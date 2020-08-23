@@ -1,0 +1,15 @@
+[package]
+name = "xrml-swaps"
+version = "0.1.0"
+authors = ["Logan Saether <X@logansaether.com>"]
+edition = "2018"
+
+[dependencies]
+
+[dev-dependencies]
+
+[features]
+default = ["std"]
+std = [
+
+]
