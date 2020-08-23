@@ -4,7 +4,9 @@ version = "0.1.0"
 authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"
 
-[depedencies]
+[dependencies]
+xrml-traits = { path = "../traits", version = "0.1.0", default-features = false }
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
