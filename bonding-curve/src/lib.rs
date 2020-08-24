@@ -133,7 +133,7 @@ decl_module! {
                 T::Currency::total_issuance(currency_id) == 0.into(),
                 Error::<T>::CurrencyAlreadyExists,
             );
-            
+
             // TODO: figure out how to get the below working
             // ensure!(
             //     !<Curves<T>>::contains_key(currency_id),
@@ -194,6 +194,9 @@ decl_module! {
 
             if let Some(curve) = Self::curves(curve_id) {
                 let currency_id = curve.currency_id;
+
+                T::Currency::ensure_can_withdraw(currency_id, &sender, amount)?;
+                
                 let total_issuance = T::Currency::total_issuance(currency_id);
                 let issuance_after = total_issuance - amount;
 
