@@ -14,13 +14,13 @@ use frame_system::ensure_signed;
 use orml_traits::{
     MultiCurrency, MultiReservableCurrency,
 };
-use sp_runtime::{ModuleId, FixedU128};
+use sp_runtime::ModuleId;
 use sp_runtime::traits::{AccountIdConversion, SaturatedConversion};
 
-// #[cfg(test)]
-// mod mock;
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 #[derive(Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -100,6 +100,7 @@ decl_error! {
         CurveDoesNotExist,
         /// Sender does not have enough base currency to make a purchase.
         InsufficentBalanceForPurchase,
+        /// The currency that is trying to be created already exists.
         CurrencyAlreadyExists,
 	}
 }
@@ -132,6 +133,12 @@ decl_module! {
                 T::Currency::total_issuance(currency_id) == 0.into(),
                 Error::<T>::CurrencyAlreadyExists,
             );
+            
+            // TODO: figure out how to get the below working
+            // ensure!(
+            //     !<Curves<T>>::contains_key(currency_id),
+            //     Error::<T>::CurrencyAlreadyExists,
+            // );
 
             let new_curve = BondingCurve {
                 creator: sender.clone(),
