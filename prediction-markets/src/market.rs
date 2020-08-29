@@ -2,6 +2,18 @@
 
 use codec::{Decode, Encode};
 
+/// Defines the type of market creation.
+#[derive(Eq, PartialEq, Encode, Decode, Clone)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub enum MarketCreation {
+    // A completely permissionless market that requires a higher
+    // validity bond. May resolve as `Invalid`.
+    Permissionless,
+    // An advised market that must pass inspection by the advisory
+    // committee. After being approved will never resolve as `Invalid`.
+    Advised,
+}
+
 /// Defines the type of market.
 /// All markets also have the `Invalid` resolution.
 #[derive(Eq, PartialEq, Encode, Decode)]
@@ -41,6 +53,8 @@ pub enum MarketStatus {
 pub struct Market<AccountId, BlockNumber> {
     // Creator of this market.
     pub creator: AccountId,
+    // The fee the creator gets from each winning share.
+    pub creator_fee: u8, //TODO: Make this into a percent.
     // Oracle that reports the outcome of this market.
     pub oracle: AccountId,
     // Ending block for this market.

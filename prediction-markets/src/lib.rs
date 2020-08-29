@@ -40,7 +40,7 @@ mod tests;
 
 mod market;
 
-use market::{Market, MarketStatus, MarketType};
+use market::{Market, MarketCreation, MarketStatus, MarketType};
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
@@ -62,7 +62,12 @@ pub trait Trait: system::Trait {
     /// The number of blocks the dispute period remains open.
     type DisputePeriod: Get<Self::BlockNumber>;
     /// The base amount of currency that must be bonded in order to create a dispute.
-    type DisputeBond: Get<u128>;
+    type DisputeBond: Get<BalanceOf<Self>>;
+    /// The base amount of currency that must be bonded for a permissionless market.
+    type ValidityBond: Get<BalanceOf<Self>>;
+    /// The base amount of currency that must be bonded for a market approved by the
+    ///  advisory committee.
+    type AdvisoryBond: Get<BalanceOf<Self>>;
 
     type ApprovalOrigin: EnsureOrigin<<Self as system::Trait>::Origin>;
 }
@@ -135,7 +140,9 @@ decl_error! {
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
  
-        const DisputeBond: u128 = T::DisputeBond::get();
+        const AdvisoryBond: BalanceOf<T> = T::AdvisoryBond::get();
+        const DisputeBond: BalanceOf<T> = T::DisputeBond::get();
+        const ValidityBond: BalanceOf<T> = T::ValidityBond::get();
 
         type Error = Error<T>;
 
@@ -171,20 +178,31 @@ decl_module! {
             outcomes: u16,
             end_block: T::BlockNumber,
             metadata: [u8; 32],
+            creation: MarketCreation,
         ) {
             let sender = ensure_signed(origin)?;
 
-            // TODO: reserve funds
+            let status: MarketStatus = match creation {
+                MarketCreation::Permissionless => {
+                    T::Currency::reserve(&sender, T::ValidityBond::get())?;
+                    MarketStatus::Active
+                }
+                MarketCreation::Advised => {
+                    T::Currency::reserve(&sender, T::AdvisoryBond::get())?;
+                    MarketStatus::Proposed
+                }
+            };
 
             let new_market_id = Self::get_next_market_id()?;
             let new_market = Market {
                 creator: sender.clone(),
+                creator_fee: 0,
                 oracle,
                 outcomes,
                 end_block,
                 metadata,
                 market_type: MarketType::YesNo,
-                status: MarketStatus::Proposed,
+                status,
                 winning_outcome: None,
             };
 
@@ -246,7 +264,7 @@ decl_module! {
                 for i in 0..outcomes {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
-                    T::Shares::generate(share_id, &sender, amount);
+                    T::Shares::generate(share_id, &sender, amount)?;
                 }
 
                 Self::deposit_event(RawEvent::BoughtCompleteSet(market_id, sender));
@@ -294,7 +312,7 @@ decl_module! {
                 for i in 0..outcomes {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
-                    T::Shares::destroy(share_id, &sender, amount);
+                    T::Shares::destroy(share_id, &sender, amount)?;
                 }
 
                 T::Currency::transfer(&market_account, &sender, amount, ExistenceRequirement::AllowDeath)?;
@@ -375,7 +393,7 @@ decl_module! {
                 );
 
                 // Destory the shares.
-                T::Shares::destroy(winning_shares_id, &sender, winning_balance);
+                T::Shares::destroy(winning_shares_id, &sender, winning_balance)?;
 
                 // Pay out the winner. One full unit of currency per winning share.
                 T::Currency::transfer(&market_account, &sender, winning_balance, ExistenceRequirement::AllowDeath)?;

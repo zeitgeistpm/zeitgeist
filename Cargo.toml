@@ -3,6 +3,7 @@ members = [
     "bonding-curve",
     "one-way-channels",
     "prediction-markets",
+    "shares",
     "swaps",
     "traits"
 ]
