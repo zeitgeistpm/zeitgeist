@@ -35,6 +35,8 @@ pub struct BondingCurve<AccountId, CurrencyId> {
     exponent: u32,
     /// The slope of the curve.
     slope: u128,
+    /// The maximum supply that can be minted from the curve.
+    max_supply: u128,
 }
 
 impl<
@@ -47,8 +49,6 @@ impl<
         x.pow(nexp) * self.slope / nexp as u128
     }
 }
-
-// const MODULE_ID: ModuleId = ModuleId(*b"mtg/bonding-curve");
 
 type BalanceOf<T> = <<T as Trait>::Currency as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
 type CurrencyIdOf<T> =
@@ -119,7 +119,7 @@ decl_module! {
         /// Creates a new bonding curve.
         ///
         #[weight = 0]
-        pub fn create(origin, currency_id: CurrencyIdOf<T>, exponent: u32, slope: u128) {
+        pub fn create(origin, currency_id: CurrencyIdOf<T>, exponent: u32, slope: u128, max_supply: u128) {
             let sender = ensure_signed(origin)?;
 
             // Requires an amount to be reserved.
@@ -134,17 +134,15 @@ decl_module! {
                 Error::<T>::CurrencyAlreadyExists,
             );
 
-            // TODO: figure out how to get the below working
-            // ensure!(
-            //     !<Curves<T>>::contains_key(currency_id),
-            //     Error::<T>::CurrencyAlreadyExists,
-            // );
+            // Adds 1 of the token to the module account.
+            T::Currency::deposit(currency_id, &Self::module_account(), 1.saturated_into())?;
 
             let new_curve = BondingCurve {
                 creator: sender.clone(),
                 currency_id,
                 exponent,
                 slope,
+                max_supply,
             };
 
             // Mutations start here
@@ -162,11 +160,15 @@ decl_module! {
 
             if let Some(curve) = Self::curves(curve_id) {
                 let currency_id = curve.currency_id;
-                let total_issuance = T::Currency::total_issuance(currency_id);
-                let issuance_after = total_issuance + amount;
+                let total_issuance = T::Currency::total_issuance(currency_id).saturated_into::<u128>();
+                let issuance_after = total_issuance + amount.saturated_into::<u128>();
 
-                let integral_before: BalanceOf<T> = curve.integral(total_issuance.saturated_into::<u128>()).saturated_into();
-                let integral_after: BalanceOf<T> = curve.integral(issuance_after.saturated_into::<u128>()).saturated_into();
+                ensure!(
+                    issuance_after <= curve.max_supply,
+                    "Exceeded max supply.",
+                );
+
+                let integral_after: BalanceOf<T> = curve.integral(issuance_after).saturated_into();
                 
                 let cost = integral_after - integral_before;
                 ensure!(
@@ -220,6 +222,10 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+    fn module_account() -> T::AccountId {
+        T::ModuleId::get().into_account()
+    }
+
     fn get_module_sub_account(id: u64) -> T::AccountId {
         T::ModuleId::get().into_sub_account(id)
     }
