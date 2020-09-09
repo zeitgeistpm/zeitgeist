@@ -13,22 +13,20 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch, 
-    ensure, Parameter,
+    decl_error, decl_event, decl_module, decl_storage, 
+    ensure,
 };
 use frame_support::traits::{
-    Currency, ReservableCurrency, Get, ExistenceRequirement,
-    EnsureOrigin,
+    Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons,
 };
-use frame_support::weights::Weight;
+// use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::ModuleId;
 use sp_runtime::traits::{
-    AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, 
-    Member, One, Hash, Zero,
+    CheckedSub, CheckedMul, Hash, Zero,
 };
+use sp_std::cmp;
 use xrml_traits::shares::{ReservableShares, Shares};
 
 // #[cfg(test)]
@@ -37,7 +35,7 @@ use xrml_traits::shares::{ReservableShares, Shares};
 // #[cfg(test)]
 // mod tests;
 
-fn remove_item<I>(items: &mut Vec<I>, item: I) {
+fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     let pos = items.iter().position(|&i| i == item).unwrap();
     items.swap_remove(pos);
 }
@@ -63,13 +61,15 @@ pub struct Order<AccountId, Balance, Hash> {
 
 impl<
     AccountId,
-    Balance,
+    Balance: CheckedSub + CheckedMul,
     Hash,
 > Order<AccountId, Balance, Hash> {
     pub fn cost(&self) -> Balance {
         self.total
-            .checked_sub(self.filled)
-            .checked_mul(self.price)
+            .checked_sub(&self.filled)
+            .unwrap()
+            .checked_mul(&self.price)
+            .unwrap()
     }
 }
 
@@ -80,7 +80,7 @@ pub trait Trait: frame_system::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<T>, Self::Hash> + ReservableShares<Self::AccountId, BalanceOf<T>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash> + ReservableShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
 }
 
 decl_storage! {
@@ -101,11 +101,15 @@ decl_storage! {
 }
 
 decl_event! {
-    pub enum Event<T> {
+    pub enum Event<T> 
+    where
+        AccountId = <T as frame_system::Trait>::AccountId,
+        Hash = <T as frame_system::Trait>::Hash,
+    {
         /// [maker, order_hash]
         OrderMade(AccountId, Hash),
         /// [taker, order_hash]
-        OrderFilled(Accountid, Hash),
+        OrderFilled(AccountId, Hash),
     }
 }
 
@@ -113,6 +117,7 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         OrderDoesNotExist,
         OrderAlreadyTaken,
+        InsufficientBalance,
     }
 }
 
@@ -133,7 +138,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             // Only store nonce in memory for now.
-            let nonce = Nonce<T>::get();
+            let nonce = Nonce::get();
             let hash = (sender.clone(), share_id, nonce)
                 .using_encoded(<T as frame_system::Trait>::Hashing::hash);
 
@@ -157,8 +162,8 @@ decl_module! {
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Bids<T>>::mutate(share_id, |b| {
-                        b.as_mut().unwrap().push(hash);
+                    <Bids<T>>::mutate(share_id, |b: &mut Vec<T::Hash>| {
+                        b.push(hash.clone());
                     });
 
                     T::Currency::reserve(&sender, cost)?;
@@ -170,30 +175,29 @@ decl_module! {
                     );
 
                     <Asks<T>>::mutate(share_id, |a| {
-                        a.as_mut().unwrap().push(hash);
+                        a.push(hash.clone());
                     });
 
                     T::Shares::reserve(share_id, &sender, amount)?;
                 }
-
-                <OrderData<T>>::insert(hash, order);
-                Self::deposit_event(RawEvent::OrderMade(sender, hash))
             }
 
+            <OrderData<T>>::insert(hash, order);
+            Self::deposit_event(RawEvent::OrderMade(sender, hash))
         }
 
-        #[weoght = 0]
+        #[weight = 0]
         fn fill_order(origin, order_hash: T::Hash) {
             let sender = ensure_signed(origin)?;
 
             if let Some(order_data) = Self::order_data(order_hash) {
                 ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
 
-                match order_data.side {
-                    let cost = order.cost();
-                    let share_id = order_data.share_id;
-                    let maker = order_data.maker;
+                let cost = order_data.cost();
+                let share_id = order_data.share_id;
+                let maker = order_data.maker;
 
+                match order_data.side {
                     OrderSide::Bid => {
                         T::Shares::ensure_can_withdraw(share_id, &sender, order_data.total)?;
 
@@ -203,9 +207,9 @@ decl_module! {
                         T::Shares::transfer(share_id, &sender, &maker, order_data.total)?;
                     }
                     OrderSide::Ask => {
-                        T::Currency::ensure_can_withdraw(&sender, cost)?;
+                        T::Currency::ensure_can_withdraw(&sender, cost, WithdrawReasons::all(), Zero::zero())?;
 
-                        T::Shares::unreserve(share_id, &maker, order_data.total)?;
+                        T::Shares::unreserve(share_id, &maker, order_data.total);
                         T::Shares::transfer(share_id, &maker, &sender, order_data.total)?;
 
                         T::Currency::transfer(&sender, &maker, cost, ExistenceRequirement::AllowDeath)?;
@@ -231,17 +235,17 @@ decl_module! {
                 match order_data.side {
                     OrderSide::Bid => {
                         let mut bids = Self::bids(share_id);
-                        remove_item::<T::Hash>(&bids, order_hash);
+                        remove_item::<T::Hash>(&mut bids, order_hash);
                         <Bids<T>>::insert(share_id, bids);
                     }   
                     OrderSide::Ask => {
                         let mut asks = Self::asks(share_id);
-                        remove_item::<T::Hash>(&asks, order_hash);
+                        remove_item::<T::Hash>(&mut asks, order_hash);
                         <Asks<T>>::insert(share_id, asks);
                     }
                 }
 
-                <OrderData<T>>::remove_item(order_hash);
+                <OrderData<T>>::remove(order_hash);
             } else {
                 Err(Error::<T>::OrderDoesNotExist)?;
             }

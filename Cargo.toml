@@ -2,6 +2,8 @@
 members = [
     "bonding-curve",
     "one-way-channels",
+    "orderbook-v1",
+    "orderbook-v2",
     "prediction-markets",
     "shares",
     "swaps",
