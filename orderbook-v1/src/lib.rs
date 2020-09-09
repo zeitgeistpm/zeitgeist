@@ -105,7 +105,7 @@ decl_event! {
         /// [maker, order_hash]
         OrderMade(AccountId, Hash),
         /// [taker, order_hash]
-        OrderTaken(Accountid, Hash),
+        OrderFilled(Accountid, Hash),
     }
 }
 
@@ -183,7 +183,7 @@ decl_module! {
         }
 
         #[weoght = 0]
-        fn take_order(origin, order_hash: T::Hash) {
+        fn fill_order(origin, order_hash: T::Hash) {
             let sender = ensure_signed(origin)?;
 
             if let Some(order_data) = Self::order_data(order_hash) {
@@ -201,8 +201,6 @@ decl_module! {
                         T::Currency::transfer(&maker, &sender, cost, ExistenceRequirement::AllowDeath)?;
 
                         T::Shares::transfer(share_id, &sender, &maker, order_data.total)?;
-
-                        // Self::deposit_event(RawEvent::OrderFilled());
                     }
                     OrderSide::Ask => {
                         T::Currency::ensure_can_withdraw(&sender, cost)?;
@@ -211,10 +209,10 @@ decl_module! {
                         T::Shares::transfer(share_id, &maker, &sender, order_data.total)?;
 
                         T::Currency::transfer(&sender, &maker, cost, ExistenceRequirement::AllowDeath)?;
-
                     }
                 }
 
+                Self::deposit_event(RawEvent::OrderFilled(sender, order_hash));
             } else {
                 Err(Error::<T>::OrderDoesNotExist)?;
             }
