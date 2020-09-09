@@ -166,11 +166,6 @@ decl_module! {
 
         /// Creates a new prediction market, seeded with the intial values.
         ///
-        /// TODO:
-        ///     - The creator should need to reserve some funds.
-        ///     - Two different bonds: One lower bond if the market needs
-        ///       to be approved by the advisory committee before becoming
-        ///       active - or a higher one for truly permissionless.
         #[weight = 0]
         pub fn create(
             origin,
@@ -228,6 +223,8 @@ decl_module! {
                 <Markets<T>>::contains_key(market_id.clone()), 
                 Error::<T>::MarketDoesNotExist,
             );
+            
+            T::Currency::unreserve(&Self::markets(market_id.clone()).creator, T::AdvisoryBond::get());
 
             <Markets<T>>::mutate(market_id.clone(), |m| {
                 m.as_mut().unwrap().status = MarketStatus::Active;

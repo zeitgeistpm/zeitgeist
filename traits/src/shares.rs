@@ -24,3 +24,10 @@ pub trait Shares<AccountId, Balance, Hash> {
     fn generate(share_id: Hash, to: &AccountId, amount: Balance) -> DispatchResult;
     fn transfer(share_id: Hash, from: &AccountId, to: &AccountId, amount: Balance) -> DispatchResult;
 }
+
+pub trait ReservableShares<AccountId, Balance, Hash> {
+    fn can_reserve(share_id: Hash, who: &AccountId, value: Balance) -> bool;
+    fn reserved_balance(share_id: Hash, who: &AccountId) -> Balance;
+    fn reserve(share_id: Hash, who: &AccountId, value: Balance) -> DispatchResult;
+    fn unreserve(share_id: Hash, who: &AccountId, value: Balance) -> Balance;
+}

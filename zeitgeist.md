@@ -1,11 +1,11 @@
 # Zeitgesit Protocol
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
-prediction markets. The platform's native currency the Zeitgesit Governance Token (XZG)
-is used to decide the direction of the network and as a means of last-call dispute
-resolution. Additionally, Zeitgeist is a protocol for efficient trading prediciton
+prediction markets. The platform's native currency, the Zeitgesit Governance Token (XZG),
+is used to sway the direction of the network, and as a means of last-call dispute
+resolution. Additionally, Zeitgeist is a protocol for efficient trading of prediciton
 market shares and will one day become the backbone of the decentralized finance eocsystem
-by allowing for traders to create complex financial contracts on _anything_.
+by allowing for traders to create complex financial contracts on virtually _anything_.
 
 ## Zeitgeist Governance / The Zeitgeist DAO
 
@@ -70,6 +70,14 @@ where there are 3 possible outcomes: Yes, No, or Invalid. The share identifier f
 would be `hash(market_id, 0)` for Yes shares, `hash(market_id, 1)` for No shares, and `hash(market_id, 2)`
 for Invalid shares.
 
+## Trading
+
+Zeitgeist has two built-in methods to trade shares. These methods are a hybrid on- and off-chain
+orderbook and a Uniswap-style Automated Market Maker (AMM). For those familiar with the 0x-style
+orderbooks in the Ethereum ecosystem, Zeitgeist takes a nearly identical approach. Namely, operators
+(known in parlance as relayers) will keep the data of orders and only the hash of orders are published
+on-chain. This allows the chain to scale very well as it means all orders require only a constant size
+hash to be published on-chain.
 
 ### Reporting
 
@@ -98,6 +106,8 @@ plan to airdrop 5% of the initial allocation of XZG to REP holders.
 ## Substrate Pallets
 
 - Prediction Markets
+- Orderbook
+- Shares
 - Swaps     
 
 ## Zeitgeist's Transition to a Parachain
