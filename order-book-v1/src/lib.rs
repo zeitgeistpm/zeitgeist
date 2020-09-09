@@ -27,15 +27,20 @@ use frame_system::{self as system, ensure_signed};
 use sp_runtime::ModuleId;
 use sp_runtime::traits::{
     AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, 
-    Member, One, Hash,
+    Member, One, Hash, Zero,
 };
-use xrml_traits::shares::Shares;
+use xrml_traits::shares::{ReservableShares, Shares};
 
 // #[cfg(test)]
 // mod mock;
 
 // #[cfg(test)]
 // mod tests;
+
+fn remove_item<I>(items: &mut Vec<I>, item: I) {
+    let pos = items.iter().position(|&i| i == item).unwrap();
+    items.swap_remove(pos);
+}
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -46,13 +51,26 @@ pub enum OrderSide {
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Order<AccountId, Balance> {
+pub struct Order<AccountId, Balance, Hash> {
     side: OrderSide,
     maker: AccountId,
     taker: Option<AccountId>,
+    share_id: Hash,
     total: Balance,
     price: Balance,
     filled: Balance,
+}
+
+impl<
+    AccountId,
+    Balance,
+    Hash,
+> Order<AccountId, Balance, Hash> {
+    pub fn cost(&self) -> Balance {
+        self.total
+            .checked_sub(self.filled)
+            .checked_mul(self.price)
+    }
 }
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
@@ -62,7 +80,7 @@ pub trait Trait: frame_system::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<T>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, BalanceOf<T>, Self::Hash> + ReservableShares<Self::AccountId, BalanceOf<T>, Self::Hash>;
 }
 
 decl_storage! {
@@ -75,7 +93,7 @@ decl_storage! {
         Asks get(fn asks): map hasher(blake2_128_concat) T::Hash => Vec<T::Hash>;
 
         OrderData get(fn order_data): map hasher(blake2_128_concat) T::Hash => 
-            Option<Order<T::AccountId, BalanceOf<T>>>;
+            Option<Order<T::AccountId, BalanceOf<T>, T::Hash>>;
 
         Nonce get(fn nonce): u64;
 
@@ -93,8 +111,8 @@ decl_event! {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        One,
-        Two,
+        OrderDoesNotExist,
+        OrderAlreadyTaken,
     }
 }
 
@@ -124,12 +142,13 @@ decl_module! {
                 side: side.clone(),
                 maker: sender.clone(),
                 taker: None,
+                share_id,
                 total: amount,
                 price,
-                filled: 0,
+                filled: Zero::zero(),
             };
 
-            let cost = amount * price;
+            let cost = order.cost();
 
             match side {
                 OrderSide::Bid => {
@@ -164,19 +183,74 @@ decl_module! {
         }
 
         #[weoght = 0]
-        fn take_order(
-            origin,
-        ) {
+        fn take_order(origin, order_hash: T::Hash) {
+            let sender = ensure_signed(origin)?;
 
+            if let Some(order_data) = Self::order_data(order_hash) {
+                ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
+
+                match order_data.side {
+                    let cost = order.cost();
+                    let share_id = order_data.share_id;
+                    let maker = order_data.maker;
+
+                    OrderSide::Bid => {
+                        T::Shares::ensure_can_withdraw(share_id, &sender, order_data.total)?;
+
+                        T::Currency::unreserve(&maker, cost);
+                        T::Currency::transfer(&maker, &sender, cost, ExistenceRequirement::AllowDeath)?;
+
+                        T::Shares::transfer(share_id, &sender, &maker, order_data.total)?;
+
+                        // Self::deposit_event(RawEvent::OrderFilled());
+                    }
+                    OrderSide::Ask => {
+                        T::Currency::ensure_can_withdraw(&sender, cost)?;
+
+                        T::Shares::unreserve(share_id, &maker, order_data.total)?;
+                        T::Shares::transfer(share_id, &maker, &sender, order_data.total)?;
+
+                        T::Currency::transfer(&sender, &maker, cost, ExistenceRequirement::AllowDeath)?;
+
+                    }
+                }
+
+            } else {
+                Err(Error::<T>::OrderDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
-        fn cancel_order(origin) {
+        fn cancel_order(origin, share_id: T::Hash, order_hash: T::Hash) {
+            let sender = ensure_signed(origin)?;
 
+            if let Some(order_data) = Self::order_data(order_hash) {
+                ensure!(
+                    sender == order_data.maker,
+                    "Canceller must be order maker."
+                );
+
+                match order_data.side {
+                    OrderSide::Bid => {
+                        let mut bids = Self::bids(share_id);
+                        remove_item::<T::Hash>(&bids, order_hash);
+                        <Bids<T>>::insert(share_id, bids);
+                    }   
+                    OrderSide::Ask => {
+                        let mut asks = Self::asks(share_id);
+                        remove_item::<T::Hash>(&asks, order_hash);
+                        <Asks<T>>::insert(share_id, asks);
+                    }
+                }
+
+                <OrderData<T>>::remove_item(order_hash);
+            } else {
+                Err(Error::<T>::OrderDoesNotExist)?;
+            }
         }
     }
 }
 
 impl<T: Trait> Module<T> {
-
+    
 }
