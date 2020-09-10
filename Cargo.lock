@@ -1067,6 +1067,7 @@ dependencies = [
  "sp-io 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "xrml-shares",
  "xrml-traits",
 ]
 

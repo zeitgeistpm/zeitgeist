@@ -1,6 +1,6 @@
 //! # Orderbook
 //!
-//! A module to trade shares using a 0x-style off-chain orderbook.
+//! A module to trade shares using a naive on-chain orderbook.
 //! 
 //! ## Overview
 //!
@@ -29,8 +29,8 @@ use sp_runtime::traits::{
 use sp_std::cmp;
 use xrml_traits::shares::{ReservableShares, Shares};
 
-// #[cfg(test)]
-// mod mock;
+#[cfg(test)]
+mod mock;
 
 // #[cfg(test)]
 // mod tests;
