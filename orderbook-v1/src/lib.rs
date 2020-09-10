@@ -32,8 +32,8 @@ use xrml_traits::shares::{ReservableShares, Shares};
 #[cfg(test)]
 mod mock;
 
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;
 
 fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     let pos = items.iter().position(|&i| i == item).unwrap();
@@ -85,10 +85,6 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
     trait Store for Module<T: Trait> as Orderbook {
-        /// Stores the order hash mapping to the amount of the taker asset already bought by maker.
-        // Filled get(fn filled): map hasher(blake2_128_concat) T::Hash => u128;
-        // Cancelled get(fn cancelled): map hasher(blake2_128_concat) T::Hash => bool;
-
         Bids get(fn bids): map hasher(blake2_128_concat) T::Hash => Vec<T::Hash>;
         Asks get(fn asks): map hasher(blake2_128_concat) T::Hash => Vec<T::Hash>;
 
@@ -118,6 +114,7 @@ decl_error! {
         OrderDoesNotExist,
         OrderAlreadyTaken,
         InsufficientBalance,
+        NotOrderCreator,
     }
 }
 
@@ -139,8 +136,7 @@ decl_module! {
 
             // Only store nonce in memory for now.
             let nonce = Nonce::get();
-            let hash = (sender.clone(), share_id, nonce)
-                .using_encoded(<T as frame_system::Trait>::Hashing::hash);
+            let hash = Self::order_hash(&sender, share_id.clone(), nonce);
 
             // Love the smell of fresh orders in the morning.
             let order = Order {
@@ -183,6 +179,7 @@ decl_module! {
             }
 
             <OrderData<T>>::insert(hash, order);
+            <Nonce>::mutate(|n| *n += 1);
             Self::deposit_event(RawEvent::OrderMade(sender, hash))
         }
 
@@ -229,7 +226,7 @@ decl_module! {
             if let Some(order_data) = Self::order_data(order_hash) {
                 ensure!(
                     sender == order_data.maker,
-                    "Canceller must be order maker."
+                    Error::<T>::NotOrderCreator
                 );
 
                 match order_data.side {
@@ -254,5 +251,7 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    
+    pub fn order_hash(creator: &T::AccountId, share_id: T::Hash, nonce: u64) -> T::Hash {
+        (&creator, share_id, nonce).using_encoded(<T as frame_system::Trait>::Hashing::hash)
+    }
 }

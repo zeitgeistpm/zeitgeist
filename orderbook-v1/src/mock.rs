@@ -7,7 +7,6 @@ use sp_runtime::{
 };
 
 pub type AccountId = u128;
-pub type Amount = i128;
 pub type Balance = u128;
 
 pub const ALICE: AccountId = 0;

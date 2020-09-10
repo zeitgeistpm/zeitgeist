@@ -90,11 +90,11 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    fn set_balance(share_id: T::Hash, who: &T::AccountId, balance: T::Balance) {
+    pub fn set_balance(share_id: T::Hash, who: &T::AccountId, balance: T::Balance) {
         <Accounts<T>>::mutate(who, share_id, |data| data.free = balance);
     }
 
-    fn set_reserved(share_id: T::Hash, who: &T::AccountId, reserved: T::Balance) {
+    pub fn set_reserved(share_id: T::Hash, who: &T::AccountId, reserved: T::Balance) {
         <Accounts<T>>::mutate(who, share_id, |data| data.reserved = reserved);
     }
 
