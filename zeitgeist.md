@@ -186,7 +186,7 @@ be optimized on a native base chain layer level which is simply not possible for
 ## Governance
 
 While Augur is governed by the REP holders ultimately, its development direction is still
-mostly controlled by the centralized entity of the forecast foundation (see coinbase rating
+mostly controlled by the centralized entity of the Forecast Foundation (see coinbase rating
 REP a security). Zeitgeist will have its entire governance controlled by the ZGT holders
 including the governance ability of not only resolving markets, but electing the advisory
 committee, the oracle committee, and the upgrade roadmap.
