@@ -23,10 +23,12 @@ use frame_support::traits::{
 };
 // use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
+use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{
     CheckedSub, CheckedMul, Hash, Zero,
 };
 use sp_std::cmp;
+use sp_std::vec::Vec;
 use xrml_traits::shares::{ReservableShares, Shares};
 
 #[cfg(test)]
@@ -40,15 +42,13 @@ fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     items.swap_remove(pos);
 }
 
-#[derive(Clone, Eq, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub enum OrderSide {
     Bid,
     Ask,
 }
 
-#[derive(Clone, Eq, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Order<AccountId, Balance, Hash> {
     side: OrderSide,
     maker: AccountId,

@@ -1,10 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
+use sp_runtime::RuntimeDebug;
 
 /// Defines the type of market creation.
-#[derive(Eq, PartialEq, Encode, Decode, Clone)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
 pub enum MarketCreation {
     // A completely permissionless market that requires a higher
     // validity bond. May resolve as `Invalid`.
@@ -16,8 +16,7 @@ pub enum MarketCreation {
 
 /// Defines the type of market.
 /// All markets also have the `Invalid` resolution.
-#[derive(Eq, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub enum MarketType {
     // Binary market.
     YesNo,
@@ -27,8 +26,7 @@ pub enum MarketType {
 }
 
 /// Defines the state of the market.
-#[derive(Eq, PartialEq, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub enum MarketStatus {
     // The market has been proposed and is either waiting for approval
     // from the governing committee, or hasn't reach its delay yet.
@@ -48,8 +46,7 @@ pub enum MarketStatus {
     Resolved,
 }
 
-#[derive(Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, RuntimeDebug)]
 pub struct Market<AccountId, BlockNumber> {
     // Creator of this market.
     pub creator: AccountId,

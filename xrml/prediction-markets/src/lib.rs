@@ -30,6 +30,7 @@ use sp_runtime::traits::{
     AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, 
     Member, One, Hash,
 };
+use sp_std::vec::Vec;
 use xrml_traits::shares::Shares;
 
 #[cfg(test)]

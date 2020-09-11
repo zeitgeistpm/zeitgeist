@@ -168,6 +168,7 @@ decl_module! {
                     "Exceeded max supply.",
                 );
 
+                let integral_before: BalanceOf<T> = curve.integral(total_issuance).saturated_into();
                 let integral_after: BalanceOf<T> = curve.integral(issuance_after).saturated_into();
                 
                 let cost = integral_after - integral_before;
