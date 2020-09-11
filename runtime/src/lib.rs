@@ -9,6 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use sp_std::prelude::*;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
+	ModuleId,
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
@@ -38,8 +39,10 @@ pub use frame_support::{
 	},
 };
 
-/// Import the template pallet.
-pub use template;
+/// Zeitgeist pallets.
+pub use orderbook_v1;
+pub use xrml_prediction_markets;
+pub use xrml_shares;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -257,9 +260,49 @@ impl pallet_sudo::Trait for Runtime {
 	type Call = Call;
 }
 
-/// Configure the pallet template in pallets/template.
-impl template::Trait for Runtime {
+impl xrml_shares::Trait for Runtime {
 	type Event = Event;
+	type Balance = Balance;
+}
+
+impl orderbook_v1::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type Shares = Shares;
+}
+
+parameter_types! {
+	pub const PmModuleId: ModuleId = ModuleId(*b"zgt/prma");
+	pub const ReportingPeriod: BlockNumber = 100;
+	pub const DisputePeriod: BlockNumber = 100;
+	pub const DisputeBond: Balance = 10;
+	pub const ValidityBond: Balance = 10;
+	pub const AdvisoryBond: Balance = 10;
+}
+
+// ord_parameter_types! {
+// 	pub const SudoOrigin: AccountId = AccountId::from(
+// 		// 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+// 		hex_literal::hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
+// 	);
+// }
+
+// type ValidityOrigin = EnsureOneOf<
+// 	EnsureRoot<AccountId>,
+// >;
+
+impl xrml_prediction_markets::Trait for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type Shares = Shares;
+	type MarketId = u128;
+	type ModuleId = PmModuleId;
+	type ReportingPeriod = ReportingPeriod;
+	type DisputePeriod = DisputePeriod;
+	type DisputeBond = DisputeBond;
+	type ValidityBond = ValidityBond;
+	type AdvisoryBond = AdvisoryBond;
+	type ApprovalOrigin = EnsureRoot<AccountId>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -277,8 +320,10 @@ construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-		// Include the custom logic from the template pallet in the runtime.
-		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		// Zeitgeist pallets.
+		Shares: xrml_shares::{Module, Call, Storage, Evenet<T>},
+		Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>},
+		PredictionMarket: xrml_prediction_markets::{Module, Call, Storage, Event<T>},
 	}
 );
 

@@ -1,12 +1,17 @@
 [package]
 authors = ['Logan Saether <x@logansaether.com']
 edition = '2018'
-homepage = 'https://substrate.dev'
 name = 'zeitgeist-runtime'
 version = '0.1.0'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+orderbook-v1 = { path = "../xrml/orderbook-v1", version = "0.1.0", default-features = false }
+xrml-prediction-markets = { path = "../xrml/prediction-markets", version = "0.1.0", default-features = false }
+xrml-shares = { path = "../xrml/shares", version = "0.1.0", default-features = false }
+xrml-traits = { path = "../xrml/traits", version = "0.1.0", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -111,12 +116,6 @@ version = '2.0.0-rc6'
 default-features = false
 version = '2.0.0-rc6'
 
-[dependencies.template]
-default-features = false
-package = 'pallet-template'
-path = '../pallets/template'
-version = '2.0.0-rc6'
-
 [features]
 default = ['std']
 std = [
@@ -145,7 +144,10 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
-    'template/std',
+    'orderbook-v1/std',
+    'xrml-prediction-markets/std',
+    'xrml-shares/std',
+    'xrml-traits/std'
 ]
 
 [build-dependencies.wasm-builder-runner]
