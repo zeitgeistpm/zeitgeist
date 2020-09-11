@@ -21,6 +21,7 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_grandpa::fg_primitives;
 use sp_version::RuntimeVersion;
+use frame_system::EnsureRoot;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 
@@ -279,17 +280,6 @@ parameter_types! {
 	pub const ValidityBond: Balance = 10;
 	pub const AdvisoryBond: Balance = 10;
 }
-
-// ord_parameter_types! {
-// 	pub const SudoOrigin: AccountId = AccountId::from(
-// 		// 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
-// 		hex_literal::hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d")
-// 	);
-// }
-
-// type ValidityOrigin = EnsureOneOf<
-// 	EnsureRoot<AccountId>,
-// >;
 
 impl xrml_prediction_markets::Trait for Runtime {
 	type Event = Event;

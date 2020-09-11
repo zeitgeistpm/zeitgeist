@@ -5,6 +5,8 @@ authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"
 
 [dependencies]
+orderbook-v1 = { path = "../orderbook-v1", version = "0.1.0", default-features = false }
+xrml-shares = { path = "../shares", version = "0.1.0", default-features = false }
 xrml-traits = { path = "../traits", version = "0.1.0", default-features = false }
 
 [dependencies.codec]
@@ -64,4 +66,7 @@ std = [
     'sp-io/std',
     'sp-std/std',
     'pallet-balances/std',
+    'orderbook-v1/std',
+    'xrml-shares/std',
+    'xrml-traits/std'
 ]

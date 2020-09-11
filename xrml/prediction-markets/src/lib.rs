@@ -224,7 +224,7 @@ decl_module! {
                 Error::<T>::MarketDoesNotExist,
             );
             
-            T::Currency::unreserve(&Self::markets(market_id.clone()).creator, T::AdvisoryBond::get());
+            T::Currency::unreserve(&Self::markets(market_id.clone()).unwrap().creator, T::AdvisoryBond::get());
 
             <Markets<T>>::mutate(market_id.clone(), |m| {
                 m.as_mut().unwrap().status = MarketStatus::Active;
