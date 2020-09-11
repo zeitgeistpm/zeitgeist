@@ -2,10 +2,10 @@
 members = [
     "node",
     "runtime",
-    "xrml/bonding-curve",
-    "xrml/one-way-channels",
+    # "xrml/bonding-curve",
+    # "xrml/one-way-channels",
     "xrml/orderbook-v1",
-    "xrml/orderbook-v2",
+    # "xrml/orderbook-v2",
     "xrml/prediction-markets",
     "xrml/shares",
     "xrml/swaps",

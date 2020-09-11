@@ -311,9 +311,9 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Zeitgeist pallets.
-		Shares: xrml_shares::{Module, Call, Storage, Evenet<T>},
+		Shares: xrml_shares::{Module, Call, Storage, Event<T>},
 		Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>},
-		PredictionMarket: xrml_prediction_markets::{Module, Call, Storage, Event<T>},
+		PredictionMarkets: xrml_prediction_markets::{Module, Call, Storage, Event<T>},
 	}
 );
 
