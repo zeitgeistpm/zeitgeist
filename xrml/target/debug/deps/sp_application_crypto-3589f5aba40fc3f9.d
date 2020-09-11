@@ -1,0 +1,11 @@
+/home/volt/Code/xrml/target/debug/deps/sp_application_crypto-3589f5aba40fc3f9.rmeta: /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/lib.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ed25519.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/sr25519.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ecdsa.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/traits.rs
+
+/home/volt/Code/xrml/target/debug/deps/libsp_application_crypto-3589f5aba40fc3f9.rlib: /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/lib.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ed25519.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/sr25519.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ecdsa.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/traits.rs
+
+/home/volt/Code/xrml/target/debug/deps/sp_application_crypto-3589f5aba40fc3f9.d: /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/lib.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ed25519.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/sr25519.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ecdsa.rs /home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/traits.rs
+
+/home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/lib.rs:
+/home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ed25519.rs:
+/home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/sr25519.rs:
+/home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/ecdsa.rs:
+/home/volt/.cargo/registry/src/github.com-1ecc6299db9ec823/sp-application-crypto-2.0.0-rc6/src/traits.rs:

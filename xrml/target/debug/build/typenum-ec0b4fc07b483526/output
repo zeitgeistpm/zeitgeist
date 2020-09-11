@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/home/volt/Code/xrml/target/debug/build/typenum-ec0b4fc07b483526/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/home/volt/Code/xrml/target/debug/build/typenum-ec0b4fc07b483526/out/op.rs

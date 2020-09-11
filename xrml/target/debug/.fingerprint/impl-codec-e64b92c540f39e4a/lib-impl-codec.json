@@ -1,0 +1,1 @@
+{"rustc":7210524046684111384,"features":"[\"std\"]","target":5358175595864118638,"profile":6299028598154287785,"path":5524560213402879451,"deps":[[4494119853877962453,"parity_scale_codec",false,6531727890337233105]],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/impl-codec-e64b92c540f39e4a/dep-lib-impl-codec"}}],"rustflags":[],"metadata":5277811016856928684,"config":0}
