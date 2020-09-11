@@ -1,26 +1,26 @@
 # Zeitgesit Protocol
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
-prediction markets. The platform's native currency, the Zeitgesit Token (ZTG),
+prediction markets. The platform's native currency, the Zeitgeist Token (ZGT),
 is used to sway the direction of the network, and as a means of last-call dispute
 resolution. Additionally, Zeitgeist is a protocol for efficient trading of prediciton
-market shares and will one day become the backbone of the decentralized finance eocsystem
+market shares and will one day become the backbone of the decentralized finance ecosystem
 by allowing for traders to create complex financial contracts on virtually _anything_.
 
 ## Zeitgeist Governance / The Zeitgeist DAO
 
 Zeitgeist is a blockchain network but also a DAO that oversees the health and
 sustainability of this network. Along with the stakers, the primary maintainers of
-the network, the ZTG holders themselves have the opportunity to evolve the protocol.
-In times of crisis, the ZTG holders will be the party of last resort to avert danger
-and protect the protocol from collapsing. For these reasons the ZTG is a governance token
+the network, the ZGT holders themselves have the opportunity to evolve the protocol.
+In times of crisis, the ZGT holders will be the party of last resort to avert danger
+and protect the protocol from collapsing. For these reasons the ZGT is a governance token
 of the network. Below we detail the governance mechanism of the Zeitgeist DAO.
 
 ### Advisory Committee
 
 When someone creates a market on Zeitgeist they have two available options for the size
-of the deposit they are willing to make using ZTG. One option is to place a large deposit
-for example 10 ZTG and have their market be activated right away. The large deposit is
+of the deposit they are willing to make using ZGT. One option is to place a large deposit
+for example 10 ZGT and have their market be activated right away. The large deposit is
 there as assurance to the network that the market will not be resolved as an invalid
 market. This is because invalid markets are overall harmful for an ecosystem (see the 
 section on [invalid markets](#invalid-markets)).
@@ -30,13 +30,13 @@ section on [invalid markets](#invalid-markets)).
 There may be a large incentive for a reporter to buy the opposing share of a market
 then report fraudelently. In most cases, the native dispute system will incentivize and
 fairly resolve the fraudulent behaviour before a payout is made. However, in some cases
-it may be that there is such an incentive that a significant amount of ZTG holders are
+it may be that there is such an incentive that a significant amount of ZGT holders are
 reporting fraudelently. In Augur this is resolved through a protocol fork - a messy process
 that requires all REP holders to migrate their tokens to what they believe is the right
 side of history within a limited time at the risk of losing all their REP completely. 
 Instead of using a forking procedure, Zeitgeist solves this problem more elegantly through
 use of an elected on-chain body known as the _Arbitration Council_ that can call a public
-vote for all ZTG holders to decide the final outcome of a market.
+vote for all ZGT holders to decide the final outcome of a market.
 
 ### Treasury
 
@@ -47,8 +47,8 @@ and will be paid out through majority acceptance of the Arbitration Council.
 
 Sometimes it may be desirable for a market creator to not specify a particular oracle source,
 and rather just a resolution source. In cases like this, the default is to draw an oracle
-from the public reporters pool. The public reporters pool can be joined by any ZTG holder.
-They stake their ZTG and enter into the pool. Anytime there is a market that needs resolution
+from the public reporters pool. The public reporters pool can be joined by any ZGT holder.
+They stake their ZGT and enter into the pool. Anytime there is a market that needs resolution
 the first reporter from the public reporter pool can make a report. They then have a cooldown
 for making another public report for a number which is a function of how many times in the past
 they have made public reporting.
@@ -61,7 +61,7 @@ they have made public reporting.
 
 Shares are generated and destroyed as a complete set directly from the market. When shares
 are generated, the amount held in the reserve pool of that market will be increased. When shares
-are destroyed, the supply will decreased and the reserve pool will be used to pay out ZTG in 
+are destroyed, the supply will decreased and the reserve pool will be used to pay out ZGT in 
 accordance to the amount of shares burned.
 
 Shares can be transferred freely and traded among users of the network. They are identified by
@@ -89,11 +89,11 @@ TODO: Write about invalid markets.
 
 ## Roadmap
 
-We aim to distribute ZTG in as fair and egalitarian way as possible, while still
+We aim to distribute ZGT in as fair and egalitarian way as possible, while still
 acknowledging the necessary steps to bring the network to fruition. Because we have
 such a great foundation laid down for us by the Augur protocol, and because the Augur
 community has demonstrated itself knowledgable about prediction markets in general we
-plan to airdrop 5% of the initial allocation of ZTG to REP holders.
+plan to airdrop 5% of the initial allocation of ZGT to REP holders.
 
 - 10% Initial Founding Team
 -  5% Airdrop to REP holders that signal.
@@ -114,7 +114,7 @@ plan to airdrop 5% of the initial allocation of ZTG to REP holders.
 
 Zeitgeist plans to transition to a parachain on the Kusama or Polkadot networks.
 When the transition takes place, validators will no longer be needed to secure
-the Zeitgeist chain and so the ZTG would cease to have inflation. This would mean
+the Zeitgeist chain and so the ZGT would cease to have inflation. This would mean
 that for the time that Zeitgeist runs as its own sovereign chain will be the only
 time that new tokens would be created. Additionally, if Zeitgeist were to return
 to being a sovereign chain after a bout of being a parachain - it would required
@@ -122,7 +122,7 @@ the work of validators once again and therefore the token would again be inflate
 
 ## Native Rebalancing Stablecoin
 
-Since that native token of Zeitgeist, the ZTG is used as a governance token and a
+Since that native token of Zeitgeist, the ZGT is used as a governance token and a
 utility token over the platform to gracefully resolve markets, it may not be the first
 choice for the token that is used to participate in markets. Without a doubt, the ideal
 choice for a token to place orders on a prediction market will be a stablecoin.
@@ -162,7 +162,7 @@ probability...
 
 # Executive Summary
 
-## Usages of the ZTG
+## Usages of the ZGT
 
 - To place bonds on market creation.
 - To participate as part of the advisory committee or voting for members of the advisory
@@ -187,7 +187,7 @@ be optimized on a native base chain layer level which is simply not possible for
 
 While Augur is governed by the REP holders ultimately, its development direction is still
 mostly controlled by the centralized entity of the forecast foundation (see coinbase rating
-REP a security). Zeitgeist will have its entire governance controlled by the ZTG holders
+REP a security). Zeitgeist will have its entire governance controlled by the ZGT holders
 including the governance ability of not only resolving markets, but electing the advisory
 committee, the oracle committee, and the upgrade roadmap.
 
