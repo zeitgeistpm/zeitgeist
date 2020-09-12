@@ -7,6 +7,35 @@ resolution. Additionally, Zeitgeist is a protocol for efficient trading of predi
 market shares and will one day become the backbone of the decentralized finance ecosystem
 by allowing for traders to create complex financial contracts on virtually _anything_.
 
+## What are Prediction Markets?
+
+A prediction market is a type of market mechanism that is designed to solve the information
+aggregation problem. In brief, the information aggregation problem can be described as
+arising out of the need of an individual (known as the _aggregator_) wishing to obtain
+a prediction on a particular variable. A number of inividuals known as the _informants_
+each hold different views and information regarding the variable. A prediction market is
+a mechanism to incentivize informants to report truthfully about their information and
+therefore create a robust aggregation.
+
+For example, let's say an individual would like to know what the predicted price of
+Kusama ($KSM) will be at the end of year 2021. This individual can create a market
+that asks "Will the price of KSM be more than $100 according to CoinGecko on December 31, 2020?".
+This market has two sides. One side is the "Yes" share which will be worth $1 only if the outcome
+finalizes to yes, and the other side is the "No" share which will be worth $1 only if the outcome
+finalizes to no.
+Traders can then speculate on the market outcome, using each of their indivudal knowledge and
+information to inform their trades. For example, if Alice believes that KSM will be worth more
+than $100 with a probability of 80% they are incentivized to buy "Yes" shares up to the
+market price of $0.80.
+
+-The source of the above information is David M. Pennock and Rahul Sami's Computational Aspect
+of Prediction Markets in the Roughgarden-edited "Algorithmic Game Theory".-
+
+Markets are noted in the efficient market hypothesis to be excellent aggregators of information.
+It is specifically this property of markets that make prediction markets the most accurate
+of all available tools to forecast future outcomes. Therefore, it is proposed by Hanson that
+prediction markets can be used to make business decisions (i.e. Futarchy).
+
 ## Zeitgeist Governance / The Zeitgeist DAO
 
 Zeitgeist is a blockchain network but also a DAO that oversees the health and
@@ -41,7 +70,7 @@ vote for all ZGT holders to decide the final outcome of a market.
 ### Treasury
 
 Zeitgeist will have an on-chain treasury which can be permissionlessly requested for funds
-and will be paid out through majority acceptance of the Arbitration Council.
+and will be paid out through majority acceptance of the Arbitration Council. 
 
 ### Public Reporters
 
@@ -108,7 +137,7 @@ plan to airdrop 5% of the initial allocation of ZGT to REP holders.
 - Prediction Markets
 - Orderbook
 - Shares
-- Swaps     
+- AMM (LMSR-based)     
 
 ## Zeitgeist's Transition to a Parachain
 
@@ -160,6 +189,11 @@ probability...
 
 ### Futarchy
 
+Futarchy is the use of prediction markets to guide decision making. When prediction markets are
+used in Futarchy, they are sometimes referred to as _decision markets_ instead. However, the two
+are not mutually exclusive and any prediction market can double as a decision market if there is
+an entity that is bound to making its decision based on it.
+
 # Executive Summary
 
 ## Usages of the ZGT
@@ -192,5 +226,10 @@ including the governance ability of not only resolving markets, but electing the
 committee, the oracle committee, and the upgrade roadmap.
 
 ## Logarithmic Market Scoring Rule
+
+## Problems with the Continuous Double Auction / Orderbook
+
+The thin market problem. Liquidity must be bootstrapped in some way. Also the double
+coincidence of wants.
 
 [Hanson,LMSR]: https://mason.gmu.edu/~rhanson/mktscore.pdf
