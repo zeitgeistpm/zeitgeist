@@ -22,7 +22,7 @@ mod mock;
 mod tests;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
-pub struct AccountData<Balance> {
+pub struct AccountShares<Balance> {
     pub free: Balance,
     pub reserved: Balance,
 }
@@ -36,7 +36,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as Shares {
         pub Accounts get(fn accounts):
             double_map hasher (blake2_128_concat) T::AccountId, hasher (identity) T::Hash =>
-                AccountData<T::Balance>;
+                AccountShares<T::Balance>;
 
         pub TotalSupply get(fn total_supply): map hasher (identity) T::Hash => T::Balance;
     }

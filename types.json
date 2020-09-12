@@ -1,0 +1,56 @@
+{
+    "AccountShares": {
+        "free": "Balance",
+        "reserved": "Balance"
+    },
+    "MarketCreation": {
+        "__enum": [
+            "Permissionless",
+            "Advised"
+        ]
+    },
+    "MarketType": {
+        "__enum": [
+            "YesNo",
+            "Categorical",
+            "Scalar"
+        ]
+    },
+    "MarketStatus": {
+        "__enum": [
+            "Proposed",
+            "Active",
+            "Suspended",
+            "Closed",
+            "Reported",
+            "Disputed",
+            "Resolved"
+        ]
+    },
+    "Market": {
+        "creator": "AccountId",
+        "creator_fee": "u8",
+        "oracle": "AccountId",
+        "end_block": "BlockNumber",
+        "metadata": "[u8; 32]",
+        "market_type": "MarketType",
+        "outcomes": "u16",
+        "status": "MarketStatus",
+        "winning_outcome": "Option<u16>"
+    },
+    "OrderSide": {
+        "__enum": [
+            "Bid",
+            "Ask"
+        ]
+    },
+    "Order": {
+        "side": "OrderSide",
+        "maker": "AccountId",
+        "taker": "Option<AccountId>",
+        "share_id": "Hash",
+        "total": "Balance",
+        "price": "Balance",
+        "filled": "Balance"
+    }
+}
