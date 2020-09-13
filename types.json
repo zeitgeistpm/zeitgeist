@@ -1,4 +1,6 @@
 {
+    "Address": "AccountId",
+    "LookupSource": "AccountId",
     "AccountShares": {
         "free": "Balance",
         "reserved": "Balance"
