@@ -94,6 +94,10 @@ decl_event!(
     {
         /// A market has been created [market_id, creator]
         MarketCreated(MarketId, AccountId),
+        /// A pending market has been cancelled. [market_id, creator]
+        MarketCancelled(MarketId), /// NOTE: Maybe we should only allow rejections.
+        /// A pending market has been rejected as invalid. [market_id]
+        MarketRejected(MarketId),
         /// A market has been approved [market_id]
         MarketApproved(MarketId),
         /// A complete set of shares has been bought [market_id, buyer]
@@ -171,12 +175,17 @@ decl_module! {
         pub fn create(
             origin,
             oracle: T::AccountId,
+            market_type: MarketType,
             outcomes: u16,
             end_block: T::BlockNumber,
             metadata: [u8; 32],
             creation: MarketCreation,
         ) {
             let sender = ensure_signed(origin)?;
+
+            // PoC - Only binary markets are currenctly supported.
+            ensure!(market_type == MarketType::YesNo, "Only binary markets are currently supported.");
+            ensure!(outcomes == 3, "Only binary markets are currently supported.");
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
@@ -197,7 +206,7 @@ decl_module! {
                 outcomes,
                 end_block,
                 metadata,
-                market_type: MarketType::YesNo,
+                market_type,
                 status,
                 winning_outcome: None,
             };
@@ -234,6 +243,41 @@ decl_module! {
             Self::deposit_event(RawEvent::MarketApproved(market_id));
         }
 
+        #[weight = 0]
+        pub fn reject_market(origin, market_id: T::MarketId) {
+            T::ApprovalOrigin::ensure_origin(origin)?;
+
+            if let Some(market) = Self::markets(&market_id) {
+                let creator = market.creator;
+                let (_imbalance, _) =  T::Currency::slash_reserved(&creator, T::AdvisoryBond::get());
+                // TODO: Handle the imbalance by moving it to the treasury.
+                <Markets<T>>::remove(&market_id);
+                Self::deposit_event(RawEvent::MarketRejected(market_id));
+            } else {
+                Err(Error::<T>::MarketDoesNotExist)?;
+            }
+        }
+
+        /// NOTE: Only for PoC probably - should only allow rejections
+        /// in a production environment since this better aligns incentives.
+        /// See also: Polkadot Treasury
+        #[weight = 0]
+        pub fn cancel_pending_market(origin, market_id: T::MarketId) {
+            let sender = ensure_signed(origin)?;
+
+            if let Some(market) = <Markets<T>>::get(&market_id) {
+                let creator = market.creator;
+                let status = market.status;
+                ensure!(creator == sender, "Canceller must be market creator.");
+                ensure!(status == MarketStatus::Proposed, "Market must be pending approval.");
+                // The market is being cancelled, return the deposit.
+                T::Currency::unreserve(&creator, T::AdvisoryBond::get());
+                <Markets<T>>::remove(&market_id);
+                Self::deposit_event(RawEvent::MarketCancelled(market_id));
+            } else {
+                Err(Error::<T>::MarketDoesNotExist)?;
+            }
+        }
 
         /// Generates a complete set of outcome shares for a market.
         ///

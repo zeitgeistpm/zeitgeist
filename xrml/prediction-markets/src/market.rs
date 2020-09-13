@@ -16,7 +16,7 @@ pub enum MarketCreation {
 
 /// Defines the type of market.
 /// All markets also have the `Invalid` resolution.
-#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+#[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
 pub enum MarketType {
     // Binary market.
     YesNo,
