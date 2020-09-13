@@ -4,20 +4,21 @@
         "reserved": "Balance"
     },
     "MarketCreation": {
-        "__enum": [
+        "_enum": [
             "Permissionless",
             "Advised"
         ]
     },
+    "MarketId": "u128",
     "MarketType": {
-        "__enum": [
+        "_enum": [
             "YesNo",
             "Categorical",
             "Scalar"
         ]
     },
     "MarketStatus": {
-        "__enum": [
+        "_enum": [
             "Proposed",
             "Active",
             "Suspended",
@@ -39,7 +40,7 @@
         "winning_outcome": "Option<u16>"
     },
     "OrderSide": {
-        "__enum": [
+        "_enum": [
             "Bid",
             "Ask"
         ]
