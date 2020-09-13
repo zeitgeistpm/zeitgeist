@@ -228,19 +228,18 @@ decl_module! {
         pub fn approve_market(origin, market_id: T::MarketId) {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
-            // Make sure this market exists.
-            ensure!(
-                <Markets<T>>::contains_key(market_id.clone()), 
-                Error::<T>::MarketDoesNotExist,
-            );
-            
-            T::Currency::unreserve(&Self::markets(market_id.clone()).unwrap().creator, T::AdvisoryBond::get());
-
-            <Markets<T>>::mutate(market_id.clone(), |m| {
-                m.as_mut().unwrap().status = MarketStatus::Active;
-            });
-
-            Self::deposit_event(RawEvent::MarketApproved(market_id));
+            if let Some(market) = Self::markets(&market_id) {
+                let creator = market.creator;
+                
+                T::Currency::unreserve(&creator, T::AdvisoryBond::get());
+                <Markets<T>>::mutate(&market_id, |m| {
+                    m.as_mut().unwrap().status = MarketStatus::Active;
+                });
+    
+                Self::deposit_event(RawEvent::MarketApproved(market_id));
+            } else {
+                Err(Error::<T>::MarketDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
