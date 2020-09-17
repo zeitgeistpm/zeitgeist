@@ -7,6 +7,34 @@ resolution. Additionally, Zeitgeist is a protocol for efficient trading of predi
 market shares and will one day become the backbone of the decentralized finance ecosystem
 by allowing for traders to create complex financial contracts on virtually _anything_.
 
+## Table of Contents
+
+- [What are Prediction Markets?](#what-are-prediction-markets)
+- [How Zeitgeist Works](#how-zeitgeist-works)
+  - [Market Creation](#market-creation)
+  - [Trading](#trading)
+  - [Oracle Reports](#oracle-reports)
+  - [Dispute Resolution](#dispute-resolution)
+  - [Market Finalization](#market-finalization)
+- [Governance](#governance)
+  - [Executive Council](#executive-council)
+  - [Advisory Committee](#advisory-committee)
+  - [Democracy](#democracy)
+  - [Treasury](#treasury)
+  - [Court](#court)
+- [Token Economics](#token-economics)
+  - [Uses of ZGT](#uses-of-zgt)
+  - [Emission Schedule](#emission-schedule)
+  - [Fair Launch](#fair-launch)
+- [Roadmap]
+- [Applications](#applications-and-use-cases)
+  - [E-Sports](#e-sports)
+  - [Politics](#politics)
+  - [Cryptocurrency](#cryptocurrency)
+  - [Insurance](#insurance)
+  - [Startups](#startups)
+  - [Futarchy](#futarchy)
+
 ## What are Prediction Markets?
 
 A prediction market is a type of market mechanism that is designed to solve the information
@@ -36,7 +64,19 @@ It is specifically this property of markets that make prediction markets the mos
 of all available tools to forecast future outcomes. Therefore, it is proposed by Hanson that
 prediction markets can be used to make business decisions (i.e. Futarchy).
 
-## Zeitgeist Governance / The Zeitgeist DAO
+## How Zeitgeist Works
+
+### Market Creation
+
+### Trading
+
+### Oracle Reports
+
+### Dispute Resolution
+
+### Market Finalizaton
+
+## Governance
 
 Zeitgeist is a blockchain network but also a DAO that oversees the health and
 sustainability of this network. Along with the stakers, the primary maintainers of
@@ -44,6 +84,22 @@ the network, the ZGT holders themselves have the opportunity to evolve the proto
 In times of crisis, the ZGT holders will be the party of last resort to avert danger
 and protect the protocol from collapsing. For these reasons the ZGT is a governance token
 of the network. Below we detail the governance mechanism of the Zeitgeist DAO.
+
+Zeitgeist governance is divided into five distinct chambers, each with checks and balances
+on the other chambers.
+
+### Executive Council
+
+There may be a large incentive for a reporter to buy the opposing share of a market
+then report fraudelently. In most cases, the native dispute system will incentivize and
+fairly resolve the fraudulent behaviour before a payout is made. However, in some cases
+it may be that there is such an incentive that a significant amount of ZGT holders are
+reporting fraudelently. In Augur this is resolved through a protocol fork - a messy process
+that requires all REP holders to migrate their tokens to what they believe is the right
+side of history within a limited time at the risk of losing all their REP completely. 
+Instead of using a forking procedure, Zeitgeist solves this problem more elegantly through
+use of an elected on-chain body known as the _Executive Council_ that can call a public
+vote for all ZGT holders to decide the final outcome of a market.
 
 ### Advisory Committee
 
@@ -54,25 +110,16 @@ there as assurance to the network that the market will not be resolved as an inv
 market. This is because invalid markets are overall harmful for an ecosystem (see the 
 section on [invalid markets](#invalid-markets)).
 
-### Arbitration Council
-
-There may be a large incentive for a reporter to buy the opposing share of a market
-then report fraudelently. In most cases, the native dispute system will incentivize and
-fairly resolve the fraudulent behaviour before a payout is made. However, in some cases
-it may be that there is such an incentive that a significant amount of ZGT holders are
-reporting fraudelently. In Augur this is resolved through a protocol fork - a messy process
-that requires all REP holders to migrate their tokens to what they believe is the right
-side of history within a limited time at the risk of losing all their REP completely. 
-Instead of using a forking procedure, Zeitgeist solves this problem more elegantly through
-use of an elected on-chain body known as the _Arbitration Council_ that can call a public
-vote for all ZGT holders to decide the final outcome of a market.
+### Democracy
 
 ### Treasury
 
 Zeitgeist will have an on-chain treasury which can be permissionlessly requested for funds
-and will be paid out through majority acceptance of the Arbitration Council. 
+and will be paid out through majority acceptance of the Executive Council. 
 
-### Public Reporters
+### Advisory Committee
+
+### Public Reporters / Court
 
 Sometimes it may be desirable for a market creator to not specify a particular oracle source,
 and rather just a resolution source. In cases like this, the default is to draw an oracle
@@ -82,7 +129,69 @@ the first reporter from the public reporter pool can make a report. They then ha
 for making another public report for a number which is a function of how many times in the past
 they have made public reporting.
 
+## Token Economics
+
+### Uses of ZGT
+
+### Emission Schedule
+
+### Fair Launch
+
+## Roadmap
+
+We aim to distribute ZGT in as fair and egalitarian way as possible, while still
+acknowledging the necessary steps to bring the network to fruition. Because we have
+such a great foundation laid down for us by the Augur protocol, and because the Augur
+community has demonstrated itself knowledgable about prediction markets in general we
+plan to airdrop 5% of the initial allocation of ZGT to REP holders.
+
+- 10% Initial Founding Team
+-  5% Airdrop to REP holders that signal.
+- 10% ETH lockdrop.
+-  5% Early investors.
+-  5% Users of the testnet.
+- 25% Initial Uniswap Offering
+- 40% Reserves
+
+## Applications and Use Cases
+
+Finally we conclude with some high level descriptions of use cases and business that can
+be built atop the Zeitgesit blockchain network.
+
+### E-Sports
+
+### Politics
+
+### Cryptocurrency
+
+### Insurance
+
+A next generation decentralized insurance business can be built atop the Zeitgeist protocol.
+This is because insurance is essientially a way for an individual to de-risk themselves
+from a certain event happening. Prediction markets are perfect for this as the individual
+just needs to purchase shares in the event that they are hoping will not take place.
+
+For example, if a person wants to insure themselves against a DeFi protocol failing and
+losing all of their money what they can do is the following:
+
+1) They would purchase shares in a "Will DeFi protocol X collapse?" for "Yes" equal to the
+probability...
+
+### Startups
+
+### Futarchy
+
+Futarchy is the use of prediction markets to guide decision making. When prediction markets are
+used in Futarchy, they are sometimes referred to as _decision markets_ instead. However, the two
+are not mutually exclusive and any prediction market can double as a decision market if there is
+an entity that is bound to making its decision based on it.
+
+<!-- Everything below this line is draft content to be integrated into the real content above -->
+<!--
+
 ## Protocol Description
+
+TODO: merge into the how it works section
 
 ### Market Creation
 
@@ -115,22 +224,6 @@ hash to be published on-chain.
 ### Invalid Markets
 
 TODO: Write about invalid markets.
-
-## Roadmap
-
-We aim to distribute ZGT in as fair and egalitarian way as possible, while still
-acknowledging the necessary steps to bring the network to fruition. Because we have
-such a great foundation laid down for us by the Augur protocol, and because the Augur
-community has demonstrated itself knowledgable about prediction markets in general we
-plan to airdrop 5% of the initial allocation of ZGT to REP holders.
-
-- 10% Initial Founding Team
--  5% Airdrop to REP holders that signal.
-- 10% ETH lockdrop.
--  5% Early investors.
--  5% Users of the testnet.
-- 25% Initial Uniswap Offering
-- 40% Reserves
 
 ## Substrate Pallets
 
@@ -167,32 +260,6 @@ market that will use a Schellingcoin-like mechanism to rebalance.
 Option 2 -
 Zeitgeist will use a simple collateral-based stablecoin.
 
-## Use Cases
-
-Finally we conclude with some high level descriptions of use cases and business that can
-be built atop the Zeitgesit blockchain network.
-
-### E-Sports Betting
-
-### Insurance
-
-A next generation decentralized insurance business can be built atop the Zeitgeist protocol.
-This is because insurance is essientially a way for an individual to de-risk themselves
-from a certain event happening. Prediction markets are perfect for this as the individual
-just needs to purchase shares in the event that they are hoping will not take place.
-
-For example, if a person wants to insure themselves against a DeFi protocol failing and
-losing all of their money what they can do is the following:
-
-1) They would purchase shares in a "Will DeFi protocol X collapse?" for "Yes" equal to the
-probability...
-
-### Futarchy
-
-Futarchy is the use of prediction markets to guide decision making. When prediction markets are
-used in Futarchy, they are sometimes referred to as _decision markets_ instead. However, the two
-are not mutually exclusive and any prediction market can double as a decision market if there is
-an entity that is bound to making its decision based on it.
 
 # Executive Summary
 
@@ -239,3 +306,5 @@ If a market goes through the entire court process and ultimately reaches the con
 haircut and the ZGT will be redistributed to those who participated in the dispute process.
 
 [Hanson,LMSR]: https://mason.gmu.edu/~rhanson/mktscore.pdf
+
+-->
