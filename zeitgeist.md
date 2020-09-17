@@ -96,7 +96,7 @@ fairly resolve the fraudulent behaviour before a payout is made. However, in som
 it may be that there is such an incentive that a significant amount of ZGT holders are
 reporting fraudelently. In Augur this is resolved through a protocol fork - a messy process
 that requires all REP holders to migrate their tokens to what they believe is the right
-side of history within a limited time at the risk of losing all their REP completely. 
+side of history within a limited time at the risk of losing all their REP completely.
 Instead of using a forking procedure, Zeitgeist solves this problem more elegantly through
 use of an elected on-chain body known as the _Executive Council_ that can call a public
 vote for all ZGT holders to decide the final outcome of a market.
@@ -107,7 +107,7 @@ When someone creates a market on Zeitgeist they have two available options for t
 of the deposit they are willing to make using ZGT. One option is to place a large deposit
 for example 10 ZGT and have their market be activated right away. The large deposit is
 there as assurance to the network that the market will not be resolved as an invalid
-market. This is because invalid markets are overall harmful for an ecosystem (see the 
+market. This is because invalid markets are overall harmful for an ecosystem (see the
 section on [invalid markets](#invalid-markets)).
 
 ### Democracy
@@ -115,7 +115,7 @@ section on [invalid markets](#invalid-markets)).
 ### Treasury
 
 Zeitgeist will have an on-chain treasury which can be permissionlessly requested for funds
-and will be paid out through majority acceptance of the Executive Council. 
+and will be paid out through majority acceptance of the Executive Council.
 
 ### Advisory Committee
 
@@ -146,10 +146,10 @@ community has demonstrated itself knowledgable about prediction markets in gener
 plan to airdrop 5% of the initial allocation of ZGT to REP holders.
 
 - 10% Initial Founding Team
--  5% Airdrop to REP holders that signal.
+- 5% Airdrop to REP holders that signal.
 - 10% ETH lockdrop.
--  5% Early investors.
--  5% Users of the testnet.
+- 5% Early investors.
+- 5% Users of the testnet.
 - 25% Initial Uniswap Offering
 - 40% Reserves
 
@@ -174,8 +174,8 @@ just needs to purchase shares in the event that they are hoping will not take pl
 For example, if a person wants to insure themselves against a DeFi protocol failing and
 losing all of their money what they can do is the following:
 
-1) They would purchase shares in a "Will DeFi protocol X collapse?" for "Yes" equal to the
-probability...
+1. They would purchase shares in a "Will DeFi protocol X collapse?" for "Yes" equal to the
+   probability...
 
 ### Startups
 
@@ -199,7 +199,7 @@ TODO: merge into the how it works section
 
 Shares are generated and destroyed as a complete set directly from the market. When shares
 are generated, the amount held in the reserve pool of that market will be increased. When shares
-are destroyed, the supply will decreased and the reserve pool will be used to pay out ZGT in 
+are destroyed, the supply will decreased and the reserve pool will be used to pay out ZGT in
 accordance to the amount of shares burned.
 
 Shares can be transferred freely and traded among users of the network. They are identified by
@@ -230,7 +230,7 @@ TODO: Write about invalid markets.
 - Prediction Markets
 - Orderbook
 - Shares
-- AMM (LMSR-based)     
+- AMM (LMSR-based)
 
 ## Zeitgeist's Transition to a Parachain
 
