@@ -1,11 +1,14 @@
 # Zeitgesit Protocol
 
-Zeitgeist is a decentralized network for creating, betting on, and resolving
-prediction markets. The platform's native currency, the Zeitgeist Token (ZGT),
-is used to sway the direction of the network, and as a means of last-call dispute
-resolution. Additionally, Zeitgeist is a protocol for efficient trading of prediciton
-market shares and will one day become the backbone of the decentralized finance ecosystem
-by allowing for traders to create complex financial contracts on virtually _anything_.
+Zeitgeist is a blockchain for creating, betting on, and resolving prediction
+markets. A prediction market, as Zeitgeist implements them, is a permissionless
+speculative market that allows anyone to pose a question about a future
+occurrance and other individuals to trade on the outcomes. Zeitgeist's native
+currency, the ZGT, is used as bonds for creating and resolving markets, as well
+as the default trading pair for all markets. Additionally, Zeitgeist implements
+a robust governance protocol around its core functionality that allows ZGT
+holders to participate, vote, and ultimately sway the direction of the network
+in perpetuity.
 
 ## Table of Contents
 
@@ -37,34 +40,57 @@ by allowing for traders to create complex financial contracts on virtually _anyt
 
 ## What are Prediction Markets?
 
-A prediction market is a type of market mechanism that is designed to solve the information
-aggregation problem. In brief, the information aggregation problem can be described as
-arising out of the need of an individual (known as the _aggregator_) wishing to obtain
-a prediction on a particular variable. A number of inividuals known as the _informants_
-each hold different views and information regarding the variable. A prediction market is
-a mechanism to incentivize informants to report truthfully about their information and
-therefore create a robust aggregation.
+A prediction market is a type of market mechanism that is designed to solve the
+information aggregation problem. In brief, the information aggregation problem
+can be described as arising out of the need of an individual (known as the
+_aggregator_) wishing to obtain a prediction on a particular variable. A number
+of inividuals known as the _informants_ each hold different views and
+information regarding the variable. A prediction market is a mechanism to
+incentivize informants to report truthfully about their information and
+therefore create a robust aggregation and accurate signal of the predicted
+outcome.
 
-For example, let's say an individual would like to know what the predicted price of
-Kusama ($KSM) will be at the end of year 2021. This individual can create a market
-that asks "Will the price of KSM be more than $100 according to CoinGecko on December 31, 2020?".
-This market has two sides. One side is the "Yes" share which will be worth $1 only if the outcome
-finalizes to yes, and the other side is the "No" share which will be worth $1 only if the outcome
-finalizes to no.
-Traders can then speculate on the market outcome, using each of their indivudal knowledge and
-information to inform their trades. For example, if Alice believes that KSM will be worth more
-than $100 with a probability of 80% they are incentivized to buy "Yes" shares up to the
-market price of $0.80.
+For example, let's say an individual would like to discover the predicted price
+of Kusama's native token, the KSM, in the year 2021. Before this individual,
+known as the aggregator, can create this market they must form their question in
+a precise way. Therefore, when they create the market they would pose the
+questions as "Will the price of KSM be more than \$100 according to the
+CoinGecko API on July 20, 2021 at 23:59 UTC?". This form of the question is much
+more precise than "Will KSM be worth a lot in 2021?".
 
--The source of the above information is David M. Pennock and Rahul Sami's Computational Aspect
-of Prediction Markets in the Roughgarden-edited "Algorithmic Game Theory".-
+Once the market is created, in the most common scenario there are two tradable
+sides: "Yes" or "No". A market maker can generate 1 "Yes" share and 1 "No" share
+in exchange for 1 of the base currency (ZGT). If the market is later found to
+resolve to "Yes" then the "Yes" shares will be redeemable for 1 ZGT. Vice versa,
+if the market later resolves to "No", the "No" shares will be worth 1 ZGT. The
+losing share is not redeemable for ZGT.
 
-Markets are noted in the efficient market hypothesis to be excellent aggregators of information.
-It is specifically this property of markets that make prediction markets the most accurate
-of all available tools to forecast future outcomes. Therefore, it is proposed by Hanson that
-prediction markets can be used to make business decisions (i.e. Futarchy).
+Traders can speculate and bet based on their individual information and belief
+on the market outcome. While trading, the price of each share reflects the
+expected probability that the market will resolve on that outcome. For example,
+if "Yes" shares in the market are trading at
+$0.60 while "No" shares
+are trading at $0.39 this displays an expected
+probability of the market resolving "Yes" at 60%. The difference between the
+price of the "Yes" share and the price of the "No" share reflects the spread in
+the market, which can be arbitraged by market makers. If a trader believes the
+probability of KSM being worth more than
+$100 at the specified date is actually 80%, they are economically
+incentivized to buy "Yes" shares up to the price of $0.80.
+Similarly, they could sell "No" shares down to the price of \$0.20.
+
+<!-- The source of the above information is David M. Pennock and Rahul Sami's Computational Aspect
+of Prediction Markets in the Roughgarden-edited "Algorithmic Game Theory". -->
+
+Markets are noted in the efficient market hypothesis to be excellent aggregators
+of information. It is specifically this property of markets that make prediction
+markets the most accurate of all available tools to forecast future outcomes.
+Therefore, it is proposed by Robin Hanson that prediction markets can be used to
+make business decisions (i.e. [Futarchy](#futarchy)).
 
 ## How Zeitgeist Works
+
+We will now discuss from a highlevel
 
 ### Market Creation
 
@@ -79,55 +105,60 @@ prediction markets can be used to make business decisions (i.e. Futarchy).
 ## Governance
 
 Zeitgeist is a blockchain network but also a DAO that oversees the health and
-sustainability of this network. Along with the stakers, the primary maintainers of
-the network, the ZGT holders themselves have the opportunity to evolve the protocol.
-In times of crisis, the ZGT holders will be the party of last resort to avert danger
-and protect the protocol from collapsing. For these reasons the ZGT is a governance token
-of the network. Below we detail the governance mechanism of the Zeitgeist DAO.
+sustainability of this network. Along with the stakers, the primary maintainers
+of the network, the ZGT holders themselves have the opportunity to evolve the
+protocol. In times of crisis, the ZGT holders will be the party of last resort
+to avert danger and protect the protocol from collapsing. For these reasons the
+ZGT is a governance token of the network. Below we detail the governance
+mechanism of the Zeitgeist DAO.
 
-Zeitgeist governance is divided into five distinct chambers, each with checks and balances
-on the other chambers.
+Zeitgeist governance is divided into five distinct chambers, each with checks
+and balances on the other chambers.
 
 ### Executive Council
 
-There may be a large incentive for a reporter to buy the opposing share of a market
-then report fraudelently. In most cases, the native dispute system will incentivize and
-fairly resolve the fraudulent behaviour before a payout is made. However, in some cases
-it may be that there is such an incentive that a significant amount of ZGT holders are
-reporting fraudelently. In Augur this is resolved through a protocol fork - a messy process
-that requires all REP holders to migrate their tokens to what they believe is the right
-side of history within a limited time at the risk of losing all their REP completely.
-Instead of using a forking procedure, Zeitgeist solves this problem more elegantly through
-use of an elected on-chain body known as the _Executive Council_ that can call a public
+There may be a large incentive for a reporter to buy the opposing share of a
+market then report fraudelently. In most cases, the native dispute system will
+incentivize and fairly resolve the fraudulent behaviour before a payout is made.
+However, in some cases it may be that there is such an incentive that a
+significant amount of ZGT holders are reporting fraudelently. In Augur this is
+resolved through a protocol fork - a messy process that requires all REP holders
+to migrate their tokens to what they believe is the right side of history within
+a limited time at the risk of losing all their REP completely. Instead of using
+a forking procedure, Zeitgeist solves this problem more elegantly through use of
+an elected on-chain body known as the _Executive Council_ that can call a public
 vote for all ZGT holders to decide the final outcome of a market.
 
 ### Advisory Committee
 
-When someone creates a market on Zeitgeist they have two available options for the size
-of the deposit they are willing to make using ZGT. One option is to place a large deposit
-for example 10 ZGT and have their market be activated right away. The large deposit is
-there as assurance to the network that the market will not be resolved as an invalid
-market. This is because invalid markets are overall harmful for an ecosystem (see the
-section on [invalid markets](#invalid-markets)).
+When someone creates a market on Zeitgeist they have two available options for
+the size of the deposit they are willing to make using ZGT. One option is to
+place a large deposit for example 10 ZGT and have their market be activated
+right away. The large deposit is there as assurance to the network that the
+market will not be resolved as an invalid market. This is because invalid
+markets are overall harmful for an ecosystem (see the section on
+[invalid markets](#invalid-markets)).
 
 ### Democracy
 
 ### Treasury
 
-Zeitgeist will have an on-chain treasury which can be permissionlessly requested for funds
-and will be paid out through majority acceptance of the Executive Council.
+Zeitgeist will have an on-chain treasury which can be permissionlessly requested
+for funds and will be paid out through majority acceptance of the Executive
+Council.
 
 ### Advisory Committee
 
 ### Public Reporters / Court
 
-Sometimes it may be desirable for a market creator to not specify a particular oracle source,
-and rather just a resolution source. In cases like this, the default is to draw an oracle
-from the public reporters pool. The public reporters pool can be joined by any ZGT holder.
-They stake their ZGT and enter into the pool. Anytime there is a market that needs resolution
-the first reporter from the public reporter pool can make a report. They then have a cooldown
-for making another public report for a number which is a function of how many times in the past
-they have made public reporting.
+Sometimes it may be desirable for a market creator to not specify a particular
+oracle source, and rather just a resolution source. In cases like this, the
+default is to draw an oracle from the public reporters pool. The public
+reporters pool can be joined by any ZGT holder. They stake their ZGT and enter
+into the pool. Anytime there is a market that needs resolution the first
+reporter from the public reporter pool can make a report. They then have a
+cooldown for making another public report for a number which is a function of
+how many times in the past they have made public reporting.
 
 ## Token Economics
 
@@ -140,10 +171,11 @@ they have made public reporting.
 ## Roadmap
 
 We aim to distribute ZGT in as fair and egalitarian way as possible, while still
-acknowledging the necessary steps to bring the network to fruition. Because we have
-such a great foundation laid down for us by the Augur protocol, and because the Augur
-community has demonstrated itself knowledgable about prediction markets in general we
-plan to airdrop 5% of the initial allocation of ZGT to REP holders.
+acknowledging the necessary steps to bring the network to fruition. Because we
+have such a great foundation laid down for us by the Augur protocol, and because
+the Augur community has demonstrated itself knowledgable about prediction
+markets in general we plan to airdrop 5% of the initial allocation of ZGT to REP
+holders.
 
 - 10% Initial Founding Team
 - 5% Airdrop to REP holders that signal.
@@ -155,8 +187,8 @@ plan to airdrop 5% of the initial allocation of ZGT to REP holders.
 
 ## Applications and Use Cases
 
-Finally we conclude with some high level descriptions of use cases and business that can
-be built atop the Zeitgesit blockchain network.
+Finally we conclude with some high level descriptions of use cases and business
+that can be built atop the Zeitgesit blockchain network.
 
 ### E-Sports
 
@@ -166,25 +198,27 @@ be built atop the Zeitgesit blockchain network.
 
 ### Insurance
 
-A next generation decentralized insurance business can be built atop the Zeitgeist protocol.
-This is because insurance is essientially a way for an individual to de-risk themselves
-from a certain event happening. Prediction markets are perfect for this as the individual
-just needs to purchase shares in the event that they are hoping will not take place.
+A next generation decentralized insurance business can be built atop the
+Zeitgeist protocol. This is because insurance is essientially a way for an
+individual to de-risk themselves from a certain event happening. Prediction
+markets are perfect for this as the individual just needs to purchase shares in
+the event that they are hoping will not take place.
 
-For example, if a person wants to insure themselves against a DeFi protocol failing and
-losing all of their money what they can do is the following:
+For example, if a person wants to insure themselves against a DeFi protocol
+failing and losing all of their money what they can do is the following:
 
-1. They would purchase shares in a "Will DeFi protocol X collapse?" for "Yes" equal to the
-   probability...
+1. They would purchase shares in a "Will DeFi protocol X collapse?" for "Yes"
+   equal to the probability...
 
 ### Startups
 
 ### Futarchy
 
-Futarchy is the use of prediction markets to guide decision making. When prediction markets are
-used in Futarchy, they are sometimes referred to as _decision markets_ instead. However, the two
-are not mutually exclusive and any prediction market can double as a decision market if there is
-an entity that is bound to making its decision based on it.
+Futarchy is the use of prediction markets to guide decision making. When
+prediction markets are used in Futarchy, they are sometimes referred to as
+_decision markets_ instead. However, the two are not mutually exclusive and any
+prediction market can double as a decision market if there is an entity that is
+bound to making its decision based on it.
 
 <!-- Everything below this line is draft content to be integrated into the real content above -->
 <!--
