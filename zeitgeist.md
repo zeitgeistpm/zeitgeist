@@ -232,4 +232,10 @@ committee, the oracle committee, and the upgrade roadmap.
 The thin market problem. Liquidity must be bootstrapped in some way. Also the double
 coincidence of wants.
 
+# Court
+
+If a market goes through the entire court process and ultimately reaches the conclusion of
+"Invalid" then all of the shares that were used to participate in the market will take a 10%
+haircut and the ZGT will be redistributed to those who participated in the dispute process.
+
 [Hanson,LMSR]: https://mason.gmu.edu/~rhanson/mktscore.pdf
