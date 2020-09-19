@@ -19,7 +19,7 @@ pub enum MarketCreation {
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
 pub enum MarketType {
     // Binary market.
-    YesNo,
+    Binary,
     // A market with a number of categorical outcomes.
     Categorical,
     Scalar,

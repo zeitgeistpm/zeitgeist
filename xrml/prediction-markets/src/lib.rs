@@ -183,8 +183,8 @@ decl_module! {
         ) {
             let sender = ensure_signed(origin)?;
 
-            // PoC - Only binary markets are currenctly supported.
-            ensure!(market_type == MarketType::YesNo, "Only binary markets are currently supported.");
+            // PoC - Only binary markets are currently supported.
+            ensure!(market_type == MarketType::Binary, "Only binary markets are currently supported.");
             ensure!(outcomes == 3, "Only binary markets are currently supported.");
 
             let status: MarketStatus = match creation {
