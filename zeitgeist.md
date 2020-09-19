@@ -259,20 +259,23 @@ holders.
 - 25% Initial Uniswap Offering
 - 40% Reserves
 
-### PoC-1
+### PoC-1 "Battery Park"
 
-The first Proof-of-Concept release, codenamed Hanson will have ..
-
-- Hanson testnet.
+- Battery Park testnet.
 - Trading uses naive orderbooks.
+- Polkadot-JS Apps integration.
 
-### PoC-2
+### PoC-2 "Alphabet City"
 
-- Pennock testnet.
+- Alphabet City testnet.
 - Next version of orderbooks.
 - The ability to use a LS-LMSR AMM.
 
-### Release
+### Mainnet
+
+- The Z8 token launches.
+- Mobile application.
+
 
 ## Applications and Use Cases
 

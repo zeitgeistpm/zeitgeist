@@ -9,7 +9,7 @@ use sp_runtime::traits::{Verify, IdentifyAccount};
 use sc_service::ChainType;
 
 // The URL for the telemetry server.
-// const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
@@ -155,3 +155,33 @@ fn testnet_genesis(
 		}),
 	}
 }
+
+// pub fn battery_park_testnet_config() -> Result<ChainSpec, String> {
+// 	let mut properties = Map::new();
+// 	properties.insert("tokenSymbol".into(), "Z8".into());
+// 	properties.insert("tokenDecimals".into(), 10.into());
+
+// 	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
+
+// 	Ok(ChainSpec::from_genesis(
+// 		"Zeitgeist Battery Park",
+// 		"battery_park",
+// 		ChainType::Live,
+// 		move || {
+// 			battery_park_genesis(
+// 				wasm_binary,
+
+// 			)
+// 		},
+// 		// Bootnodes
+// 		vec![],
+// 		// Telemetry
+// 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
+// 		// Protocol ID
+// 		Some("battery_park"),
+// 		// Properties
+// 		Some(properties),
+// 		Defaul::default(),
+// 	))
+// }
+
