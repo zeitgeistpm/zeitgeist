@@ -14,7 +14,7 @@
     "MarketId": "u128",
     "MarketType": {
         "_enum": [
-            "YesNo",
+            "Binary",
             "Categorical",
             "Scalar"
         ]
