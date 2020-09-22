@@ -1,7 +1,7 @@
 use crate::{Module, Trait};
 use sp_core::H256;
-use frame_system::EnsureRoot;
-use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
+use frame_system::EnsureSignedBy;
+use frame_support::{impl_outer_origin, parameter_types, ord_parameter_types, weights::Weight};
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     testing::Header, Perbill, ModuleId,
@@ -14,6 +14,8 @@ pub type MarketId = u128;
 
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
+pub const CHARLIE: AccountId = 2;
+pub const SUDO: AccountId = 69;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -85,9 +87,13 @@ parameter_types! {
     pub const PmModuleId: ModuleId = ModuleId(*b"test/prm");
     pub const ReportingPeriod: BlockNumber = 10;
     pub const DisputePeriod: BlockNumber = 10;
-    pub const DisputeBond: Balance = 100;
+	pub const DisputeBond: Balance = 100;
+	pub const OracleBond: Balance = 100;
     pub const ValidityBond: Balance = 200;
     pub const AdvisoryBond: Balance = 50;
+}
+ord_parameter_types! {
+	pub const Sudo: AccountId = 69;
 }
 
 impl Trait for Test {
@@ -101,7 +107,8 @@ impl Trait for Test {
 	type DisputeBond = DisputeBond;
 	type ValidityBond = ValidityBond;
 	type AdvisoryBond = AdvisoryBond;
-    type ApprovalOrigin = EnsureRoot<AccountId>;
+	type OracleBond = OracleBond;
+    type ApprovalOrigin = EnsureSignedBy<Sudo, AccountId>;
 }
 
 pub type Balances = pallet_balances::Module<Test>;

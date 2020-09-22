@@ -69,6 +69,9 @@ pub trait Trait: system::Trait {
     /// The base amount of currency that must be bonded for a market approved by the
     ///  advisory committee.
     type AdvisoryBond: Get<BalanceOf<Self>>;
+    /// The base amount of currency that must be bonded to ensure the oracle reports
+    ///  in a timely manner.
+    type OracleBond: Get<BalanceOf<Self>>;
 
     type ApprovalOrigin: EnsureOrigin<<Self as system::Trait>::Origin>;
 }
@@ -147,6 +150,8 @@ decl_module! {
  
         const AdvisoryBond: BalanceOf<T> = T::AdvisoryBond::get();
         const DisputeBond: BalanceOf<T> = T::DisputeBond::get();
+        const OracleBond: BalanceOf<T> = T::OracleBond::get();
+        // TODO: Rename validity bond?
         const ValidityBond: BalanceOf<T> = T::ValidityBond::get();
 
         type Error = Error<T>;
@@ -187,13 +192,19 @@ decl_module! {
             ensure!(market_type == MarketType::Binary, "Only binary markets are currently supported.");
             ensure!(outcomes == 3, "Only binary markets are currently supported.");
 
+            // Check the end_block is in the future.
+            let current_block = <frame_system::Module<T>>::block_number();
+            ensure!(current_block < end_block, "End block must be in the future.");
+
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
-                    T::Currency::reserve(&sender, T::ValidityBond::get())?;
+                    let required_bond = T::ValidityBond::get() + T::OracleBond::get();
+                    T::Currency::reserve(&sender, required_bond)?;
                     MarketStatus::Active
                 }
                 MarketCreation::Advised => {
-                    T::Currency::reserve(&sender, T::AdvisoryBond::get())?;
+                    let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
+                    T::Currency::reserve(&sender, required_bond)?;
                     MarketStatus::Proposed
                 }
             };
