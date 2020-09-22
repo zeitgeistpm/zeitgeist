@@ -6,7 +6,8 @@ use zeitgeist_runtime::{
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
-use sc_service::ChainType;
+use sc_service::{ChainType, config::TelemetryEndpoints};
+use jsonrpc_core::serde_json::Map;
 
 // The URL for the telemetry server.
 const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -168,9 +169,9 @@ pub fn battery_park_testnet_config() -> Result<ChainSpec, String> {
 		"battery_park",
 		ChainType::Live,
 		move || {
-			battery_park_genesis(
+			testnet_genesis(
 				wasm_binary,
-				/// Initial PoA authorities
+				// Initial PoA authorities
 				vec![
 					authority_keys_from_seed("Alice"),
 					authority_keys_from_seed("Bob"),
@@ -203,7 +204,7 @@ pub fn battery_park_testnet_config() -> Result<ChainSpec, String> {
 		Some("battery_park"),
 		// Properties
 		Some(properties),
-		Defaul::default(),
+		Default::default(),
 	))
 }
 
