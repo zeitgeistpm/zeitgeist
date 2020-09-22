@@ -42,8 +42,8 @@ pub use frame_support::{
 
 /// Zeitgeist pallets.
 pub use orderbook_v1;
-pub use xrml_prediction_markets;
-pub use xrml_shares;
+pub use zrml_prediction_markets;
+pub use zrml_shares;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -261,7 +261,7 @@ impl pallet_sudo::Trait for Runtime {
 	type Call = Call;
 }
 
-impl xrml_shares::Trait for Runtime {
+impl zrml_shares::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 }
@@ -281,7 +281,7 @@ parameter_types! {
 	pub const AdvisoryBond: Balance = 10;
 }
 
-impl xrml_prediction_markets::Trait for Runtime {
+impl zrml_prediction_markets::Trait for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type Shares = Shares;
@@ -311,9 +311,9 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Zeitgeist pallets.
-		Shares: xrml_shares::{Module, Call, Storage, Event<T>},
+		Shares: zrml_shares::{Module, Call, Storage, Event<T>},
 		Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>},
-		PredictionMarkets: xrml_prediction_markets::{Module, Call, Storage, Event<T>},
+		PredictionMarkets: zrml_prediction_markets::{Module, Call, Storage, Event<T>},
 	}
 );
 

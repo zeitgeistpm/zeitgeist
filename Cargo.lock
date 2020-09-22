@@ -3529,8 +3529,8 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xrml-shares",
- "xrml-traits",
+ "zrml-shares",
+ "zrml-traits",
 ]
 
 [[package]]
@@ -7927,50 +7927,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xrml-prediction-markets"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "orderbook-v1",
- "pallet-balances",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "xrml-shares",
- "xrml-traits",
-]
-
-[[package]]
-name = "xrml-shares"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "xrml-traits",
-]
-
-[[package]]
-name = "xrml-swaps"
-version = "0.1.0"
-
-[[package]]
-name = "xrml-traits"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "yamux"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8048,9 +8004,9 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder-runner",
- "xrml-prediction-markets",
- "xrml-shares",
- "xrml-traits",
+ "zrml-prediction-markets",
+ "zrml-shares",
+ "zrml-traits",
 ]
 
 [[package]]
@@ -8072,6 +8028,50 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
+]
+
+[[package]]
+name = "zrml-prediction-markets"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orderbook-v1",
+ "pallet-balances",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "zrml-shares",
+ "zrml-traits",
+]
+
+[[package]]
+name = "zrml-shares"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "zrml-traits",
+]
+
+[[package]]
+name = "zrml-swaps"
+version = "0.1.0"
+
+[[package]]
+name = "zrml-traits"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
