@@ -29,7 +29,7 @@ use sp_runtime::traits::{
 };
 use sp_std::cmp;
 use sp_std::vec::Vec;
-use xrml_traits::shares::{ReservableShares, Shares};
+use zrml_traits::shares::{ReservableShares, Shares};
 
 #[cfg(test)]
 mod mock;

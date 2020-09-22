@@ -31,7 +31,7 @@ use sp_runtime::traits::{
     Member, One, Hash,
 };
 use sp_std::vec::Vec;
-use xrml_traits::shares::Shares;
+use zrml_traits::shares::Shares;
 
 #[cfg(test)]
 mod mock;

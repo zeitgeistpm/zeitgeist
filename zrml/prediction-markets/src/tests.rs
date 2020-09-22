@@ -4,7 +4,7 @@ use frame_support::{
     traits::{Currency, ReservableCurrency},
 };
 use sp_core::H256;
-use xrml_traits::shares::{Shares as SharesTrait, ReservableShares};
+use zrml_traits::shares::{Shares as SharesTrait, ReservableShares};
 
 #[test]
 fn it_works() {

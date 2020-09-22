@@ -29,7 +29,7 @@ use sp_runtime::traits::{
     AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, 
     Member, One, Hash,
 };
-use xrml_traits::shares::Shares;
+use zrml_traits::shares::Shares;
 
 // #[cfg(test)]
 // mod mock;

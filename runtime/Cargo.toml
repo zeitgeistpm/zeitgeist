@@ -8,10 +8,10 @@ version = '0.1.0'
 targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
-orderbook-v1 = { path = "../xrml/orderbook-v1", version = "0.1.0", default-features = false }
-xrml-prediction-markets = { path = "../xrml/prediction-markets", version = "0.1.0", default-features = false }
-xrml-shares = { path = "../xrml/shares", version = "0.1.0", default-features = false }
-xrml-traits = { path = "../xrml/traits", version = "0.1.0", default-features = false }
+orderbook-v1 = { path = "../zrml/orderbook-v1", version = "0.1.0", default-features = false }
+zrml-prediction-markets = { path = "../zrml/prediction-markets", version = "0.1.0", default-features = false }
+zrml-shares = { path = "../zrml/shares", version = "0.1.0", default-features = false }
+zrml-traits = { path = "../zrml/traits", version = "0.1.0", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -145,9 +145,9 @@ std = [
     'sp-transaction-pool/std',
     'sp-version/std',
     'orderbook-v1/std',
-    'xrml-prediction-markets/std',
-    'xrml-shares/std',
-    'xrml-traits/std'
+    'zrml-prediction-markets/std',
+    'zrml-shares/std',
+    'zrml-traits/std'
 ]
 
 [build-dependencies.wasm-builder-runner]

@@ -1,10 +1,11 @@
 [package]
-name = "xrml-bonding-curve"
+name = "zrml-shares"
 version = "0.1.0"
 authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"
 
 [dependencies]
+zrml-traits = { path = "../traits", version = "0.1.0", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -20,24 +21,6 @@ version = '2.0.0-rc6'
 default-features = false
 version = '2.0.0-rc6'
 
-[dependencies.orml-tokens]
-default-features = false
-git = 'https://github.com/open-web3-stack/open-runtime-module-library'
-version = '0.1.3-dev'
-
-[dependencies.orml-traits]
-default-features = false
-git = 'https://github.com/open-web3-stack/open-runtime-module-library'
-version = '0.1.3-dev'
-
-[dependencies.pallet-balances]
-default-features = false
-version = '2.0.0-rc6'
-
-[dependencies.sp-arithmetic]
-default-features = false
-version = '2.0.0-rc6'
-
 [dependencies.sp-core]
 default-features = false
 version = '2.0.0-rc6'
@@ -47,6 +30,10 @@ default-features = false
 version = '2.0.0-rc6'
 
 [dependencies.sp-runtime]
+default-features = false
+version = '2.0.0-rc6'
+
+[dependencies.sp-std]
 default-features = false
 version = '2.0.0-rc6'
 
@@ -70,10 +57,6 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'orml-tokens/std',
-    'orml-traits/std',
-    'pallet-balances/std',
-    'sp-arithmetic/std',
     'sp-io/std',
-    'sp-runtime/std',
+    'sp-std/std',
 ]

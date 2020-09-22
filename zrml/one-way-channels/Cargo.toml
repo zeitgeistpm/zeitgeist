@@ -1,5 +1,5 @@
 [package]
-name = "xrml-one-way-channels"
+name = "zrml-one-way-channels"
 version = "0.1.0"
 authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"

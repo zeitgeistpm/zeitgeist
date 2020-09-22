@@ -1,11 +1,13 @@
 [package]
-name = "xrml-shares"
+name = "orderbook-v1"
 version = "0.1.0"
 authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"
 
 [dependencies]
-xrml-traits = { path = "../traits", version = "0.1.0", default-features = false }
+pallet-balances = { version = "2.0.0-rc6", default-features = false }
+zrml-shares = { path = "../shares", version = "0.1.0", default-features = false }
+zrml-traits = { path = "../traits", version = "0.1.0", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -59,4 +61,7 @@ std = [
     'frame-system/std',
     'sp-io/std',
     'sp-std/std',
+    'pallet-balances/std',
+    "zrml-shares/std",
+    "zrml-traits/std"
 ]

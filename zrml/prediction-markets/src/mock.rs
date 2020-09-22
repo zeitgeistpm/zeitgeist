@@ -1,13 +1,16 @@
 use crate::{Module, Trait};
 use sp_core::H256;
+use frame_system::EnsureRoot;
 use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
-    testing::Header, Perbill,
+    testing::Header, Perbill, ModuleId,
 };
 
 pub type AccountId = u128;
 pub type Balance = u128;
+pub type BlockNumber = u64;
+pub type MarketId = u128;
 
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
@@ -31,7 +34,7 @@ impl frame_system::Trait for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
-	type BlockNumber = u64;
+	type BlockNumber = BlockNumber;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
@@ -67,20 +70,44 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
-impl xrml_shares::Trait for Test {
+impl zrml_shares::Trait for Test {
 	type Event = ();
 	type Balance = Balance;
 }
 
+impl orderbook_v1::Trait for Test {
+    type Event = ();
+    type Currency = Balances;
+    type Shares = Shares;
+}
+
+parameter_types! {
+    pub const PmModuleId: ModuleId = ModuleId(*b"test/prm");
+    pub const ReportingPeriod: BlockNumber = 10;
+    pub const DisputePeriod: BlockNumber = 10;
+    pub const DisputeBond: Balance = 100;
+    pub const ValidityBond: Balance = 200;
+    pub const AdvisoryBond: Balance = 50;
+}
+
 impl Trait for Test {
     type Event = ();
-    type Currency = pallet_balances::Module<Test>;
-    type Shares = xrml_shares::Module<Test>;
+    type Currency = Balances;
+    type Shares = Shares;
+    type MarketId = MarketId;
+    type ModuleId = PmModuleId;
+    type ReportingPeriod = ReportingPeriod;
+    type DisputePeriod = DisputePeriod;
+	type DisputeBond = DisputeBond;
+	type ValidityBond = ValidityBond;
+	type AdvisoryBond = AdvisoryBond;
+    type ApprovalOrigin = EnsureRoot<AccountId>;
 }
 
 pub type Balances = pallet_balances::Module<Test>;
-pub type Orderbook = Module<Test>;
-pub type Shares = xrml_shares::Module<Test>;
+pub type Orderbook = orderbook_v1::Module<Test>;
+pub type PredictionMarkets = Module<Test>;
+pub type Shares = zrml_shares::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
 pub struct ExtBuilder {

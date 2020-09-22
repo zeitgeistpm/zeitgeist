@@ -13,7 +13,7 @@ use sp_std::{
     cmp,
 	prelude::*,
 };
-use xrml_traits::shares::{ReservableShares, Shares};
+use zrml_traits::shares::{ReservableShares, Shares};
 
 #[cfg(test)]
 mod mock;

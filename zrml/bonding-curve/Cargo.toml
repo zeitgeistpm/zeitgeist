@@ -1,13 +1,10 @@
 [package]
-name = "xrml-prediction-markets"
+name = "zrml-bonding-curve"
 version = "0.1.0"
 authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"
 
 [dependencies]
-orderbook-v1 = { path = "../orderbook-v1", version = "0.1.0", default-features = false }
-xrml-shares = { path = "../shares", version = "0.1.0", default-features = false }
-xrml-traits = { path = "../traits", version = "0.1.0", default-features = false }
 
 [dependencies.codec]
 default-features = false
@@ -23,7 +20,21 @@ version = '2.0.0-rc6'
 default-features = false
 version = '2.0.0-rc6'
 
+[dependencies.orml-tokens]
+default-features = false
+git = 'https://github.com/open-web3-stack/open-runtime-module-library'
+version = '0.1.3-dev'
+
+[dependencies.orml-traits]
+default-features = false
+git = 'https://github.com/open-web3-stack/open-runtime-module-library'
+version = '0.1.3-dev'
+
 [dependencies.pallet-balances]
+default-features = false
+version = '2.0.0-rc6'
+
+[dependencies.sp-arithmetic]
 default-features = false
 version = '2.0.0-rc6'
 
@@ -36,10 +47,6 @@ default-features = false
 version = '2.0.0-rc6'
 
 [dependencies.sp-runtime]
-default-features = false
-version = '2.0.0-rc6'
-
-[dependencies.sp-std]
 default-features = false
 version = '2.0.0-rc6'
 
@@ -63,10 +70,10 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'sp-io/std',
-    'sp-std/std',
+    'orml-tokens/std',
+    'orml-traits/std',
     'pallet-balances/std',
-    'orderbook-v1/std',
-    'xrml-shares/std',
-    'xrml-traits/std'
+    'sp-arithmetic/std',
+    'sp-io/std',
+    'sp-runtime/std',
 ]
