@@ -14,85 +14,89 @@ targets = ['x86_64-unknown-linux-gnu']
 name = 'zeitgeist'
 path = './src/main.rs'
 
+[dependencies]
+jsonrpc-core = '15.0.0'
+structopt = '0.3.8'
+
+# These dependencies are used for runtime benchmarking
+frame-benchmarking = { version = "2.0.0" }
+frame-benchmarking-cli = { version = "2.0.0" }
+
 [dependencies.zeitgeist-runtime]
 path = '../runtime'
 version = '0.1.0'
 
 [dependencies.pallet-transaction-payment-rpc]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sc-basic-authorship]
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-cli]
 features = ['wasmtime']
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-client-api]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sc-consensus]
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-consensus-aura]
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-executor]
 features = ['wasmtime']
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-finality-grandpa]
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-rpc]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sc-rpc-api]
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-service]
 features = ['wasmtime']
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sc-transaction-pool]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-api]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-block-builder]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-blockchain]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-consensus]
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sp-consensus-aura]
-version = '0.8.0-rc6'
+version = '0.8.0'
 
 [dependencies.sp-core]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-finality-grandpa]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-inherents]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-runtime]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.sp-transaction-pool]
-version = '2.0.0-rc6'
+version = '2.0.0'
 
 [dependencies.substrate-frame-rpc-system]
-version = '2.0.0-rc6'
-
-[dependencies]
-jsonrpc-core = '14.0.3'
-structopt = '0.3.8'
+version = '2.0.0'
 
 [build-dependencies.substrate-build-script-utils]
-version = '2.0.0-rc6'
+version = '2.0.0'
