@@ -187,7 +187,9 @@ decl_module! {
                     if market.status == MarketStatus::Reported {
                         <Markets<T>>::mutate(id, |m| {
                             m.as_mut().unwrap().status = MarketStatus::Resolved;
-                        })
+                        });
+                        // TODO: determine what should happen to the shares of the outcome
+                        // that did not win. Probably the most straightforward thing is to simply delete them.
                     } else if market.status == MarketStatus::Closed {
                         // TODO: determine what to do with markets that were not reported on
                         // they should move into an overdue queue of some type
@@ -472,7 +474,6 @@ decl_module! {
 
                 // Pay out the winner. One full unit of currency per winning share.
                 T::Currency::transfer(&market_account, &sender, winning_balance, ExistenceRequirement::AllowDeath)?;
-
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
             }
