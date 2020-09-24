@@ -207,7 +207,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             )
         );
 
-        run_to_block(102);
+        run_to_block(100);
 
         // the initialize function should have closed the market
         let market = PredictionMarkets::markets(0);
@@ -237,6 +237,35 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 #[test]
 fn it_allows_to_redeem_shares() {
     ExtBuilder::default().build().execute_with(|| {
-        // TODO
+        // Creates a permissionless market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(ALICE),
+                BOB,
+                MarketType::Binary,
+                3,
+                100,
+                H256::repeat_byte(2).to_fixed_bytes(),
+                MarketCreation::Permissionless,
+            )
+        );
+
+        run_to_block(100);
+
+        assert_ok!(
+            PredictionMarkets::report(
+                Origin::signed(BOB),
+                0,
+                1,
+            )
+        );
+
+        run_to_block(111);
+
+        let market = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market.status, MarketStatus::Resolved);
+
+        //TODO: redeem shares
+
     });
 }
