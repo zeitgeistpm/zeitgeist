@@ -61,7 +61,7 @@ impl frame_system::Trait for Test {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 10;
+	pub const ExistentialDeposit: u64 = 1;
 	pub const MaxLocks: u32 = 50;
 }
 
@@ -130,7 +130,7 @@ impl Default for ExtBuilder {
 			balances: vec![
 				(ALICE, 1_000),
 				(BOB, 1_000),
-
+				(CHARLIE, 1_000),
 			],
 		}
 	}
