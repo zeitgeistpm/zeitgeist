@@ -174,6 +174,28 @@ decl_module! {
             0
         }
 
+        /// The finalize function will move all reported markets to finalized.
+        ///
+        fn on_finalize(now: T::BlockNumber) {
+            let reporting_period = T::ReportingPeriod::get();
+            if now <= reporting_period { return; }
+
+            let market_ids = Self::market_ids_per_end_block(now - T::ReportingPeriod::get());
+            if !market_ids.is_empty() {
+                market_ids.iter().for_each(|id| {
+                    let market = Self::markets(id).unwrap();
+                    if market.status == MarketStatus::Reported {
+                        <Markets<T>>::mutate(id, |m| {
+                            m.as_mut().unwrap().status = MarketStatus::Resolved;
+                        })
+                    } else if market.status == MarketStatus::Closed {
+                        // TODO: determine what to do with markets that were not reported on
+                        // they should move into an overdue queue of some type
+                    }
+                })
+            }
+        }
+
         /// Creates a new prediction market, seeded with the intial values.
         ///
         #[weight = 0]
