@@ -223,6 +223,7 @@ decl_module! {
             };
 
             <Markets<T>>::insert(new_market_id.clone(), new_market);
+            <MarketIdsPerEndBlock<T>>::mutate(end_block, |v| v.push(new_market_id.clone()));
 
             Self::deposit_event(RawEvent::MarketCreated(new_market_id, sender));
         }

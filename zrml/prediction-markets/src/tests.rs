@@ -207,7 +207,23 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             )
         );
 
-        // TODO
+        run_to_block(102);
+
+        // the initialize function should have closed the market
+        let market = PredictionMarkets::markets(0);
+        assert_eq!(market.unwrap().status, MarketStatus::Closed);
+
+        assert_ok!(
+            PredictionMarkets::report(
+                Origin::signed(BOB),
+                0,
+                1,
+            )
+        );
+
+        let market_after = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Reported);
+        assert_eq!(market_after.winning_outcome.unwrap(), 1);
     });
 }
 
