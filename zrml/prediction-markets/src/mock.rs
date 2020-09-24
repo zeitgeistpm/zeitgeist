@@ -2,6 +2,7 @@ use crate::{Module, Trait};
 use sp_core::H256;
 use frame_system::EnsureSignedBy;
 use frame_support::{impl_outer_origin, parameter_types, ord_parameter_types, weights::Weight};
+use frame_support::traits::{OnInitialize, OnFinalize};
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     testing::Header, Perbill, ModuleId,
@@ -148,5 +149,17 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
+	}
+}
+
+pub fn run_to_block(n: BlockNumber) {
+	while System::block_number() < n {
+		Balances::on_finalize(System::block_number());
+		PredictionMarkets::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		PredictionMarkets::on_initialize(System::block_number());
+		Balances::on_initialize(System::block_number());
 	}
 }
