@@ -143,6 +143,10 @@ fn it_allows_to_buy_a_complete_set() {
         // also check native balance
         let bal = Balances::free_balance(&BOB);
         assert_eq!(bal, 1_000 - 100);
+
+        let market_account = PredictionMarkets::market_account(0);
+        let market_bal = Balances::free_balance(market_account);
+        assert_eq!(market_bal, 100);
     });
 }
 
@@ -250,6 +254,14 @@ fn it_allows_to_redeem_shares() {
             )
         );
 
+        assert_ok!(
+            PredictionMarkets::buy_complete_set(
+                Origin::signed(CHARLIE),
+                0,
+                100,
+            )
+        );
+
         run_to_block(100);
 
         assert_ok!(
@@ -265,7 +277,8 @@ fn it_allows_to_redeem_shares() {
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Resolved);
 
-        //TODO: redeem shares
-
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+        let bal = Balances::free_balance(&CHARLIE);
+        assert_eq!(bal, 1_000);
     });
 }
