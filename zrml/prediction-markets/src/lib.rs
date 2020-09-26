@@ -207,7 +207,7 @@ decl_module! {
             market_type: MarketType,
             outcomes: u16,
             end_block: T::BlockNumber,
-            metadata: [u8; 32],
+            metadata: Vec<u8>,
             creation: MarketCreation,
         ) {
             let sender = ensure_signed(origin)?;
@@ -219,6 +219,9 @@ decl_module! {
             // Check the end_block is in the future.
             let current_block = <frame_system::Module<T>>::block_number();
             ensure!(current_block < end_block, "End block must be in the future.");
+
+            // This will check if the length is correct for an IPFS CID
+            // ensure!(metadata.length == 46, "Incorrect metadata length");
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
