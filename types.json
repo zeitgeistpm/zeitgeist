@@ -35,7 +35,7 @@
         "creator_fee": "u8",
         "oracle": "AccountId",
         "end_block": "BlockNumber",
-        "metadata": "[u8; 32]",
+        "metadata": "Vec<u8>",
         "market_type": "MarketType",
         "outcomes": "u16",
         "status": "MarketStatus",
