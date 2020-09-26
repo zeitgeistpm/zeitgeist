@@ -58,7 +58,7 @@ pub struct Market<AccountId, BlockNumber> {
     pub end_block: BlockNumber,
     // Metadata for the market, usually and content address of IPFS
     // hosted JSON.
-    pub metadata: [u8; 32],
+    pub metadata: Vec<u8>,
     // The type of the market.
     pub market_type: MarketType,
     // Number of outcomes (always includes Invalid).
