@@ -10,6 +10,7 @@ targets = ['x86_64-unknown-linux-gnu']
 [dependencies]
 orderbook-v1 = { path = "../zrml/orderbook-v1", version = "0.1.0", default-features = false }
 zrml-prediction-markets = { path = "../zrml/prediction-markets", version = "0.1.0", default-features = false }
+zrml-prediction-markets-runtime-api = { path ="../zrml/prediction-markets/rpc/runtime-api", version = "0.1.0", default-features = false }
 zrml-shares = { path = "../zrml/shares", version = "0.1.0", default-features = false }
 zrml-traits = { path = "../zrml/traits", version = "0.1.0", default-features = false }
 
@@ -146,6 +147,7 @@ std = [
     'sp-version/std',
     'orderbook-v1/std',
     'zrml-prediction-markets/std',
+    'zrml-prediction-markets-runtime-api/std',
     'zrml-shares/std',
     'zrml-traits/std'
 ]
