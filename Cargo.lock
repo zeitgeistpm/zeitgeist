@@ -7898,6 +7898,7 @@ dependencies = [
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "zeitgeist-runtime",
+ "zrml-prediction-markets-rpc",
 ]
 
 [[package]]
@@ -7932,6 +7933,7 @@ dependencies = [
  "sp-version",
  "substrate-wasm-builder-runner",
  "zrml-prediction-markets",
+ "zrml-prediction-markets-runtime-api",
  "zrml-shares",
  "zrml-traits",
 ]
@@ -7972,6 +7974,32 @@ dependencies = [
  "sp-std",
  "zrml-shares",
  "zrml-traits",
+]
+
+[[package]]
+name = "zrml-prediction-markets-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "zrml-prediction-markets-runtime-api",
+]
+
+[[package]]
+name = "zrml-prediction-markets-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
