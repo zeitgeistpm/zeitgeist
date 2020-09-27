@@ -18,7 +18,7 @@ pub use zrml_prediction_markets_runtime_api::PredictionMarketsApi as PredictionM
 
 #[rpc]
 pub trait PredictionMarketsApi<BlockHash, MarketId, Hash> {
-    #[rpc(name = "pm_marketOutcomeShareId")]
+    #[rpc(name = "predictionMarkets_marketOutcomeShareId")]
     fn market_outcome_share_id(
         &self,
         market_id: MarketId,
