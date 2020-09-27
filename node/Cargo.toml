@@ -16,7 +16,9 @@ path = './src/main.rs'
 
 [dependencies]
 jsonrpc-core = '15.0.0'
+sc-rpc = "2.0.0"
 structopt = '0.3.8'
+zrml-prediction-markets-rpc = { path = "../zrml/prediction-markets/rpc" }
 
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { version = "2.0.0" }
@@ -51,9 +53,6 @@ version = '0.8.0'
 
 [dependencies.sc-finality-grandpa]
 version = '0.8.0'
-
-[dependencies.sc-rpc]
-version = '2.0.0'
 
 [dependencies.sc-rpc-api]
 version = '0.8.0'

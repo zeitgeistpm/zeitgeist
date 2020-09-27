@@ -2,6 +2,7 @@
 
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
+use sp_std::vec::Vec;
 
 /// Defines the type of market creation.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
