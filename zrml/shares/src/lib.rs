@@ -128,6 +128,7 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
 
     fn destroy_all(share_id: T::Hash) -> DispatchResult {
         <Accounts<T>>::remove_prefix(share_id);
+        <TotalSupply<T>>::remove(share_id);
         
         Ok(())
     }
