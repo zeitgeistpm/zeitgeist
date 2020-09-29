@@ -1,4 +1,5 @@
 //! # Prediction Markets
+//!
 //! A module for creating, reporting, and disputing prediction markets.
 //! 
 //! ## Overview
@@ -188,8 +189,14 @@ decl_module! {
                         <Markets<T>>::mutate(id, |m| {
                             m.as_mut().unwrap().status = MarketStatus::Resolved;
                         });
-                        // TODO: determine what should happen to the shares of the outcome
-                        // that did not win. Probably the most straightforward thing is to simply delete them.
+
+                        for i in 0..market.outcomes {
+                            // skip deleting the winning outcome
+                            if i == market.winning_outcome.unwrap() { continue; }
+                            // ...but delete all others
+                            let share_id = Self::market_outcome_share_id(id.clone(), i);
+                            T::Shares::destroy_all(share_id);
+                        }
                     } else if market.status == MarketStatus::Closed {
                         // TODO: determine what to do with markets that were not reported on
                         // they should move into an overdue queue of some type

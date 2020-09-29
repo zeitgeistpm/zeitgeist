@@ -3,12 +3,7 @@ use sp_runtime::{
     traits::{AtLeast32Bit, MaybeSerializeDeserialize},
     DispatchResult,
 };
-use sp_std::{
-    // cmp::{Eq, PartialEq},
-    // convert::{TryFrom, TryInto},
-    fmt::Debug,
-    // result,
-};
+use sp_std::fmt::Debug;
 
 pub trait Shares<AccountId, Balance, Hash> {
 	/// The balance of an account.
@@ -20,6 +15,8 @@ pub trait Shares<AccountId, Balance, Hash> {
 
     // Mutables
     fn destroy(share_id: Hash, from: &AccountId, amount: Balance) -> DispatchResult;
+    /// Deletes all shares with a given `share_id`.
+    fn destroy_all(share_id: Hash) -> DispatchResult;
     fn ensure_can_withdraw(share_id: Hash, who: &AccountId, amount: Balance) -> DispatchResult;
     fn generate(share_id: Hash, to: &AccountId, amount: Balance) -> DispatchResult;
     fn transfer(share_id: Hash, from: &AccountId, to: &AccountId, amount: Balance) -> DispatchResult;
