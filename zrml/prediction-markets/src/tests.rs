@@ -18,7 +18,7 @@ fn it_creates_binary_markets() {
                 MarketType::Binary,
                 3,
                 100,
-                H256::repeat_byte(2).to_fixed_bytes(),
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
                 MarketCreation::Permissionless,
             )
         );
@@ -35,7 +35,7 @@ fn it_creates_binary_markets() {
                 MarketType::Binary,
                 3,
                 1000,
-                H256::repeat_byte(3).to_fixed_bytes(),
+                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
                 MarketCreation::Advised,
             )
         );
@@ -60,7 +60,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
                 MarketType::Binary,
                 3,
                 1000,
-                H256::repeat_byte(3).to_fixed_bytes(),
+                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
                 MarketCreation::Advised,
             )
         );
@@ -91,7 +91,7 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
                 MarketType::Binary,
                 3,
                 1000,
-                H256::repeat_byte(3).to_fixed_bytes(),
+                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
                 MarketCreation::Advised,
             )
         );
@@ -119,7 +119,7 @@ fn it_allows_to_buy_a_complete_set() {
                 MarketType::Binary,
                 3,
                 100,
-                H256::repeat_byte(2).to_fixed_bytes(),
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
                 MarketCreation::Permissionless,
             )
         );
@@ -161,7 +161,7 @@ fn it_allows_to_sell_a_complete_set() {
                 MarketType::Binary,
                 3,
                 100,
-                H256::repeat_byte(2).to_fixed_bytes(),
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
                 MarketCreation::Permissionless,
             )
         );
@@ -206,7 +206,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
                 MarketType::Binary,
                 3,
                 100,
-                H256::repeat_byte(2).to_fixed_bytes(),
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
                 MarketCreation::Permissionless,
             )
         );
@@ -239,6 +239,73 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 }
 
 #[test]
+fn it_correctly_finalizes_a_market_that_was_reported() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(ALICE),
+                BOB,
+                MarketType::Binary,
+                3,
+                100,
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+                MarketCreation::Permissionless,
+            )
+        );
+
+        assert_ok!(
+            PredictionMarkets::buy_complete_set(
+                Origin::signed(CHARLIE),
+                0,
+                100,
+            )
+        );
+
+        run_to_block(100);
+
+        assert_ok!(
+            PredictionMarkets::report(
+                Origin::signed(BOB),
+                0,
+                1,
+            )
+        );
+
+        run_to_block(111);
+
+        let market = PredictionMarkets::markets(0);
+        assert_eq!(market.unwrap().status, MarketStatus::Resolved);
+
+        // check to make sure all but the winning share was deleted
+        let share_a = PredictionMarkets::market_outcome_share_id(0, 0);
+        let share_a_total = Shares::total_supply(share_a);
+        assert_eq!(share_a_total, 0);
+        let share_a_bal = Shares::free_balance(share_a, &CHARLIE);
+        assert_eq!(share_a_bal, 0);
+
+        let share_b = PredictionMarkets::market_outcome_share_id(0, 1);
+        let share_b_total = Shares::total_supply(share_b);
+        assert_eq!(share_b_total, 100);
+        let share_b_bal = Shares::free_balance(share_b, &CHARLIE);
+        assert_eq!(share_b_bal, 100);
+
+        let share_c = PredictionMarkets::market_outcome_share_id(0, 2);
+        let share_c_total = Shares::total_supply(share_c);
+        assert_eq!(share_c_total, 0);
+        let share_c_bal = Shares::free_balance(share_c, &CHARLIE);
+        assert_eq!(share_c_bal, 0);
+    });
+}
+
+#[test]
+fn it_does_not_finalize_a_market_that_was_not_reported() {
+    ExtBuilder::default().build().execute_with(|| {
+        // TODO
+    });
+}
+
+#[test]
 fn it_allows_to_redeem_shares() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
@@ -249,7 +316,7 @@ fn it_allows_to_redeem_shares() {
                 MarketType::Binary,
                 3,
                 100,
-                H256::repeat_byte(2).to_fixed_bytes(),
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
                 MarketCreation::Permissionless,
             )
         );
