@@ -34,8 +34,10 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
     trait Store for Module<T: Trait> as Shares {
+        /// A double map that is keyed by (share_id, account). The reason to make the `share_id` the prefix
+        /// key is so that we can efficiently wipe out shares.
         pub Accounts get(fn accounts):
-            double_map hasher (blake2_128_concat) T::AccountId, hasher (identity) T::Hash =>
+            double_map hasher (identity) T::Hash, hasher (blake2_128_concat) T::AccountId  =>
                 AccountShares<T::Balance>;
 
         pub TotalSupply get(fn total_supply): map hasher (identity) T::Hash => T::Balance;
@@ -91,11 +93,11 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     pub fn set_balance(share_id: T::Hash, who: &T::AccountId, balance: T::Balance) {
-        <Accounts<T>>::mutate(who, share_id, |data| data.free = balance);
+        <Accounts<T>>::mutate(share_id, who, |data| data.free = balance);
     }
 
     pub fn set_reserved(share_id: T::Hash, who: &T::AccountId, reserved: T::Balance) {
-        <Accounts<T>>::mutate(who, share_id, |data| data.reserved = reserved);
+        <Accounts<T>>::mutate(share_id, who, |data| data.reserved = reserved);
     }
 
 }
@@ -104,7 +106,7 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
     type Balance = T::Balance;
 
     fn free_balance(share_id: T::Hash, who: &T::AccountId) -> Self::Balance {
-        Self::accounts(who, share_id).free
+        Self::accounts(share_id, who).free
     }
 
     fn total_supply(share_id: T::Hash) -> Self::Balance {
@@ -121,6 +123,12 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
         <TotalSupply<T>>::mutate(share_id, |am| *am -= amount);
         Self::set_balance(share_id, from, Self::free_balance(share_id, from) - amount);
 
+        Ok(())
+    }
+
+    fn destroy_all(share_id: T::Hash) -> DispatchResult {
+        <Accounts<T>>::remove_prefix(share_id);
+        
         Ok(())
     }
 
@@ -177,7 +185,7 @@ impl<T: Trait> ReservableShares<T::AccountId, T::Balance, T::Hash> for Module<T>
     }
 
     fn reserved_balance(share_id: T::Hash, who: &T::AccountId) -> T::Balance {
-        Self::accounts(who, share_id).reserved
+        Self::accounts(share_id, who).reserved
     }
 
     fn reserve(share_id: T::Hash, who: &T::AccountId, value: T::Balance) -> DispatchResult {
