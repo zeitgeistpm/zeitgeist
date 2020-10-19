@@ -1,7 +1,7 @@
 # Zeitgeist: A Prediction Markets Blockchain and Governance Protocol
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
-prediction markets. The platform's native currency, the Zeitgeist Token (ZGT),
+prediction markets. The platform's native currency, the ZGE,
 is used to sway the direction of the network, and as a means of last-call dispute
 resolution. Additionally, Zeitgeist is a protocol for efficient trading of prediciton
 market shares and will one day become the backbone of the decentralized finance ecosystem
@@ -19,3 +19,21 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   prediction market outcomes.
 
 ## [Whitepaper](./zeitgeist.md)
+
+## Roadmap
+
+Zeitgeist is currently under development.
+
+### Battery Park
+
+Planned release date: October 31, 2020
+
+Battery Park is the planned Proof-of-Concept release of the Zeitgeist protocol
+that implements the prediction markets core logic as well as a simple orderbook
+for trading shares.
+
+### Unnamed
+
+The next milestone after "Batter Park" is UNNAMED. It will integrate Balancer-style
+automated market makers and liquidity mining as the core trading protocol.
+
