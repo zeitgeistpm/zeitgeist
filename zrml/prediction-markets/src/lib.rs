@@ -61,19 +61,24 @@ pub trait Trait: system::Trait {
 
     /// The number of blocks the reporting period remains open.
     type ReportingPeriod: Get<Self::BlockNumber>;
+
     /// The number of blocks the dispute period remains open.
     type DisputePeriod: Get<Self::BlockNumber>;
-    /// The base amount of currency that must be bonded in order to create a dispute.
-    type DisputeBond: Get<BalanceOf<Self>>;
-    /// The base amount of currency that must be bonded for a permissionless market,
-    /// guaranteeing that it will resolve as anything but `Invalid`.
-    type ValidityBond: Get<BalanceOf<Self>>;
+
     /// The base amount of currency that must be bonded for a market approved by the
     ///  advisory committee.
     type AdvisoryBond: Get<BalanceOf<Self>>;
+
+    /// The base amount of currency that must be bonded in order to create a dispute.
+    type DisputeBond: Get<BalanceOf<Self>>;
+
     /// The base amount of currency that must be bonded to ensure the oracle reports
     ///  in a timely manner.
     type OracleBond: Get<BalanceOf<Self>>;
+
+    /// The base amount of currency that must be bonded for a permissionless market,
+    /// guaranteeing that it will resolve as anything but `Invalid`.
+    type ValidityBond: Get<BalanceOf<Self>>;
 
     type ApprovalOrigin: EnsureOrigin<<Self as system::Trait>::Origin>;
 }
@@ -202,7 +207,7 @@ decl_module! {
                             T::Shares::destroy_all(share_id);
                         }
                     } else if market.status == MarketStatus::Closed {
-                        // TODO: determine what to do with markets that were not reported on
+                        // TODO(#2): determine what to do with markets that were not reported on
                         // they should move into an overdue queue of some type
                         // slash the reserved amount for the oracle not reporting
                         let (neg_imbal, _) = T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
@@ -295,6 +300,12 @@ decl_module! {
             }
         }
 
+
+        /// Rejects a market that is waiting for approval from the advisory
+        /// committee.
+        ///
+        /// NOTE: Will slash the reserved `AdvisoryBond` from the market creator.
+        ///
         #[weight = 0]
         pub fn reject_market(origin, market_id: T::MarketId) {
             T::ApprovalOrigin::ensure_origin(origin)?;
@@ -302,7 +313,7 @@ decl_module! {
             if let Some(market) = Self::markets(&market_id) {
                 let creator = market.creator;
                 let (_imbalance, _) =  T::Currency::slash_reserved(&creator, T::AdvisoryBond::get());
-                // TODO: Handle the imbalance by moving it to the treasury.
+                // TODO(#8): Handle the imbalance by moving it to the treasury.
                 <Markets<T>>::remove(&market_id);
                 Self::deposit_event(RawEvent::MarketRejected(market_id));
             } else {
@@ -313,6 +324,7 @@ decl_module! {
         /// NOTE: Only for PoC probably - should only allow rejections
         /// in a production environment since this better aligns incentives.
         /// See also: Polkadot Treasury
+        ///
         #[weight = 0]
         pub fn cancel_pending_market(origin, market_id: T::MarketId) {
             let sender = ensure_signed(origin)?;
@@ -442,9 +454,17 @@ decl_module! {
             }
         }
 
+        /// Reports the outcome of a market.
+        ///
+        /// NOTE: Only callable for overdue markets that were not reported on
+        ///  by their designated reporter.
+        ///
+        /// NOTE: Requires a `SecondaryReporterBond` to ensure correctness that
+        ///  will be returned as well as half of the original reporter bond.
+        ///
         #[weight = 0]
         pub fn report_overdue(origin, market_id: T::MarketId, winning_outcome: u16) {
-
+            // TODO(#9): Implement logic
         }
 
         /// Disputes a reported outcome.
@@ -455,7 +475,7 @@ decl_module! {
         pub fn dispute(origin, market_id: T::MarketId) {
             let _sender = ensure_signed(origin)?;
             if let Some(_market) = Self::markets(market_id) {
-                // TODO
+                // TODO(#1): Implement logic
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
             }
