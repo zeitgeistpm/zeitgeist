@@ -24,7 +24,7 @@ by allowing for traders to create complex financial contracts on virtually _anyt
 
 Zeitgeist is currently under development.
 
-### Battery Park
+### [Battery Park](https://github.com/zeitgeistmarket/zeitgeist/milestone/1)
 
 Planned release date: October 31, 2020
 
@@ -32,7 +32,7 @@ Battery Park is the planned Proof-of-Concept release of the Zeitgeist protocol
 that implements the prediction markets core logic as well as a simple orderbook
 for trading shares.
 
-### Unnamed
+### [Unnamed](https://github.com/zeitgeistmarket/zeitgeist/milestone/2)
 
 The next milestone after "Batter Park" is UNNAMED. It will integrate Balancer-style
 automated market makers and liquidity mining as the core trading protocol.
