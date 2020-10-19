@@ -239,7 +239,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 }
 
 #[test]
-fn it_correctly_finalizes_a_market_that_was_reported() {
+fn it_correctly_resolves_a_market_that_was_reported_on() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
         assert_ok!(
@@ -299,7 +299,7 @@ fn it_correctly_finalizes_a_market_that_was_reported() {
 }
 
 #[test]
-fn it_does_not_finalize_a_market_that_was_not_reported() {
+fn it_does_not_resolve_a_market_that_was_not_reported_on() {
     ExtBuilder::default().build().execute_with(|| {
         // TODO
     });

@@ -65,7 +65,8 @@ pub trait Trait: system::Trait {
     type DisputePeriod: Get<Self::BlockNumber>;
     /// The base amount of currency that must be bonded in order to create a dispute.
     type DisputeBond: Get<BalanceOf<Self>>;
-    /// The base amount of currency that must be bonded for a permissionless market.
+    /// The base amount of currency that must be bonded for a permissionless market,
+    /// guaranteeing that it will resolve as anything but `Invalid`.
     type ValidityBond: Get<BalanceOf<Self>>;
     /// The base amount of currency that must be bonded for a market approved by the
     ///  advisory committee.
@@ -86,6 +87,9 @@ decl_storage! {
         MarketCount get(fn market_count): T::MarketId;
 
         MarketIdsPerEndBlock get(fn market_ids_per_end_block):
+            map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
+        
+        MarketIdsPerReportBlock get(fn market_ids_per_report_block):
             map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
     }
 }
@@ -200,6 +204,9 @@ decl_module! {
                     } else if market.status == MarketStatus::Closed {
                         // TODO: determine what to do with markets that were not reported on
                         // they should move into an overdue queue of some type
+                        // slash the reserved amount for the oracle not reporting
+                        let (neg_imbal, _) = T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
+
                     }
                 })
             }
@@ -433,6 +440,11 @@ decl_module! {
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
             }
+        }
+
+        #[weight = 0]
+        pub fn report_overdue(origin, market_id: T::MarketId, winning_outcome: u16) {
+
         }
 
         /// Disputes a reported outcome.
