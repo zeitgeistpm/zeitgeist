@@ -91,6 +91,8 @@ parameter_types! {
     pub const ReportingPeriod: BlockNumber = 10;
     pub const DisputePeriod: BlockNumber = 10;
 	pub const DisputeBond: Balance = 100;
+	pub const DisputeFactor: Balance = 25;
+	pub const MaxDisputes: u16 = 5;
 	pub const OracleBond: Balance = 100;
     pub const ValidityBond: Balance = 200;
     pub const AdvisoryBond: Balance = 50;
@@ -106,8 +108,10 @@ impl Trait for Test {
     type MarketId = MarketId;
     type ModuleId = PmModuleId;
     type ReportingPeriod = ReportingPeriod;
-    type DisputePeriod = DisputePeriod;
+	type DisputePeriod = DisputePeriod;
 	type DisputeBond = DisputeBond;
+	type DisputeFactor = DisputeFactor;
+	type MaxDisputes = MaxDisputes;
 	type ValidityBond = ValidityBond;
 	type AdvisoryBond = AdvisoryBond;
 	type OracleBond = OracleBond;

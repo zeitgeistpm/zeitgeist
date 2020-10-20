@@ -74,7 +74,7 @@ pub struct Market<AccountId, BlockNumber> {
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub struct MarketDispute<AccountId, BlockNumber> {
-    at: BlockNumber,
-    by: AccountId,
-    outcome: u16,
+    pub at: BlockNumber,
+    pub by: AccountId,
+    pub outcome: u16,
 }

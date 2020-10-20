@@ -241,20 +241,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 #[test]
 fn it_moves_an_unreported_market_to_overdue_queue() {
     ExtBuilder::default().build().execute_with(|| {
-        // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                3,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
-
-        run_to_block(120);
+        // TODO
 
 
 
