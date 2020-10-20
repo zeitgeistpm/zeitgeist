@@ -8017,10 +8017,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zrml-swaps"
-version = "0.1.0"
-
-[[package]]
 name = "zrml-traits"
 version = "0.1.0"
 dependencies = [
