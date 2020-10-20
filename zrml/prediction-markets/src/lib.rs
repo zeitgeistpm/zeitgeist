@@ -72,8 +72,12 @@ pub trait Trait: system::Trait {
     /// The base amount of currency that must be bonded in order to create a dispute.
     type DisputeBond: Get<BalanceOf<Self>>;
 
+    /// The additional amount of currency that must be bonded when creating a subsequent
+    ///  dispute.
+    type DisputeFactor: Get<BalanceOf<Self>>;
+
     /// The maximum number of disputes allowed on any single market.
-    type MaxDisputes: u16;
+    type MaxDisputes: Get<u16>;
 
     /// The base amount of currency that must be bonded to ensure the oracle reports
     ///  in a timely manner.
@@ -184,9 +188,13 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
  
         const AdvisoryBond: BalanceOf<T> = T::AdvisoryBond::get();
+
         const DisputeBond: BalanceOf<T> = T::DisputeBond::get();
+
+        const DisputeFactor: BalanceOf<T> = T::DisputeFactor::get();
+
         const OracleBond: BalanceOf<T> = T::OracleBond::get();
-        // TODO: Rename validity bond?
+
         const ValidityBond: BalanceOf<T> = T::ValidityBond::get();
 
         type Error = Error<T>;
@@ -484,7 +492,8 @@ decl_module! {
 
         /// Disputes a reported outcome.
         ///
-        /// NOTE: Requires a `DisputeBond` amount of currency to be locked.
+        /// NOTE: Requires a `DisputeBond` + `DisputeFactor` * `num_disputes` amount of currency
+        ///  to be reserved.
         ///
         #[weight = 0]
         pub fn dispute(origin, market_id: T::MarketId, actual_outcome: u16) {
@@ -496,12 +505,13 @@ decl_module! {
                     ids.push(market_id.clone());
                 });
 
-                let num_disputes = Self::disputes(market_id.clone()).len();
+                let num_disputes = Self::disputes(market_id.clone()).len() as u16;
                 ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
 
-                let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * num_disputes;
+                let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * num_disputes.into();
+                T::Currency::reserve(&sender, dispute_bond)?;
 
-                <Disputes<T>>::mutate(market_id, |disputes| {
+                <Disputes<T>>::mutate(market_id.clone(), |disputes| {
                     disputes.push(MarketDispute {
                         at: current_block,
                         by: sender,
