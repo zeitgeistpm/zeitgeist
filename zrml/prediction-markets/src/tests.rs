@@ -290,7 +290,41 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 #[test]
 fn it_allows_anyone_to_report_an_unreported_market() {
     ExtBuilder::default().build().execute_with(|| {
-        // TODO
+        // Creates a permissionless market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(ALICE),
+                BOB,
+                MarketType::Binary,
+                3,
+                100,
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+                MarketCreation::Permissionless,
+            )
+        );
+
+        // Just skip to waaaay overdue.
+        run_to_block(3000);
+
+        assert_ok!(
+            PredictionMarkets::report(
+                Origin::signed(ALICE), // alice reports her own market now 
+                0,
+                1,
+            )
+        );
+
+        let market = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market.status, MarketStatus::Reported);
+        assert_eq!(market.reporter, Some(ALICE));
+        // but lol oracle was bob
+        assert_eq!(market.oracle, BOB);
+
+        // make sure it still resolves
+        run_to_block(3011);
+
+        let market_after = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
     });
 }
 
