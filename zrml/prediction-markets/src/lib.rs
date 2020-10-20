@@ -42,7 +42,7 @@ mod tests;
 
 mod market;
 
-use market::{Market, MarketCreation, MarketStatus, MarketType};
+use market::{Market, MarketCreation, MarketDispute, MarketStatus, MarketType};
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
@@ -72,6 +72,9 @@ pub trait Trait: system::Trait {
     /// The base amount of currency that must be bonded in order to create a dispute.
     type DisputeBond: Get<BalanceOf<Self>>;
 
+    /// The maximum number of disputes allowed on any single market.
+    type MaxDisputes: u16;
+
     /// The base amount of currency that must be bonded to ensure the oracle reports
     ///  in a timely manner.
     type OracleBond: Get<BalanceOf<Self>>;
@@ -85,17 +88,31 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
     trait Store for Module<T: Trait> as PredictionMarkets {
+        /// Stores all of the actual market data.
         Markets get(fn markets):
             map hasher(blake2_128_concat) T::MarketId => 
                 Option<Market<T::AccountId, T::BlockNumber>>;
 
+        /// The number of markets that have been created and the next identifier
+        /// for a created market.
         MarketCount get(fn market_count): T::MarketId;
 
+        /// A mapping of market identifiers to the block that trading ends.
         MarketIdsPerEndBlock get(fn market_ids_per_end_block):
             map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
         
+        /// A mapping of market identifiers to the block that they were reported on.
         MarketIdsPerReportBlock get(fn market_ids_per_report_block):
             map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
+
+        /// A mapping of market identifiers to the block they were disputed at.
+        ///  A market only ends up here if it was disputed.
+        MarketIdsPerDisputeBlock get(fn market_ids_per_dispute_block):
+            map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
+
+        Disputes get(fn disputes):
+            map hasher(blake2_128_concat) T::MarketId =>
+                Vec<MarketDispute<T::AccountId, T::BlockNumber>>;
     }
 }
 
@@ -119,6 +136,8 @@ decl_event!(
         SoldCompleteSet(MarketId, AccountId),
         /// A market has been reported on [market_id, winning_outcome]
         MarketReported(MarketId, u16),
+        /// A market has been disputed [market_id, actual_outcome]
+        MarketDisputed(MarketId, u16),
     }
 );
 
@@ -154,6 +173,10 @@ decl_error! {
         MarketNotClosed,
         /// The market is not overdue.
         MarketNotOverdue,
+        /// The market is not reported on.
+        MarketNotReported,
+        /// The maximum number of disputes has been reached.
+        MaxDisputesReached,
     }
 }
 
@@ -464,10 +487,29 @@ decl_module! {
         /// NOTE: Requires a `DisputeBond` amount of currency to be locked.
         ///
         #[weight = 0]
-        pub fn dispute(origin, market_id: T::MarketId) {
-            let _sender = ensure_signed(origin)?;
-            if let Some(_market) = Self::markets(market_id) {
-                // TODO(#1): Implement logic
+        pub fn dispute(origin, market_id: T::MarketId, actual_outcome: u16) {
+            let sender = ensure_signed(origin)?;
+            if let Some(market) = Self::markets(market_id.clone()) {
+                ensure!(market.status == MarketStatus::Reported, Error::<T>::MarketNotReported);
+                let current_block = <frame_system::Module<T>>::block_number();
+                <MarketIdsPerDisputeBlock<T>>::mutate(current_block, |ids| {
+                    ids.push(market_id.clone());
+                });
+
+                let num_disputes = Self::disputes(market_id.clone()).len();
+                ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
+
+                let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * num_disputes;
+
+                <Disputes<T>>::mutate(market_id, |disputes| {
+                    disputes.push(MarketDispute {
+                        at: current_block,
+                        by: sender,
+                        outcome: actual_outcome,
+                    })
+                });
+
+                Self::deposit_event(RawEvent::MarketDisputed(market_id, actual_outcome));
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
             }
