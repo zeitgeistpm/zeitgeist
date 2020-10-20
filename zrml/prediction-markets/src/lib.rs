@@ -181,6 +181,9 @@ decl_error! {
         MarketNotReported,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
+        /// Someone is trying to call `dispute` with the same outcome that is currently
+        ///  registered on-chain.
+        CannotDisputeSameOutcome,
     }
 }
 
@@ -192,6 +195,8 @@ decl_module! {
         const DisputeBond: BalanceOf<T> = T::DisputeBond::get();
 
         const DisputeFactor: BalanceOf<T> = T::DisputeFactor::get();
+
+        const DisputePeriod: T::BlockNumber = T::DisputePeriod::get();
 
         const OracleBond: BalanceOf<T> = T::OracleBond::get();
 
@@ -222,16 +227,16 @@ decl_module! {
         /// Disputed markets need to be resolved manually.
         ///
         fn on_finalize(now: T::BlockNumber) {
-            let reporting_period = T::ReportingPeriod::get();
-            if now <= reporting_period { return; }
+            let dispute_period = T::DisputePeriod::get();
+            if now <= dispute_period { return; }
 
-            let market_ids = Self::market_ids_per_report_block(now - T::DisputePeriod::get());
+            let market_ids = Self::market_ids_per_report_block(now - dispute_period);
             if !market_ids.is_empty() {
                 market_ids.iter().for_each(|id| {
                     let market = Self::markets(id).unwrap();
                     if market.status == MarketStatus::Reported {
-                        <Markets<T>>::mutate(id, |m| {
-                            m.as_mut().unwrap().status == MarketStatus::Resolved;
+                        <Markets<T>>::mutate(&id, |m| {
+                            m.as_mut().unwrap().status = MarketStatus::Resolved;
                         });
 
                         for i in 0..market.outcomes {
@@ -239,7 +244,7 @@ decl_module! {
                             if i == market.winning_outcome.unwrap() { continue; }
                             // ... but delete the rest
                             let share_id = Self::market_outcome_share_id(id.clone(), i);
-                            T::Shares::destroy_all(share_id);
+                            T::Shares::destroy_all(share_id).unwrap();
                         }
                     }
                 });
@@ -480,8 +485,8 @@ decl_module! {
                 market.reporter = Some(sender);
                 <Markets<T>>::insert(market_id.clone(), market);
 
-                <MarketIdsPerReportBlock<T>>::mutate(current_block, |ids| {
-                    ids.push(market_id.clone());
+                <MarketIdsPerReportBlock<T>>::mutate(current_block, |v| {
+                    v.push(market_id.clone());
                 });
 
                 Self::deposit_event(RawEvent::MarketReported(market_id, winning_outcome));
@@ -496,30 +501,44 @@ decl_module! {
         ///  to be reserved.
         ///
         #[weight = 0]
-        pub fn dispute(origin, market_id: T::MarketId, actual_outcome: u16) {
+        pub fn dispute(origin, market_id: T::MarketId, outcome: u16) {
             let sender = ensure_signed(origin)?;
             if let Some(market) = Self::markets(market_id.clone()) {
                 ensure!(market.status == MarketStatus::Reported, Error::<T>::MarketNotReported);
-                let current_block = <frame_system::Module<T>>::block_number();
-                <MarketIdsPerDisputeBlock<T>>::mutate(current_block, |ids| {
-                    ids.push(market_id.clone());
-                });
 
-                let num_disputes = Self::disputes(market_id.clone()).len() as u16;
+                let disputes = Self::disputes(market_id.clone());
+                let num_disputes = disputes.len() as u16;
                 ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
+
+                if num_disputes > 0 {
+                    ensure!(disputes[(num_disputes as usize) - 1].outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
+                }
 
                 let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * num_disputes.into();
                 T::Currency::reserve(&sender, dispute_bond)?;
+
+                let current_block = <frame_system::Module<T>>::block_number();
+
+                <MarketIdsPerDisputeBlock<T>>::mutate(current_block, |ids| {
+                    ids.push(market_id.clone());
+                });
 
                 <Disputes<T>>::mutate(market_id.clone(), |disputes| {
                     disputes.push(MarketDispute {
                         at: current_block,
                         by: sender,
-                        outcome: actual_outcome,
+                        outcome,
                     })
                 });
 
-                Self::deposit_event(RawEvent::MarketDisputed(market_id, actual_outcome));
+                // if not already in dispute
+                if market.status != MarketStatus::Disputed {
+                    <Markets<T>>::mutate(market_id.clone(), |m| {
+                        m.as_mut().unwrap().status = MarketStatus::Disputed;
+                    });
+                }
+
+                Self::deposit_event(RawEvent::MarketDisputed(market_id, outcome));
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
             }

@@ -214,8 +214,9 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         run_to_block(100);
 
         // the initialize function should have closed the market
-        let market = PredictionMarkets::markets(0);
-        assert_eq!(market.unwrap().status, MarketStatus::Closed);
+        let market = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+        assert_eq!(market.reporter, None);
 
         assert_ok!(
             PredictionMarkets::report(
@@ -228,23 +229,68 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         let market_after = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
         assert_eq!(market_after.winning_outcome.unwrap(), 1);
+        assert_eq!(market_after.reporter, Some(market_after.oracle));
     });
 }
 
 #[test]
 fn it_allows_to_dispute_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
-        // TODO
+                // Creates a permissionless market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(ALICE),
+                BOB,
+                MarketType::Binary,
+                3,
+                100,
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+                MarketCreation::Permissionless,
+            )
+        );
+
+        // Run to the end of the trading phase.
+        run_to_block(100);
+
+        assert_ok!(
+            PredictionMarkets::report(
+                Origin::signed(BOB),
+                0,
+                1,
+            )
+        );
+
+        // Dispute phase is 10 blocks... so only run 5 of them.
+        run_to_block(105);
+
+        assert_ok!(
+            PredictionMarkets::dispute(
+                Origin::signed(CHARLIE),
+                0,
+                0,
+            )
+        );
+
+        let market = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
+
+        let disputes = PredictionMarkets::disputes(0);
+        assert_eq!(disputes.len(), 1);
+        let dispute = &disputes[0];
+        assert_eq!(dispute.at, 105);
+        assert_eq!(dispute.by, CHARLIE);
+        assert_eq!(dispute.outcome, 0);
+
+        let market_ids = PredictionMarkets::market_ids_per_dispute_block(105);
+        assert_eq!(market_ids.len(), 1);
+        assert_eq!(market_ids[0], 0);
     });
 }
 
 #[test]
-fn it_moves_an_unreported_market_to_overdue_queue() {
+fn it_allows_anyone_to_report_an_unreported_market() {
     ExtBuilder::default().build().execute_with(|| {
         // TODO
-
-
-
     });
 }
 
@@ -281,6 +327,11 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
                 1,
             )
         );
+
+        let reported_ids = PredictionMarkets::market_ids_per_report_block(100);
+        assert_eq!(reported_ids.len(), 1);
+        let id = reported_ids[0];
+        assert_eq!(id, 0);
 
         run_to_block(111);
 
