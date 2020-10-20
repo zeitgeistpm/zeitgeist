@@ -285,6 +285,8 @@ parameter_types! {
 	pub const ReportingPeriod: BlockNumber = 100;
 	pub const DisputePeriod: BlockNumber = 100;
 	pub const DisputeBond: Balance = 10;
+	pub const DisputeFactor: Balance = 5;
+	pub const MaxDisputes: u16 = 6;
 	pub const ValidityBond: Balance = 10;
 	pub const AdvisoryBond: Balance = 10;
 	pub const OracleBond: Balance = 10;
@@ -299,6 +301,8 @@ impl zrml_prediction_markets::Trait for Runtime {
 	type ReportingPeriod = ReportingPeriod;
 	type DisputePeriod = DisputePeriod;
 	type DisputeBond = DisputeBond;
+	type DisputeFactor = DisputeFactor;
+	type MaxDisputes = MaxDisputes;
 	type ValidityBond = ValidityBond;
 	type AdvisoryBond = AdvisoryBond;
 	type ApprovalOrigin = EnsureRoot<AccountId>;
