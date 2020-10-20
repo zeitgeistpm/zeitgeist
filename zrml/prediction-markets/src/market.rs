@@ -57,7 +57,7 @@ pub struct Market<AccountId, BlockNumber> {
     pub oracle: AccountId,
     // Ending block for this market.
     pub end_block: BlockNumber,
-    // Metadata for the market, usually and content address of IPFS
+    // Metadata for the market, usually a content address of IPFS
     // hosted JSON.
     pub metadata: Vec<u8>,
     // The type of the market.
@@ -70,4 +70,11 @@ pub struct Market<AccountId, BlockNumber> {
     pub winning_outcome: Option<u16>,
     // The actual reporter of the market.
     pub reporter: Option<AccountId>,
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
+pub struct MarketDispute<AccountId, BlockNumber> {
+    at: BlockNumber,
+    by: AccountId,
+    outcome: u16,
 }
