@@ -68,4 +68,6 @@ pub struct Market<AccountId, BlockNumber> {
     pub status: MarketStatus,
     // The winning outcome. Only `Some` if it has been resolved.
     pub winning_outcome: Option<u16>,
+    // The actual reporter of the market.
+    pub reporter: Option<AccountId>,
 }

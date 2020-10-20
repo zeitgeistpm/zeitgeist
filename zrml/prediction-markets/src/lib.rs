@@ -152,6 +152,8 @@ decl_error! {
         ReporterNotOracle,
         /// The market is not closed.
         MarketNotClosed,
+        /// The market is not overdue.
+        MarketNotOverdue,
     }
 }
 
@@ -184,37 +186,33 @@ decl_module! {
             0
         }
 
-        /// The finalize function will move all reported markets to finalized.
+        /// The finalize function will move all reported markets to resolved.
+        ///
+        /// Disputed markets need to be resolved manually.
         ///
         fn on_finalize(now: T::BlockNumber) {
             let reporting_period = T::ReportingPeriod::get();
             if now <= reporting_period { return; }
 
-            let market_ids = Self::market_ids_per_end_block(now - T::ReportingPeriod::get());
+            let market_ids = Self::market_ids_per_report_block(now - T::DisputePeriod::get());
             if !market_ids.is_empty() {
                 market_ids.iter().for_each(|id| {
                     let market = Self::markets(id).unwrap();
                     if market.status == MarketStatus::Reported {
                         <Markets<T>>::mutate(id, |m| {
-                            m.as_mut().unwrap().status = MarketStatus::Resolved;
+                            m.as_mut().unwrap().status == MarketStatus::Resolved;
                         });
 
                         for i in 0..market.outcomes {
-                            // skip deleting the winning outcome
+                            // don't delete the winning outcome...
                             if i == market.winning_outcome.unwrap() { continue; }
-                            // ...but delete all others
+                            // ... but delete the rest
                             let share_id = Self::market_outcome_share_id(id.clone(), i);
                             T::Shares::destroy_all(share_id);
                         }
-                    } else if market.status == MarketStatus::Closed {
-                        // TODO(#2): determine what to do with markets that were not reported on
-                        // they should move into an overdue queue of some type
-                        // slash the reserved amount for the oracle not reporting
-                        let (neg_imbal, _) = T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
-
                     }
-                })
-            }
+                });
+            }            
         }
 
         /// Creates a new prediction market, seeded with the intial values.
@@ -266,6 +264,7 @@ decl_module! {
                 market_type,
                 status,
                 winning_outcome: None,
+                reporter: None,
             };
 
             <Markets<T>>::insert(new_market_id.clone(), new_market);
@@ -431,40 +430,33 @@ decl_module! {
 
         /// Reports the outcome of a market.
         ///
-        /// NOTE: Only callable by the designated oracle of a market.
-        ///
         #[weight = 0]
         pub fn report(origin, market_id: T::MarketId, winning_outcome: u16) {
             let sender = ensure_signed(origin)?;
 
             if let Some(mut market) = Self::markets(market_id.clone()) {
-                let oracle = market.oracle.clone();
-                ensure!(sender == oracle, Error::<T>::ReporterNotOracle);
-                
-                // Make sure the market is closed and in reporting period.
+                let current_block = <frame_system::Module<T>>::block_number();
+                if current_block <= market.end_block + T::ReportingPeriod::get() {
+                    ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                } // otherwise anyone can be the reporter
+
+
+                // Make sure the market is closed.
                 ensure!(market.status == MarketStatus::Closed, Error::<T>::MarketNotClosed);
 
                 market.winning_outcome = Some(winning_outcome);
                 market.status = MarketStatus::Reported;
+                market.reporter = Some(sender);
                 <Markets<T>>::insert(market_id.clone(), market);
+
+                <MarketIdsPerReportBlock<T>>::mutate(current_block, |ids| {
+                    ids.push(market_id.clone());
+                });
 
                 Self::deposit_event(RawEvent::MarketReported(market_id, winning_outcome));
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
             }
-        }
-
-        /// Reports the outcome of a market.
-        ///
-        /// NOTE: Only callable for overdue markets that were not reported on
-        ///  by their designated reporter.
-        ///
-        /// NOTE: Requires a `SecondaryReporterBond` to ensure correctness that
-        ///  will be returned as well as half of the original reporter bond.
-        ///
-        #[weight = 0]
-        pub fn report_overdue(origin, market_id: T::MarketId, winning_outcome: u16) {
-            // TODO(#9): Implement logic
         }
 
         /// Disputes a reported outcome.
