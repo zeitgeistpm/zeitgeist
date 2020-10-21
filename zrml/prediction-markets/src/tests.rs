@@ -394,13 +394,6 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 }
 
 #[test]
-fn it_does_not_resolve_a_market_that_was_not_reported_on() {
-    ExtBuilder::default().build().execute_with(|| {
-        // TODO
-    });
-}
-
-#[test]
 fn it_allows_to_redeem_shares() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
