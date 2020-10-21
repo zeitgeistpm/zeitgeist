@@ -19,7 +19,7 @@ pub enum MarketCreation {
 /// All markets also have the `Invalid` resolution.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
 pub enum MarketType {
-    // Binary market.
+    // Binary market that can resolve either as `Yes`, `No`, or `Invalid`.
     Binary,
     // A market with a number of categorical outcomes.
     Categorical,
@@ -62,14 +62,24 @@ pub struct Market<AccountId, BlockNumber> {
     pub metadata: Vec<u8>,
     // The type of the market.
     pub market_type: MarketType,
-    // Number of outcomes (always includes Invalid).
-    pub outcomes: u16,
     // The current status of the market.
     pub status: MarketStatus,
     // The winning outcome. Only `Some` if it has been resolved.
     pub winning_outcome: Option<u16>,
     // The actual reporter of the market.
     pub reporter: Option<AccountId>,
+    // Categories are only relevant to Categorical markets.
+    pub categories: Option<u16>,
+}
+
+impl<AccountId, BlockNumber> Market<AccountId, BlockNumber> {
+    pub fn outcomes(&self) -> u16 {
+        match self.market_type {
+            MarketType::Binary => 2,
+            MarketType::Categorical => self.categories.unwrap() + 1,
+            MarketType::Scalar => 0, // TODO figure out scalar markets
+        }
+    } 
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
