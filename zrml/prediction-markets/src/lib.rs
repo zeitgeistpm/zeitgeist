@@ -187,6 +187,8 @@ decl_error! {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         ///  registered on-chain.
         CannotDisputeSameOutcome,
+        /// The outcome being reported is out of range.
+        OutcomeOutOfRange,
     }
 }
 
@@ -257,7 +259,6 @@ decl_module! {
             origin,
             oracle: T::AccountId,
             market_type: MarketType,
-            outcomes: u16,
             end_block: T::BlockNumber,
             metadata: Vec<u8>,
             creation: MarketCreation,
@@ -266,7 +267,6 @@ decl_module! {
 
             // PoC - Only binary markets are currently supported.
             ensure!(market_type == MarketType::Binary, "Only binary markets are currently supported.");
-            ensure!(outcomes == 3, "Only binary markets are currently supported.");
 
             // Check the end_block is in the future.
             let current_block = <frame_system::Module<T>>::block_number();
@@ -293,13 +293,13 @@ decl_module! {
                 creator: sender.clone(),
                 creator_fee: 0,
                 oracle,
-                outcomes,
                 end_block,
                 metadata,
                 market_type,
                 status,
                 winning_outcome: None,
                 reporter: None,
+                categories: None,
             };
 
             <Markets<T>>::insert(new_market_id.clone(), new_market);
@@ -400,8 +400,7 @@ decl_module! {
                 let market_account = Self::market_account(market_id.clone());
                 T::Currency::transfer(&sender, &market_account, amount, ExistenceRequirement::KeepAlive)?;
 
-                let outcomes = market.outcomes;
-                for i in 0..outcomes {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     T::Shares::generate(share_id, &sender, amount)?;
@@ -435,8 +434,7 @@ decl_module! {
                     "Market account does not have sufficient reserves.",
                 );
 
-                let outcomes = market.outcomes;
-                for i in 0..outcomes {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     // Ensures that the sender has sufficient amount of each
@@ -449,7 +447,7 @@ decl_module! {
 
                 // This loop must be done twice because we check the entire
                 // set of shares before making any mutations to storage.
-                for i in 0..outcomes {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     T::Shares::destroy(share_id, &sender, amount)?;
@@ -470,6 +468,8 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             if let Some(mut market) = Self::markets(market_id.clone()) {
+                ensure!(winning_outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
+
                 let current_block = <frame_system::Module<T>>::block_number();
                 if current_block <= market.end_block + T::ReportingPeriod::get() {
                     ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
@@ -502,8 +502,10 @@ decl_module! {
         #[weight = 0]
         pub fn dispute(origin, market_id: T::MarketId, outcome: u16) {
             let sender = ensure_signed(origin)?;
+
             if let Some(market) = Self::markets(market_id.clone()) {
                 ensure!(market.status == MarketStatus::Reported, Error::<T>::MarketNotReported);
+                ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
 
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes = disputes.len() as u16;
@@ -553,7 +555,7 @@ decl_module! {
             if let Some(market) = Self::markets(market_id.clone()) {
                 // TODO: implement global disputes
             } else {
-                Err(Error::<T>::MarketDoesNotExit)?;
+                Err(Error::<T>::MarketDoesNotExist)?;
             }
 
         }
@@ -622,13 +624,28 @@ impl<T: Trait> Module<T> {
         Ok(next)
     }
 
-    fn internal_resolve(market_id: T::MarketId) {
-        let market = Self::markets(market_id).unwrap();  
+    fn internal_resolve(market_id: &T::MarketId) {
+        let market = Self::markets(market_id).unwrap();
+        let reporter = market.reporter.clone().unwrap();
+        let winning_outcome = market.winning_outcome.unwrap();
+
+        // if the market was not invalid, return `ValidityBond`.
+        if winning_outcome != 0 {
+            T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+        } else {
+            // dunno - give it to treasury?
+        }
 
         match market.status {
             MarketStatus::Reported => {
-                // the happy case
-                // TODO: do all the unreserving
+                // the oracle bond gets returned if the reporter was the oracle
+                if reporter == market.oracle {
+                    T::Currency::unreserve(&market.creator, T::OracleBond::get());
+                } else {
+                    let (_imbalance, _) = T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
+                    // TODO learn how to resolve imbalances
+                    // give it to the real reporter
+                }
             }
             MarketStatus::Disputed => {
                 // the unhappy case
@@ -637,11 +654,11 @@ impl<T: Trait> Module<T> {
             _ => (),
         };
 
-        for i in 0..market.outcomes {
+        for i in 0..market.outcomes() {
             // don't delete the winning outcome...
-            if i == market.winning_outcome.unwrap() { continue; }
+            if i == winning_outcome { continue; }
             // ... but delete the rest
-            let share_id = Self::market_outcome_share_id(id.clone(), i);
+            let share_id = Self::market_outcome_share_id(market_id.clone(), i);
             T::Shares::destroy_all(share_id).unwrap();
         }  
 
