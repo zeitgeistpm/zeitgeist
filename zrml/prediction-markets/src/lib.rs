@@ -117,6 +117,9 @@ decl_storage! {
         Disputes get(fn disputes):
             map hasher(blake2_128_concat) T::MarketId =>
                 Vec<MarketDispute<T::AccountId, T::BlockNumber>>;
+
+        // TODO
+        // GlobalDisputes get(fn global_disputes):
     }
 }
 
@@ -230,25 +233,21 @@ decl_module! {
             let dispute_period = T::DisputePeriod::get();
             if now <= dispute_period { return; }
 
+            // Resolve all regularly reported markets.
             let market_ids = Self::market_ids_per_report_block(now - dispute_period);
             if !market_ids.is_empty() {
                 market_ids.iter().for_each(|id| {
-                    let market = Self::markets(id).unwrap();
-                    if market.status == MarketStatus::Reported {
-                        <Markets<T>>::mutate(&id, |m| {
-                            m.as_mut().unwrap().status = MarketStatus::Resolved;
-                        });
-
-                        for i in 0..market.outcomes {
-                            // don't delete the winning outcome...
-                            if i == market.winning_outcome.unwrap() { continue; }
-                            // ... but delete the rest
-                            let share_id = Self::market_outcome_share_id(id.clone(), i);
-                            T::Shares::destroy_all(share_id).unwrap();
-                        }
-                    }
+                    Self::internal_resolve(id);                    
                 });
             }            
+
+            // Resolve any disputed markets.
+            let disputed = Self::market_ids_per_dispute_block(now - dispute_period);
+            if !disputed.is_empty() {
+                disputed.iter().for_each(|id| {
+                    Self::internal_resolve(id);
+                });
+            }
         }
 
         /// Creates a new prediction market, seeded with the intial values.
@@ -544,6 +543,21 @@ decl_module! {
             }
         }
 
+        /// Starts a global dispute.
+        ///
+        /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
+        ///
+        #[weight = 0]
+        pub fn global_dispute(origin, market_id: T::MarketId) {
+            let sender = ensure_signed(origin)?;
+            if let Some(market) = Self::markets(market_id.clone()) {
+                // TODO: implement global disputes
+            } else {
+                Err(Error::<T>::MarketDoesNotExit)?;
+            }
+
+        }
+
         /// Redeems the winning shares of a prediction market.
         ///
         #[weight = 0]
@@ -606,5 +620,33 @@ impl<T: Trait> Module<T> {
             .ok_or("Overflow when incrementing market count.")?;
         <MarketCount<T>>::put(inc);
         Ok(next)
+    }
+
+    fn internal_resolve(market_id: T::MarketId) {
+        let market = Self::markets(market_id).unwrap();  
+
+        match market.status {
+            MarketStatus::Reported => {
+                // the happy case
+                // TODO: do all the unreserving
+            }
+            MarketStatus::Disputed => {
+                // the unhappy case
+                // TODO: do all the unreserving
+            }
+            _ => (),
+        };
+
+        for i in 0..market.outcomes {
+            // don't delete the winning outcome...
+            if i == market.winning_outcome.unwrap() { continue; }
+            // ... but delete the rest
+            let share_id = Self::market_outcome_share_id(id.clone(), i);
+            T::Shares::destroy_all(share_id).unwrap();
+        }  
+
+        <Markets<T>>::mutate(&market_id, |m| {
+            m.as_mut().unwrap().status = MarketStatus::Resolved;
+        });
     }
 }
