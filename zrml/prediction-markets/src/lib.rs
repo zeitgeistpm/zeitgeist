@@ -22,7 +22,7 @@ use frame_support::{
 };
 use frame_support::traits::{
     Currency, ReservableCurrency, Get, ExistenceRequirement,
-    EnsureOrigin, OnUnbalanced,
+    EnsureOrigin, OnUnbalanced, Imbalance,
 };
 use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
@@ -663,6 +663,7 @@ impl<T: Trait> Module<T> {
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes= disputes.len() as u16;
                 let mut correct_reporters = Vec::new();
+                let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
                 for i in 0..num_disputes {
                     let dispute = &disputes[i as usize];
                     let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * i.into();
@@ -671,10 +672,12 @@ impl<T: Trait> Module<T> {
 
                         correct_reporters.push(dispute.by.clone());
                     } else {
-                        let (_imbalance, _) = T::Currency::slash_reserved(&dispute.by, dispute_bond);
-                        // TODO fold all the imbalances into one and reward the correct reporters.
+                        let (imbalance, _) = T::Currency::slash_reserved(&dispute.by, dispute_bond);
+                        overall_imbalance.subsume(imbalance);
                     }
                 }
+                // TODO fold all the imbalances into one and reward the correct reporters.
+
             }
             _ => (),
         };
