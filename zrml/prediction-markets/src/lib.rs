@@ -9,8 +9,24 @@
 //! ## Interface
 //!
 //! ### Dispatches
-//! 
+//!
+//! #### Public Dispatches 
+//!
 //! - `create` - Creates a market which then can have its shares be bought or sold.
+//! - `buy_complete_set` - Purchases and generates a complete set of outcome shares for a
+//!  specific market.
+//! - `sell_complete_set` - Sells and destorys a complete set of outcome shares for a market.
+//! - `report` -
+//! - `dispute` -
+//! - `global_dispute` - TODO
+//! - `redeem_shares` -
+//! 
+//! #### `ApprovalOrigin` Dispatches
+//!
+//! - `approve_market` - Can only be called by the `ApprovalOrigin`. Approves a market
+//!  that is waiting for approval from the advisory committee.
+//! - `reject_market` - Can only be called by the `ApprovalOrigin`. Rejects a market that
+//!  is waiting for approval from the advisory committee.
 //!
 
 #![cfg_attr(not(feature = "std"), no_std)]
