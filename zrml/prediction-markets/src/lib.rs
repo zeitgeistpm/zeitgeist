@@ -22,7 +22,7 @@ use frame_support::{
 };
 use frame_support::traits::{
     Currency, ReservableCurrency, Get, ExistenceRequirement,
-    EnsureOrigin,
+    EnsureOrigin, OnUnbalanced,
 };
 use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
@@ -45,6 +45,9 @@ mod market;
 use market::{Market, MarketCreation, MarketDispute, MarketStatus, MarketType};
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+
+type NegativeImbalanceOf<T> =
+	<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
 
 pub trait Trait: system::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -88,6 +91,8 @@ pub trait Trait: system::Trait {
     type ValidityBond: Get<BalanceOf<Self>>;
 
     type ApprovalOrigin: EnsureOrigin<<Self as system::Trait>::Origin>;
+
+    type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 }
 
 decl_storage! {
@@ -291,6 +296,7 @@ decl_module! {
             let new_market_id = Self::get_next_market_id()?;
             let new_market = Market {
                 creator: sender.clone(),
+                creation,
                 creator_fee: 0,
                 oracle,
                 end_block,
@@ -346,8 +352,9 @@ decl_module! {
 
             if let Some(market) = Self::markets(&market_id) {
                 let creator = market.creator;
-                let (_imbalance, _) =  T::Currency::slash_reserved(&creator, T::AdvisoryBond::get());
-                // TODO(#8): Handle the imbalance by moving it to the treasury.
+                let (imbalance, _) =  T::Currency::slash_reserved(&creator, T::AdvisoryBond::get());
+                // Slashes the imbalance.
+                T::Slash::on_unbalanced(imbalance);
                 <Markets<T>>::remove(&market_id);
                 Self::deposit_event(RawEvent::MarketRejected(market_id));
             } else {
@@ -629,11 +636,13 @@ impl<T: Trait> Module<T> {
         let reporter = market.reporter.clone().unwrap();
         let winning_outcome = market.winning_outcome.unwrap();
 
-        // if the market was not invalid, return `ValidityBond`.
-        if winning_outcome != 0 {
-            T::Currency::unreserve(&market.creator, T::ValidityBond::get());
-        } else {
-            // dunno - give it to treasury?
+        // if the market was permissionless and not invalid, return `ValidityBond`.
+        if market.creation == MarketCreation::Permissionless {
+            if winning_outcome != 0 {
+                T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+            } else {
+                // dunno - give it to treasury?
+            }
         }
 
         match market.status {
@@ -642,14 +651,28 @@ impl<T: Trait> Module<T> {
                 if reporter == market.oracle {
                     T::Currency::unreserve(&market.creator, T::OracleBond::get());
                 } else {
-                    let (_imbalance, _) = T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
-                    // TODO learn how to resolve imbalances
+                    let (imbalance, _) = T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
+
                     // give it to the real reporter
+                    T::Currency::resolve_creating(&reporter, imbalance);
                 }
             }
             MarketStatus::Disputed => {
-                // the unhappy case
-                // TODO: do all the unreserving
+                let disputes = Self::disputes(market_id.clone());
+                let num_disputes= disputes.len() as u16;
+                let mut correct_reporters = Vec::new();
+                for i in 0..num_disputes {
+                    let dispute = &disputes[i as usize];
+                    let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * i.into();
+                    if dispute.outcome == winning_outcome {
+                        T::Currency::unreserve(&dispute.by, dispute_bond);
+
+                        correct_reporters.push(dispute.by.clone());
+                    } else {
+                        let (_imbalance, _) = T::Currency::slash_reserved(&dispute.by, dispute_bond);
+                        // TODO fold all the imbalances into one and reward the correct reporters.
+                    }
+                }
             }
             _ => (),
         };

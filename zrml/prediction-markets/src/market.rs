@@ -51,6 +51,8 @@ pub enum MarketStatus {
 pub struct Market<AccountId, BlockNumber> {
     // Creator of this market.
     pub creator: AccountId,
+    // Creation type.
+    pub creation: MarketCreation,
     // The fee the creator gets from each winning share.
     pub creator_fee: u8, //TODO: Make this into a percent.
     // Oracle that reports the outcome of this market.
