@@ -115,7 +115,8 @@ impl Trait for Test {
 	type ValidityBond = ValidityBond;
 	type AdvisoryBond = AdvisoryBond;
 	type OracleBond = OracleBond;
-    type ApprovalOrigin = EnsureSignedBy<Sudo, AccountId>;
+	type ApprovalOrigin = EnsureSignedBy<Sudo, AccountId>;
+	type Slash = ();
 }
 
 pub type Balances = pallet_balances::Module<Test>;

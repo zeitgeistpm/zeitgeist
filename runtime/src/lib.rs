@@ -307,6 +307,7 @@ impl zrml_prediction_markets::Trait for Runtime {
 	type AdvisoryBond = AdvisoryBond;
 	type ApprovalOrigin = EnsureRoot<AccountId>;
 	type OracleBond = OracleBond;
+	type Slash = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
