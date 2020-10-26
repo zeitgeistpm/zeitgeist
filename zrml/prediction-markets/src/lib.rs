@@ -641,7 +641,9 @@ impl<T: Trait> Module<T> {
             if winning_outcome != 0 {
                 T::Currency::unreserve(&market.creator, T::ValidityBond::get());
             } else {
-                // dunno - give it to treasury?
+                // Give it to the treasury instead.
+                let (imbalance, _) = T::Currency::slash_reserved(&market.creator, T::ValidityBond::get());
+                T::Slash::on_unbalanced(imbalance);
             }
         }
 
