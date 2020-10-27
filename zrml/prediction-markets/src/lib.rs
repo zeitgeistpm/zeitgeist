@@ -57,7 +57,6 @@ mod mock;
 mod tests;
 
 mod market;
-
 use market::{Market, MarketCreation, MarketDispute, MarketStatus, MarketType};
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
@@ -139,8 +138,6 @@ decl_storage! {
             map hasher(blake2_128_concat) T::MarketId =>
                 Vec<MarketDispute<T::AccountId, T::BlockNumber>>;
 
-        // TODO
-        // GlobalDisputes get(fn global_disputes):
     }
 }
 

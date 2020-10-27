@@ -7902,6 +7902,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "zeitgeist-primitives"
+version = "0.1.0"
+dependencies = [
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
 name = "zeitgeist-runtime"
 version = "0.1.0"
 dependencies = [
@@ -7932,6 +7940,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder-runner",
+ "zeitgeist-primitives",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
  "zrml-shares",
