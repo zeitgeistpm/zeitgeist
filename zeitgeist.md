@@ -1,7 +1,11 @@
 # Zeitgesit Protocol
 
-Zeitgeist is a blockchain for creating, betting on, and resolving prediction
-markets. A prediction market, as Zeitgeist implements them, is a permissionless
+Zeitgeist is an self-evolving blockchain for prediction markets with a governance
+protocol. The core functions of the Zeitgeist blockcahin include methods for
+creating, betting on, and resolving prediction markets, although this is expected
+to be expanded in the future.
+
+A prediction market, as Zeitgeist implements them, is a permissionless
 speculative market that allows anyone to pose a question about a future
 occurrance and other individuals to trade on the outcomes. Zeitgeist's native
 currency, the ZGE, is used as bonds for creating and resolving markets, as well
@@ -9,6 +13,8 @@ as the default trading pair for all markets. Additionally, Zeitgeist implements
 a robust governance protocol around its core functionality that allows ZGE
 holders to participate, vote, and ultimately sway the direction of the network
 in perpetuity.
+
+An area of exploration for the Zeitgeist project is futarchy.
 
 ## Table of Contents
 
