@@ -692,8 +692,14 @@ impl<T: Trait> Module<T> {
                         overall_imbalance.subsume(imbalance);
                     }
                 }
-                // TODO fold all the imbalances into one and reward the correct reporters.
 
+                // fold all the imbalances into one and reward the correct reporters.
+                let reward_per_each = overall_imbalance.peek() / (correct_reporters.len() as u32).into();
+                for i in 0..correct_reporters.len() {
+                    let (amount, leftover) = overall_imbalance.split(reward_per_each);
+                    T::Currency::resolve_creating(&correct_reporters[i], amount);
+                    overall_imbalance = leftover;
+                }
             }
             _ => (),
         };
