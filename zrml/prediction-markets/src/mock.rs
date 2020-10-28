@@ -16,6 +16,8 @@ pub type MarketId = u128;
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
 pub const CHARLIE: AccountId = 2;
+pub const DAVE: AccountId = 3;
+pub const EVE: AccountId = 4;
 pub const SUDO: AccountId = 69;
 
 impl_outer_origin! {
@@ -136,6 +138,8 @@ impl Default for ExtBuilder {
 				(ALICE, 1_000),
 				(BOB, 1_000),
 				(CHARLIE, 1_000),
+				(DAVE, 1_000),
+				(EVE, 1_000),
 			],
 		}
 	}
