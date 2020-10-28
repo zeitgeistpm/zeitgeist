@@ -221,7 +221,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         let market_after = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
-        assert_eq!(market_after.winning_outcome.unwrap(), 1);
+        assert_eq!(market_after.reported_outcome.unwrap(), 1);
         assert_eq!(market_after.reporter, Some(market_after.oracle));
     });
 }
@@ -381,6 +381,136 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         let share_c_bal = Shares::free_balance(share_c, &CHARLIE);
         assert_eq!(share_c_bal, 0);
     });
+}
+
+#[test]
+fn it_resolves_a_disputed_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(ALICE),
+                BOB,
+                MarketType::Binary,
+                100,
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+                MarketCreation::Permissionless,
+            )
+        );
+
+        assert_ok!(
+            PredictionMarkets::buy_complete_set(
+                Origin::signed(CHARLIE),
+                0,
+                100,
+            )
+        );
+
+        run_to_block(100);
+
+        assert_ok!(
+            PredictionMarkets::report(
+                Origin::signed(BOB),
+                0,
+                1,
+            )
+        );
+
+        run_to_block(102);
+
+        assert_ok!(
+            PredictionMarkets::dispute(
+                Origin::signed(CHARLIE),
+                0,
+                2,
+            )
+        );
+
+        run_to_block(103);
+
+        assert_ok!(
+            PredictionMarkets::dispute(
+                Origin::signed(DAVE),
+                0,
+                1,
+            )
+        );
+
+        run_to_block(104);
+
+        assert_ok!(
+            PredictionMarkets::dispute(
+                Origin::signed(EVE),
+                0,
+                2,
+            )
+        );
+
+        let market = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
+
+        // check everyone's deposits
+        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        assert_eq!(charlie_reserved, 100);
+
+        let dave_reserved = Balances::reserved_balance(&DAVE);
+        assert_eq!(dave_reserved, 125);
+
+        let eve_reserved = Balances::reserved_balance(&EVE);
+        assert_eq!(eve_reserved, 150);
+
+        // check disputes length
+        let disputes = PredictionMarkets::disputes(0);
+        assert_eq!(disputes.len(), 3);
+
+        // make sure the old mappings of market id per dispute block are erased
+        let market_ids_1 = PredictionMarkets::market_ids_per_dispute_block(102);
+        assert_eq!(market_ids_1.len(), 0);
+
+        let market_ids_2 = PredictionMarkets::market_ids_per_dispute_block(103);
+        assert_eq!(market_ids_2.len(), 0);
+
+        let market_ids_3 = PredictionMarkets::market_ids_per_dispute_block(104);
+        assert_eq!(market_ids_3.len(), 1);
+
+        run_to_block(115);
+
+        let market_after = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
+
+        assert_ok!(
+            PredictionMarkets::redeem_shares(
+                Origin::signed(CHARLIE),
+                0,
+            )
+        );
+
+        // make sure rewards are right
+        //
+        // slashed amounts
+        // ---------------------------
+        // - OracleBond: 100
+        // - Dave's reserve: 125
+        // Total: 225
+        // Per each: 112
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_112);
+        let eve_balance = Balances::free_balance(&EVE);
+        assert_eq!(eve_balance, 1_112);
+
+        let dave_balance = Balances::free_balance(&DAVE);
+        assert_eq!(dave_balance, 875);
+
+        let alice_balance = Balances::free_balance(&ALICE);
+        assert_eq!(alice_balance, 900);
+
+        // bob kinda gets away scot-free since Alice is held responsible
+        // for her designated reporter
+        let bob_balance = Balances::free_balance(&BOB);
+        assert_eq!(bob_balance, 1_000);
+
+    })
 }
 
 #[test]
