@@ -66,8 +66,8 @@ pub struct Market<AccountId, BlockNumber> {
     pub market_type: MarketType,
     // The current status of the market.
     pub status: MarketStatus,
-    // The winning outcome. Only `Some` if it has been resolved.
-    pub winning_outcome: Option<u16>,
+    // The reported outcome. Only `Some` if it has been reported.
+    pub reported_outcome: Option<u16>,
     // The actual reporter of the market.
     pub reporter: Option<AccountId>,
     // Categories are only relevant to Categorical markets.
@@ -84,7 +84,7 @@ impl<AccountId, BlockNumber> Market<AccountId, BlockNumber> {
     } 
 }
 
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
