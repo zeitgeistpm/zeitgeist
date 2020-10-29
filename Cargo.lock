@@ -7897,6 +7897,7 @@ dependencies = [
  "structopt",
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
+ "zeitgeist-primitives",
  "zeitgeist-runtime",
  "zrml-prediction-markets-rpc",
 ]

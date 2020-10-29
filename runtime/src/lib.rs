@@ -25,7 +25,7 @@ use frame_system::EnsureRoot;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 
-pub use zeitgeist_primitives::*;
+use zeitgeist_primitives::*;
 
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
@@ -49,7 +49,7 @@ pub use zrml_shares;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("zeitgeist"),
-	impl_name: create_runtime_str!("zeitgeist-canon"),
+	impl_name: create_runtime_str!("zeitgeist"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 1,

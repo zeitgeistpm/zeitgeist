@@ -147,6 +147,7 @@ std = [
     'sp-transaction-pool/std',
     'sp-version/std',
     'orderbook-v1/std',
+    'zeitgeist-primitives/std',
     'zrml-prediction-markets/std',
     'zrml-prediction-markets-runtime-api/std',
     'zrml-shares/std',
