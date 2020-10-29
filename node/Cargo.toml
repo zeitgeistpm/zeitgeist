@@ -18,6 +18,7 @@ path = './src/main.rs'
 jsonrpc-core = '15.0.0'
 sc-rpc = "2.0.0"
 structopt = '0.3.8'
+zeitgeist-primitives = { path = "../primitives", version = "0.1.0" }
 zrml-prediction-markets-rpc = { path = "../zrml/prediction-markets/rpc" }
 
 # These dependencies are used for runtime benchmarking
