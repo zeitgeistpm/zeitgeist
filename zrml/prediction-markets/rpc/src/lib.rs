@@ -3,13 +3,11 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-// use zrml_prediction_markets_runtime_api;
-use serde::{Deserialize, Serialize};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
     generic::BlockId,
-    traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
+    traits::Block as BlockT,
 };
 use std::sync::Arc;
 

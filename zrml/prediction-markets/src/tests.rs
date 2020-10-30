@@ -1,11 +1,10 @@
-use crate::{Error, mock::*, market::*};
+use crate::{mock::*, market::*};
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::DispatchError,
-    traits::{Currency, ReservableCurrency},
 };
 use sp_core::H256;
-use zrml_traits::shares::{Shares as SharesTrait, ReservableShares};
+use zrml_traits::shares::Shares as SharesTrait;
 
 #[test]
 fn it_creates_binary_markets() {
