@@ -1,4 +1,4 @@
-use sc_service::{ChainType, config::TelemetryEndpoints};
+use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{Pair, Public, sr25519};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
