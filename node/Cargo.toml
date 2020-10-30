@@ -15,6 +15,7 @@ name = 'zeitgeist'
 path = './src/main.rs'
 
 [dependencies]
+hex-literal = "*"
 jsonrpc-core = '15.0.0'
 sc-rpc = "2.0.0"
 structopt = '0.3.8'
