@@ -83,7 +83,6 @@ impl Trait for Test {
 pub type Balances = pallet_balances::Module<Test>;
 pub type Orderbook = Module<Test>;
 pub type Shares = zrml_shares::Module<Test>;
-pub type System = frame_system::Module<Test>;
 
 pub struct ExtBuilder {
 	balances: Vec<(AccountId, Balance)>,

@@ -587,8 +587,8 @@ decl_module! {
         ///
         #[weight = 0]
         pub fn global_dispute(origin, market_id: T::MarketId) {
-            let sender = ensure_signed(origin)?;
-            if let Some(market) = Self::markets(market_id.clone()) {
+            let _sender = ensure_signed(origin)?;
+            if let Some(_market) = Self::markets(market_id.clone()) {
                 // TODO: implement global disputes
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
