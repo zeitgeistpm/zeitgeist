@@ -1,14 +1,16 @@
-use jsonrpc_core::serde_json::Map;
+use sc_service::{ChainType, config::TelemetryEndpoints};
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{Pair, Public, sr25519};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{Verify, IdentifyAccount};
-use sc_service::{ChainType, config::TelemetryEndpoints};
 use zeitgeist_primitives::{AccountId, Signature};
 use zeitgeist_runtime::{
 	AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
 	SudoConfig, SystemConfig, WASM_BINARY
 };
+
+// The PoC-1 "Battery Park" testnet configuration.
+pub mod battery_park;
 
 // The URL for the telemetry server.
 const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -157,55 +159,3 @@ fn testnet_genesis(
 		}),
 	}
 }
-
-pub fn battery_park_testnet_config() -> Result<ChainSpec, String> {
-	let mut properties = Map::new();
-	properties.insert("tokenSymbol".into(), "Z8".into());
-	properties.insert("tokenDecimals".into(), 10.into());
-
-	let wasm_binary = WASM_BINARY.ok_or("Development wasm binary not available".to_string())?;
-
-	Ok(ChainSpec::from_genesis(
-		"Zeitgeist Battery Park",
-		"battery_park",
-		ChainType::Live,
-		move || {
-			testnet_genesis(
-				wasm_binary,
-				// Initial PoA authorities
-				vec![
-					authority_keys_from_seed("Alice"),
-					authority_keys_from_seed("Bob"),
-				],
-				// Sudo account
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
-				// Prefunded accounts
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
-				true
-			)
-		},
-		// Bootnodes
-		vec![],
-		// Telemetry
-		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-		// Protocol ID
-		Some("battery_park"),
-		// Properties
-		Some(properties),
-		Default::default(),
-	))
-}
-

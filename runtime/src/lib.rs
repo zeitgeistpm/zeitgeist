@@ -27,7 +27,7 @@ use sp_version::NativeVersion;
 
 use zeitgeist_primitives::*;
 
-mod constants;
+pub mod constants;
 use crate::constants::time::*;
 
 // A few exports that help ease life for downstream crates.
