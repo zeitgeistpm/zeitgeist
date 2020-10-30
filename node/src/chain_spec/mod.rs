@@ -1,14 +1,14 @@
+use jsonrpc_core::serde_json::Map;
+use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{Pair, Public, sr25519};
+use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_runtime::traits::{Verify, IdentifyAccount};
+use sc_service::{ChainType, config::TelemetryEndpoints};
 use zeitgeist_primitives::{AccountId, Signature};
 use zeitgeist_runtime::{
 	AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
 	SudoConfig, SystemConfig, WASM_BINARY
 };
-use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_finality_grandpa::AuthorityId as GrandpaId;
-use sp_runtime::traits::{Verify, IdentifyAccount};
-use sc_service::{ChainType, config::TelemetryEndpoints};
-use jsonrpc_core::serde_json::Map;
 
 // The URL for the telemetry server.
 const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
