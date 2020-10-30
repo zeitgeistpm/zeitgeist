@@ -35,3 +35,6 @@ pub type DigestItem = generic::DigestItem<Hash>;
 
 /// The market identifier type.
 pub type MarketId = u128;
+
+/// TODO
+pub type Moment = u64;
