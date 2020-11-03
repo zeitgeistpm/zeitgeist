@@ -9,6 +9,7 @@ targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
 orderbook-v1 = { path = "../zrml/orderbook-v1", version = "0.1.0", default-features = false }
+pallet-timestamp = { version = "2.0.0", default-features = false }
 zeitgeist-primitives = { path = "../primitives", version = "0.1.0", default-features = false }
 zrml-prediction-markets = { path = "../zrml/prediction-markets", version = "0.1.0", default-features = false }
 zrml-prediction-markets-runtime-api = { path ="../zrml/prediction-markets/rpc/runtime-api", version = "0.1.0", default-features = false }
@@ -54,10 +55,6 @@ default-features = false
 version = '2.0.0'
 
 [dependencies.pallet-sudo]
-default-features = false
-version = '2.0.0'
-
-[dependencies.pallet-timestamp]
 default-features = false
 version = '2.0.0'
 

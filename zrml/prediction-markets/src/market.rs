@@ -48,7 +48,7 @@ pub enum MarketStatus {
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
-pub struct Market<AccountId, BlockNumber> {
+pub struct Market<AccountId> {
     // Creator of this market.
     pub creator: AccountId,
     // Creation type.
@@ -58,7 +58,7 @@ pub struct Market<AccountId, BlockNumber> {
     // Oracle that reports the outcome of this market.
     pub oracle: AccountId,
     // Ending block for this market.
-    pub end_block: BlockNumber,
+    pub end: u64,
     // Metadata for the market, usually a content address of IPFS
     // hosted JSON.
     pub metadata: Vec<u8>,
@@ -74,7 +74,7 @@ pub struct Market<AccountId, BlockNumber> {
     pub categories: Option<u16>,
 }
 
-impl<AccountId, BlockNumber> Market<AccountId, BlockNumber> {
+impl<AccountId> Market<AccountId> {
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
             MarketType::Binary => 2,

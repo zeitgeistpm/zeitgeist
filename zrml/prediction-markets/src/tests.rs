@@ -1,4 +1,4 @@
-use crate::{mock::*, market::*};
+use crate::{mock::*, market::*, Error};
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::DispatchError,
@@ -205,9 +205,8 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         run_to_block(100);
 
-        // the initialize function should have closed the market
         let market = PredictionMarkets::markets(0).unwrap();
-        assert_eq!(market.status, MarketStatus::Closed);
+        assert_eq!(market.status, MarketStatus::Active);
         assert_eq!(market.reporter, None);
 
         assert_ok!(
@@ -553,5 +552,51 @@ fn it_allows_to_redeem_shares() {
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000);
+    });
+}
+
+#[test]
+fn the_entire_market_lifecycle_works_with_timestamps() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(ALICE),
+                BOB,
+                MarketType::Binary,
+                1_234_567_890_123,
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+                MarketCreation::Permissionless,
+            )
+        );
+
+        // is ok
+        assert_ok!(
+            PredictionMarkets::buy_complete_set(
+                Origin::signed(BOB),
+                0,
+                100,
+            )
+        );
+
+        // set the timestamp
+        Timestamp::set_timestamp(1_234_567_890_124);
+
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(
+                Origin::signed(BOB),
+                0,
+                100,
+            ),
+            Error::<Test>::MarketNotActive,
+        );
+
+        assert_ok!(
+            PredictionMarkets::report(
+                Origin::signed(BOB),
+                0,
+                1,
+            )
+        );
     });
 }
