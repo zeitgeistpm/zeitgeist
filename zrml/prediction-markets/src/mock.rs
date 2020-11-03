@@ -77,6 +77,17 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const MinimumPeriod: u64 = 0;
+}
+
+impl pallet_timestamp::Trait for Test {
+	type Moment = u64;
+	type OnTimestampSet = ();
+	type MinimumPeriod = MinimumPeriod;
+	type WeightInfo = ();
+}
+
 impl zrml_shares::Trait for Test {
 	type Event = ();
 	type Balance = Balance;
@@ -123,6 +134,7 @@ impl Trait for Test {
 
 pub type Balances = pallet_balances::Module<Test>;
 pub type PredictionMarkets = Module<Test>;
+pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type Shares = zrml_shares::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
