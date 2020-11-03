@@ -40,7 +40,6 @@ use frame_support::traits::{
     Currency, ReservableCurrency, Get, ExistenceRequirement,
     EnsureOrigin, OnUnbalanced, Imbalance,
 };
-use frame_support::weights::Weight;
 use frame_system::ensure_signed;
 use sp_runtime::{ModuleId, SaturatedConversion};
 use sp_runtime::traits::{
