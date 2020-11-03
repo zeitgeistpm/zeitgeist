@@ -7978,6 +7978,7 @@ dependencies = [
  "frame-system",
  "orderbook-v1",
  "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "sp-core",
  "sp-io",

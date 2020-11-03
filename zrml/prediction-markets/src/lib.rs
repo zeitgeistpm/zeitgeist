@@ -41,8 +41,8 @@ use frame_support::traits::{
     EnsureOrigin, OnUnbalanced, Imbalance,
 };
 use frame_support::weights::Weight;
-use frame_system::{self as system, ensure_signed};
-use sp_runtime::ModuleId;
+use frame_system::ensure_signed;
+use sp_runtime::{ModuleId, SaturatedConversion};
 use sp_runtime::traits::{
     AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, 
     Member, One, Hash,
@@ -65,13 +65,13 @@ fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     items.swap_remove(pos);
 }
 
-type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 type NegativeImbalanceOf<T> =
 	<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::NegativeImbalance;
 
-pub trait Trait: system::Trait {
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+pub trait Trait: frame_system::Trait + pallet_timestamp::Trait  {
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
@@ -111,7 +111,7 @@ pub trait Trait: system::Trait {
     /// guaranteeing that it will resolve as anything but `Invalid`.
     type ValidityBond: Get<BalanceOf<Self>>;
 
-    type ApprovalOrigin: EnsureOrigin<<Self as system::Trait>::Origin>;
+    type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Trait>::Origin>;
 
     type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 }
@@ -121,16 +121,12 @@ decl_storage! {
         /// Stores all of the actual market data.
         Markets get(fn markets):
             map hasher(blake2_128_concat) T::MarketId => 
-                Option<Market<T::AccountId, T::BlockNumber>>;
+                Option<Market<T::AccountId>>;
 
         /// The number of markets that have been created and the next identifier
         /// for a created market.
         MarketCount get(fn market_count): T::MarketId;
 
-        /// A mapping of market identifiers to the block that trading ends.
-        MarketIdsPerEndBlock get(fn market_ids_per_end_block):
-            map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
-        
         /// A mapping of market identifiers to the block that they were reported on.
         MarketIdsPerReportBlock get(fn market_ids_per_report_block):
             map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
@@ -150,7 +146,7 @@ decl_storage! {
 decl_event!(
     pub enum Event<T>
     where
-        AccountId = <T as system::Trait>::AccountId,
+        AccountId = <T as frame_system::Trait>::AccountId,
         MarketId = <T as Trait>::MarketId,
     {
         /// A market has been created [market_id, creator]
@@ -213,6 +209,8 @@ decl_error! {
         CannotDisputeSameOutcome,
         /// The outcome being reported is out of range.
         OutcomeOutOfRange,
+        /// Market is already reported on.
+        MarketAlreadyReported,
     }
 }
 
@@ -234,22 +232,6 @@ decl_module! {
         type Error = Error<T>;
 
         fn deposit_event() = default;
-
-        /// The initializer will automatically close any markets that are
-        /// slated to be closed at the beginning of the block.
-        ///
-        fn on_initialize(now: T::BlockNumber) -> Weight {
-            let market_ids = Self::market_ids_per_end_block(now);
-            if !market_ids.is_empty() {
-                market_ids.iter().for_each(|id| {
-                    <Markets<T>>::mutate(id, |m| {
-                        m.as_mut().unwrap().status = MarketStatus::Closed;
-                    });
-                });
-            }
-
-            0
-        }
 
         /// The finalize function will move all reported markets to resolved.
         ///
@@ -285,7 +267,7 @@ decl_module! {
             origin,
             oracle: T::AccountId,
             market_type: MarketType,
-            end_block: T::BlockNumber,
+            end: u64,
             metadata: Vec<u8>,
             creation: MarketCreation,
         ) {
@@ -294,9 +276,16 @@ decl_module! {
             // PoC - Only binary markets are currently supported.
             ensure!(market_type == MarketType::Binary, "Only binary markets are currently supported.");
 
-            // Check the end_block is in the future.
-            let current_block = <frame_system::Module<T>>::block_number();
-            ensure!(current_block < end_block, "End block must be in the future.");
+            // Check the end is in the future.
+            if end > 1_000_000_000_000 {
+                // unix timestamp
+                let now = <pallet_timestamp::Module<T>>::get();
+                ensure!(now < end.saturated_into(), "End timestamp must be before now.");
+            } else {
+                // block
+                let current_block = <frame_system::Module<T>>::block_number();
+                ensure!(current_block < end.saturated_into(), "End block must be in the future.");
+            }
 
             // This will check if the length is correct for an IPFS CID
             // ensure!(metadata.length == 46, "Incorrect metadata length");
@@ -320,7 +309,7 @@ decl_module! {
                 creation,
                 creator_fee: 0,
                 oracle,
-                end_block,
+                end,
                 metadata,
                 market_type,
                 status,
@@ -330,7 +319,6 @@ decl_module! {
             };
 
             <Markets<T>>::insert(new_market_id.clone(), new_market);
-            <MarketIdsPerEndBlock<T>>::mutate(end_block, |v| v.push(new_market_id.clone()));
 
             Self::deposit_event(RawEvent::MarketCreated(new_market_id, sender));
         }
@@ -423,7 +411,7 @@ decl_module! {
             );
 
             if let Some(market) = Self::markets(market_id.clone()) {
-                ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
+                ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
 
                 let market_account = Self::market_account(market_id.clone());
                 T::Currency::transfer(&sender, &market_account, amount, ExistenceRequirement::KeepAlive)?;
@@ -451,10 +439,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             if let Some(market) = Self::markets(market_id.clone()) {
-                ensure!(
-                    market.status == MarketStatus::Active,
-                    Error::<T>::MarketNotActive,
-                );
+                ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
 
                 let market_account = Self::market_account(market_id.clone());
                 ensure!(
@@ -498,14 +483,27 @@ decl_module! {
             if let Some(mut market) = Self::markets(market_id.clone()) {
                 ensure!(reported_outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
 
+                ensure!(market.status != MarketStatus::Reported, Error::<T>::MarketAlreadyReported);
+
+                // ensure market is not active
+                ensure!(!Self::is_market_active(market.end.clone()), Error::<T>::MarketNotClosed);
+
                 let current_block = <frame_system::Module<T>>::block_number();
-                if current_block <= market.end_block + T::ReportingPeriod::get() {
-                    ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
-                } // otherwise anyone can be the reporter
 
-
-                // Make sure the market is closed.
-                ensure!(market.status == MarketStatus::Closed, Error::<T>::MarketNotClosed);
+                if market.end > 1_000_000_000_000 {
+                    // unix timestamp
+                    let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
+                    let reporting_period_in_ms = T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
+                    if now <= market.end + reporting_period_in_ms {
+                        ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                    } // otherwise anyone can be the reporter
+                } else {
+                    // blocks
+                    let end: T::BlockNumber = market.end.saturated_into();
+                    if current_block <= end + T::ReportingPeriod::get() {
+                        ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                    } // otherwise anyone can be the reporter
+                }
 
                 market.reported_outcome = Some(reported_outcome);
                 market.status = MarketStatus::Reported;
@@ -646,7 +644,19 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn market_outcome_share_id(market_id: T::MarketId, outcome: u16) -> T::Hash {
-        (market_id, outcome).using_encoded(<T as system::Trait>::Hashing::hash)
+        (market_id, outcome).using_encoded(<T as frame_system::Trait>::Hashing::hash)
+    }
+
+    fn is_market_active(end: u64) -> bool {
+        if end > 1_000_000_000_000 {
+            // unix timestamp
+            let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
+            return now < end;
+        } else {
+            // block number
+            let current_block = <frame_system::Module<T>>::block_number();
+            return current_block < end.saturated_into();
+        }
     }
 
     /// DANGEROUS - MUTATES PALLET STORAGE

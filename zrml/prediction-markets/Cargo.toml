@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 orderbook-v1 = { path = "../orderbook-v1", version = "0.1.0", default-features = false }
+pallet-timestamp = { version = "2.0", default-features = false }
 zrml-shares = { path = "../shares", version = "0.1.0", default-features = false }
 zrml-traits = { path = "../traits", version = "0.1.0", default-features = false }
 
@@ -67,6 +68,7 @@ std = [
     'sp-io/std',
     'sp-std/std',
     'pallet-balances/std',
+    'pallet-timestamp/std',
     'orderbook-v1/std',
     'zrml-shares/std',
     'zrml-traits/std'
