@@ -15,12 +15,12 @@ use frame_support::traits::{
 };
 // use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{SaturatedConversion, RuntimeDebug};
 use sp_runtime::traits::{
     CheckedSub, CheckedMul, Hash, Zero,
 };
 use sp_std::cmp;
-use sp_std::collection::btree_map::BTreeMap;
+use sp_std::collections::btree_map::BTreeMap;
 use sp_std::vec::Vec;
 use zrml_traits::shares::{ReservableShares, Shares};
 
@@ -35,15 +35,17 @@ mod math;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Pool<Hash> {
-    pub weights: BTreeMap<Hash, u128>;
+    pub weights: BTreeMap<Hash, u128>,
 }
 
-impl<Hash> Pool<Hash> {
-    pub fn bound(self, asset: Hash) -> bool {
-        let weight = self.weights.get(asset);
-        weight.is_some()
-    }
-}
+// impl<Hash> Pool<Hash> {
+//     pub fn bound(&self, asset: Hash) -> bool {
+//         let weight = self.weights.get(&asset);
+//         weight.is_some()
+//     }
+// }
+
+type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
 pub trait Trait: frame_system::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
@@ -55,8 +57,8 @@ pub trait Trait: frame_system::Trait {
 
 decl_storage! {
     trait Store for Module<T: Trait> as Swaps {
-        Pools get(fn pools): map hasher(blake2_128_concat) u128 => Pool;
-        PoolToAssets get(fn pool_to_assets): map hasher(blake2_128_concat) T::Hash => Vec<T::Hash>;
+        Pools get(fn pools): map hasher(blake2_128_concat) u128 => Option<Pool<T::Hash>>;
+        NextPoolId: u128;
     }
 }
 
@@ -65,63 +67,74 @@ decl_event! {
     where
         AccountId = <T as frame_system::Trait>::AccountId,
     {
-        Something(AccountId).
+        Something(AccountId),
     }
 }
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        SomeError,
+        TooManyAssets,
+        AssetNotBound,
+        BelowMinimumWeight,
+        AboveMaximumWeight,
     }
 }
 
 decl_module! {
-    pub struct Module<T: trait> for enum Call where origin: T::Origin {
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         type Error = Error<T>;
 
         fn deposit_event() = default;
 
+        // #[weight = 0]
+        // pub fn call() {
 
+        // }
     }
 }
 
 impl<T: Trait> Module<T> {
     pub fn create_pool(assets: Vec<T::Hash>, weights: Vec<u128>) {
-        ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets)?;
+        // ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets)?;
 
         for i in 0..weights.len() {
-            ensure!(weights[i] >= T::MinWeight, Error::<T>::BelowMinimumWeight)?;
-            ensure!(weights[i] <= T::MaxWeight, Error::<T>::AboveMaximumWeight)?;
+            // ensure!(weights[i] >= T::MinWeight, Error::<T>::BelowMinimumWeight)?;
+            // ensure!(weights[i] <= T::MaxWeight, Error::<T>::AboveMaximumWeight)?;
         }
 
         let next_pool_id = Self::next_pool_id();
 
-        Pool::insert(next_pool_id, Pool {
-            assets,
-            weights,
+        Pools::insert(next_pool_id, Pool {
+            weights: BTreeMap::new(),
         });
     }
 
     pub fn get_spot_price(pool_id: u128, asset_in: T::Hash, asset_out: T::Hash) -> u128 {
-        if let pool = Self::pools(pool_id) {
-            ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
-            ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound)?;
+        if let Some(pool) = Self::pools(pool_id) {
+            // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
+            // ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound)?;
 
-            let pool_account = Self::pool_acount_id(pool_id);
+            let pool_account = Self::pool_account_id(pool_id);
             let in_balance = T::Shares::free_balance(asset_in, &pool_account);
-            let in_weight = pool.weights.get(asset_in).unwrap();
+            let in_weight = pool.weights.get(&asset_in).unwrap();
             let out_balance = T::Shares::free_balance(asset_out, &pool_account);
-            let out_weight = pool.weights.get(asset_out).unwrap();
+            let out_weight = pool.weights.get(&asset_out).unwrap();
 
             return math::calc_spot_price(
-                in_balance,
-                in_weight,
-                out_balance,
-                out_weight,
+                in_balance.saturated_into(),
+                *in_weight,
+                out_balance.saturated_into(),
+                *out_weight,
+                0 //fee
             );
         } else {
-            Err(Error::<T>::PoolDoesNotExist)?;
+            // Err(Error::<T>::PoolDoesNotExist)?;
+            return 0;
         }
+    }
+
+    fn pool_account_id(pool_id: u128) -> T::AccountId {
+        0.into()
     }
 
     fn next_pool_id() -> u128 {
