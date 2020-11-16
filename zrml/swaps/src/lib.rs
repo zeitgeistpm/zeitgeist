@@ -34,6 +34,7 @@ mod math;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Pool<Hash> {
+    pub assets: Vec<Hash>,
     pub weights: BTreeMap<Hash, u128>,
 }
 
@@ -79,6 +80,8 @@ decl_error! {
         AssetNotBound,
         BelowMinimumWeight,
         AboveMaximumWeight,
+        MathApproximation,
+        LimitIn,
     }
 }
 
@@ -91,6 +94,28 @@ decl_module! {
         #[weight = 0]
         fn join_pool(origin, pool_id: u128, pool_amount_out: u128, max_amounts_in: Vec<u128>) {
 
+            let pool_shares_id = Self::pool_shares_id(pool_id);
+            let pool_shares_total = T::Shares::total_supply(pool_shares_id);
+            let ratio = pool_amount_out / pool_shares_total;
+            ensure!(ratio != 0, Error::<T>::MathApproximation)?;
+         
+            if let Some(pool) = Self::pools(pool_id) {
+                let pool_account = Self::pool_account_id(pool_id);
+
+                for i in pool.assets.len() {
+                    let asset = pool.assets[i];
+                    let bal = T::Shares::free_balance(asset, &pool_account_id);
+                    let asset_amount_in = ratio * bal;
+                    ensure!(asset_amount_in != 0, Error::<T>::MathApproximation)?;
+                    ensure!(asset_amount_in <= max_amounts_in[i], Error::<T>::LimitIn)?;
+
+
+                }
+
+
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
@@ -187,6 +212,7 @@ impl<T: Trait> Module<T> {
         }
 
         <Pools<T>>::insert(next_pool_id, Pool {
+            assets,
             weights: map,
         });
     }
