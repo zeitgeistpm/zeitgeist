@@ -11,6 +11,6 @@ members = [
     "zrml/prediction-markets/rpc",
     "zrml/prediction-markets/rpc/runtime-api",
     "zrml/shares",
-    # "zrml/swaps",
+    "zrml/swaps",
     "zrml/traits"
 ]
