@@ -89,23 +89,19 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 0]
-        fn call(origin) {
+        fn join_pool(origin, pool_id: u128, pool_amount_out: u128, max_amounts_in: Vec<u128>) {
 
         }
 
         #[weight = 0]
-        fn join_pool(origin, pool_amount_out: u128, max_amounts_in: Vec<u128>) {
-
-        }
-
-        #[weight = 0]
-        fn exit_pool(origin, pool_amount_in: u128, min_amounts_out: Vec<u128>) {
+        fn exit_pool(origin, pool_id: u128, pool_amount_in: u128, min_amounts_out: Vec<u128>) {
 
         }
 
         #[weight = 0]
         fn swap_exact_amount_in(
             origin,
+            pool_id: u128,
             asset_in: T::Hash,
             asset_amount_in: u128,
             asset_out: T::Hash,
@@ -118,6 +114,7 @@ decl_module! {
         #[weight = 0]
         fn swap_exact_amount_out(
             origin,
+            pool_id: u128,
             asset_in: T::Hash,
             max_amount_in: u128,
             asset_out: T::Hash,
@@ -130,6 +127,7 @@ decl_module! {
         #[weight = 0]
         fn joinswap_extern_amount_in(
             origin,
+            pool_id: u128,
             asset_in: T::Hash,
             asset_amount_in: u128,
             min_pool_amount_out: u128,
@@ -140,6 +138,7 @@ decl_module! {
         #[weight = 0]
         fn joinswap_pool_amount_out(
             origin,
+            pool_id: u128,
             asset_in: T::Hash,
             pool_amount_out: u128,
             max_amount_in: u128,
@@ -150,6 +149,7 @@ decl_module! {
         #[weight = 0]
         fn exitswap_pool_amount_in(
             origin,
+            pool_id: u128,
             asset_out: T::Hash,
             pool_amount_in: u128,
             min_amount_out: u128,
@@ -160,13 +160,13 @@ decl_module! {
         #[weight = 0]
         fn exitswap_extern_amount_out(
             origin,
+            pool_id: u128,
             asset_out: T::Hash,
             asset_amount_out: u128,
             max_pool_amount_in: u128,
         ) {
 
         }
-        
     }
 }
 
