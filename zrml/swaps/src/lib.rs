@@ -11,13 +11,12 @@ use frame_support::{
     ensure,
 };
 use frame_support::traits::{
-    Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons,
+    Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons, Get,
 };
-// use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::{SaturatedConversion, RuntimeDebug};
+use sp_runtime::{ModuleId, RuntimeDebug, SaturatedConversion};
 use sp_runtime::traits::{
-    CheckedSub, CheckedMul, Hash, Zero,
+    AccountIdConversion, CheckedSub, CheckedMul, Hash, Zero,
 };
 use sp_std::cmp;
 use sp_std::collections::btree_map::BTreeMap;
@@ -53,6 +52,9 @@ pub trait Trait: frame_system::Trait {
     type Currency: ReservableCurrency<Self::AccountId>;
 
     type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash> + ReservableShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+
+    /// The module identifier.
+    type ModuleId: Get<ModuleId>;
 }
 
 decl_storage! {
@@ -86,10 +88,85 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        // #[weight = 0]
-        // pub fn call() {
+        #[weight = 0]
+        fn call(origin) {
 
-        // }
+        }
+
+        #[weight = 0]
+        fn join_pool(origin, pool_amount_out: u128, max_amounts_in: Vec<u128>) {
+
+        }
+
+        #[weight = 0]
+        fn exit_pool(origin, pool_amount_in: u128, min_amounts_out: Vec<u128>) {
+
+        }
+
+        #[weight = 0]
+        fn swap_exact_amount_in(
+            origin,
+            asset_in: T::Hash,
+            asset_amount_in: u128,
+            asset_out: T::Hash,
+            min_amount_out: u128,
+            max_price: u128,
+        ) {
+
+        }
+
+        #[weight = 0]
+        fn swap_exact_amount_out(
+            origin,
+            asset_in: T::Hash,
+            max_amount_in: u128,
+            asset_out: T::Hash,
+            asset_amount_out: u128,
+            max_price: u128,
+        ) {
+
+        }
+
+        #[weight = 0]
+        fn joinswap_extern_amount_in(
+            origin,
+            asset_in: T::Hash,
+            asset_amount_in: u128,
+            min_pool_amount_out: u128,
+        ) {
+
+        }
+
+        #[weight = 0]
+        fn joinswap_pool_amount_out(
+            origin,
+            asset_in: T::Hash,
+            pool_amount_out: u128,
+            max_amount_in: u128,
+        ) {
+
+        }
+
+        #[weight = 0]
+        fn exitswap_pool_amount_in(
+            origin,
+            asset_out: T::Hash,
+            pool_amount_in: u128,
+            min_amount_out: u128,
+        ) {
+
+        }
+
+        #[weight = 0]
+        fn exitswap_extern_amount_out(
+            origin,
+            asset_out: T::Hash,
+            asset_amount_out: u128,
+            max_pool_amount_in: u128,
+        ) {
+
+        }
+        
     }
 }
 
@@ -104,8 +181,13 @@ impl<T: Trait> Module<T> {
 
         let next_pool_id = Self::next_pool_id();
 
-        Pools::insert(next_pool_id, Pool {
-            weights: BTreeMap::new(),
+        let mut map = BTreeMap::new();
+        for i in 0..assets.len() {
+            map.insert(assets[i], weights[i]);
+        }
+
+        <Pools<T>>::insert(next_pool_id, Pool {
+            weights: map,
         });
     }
 
@@ -134,7 +216,7 @@ impl<T: Trait> Module<T> {
     }
 
     fn pool_account_id(pool_id: u128) -> T::AccountId {
-        0.into()
+        T::ModuleId::get().into_sub_account(pool_id)
     }
 
     fn next_pool_id() -> u128 {
