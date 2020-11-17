@@ -56,6 +56,9 @@ pub trait Trait: frame_system::Trait {
 
     /// The module identifier.
     type ModuleId: Get<ModuleId>;
+
+    // The fee for exiting a pool.
+    type ExitFee: Get<BalanceOf<Self>>;
 }
 
 decl_storage! {
@@ -82,6 +85,7 @@ decl_error! {
         AboveMaximumWeight,
         MathApproximation,
         LimitIn,
+        LimitOut,
         PoolDoesNotExist,
     }
 }
@@ -123,7 +127,37 @@ decl_module! {
         }
 
         #[weight = 0]
-        fn exit_pool(origin, pool_id: u128, pool_amount_in: u128, min_amounts_out: Vec<u128>) {
+        fn exit_pool(origin, pool_id: u128, pool_amount_in: BalanceOf<T>, min_amounts_out: Vec<BalanceOf<T>>) {
+            let sender = ensure_signed(origin)?;
+
+            let pool_shares_id = Self::pool_shares_id(pool_id);
+            let pool_shares_total = T::Shares::total_supply(pool_shares_id);
+            let exit_fee = pool_amount_in * T::ExitFee::get();
+            let pool_amount_in_after_exit_fee = pool_amount_in - exit_fee;
+            let ratio = pool_amount_in_after_exit_fee / pool_shares_total;
+            ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
+
+            if let Some(pool) = Self::pools(pool_id) {
+                let pool_account = Self::pool_account_id(pool_id);
+                
+                Self::burn_pool_shares(pool_id, &sender, pool_amount_in_after_exit_fee)?;
+                // give the exit fee to the pool
+                T::Shares::transfer(pool_shares_id, &sender, &pool_account, exit_fee)?;
+
+                for i in 0..pool.assets.len() {
+                    let asset = pool.assets[0];
+                    let bal = T::Shares::free_balance(asset, &pool_account);
+                    let asset_amount_out = ratio * bal;
+                    ensure!(asset_amount_out != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount_out >= min_amounts_out[i], Error::<T>::LimitOut);
+                
+                    T::Shares::transfer(asset, &pool_account, &sender, asset_amount_out)?;
+                }
+
+                //emit event
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
 
         }
 
@@ -246,8 +280,13 @@ impl<T: Trait> Module<T> {
     }
 
     fn mint_pool_shares(pool_id: u128, to: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-        let share_id = Self::pool_shares_id(pool_id);
-        T::Shares::generate(share_id, to, amount)
+        let shares_id = Self::pool_shares_id(pool_id);
+        T::Shares::generate(shares_id, to, amount)
+    }
+
+    fn burn_pool_shares(pool_id: u128, from: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        let shares_id = Self::pool_shares_id(pool_id);
+        T::Shares::destroy(shares_id, from, amount)
     }
 
     fn pool_shares_id(pool_id: u128) -> T::Hash {
