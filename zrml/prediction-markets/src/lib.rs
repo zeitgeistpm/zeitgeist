@@ -276,7 +276,7 @@ decl_module! {
             ensure!(market_type == MarketType::Binary, "Only binary markets are currently supported.");
 
             // Check the end is in the future.
-            if end > 1_000_000_000_000 {
+            if end > 1_000_000_000 {
                 // unix timestamp
                 let now = <pallet_timestamp::Module<T>>::get();
                 ensure!(now < end.saturated_into(), "End timestamp must be before now.");
@@ -489,7 +489,7 @@ decl_module! {
 
                 let current_block = <frame_system::Module<T>>::block_number();
 
-                if market.end > 1_000_000_000_000 {
+                if market.end > 1_000_000_000 {
                     // unix timestamp
                     let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
                     let reporting_period_in_ms = T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
@@ -643,11 +643,11 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn market_outcome_share_id(market_id: T::MarketId, outcome: u16) -> T::Hash {
-        (market_id, outcome).using_encoded(<T as frame_system::Trait>::Hashing::hash)
+        ("zge/pm", market_id, outcome).using_encoded(<T as frame_system::Trait>::Hashing::hash)
     }
 
     fn is_market_active(end: u64) -> bool {
-        if end > 1_000_000_000_000 {
+        if end > 1_000_000_000 {
             // unix timestamp
             let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
             return now < end;
