@@ -36,6 +36,7 @@ mod math;
 pub struct Pool<Hash> {
     pub assets: Vec<Hash>,
     pub swap_fee: u128,
+    pub total_weight: u128,
     pub weights: BTreeMap<Hash, u128>,
 }
 
@@ -286,7 +287,37 @@ decl_module! {
             asset_amount_in: BalanceOf<T>,
             min_pool_amount_out: BalanceOf<T>,
         ) {
+            let sender = ensure_signed(origin)?;
 
+            if let Some(pool) = Self::pools(pool_id) {
+                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
+
+                let pool_account = Self::pool_account_id(pool_id);
+
+                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
+                ensure!(asset_amount_in <= in_balance * T::MaxInRatio::get(), Error::<T>::MaxInRatio);
+
+                let pool_shares_id = Self::pool_shares_id(pool_id);
+                let total_supply = T::Shares::total_supply(pool_shares_id);
+
+                let pool_amount_out: BalanceOf<T> = math::calc_pool_out_given_single_in(
+                    in_balance.saturated_into(),
+                    *pool.weights.get(&asset_in).unwrap(),
+                    total_supply.saturated_into(),
+                    pool.total_weight.saturated_into(),
+                    asset_amount_in.saturated_into(),
+                    pool.swap_fee,
+                ).saturated_into();
+
+                ensure!(pool_amount_out >= min_pool_amount_out, Error::<T>::LimitOut);
+
+                Self::mint_pool_shares(pool_id, &sender, pool_amount_out)?;
+                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
+
+                // emit an event
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
@@ -297,7 +328,16 @@ decl_module! {
             pool_amount_out: BalanceOf<T>,
             max_amount_in: BalanceOf<T>,
         ) {
+            let sender = ensure_signed(origin)?;
 
+            if let Some(pool) = Self::pools(pool_id) {
+
+                let pool_account = Self::pool_account_id(pool_id);
+            
+                // emit an event
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
@@ -308,7 +348,16 @@ decl_module! {
             pool_amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
         ) {
+            let sender = ensure_signed(origin)?;
 
+            if let Some(pool) = Self::pools(pool_id) {
+
+                let pool_account = Self::pool_account_id(pool_id);
+
+                // emit an event
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
@@ -319,7 +368,16 @@ decl_module! {
             asset_amount_out: BalanceOf<T>,
             max_pool_amount_in: BalanceOf<T>,
         ) {
+            let sender = ensure_signed(origin)?;
 
+            if let Some(pool) = Self::pools(pool_id) {
+
+                let pool_account = Self::pool_account_id(pool_id);
+
+                // emit an event
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
         }
     }
 }
@@ -340,9 +398,12 @@ impl<T: Trait> Module<T> {
             map.insert(assets[i], weights[i]);
         }
 
+        let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
+
         <Pools<T>>::insert(next_pool_id, Pool {
             assets,
             swap_fee,
+            total_weight,
             weights: map,
         });
     }
