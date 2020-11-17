@@ -35,15 +35,16 @@ mod math;
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Pool<Hash> {
     pub assets: Vec<Hash>,
+    pub swap_fee: u128,
     pub weights: BTreeMap<Hash, u128>,
 }
 
-// impl<Hash> Pool<Hash> {
-//     pub fn bound(&self, asset: Hash) -> bool {
-//         let weight = self.weights.get(&asset);
-//         weight.is_some()
-//     }
-// }
+impl<Hash: Ord> Pool<Hash> {
+    pub fn bound(&self, asset: Hash) -> bool {
+        let weight = BTreeMap::get(&self.weights, &asset);
+        weight.is_some()
+    }
+}
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
 
@@ -59,6 +60,8 @@ pub trait Trait: frame_system::Trait {
 
     // The fee for exiting a pool.
     type ExitFee: Get<BalanceOf<Self>>;
+
+    type MaxInRatio: Get<BalanceOf<Self>>;
 }
 
 decl_storage! {
@@ -87,6 +90,8 @@ decl_error! {
         LimitIn,
         LimitOut,
         PoolDoesNotExist,
+        MaxInRatio,
+        BadLimitPrice,
     }
 }
 
@@ -171,7 +176,50 @@ decl_module! {
             min_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) {
+            let sender = ensure_signed(origin)?;
+            
+            if let Some(pool) = Self::pools(pool_id) {
+                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
+                ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound);
 
+                let pool_account = Self::pool_account_id(pool_id);
+                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
+                ensure!(
+                    asset_amount_in <= in_balance * T::MaxInRatio::get(),
+                    Error::<T>::MaxInRatio,
+                );
+
+                let spot_price_before = Self::get_spot_price(pool_id, asset_in, asset_out);
+
+                ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
+
+                let out_balance = T::Shares::free_balance(asset_out, &pool_account);
+
+                let asset_amount_out: BalanceOf<T> = math::calc_out_given_in(
+                    in_balance.saturated_into(),
+                    *pool.weights.get(&asset_in).unwrap(),
+                    out_balance.saturated_into(),
+                    *pool.weights.get(&asset_out).unwrap(),
+                    asset_amount_in.saturated_into(),
+                    pool.swap_fee,
+                ).saturated_into();
+
+                ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
+
+                // do the swap
+                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
+                T::Shares::transfer(asset_out, &pool_account, &sender, asset_amount_out)?;
+
+                let spot_price_after = Self::get_spot_price(pool_id, asset_in, asset_out);
+
+                ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+                ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
+                ensure!(spot_price_before <= asset_amount_in / asset_amount_out, Error::<T>::MathApproximation);
+
+                // emit an event
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
@@ -234,7 +282,7 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn create_pool(assets: Vec<T::Hash>, weights: Vec<u128>) {
+    pub fn create_pool(assets: Vec<T::Hash>, swap_fee: u128, weights: Vec<u128>) {
         // ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets)?;
 
         for i in 0..weights.len() {
@@ -251,11 +299,12 @@ impl<T: Trait> Module<T> {
 
         <Pools<T>>::insert(next_pool_id, Pool {
             assets,
+            swap_fee,
             weights: map,
         });
     }
 
-    pub fn get_spot_price(pool_id: u128, asset_in: T::Hash, asset_out: T::Hash) -> u128 {
+    pub fn get_spot_price(pool_id: u128, asset_in: T::Hash, asset_out: T::Hash) -> BalanceOf<T> {
         if let Some(pool) = Self::pools(pool_id) {
             // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
             // ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound)?;
@@ -272,10 +321,10 @@ impl<T: Trait> Module<T> {
                 out_balance.saturated_into(),
                 *out_weight,
                 0 //fee
-            );
+            ).saturated_into();
         } else {
             // Err(Error::<T>::PoolDoesNotExist)?;
-            return 0;
+            return Zero::zero();
         }
     }
 
