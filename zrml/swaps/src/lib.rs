@@ -14,7 +14,7 @@ use frame_support::traits::{
     Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons, Get,
 };
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::{ModuleId, RuntimeDebug, SaturatedConversion};
+use sp_runtime::{DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion};
 use sp_runtime::traits::{
     AccountIdConversion, CheckedSub, CheckedMul, Hash, Zero,
 };
@@ -82,6 +82,7 @@ decl_error! {
         AboveMaximumWeight,
         MathApproximation,
         LimitIn,
+        PoolDoesNotExist,
     }
 }
 
@@ -92,27 +93,30 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 0]
-        fn join_pool(origin, pool_id: u128, pool_amount_out: u128, max_amounts_in: Vec<u128>) {
+        fn join_pool(origin, pool_id: u128, pool_amount_out: BalanceOf<T>, max_amounts_in: Vec<BalanceOf<T>>) {
+            let sender = ensure_signed(origin)?;
 
             let pool_shares_id = Self::pool_shares_id(pool_id);
             let pool_shares_total = T::Shares::total_supply(pool_shares_id);
             let ratio = pool_amount_out / pool_shares_total;
-            ensure!(ratio != 0, Error::<T>::MathApproximation)?;
+            ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
          
             if let Some(pool) = Self::pools(pool_id) {
                 let pool_account = Self::pool_account_id(pool_id);
 
-                for i in pool.assets.len() {
+                for i in 0..pool.assets.len() {
                     let asset = pool.assets[i];
-                    let bal = T::Shares::free_balance(asset, &pool_account_id);
+                    let bal = T::Shares::free_balance(asset, &pool_account);
                     let asset_amount_in = ratio * bal;
-                    ensure!(asset_amount_in != 0, Error::<T>::MathApproximation)?;
-                    ensure!(asset_amount_in <= max_amounts_in[i], Error::<T>::LimitIn)?;
+                    ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount_in <= max_amounts_in[i], Error::<T>::LimitIn);
 
-
+                    // transfer asset_amount_in to the pool_account
+                    T::Shares::transfer(asset, &sender, &pool_account, asset_amount_in)?;
                 }
 
-
+                Self::mint_pool_shares(pool_id, &sender, pool_amount_out)?;
+                //emit event
             } else {
                 Err(Error::<T>::PoolDoesNotExist)?;
             }
@@ -239,6 +243,15 @@ impl<T: Trait> Module<T> {
             // Err(Error::<T>::PoolDoesNotExist)?;
             return 0;
         }
+    }
+
+    fn mint_pool_shares(pool_id: u128, to: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        let share_id = Self::pool_shares_id(pool_id);
+        T::Shares::generate(share_id, to, amount)
+    }
+
+    fn pool_shares_id(pool_id: u128) -> T::Hash {
+        ("zge/swaps", pool_id).using_encoded(<T as frame_system::Trait>::Hashing::hash)
     }
 
     fn pool_account_id(pool_id: u128) -> T::AccountId {
