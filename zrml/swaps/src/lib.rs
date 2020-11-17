@@ -419,12 +419,31 @@ decl_module! {
             if let Some(pool) = Self::pools(pool_id) {
                 ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound);
 
-                // let asset_amount_in: BalanceOf<T> = math::calc_pool_in_given_single_out(
-
-                // ).saturated_into();
-
-
                 let pool_account = Self::pool_account_id(pool_id);
+
+                let out_balance = T::Shares::free_balance(asset_out, &pool_account);
+                ensure!(asset_amount_out <= out_balance * T::MaxOutRatio::get(), Error::<T>::MaxOutRatio);
+                
+                let pool_shares_id = Self::pool_shares_id(pool_id);
+                let total_supply = T::Shares::total_supply(pool_shares_id);
+
+                let pool_amount_in: BalanceOf<T> = math::calc_pool_in_given_single_out(
+                    out_balance.saturated_into(),
+                    *pool.weights.get(&asset_out).unwrap(),
+                    total_supply.saturated_into(),
+                    pool.total_weight,
+                    asset_amount_out.saturated_into(),
+                    pool.swap_fee,
+                ).saturated_into();
+
+                ensure!(pool_amount_in != Zero::zero(), Error::<T>::MathApproximation);
+                ensure!(pool_amount_in <= max_pool_amount_in, Error::<T>::LimitIn);
+
+                let exit_fee = pool_amount_in * T::ExitFee::get();
+
+                Self::burn_pool_shares(pool_id, &sender, pool_amount_in - exit_fee)?;
+                // todo do something with exit fee
+                T::Shares::transfer(asset_out, &pool_account, &sender, asset_amount_out)?;
 
                 // emit an event
             } else {
