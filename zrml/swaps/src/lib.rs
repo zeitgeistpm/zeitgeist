@@ -62,6 +62,8 @@ pub trait Trait: frame_system::Trait {
     type ExitFee: Get<BalanceOf<Self>>;
 
     type MaxInRatio: Get<BalanceOf<Self>>;
+
+    type MaxOutRatio: Get<BalanceOf<Self>>;
 }
 
 decl_storage! {
@@ -91,6 +93,7 @@ decl_error! {
         LimitOut,
         PoolDoesNotExist,
         MaxInRatio,
+        MaxOutRatio,
         BadLimitPrice,
     }
 }
@@ -232,7 +235,47 @@ decl_module! {
             asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) {
+            let sender = ensure_signed(origin)?;
+            
+            if let Some(pool) = Self::pools(pool_id) {
+                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
+                ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound);
 
+                let pool_account = Self::pool_account_id(pool_id);
+                let out_balance = T::Shares::free_balance(asset_out, &pool_account);
+                ensure!(asset_amount_out <= out_balance * T::MaxOutRatio::get(), Error::<T>::MaxOutRatio);
+
+
+                let spot_price_before = Self::get_spot_price(pool_id, asset_in, asset_out);
+
+                ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
+
+                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
+                let asset_amount_in: BalanceOf<T> = math::calc_in_given_out(
+                    in_balance.saturated_into(),
+                    *pool.weights.get(&asset_in).unwrap(),
+                    out_balance.saturated_into(),
+                    *pool.weights.get(&asset_out).unwrap(),
+                    asset_amount_out.saturated_into(),
+                    pool.swap_fee,
+                ).saturated_into();
+
+                ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
+
+                // do the swap
+                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
+                T::Shares::transfer(asset_out, &pool_account, &sender, asset_amount_out)?;
+
+                let spot_price_after = Self::get_spot_price(pool_id, asset_in, asset_out);
+
+                ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+                ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
+                ensure!(spot_price_before <= asset_amount_in / asset_amount_out, Error::<T>::MathApproximation);
+
+                // emit an event
+            } else {
+                Err(Error::<T>::PoolDoesNotExist)?;
+            }
         }
 
         #[weight = 0]
