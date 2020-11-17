@@ -331,9 +331,32 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             if let Some(pool) = Self::pools(pool_id) {
+                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
 
                 let pool_account = Self::pool_account_id(pool_id);
             
+                let pool_shares_id = Self::pool_shares_id(pool_id);
+                let total_supply = T::Shares::total_supply(pool_shares_id);
+
+                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
+
+                let asset_amount_in: BalanceOf<T> = math::calc_single_in_given_pool_out(
+                    in_balance.saturated_into(),
+                    *pool.weights.get(&asset_in).unwrap(),
+                    total_supply.saturated_into(),
+                    pool.total_weight,
+                    pool_amount_out.saturated_into(),
+                    pool.swap_fee,
+                ).saturated_into();
+
+                ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximation);
+                ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
+
+                ensure!(asset_amount_in <= in_balance * T::MaxInRatio::get(), Error::<T>::MaxInRatio);
+
+                Self::mint_pool_shares(pool_id, &sender, pool_amount_out)?;
+                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
+
                 // emit an event
             } else {
                 Err(Error::<T>::PoolDoesNotExist)?;
