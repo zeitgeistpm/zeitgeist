@@ -166,10 +166,10 @@ decl_module! {
             origin,
             pool_id: u128,
             asset_in: T::Hash,
-            asset_amount_in: u128,
+            asset_amount_in: BalanceOf<T>,
             asset_out: T::Hash,
-            min_amount_out: u128,
-            max_price: u128,
+            min_amount_out: BalanceOf<T>,
+            max_price: BalanceOf<T>,
         ) {
 
         }
@@ -179,10 +179,10 @@ decl_module! {
             origin,
             pool_id: u128,
             asset_in: T::Hash,
-            max_amount_in: u128,
+            max_amount_in: BalanceOf<T>,
             asset_out: T::Hash,
-            asset_amount_out: u128,
-            max_price: u128,
+            asset_amount_out: BalanceOf<T>,
+            max_price: BalanceOf<T>,
         ) {
 
         }
@@ -192,8 +192,8 @@ decl_module! {
             origin,
             pool_id: u128,
             asset_in: T::Hash,
-            asset_amount_in: u128,
-            min_pool_amount_out: u128,
+            asset_amount_in: BalanceOf<T>,
+            min_pool_amount_out: BalanceOf<T>,
         ) {
 
         }
@@ -203,8 +203,8 @@ decl_module! {
             origin,
             pool_id: u128,
             asset_in: T::Hash,
-            pool_amount_out: u128,
-            max_amount_in: u128,
+            pool_amount_out: BalanceOf<T>,
+            max_amount_in: BalanceOf<T>,
         ) {
 
         }
@@ -214,8 +214,8 @@ decl_module! {
             origin,
             pool_id: u128,
             asset_out: T::Hash,
-            pool_amount_in: u128,
-            min_amount_out: u128,
+            pool_amount_in: BalanceOf<T>,
+            min_amount_out: BalanceOf<T>,
         ) {
 
         }
@@ -225,8 +225,8 @@ decl_module! {
             origin,
             pool_id: u128,
             asset_out: T::Hash,
-            asset_amount_out: u128,
-            max_pool_amount_in: u128,
+            asset_amount_out: BalanceOf<T>,
+            max_pool_amount_in: BalanceOf<T>,
         ) {
 
         }
