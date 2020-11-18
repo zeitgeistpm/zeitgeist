@@ -94,6 +94,7 @@ parameter_types! {
 	pub const MaxWeight: Balance = 50 * BASE;
 	pub const MaxTotalWeight: Balance = 50 * BASE;
 	pub const MaxAssets: Balance = 8;
+	pub const MinBalance: Balance = BASE / 100_000;
 }
 
 impl Trait for Test {
@@ -108,6 +109,7 @@ impl Trait for Test {
 	type MaxWeight = MaxWeight;
 	type MaxTotalWeight = MaxTotalWeight;
 	type MaxAssets = MaxAssets;
+	type MinBalance = MinBalance;
 }
 
 pub type Balances = pallet_balances::Module<Test>;

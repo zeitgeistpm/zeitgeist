@@ -68,7 +68,7 @@ fn it_allows_the_full_user_lifecycle() {
             Swaps::join_pool(
                 Origin::signed(ALICE),
                 0,
-                1 * BASE,
+                5 * BASE,
                 vec!(25 * BASE, 25 * BASE, 25 * BASE, 25 * BASE),
             )
         );
