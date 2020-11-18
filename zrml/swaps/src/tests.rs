@@ -57,10 +57,10 @@ fn it_allows_the_full_user_lifecycle() {
             )
         );
 
-        Shares::generate(ASSET_A, &ALICE, 2 * BASE);
-        Shares::generate(ASSET_B, &ALICE, 2 * BASE);
-        Shares::generate(ASSET_C, &ALICE, 2 * BASE);
-        Shares::generate(ASSET_D, &ALICE, 2 * BASE);
+        Shares::generate(ASSET_A, &ALICE, 25 * BASE).ok();
+        Shares::generate(ASSET_B, &ALICE, 25 * BASE).ok();
+        Shares::generate(ASSET_C, &ALICE, 25 * BASE).ok();
+        Shares::generate(ASSET_D, &ALICE, 25 * BASE).ok();
 
 
         // joining the pool
@@ -68,8 +68,8 @@ fn it_allows_the_full_user_lifecycle() {
             Swaps::join_pool(
                 Origin::signed(ALICE),
                 0,
-                10,
-                vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
+                1 * BASE,
+                vec!(25 * BASE, 25 * BASE, 25 * BASE, 25 * BASE),
             )
         );
 
