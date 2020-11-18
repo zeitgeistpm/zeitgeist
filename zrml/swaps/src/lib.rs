@@ -20,6 +20,7 @@ use sp_runtime::traits::{
 };
 use sp_std::cmp;
 use sp_std::collections::btree_map::BTreeMap;
+use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
 use zrml_traits::shares::{ReservableShares, Shares};
 
@@ -65,6 +66,11 @@ pub trait Trait: frame_system::Trait {
     type MaxInRatio: Get<BalanceOf<Self>>;
 
     type MaxOutRatio: Get<BalanceOf<Self>>;
+
+    type MinWeight: Get<u128>;
+    type MaxWeight: Get<u128>;
+    type MaxTotalWeight: Get<u128>;
+    type MaxAssets: Get<u128>;
 }
 
 decl_storage! {
@@ -89,6 +95,7 @@ decl_error! {
         AssetNotBound,
         BelowMinimumWeight,
         AboveMaximumWeight,
+        MaxTotalWeight,
         MathApproximation,
         LimitIn,
         LimitOut,
@@ -454,12 +461,12 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn create_pool(assets: Vec<T::Hash>, swap_fee: u128, weights: Vec<u128>) {
-        // ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets)?;
+    pub fn create_pool(assets: Vec<T::Hash>, swap_fee: u128, weights: Vec<u128>) -> DispatchResult {
+        ensure!(assets.len() <= T::MaxAssets::get().try_into().unwrap(), Error::<T>::TooManyAssets);
 
         for i in 0..weights.len() {
-            // ensure!(weights[i] >= T::MinWeight, Error::<T>::BelowMinimumWeight)?;
-            // ensure!(weights[i] <= T::MaxWeight, Error::<T>::AboveMaximumWeight)?;
+            ensure!(weights[i] >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
+            ensure!(weights[i] <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
         }
 
         let next_pool_id = Self::next_pool_id();
@@ -470,6 +477,7 @@ impl<T: Trait> Module<T> {
         }
 
         let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
+        ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
 
         <Pools<T>>::insert(next_pool_id, Pool {
             assets,
@@ -477,6 +485,8 @@ impl<T: Trait> Module<T> {
             total_weight,
             weights: map,
         });
+
+        Ok(())
     }
 
     pub fn get_spot_price(pool_id: u128, asset_in: T::Hash, asset_out: T::Hash) -> BalanceOf<T> {

@@ -89,7 +89,11 @@ parameter_types! {
     pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
     pub const ExitFee: Balance = 0;
     pub const MaxInRatio: Balance = BASE / 2;
-    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+	pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+	pub const MinWeight: Balance = BASE;
+	pub const MaxWeight: Balance = 50 * BASE;
+	pub const MaxTotalWeight: Balance = 50 * BASE;
+	pub const MaxAssets: Balance = 8;
 }
 
 impl Trait for Test {
@@ -99,7 +103,10 @@ impl Trait for Test {
     type ModuleId = SwapsModuleId;
     type ExitFee = ExitFee;
     type MaxInRatio = MaxInRatio;
-    type MaxOutRatio = MaxOutRatio;
+	type MaxOutRatio = MaxOutRatio;
+	type MinWeight = MinWeight;
+	type MaxWeight = MaxWeight;
+	type MaxAssets = MaxAssets;
 }
 
 pub type Balances = pallet_balances::Module<Test>;
