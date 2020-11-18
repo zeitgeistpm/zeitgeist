@@ -25,6 +25,8 @@ mod consts;
 mod fixed;
 mod math;
 
+use fixed::*;
+
 #[cfg(test)]
 mod mock;
 
@@ -67,6 +69,7 @@ pub trait Trait: frame_system::Trait {
     type MaxWeight: Get<u128>;
     type MaxTotalWeight: Get<u128>;
     type MaxAssets: Get<u128>;
+    type MinBalance: Get<BalanceOf<Self>>;
 }
 
 decl_storage! {
@@ -93,6 +96,7 @@ decl_error! {
         AboveMaximumWeight,
         MaxTotalWeight,
         MathApproximation,
+        MathApproximationDebug,
         LimitIn,
         LimitOut,
         PoolDoesNotExist,
@@ -114,7 +118,7 @@ decl_module! {
 
             let pool_shares_id = Self::pool_shares_id(pool_id);
             let pool_shares_total = T::Shares::total_supply(pool_shares_id);
-            let ratio = pool_amount_out / pool_shares_total;
+            let ratio: BalanceOf<T> = bdiv(pool_amount_out.saturated_into(), pool_shares_total.saturated_into()).saturated_into();
             ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
          
             if let Some(pool) = Self::pools(pool_id) {
@@ -123,8 +127,8 @@ decl_module! {
                 for i in 0..pool.assets.len() {
                     let asset = pool.assets[i];
                     let bal = T::Shares::free_balance(asset, &pool_account);
-                    let asset_amount_in = ratio * bal;
-                    ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximation);
+                    let asset_amount_in = bmul(ratio.saturated_into(), bal.saturated_into()).saturated_into();
+                    ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximationDebug);
                     ensure!(asset_amount_in <= max_amounts_in[i], Error::<T>::LimitIn);
 
                     // transfer asset_amount_in to the pool_account
@@ -467,9 +471,14 @@ impl<T: Trait> Module<T> {
 
         let next_pool_id = Self::inc_next_pool_id();
 
+        let pool_account = Self::pool_account_id(next_pool_id);
+
         let mut map = BTreeMap::new();
         for i in 0..assets.len() {
             map.insert(assets[i], weights[i]);
+
+            // generate the `MinBalance` of shares
+            T::Shares::generate(assets[i], &pool_account, T::MinBalance::get());
         }
 
         let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
