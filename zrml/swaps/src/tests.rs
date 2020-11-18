@@ -73,6 +73,18 @@ fn it_allows_the_full_user_lifecycle() {
             )
         );
 
+        let pool_shares_id = Swaps::pool_shares_id(0);
+        let balance = Shares::free_balance(pool_shares_id, &ALICE);
+        assert_eq!(balance, 5 * BASE);
+
+        let asset_a_bal = Shares::free_balance(ASSET_A, &ALICE);
+        let asset_b_bal = Shares::free_balance(ASSET_B, &ALICE);
+        let asset_c_bal = Shares::free_balance(ASSET_C, &ALICE);
+        let asset_d_bal = Shares::free_balance(ASSET_D, &ALICE);
+        assert_eq!(asset_a_bal, asset_b_bal);
+        assert_eq!(asset_b_bal, asset_c_bal);
+        assert_eq!(asset_c_bal, asset_d_bal);
+
 
     });
 }
