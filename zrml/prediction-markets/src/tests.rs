@@ -4,7 +4,6 @@ use frame_support::{
     dispatch::DispatchError,
 };
 use sp_core::H256;
-use zrml_traits::shares::Shares as SharesTrait;
 
 #[test]
 fn it_creates_binary_markets() {
