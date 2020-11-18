@@ -1,3 +1,4 @@
+/// The base number of decimals places to use for math.
 pub const BASE: u128 = 10_000_000_000;
 
 // pub const MIN_FEE: u128 = 100;
