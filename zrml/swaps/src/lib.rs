@@ -22,6 +22,7 @@ use sp_std::vec::Vec;
 use zrml_traits::shares::{ReservableShares, Shares};
 
 mod consts;
+mod fixed;
 mod math;
 
 #[cfg(test)]
