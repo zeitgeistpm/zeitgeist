@@ -11,14 +11,11 @@ use frame_support::{
     ensure,
 };
 use frame_support::traits::{
-    Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons, Get,
+    Currency, ReservableCurrency, Get,
 };
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::{DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion};
-use sp_runtime::traits::{
-    AccountIdConversion, CheckedSub, CheckedMul, Hash, Zero,
-};
-use sp_std::cmp;
+use sp_runtime::traits::{AccountIdConversion, Hash, Zero};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
@@ -30,8 +27,8 @@ mod math;
 #[cfg(test)]
 mod mock;
 
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Pool<Hash> {
@@ -64,9 +61,7 @@ pub trait Trait: frame_system::Trait {
     type ExitFee: Get<BalanceOf<Self>>;
 
     type MaxInRatio: Get<BalanceOf<Self>>;
-
     type MaxOutRatio: Get<BalanceOf<Self>>;
-
     type MinWeight: Get<u128>;
     type MaxWeight: Get<u128>;
     type MaxTotalWeight: Get<u128>;
@@ -76,7 +71,7 @@ pub trait Trait: frame_system::Trait {
 decl_storage! {
     trait Store for Module<T: Trait> as Swaps {
         Pools get(fn pools): map hasher(blake2_128_concat) u128 => Option<Pool<T::Hash>>;
-        NextPoolId: u128;
+        NextPoolId get(fn next_pool_id): u128;
     }
 }
 
@@ -469,7 +464,7 @@ impl<T: Trait> Module<T> {
             ensure!(weights[i] <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
         }
 
-        let next_pool_id = Self::next_pool_id();
+        let next_pool_id = Self::inc_next_pool_id();
 
         let mut map = BTreeMap::new();
         for i in 0..assets.len() {
@@ -485,6 +480,9 @@ impl<T: Trait> Module<T> {
             total_weight,
             weights: map,
         });
+
+        let pool_shares_id = Self::pool_shares_id(next_pool_id);
+        T::Shares::generate(pool_shares_id, &Self::pool_master_account(), (100 * consts::BASE).saturated_into())?;
 
         Ok(())
     }
@@ -527,11 +525,15 @@ impl<T: Trait> Module<T> {
         ("zge/swaps", pool_id).using_encoded(<T as frame_system::Trait>::Hashing::hash)
     }
 
+    fn pool_master_account() -> T::AccountId {
+        T::ModuleId::get().into_account()
+    }
+
     fn pool_account_id(pool_id: u128) -> T::AccountId {
         T::ModuleId::get().into_sub_account(pool_id)
     }
 
-    fn next_pool_id() -> u128 {
+    fn inc_next_pool_id() -> u128 {
         let id = NextPoolId::get();
         NextPoolId::mutate(|n| *n += 1);
         id
