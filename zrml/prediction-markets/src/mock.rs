@@ -93,12 +93,6 @@ impl zrml_shares::Trait for Test {
 	type Balance = Balance;
 }
 
-impl orderbook_v1::Trait for Test {
-    type Event = ();
-    type Currency = Balances;
-    type Shares = Shares;
-}
-
 parameter_types! {
     pub const PmModuleId: ModuleId = ModuleId(*b"test/prm");
     pub const ReportingPeriod: BlockNumber = 10;
