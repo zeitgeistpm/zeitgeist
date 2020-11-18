@@ -2,16 +2,19 @@ use crate::consts::*;
 use crate::fixed::*;
 
 pub fn calc_spot_price(
-    asset_balanace_in: u128,
+    asset_balance_in: u128,
     asset_weight_in: u128,
     asset_balance_out: u128,
     asset_weight_out: u128,
     swap_fee: u128,
 ) -> u128 // spot_price
 {
-    let numer = bdiv(asset_balanace_in, asset_weight_in);
+    let numer = bdiv(asset_balance_in, asset_weight_in);
+    if numer == 0 { panic!("numer is zero"); }; //debug
     let denom = bdiv(asset_balance_out, asset_weight_out);
+    if denom == 0 { panic!("denom is zero"); }; //debug
     let ratio = bdiv(numer, denom);
+    if ratio == 0 { panic!("ratio is zero"); }; //debug
     let scale = bdiv(BASE, (BASE - swap_fee));
     bmul(ratio,  scale)
 }
