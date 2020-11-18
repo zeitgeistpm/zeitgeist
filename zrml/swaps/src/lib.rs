@@ -26,8 +26,8 @@ use zrml_traits::shares::{ReservableShares, Shares};
 mod consts;
 mod math;
 
-// #[cfg(test)]
-// mod mock;
+#[cfg(test)]
+mod mock;
 
 // #[cfg(test)]
 // mod tests;
