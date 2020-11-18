@@ -106,6 +106,7 @@ impl Trait for Test {
 	type MaxOutRatio = MaxOutRatio;
 	type MinWeight = MinWeight;
 	type MaxWeight = MaxWeight;
+	type MaxTotalWeight = MaxTotalWeight;
 	type MaxAssets = MaxAssets;
 }
 
