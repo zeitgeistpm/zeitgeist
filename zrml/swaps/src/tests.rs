@@ -84,7 +84,22 @@ fn it_allows_the_full_user_lifecycle() {
         assert_eq!(asset_a_bal, asset_b_bal);
         assert_eq!(asset_b_bal, asset_c_bal);
         assert_eq!(asset_c_bal, asset_d_bal);
+        assert_eq!(asset_a_bal, 20 * BASE);
 
+        let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B);
+        assert_eq!(spot_price, BASE);
 
+        assert_ok!(
+            Swaps::swap_exact_amount_in(
+                Origin::signed(ALICE),
+                0,
+                ASSET_A,
+                BASE,
+                ASSET_B,
+                2 * BASE,
+                BASE,
+            )
+        );
+        
     });
 }
