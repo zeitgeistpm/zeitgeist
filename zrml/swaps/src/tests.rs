@@ -96,8 +96,8 @@ fn it_allows_the_full_user_lifecycle() {
                 ASSET_A,
                 BASE,
                 ASSET_B,
+                BASE / 2,
                 2 * BASE,
-                BASE,
             )
         );
         

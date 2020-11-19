@@ -15,7 +15,7 @@ pub fn calc_spot_price(
     if denom == 0 { panic!("denom is zero"); }; //debug
     let ratio = bdiv(numer, denom);
     if ratio == 0 { panic!("ratio is zero"); }; //debug
-    let scale = bdiv(BASE, (BASE - swap_fee));
+    let scale = bdiv(BASE, BASE - swap_fee);
     bmul(ratio,  scale)
 }
 
@@ -31,7 +31,7 @@ pub fn calc_out_given_in(
     let weight_ratio = bdiv(asset_weight_in, asset_weight_out);
     let mut adjusted_in = BASE - swap_fee;
     adjusted_in = bmul(adjusted_in, asset_amount_in);
-    let y = bdiv(asset_balance_in, (asset_balance_in + adjusted_in));
+    let y = bdiv(asset_balance_in, asset_balance_in + adjusted_in);
     let foo = bpow(y, weight_ratio);
     let bar = BASE - foo;
     bmul(asset_balance_out, bar)

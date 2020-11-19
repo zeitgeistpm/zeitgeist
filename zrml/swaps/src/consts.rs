@@ -10,4 +10,4 @@ pub const EXIT_FEE: u128 = 0;
 
 // pub const MAX_IN_RATIO: u128 = BASE / 2;
 // pub const MAX_OUT_RATIO: u128 = (BASE / 3) + 1;
-pub const BPOW_PRECISION = BASE;
+pub const BPOW_PRECISION: u128 = BASE;
