@@ -4,6 +4,7 @@ use frame_support::{
     dispatch::DispatchError,
 };
 use sp_core::H256;
+use zrml_traits::shares::Shares as SharesTrait;
 
 #[test]
 fn it_creates_binary_markets() {
@@ -42,6 +43,33 @@ fn it_creates_binary_markets() {
         // Make sure that the market id has been incrementing
         let market_id = PredictionMarkets::market_count();
         assert_eq!(market_id, 2);
+    });
+}
+
+#[test]
+fn it_allows_sudo_to_destroy_markets() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(BOB),
+                ALICE,
+                MarketType::Binary,
+                1000,
+                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
+                MarketCreation::Advised,
+            )
+        );
+
+        // destroy the market
+        assert_ok!(
+            PredictionMarkets::destroy_market(
+                Origin::signed(SUDO),
+                0
+            )
+        );
+
+        assert_eq!(PredictionMarkets::markets(0).is_none(), true);
     });
 }
 
