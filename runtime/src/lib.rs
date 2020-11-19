@@ -28,6 +28,7 @@ use sp_version::NativeVersion;
 use zeitgeist_primitives::*;
 
 pub mod constants;
+use crate::constants::currency::*;
 use crate::constants::time::*;
 
 // A few exports that help ease life for downstream crates.
@@ -54,7 +55,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("zeitgeist"),
 	impl_name: create_runtime_str!("zeitgeist"),
 	authoring_version: 1,
-	spec_version: 2,
+	spec_version: 3,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -248,7 +249,34 @@ impl orderbook_v1::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const PmModuleId: ModuleId = ModuleId(*b"zgt/prma");
+    pub const SwapsModuleId: ModuleId = ModuleId(*b"zge/swap");
+    pub const ExitFee: Balance = 0;
+    pub const MaxInRatio: Balance = ZGE / 2;
+	pub const MaxOutRatio: Balance = (ZGE / 3) + 1;
+	pub const MinWeight: Balance = ZGE;
+	pub const MaxWeight: Balance = 50 * ZGE;
+	pub const MaxTotalWeight: Balance = 50 * ZGE;
+	pub const MaxAssets: Balance = 8;
+	pub const MinLiquidity: Balance = 100 * ZGE;
+}
+
+impl zrml_swaps::Trait for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Shares = Shares;
+    type ModuleId = SwapsModuleId;
+    type ExitFee = ExitFee;
+    type MaxInRatio = MaxInRatio;
+	type MaxOutRatio = MaxOutRatio;
+	type MinWeight = MinWeight;
+	type MaxWeight = MaxWeight;
+	type MaxTotalWeight = MaxTotalWeight;
+	type MaxAssets = MaxAssets;
+	type MinLiquidity = MinLiquidity;
+}
+
+parameter_types! {
+	pub const PmModuleId: ModuleId = ModuleId(*b"zge/pred");
 	pub const ReportingPeriod: BlockNumber = 100;
 	pub const DisputePeriod: BlockNumber = 100;
 	pub const DisputeBond: Balance = 10;
@@ -296,6 +324,7 @@ construct_runtime!(
 		Shares: zrml_shares::{Module, Call, Storage, Event<T>},
 		Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>},
 		PredictionMarkets: zrml_prediction_markets::{Module, Call, Storage, Event<T>},
+		Swaps: zrml_swaps::{Module, Call, Storage, Event<T>},
 	}
 );
 
