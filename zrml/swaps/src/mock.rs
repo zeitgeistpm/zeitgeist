@@ -1,8 +1,6 @@
 use crate::{Module, Trait};
 use sp_core::H256;
-use frame_system::EnsureSignedBy;
-use frame_support::{impl_outer_origin, parameter_types, ord_parameter_types, weights::Weight};
-use frame_support::traits::{OnInitialize, OnFinalize};
+use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     testing::Header, Perbill, ModuleId,
@@ -11,14 +9,12 @@ use sp_runtime::{
 pub type AccountId = u128;
 pub type Balance = u128;
 pub type BlockNumber = u64;
-pub type MarketId = u128;
 
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
 pub const CHARLIE: AccountId = 2;
 pub const DAVE: AccountId = 3;
 pub const EVE: AccountId = 4;
-pub const SUDO: AccountId = 69;
 
 // BASE is used as the number of decimals in order to set constants elsewhere.
 pub const BASE: Balance = 10_000_000_000;
@@ -115,7 +111,6 @@ impl Trait for Test {
 pub type Balances = pallet_balances::Module<Test>;
 pub type Shares = zrml_shares::Module<Test>;
 pub type Swaps = Module<Test>;
-pub type System = frame_system::Module<Test>;
 
 pub struct ExtBuilder {
 	balances: Vec<(AccountId, Balance)>,
