@@ -259,6 +259,28 @@ decl_module! {
             }
         }
 
+        /// Allows Root to destroy markets.
+        ///
+        /// todo: this should check if there's any outstanding funds reserved if it stays
+        /// in for production
+        #[weight = 0]
+        pub fn destroy_market(origin, market_id: T::MarketId) {
+            T::ApprovalOrigin::ensure_origin(origin)?;
+
+            if let Some(market) = Self::markets(&market_id) {
+
+                <Markets<T>>::remove(&market_id);
+
+                // delete all the shares if any exist
+                for i in 0..market.outcomes() {
+                    let share_id = Self::market_outcome_share_id(market_id.clone(), i);
+                    T::Shares::destroy_all(share_id).unwrap();
+                }  
+            } else {
+                Err(Error::<T>::MarketDoesNotExist)?;
+            }
+        }
+
         /// Creates a new prediction market, seeded with the intial values.
         ///
         #[weight = 0]
