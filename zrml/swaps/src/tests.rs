@@ -1,10 +1,8 @@
-use crate::{mock::*, Error};
-use frame_support::{
-    assert_noop, assert_ok,
-    dispatch::DispatchError,
-};
+use crate::{mock::*};
+use frame_support::assert_ok;
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
+use zrml_traits::swaps::Swaps as SwapsTrait;
 
 pub const ASSET_A: H256 = H256::repeat_byte(65);
 pub const ASSET_B: H256 = H256::repeat_byte(66);
