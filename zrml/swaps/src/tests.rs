@@ -89,6 +89,20 @@ fn it_allows_the_full_user_lifecycle() {
         let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B);
         assert_eq!(spot_price, BASE);
 
+        let pool_account = Swaps::pool_account_id(0);
+
+        let in_balance = Shares::free_balance(ASSET_A, &pool_account);
+        assert_eq!(in_balance, 105 * BASE);
+
+        let expected = crate::math::calc_out_given_in(
+            in_balance,
+            2 * BASE,
+            105 * BASE,
+            2 * BASE,
+            BASE,
+            0,
+        );
+
         assert_ok!(
             Swaps::swap_exact_amount_in(
                 Origin::signed(ALICE),
@@ -100,6 +114,14 @@ fn it_allows_the_full_user_lifecycle() {
                 2 * BASE,
             )
         );
+
+        let asset_a_bal_after = Shares::free_balance(ASSET_A, &ALICE);
+        assert_eq!(asset_a_bal_after, asset_a_bal - BASE);
+
+        let asset_b_bal_after = Shares::free_balance(ASSET_B, &ALICE);
+        assert_eq!(asset_b_bal_after - asset_b_bal, expected);
+
+        assert_eq!(expected, 9_905_660_415);
         
     });
 }
