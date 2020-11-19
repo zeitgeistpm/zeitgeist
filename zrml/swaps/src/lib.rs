@@ -223,9 +223,9 @@ decl_module! {
 
                 let spot_price_after = Self::get_spot_price(pool_id, asset_in, asset_out);
 
-                // ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
-                // ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
-                // ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);
+                ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+                ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
+                ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);
 
                 //todo emit an event
             } else {

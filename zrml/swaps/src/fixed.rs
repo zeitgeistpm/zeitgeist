@@ -1,4 +1,4 @@
-use crate::consts::BASE;
+use crate::consts::{BASE, BPOW_PRECISION};
 
 pub fn btoi(a: u128) -> u128 {
     a / BASE
@@ -6,6 +6,14 @@ pub fn btoi(a: u128) -> u128 {
 
 pub fn bfloor(a: u128) -> u128 {
     btoi(a) * BASE
+}
+
+pub fn bsub_sign(a: u128, b: u128) -> (u128, bool) {
+    if a >= b {
+        return (a - b, false);
+    } else {
+        return (b - a, true);
+    }
 }
 
 pub fn bmul(a: u128, b: u128) -> u128 {
@@ -43,16 +51,45 @@ pub fn bpow(base: u128, exp: u128) -> u128 {
     let whole = bfloor(exp);
     let remain = exp - whole;
 
-    let wholePow = bpowi(base, btoi(whole));
+    let whole_pow = bpowi(base, btoi(whole));
 
     if remain == 0 {
-        return wholePow;
+        return whole_pow;
     }
 
-    let partialResult = bpowApprox(base, remain, BPOW_PRECISION);
-    return bmul(wholePow, partialResult);
+    let partial_result = bpow_approx(base, remain, BPOW_PRECISION);
+    return bmul(whole_pow, partial_result);
 }
 
-pub fn bpowApprox(base: u128, exp: u128, precision: u128) -> u128 {
+pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> u128 {
+    let a = exp;
+    let (x, xneg) = bsub_sign(base, BASE);
+    let mut term = BASE;
+    let mut sum = term;
+    let mut negative = false;
 
+    // term(k) = numer / denom 
+    //         = (product(a - i - 1, i=1-->k) * x^k) / (k!)
+    // each iteration, multiply previous term by (a-(k-1)) * x / k
+    // continue until term is less than precision
+    let mut i = 1;
+    while term >= precision {
+        let big_k = i * BASE;
+        let (c, cneg) = bsub_sign(a, big_k - BASE);
+        term = bmul(term, bmul(c, x));
+        term = bdiv(term, big_k);
+        if term == 0 { break; }
+
+        if xneg { negative = !negative; }
+        if cneg { negative = !negative; }
+        if negative {
+            sum = sum - term;
+        } else {
+            sum = sum + term;
+        }
+
+        i += 1;
+    }
+
+    sum
 }
