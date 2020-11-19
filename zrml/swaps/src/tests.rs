@@ -86,6 +86,7 @@ fn it_allows_the_full_user_lifecycle() {
         assert_eq!(asset_c_bal, asset_d_bal);
         assert_eq!(asset_a_bal, 20 * BASE);
 
+        // swap_exact_amount_in
         let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B);
         assert_eq!(spot_price, BASE);
 
@@ -97,7 +98,7 @@ fn it_allows_the_full_user_lifecycle() {
         let expected = crate::math::calc_out_given_in(
             in_balance,
             2 * BASE,
-            105 * BASE,
+            Shares::free_balance(ASSET_B, &pool_account),
             2 * BASE,
             BASE,
             0,
@@ -123,5 +124,34 @@ fn it_allows_the_full_user_lifecycle() {
 
         assert_eq!(expected, 9_905_660_415);
         
+        //swap_exact_amount_out
+        let expected_in = crate::math::calc_in_given_out(
+            Shares::free_balance(ASSET_A, &pool_account),
+            2 * BASE,
+            Shares::free_balance(ASSET_B, &pool_account),
+            2 * BASE,
+            BASE,
+            0
+        );
+
+        assert_eq!(expected_in, 10_290_319_622);
+
+        assert_ok!(
+            Swaps::swap_exact_amount_out(
+                Origin::signed(ALICE),
+                0,
+                ASSET_A,
+                2 * BASE,
+                ASSET_B,
+                BASE,
+                3 * BASE,
+            )
+        );
+
+        let asset_a_bal_after_2 = Shares::free_balance(ASSET_A, &ALICE);
+        assert_eq!(asset_a_bal_after_2, asset_a_bal_after - expected_in);
+
+        let asset_b_bal_after_2 = Shares::free_balance(ASSET_B, &ALICE);
+        assert_eq!(asset_b_bal_after_2 - asset_b_bal_after, BASE);
     });
 }

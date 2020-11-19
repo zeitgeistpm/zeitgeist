@@ -46,10 +46,10 @@ pub fn calc_in_given_out(
     swap_fee: u128,
 ) -> u128 // asset_amount_in
 {
-    let weight_ratio = bdiv(asset_weight_in, asset_weight_out);
+    let weight_ratio = bdiv(asset_weight_out, asset_weight_in);
     let diff = asset_balance_out - asset_amount_out;
     let y = bdiv(asset_balance_out, diff);
-    let foo = bpow(y, weight_ratio);
+    let foo = bpow(y, weight_ratio) - BASE;
     let mut asset_amount_in = BASE - swap_fee;
     asset_amount_in = bdiv(bmul(asset_balance_in, foo), asset_amount_in);
     asset_amount_in
