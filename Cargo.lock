@@ -7946,6 +7946,7 @@ dependencies = [
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
  "zrml-shares",
+ "zrml-swaps",
  "zrml-traits",
 ]
 
@@ -8025,6 +8026,22 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "zrml-traits",
+]
+
+[[package]]
+name = "zrml-swaps"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "zrml-shares",
  "zrml-traits",
 ]
 
