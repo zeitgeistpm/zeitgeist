@@ -20,6 +20,7 @@ use sp_std::collections::btree_map::BTreeMap;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
 use zrml_traits::shares::{ReservableShares, Shares};
+use zrml_traits::swaps::Swaps;
 
 mod consts;
 mod fixed;
@@ -34,14 +35,14 @@ mod mock;
 mod tests;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
-pub struct Pool<Hash> {
+pub struct Pool<Balance, Hash> {
     pub assets: Vec<Hash>,
-    pub swap_fee: u128,
+    pub swap_fee: Balance,
     pub total_weight: u128,
     pub weights: BTreeMap<Hash, u128>,
 }
 
-impl<Hash: Ord> Pool<Hash> {
+impl<Balance, Hash: Ord> Pool<Balance, Hash> {
     pub fn bound(&self, asset: Hash) -> bool {
         let weight = BTreeMap::get(&self.weights, &asset);
         weight.is_some()
@@ -69,12 +70,14 @@ pub trait Trait: frame_system::Trait {
     type MaxWeight: Get<u128>;
     type MaxTotalWeight: Get<u128>;
     type MaxAssets: Get<u128>;
-    type MinBalance: Get<BalanceOf<Self>>;
+
+    /// The minimum amount of liqudity required to bootstrap a pool.
+    type MinLiquidity: Get<BalanceOf<Self>>;
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as Swaps {
-        Pools get(fn pools): map hasher(blake2_128_concat) u128 => Option<Pool<T::Hash>>;
+        Pools get(fn pools): map hasher(blake2_128_concat) u128 => Option<Pool<BalanceOf<T>, T::Hash>>;
         NextPoolId get(fn next_pool_id): u128;
     }
 }
@@ -212,7 +215,7 @@ decl_module! {
                     out_balance.saturated_into(),
                     *pool.weights.get(&asset_out).unwrap(),
                     asset_amount_in.saturated_into(),
-                    pool.swap_fee,
+                    pool.swap_fee.saturated_into(),
                 ).saturated_into();
 
                 ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
@@ -265,7 +268,7 @@ decl_module! {
                     out_balance.saturated_into(),
                     *pool.weights.get(&asset_out).unwrap(),
                     asset_amount_out.saturated_into(),
-                    pool.swap_fee,
+                    pool.swap_fee.saturated_into(),
                 ).saturated_into();
 
                 ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
@@ -313,7 +316,7 @@ decl_module! {
                     total_supply.saturated_into(),
                     pool.total_weight.saturated_into(),
                     asset_amount_in.saturated_into(),
-                    pool.swap_fee,
+                    pool.swap_fee.saturated_into(),
                 ).saturated_into();
 
                 ensure!(pool_amount_out >= min_pool_amount_out, Error::<T>::LimitOut);
@@ -353,7 +356,7 @@ decl_module! {
                     total_supply.saturated_into(),
                     pool.total_weight,
                     pool_amount_out.saturated_into(),
-                    pool.swap_fee,
+                    pool.swap_fee.saturated_into(),
                 ).saturated_into();
 
                 ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximation);
@@ -394,7 +397,7 @@ decl_module! {
                     total_supply.saturated_into(),
                     pool.total_weight,
                     pool_amount_in.saturated_into(),
-                    pool.swap_fee,
+                    pool.swap_fee.saturated_into(),
                 ).saturated_into();
 
                 ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
@@ -440,7 +443,7 @@ decl_module! {
                     total_supply.saturated_into(),
                     pool.total_weight,
                     asset_amount_out.saturated_into(),
-                    pool.swap_fee,
+                    pool.swap_fee.saturated_into(),
                 ).saturated_into();
 
                 ensure!(pool_amount_in != Zero::zero(), Error::<T>::MathApproximation);
@@ -461,42 +464,6 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn create_pool(assets: Vec<T::Hash>, swap_fee: u128, weights: Vec<u128>) -> DispatchResult {
-        ensure!(assets.len() <= T::MaxAssets::get().try_into().unwrap(), Error::<T>::TooManyAssets);
-
-        for i in 0..weights.len() {
-            ensure!(weights[i] >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
-            ensure!(weights[i] <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
-        }
-
-        let next_pool_id = Self::inc_next_pool_id();
-
-        let pool_account = Self::pool_account_id(next_pool_id);
-
-        let mut map = BTreeMap::new();
-        for i in 0..assets.len() {
-            map.insert(assets[i], weights[i]);
-
-            // generate the `MinBalance` of shares
-            T::Shares::generate(assets[i], &pool_account, (100 * consts::BASE).saturated_into());
-        }
-
-        let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
-        ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
-
-        <Pools<T>>::insert(next_pool_id, Pool {
-            assets,
-            swap_fee,
-            total_weight,
-            weights: map,
-        });
-
-        let pool_shares_id = Self::pool_shares_id(next_pool_id);
-        T::Shares::generate(pool_shares_id, &Self::pool_master_account(), (100 * consts::BASE).saturated_into())?;
-
-        Ok(())
-    }
-
     pub fn get_spot_price(pool_id: u128, asset_in: T::Hash, asset_out: T::Hash) -> BalanceOf<T> {
         if let Some(pool) = Self::pools(pool_id) {
             // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
@@ -547,5 +514,43 @@ impl<T: Trait> Module<T> {
         let id = NextPoolId::get();
         NextPoolId::mutate(|n| *n += 1);
         id
+    }
+}
+
+impl<T: Trait> Swaps<BalanceOf<T>, T::Hash> for Module<T> {
+    fn create_pool(assets: Vec<T::Hash>, swap_fee: BalanceOf<T>, weights: Vec<u128>) -> DispatchResult {
+        ensure!(assets.len() <= T::MaxAssets::get().try_into().unwrap(), Error::<T>::TooManyAssets);
+
+        for i in 0..weights.len() {
+            ensure!(weights[i] >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
+            ensure!(weights[i] <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
+        }
+
+        let next_pool_id = Self::inc_next_pool_id();
+
+        let pool_account = Self::pool_account_id(next_pool_id);
+
+        let mut map = BTreeMap::new();
+        for i in 0..assets.len() {
+            map.insert(assets[i], weights[i]);
+
+            // generate the `MinBalance` of shares
+            T::Shares::generate(assets[i], &pool_account, T::MinLiquidity::get())?;
+        }
+
+        let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
+        ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
+
+        <Pools<T>>::insert(next_pool_id, Pool {
+            assets,
+            swap_fee,
+            total_weight,
+            weights: map,
+        });
+
+        let pool_shares_id = Self::pool_shares_id(next_pool_id);
+        T::Shares::generate(pool_shares_id, &Self::pool_master_account(), T::MinLiquidity::get())?;
+
+        Ok(())
     }
 }
