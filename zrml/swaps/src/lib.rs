@@ -116,6 +116,13 @@ decl_module! {
         fn deposit_event() = default;
 
         #[weight = 0]
+        fn extern_create_pool(origin, assets: Vec<T::Hash>, weights: Vec<u128>) {
+            let _sender = ensure_signed(origin)?;
+
+            Self::create_pool(assets, Zero::zero(), weights)?;
+        }
+
+        #[weight = 0]
         fn join_pool(origin, pool_id: u128, pool_amount_out: BalanceOf<T>, max_amounts_in: Vec<BalanceOf<T>>) {
             let sender = ensure_signed(origin)?;
 
