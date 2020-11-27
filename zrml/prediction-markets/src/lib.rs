@@ -414,29 +414,6 @@ decl_module! {
             }
         }
 
-        // /// Requires 200 ZGE:
-        // /// - 100 ZGE to supply native currency.
-        // /// - 100 ZGE to buy a complete set.
-        // #[weight = 0]
-        // pub fn create_pool_for_market(origin, market_id: T::MarketId) {
-        //     let sender = ensure_signed(origin)?;
-
-        //     ensure!(Self::market_id_to_pool_id(market_id).is_none(), Error::<T>::PoolAlreadyExists);
-
-        //     if let Some(market) = <Markets<T>>::get(&market_id) {
-        //         ensure!(market.status == MarketStatus::Active, Error::<T>::MarketNotActive);
-
-        //         let req_funds = T::RequiredFundsForPool::get();
-
-        //         ensure!(T::Currency::free_balance(&sender) >= req_funds, "Insufficient balance");
-
-        //         T::Shares::do_wrap_native_currency(sender, req_funds / 2)?;
-        //         Self::buy_complete_set(origin, market_id, req_funds/2)?;
-
-        //         T::Swaps::create_pool(assets, )
-        //     } else { Err(Error::<T>::MarketDoesNotExist)?; }
-        // }
-
         /// Generates a complete set of outcome shares for a market.
         ///
         /// NOTE: This is the only way to create new shares.
