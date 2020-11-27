@@ -88,9 +88,15 @@ impl pallet_timestamp::Trait for Test {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
+}
+
 impl zrml_shares::Trait for Test {
 	type Event = ();
 	type Balance = Balance;
+	type Currency = Balances;
+	type ModuleId = SharesModuleId;
 }
 
 parameter_types! {
@@ -104,6 +110,7 @@ parameter_types! {
     pub const ValidityBond: Balance = 200;
     pub const AdvisoryBond: Balance = 50;
 }
+
 ord_parameter_types! {
 	pub const Sudo: AccountId = 69;
 }
