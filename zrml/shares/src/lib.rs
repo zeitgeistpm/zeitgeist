@@ -2,13 +2,15 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, Parameter,
+    decl_error, decl_event, decl_module, decl_storage, Parameter, ensure,
 };
+use frame_support::traits::{Currency, ReservableCurrency, Get, ExistenceRequirement};
 use frame_system::ensure_signed;
 use sp_runtime::{
     traits::{AtLeast32Bit, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, StaticLookup, Zero},
-    DispatchResult, RuntimeDebug,
+    DispatchResult, RuntimeDebug, ModuleId,
 };
+use sp_runtime::{traits::AccountIdConversion, SaturatedConversion};
 use sp_std::{
     cmp,
 	prelude::*,
@@ -21,6 +23,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
 pub struct AccountShares<Balance> {
     pub free: Balance,
@@ -29,7 +33,13 @@ pub struct AccountShares<Balance> {
 
 pub trait Trait: frame_system::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    
     type Balance: Parameter + Member + Copy + MaybeSerializeDeserialize + AtLeast32Bit + Default;
+    
+    type Currency: ReservableCurrency<Self::AccountId>;
+
+    /// The module identifier.
+    type ModuleId: Get<ModuleId>;
 }
 
 decl_storage! {
@@ -88,6 +98,22 @@ decl_module! {
 
             Self::deposit_event(RawEvent::Transferred(share_id, from, to, amount));
         }
+
+        /// Wraps the native currency into a "share" so that it can be used as if it was part of this
+        /// pallet.
+        #[weight = 0]
+        pub fn wrap_native_currency(origin, amount: BalanceOf<T>) {
+            let sender = ensure_signed(origin)?;
+
+            Self::do_wrap_native_currency(sender, amount)?;
+        }
+
+        #[weight = 0]
+        pub fn unwrap_native_currency(origin, amount: BalanceOf<T>) {
+            let sender = ensure_signed(origin)?;
+
+            Self::do_unwrap_native_currency(sender, amount)?;
+        }
     }
 }
 
@@ -98,6 +124,35 @@ impl<T: Trait> Module<T> {
 
     pub fn set_reserved(share_id: T::Hash, who: &T::AccountId, reserved: T::Balance) {
         <Accounts<T>>::mutate(share_id, who, |data| data.reserved = reserved);
+    }
+
+    pub fn do_wrap_native_currency(who: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        ensure!(T::Currency::free_balance(&who) >= amount.into(), Error::<T>::BalanceTooLow);
+
+        let id = Self::get_native_currency_id();
+
+        T::Currency::transfer(&who, &Self::get_module_id(), amount, ExistenceRequirement::KeepAlive)?;
+        Self::generate(id, &who, amount.saturated_into().saturated_into())
+    }
+
+    pub fn do_unwrap_native_currency(who: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        let id = Self::get_native_currency_id();
+
+        ensure!(Self::free_balance(id, &who) >= amount.saturated_into().saturated_into(), Error::<T>::BalanceTooLow);
+
+        Self::destroy(id, &who, amount.saturated_into().saturated_into())?;
+        T::Currency::transfer(&Self::get_module_id(), &who, amount, ExistenceRequirement::AllowDeath)
+    }
+
+    fn get_native_currency_id() -> T::Hash {
+        let mut h = T::Hash::default();
+        h.as_mut().iter_mut().for_each(|byte| *byte = 00);
+
+        h
+    }
+
+    fn get_module_id() -> T::AccountId {
+        T::ModuleId::get().into_account()
     }
 
 }

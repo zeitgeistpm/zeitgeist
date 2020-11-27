@@ -76,9 +76,15 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
+}
+
 impl zrml_shares::Trait for Test {
 	type Event = ();
 	type Balance = Balance;
+	type Currency = Balances;
+	type ModuleId = SharesModuleId;
 }
 
 parameter_types! {

@@ -55,7 +55,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("zeitgeist"),
 	impl_name: create_runtime_str!("zeitgeist"),
 	authoring_version: 1,
-	spec_version: 4,
+	spec_version: 5,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -237,9 +237,15 @@ impl pallet_sudo::Trait for Runtime {
 	type Call = Call;
 }
 
+parameter_types! {
+	pub const SharesModuleId: ModuleId = ModuleId(*b"zge/shar");
+}
+
 impl zrml_shares::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
+	type Currency = Balances;
+	type ModuleId = SharesModuleId;
 }
 
 impl orderbook_v1::Trait for Runtime {
