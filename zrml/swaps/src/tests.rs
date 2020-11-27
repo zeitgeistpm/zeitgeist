@@ -2,7 +2,6 @@ use crate::{mock::*};
 use frame_support::assert_ok;
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
-use zrml_traits::swaps::Swaps as SwapsTrait;
 
 pub const ASSET_A: H256 = H256::repeat_byte(65);
 pub const ASSET_B: H256 = H256::repeat_byte(66);
@@ -10,7 +9,7 @@ pub const ASSET_C: H256 = H256::repeat_byte(67);
 pub const ASSET_D: H256 = H256::repeat_byte(68);
 
 #[test]
-fn it_creates_a_new_pool_internal() {
+fn it_creates_a_new_pool_external() {
     ExtBuilder::default().build().execute_with(|| {
         
         let next_pool_before = Swaps::next_pool_id();
@@ -18,10 +17,14 @@ fn it_creates_a_new_pool_internal() {
 
         let assets = vec!(ASSET_A, ASSET_B, ASSET_C, ASSET_D);
 
+        assets.clone().into_iter().for_each(|asset| {
+            let _res = Shares::generate(asset, &BOB, 100 * BASE);
+        });
+
         assert_ok!(
             Swaps::create_pool(
+                Origin::signed(BOB),
                 assets.clone(),
-                0,
                 vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
             )
         );
@@ -47,10 +50,14 @@ fn it_allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
         let assets = vec!(ASSET_A, ASSET_B, ASSET_C, ASSET_D);
 
+        assets.clone().into_iter().for_each(|asset| {
+            let _res = Shares::generate(asset, &BOB, 100 * BASE);
+        });
+        
         assert_ok!(
             Swaps::create_pool(
+                Origin::signed(BOB),
                 assets.clone(),
-                0,
                 vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
             )
         );
