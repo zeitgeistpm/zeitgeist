@@ -3,7 +3,7 @@ use sp_core::H256;
 use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
 use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
-    testing::Header, Perbill,
+    testing::Header, Perbill, ModuleId,
 };
 
 pub type AccountId = u128;
@@ -69,9 +69,15 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
+}
+
 impl zrml_shares::Trait for Test {
 	type Event = ();
 	type Balance = Balance;
+	type Currency = Balances;
+	type ModuleId = SharesModuleId;
 }
 
 impl Trait for Test {
