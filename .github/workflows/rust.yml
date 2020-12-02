@@ -16,10 +16,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Check
+    - name: Initializes
       run: |
         ./scripts/init.sh
+    - name: Builds WASM
+      run: |
+        make build-wasm
+    - name: Checks
+      run: |
         make check
-    - name: Run tests
+    - name: Runs tests
       run: |
         cargo test
