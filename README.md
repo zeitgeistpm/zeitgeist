@@ -11,10 +11,12 @@ by allowing for traders to create complex financial contracts on virtually _anyt
 
 - [orderbook-v1](./zrml/orderbook-v1) - A naive orderbook implementation that's
   only part of Zeitgeist's PoC. Will be replaced by a v2 orderbook that uses 0x-style
-  hybrid on-chain and off-chain trading. Eventually will be replaced by an automated
-  market maker based on Robin Hanson's Logarithmic Market Scoring Rule.
+  hybrid on-chain and off-chain trading.
 - [prediction-markets](./zrml/prediction-markets) - The core implementation of the
   prediction market logic for creating and resolving markets.
+- [swaps](./zrml/swaps) - An implmenation of a constant function automated market maker
+  (similar to Balancer) that allows for liqudity providing and trading of prediction
+  market shares.
 - [shares](./zrml/shares) - Implementation of tradable and transferrable shares of
   prediction market outcomes.
 
@@ -26,9 +28,9 @@ Zeitgeist is currently under development.
 
 ### [Battery Park](https://github.com/zeitgeistmarket/zeitgeist/milestone/1)
 
-Planned release date: October 31, 2020
+Release date: October 31, 2020
 
-Battery Park is the planned Proof-of-Concept release of the Zeitgeist protocol
+Battery Park is the Proof-of-Concept release of the Zeitgeist protocol
 that implements the prediction markets core logic as well as a simple orderbook
 for trading shares.
 
