@@ -3,8 +3,6 @@ members = [
     "node",
     "runtime",
     "primitives",
-    # "zrml/bonding-curve",
-    # "zrml/one-way-channels",
     "zrml/orderbook-v1",
     # "zrml/orderbook-v2",
     "zrml/prediction-markets",
