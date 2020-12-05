@@ -1,4 +1,6 @@
-# Zeitgeist: A Prediction Markets Blockchain and Governance Protocol
+# Zeitgeist: An Evolving Blockchain for Prediction Markets and Futarchy
+
+![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg)
 
 Zeitgeist is a decentralized network for creating, betting on, and resolving
 prediction markets. The platform's native currency, the ZGE,
