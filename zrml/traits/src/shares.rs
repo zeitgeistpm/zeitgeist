@@ -28,3 +28,9 @@ pub trait ReservableShares<AccountId, Balance, Hash> {
     fn reserve(share_id: Hash, who: &AccountId, value: Balance) -> DispatchResult;
     fn unreserve(share_id: Hash, who: &AccountId, value: Balance) -> Balance;
 }
+
+pub trait WrapperShares<AccountId, Balance, Hash> {
+    fn get_native_currency_id() -> Hash;
+    fn do_wrap_native_currency(who: AccountId, amount: Balance) -> DispatchResult;
+    fn do_unwrap_native_currency(who: AccountId, amount: Balance) -> DispatchResult;
+}

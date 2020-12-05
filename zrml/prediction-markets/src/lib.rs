@@ -41,14 +41,15 @@ use frame_support::traits::{
     EnsureOrigin, OnUnbalanced, Imbalance,
 };
 use frame_system::ensure_signed;
-use sp_runtime::{ModuleId, SaturatedConversion};
+use sp_runtime::{ModuleId, SaturatedConversion, DispatchResult};
 use sp_runtime::traits::{
     AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, 
-    Member, One, Hash,
+    Member, One, Hash, Zero,
 };
 use sp_std::cmp;
 use sp_std::vec::Vec;
-use zrml_traits::shares::Shares;
+use zrml_traits::shares::{Shares, WrapperShares};
+use zrml_traits::swaps::Swaps;
 
 #[cfg(test)]
 mod mock;
@@ -74,7 +75,7 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait  {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash> + WrapperShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
 
     /// The identifier of individual markets.
     type MarketId: AtLeast32Bit + Parameter + Member + MaybeSerializeDeserialize + Default + Copy;
@@ -113,6 +114,8 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait  {
     type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Trait>::Origin>;
 
     type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
+    type Swap: Swaps<Self::AccountId, BalanceOf<Self>, Self::Hash>;
 }
 
 decl_storage! {
@@ -135,10 +138,15 @@ decl_storage! {
         MarketIdsPerDisputeBlock get(fn market_ids_per_dispute_block):
             map hasher(blake2_128_concat) T::BlockNumber => Vec<T::MarketId>;
 
+        /// For each market, this holds the dispute information for each dispute that's
+        ///  been issued.
         Disputes get(fn disputes):
             map hasher(blake2_128_concat) T::MarketId =>
                 Vec<MarketDispute<T::AccountId, T::BlockNumber>>;
 
+        MarketToSwapPool get(fn market_to_swap_pool):
+            map hasher(blake2_128_concat) T::MarketId =>
+                Option<u128>;
     }
 }
 
@@ -210,6 +218,8 @@ decl_error! {
         OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
+        /// A swap pool already exists for this market.
+        SwapPoolExists,
     }
 }
 
@@ -414,6 +424,42 @@ decl_module! {
             }
         }
 
+        /// Deploys a new pool for the market. This pallet keeps track of a single
+        /// canonical swap pool for each market in `market_to_swap_pool`.
+        ///
+        /// The sender should have enough funds to cover all of the required
+        /// shares to seed the pool.
+        #[weight = 0]
+        pub fn deploy_swap_pool_for_market(origin, market_id: T::MarketId) {
+            let sender = ensure_signed(origin)?;
+
+            if let Some(market) = <Markets<T>>::get(&market_id) {
+                // ensure the market is active
+                let status = market.status;
+                ensure!(status == MarketStatus::Active, Error::<T>::MarketNotActive);
+
+                // ensure a swap pool does not already exist
+                ensure!(Self::market_to_swap_pool(&market_id).is_none(), Error::<T>::SwapPoolExists);
+
+                let mut assets = Vec::new();
+                let mut weights = Vec::new();
+                assets.push(T::Shares::get_native_currency_id());
+                weights.push(10_000_000_000_u128);
+                for i in 0..market.outcomes() {
+                    assets.push(
+                        Self::market_outcome_share_id(market_id, i)
+                    );
+                    weights.push(10_000_000_000_u128);
+                }
+
+                let pool_id = T::Swap::do_create_pool(sender, assets, Zero::zero(), weights)?;
+
+                <MarketToSwapPool<T>>::insert(market_id, pool_id);
+            } else {
+                Err(Error::<T>::MarketDoesNotExist)?;
+            }
+        }
+
         /// Generates a complete set of outcome shares for a market.
         ///
         /// NOTE: This is the only way to create new shares.
@@ -426,27 +472,7 @@ decl_module! {
         ) {
             let sender = ensure_signed(origin)?;
 
-            ensure!(
-                T::Currency::free_balance(&sender) >= amount.into(),
-                Error::<T>::NotEnoughBalance,
-            );
-
-            if let Some(market) = Self::markets(market_id.clone()) {
-                ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
-
-                let market_account = Self::market_account(market_id.clone());
-                T::Currency::transfer(&sender, &market_account, amount, ExistenceRequirement::KeepAlive)?;
-
-                for i in 0..market.outcomes() {
-                    let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-
-                    T::Shares::generate(share_id, &sender, amount)?;
-                }
-
-                Self::deposit_event(RawEvent::BoughtCompleteSet(market_id, sender));
-            } else {
-                Err(Error::<T>::MarketDoesNotExist)?;
-            }
+            Self::do_buy_complete_set(sender, market_id, amount)?;
         }
 
         /// Destroys a complete set of outcomes shares for a market.
@@ -689,6 +715,32 @@ impl<T: Trait> Module<T> {
             .ok_or("Overflow when incrementing market count.")?;
         <MarketCount<T>>::put(inc);
         Ok(next)
+    }
+
+    fn do_buy_complete_set(who: T::AccountId, market_id: T::MarketId, amount: BalanceOf<T>) -> DispatchResult {
+        ensure!(
+            T::Currency::free_balance(&who) >= amount.into(), 
+            Error::<T>::NotEnoughBalance,
+        );
+
+        if let Some(market) = Self::markets(market_id.clone()) {
+            ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
+
+            let market_account = Self::market_account(market_id.clone());
+            T::Currency::transfer(&who, &market_account, amount, ExistenceRequirement::KeepAlive)?;
+
+            for i in 0..market.outcomes() {
+                let share_id = Self::market_outcome_share_id(market_id.clone(), i);
+
+                T::Shares::generate(share_id, &who, amount)?;
+            }
+
+            Self::deposit_event(RawEvent::BoughtCompleteSet(market_id, who));
+
+            Ok(())
+        } else {
+            Err(Error::<T>::MarketDoesNotExist)?
+        }
     }
 
     fn internal_resolve(market_id: &T::MarketId) {
