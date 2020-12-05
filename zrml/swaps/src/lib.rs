@@ -87,8 +87,14 @@ decl_event! {
     where
         AccountId = <T as frame_system::Trait>::AccountId,
     {
-        Something(AccountId),
-        PoolCreated(),
+        /// A new pool has been created. [creator]
+        PoolCreated(AccountId),
+        /// Someone has joined a pool. [pool_id, who]
+        JoinedPool(u128, AccountId),
+        /// Someone has exited a pool. [pool_id, who]
+        ExitedPool(u128, AccountId),
+        /// A swap has occurred. [pool_id]
+        Swap(u128)
     }
 }
 
@@ -117,6 +123,7 @@ decl_module! {
 
         fn deposit_event() = default;
 
+        /// Temporary probably - The Swap is created per prediction market.
         #[weight = 0]
         fn create_pool(origin, assets: Vec<T::Hash>, weights: Vec<u128>) {
             let sender = ensure_signed(origin)?;
@@ -148,7 +155,8 @@ decl_module! {
                 }
 
                 Self::mint_pool_shares(pool_id, &sender, pool_amount_out)?;
-                //emit event
+
+                Self::deposit_event(RawEvent::JoinedPool(pool_id, sender));
             } else {
                 Err(Error::<T>::PoolDoesNotExist)?;
             }
@@ -182,7 +190,7 @@ decl_module! {
                     T::Shares::transfer(asset, &pool_account, &sender, asset_amount_out)?;
                 }
 
-                //emit event
+                Self::deposit_event(RawEvent::ExitedPool(pool_id, sender));
             } else {
                 Err(Error::<T>::PoolDoesNotExist)?;
             }
@@ -560,7 +568,7 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         let pool_shares_id = Self::pool_shares_id(next_pool_id);
         T::Shares::generate(pool_shares_id, &Self::pool_master_account(), amount)?;
 
-        Self::deposit_event(RawEvent::PoolCreated());
+        Self::deposit_event(RawEvent::PoolCreated(next_pool_id));
 
         Ok(next_pool_id)
     }

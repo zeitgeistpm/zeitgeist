@@ -27,7 +27,7 @@ pub enum MarketType {
 }
 
 /// Defines the state of the market.
-#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug, Clone, Copy)]
 pub enum MarketStatus {
     // The market has been proposed and is either waiting for approval
     // from the governing committee, or hasn't reach its delay yet.
