@@ -55,7 +55,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("zeitgeist"),
 	impl_name: create_runtime_str!("zeitgeist"),
 	authoring_version: 1,
-	spec_version: 6,
+	spec_version: 7,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -309,6 +309,7 @@ impl zrml_prediction_markets::Trait for Runtime {
 	type ApprovalOrigin = EnsureRoot<AccountId>;
 	type OracleBond = OracleBond;
 	type Slash = ();
+	type Swap = Swaps;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
