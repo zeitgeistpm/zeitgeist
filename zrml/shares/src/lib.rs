@@ -15,7 +15,7 @@ use sp_std::{
     cmp,
 	prelude::*,
 };
-use zrml_traits::shares::{ReservableShares, Shares};
+use zrml_traits::shares::{ReservableShares, Shares, WrapperShares};
 
 #[cfg(test)]
 mod mock;
@@ -124,31 +124,6 @@ impl<T: Trait> Module<T> {
 
     pub fn set_reserved(share_id: T::Hash, who: &T::AccountId, reserved: T::Balance) {
         <Accounts<T>>::mutate(share_id, who, |data| data.reserved = reserved);
-    }
-
-    pub fn do_wrap_native_currency(who: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-        ensure!(T::Currency::free_balance(&who) >= amount.into(), Error::<T>::BalanceTooLow);
-
-        let id = Self::get_native_currency_id();
-
-        T::Currency::transfer(&who, &Self::get_module_id(), amount, ExistenceRequirement::KeepAlive)?;
-        Self::generate(id, &who, amount.saturated_into().saturated_into())
-    }
-
-    pub fn do_unwrap_native_currency(who: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
-        let id = Self::get_native_currency_id();
-
-        ensure!(Self::free_balance(id, &who) >= amount.saturated_into().saturated_into(), Error::<T>::BalanceTooLow);
-
-        Self::destroy(id, &who, amount.saturated_into().saturated_into())?;
-        T::Currency::transfer(&Self::get_module_id(), &who, amount, ExistenceRequirement::AllowDeath)
-    }
-
-    fn get_native_currency_id() -> T::Hash {
-        let mut h = T::Hash::default();
-        h.as_mut().iter_mut().for_each(|byte| *byte = 00);
-
-        h
     }
 
     fn get_module_id() -> T::AccountId {
@@ -272,5 +247,32 @@ impl<T: Trait> ReservableShares<T::AccountId, T::Balance, T::Hash> for Module<T>
         Self::deposit_event(RawEvent::Unreserved(share_id, who.clone(), actual));
 
         actual
+    }
+}
+
+impl<T: Trait> WrapperShares<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
+    fn get_native_currency_id() -> T::Hash {
+        let mut h = T::Hash::default();
+        h.as_mut().iter_mut().for_each(|byte| *byte = 00);
+
+        h
+    }
+
+    fn do_wrap_native_currency(who: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        ensure!(T::Currency::free_balance(&who) >= amount.into(), Error::<T>::BalanceTooLow);
+
+        let id = Self::get_native_currency_id();
+
+        T::Currency::transfer(&who, &Self::get_module_id(), amount, ExistenceRequirement::KeepAlive)?;
+        Self::generate(id, &who, amount.saturated_into().saturated_into())
+    }
+
+    fn do_unwrap_native_currency(who: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+        let id = Self::get_native_currency_id();
+
+        ensure!(Self::free_balance(id, &who) >= amount.saturated_into().saturated_into(), Error::<T>::BalanceTooLow);
+
+        Self::destroy(id, &who, amount.saturated_into().saturated_into())?;
+        T::Currency::transfer(&Self::get_module_id(), &who, amount, ExistenceRequirement::AllowDeath)
     }
 }
