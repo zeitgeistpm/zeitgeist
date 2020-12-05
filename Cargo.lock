@@ -7986,6 +7986,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "zrml-shares",
+ "zrml-swaps",
  "zrml-traits",
 ]
 
