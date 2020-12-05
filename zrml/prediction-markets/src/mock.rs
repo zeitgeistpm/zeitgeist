@@ -20,6 +20,9 @@ pub const DAVE: AccountId = 3;
 pub const EVE: AccountId = 4;
 pub const SUDO: AccountId = 69;
 
+// BASE is used as the number of decimals in order to set constants elsewhere.
+pub const BASE: Balance = 10_000_000_000;
+
 impl_outer_origin! {
     pub enum Origin for Test {}
 }
@@ -100,6 +103,34 @@ impl zrml_shares::Trait for Test {
 }
 
 parameter_types! {
+    pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
+    pub const ExitFee: Balance = 0;
+    pub const MaxInRatio: Balance = BASE / 2;
+	pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+	pub const MinWeight: Balance = BASE;
+	pub const MaxWeight: Balance = 50 * BASE;
+	pub const MaxTotalWeight: Balance = 50 * BASE;
+	pub const MaxAssets: Balance = 8;
+	pub const MinLiquidity: Balance = 100 * BASE;
+}
+
+
+impl zrml_swaps::Trait for Test {
+    type Event = ();
+    type Currency = Balances;
+    type Shares = Shares;
+    type ModuleId = SwapsModuleId;
+    type ExitFee = ExitFee;
+    type MaxInRatio = MaxInRatio;
+	type MaxOutRatio = MaxOutRatio;
+	type MinWeight = MinWeight;
+	type MaxWeight = MaxWeight;
+	type MaxTotalWeight = MaxTotalWeight;
+	type MaxAssets = MaxAssets;
+	type MinLiquidity = MinLiquidity;
+}
+
+parameter_types! {
     pub const PmModuleId: ModuleId = ModuleId(*b"test/prm");
     pub const ReportingPeriod: BlockNumber = 10;
     pub const DisputePeriod: BlockNumber = 10;
@@ -131,12 +162,14 @@ impl Trait for Test {
 	type OracleBond = OracleBond;
 	type ApprovalOrigin = EnsureSignedBy<Sudo, AccountId>;
 	type Slash = ();
+	type Swap = Swaps;
 }
 
 pub type Balances = pallet_balances::Module<Test>;
 pub type PredictionMarkets = Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;
 pub type Shares = zrml_shares::Module<Test>;
+pub type Swaps = zrml_swaps::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
 pub struct ExtBuilder {

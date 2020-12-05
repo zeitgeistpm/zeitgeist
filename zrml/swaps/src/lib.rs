@@ -87,14 +87,14 @@ decl_event! {
     where
         AccountId = <T as frame_system::Trait>::AccountId,
     {
-        /// A new pool has been created. [creator]
-        PoolCreated(AccountId),
+        /// A new pool has been created. [pool_id, creator]
+        PoolCreated(u128, AccountId),
         /// Someone has joined a pool. [pool_id, who]
         JoinedPool(u128, AccountId),
         /// Someone has exited a pool. [pool_id, who]
         ExitedPool(u128, AccountId),
         /// A swap has occurred. [pool_id]
-        Swap(u128)
+        Swap(u128),
     }
 }
 
@@ -568,7 +568,7 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         let pool_shares_id = Self::pool_shares_id(next_pool_id);
         T::Shares::generate(pool_shares_id, &Self::pool_master_account(), amount)?;
 
-        Self::deposit_event(RawEvent::PoolCreated(next_pool_id));
+        Self::deposit_event(RawEvent::PoolCreated(next_pool_id, creator));
 
         Ok(next_pool_id)
     }
