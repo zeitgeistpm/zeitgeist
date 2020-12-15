@@ -163,11 +163,50 @@ fn it_allows_to_buy_a_complete_set() {
 
         // also check native balance
         let bal = Balances::free_balance(&BOB);
-        assert_eq!(bal, 1_000 - 100);
+        assert_eq!(bal, 1_000 * BASE - 100);
 
         let market_account = PredictionMarkets::market_account(0);
         let market_bal = Balances::free_balance(market_account);
         assert_eq!(market_bal, 100);
+    });
+}
+
+#[test]
+fn it_allows_to_deploy_a_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        assert_ok!(
+            PredictionMarkets::create(
+                Origin::signed(ALICE),
+                BOB,
+                MarketType::Binary,
+                100,
+                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+                MarketCreation::Permissionless,
+            )
+        );
+
+        assert_ok!(
+            PredictionMarkets::buy_complete_set(
+                Origin::signed(BOB),
+                0,
+                100 * BASE,
+            )
+        );
+
+        assert_ok!(
+            Shares::wrap_native_currency(
+                Origin::signed(BOB),
+                100 * BASE
+            )
+        );
+
+        assert_ok!(
+            PredictionMarkets::deploy_swap_pool_for_market(
+                Origin::signed(BOB),
+                0
+            )
+        );
     });
 }
 
@@ -211,7 +250,7 @@ fn it_allows_to_sell_a_complete_set() {
 
         // also check native balance
         let bal = Balances::free_balance(&BOB);
-        assert_eq!(bal, 1_000);
+        assert_eq!(bal, 1_000 * BASE);
     });
 }
 
@@ -520,22 +559,22 @@ fn it_resolves_a_disputed_market() {
         // Per each: 112
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_112);
+        assert_eq!(charlie_balance, 1_000 * BASE + 112);
         let eve_balance = Balances::free_balance(&EVE);
-        assert_eq!(eve_balance, 1_112);
+        assert_eq!(eve_balance, 1_000 * BASE + 112);
 
         let dave_balance = Balances::free_balance(&DAVE);
-        assert_eq!(dave_balance, 875);
+        assert_eq!(dave_balance, 1_000 * BASE - 125);
 
         let alice_balance = Balances::free_balance(&ALICE);
-        assert_eq!(alice_balance, 900);
+        assert_eq!(alice_balance, 1_000 * BASE - 100);
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter
         let bob_balance = Balances::free_balance(&BOB);
-        assert_eq!(bob_balance, 1_000);
+        assert_eq!(bob_balance, 1_000 * BASE);
 
-    })
+    });
 }
 
 #[test]
@@ -578,7 +617,7 @@ fn it_allows_to_redeem_shares() {
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
         let bal = Balances::free_balance(&CHARLIE);
-        assert_eq!(bal, 1_000);
+        assert_eq!(bal, 1_000 * BASE);
     });
 }
 

@@ -114,7 +114,6 @@ parameter_types! {
 	pub const MinLiquidity: Balance = 100 * BASE;
 }
 
-
 impl zrml_swaps::Trait for Test {
     type Event = ();
     type Currency = Balances;
@@ -180,11 +179,11 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			balances: vec![
-				(ALICE, 1_000),
-				(BOB, 1_000),
-				(CHARLIE, 1_000),
-				(DAVE, 1_000),
-				(EVE, 1_000),
+				(ALICE, 1_000 * BASE),
+				(BOB, 1_000 * BASE),
+				(CHARLIE, 1_000 * BASE),
+				(DAVE, 1_000 * BASE),
+				(EVE, 1_000 * BASE),
 			],
 		}
 	}
