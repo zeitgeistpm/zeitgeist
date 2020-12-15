@@ -282,7 +282,7 @@ decl_module! {
                 <Markets<T>>::remove(&market_id);
 
                 // delete all the shares if any exist
-                for i in 0..market.outcomes() {
+                for i in 0..=market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
                     T::Shares::destroy_all(share_id).unwrap();
                 }  
@@ -445,7 +445,7 @@ decl_module! {
                 let mut weights = Vec::new();
                 assets.push(T::Shares::get_native_currency_id());
                 weights.push(10_000_000_000_u128);
-                for i in 0..market.outcomes() {
+                for i in 0..=market.outcomes() {
                     assets.push(
                         Self::market_outcome_share_id(market_id, i)
                     );
@@ -494,7 +494,7 @@ decl_module! {
                     "Market account does not have sufficient reserves.",
                 );
 
-                for i in 0..market.outcomes() {
+                for i in 0..=market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     // Ensures that the sender has sufficient amount of each
@@ -507,7 +507,7 @@ decl_module! {
 
                 // This loop must be done twice because we check the entire
                 // set of shares before making any mutations to storage.
-                for i in 0..market.outcomes() {
+                for i in 0..=market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     T::Shares::destroy(share_id, &sender, amount)?;
@@ -729,7 +729,7 @@ impl<T: Trait> Module<T> {
             let market_account = Self::market_account(market_id.clone());
             T::Currency::transfer(&who, &market_account, amount, ExistenceRequirement::KeepAlive)?;
 
-            for i in 0..market.outcomes() {
+            for i in 0..=market.outcomes() {
                 let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                 T::Shares::generate(share_id, &who, amount)?;
@@ -791,7 +791,7 @@ impl<T: Trait> Module<T> {
                     overall_imbalance.subsume(imbalance);
                 }
 
-                for i in 0..num_disputes {
+                for i in 0..=num_disputes {
                     let dispute = &disputes[i as usize];
                     let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * i.into();
                     if dispute.outcome == last_outcome {
@@ -806,7 +806,7 @@ impl<T: Trait> Module<T> {
 
                 // fold all the imbalances into one and reward the correct reporters.
                 let reward_per_each = overall_imbalance.peek() / (correct_reporters.len() as u32).into();
-                for i in 0..correct_reporters.len() {
+                for i in 0..=correct_reporters.len() {
                     let (amount, leftover) = overall_imbalance.split(reward_per_each);
                     T::Currency::resolve_creating(&correct_reporters[i], amount);
                     overall_imbalance = leftover;
@@ -815,7 +815,7 @@ impl<T: Trait> Module<T> {
             _ => panic!("Should never happen"), //TODO remove after testing
         };
 
-        for i in 0..market.outcomes() {
+        for i in 0..=market.outcomes() {
             // don't delete the winning outcome...
             if i == reported_outcome { continue; }
             // ... but delete the rest

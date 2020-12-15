@@ -181,7 +181,7 @@ decl_module! {
                 T::Shares::transfer(pool_shares_id, &sender, &pool_account, exit_fee)?;
 
                 for i in 0..pool.assets.len() {
-                    let asset = pool.assets[0];
+                    let asset = pool.assets[i];
                     let bal = T::Shares::free_balance(asset, &pool_account);
                     let asset_amount_out = bmul(ratio.saturated_into(), bal.saturated_into()).saturated_into();
                     ensure!(asset_amount_out != Zero::zero(), Error::<T>::MathApproximation);
