@@ -155,7 +155,7 @@ fn it_allows_to_buy_a_complete_set() {
         );
 
         // Check the outcome balances
-        for i in 0..2 {
+        for i in 0..=2 {
             let share_id = PredictionMarkets::market_outcome_share_id(0, i);
             let bal = Shares::free_balance(share_id, &BOB);
             assert_eq!(bal, 100);
@@ -203,7 +203,7 @@ fn it_allows_to_sell_a_complete_set() {
         );
 
         // Check the outcome balances
-        for i in 0..3 {
+        for i in 0..=2 {
             let share_id = PredictionMarkets::market_outcome_share_id(0, i);
             let bal = Shares::free_balance(share_id, &BOB);
             assert_eq!(bal, 0);
