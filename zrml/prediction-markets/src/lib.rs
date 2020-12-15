@@ -791,7 +791,7 @@ impl<T: Trait> Module<T> {
                     overall_imbalance.subsume(imbalance);
                 }
 
-                for i in 0..=num_disputes {
+                for i in 0..num_disputes {
                     let dispute = &disputes[i as usize];
                     let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * i.into();
                     if dispute.outcome == last_outcome {
@@ -806,7 +806,7 @@ impl<T: Trait> Module<T> {
 
                 // fold all the imbalances into one and reward the correct reporters.
                 let reward_per_each = overall_imbalance.peek() / (correct_reporters.len() as u32).into();
-                for i in 0..=correct_reporters.len() {
+                for i in 0..correct_reporters.len() {
                     let (amount, leftover) = overall_imbalance.split(reward_per_each);
                     T::Currency::resolve_creating(&correct_reporters[i], amount);
                     overall_imbalance = leftover;
