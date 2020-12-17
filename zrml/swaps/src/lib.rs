@@ -515,7 +515,7 @@ impl<T: Trait> Module<T> {
         T::Shares::destroy(shares_id, from, amount)
     }
 
-    fn pool_shares_id(pool_id: u128) -> T::Hash {
+    pub fn pool_shares_id(pool_id: u128) -> T::Hash {
         ("zge/swaps", pool_id).using_encoded(<T as frame_system::Trait>::Hashing::hash)
     }
 
@@ -523,7 +523,7 @@ impl<T: Trait> Module<T> {
         T::ModuleId::get().into_account()
     }
 
-    fn pool_account_id(pool_id: u128) -> T::AccountId {
+    pub fn pool_account_id(pool_id: u128) -> T::AccountId {
         T::ModuleId::get().into_sub_account(pool_id)
     }
 
