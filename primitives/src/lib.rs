@@ -36,5 +36,8 @@ pub type DigestItem = generic::DigestItem<Hash>;
 /// The market identifier type.
 pub type MarketId = u128;
 
+/// The identifier type for pools.
+pub type PoolId = u128;
+
 /// TODO
 pub type Moment = u64;

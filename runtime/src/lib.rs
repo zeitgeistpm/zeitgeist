@@ -55,7 +55,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("zeitgeist"),
 	impl_name: create_runtime_str!("zeitgeist"),
 	authoring_version: 1,
-	spec_version: 9,
+	spec_version: 10,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -498,6 +498,28 @@ impl_runtime_apis! {
 			outcome: u16,
 		) -> Hash {
 			PredictionMarkets::market_outcome_share_id(market_id, outcome)
+		}
+	}
+
+	impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, Hash, AccountId, Balance> for Runtime {
+		fn pool_shares_id(
+			pool_id: u128,
+ 		) -> Hash {
+			 Swaps::pool_shares_id(pool_id)
+		}
+
+		fn pool_account_id(
+			pool_id: u128,
+		) -> AccountId {
+			Swaps::pool_account_id(pool_id)
+		}
+
+		fn get_spot_price(
+			pool_id: u128,
+			asset_in: Hash,
+			asset_out: Hash,
+		) -> Balance {
+			Swaps::get_spot_price(pool_id, asset_in, asset_out)
 		}
 	}
 }
