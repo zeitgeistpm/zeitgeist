@@ -481,6 +481,14 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+    pub fn pool_shares_id(pool_id: u128) -> T::Hash {
+        ("zge/swaps", pool_id).using_encoded(<T as frame_system::Trait>::Hashing::hash)
+    }
+
+    pub fn pool_account_id(pool_id: u128) -> T::AccountId {
+        T::ModuleId::get().into_sub_account(pool_id)
+    }
+
     pub fn get_spot_price(pool_id: u128, asset_in: T::Hash, asset_out: T::Hash) -> BalanceOf<T> {
         if let Some(pool) = Self::pools(pool_id) {
             // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
@@ -515,16 +523,8 @@ impl<T: Trait> Module<T> {
         T::Shares::destroy(shares_id, from, amount)
     }
 
-    fn pool_shares_id(pool_id: u128) -> T::Hash {
-        ("zge/swaps", pool_id).using_encoded(<T as frame_system::Trait>::Hashing::hash)
-    }
-
     fn pool_master_account() -> T::AccountId {
         T::ModuleId::get().into_account()
-    }
-
-    fn pool_account_id(pool_id: u128) -> T::AccountId {
-        T::ModuleId::get().into_sub_account(pool_id)
     }
 
     fn inc_next_pool_id() -> u128 {

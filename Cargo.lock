@@ -7947,6 +7947,7 @@ dependencies = [
  "zrml-prediction-markets-runtime-api",
  "zrml-shares",
  "zrml-swaps",
+ "zrml-swaps-runtime-api",
  "zrml-traits",
 ]
 
@@ -8044,6 +8045,32 @@ dependencies = [
  "sp-std",
  "zrml-shares",
  "zrml-traits",
+]
+
+[[package]]
+name = "zrml-swaps-rpc"
+version = "0.1.0"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+ "zrml-swaps-runtime-api",
+]
+
+[[package]]
+name = "zrml-swaps-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
