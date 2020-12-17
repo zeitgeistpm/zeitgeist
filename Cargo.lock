@@ -7947,6 +7947,7 @@ dependencies = [
  "zrml-prediction-markets-runtime-api",
  "zrml-shares",
  "zrml-swaps",
+ "zrml-swaps-runtime-api",
  "zrml-traits",
 ]
 
