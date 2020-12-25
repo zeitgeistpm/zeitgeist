@@ -1,3 +1,5 @@
+<img src="./GH-banner.jpg">
+
 # Zeitgeist: An Evolving Blockchain for Prediction Markets and Futarchy
 
 ![Rust](https://github.com/zeitgeistpm/zeitgeist/workflows/Rust/badge.svg)
