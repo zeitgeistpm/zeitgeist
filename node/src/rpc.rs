@@ -8,13 +8,12 @@
 use std::sync::Arc;
 
 use zeitgeist_runtime::opaque::Block;
-use zeitgeist_primitives::{AccountId, Balance, Hash, MarketId, Index};
+use zeitgeist_primitives::{AccountId, Balance, Hash, MarketId, Index, PoolId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderMetadata, HeaderBackend};
 use sp_block_builder::BlockBuilder;
 pub use sc_rpc_api::DenyUnsafe;
 use sp_transaction_pool::TransactionPool;
-
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -36,6 +35,7 @@ pub fn create_full<C, P>(
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: zrml_prediction_markets_rpc::PredictionMarketsRuntimeApi<Block, MarketId, Hash>,
+	C::Api: zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, Hash, AccountId, Balance>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
@@ -65,6 +65,12 @@ pub fn create_full<C, P>(
 	io.extend_with(
 		zrml_prediction_markets_rpc::PredictionMarketsApi::to_delegate(
 			zrml_prediction_markets_rpc::PredictionMarkets::new(client.clone())
+		)
+	);
+
+	io.extend_with(
+		zrml_swaps_rpc::SwapsApi::to_delegate(
+			zrml_swaps_rpc::Swaps::new(client.clone())
 		)
 	);
 
