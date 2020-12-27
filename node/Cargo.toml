@@ -21,6 +21,7 @@ sc-rpc = "2.0.0"
 structopt = '0.3.8'
 zeitgeist-primitives = { path = "../primitives", version = "0.1.0" }
 zrml-prediction-markets-rpc = { path = "../zrml/prediction-markets/rpc" }
+zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { version = "2.0.0" }

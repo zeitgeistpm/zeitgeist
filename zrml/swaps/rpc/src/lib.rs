@@ -11,7 +11,7 @@ use sp_runtime::{
 };
 use std::sync::Arc;
 
-pub use self::gen_client::Client as PmClient;
+pub use self::gen_client::Client as SwapsClient;
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
 #[rpc]

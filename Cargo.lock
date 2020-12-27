@@ -7901,6 +7901,7 @@ dependencies = [
  "zeitgeist-primitives",
  "zeitgeist-runtime",
  "zrml-prediction-markets-rpc",
+ "zrml-swaps-rpc",
 ]
 
 [[package]]
