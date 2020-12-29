@@ -204,7 +204,8 @@ fn it_allows_to_deploy_a_pool() {
         assert_ok!(
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(BOB),
-                0
+                0,
+                vec![10_000_000_000, 10_000_000_000, 10_000_000_000, 10_000_000_000]
             )
         );
     });
