@@ -532,10 +532,44 @@ impl<T: Trait> Module<T> {
         NextPoolId::mutate(|n| *n += 1);
         id
     }
+
+
+    fn get_denormalized_weight(pool_id: u128, asset: T::Hash) -> u128 {
+        if let Some(pool) = Self::pools(pool_id) {
+            if let Some(val) = pool.weights.get(&asset) {
+                *val
+            } else {
+                0
+            }
+        } else {
+            0
+        }
+    }
+
+    fn get_normalized_weight(_pool_id: u128, _asset: T::Hash) -> u128 {
+        // unimplemented
+        0
+    }
 }
 
 impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
-    fn do_create_pool(creator: T::AccountId, assets: Vec<T::Hash>, swap_fee: BalanceOf<T>, weights: Vec<u128>) -> sp_std::result::Result<u128, DispatchError> {
+    
+    /// Deploys a new pool with the given assets and weights.
+    ///
+    /// ## Arguments
+    ///
+    /// - `creator` - The account that is the creator of the pool. Must have enough
+    ///               funds for each of the assets to cover the `MinLiqudity`.
+    /// - `assets` - The assets that are used in the pool.
+    /// - `swap_fee` - The fee applied to each swap.
+    /// - `weights` - These are the denormalized weights (the raw weights). 
+    fn do_create_pool(
+        creator: T::AccountId, 
+        assets: Vec<T::Hash>, 
+        swap_fee: BalanceOf<T>, 
+        weights: Vec<u128>
+    ) -> sp_std::result::Result<u128, DispatchError> 
+    {
         ensure!(assets.len() <= T::MaxAssets::get().try_into().unwrap(), Error::<T>::TooManyAssets);
 
         for i in 0..weights.len() {
