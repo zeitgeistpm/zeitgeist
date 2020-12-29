@@ -1,5 +1,5 @@
 run:
-	SKIP_WASM_BUILD= cargo run -- --dev --execution=native -lruntime=debug
+	SKIP_WASM_BUILD= cargo run -- --dev --execution=Native -lruntime=debug
 
 toolchain:
 	./scripts/init.sh
