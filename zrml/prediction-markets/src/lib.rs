@@ -430,7 +430,7 @@ decl_module! {
         /// The sender should have enough funds to cover all of the required
         /// shares to seed the pool.
         #[weight = 0]
-        pub fn deploy_swap_pool_for_market(origin, market_id: T::MarketId) {
+        pub fn deploy_swap_pool_for_market(origin, market_id: T::MarketId, weights: Vec<u128>) {
             let sender = ensure_signed(origin)?;
 
             if let Some(market) = <Markets<T>>::get(&market_id) {
@@ -441,15 +441,14 @@ decl_module! {
                 // ensure a swap pool does not already exist
                 ensure!(Self::market_to_swap_pool(&market_id).is_none(), Error::<T>::SwapPoolExists);
 
-                let mut assets = Vec::new();
-                let mut weights = Vec::new();
-                assets.push(T::Shares::get_native_currency_id());
-                weights.push(10_000_000_000_u128);
+                let wrapped_native_currency = T::Shares::get_native_currency_id();
+                let mut assets = Vec::from([wrapped_native_currency]);
+                
                 for i in 0..=market.outcomes() {
+                    if i == 0 { continue; }
                     assets.push(
                         Self::market_outcome_share_id(market_id, i)
                     );
-                    weights.push(10_000_000_000_u128);
                 }
 
                 let pool_id = T::Swap::do_create_pool(sender, assets, Zero::zero(), weights)?;
