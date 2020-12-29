@@ -26,6 +26,7 @@ use frame_system::EnsureRoot;
 use sp_version::NativeVersion;
 
 use zeitgeist_primitives::*;
+use zrml_swaps_runtime_api::BalanceInfo;
 
 pub mod constants;
 use crate::constants::currency::*;
@@ -518,8 +519,8 @@ impl_runtime_apis! {
 			pool_id: u128,
 			asset_in: Hash,
 			asset_out: Hash,
-		) -> Balance {
-			Swaps::get_spot_price(pool_id, asset_in, asset_out)
+		) -> BalanceInfo<Balance> {
+			BalanceInfo{ amount: Swaps::get_spot_price(pool_id, asset_in, asset_out) }
 		}
 	}
 }

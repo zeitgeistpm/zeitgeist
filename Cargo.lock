@@ -8059,7 +8059,9 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-blockchain",
+ "sp-core",
  "sp-runtime",
+ "sp-std",
  "zrml-swaps-runtime-api",
 ]
 
