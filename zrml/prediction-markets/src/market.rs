@@ -81,7 +81,7 @@ impl<AccountId> Market<AccountId> {
             MarketType::Categorical => self.categories.unwrap(),
             MarketType::Scalar => 0, // TODO figure out scalar markets
         }
-    } 
+    }
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
