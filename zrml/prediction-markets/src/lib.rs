@@ -411,7 +411,7 @@ decl_module! {
         pub fn cancel_pending_market(origin, market_id: T::MarketId) {
             let sender = ensure_signed(origin)?;
 
-            if let Some(market) = <Markets<T>>::get(&market_id) {
+            if let Some(market) = Self::markets(&market_id) {
                 let creator = market.creator;
                 let status = market.status;
                 ensure!(creator == sender, "Canceller must be market creator.");
@@ -434,7 +434,7 @@ decl_module! {
         pub fn deploy_swap_pool_for_market(origin, market_id: T::MarketId, weights: Vec<u128>) {
             let sender = ensure_signed(origin)?;
 
-            if let Some(market) = <Markets<T>>::get(&market_id) {
+            if let Some(market) = Self::markets(&market_id) {
                 // ensure the market is active
                 let status = market.status;
                 ensure!(status == MarketStatus::Active, Error::<T>::MarketNotActive);
@@ -596,7 +596,7 @@ decl_module! {
                 if num_disputes > 0 {
                     let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
                     let at = prev_dispute.at;
-                    let mut old_disputes_per_block = <MarketIdsPerDisputeBlock<T>>::get(at);
+                    let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
                     remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id.clone());
                     <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
                 }
