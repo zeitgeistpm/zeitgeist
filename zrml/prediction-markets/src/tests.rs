@@ -1,8 +1,5 @@
-use crate::{mock::*, market::*, Error};
-use frame_support::{
-    assert_noop, assert_ok,
-    dispatch::DispatchError,
-};
+use crate::{market::*, mock::*, Error};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
 
@@ -10,32 +7,28 @@ use zrml_traits::shares::Shares as SharesTrait;
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
         // check the correct amount was reserved
         let reserved = Balances::reserved_balance(&ALICE);
         assert_eq!(reserved, 300);
 
         // Creates an advised market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(BOB),
-                ALICE,
-                MarketType::Binary,
-                1000,
-                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
-                MarketCreation::Advised,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(BOB),
+            ALICE,
+            MarketType::Binary,
+            1000,
+            H256::repeat_byte(3).to_fixed_bytes().to_vec(),
+            MarketCreation::Advised,
+        ));
 
         let bob_reserved = Balances::reserved_balance(&BOB);
         assert_eq!(bob_reserved, 150);
@@ -50,24 +43,17 @@ fn it_creates_binary_markets() {
 fn it_allows_sudo_to_destroy_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(BOB),
-                ALICE,
-                MarketType::Binary,
-                1000,
-                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
-                MarketCreation::Advised,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(BOB),
+            ALICE,
+            MarketType::Binary,
+            1000,
+            H256::repeat_byte(3).to_fixed_bytes().to_vec(),
+            MarketCreation::Advised,
+        ));
 
         // destroy the market
-        assert_ok!(
-            PredictionMarkets::destroy_market(
-                Origin::signed(SUDO),
-                0
-            )
-        );
+        assert_ok!(PredictionMarkets::destroy_market(Origin::signed(SUDO), 0));
 
         assert_eq!(PredictionMarkets::markets(0).is_none(), true);
     });
@@ -77,23 +63,24 @@ fn it_allows_sudo_to_destroy_markets() {
 fn it_allows_advisory_origin_to_approve_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(BOB),
-                ALICE,
-                MarketType::Binary,
-                1000,
-                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
-                MarketCreation::Advised,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(BOB),
+            ALICE,
+            MarketType::Binary,
+            1000,
+            H256::repeat_byte(3).to_fixed_bytes().to_vec(),
+            MarketCreation::Advised,
+        ));
 
         // make sure it's in status proposed
         let market = PredictionMarkets::markets(0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
         // Make sure it fails from the random joe
-        assert_noop!(PredictionMarkets::approve_market(Origin::signed(BOB), 0), DispatchError::BadOrigin);
+        assert_noop!(
+            PredictionMarkets::approve_market(Origin::signed(BOB), 0),
+            DispatchError::BadOrigin
+        );
 
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
@@ -107,16 +94,14 @@ fn it_allows_advisory_origin_to_approve_markets() {
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(BOB),
-                ALICE,
-                MarketType::Binary,
-                1000,
-                H256::repeat_byte(3).to_fixed_bytes().to_vec(),
-                MarketCreation::Advised,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(BOB),
+            ALICE,
+            MarketType::Binary,
+            1000,
+            H256::repeat_byte(3).to_fixed_bytes().to_vec(),
+            MarketCreation::Advised,
+        ));
 
         // make sure it's in status proposed
         let market = PredictionMarkets::markets(0);
@@ -134,25 +119,21 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 fn it_allows_to_buy_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
         // Allows someone to generate a complete set
-        assert_ok!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(BOB),
-                0,
-                100,
-            )
-        );
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(BOB),
+            0,
+            100,
+        ));
 
         // Check the outcome balances
         for i in 0..=2 {
@@ -175,38 +156,36 @@ fn it_allows_to_buy_a_complete_set() {
 fn it_allows_to_deploy_a_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
-        assert_ok!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(BOB),
-                0,
-                100 * BASE,
-            )
-        );
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(BOB),
+            0,
+            100 * BASE,
+        ));
 
-        assert_ok!(
-            Shares::wrap_native_currency(
-                Origin::signed(BOB),
-                100 * BASE
-            )
-        );
+        assert_ok!(Shares::wrap_native_currency(
+            Origin::signed(BOB),
+            100 * BASE
+        ));
 
-        assert_ok!(
-            PredictionMarkets::deploy_swap_pool_for_market(
-                Origin::signed(BOB),
-                0
-            )
-        );
+        assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
+            Origin::signed(BOB),
+            0,
+            vec![
+                10_000_000_000,
+                10_000_000_000,
+                10_000_000_000,
+                10_000_000_000
+            ]
+        ));
     });
 }
 
@@ -214,32 +193,26 @@ fn it_allows_to_deploy_a_pool() {
 fn it_allows_to_sell_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
-        assert_ok!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(BOB),
-                0,
-                100,
-            )
-        );
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(BOB),
+            0,
+            100,
+        ));
 
-        assert_ok!(
-            PredictionMarkets::sell_complete_set(
-                Origin::signed(BOB),
-                0,
-                100,
-            )
-        );
+        assert_ok!(PredictionMarkets::sell_complete_set(
+            Origin::signed(BOB),
+            0,
+            100,
+        ));
 
         // Check the outcome balances
         for i in 0..=2 {
@@ -258,16 +231,14 @@ fn it_allows_to_sell_a_complete_set() {
 fn it_allows_to_report_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
         run_to_block(100);
 
@@ -275,13 +246,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         assert_eq!(market.status, MarketStatus::Active);
         assert_eq!(market.reporter, None);
 
-        assert_ok!(
-            PredictionMarkets::report(
-                Origin::signed(BOB),
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
 
         let market_after = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
@@ -293,39 +258,25 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 #[test]
 fn it_allows_to_dispute_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
-                // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        // Creates a permissionless market.
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
         // Run to the end of the trading phase.
         run_to_block(100);
 
-        assert_ok!(
-            PredictionMarkets::report(
-                Origin::signed(BOB),
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
 
         // Dispute phase is 10 blocks... so only run 5 of them.
         run_to_block(105);
 
-        assert_ok!(
-            PredictionMarkets::dispute(
-                Origin::signed(CHARLIE),
-                0,
-                0,
-            )
-        );
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, 0,));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -347,27 +298,23 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 fn it_allows_anyone_to_report_an_unreported_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
         // Just skip to waaaay overdue.
         run_to_block(3000);
 
-        assert_ok!(
-            PredictionMarkets::report(
-                Origin::signed(ALICE), // alice reports her own market now 
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(ALICE), // alice reports her own market now
+            0,
+            1,
+        ));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Reported);
@@ -387,34 +334,24 @@ fn it_allows_anyone_to_report_an_unreported_market() {
 fn it_correctly_resolves_a_market_that_was_reported_on() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
-        assert_ok!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(CHARLIE),
-                0,
-                100,
-            )
-        );
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(CHARLIE),
+            0,
+            100,
+        ));
 
         run_to_block(100);
 
-        assert_ok!(
-            PredictionMarkets::report(
-                Origin::signed(BOB),
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
 
         let reported_ids = PredictionMarkets::market_ids_per_report_block(100);
         assert_eq!(reported_ids.len(), 1);
@@ -451,64 +388,36 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 fn it_resolves_a_disputed_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
-        assert_ok!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(CHARLIE),
-                0,
-                100,
-            )
-        );
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(CHARLIE),
+            0,
+            100,
+        ));
 
         run_to_block(100);
 
-        assert_ok!(
-            PredictionMarkets::report(
-                Origin::signed(BOB),
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
 
         run_to_block(102);
 
-        assert_ok!(
-            PredictionMarkets::dispute(
-                Origin::signed(CHARLIE),
-                0,
-                2,
-            )
-        );
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, 2,));
 
         run_to_block(103);
 
-        assert_ok!(
-            PredictionMarkets::dispute(
-                Origin::signed(DAVE),
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, 1,));
 
         run_to_block(104);
 
-        assert_ok!(
-            PredictionMarkets::dispute(
-                Origin::signed(EVE),
-                0,
-                2,
-            )
-        );
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0, 2,));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -542,12 +451,7 @@ fn it_resolves_a_disputed_market() {
         let market_after = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
 
-        assert_ok!(
-            PredictionMarkets::redeem_shares(
-                Origin::signed(CHARLIE),
-                0,
-            )
-        );
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0,));
 
         // make sure rewards are right
         //
@@ -573,7 +477,6 @@ fn it_resolves_a_disputed_market() {
         // for her designated reporter
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
-
     });
 }
 
@@ -581,34 +484,24 @@ fn it_resolves_a_disputed_market() {
 fn it_allows_to_redeem_shares() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                100,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            100,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
-        assert_ok!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(CHARLIE),
-                0,
-                100,
-            )
-        );
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(CHARLIE),
+            0,
+            100,
+        ));
 
         run_to_block(100);
 
-        assert_ok!(
-            PredictionMarkets::report(
-                Origin::signed(BOB),
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
 
         run_to_block(111);
 
@@ -625,44 +518,30 @@ fn it_allows_to_redeem_shares() {
 fn the_entire_market_lifecycle_works_with_timestamps() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(
-            PredictionMarkets::create(
-                Origin::signed(ALICE),
-                BOB,
-                MarketType::Binary,
-                1_234_567_890_123,
-                H256::repeat_byte(2).to_fixed_bytes().to_vec(),
-                MarketCreation::Permissionless,
-            )
-        );
+        assert_ok!(PredictionMarkets::create(
+            Origin::signed(ALICE),
+            BOB,
+            MarketType::Binary,
+            1_234_567_890_123,
+            H256::repeat_byte(2).to_fixed_bytes().to_vec(),
+            MarketCreation::Permissionless,
+        ));
 
         // is ok
-        assert_ok!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(BOB),
-                0,
-                100,
-            )
-        );
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(BOB),
+            0,
+            100,
+        ));
 
         // set the timestamp
         Timestamp::set_timestamp(1_234_567_890_124);
 
         assert_noop!(
-            PredictionMarkets::buy_complete_set(
-                Origin::signed(BOB),
-                0,
-                100,
-            ),
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,),
             Error::<Test>::MarketNotActive,
         );
 
-        assert_ok!(
-            PredictionMarkets::report(
-                Origin::signed(BOB),
-                0,
-                1,
-            )
-        );
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
     });
 }

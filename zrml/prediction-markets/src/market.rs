@@ -78,10 +78,10 @@ impl<AccountId> Market<AccountId> {
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
             MarketType::Binary => 2,
-            MarketType::Categorical => self.categories.unwrap() + 1,
+            MarketType::Categorical => self.categories.unwrap(),
             MarketType::Scalar => 0, // TODO figure out scalar markets
         }
-    } 
+    }
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]

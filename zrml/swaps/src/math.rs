@@ -10,13 +10,19 @@ pub fn calc_spot_price(
 ) -> u128 // spot_price
 {
     let numer = bdiv(asset_balance_in, asset_weight_in);
-    if numer == 0 { panic!("numer is zero"); }; //debug
+    if numer == 0 {
+        panic!("numer is zero");
+    }; //debug
     let denom = bdiv(asset_balance_out, asset_weight_out);
-    if denom == 0 { panic!("denom is zero"); }; //debug
+    if denom == 0 {
+        panic!("denom is zero");
+    }; //debug
     let ratio = bdiv(numer, denom);
-    if ratio == 0 { panic!("ratio is zero"); }; //debug
+    if ratio == 0 {
+        panic!("ratio is zero");
+    }; //debug
     let scale = bdiv(BASE, BASE - swap_fee);
-    bmul(ratio,  scale)
+    bmul(ratio, scale)
 }
 
 pub fn calc_out_given_in(

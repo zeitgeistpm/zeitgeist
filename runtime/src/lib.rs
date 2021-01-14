@@ -320,19 +320,19 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Aura: pallet_aura::{Module, Config<T>, Inherent},
-		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
+		System: frame_system::{Module, Call, Config, Storage, Event<T>}, // 0
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage}, // 1
+		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent}, // 2
+		Aura: pallet_aura::{Module, Config<T>, Inherent}, // 3
+		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event}, // 4
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>}, // 5
+		TransactionPayment: pallet_transaction_payment::{Module, Storage}, // 6
+		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>}, // 7
 		// Zeitgeist pallets.
-		Shares: zrml_shares::{Module, Call, Storage, Event<T>},
-		Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>},
-		PredictionMarkets: zrml_prediction_markets::{Module, Call, Storage, Event<T>},
-		Swaps: zrml_swaps::{Module, Call, Storage, Event<T>},
+		Shares: zrml_shares::{Module, Call, Storage, Event<T>}, // 8
+		Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>}, // 9 
+		PredictionMarkets: zrml_prediction_markets::{Module, Call, Storage, Event<T>}, // 10
+		Swaps: zrml_swaps::{Module, Call, Storage, Event<T>}, // 11
 	}
 );
 

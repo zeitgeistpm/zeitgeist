@@ -1,4 +1,4 @@
-use crate::{mock::*};
+use crate::mock::*;
 use frame_support::assert_ok;
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
@@ -11,23 +11,20 @@ pub const ASSET_D: H256 = H256::repeat_byte(68);
 #[test]
 fn it_creates_a_new_pool_external() {
     ExtBuilder::default().build().execute_with(|| {
-        
         let next_pool_before = Swaps::next_pool_id();
         assert_eq!(next_pool_before, 0);
 
-        let assets = vec!(ASSET_A, ASSET_B, ASSET_C, ASSET_D);
+        let assets = vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
         assets.clone().into_iter().for_each(|asset| {
             let _res = Shares::generate(asset, &BOB, 100 * BASE);
         });
 
-        assert_ok!(
-            Swaps::create_pool(
-                Origin::signed(BOB),
-                assets.clone(),
-                vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
-            )
-        );
+        assert_ok!(Swaps::create_pool(
+            Origin::signed(BOB),
+            assets.clone(),
+            vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
+        ));
 
         let next_pool_after = Swaps::next_pool_id();
         assert_eq!(next_pool_after, 1);
@@ -48,35 +45,30 @@ fn it_creates_a_new_pool_external() {
 #[test]
 fn it_allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
-        let assets = vec!(ASSET_A, ASSET_B, ASSET_C, ASSET_D);
+        let assets = vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
         assets.clone().into_iter().for_each(|asset| {
             let _res = Shares::generate(asset, &BOB, 100 * BASE);
         });
-        
-        assert_ok!(
-            Swaps::create_pool(
-                Origin::signed(BOB),
-                assets.clone(),
-                vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
-            )
-        );
+
+        assert_ok!(Swaps::create_pool(
+            Origin::signed(BOB),
+            assets.clone(),
+            vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
+        ));
 
         Shares::generate(ASSET_A, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_B, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_C, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_D, &ALICE, 25 * BASE).ok();
 
-
         // joining the pool
-        assert_ok!(
-            Swaps::join_pool(
-                Origin::signed(ALICE),
-                0,
-                5 * BASE,
-                vec!(25 * BASE, 25 * BASE, 25 * BASE, 25 * BASE),
-            )
-        );
+        assert_ok!(Swaps::join_pool(
+            Origin::signed(ALICE),
+            0,
+            5 * BASE,
+            vec!(25 * BASE, 25 * BASE, 25 * BASE, 25 * BASE),
+        ));
 
         let pool_shares_id = Swaps::pool_shares_id(0);
         let balance = Shares::free_balance(pool_shares_id, &ALICE);
@@ -109,17 +101,15 @@ fn it_allows_the_full_user_lifecycle() {
             0,
         );
 
-        assert_ok!(
-            Swaps::swap_exact_amount_in(
-                Origin::signed(ALICE),
-                0,
-                ASSET_A,
-                BASE,
-                ASSET_B,
-                BASE / 2,
-                2 * BASE,
-            )
-        );
+        assert_ok!(Swaps::swap_exact_amount_in(
+            Origin::signed(ALICE),
+            0,
+            ASSET_A,
+            BASE,
+            ASSET_B,
+            BASE / 2,
+            2 * BASE,
+        ));
 
         let asset_a_bal_after = Shares::free_balance(ASSET_A, &ALICE);
         assert_eq!(asset_a_bal_after, asset_a_bal - BASE);
@@ -128,7 +118,7 @@ fn it_allows_the_full_user_lifecycle() {
         assert_eq!(asset_b_bal_after - asset_b_bal, expected);
 
         assert_eq!(expected, 9_905_660_415);
-        
+
         //swap_exact_amount_out
         let expected_in = crate::math::calc_in_given_out(
             Shares::free_balance(ASSET_A, &pool_account),
@@ -136,22 +126,20 @@ fn it_allows_the_full_user_lifecycle() {
             Shares::free_balance(ASSET_B, &pool_account),
             2 * BASE,
             BASE,
-            0
+            0,
         );
 
         assert_eq!(expected_in, 10_290_319_622);
 
-        assert_ok!(
-            Swaps::swap_exact_amount_out(
-                Origin::signed(ALICE),
-                0,
-                ASSET_A,
-                2 * BASE,
-                ASSET_B,
-                BASE,
-                3 * BASE,
-            )
-        );
+        assert_ok!(Swaps::swap_exact_amount_out(
+            Origin::signed(ALICE),
+            0,
+            ASSET_A,
+            2 * BASE,
+            ASSET_B,
+            BASE,
+            3 * BASE,
+        ));
 
         let asset_a_bal_after_2 = Shares::free_balance(ASSET_A, &ALICE);
         assert_eq!(asset_a_bal_after_2, asset_a_bal_after - expected_in);
