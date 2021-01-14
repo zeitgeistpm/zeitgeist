@@ -68,7 +68,7 @@ pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> u128 {
     let mut sum = term;
     let mut negative = false;
 
-    // term(k) = numer / denom 
+    // term(k) = numer / denom
     //         = (product(a - i - 1, i=1-->k) * x^k) / (k!)
     // each iteration, multiply previous term by (a-(k-1)) * x / k
     // continue until term is less than precision
@@ -78,10 +78,16 @@ pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> u128 {
         let (c, cneg) = bsub_sign(a, big_k - BASE);
         term = bmul(term, bmul(c, x));
         term = bdiv(term, big_k);
-        if term == 0 { break; }
+        if term == 0 {
+            break;
+        }
 
-        if xneg { negative = !negative; }
-        if cneg { negative = !negative; }
+        if xneg {
+            negative = !negative;
+        }
+        if cneg {
+            negative = !negative;
+        }
         if negative {
             sum = sum - term;
         } else {
