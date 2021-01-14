@@ -616,7 +616,7 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         );
 
         let pool_shares_id = Self::pool_shares_id(next_pool_id);
-        T::Shares::generate(pool_shares_id, &Self::pool_master_account(), amount)?;
+        T::Shares::generate(pool_shares_id, &creator, amount)?;
 
         Self::deposit_event(RawEvent::PoolCreated(next_pool_id, creator));
 
