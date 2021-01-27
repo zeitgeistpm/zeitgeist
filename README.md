@@ -1,4 +1,6 @@
-<img src="./GH-banner.jpg">
+<a href="https://zeitgeist.pm">
+  <img src="./GH-banner.jpg">
+</a>
 
 # Zeitgeist: An Evolving Blockchain for Prediction Markets and Futarchy
 
@@ -27,23 +29,21 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   market shares.
 - [shares](./zrml/shares) - Implementation of tradable and transferrable shares of
   prediction market outcomes.
+- [court](./zrml-court)- coming soon
 
-## [Whitepaper](./zeitgeist.md)
+## How to Build
 
-## Roadmap
+TODO
 
-Zeitgeist is currently under development.
+### Using Docker
 
-### [Battery Park](https://github.com/zeitgeistmarket/zeitgeist/milestone/1)
+We publish the latest version to the [Docker Hub](https://hub.docker.com/r/zeitgeistpm/zeitgeist-node) 
+that can be pulled and ran locally to connect to the network. In order to do this first make sure that
+you have Docker installed locally, then type (or paste) the following commands in your terminal:
 
-Release date: October 31, 2020
+```
+docker pull zeitgeistpm/zeitgeist-node
+docker run zeitgeistpm/zeitgeist-node --chain battery_park
+```
 
-Battery Park is the Proof-of-Concept release of the Zeitgeist protocol
-that implements the prediction markets core logic as well as a simple orderbook
-for trading shares.
-
-### [Unnamed](https://github.com/zeitgeistmarket/zeitgeist/milestone/2)
-
-The next milestone after "Batter Park" is UNNAMED. It will integrate Balancer-style
-automated market makers and liquidity mining as the core trading protocol.
-
+This will get you connected to the [Battery Park](https://docs.zeitgeist.pm/battery-park) testnet.
