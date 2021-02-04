@@ -9,7 +9,7 @@ targets = ['x86_64-unknown-linux-gnu']
 
 [dependencies]
 orderbook-v1 = { path = "../zrml/orderbook-v1", version = "0.1.0", default-features = false }
-pallet-timestamp = { version = "2.0.0", default-features = false }
+pallet-timestamp = { version = "2.0.1", default-features = false }
 zeitgeist-primitives = { path = "../primitives", version = "0.1.0", default-features = false }
 zrml-prediction-markets = { path = "../zrml/prediction-markets", version = "0.1.0", default-features = false }
 zrml-prediction-markets-runtime-api = { path = "../zrml/prediction-markets/rpc/runtime-api", version = "0.1.0", default-features = false }
@@ -26,47 +26,47 @@ version = '1.3.4'
 
 [dependencies.frame-executive]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.frame-support]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.frame-system]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.frame-system-rpc-runtime-api]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.pallet-aura]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.pallet-balances]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.pallet-grandpa]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.pallet-randomness-collective-flip]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.pallet-sudo]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.pallet-transaction-payment]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.pallet-transaction-payment-rpc-runtime-api]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.serde]
 features = ['derive']
@@ -75,11 +75,11 @@ version = '1.0.101'
 
 [dependencies.sp-api]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-block-builder]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-consensus-aura]
 default-features = false
@@ -87,35 +87,35 @@ version = '0.8.0'
 
 [dependencies.sp-core]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-inherents]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-offchain]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-runtime]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-session]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-std]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-transaction-pool]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-version]
 default-features = false
-version = '2.0.0'
+version = '2.0.1'
 
 [features]
 default = ['std']
@@ -158,5 +158,5 @@ std = [
 [build-dependencies.wasm-builder-runner]
 git = 'https://github.com/paritytech/substrate.git'
 package = 'substrate-wasm-builder-runner'
-tag = 'v2.0.0'
+tag = 'v2.0.1'
 version = '1.0.5'
