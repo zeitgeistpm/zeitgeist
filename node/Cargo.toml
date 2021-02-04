@@ -17,22 +17,22 @@ path = './src/main.rs'
 [dependencies]
 hex-literal = "*"
 jsonrpc-core = '15.0.0'
-sc-rpc = "2.0.0"
+sc-rpc = "2.0.1"
 structopt = '0.3.8'
 zeitgeist-primitives = { path = "../primitives", version = "0.1.0" }
 zrml-prediction-markets-rpc = { path = "../zrml/prediction-markets/rpc" }
 zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 # These dependencies are used for runtime benchmarking
-frame-benchmarking = { version = "2.0.0" }
-frame-benchmarking-cli = { version = "2.0.0" }
+frame-benchmarking = { version = "2.0.1" }
+frame-benchmarking-cli = { version = "2.0.1" }
 
 [dependencies.zeitgeist-runtime]
 path = '../runtime'
 version = '0.1.0'
 
 [dependencies.pallet-transaction-payment-rpc]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sc-basic-authorship]
 version = '0.8.0'
@@ -42,7 +42,7 @@ features = ['wasmtime']
 version = '0.8.0'
 
 [dependencies.sc-client-api]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sc-consensus]
 version = '0.8.0'
@@ -65,16 +65,16 @@ features = ['wasmtime']
 version = '0.8.0'
 
 [dependencies.sc-transaction-pool]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-api]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-block-builder]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-blockchain]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-consensus]
 version = '0.8.0'
@@ -83,22 +83,22 @@ version = '0.8.0'
 version = '0.8.0'
 
 [dependencies.sp-core]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-finality-grandpa]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-inherents]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-runtime]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.sp-transaction-pool]
-version = '2.0.0'
+version = '2.0.1'
 
 [dependencies.substrate-frame-rpc-system]
-version = '2.0.0'
+version = '2.0.1'
 
 [build-dependencies.substrate-build-script-utils]
-version = '2.0.0'
+version = '2.0.1'
