@@ -7,6 +7,7 @@ pub const ASSET_A: H256 = H256::repeat_byte(65);
 pub const ASSET_B: H256 = H256::repeat_byte(66);
 pub const ASSET_C: H256 = H256::repeat_byte(67);
 pub const ASSET_D: H256 = H256::repeat_byte(68);
+pub const ASSETS: [H256; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
 #[test]
 fn it_creates_a_new_pool_external() {
@@ -14,24 +15,14 @@ fn it_creates_a_new_pool_external() {
         let next_pool_before = Swaps::next_pool_id();
         assert_eq!(next_pool_before, 0);
 
-        let assets = vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D];
-
-        assets.clone().into_iter().for_each(|asset| {
-            let _res = Shares::generate(asset, &BOB, 100 * BASE);
-        });
-
-        assert_ok!(Swaps::create_pool(
-            Origin::signed(BOB),
-            assets.clone(),
-            vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
-        ));
+        create_initial_pool();
 
         let next_pool_after = Swaps::next_pool_id();
         assert_eq!(next_pool_after, 1);
 
         let pool = Swaps::pools(0).unwrap();
 
-        assert_eq!(pool.assets, assets);
+        assert_eq!(pool.assets, ASSETS.iter().cloned().collect::<Vec<_>>());
         assert_eq!(pool.swap_fee, 0);
         assert_eq!(pool.total_weight, 8 * BASE);
 
@@ -45,18 +36,7 @@ fn it_creates_a_new_pool_external() {
 #[test]
 fn it_allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
-        let assets = vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D];
-
-        assets.clone().into_iter().for_each(|asset| {
-            let _res = Shares::generate(asset, &BOB, 100 * BASE);
-        });
-
-        assert_ok!(Swaps::create_pool(
-            Origin::signed(BOB),
-            assets.clone(),
-            vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
-        ));
-
+        create_initial_pool();
         Shares::generate(ASSET_A, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_B, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_C, &ALICE, 25 * BASE).ok();
@@ -147,4 +127,16 @@ fn it_allows_the_full_user_lifecycle() {
         let asset_b_bal_after_2 = Shares::free_balance(ASSET_B, &ALICE);
         assert_eq!(asset_b_bal_after_2 - asset_b_bal_after, BASE);
     });
+}
+
+
+fn create_initial_pool() {
+    ASSETS.iter().cloned().for_each(|asset| {
+        let _ = Shares::generate(asset, &BOB, 100 * BASE);
+    });
+    assert_ok!(Swaps::create_pool(
+        Origin::signed(BOB),
+        ASSETS.iter().cloned().collect(),
+        vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
+    ));
 }
