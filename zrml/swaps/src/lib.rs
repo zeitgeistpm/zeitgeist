@@ -96,20 +96,21 @@ decl_event! {
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        TooManyAssets,
-        AssetNotBound,
-        BelowMinimumWeight,
         AboveMaximumWeight,
-        MaxTotalWeight,
-        MathApproximation,
-        MathApproximationDebug,
+        AssetNotBound,
+        BadLimitPrice,
+        BelowMinimumWeight,
+        InsufficientBalance,
         LimitIn,
         LimitOut,
-        PoolDoesNotExist,
+        MathApproximation,
+        MathApproximationDebug,
         MaxInRatio,
         MaxOutRatio,
-        BadLimitPrice,
-        InsufficientBalance,
+        MaxTotalWeight,
+        PoolDoesNotExist,
+        ProvidedValuesLenMustEqualAssetsLen,
+        TooManyAssets
     }
 }
 
@@ -127,6 +128,7 @@ decl_module! {
             let _result = Self::do_create_pool(sender, assets, Zero::zero(), weights).unwrap();
         }
 
+        /// Joins a given `pool_id` pool.
         #[weight = 0]
         fn join_pool(origin, pool_id: u128, pool_amount_out: BalanceOf<T>, max_amounts_in: Vec<BalanceOf<T>>) {
             let sender = ensure_signed(origin)?;
@@ -138,6 +140,7 @@ decl_module! {
 
             let pool = Self::pool_by_id(pool_id)?;
 
+            check_provided_values_len_must_equal_assets_len::<T>(&pool.assets, &max_amounts_in)?;
 
             let pool_account = Self::pool_account_id(pool_id);
 
@@ -169,6 +172,7 @@ decl_module! {
 
             let pool = Self::pool_by_id(pool_id)?;
 
+            check_provided_values_len_must_equal_assets_len::<T>(&pool.assets, &min_amounts_out)?;
 
             let pool_account = Self::pool_account_id(pool_id);
 
@@ -533,6 +537,15 @@ impl<T: Trait> Module<T> {
         // unimplemented
         0
     }
+
+    fn pool_by_id(
+        pool_id: u128
+    ) -> Result<Pool<BalanceOf<T>, T::Hash>, Error<T>>
+    where
+        T: Trait
+    {
+        Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist.into())
+    }
 }
 
 impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
@@ -606,3 +619,17 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         Ok(next_pool_id)
     }
 }
+
+fn check_provided_values_len_must_equal_assets_len<T>(
+    assets: &[T::Hash],
+    provided_values: &[BalanceOf<T>]
+) -> Result<(), Error<T>>
+where
+    T: Trait
+{
+    if assets.len() != provided_values.len() {
+        return Err(Error::<T>::ProvidedValuesLenMustEqualAssetsLen.into());
+    }
+    Ok(())
+}
+
