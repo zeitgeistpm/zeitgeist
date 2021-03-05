@@ -1,5 +1,5 @@
 use crate::mock::*;
-use frame_support::assert_ok;
+use frame_support::{assert_noop, assert_ok};
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
 
@@ -7,6 +7,8 @@ pub const ASSET_A: H256 = H256::repeat_byte(65);
 pub const ASSET_B: H256 = H256::repeat_byte(66);
 pub const ASSET_C: H256 = H256::repeat_byte(67);
 pub const ASSET_D: H256 = H256::repeat_byte(68);
+pub const ASSET_E: H256 = H256::repeat_byte(69);
+
 pub const ASSETS: [H256; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
 #[test]
@@ -37,12 +39,12 @@ fn it_creates_a_new_pool_external() {
 fn it_allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool();
+
         Shares::generate(ASSET_A, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_B, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_C, &ALICE, 25 * BASE).ok();
         Shares::generate(ASSET_D, &ALICE, 25 * BASE).ok();
 
-        // joining the pool
         assert_ok!(Swaps::join_pool(
             Origin::signed(ALICE),
             0,
@@ -129,6 +131,61 @@ fn it_allows_the_full_user_lifecycle() {
     });
 }
 
+#[test]
+fn provided_values_len_must_equal_assets_len() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool();
+        let signed = Origin::signed(ALICE);
+        assert_noop!(
+            Swaps::join_pool(signed.clone(), 0, 5 * BASE, vec![]),
+            crate::Error::<Test>::ProvidedValuesLenMustEqualAssetsLen
+        );
+        assert_noop!(
+            Swaps::exit_pool(signed, 0, 5 * BASE, vec![]),
+            crate::Error::<Test>::ProvidedValuesLenMustEqualAssetsLen
+        );
+    });
+}
+
+#[test]
+fn assets_must_be_bounded() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool();
+        let signed = Origin::signed(ALICE);
+        assert_noop!(
+            Swaps::swap_exact_amount_in(signed.clone(), 0, ASSET_A, 1, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_in(signed.clone(), 0, ASSET_E, 1, ASSET_A, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+
+        assert_noop!(
+            Swaps::swap_exact_amount_out(signed.clone(), 0, ASSET_A, 1, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_out(signed.clone(), 0, ASSET_E, 1, ASSET_A, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+
+        assert_noop!(
+            Swaps::joinswap_extern_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+
+        assert_noop!(
+            Swaps::exitswap_pool_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        
+        assert_noop!(
+            Swaps::exitswap_extern_amount_out(signed, 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+    });
+}
 
 fn create_initial_pool() {
     ASSETS.iter().cloned().for_each(|asset| {

@@ -18,6 +18,7 @@ pub trait Shares<AccountId, Balance, Hash> {
     /// Deletes all shares with a given `share_id`.
     fn destroy_all(share_id: Hash) -> DispatchResult;
     fn ensure_can_withdraw(share_id: Hash, who: &AccountId, amount: Balance) -> DispatchResult;
+    /// Sets a given `amount` for `to` account and increases the total supply.
     fn generate(share_id: Hash, to: &AccountId, amount: Balance) -> DispatchResult;
     fn transfer(share_id: Hash, from: &AccountId, to: &AccountId, amount: Balance) -> DispatchResult;
 }
