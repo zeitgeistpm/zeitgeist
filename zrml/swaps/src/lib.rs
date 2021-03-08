@@ -5,6 +5,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[macro_use]
+mod macros;
+
 mod consts;
 mod events;
 mod fixed;
@@ -15,12 +18,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use parity_scale_codec::{Decode, Encode};
-use fixed::*;
 use events::GenericPoolEvent;
+use fixed::*;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_support::traits::{Currency, Get, ReservableCurrency};
 use frame_system::{self as system, ensure_signed};
+use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{DispatchError, DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion};
 use sp_runtime::traits::{AccountIdConversion, Hash, Zero};
 use sp_std::collections::btree_map::BTreeMap;
@@ -128,72 +131,59 @@ decl_module! {
             let _ = Self::do_create_pool(sender, assets, Zero::zero(), weights)?;
         }
 
-        /// Joins a given `pool_id` pool.
+        /// Joins a given set of assets provided from `origin` to `pool_id`.
+        ///
+        /// # Parameters
+        ///
+        /// * `origin`: Provider. The person whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `pool_amount`: Sum of all assets that are being transferred from the provider to the pool.
+        /// * `max_assets_in`: List of asset upper bounds. No asset transfer should be greater
+        /// than the provided values.
         #[weight = 0]
-        fn join_pool(origin, pool_id: u128, pool_amount_out: BalanceOf<T>, max_amounts_in: Vec<BalanceOf<T>>) {
-            let who = ensure_signed(origin)?;
+        fn join_pool(origin, pool_id: u128, pool_amount: BalanceOf<T>, max_assets_in: Vec<BalanceOf<T>>) {
+            pool_in_and_out!(
+                params: (max_assets_in, origin, pool_amount, pool_id),
 
-            let pool_shares_id = Self::pool_shares_id(pool_id);
-            let pool_shares_total = T::Shares::total_supply(pool_shares_id);
-            let ratio: BalanceOf<T> = bdiv(pool_amount_out.saturated_into(), pool_shares_total.saturated_into()).saturated_into();
-            ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
-
-            let pool = Self::pool_by_id(pool_id)?;
-
-            check_provided_values_len_must_equal_assets_len::<T, _>(&pool.assets, &max_amounts_in)?;
-
-            let pool_account = Self::pool_account_id(pool_id);
-
-            for (asset, weight) in pool.assets.into_iter().zip(max_amounts_in) {
-                let bal = T::Shares::free_balance(asset, &pool_account);
-                let asset_amount_in = bmul(ratio.saturated_into(), bal.saturated_into()).saturated_into();
-                ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximationDebug);
-                ensure!(asset_amount_in <= weight, Error::<T>::LimitIn);
-                T::Shares::transfer(asset, &who, &pool_account, asset_amount_in)?;
-            }
-
-            Self::mint_pool_shares(pool_id, &who, pool_amount_out)?;
-
-            Self::deposit_event(RawEvent::JoinedPool(GenericPoolEvent {
-                pool_id,
-                who
-            }));
+                event: JoinedPool,
+                transfer_asset: |amount, amount_bound, asset, pool_account, who| {
+                    T::Shares::transfer(asset, who, pool_account, amount)?;
+                    ensure!(amount <= amount_bound, Error::<T>::LimitIn);
+                    Ok(())
+                },
+                transfer_pool: |_, _, who| Self::mint_pool_shares(pool_id, who, pool_amount)
+            )
         }
 
+        /// Retrieves a given set of assets from `pool_id` to `origin`.
+        ///
+        /// # Parameters
+        ///
+        /// * `origin`: Provider. The person whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `pool_amount`: Sum of all assets that are being transferred from the pool to the provider.
+        /// * `min_assets_out`: List of asset lower bounds. No asset transfer should be lower
+        /// than the provided values.
         #[weight = 0]
-        fn exit_pool(origin, pool_id: u128, pool_amount_in: BalanceOf<T>, min_amounts_out: Vec<BalanceOf<T>>) {
-            let who = ensure_signed(origin)?;
+        fn exit_pool(origin, pool_id: u128, pool_amount: BalanceOf<T>, min_assets_out: Vec<BalanceOf<T>>) {
+            let exit_fee_pct = T::ExitFee::get().saturated_into();
+            let exit_fee = bmul(pool_amount.saturated_into(), exit_fee_pct).saturated_into();
+            let pool_amount_minus_exit_fee = pool_amount - exit_fee;
+            pool_in_and_out!(
+                params: (min_assets_out, origin, pool_amount, pool_id),
 
-            let pool_shares_id = Self::pool_shares_id(pool_id);
-            let pool_shares_total = T::Shares::total_supply(pool_shares_id);
-            let exit_fee = bmul(pool_amount_in.saturated_into(), T::ExitFee::get().saturated_into()).saturated_into();
-            let pool_amount_in_after_exit_fee = pool_amount_in - exit_fee;
-            let ratio: BalanceOf<T> = bdiv(pool_amount_in_after_exit_fee.saturated_into(), pool_shares_total.saturated_into()).saturated_into();
-            ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
-
-            let pool = Self::pool_by_id(pool_id)?;
-
-            check_provided_values_len_must_equal_assets_len::<T, _>(&pool.assets, &min_amounts_out)?;
-
-            let pool_account = Self::pool_account_id(pool_id);
-
-            Self::burn_pool_shares(pool_id, &who, pool_amount_in_after_exit_fee)?;
-            // give the exit fee to the pool
-            T::Shares::transfer(pool_shares_id, &who, &pool_account, exit_fee)?;
-
-            for (asset, weight) in pool.assets.into_iter().zip(min_amounts_out) {
-                let bal = T::Shares::free_balance(asset, &pool_account);
-                let asset_amount_out = bmul(ratio.saturated_into(), bal.saturated_into()).saturated_into();
-                ensure!(asset_amount_out != Zero::zero(), Error::<T>::MathApproximation);
-                ensure!(asset_amount_out >= weight, Error::<T>::LimitOut);
-
-                T::Shares::transfer(asset, &pool_account, &who, asset_amount_out)?;
-            }
-
-            Self::deposit_event(RawEvent::ExitedPool(GenericPoolEvent {
-                pool_id,
-                who
-            }));
+                event: ExitedPool,
+                transfer_asset: |amount, amount_bound, asset, pool_account, who| {
+                    ensure!(amount >= amount_bound, Error::<T>::LimitOut);
+                    T::Shares::transfer(asset, pool_account, who, amount)?;
+                    Ok(())
+                },
+                transfer_pool: |pool_account_id, pool_shares_id, who| {
+                    T::Shares::transfer(pool_shares_id, who, pool_account_id, exit_fee)?;
+                    Self::burn_pool_shares(pool_id, who, pool_amount_minus_exit_fee)?;
+                    Ok(())
+                }
+            )
         }
 
         #[weight = 0]

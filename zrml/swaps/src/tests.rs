@@ -1,4 +1,7 @@
-use crate::mock::*;
+use crate::{
+    GenericPoolEvent,
+    mock::*
+};
 use frame_support::{assert_noop, assert_ok};
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
@@ -10,6 +13,27 @@ pub const ASSET_D: H256 = H256::repeat_byte(68);
 pub const ASSET_E: H256 = H256::repeat_byte(69);
 
 pub const ASSETS: [H256; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
+
+#[test]
+fn ensure_emitted_events() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Module::<Test>::set_block_number(1);
+        create_initial_pool_with_initial_asset_funds();
+
+        let alice = Origin::signed(ALICE);
+        let pool_id = 0;
+
+        let _ = Swaps::join_pool(alice.clone(), pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
+        let joined_pool_event = GenericPoolEvent { pool_id, who: 0 };
+        let event = TestEvent::zrml_swaps(crate::RawEvent::JoinedPool(joined_pool_event));
+        frame_system::Module::<Test>::events().iter().any(|e| e.event == event);
+
+        let _ = Swaps::exit_pool(alice, pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
+        let joined_pool_event = GenericPoolEvent { pool_id, who: 0 };
+        let event = TestEvent::zrml_swaps(crate::RawEvent::ExitedPool(joined_pool_event));
+        frame_system::Module::<Test>::events().iter().any(|e| e.event == event);
+    });
+}
 
 #[test]
 fn it_creates_a_new_pool_external() {
@@ -38,12 +62,7 @@ fn it_creates_a_new_pool_external() {
 #[test]
 fn it_allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool();
-
-        Shares::generate(ASSET_A, &ALICE, 25 * BASE).ok();
-        Shares::generate(ASSET_B, &ALICE, 25 * BASE).ok();
-        Shares::generate(ASSET_C, &ALICE, 25 * BASE).ok();
-        Shares::generate(ASSET_D, &ALICE, 25 * BASE).ok();
+        create_initial_pool_with_initial_asset_funds();
 
         assert_ok!(Swaps::join_pool(
             Origin::signed(ALICE),
@@ -196,4 +215,12 @@ fn create_initial_pool() {
         ASSETS.iter().cloned().collect(),
         vec!(2 * BASE, 2 * BASE, 2 * BASE, 2 * BASE),
     ));
+}
+
+fn create_initial_pool_with_initial_asset_funds() {
+    create_initial_pool();
+    let _ = Shares::generate(ASSET_A, &ALICE, 25 * BASE);
+    let _ = Shares::generate(ASSET_B, &ALICE, 25 * BASE);
+    let _ = Shares::generate(ASSET_C, &ALICE, 25 * BASE);
+    let _ = Shares::generate(ASSET_D, &ALICE, 25 * BASE);
 }
