@@ -16,7 +16,6 @@ use zrml_traits::shares::{ReservableShares, Shares, WrapperShares};
 
 #[cfg(test)]
 mod mock;
-
 #[cfg(test)]
 mod tests;
 
