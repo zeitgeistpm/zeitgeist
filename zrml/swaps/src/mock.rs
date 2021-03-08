@@ -1,11 +1,12 @@
 use crate::{Module, Trait};
-use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
+use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     ModuleId, Perbill,
 };
+use crate as zrml_swaps;
 
 pub type AccountId = u128;
 pub type Balance = u128;
@@ -19,6 +20,15 @@ pub const EVE: AccountId = 4;
 
 // BASE is used as the number of decimals in order to set constants elsewhere.
 pub const BASE: Balance = 10_000_000_000;
+
+impl_outer_event! {
+    pub enum TestEvent for Test {
+        frame_system<T>,
+        pallet_balances<T>,
+        zrml_shares<T>,
+        zrml_swaps<T>,
+    }
+}
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -45,7 +55,7 @@ impl frame_system::Trait for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = ();
+    type Event = TestEvent;
     type BlockHashCount = BlockHashCount;
     type MaximumBlockWeight = MaximumBlockWeight;
     type DbWeight = ();
@@ -68,7 +78,7 @@ parameter_types! {
 }
 
 impl pallet_balances::Trait for Test {
-    type Event = ();
+    type Event = TestEvent;
     type Balance = Balance;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
@@ -82,7 +92,7 @@ parameter_types! {
 }
 
 impl zrml_shares::Trait for Test {
-    type Event = ();
+    type Event = TestEvent;
     type Balance = Balance;
     type Currency = Balances;
     type ModuleId = SharesModuleId;
@@ -101,7 +111,7 @@ parameter_types! {
 }
 
 impl Trait for Test {
-    type Event = ();
+    type Event = TestEvent;
     type Currency = Balances;
     type Shares = Shares;
     type ModuleId = SwapsModuleId;
