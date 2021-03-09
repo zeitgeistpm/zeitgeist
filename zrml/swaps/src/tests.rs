@@ -24,14 +24,14 @@ fn ensure_emitted_events() {
         let pool_id = 0;
 
         let _ = Swaps::join_pool(alice.clone(), pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
-        let joined_pool_event = GenericPoolEvent { pool_id, who: 0 };
-        let event = TestEvent::zrml_swaps(crate::RawEvent::JoinedPool(joined_pool_event));
-        frame_system::Module::<Test>::events().iter().any(|e| e.event == event);
+        let join_pool_raw_event = GenericPoolEvent { pool_id, who: 0 };
+        let join_pool_event = TestEvent::zrml_swaps(crate::RawEvent::JoinedPool(join_pool_raw_event));
+        assert!(frame_system::Module::<Test>::events().iter().any(|e| e.event == join_pool_event));
 
         let _ = Swaps::exit_pool(alice, pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
-        let joined_pool_event = GenericPoolEvent { pool_id, who: 0 };
-        let event = TestEvent::zrml_swaps(crate::RawEvent::ExitedPool(joined_pool_event));
-        frame_system::Module::<Test>::events().iter().any(|e| e.event == event);
+        let exit_pool_raw_event = GenericPoolEvent { pool_id, who: 0 };
+        let exit_pool_event = TestEvent::zrml_swaps(crate::RawEvent::ExitedPool(exit_pool_raw_event));
+        assert!(frame_system::Module::<Test>::events().iter().any(|e| e.event == exit_pool_event));
     });
 }
 
@@ -190,17 +190,20 @@ fn assets_must_be_bounded() {
         );
 
         assert_noop!(
-            Swaps::joinswap_extern_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
+            Swaps::join_swap_extern_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        assert_noop!(
+            Swaps::join_swap_pool_amount_out(signed.clone(), 0, ASSET_E, 1, 1),
             crate::Error::<Test>::AssetNotBound
         );
 
         assert_noop!(
-            Swaps::exitswap_pool_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
+            Swaps::exit_swap_pool_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
             crate::Error::<Test>::AssetNotBound
         );
-        
         assert_noop!(
-            Swaps::exitswap_extern_amount_out(signed, 0, ASSET_E, 1, 1),
+            Swaps::exit_swap_extern_amount_out(signed, 0, ASSET_E, 1, 1),
             crate::Error::<Test>::AssetNotBound
         );
     });
