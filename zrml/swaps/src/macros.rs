@@ -68,7 +68,7 @@ macro_rules! join_swap_amount {
 }
 
 // Common code for `join_pool` and `exit_pool` methods.
-macro_rules! pool_in_and_out {
+macro_rules! pool {
     (
         initial_params: ($asset_bounds:expr, $origin:expr, $pool_amount:expr, $pool_id:expr),
 
@@ -136,7 +136,6 @@ macro_rules! swap_exact_amount {
         T::Shares::transfer($asset_out, &pool_account_id, &who, asset_amount_out)?;
         
         let spot_price_after = Self::get_spot_price($pool_id, $asset_in, $asset_out);
-
         ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
         ensure!(spot_price_after <= $max_price, Error::<T>::BadLimitPrice);
         ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);

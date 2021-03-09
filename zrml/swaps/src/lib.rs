@@ -141,8 +141,8 @@ decl_module! {
         /// * `max_assets_in`: List of asset upper bounds. No asset transfer should be greater
         /// than the provided values.
         #[weight = 0]
-        fn join_pool(origin, pool_id: u128, pool_amount: BalanceOf<T>, max_assets_in: Vec<BalanceOf<T>>) {
-            pool_in_and_out!(
+        fn pool_join(origin, pool_id: u128, pool_amount: BalanceOf<T>, max_assets_in: Vec<BalanceOf<T>>) {
+            pool!(
                 initial_params: (max_assets_in, origin, pool_amount, pool_id),
 
                 event: JoinedPool,
@@ -165,11 +165,11 @@ decl_module! {
         /// * `min_assets_out`: List of asset lower bounds. No asset transfer should be lower
         /// than the provided values.
         #[weight = 0]
-        fn exit_pool(origin, pool_id: u128, pool_amount: BalanceOf<T>, min_assets_out: Vec<BalanceOf<T>>) {
+        fn pool_exit(origin, pool_id: u128, pool_amount: BalanceOf<T>, min_assets_out: Vec<BalanceOf<T>>) {
             let exit_fee_pct = T::ExitFee::get().saturated_into();
             let exit_fee = bmul(pool_amount.saturated_into(), exit_fee_pct).saturated_into();
             let pool_amount_minus_exit_fee = pool_amount - exit_fee;
-            pool_in_and_out!(
+            pool!(
                 initial_params: (min_assets_out, origin, pool_amount, pool_id),
 
                 event: ExitedPool,
@@ -275,7 +275,10 @@ decl_module! {
 
                 asset_amount_in: |_, _, _| Ok(asset_amount_in),
                 pool_amount_out: |balance_in: BalanceOf<T>, pool: &Pool<BalanceOf<T>, _>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into();
+                    let mul: BalanceOf<T> = bmul(
+                        balance_in.saturated_into(),
+                        T::MaxInRatio::get().saturated_into()
+                    ).saturated_into();
                     ensure!(
                         asset_amount_in <= mul,
                         Error::<T>::MaxInRatio
@@ -317,7 +320,7 @@ decl_module! {
                     ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximation);
                     ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
                     ensure!(
-                        asset_amount_in <= bmul(balance_in.saturated_into(),T::MaxInRatio::get().saturated_into()).saturated_into(),
+                        asset_amount_in <= bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
                         Error::<T>::MaxInRatio
                     );
                     Ok(asset_amount_in)
@@ -364,7 +367,7 @@ decl_module! {
             pool_id: u128,
             asset_out: T::Hash,
             asset_amount_out: BalanceOf<T>,
-            pool_amount_in: BalanceOf<T>,
+            max_pool_amount_in: BalanceOf<T>,
         ) {
             exit_swap_amount!(
                 initial_params: (origin, pool_id, asset_out),
@@ -387,7 +390,7 @@ decl_module! {
                         pool.swap_fee.saturated_into(),
                     ).saturated_into();
                     ensure!(pool_amount_in != Zero::zero(), Error::<T>::MathApproximation);
-                    ensure!(pool_amount_in <= pool_amount_in, Error::<T>::LimitIn);
+                    ensure!(pool_amount_in <= max_pool_amount_in, Error::<T>::LimitIn);
                     Ok(pool_amount_in)
                 }
             )
