@@ -15,6 +15,49 @@ pub const ASSET_E: H256 = H256::repeat_byte(69);
 pub const ASSETS: [H256; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
 #[test]
+fn assets_must_be_bounded() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool();
+        let alice = Origin::signed(ALICE);
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice.clone(), 0, ASSET_A, 1, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice.clone(), 0, ASSET_E, 1, ASSET_A, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice.clone(), 0, ASSET_A, 1, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice.clone(), 0, ASSET_E, 1, ASSET_A, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+
+        assert_noop!(
+            Swaps::join_swap_extern_amount_in(alice.clone(), 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        assert_noop!(
+            Swaps::join_swap_pool_amount_out(alice.clone(), 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+
+        assert_noop!(
+            Swaps::exit_swap_pool_amount_in(alice.clone(), 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+        assert_noop!(
+            Swaps::exit_swap_extern_amount_out(alice, 0, ASSET_E, 1, 1),
+            crate::Error::<Test>::AssetNotBound
+        );
+    });
+}
+
+#[test]
 fn ensure_emitted_events() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
@@ -23,15 +66,43 @@ fn ensure_emitted_events() {
         let alice = Origin::signed(ALICE);
         let pool_id = 0;
 
-        let _ = Swaps::join_pool(alice.clone(), pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
+        let _ = Swaps::pool_join(alice.clone(), pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
         let join_pool_raw_event = GenericPoolEvent { pool_id, who: 0 };
         let join_pool_event = TestEvent::zrml_swaps(crate::RawEvent::JoinedPool(join_pool_raw_event));
         assert!(frame_system::Module::<Test>::events().iter().any(|e| e.event == join_pool_event));
 
-        let _ = Swaps::exit_pool(alice, pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
+        let _ = Swaps::pool_exit(alice, pool_id, BASE, vec!(BASE, BASE, BASE, BASE));
         let exit_pool_raw_event = GenericPoolEvent { pool_id, who: 0 };
         let exit_pool_event = TestEvent::zrml_swaps(crate::RawEvent::ExitedPool(exit_pool_raw_event));
         assert!(frame_system::Module::<Test>::events().iter().any(|e| e.event == exit_pool_event));
+    });
+}
+
+#[test]
+fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool();
+
+        let alice = Origin::signed(ALICE);
+        let pool_id = 0;
+
+        assert_noop!(
+            Swaps::swap_exact_amount_in(
+                Origin::signed(ALICE),
+                0,
+                ASSET_A,
+                u128::MAX,
+                ASSET_B,
+                BASE,
+                BASE,
+            ),
+            crate::Error::<Test>::MaxInRatio
+        );
+
+        assert_noop!(
+            Swaps::join_swap_extern_amount_in(alice.clone(), 0, ASSET_A, u128::MAX, 1),
+            crate::Error::<Test>::MaxInRatio
+        );
     });
 }
 
@@ -64,7 +135,7 @@ fn it_allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_initial_asset_funds();
 
-        assert_ok!(Swaps::join_pool(
+        assert_ok!(Swaps::pool_join(
             Origin::signed(ALICE),
             0,
             5 * BASE,
@@ -151,60 +222,65 @@ fn it_allows_the_full_user_lifecycle() {
 }
 
 #[test]
+fn out_amount_must_be_equal_or_less_than_max_in_ratio() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool();
+
+        let alice = Origin::signed(ALICE);
+        let pool_id = 0;
+
+        assert_noop!(
+            Swaps::swap_exact_amount_out(
+                Origin::signed(ALICE),
+                0,
+                ASSET_A,
+                BASE,
+                ASSET_B,
+                u128::MAX,
+                BASE,
+            ),
+            crate::Error::<Test>::MaxOutRatio
+        );
+
+        assert_noop!(
+            Swaps::exit_swap_extern_amount_out(alice.clone(), 0, ASSET_A, u128::MAX, 1),
+            crate::Error::<Test>::MaxOutRatio
+        );
+    });
+}
+
+#[test]
 fn provided_values_len_must_equal_assets_len() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool();
-        let signed = Origin::signed(ALICE);
+        let alice = Origin::signed(ALICE);
         assert_noop!(
-            Swaps::join_pool(signed.clone(), 0, 5 * BASE, vec![]),
+            Swaps::pool_join(alice.clone(), 0, 5 * BASE, vec![]),
             crate::Error::<Test>::ProvidedValuesLenMustEqualAssetsLen
         );
         assert_noop!(
-            Swaps::exit_pool(signed, 0, 5 * BASE, vec![]),
+            Swaps::pool_exit(alice, 0, 5 * BASE, vec![]),
             crate::Error::<Test>::ProvidedValuesLenMustEqualAssetsLen
         );
     });
 }
 
 #[test]
-fn assets_must_be_bounded() {
+fn pool_amount_must_not_be_zero() {
     ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool();
-        let signed = Origin::signed(ALICE);
+        create_initial_pool_with_initial_asset_funds();
+
+        let alice = Origin::signed(ALICE);
+        let pool_id = 0;
+
         assert_noop!(
-            Swaps::swap_exact_amount_in(signed.clone(), 0, ASSET_A, 1, ASSET_E, 1, 1),
-            crate::Error::<Test>::AssetNotBound
-        );
-        assert_noop!(
-            Swaps::swap_exact_amount_in(signed.clone(), 0, ASSET_E, 1, ASSET_A, 1, 1),
-            crate::Error::<Test>::AssetNotBound
+            Swaps::pool_join(alice.clone(), pool_id, 0, vec!(BASE, BASE, BASE, BASE)),
+            crate::Error::<Test>::MathApproximation
         );
 
         assert_noop!(
-            Swaps::swap_exact_amount_out(signed.clone(), 0, ASSET_A, 1, ASSET_E, 1, 1),
-            crate::Error::<Test>::AssetNotBound
-        );
-        assert_noop!(
-            Swaps::swap_exact_amount_out(signed.clone(), 0, ASSET_E, 1, ASSET_A, 1, 1),
-            crate::Error::<Test>::AssetNotBound
-        );
-
-        assert_noop!(
-            Swaps::join_swap_extern_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
-            crate::Error::<Test>::AssetNotBound
-        );
-        assert_noop!(
-            Swaps::join_swap_pool_amount_out(signed.clone(), 0, ASSET_E, 1, 1),
-            crate::Error::<Test>::AssetNotBound
-        );
-
-        assert_noop!(
-            Swaps::exit_swap_pool_amount_in(signed.clone(), 0, ASSET_E, 1, 1),
-            crate::Error::<Test>::AssetNotBound
-        );
-        assert_noop!(
-            Swaps::exit_swap_extern_amount_out(signed, 0, ASSET_E, 1, 1),
-            crate::Error::<Test>::AssetNotBound
+            Swaps::pool_exit(alice.clone(), pool_id, 0, vec!(BASE, BASE, BASE, BASE)),
+            crate::Error::<Test>::MathApproximation
         );
     });
 }
