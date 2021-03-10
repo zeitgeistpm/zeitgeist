@@ -126,20 +126,20 @@ decl_module! {
         /// Temporary probably - The Swap is created per prediction market.
         #[weight = 0]
         fn create_pool(origin, assets: Vec<T::Hash>, weights: Vec<u128>) {
-            let sender = ensure_signed(origin)?;
+            let who = ensure_signed(origin)?;
 
-            let _ = Self::do_create_pool(sender, assets, Zero::zero(), weights)?;
+            let _ = Self::do_create_pool(who, assets, Zero::zero(), weights)?;
         }
 
         /// Joins a given set of assets provided from `origin` to `pool_id`.
         ///
-        /// # Parameters
+        /// # Arguments
         ///
-        /// * `origin`: Provider. The person whose assets should be transferred.
+        /// * `origin`:Liquidity Provider (LP). The account whose assets should be transferred.
         /// * `pool_id`: Unique pool identifier.
-        /// * `pool_amount`: Sum of all assets that are being transferred from the provider to the pool.
-        /// * `max_assets_in`: List of asset upper bounds. No asset transfer should be greater
-        /// than the provided values.
+        /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
+        /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
+        /// provided values.
         #[weight = 0]
         fn pool_join(origin, pool_id: u128, pool_amount: BalanceOf<T>, max_assets_in: Vec<BalanceOf<T>>) {
             pool!(
@@ -157,13 +157,14 @@ decl_module! {
 
         /// Retrieves a given set of assets from `pool_id` to `origin`.
         ///
-        /// # Parameters
+        /// # Arguments
         ///
-        /// * `origin`: Provider. The person whose assets should be received.
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
-        /// * `pool_amount`: Sum of all assets that are being transferred from the pool to the provider.
-        /// * `min_assets_out`: List of asset lower bounds. No asset transfer should be lower
-        /// than the provided values.
+        /// * `pool_amount`: The amount of LP shares for this pool being burned from provider to
+        /// retrieve assets.
+        /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
+        /// provided values.
         #[weight = 0]
         fn pool_exit(origin, pool_id: u128, pool_amount: BalanceOf<T>, min_assets_out: Vec<BalanceOf<T>>) {
             let exit_fee_pct = T::ExitFee::get().saturated_into();
@@ -486,10 +487,10 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
     /// Deploys a new pool with the given assets and weights.
     ///
-    /// ## Arguments
+    /// # Arguments
     ///
-    /// - `creator` - The account that is the creator of the pool. Must have enough
-    ///               funds for each of the assets to cover the `MinLiqudity`.
+    /// - `who` - The account that is the creator of the pool. Must have enough
+    /// funds for each of the assets to cover the `MinLiqudity`.
     /// - `assets` - The assets that are used in the pool.
     /// - `swap_fee` - The fee applied to each swap.
     /// - `weights` - These are the denormalized weights (the raw weights).
