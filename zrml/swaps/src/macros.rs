@@ -67,7 +67,7 @@ macro_rules! join_swap_amount {
     }}
 }
 
-// Common code for `join_pool` and `exit_pool` methods.
+// Common code for `pool_join` and `pool_exit` methods.
 macro_rules! pool {
     (
         initial_params: ($asset_bounds:expr, $origin:expr, $pool_amount:expr, $pool_id:expr),
