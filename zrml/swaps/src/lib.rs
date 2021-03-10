@@ -5,29 +5,32 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
-use frame_support::traits::{Currency, Get, ReservableCurrency};
+#[macro_use]
+mod macros;
+
+mod consts;
+mod events;
+mod fixed;
+mod math;
+
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
+
+use events::GenericPoolEvent;
+use fixed::*;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
+use frame_support::traits::{Currency, Get, ReservableCurrency};
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{AccountIdConversion, Hash, Zero};
+use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{DispatchError, DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion};
+use sp_runtime::traits::{AccountIdConversion, Hash, Zero};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
 use zrml_traits::shares::{ReservableShares, Shares};
 use zrml_traits::swaps::Swaps;
-
-mod consts;
-mod fixed;
-mod math;
-
-use fixed::*;
-
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Pool<Balance, Hash> {
@@ -81,35 +84,36 @@ decl_storage! {
 decl_event! {
     pub enum Event<T>
     where
-        AccountId = <T as frame_system::Trait>::AccountId,
+        AccountId = <T as frame_system::Trait>::AccountId
     {
         /// A new pool has been created. [pool_id, creator]
-        PoolCreated(u128, AccountId),
+        PoolCreated(GenericPoolEvent<AccountId>),
         /// Someone has joined a pool. [pool_id, who]
-        JoinedPool(u128, AccountId),
+        JoinedPool(GenericPoolEvent<AccountId>),
         /// Someone has exited a pool. [pool_id, who]
-        ExitedPool(u128, AccountId),
+        ExitedPool(GenericPoolEvent<AccountId>),
         /// A swap has occurred. [pool_id]
-        Swap(u128),
+        Swap(GenericPoolEvent<AccountId>),
     }
 }
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        TooManyAssets,
-        AssetNotBound,
-        BelowMinimumWeight,
         AboveMaximumWeight,
-        MaxTotalWeight,
-        MathApproximation,
-        MathApproximationDebug,
+        AssetNotBound,
+        BadLimitPrice,
+        BelowMinimumWeight,
+        InsufficientBalance,
         LimitIn,
         LimitOut,
-        PoolDoesNotExist,
+        MathApproximation,
+        MathApproximationDebug,
         MaxInRatio,
         MaxOutRatio,
-        BadLimitPrice,
-        InsufficientBalance,
+        MaxTotalWeight,
+        PoolDoesNotExist,
+        ProvidedValuesLenMustEqualAssetsLen,
+        TooManyAssets
     }
 }
 
@@ -122,75 +126,65 @@ decl_module! {
         /// Temporary probably - The Swap is created per prediction market.
         #[weight = 0]
         fn create_pool(origin, assets: Vec<T::Hash>, weights: Vec<u128>) {
-            let sender = ensure_signed(origin)?;
+            let who = ensure_signed(origin)?;
 
-            let _result = Self::do_create_pool(sender, assets, Zero::zero(), weights).unwrap();
+            let _ = Self::do_create_pool(who, assets, Zero::zero(), weights)?;
         }
 
+        /// Joins a given set of assets provided from `origin` to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`:Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
+        /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
+        /// provided values.
         #[weight = 0]
-        fn join_pool(origin, pool_id: u128, pool_amount_out: BalanceOf<T>, max_amounts_in: Vec<BalanceOf<T>>) {
-            let sender = ensure_signed(origin)?;
+        fn pool_join(origin, pool_id: u128, pool_amount: BalanceOf<T>, max_assets_in: Vec<BalanceOf<T>>) {
+            pool!(
+                initial_params: (max_assets_in, origin, pool_amount, pool_id),
 
-            let pool_shares_id = Self::pool_shares_id(pool_id);
-            let pool_shares_total = T::Shares::total_supply(pool_shares_id);
-            let ratio: BalanceOf<T> = bdiv(pool_amount_out.saturated_into(), pool_shares_total.saturated_into()).saturated_into();
-            ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
-
-            if let Some(pool) = Self::pools(pool_id) {
-                let pool_account = Self::pool_account_id(pool_id);
-
-                for i in 0..pool.assets.len() {
-                    let asset = pool.assets[i];
-                    let bal = T::Shares::free_balance(asset, &pool_account);
-                    let asset_amount_in = bmul(ratio.saturated_into(), bal.saturated_into()).saturated_into();
-                    ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximationDebug);
-                    ensure!(asset_amount_in <= max_amounts_in[i], Error::<T>::LimitIn);
-
-                    // transfer asset_amount_in to the pool_account
-                    T::Shares::transfer(asset, &sender, &pool_account, asset_amount_in)?;
-                }
-
-                Self::mint_pool_shares(pool_id, &sender, pool_amount_out)?;
-
-                Self::deposit_event(RawEvent::JoinedPool(pool_id, sender));
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
+                event: JoinedPool,
+                transfer_asset: |amount, amount_bound, asset, pool_account, who| {
+                    ensure!(amount <= amount_bound, Error::<T>::LimitIn);
+                    T::Shares::transfer(asset, who, pool_account, amount)?;
+                    Ok(())
+                },
+                transfer_pool: |_, _, who| Self::mint_pool_shares(pool_id, who, pool_amount)
+            )
         }
 
+        /// Retrieves a given set of assets from `pool_id` to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `pool_amount`: The amount of LP shares for this pool being burned from provider to
+        /// retrieve assets.
+        /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
+        /// provided values.
         #[weight = 0]
-        fn exit_pool(origin, pool_id: u128, pool_amount_in: BalanceOf<T>, min_amounts_out: Vec<BalanceOf<T>>) {
-            let sender = ensure_signed(origin)?;
+        fn pool_exit(origin, pool_id: u128, pool_amount: BalanceOf<T>, min_assets_out: Vec<BalanceOf<T>>) {
+            let exit_fee_pct = T::ExitFee::get().saturated_into();
+            let exit_fee = bmul(pool_amount.saturated_into(), exit_fee_pct).saturated_into();
+            let pool_amount_minus_exit_fee = pool_amount - exit_fee;
+            pool!(
+                initial_params: (min_assets_out, origin, pool_amount, pool_id),
 
-            let pool_shares_id = Self::pool_shares_id(pool_id);
-            let pool_shares_total = T::Shares::total_supply(pool_shares_id);
-            let exit_fee = bmul(pool_amount_in.saturated_into(), T::ExitFee::get().saturated_into()).saturated_into();
-            let pool_amount_in_after_exit_fee = pool_amount_in - exit_fee;
-            let ratio: BalanceOf<T> = bdiv(pool_amount_in_after_exit_fee.saturated_into(), pool_shares_total.saturated_into()).saturated_into();
-            ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
-
-            if let Some(pool) = Self::pools(pool_id) {
-                let pool_account = Self::pool_account_id(pool_id);
-
-                Self::burn_pool_shares(pool_id, &sender, pool_amount_in_after_exit_fee)?;
-                // give the exit fee to the pool
-                T::Shares::transfer(pool_shares_id, &sender, &pool_account, exit_fee)?;
-
-                for i in 0..pool.assets.len() {
-                    let asset = pool.assets[i];
-                    let bal = T::Shares::free_balance(asset, &pool_account);
-                    let asset_amount_out = bmul(ratio.saturated_into(), bal.saturated_into()).saturated_into();
-                    ensure!(asset_amount_out != Zero::zero(), Error::<T>::MathApproximation);
-                    ensure!(asset_amount_out >= min_amounts_out[i], Error::<T>::LimitOut);
-
-                    T::Shares::transfer(asset, &pool_account, &sender, asset_amount_out)?;
+                event: ExitedPool,
+                transfer_asset: |amount, amount_bound, asset, pool_account, who| {
+                    ensure!(amount >= amount_bound, Error::<T>::LimitOut);
+                    T::Shares::transfer(asset, pool_account, who, amount)?;
+                    Ok(())
+                },
+                transfer_pool: |pool_account_id, pool_shares_id, who| {
+                    T::Shares::transfer(pool_shares_id, who, pool_account_id, exit_fee)?;
+                    Self::burn_pool_shares(pool_id, who, pool_amount_minus_exit_fee)?;
+                    Ok(())
                 }
-
-                Self::deposit_event(RawEvent::ExitedPool(pool_id, sender));
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
-
+            )
         }
 
         #[weight = 0]
@@ -203,50 +197,32 @@ decl_module! {
             min_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) {
-            let sender = ensure_signed(origin)?;
+            swap_exact_amount!(
+                initial_params: (asset_in, asset_out, max_price, origin, pool_id),
 
-            if let Some(pool) = Self::pools(pool_id) {
-                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
-                ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound);
+                asset_amount_in: |_, _| Ok(asset_amount_in),
+                asset_amount_out: |pool: &Pool<BalanceOf<T>, _>, pool_account_id| {
+                    let balance_in = T::Shares::free_balance(asset_in, pool_account_id);
+                    ensure!(
+                        asset_amount_in <= bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxInRatio
+                    );
 
-                let pool_account = Self::pool_account_id(pool_id);
-                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
-                ensure!(
-                    asset_amount_in <= bmul(in_balance.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
-                    Error::<T>::MaxInRatio,
-                );
+                    let balance_out = T::Shares::free_balance(asset_out, pool_account_id);
 
-                let spot_price_before = Self::get_spot_price(pool_id, asset_in, asset_out);
+                    let asset_amount_out: BalanceOf<T> = math::calc_out_given_in(
+                        balance_in.saturated_into(),
+                        *pool.weights.get(&asset_in).unwrap(),
+                        balance_out.saturated_into(),
+                        *pool.weights.get(&asset_out).unwrap(),
+                        asset_amount_in.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
 
-                ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
-
-                let out_balance = T::Shares::free_balance(asset_out, &pool_account);
-
-                let asset_amount_out: BalanceOf<T> = math::calc_out_given_in(
-                    in_balance.saturated_into(),
-                    *pool.weights.get(&asset_in).unwrap(),
-                    out_balance.saturated_into(),
-                    *pool.weights.get(&asset_out).unwrap(),
-                    asset_amount_in.saturated_into(),
-                    pool.swap_fee.saturated_into(),
-                ).saturated_into();
-
-                ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
-
-                // do the swap
-                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
-                T::Shares::transfer(asset_out, &pool_account, &sender, asset_amount_out)?;
-
-                let spot_price_after = Self::get_spot_price(pool_id, asset_in, asset_out);
-
-                ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
-                ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
-                ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);
-
-                //todo emit an event
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
+                    Ok(asset_amount_out)
+                }
+            )
         }
 
         #[weight = 0]
@@ -259,219 +235,166 @@ decl_module! {
             asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) {
-            let sender = ensure_signed(origin)?;
+            swap_exact_amount!(
+                initial_params: (asset_in, asset_out, max_price, origin, pool_id),
 
-            if let Some(pool) = Self::pools(pool_id) {
-                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
-                ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound);
+                asset_amount_in: |pool: &Pool<BalanceOf<T>, _>, pool_account_id| {
+                    let balance_in = T::Shares::free_balance(asset_in, pool_account_id);
 
-                let pool_account = Self::pool_account_id(pool_id);
-                let out_balance = T::Shares::free_balance(asset_out, &pool_account);
-                ensure!(asset_amount_out <= bmul(out_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(), Error::<T>::MaxOutRatio);
+                    let balance_out = T::Shares::free_balance(asset_out, pool_account_id);
+                    ensure!(
+                        asset_amount_out <= bmul(balance_out.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxOutRatio,
+                    );
 
+                    let asset_amount_in: BalanceOf<T> = math::calc_in_given_out(
+                        balance_in.saturated_into(),
+                        *pool.weights.get(&asset_in).unwrap(),
+                        balance_out.saturated_into(),
+                        *pool.weights.get(&asset_out).unwrap(),
+                        asset_amount_out.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
 
-                let spot_price_before = Self::get_spot_price(pool_id, asset_in, asset_out);
-
-                ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
-
-                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
-                let asset_amount_in: BalanceOf<T> = math::calc_in_given_out(
-                    in_balance.saturated_into(),
-                    *pool.weights.get(&asset_in).unwrap(),
-                    out_balance.saturated_into(),
-                    *pool.weights.get(&asset_out).unwrap(),
-                    asset_amount_out.saturated_into(),
-                    pool.swap_fee.saturated_into(),
-                ).saturated_into();
-
-                ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
-
-                // do the swap
-                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
-                T::Shares::transfer(asset_out, &pool_account, &sender, asset_amount_out)?;
-
-                let spot_price_after = Self::get_spot_price(pool_id, asset_in, asset_out);
-
-                ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
-                ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
-                ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);
-
-                // emit an event
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
+                    Ok(asset_amount_in)
+                },
+                asset_amount_out: |_, _| Ok(asset_amount_out)
+            )
         }
 
         #[weight = 0]
-        fn joinswap_extern_amount_in(
+        fn join_swap_extern_amount_in(
             origin,
             pool_id: u128,
             asset_in: T::Hash,
             asset_amount_in: BalanceOf<T>,
             min_pool_amount_out: BalanceOf<T>,
         ) {
-            let sender = ensure_signed(origin)?;
+            join_swap_amount!(
+                initial_params: (origin, pool_id, asset_in),
 
-            if let Some(pool) = Self::pools(pool_id) {
-                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
-
-                let pool_account = Self::pool_account_id(pool_id);
-
-                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
-                ensure!(asset_amount_in <= bmul(in_balance.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(), Error::<T>::MaxInRatio);
-
-                let pool_shares_id = Self::pool_shares_id(pool_id);
-                let total_supply = T::Shares::total_supply(pool_shares_id);
-
-                let pool_amount_out: BalanceOf<T> = math::calc_pool_out_given_single_in(
-                    in_balance.saturated_into(),
-                    *pool.weights.get(&asset_in).unwrap(),
-                    total_supply.saturated_into(),
-                    pool.total_weight.saturated_into(),
-                    asset_amount_in.saturated_into(),
-                    pool.swap_fee.saturated_into(),
-                ).saturated_into();
-
-                ensure!(pool_amount_out >= min_pool_amount_out, Error::<T>::LimitOut);
-
-                Self::mint_pool_shares(pool_id, &sender, pool_amount_out)?;
-                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
-
-                // emit an event
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
+                asset_amount_in: |_, _, _| Ok(asset_amount_in),
+                pool_amount_out: |balance_in: BalanceOf<T>, pool: &Pool<BalanceOf<T>, _>, total_supply: BalanceOf<T>| {
+                    let mul: BalanceOf<T> = bmul(
+                        balance_in.saturated_into(),
+                        T::MaxInRatio::get().saturated_into()
+                    ).saturated_into();
+                    ensure!(
+                        asset_amount_in <= mul,
+                        Error::<T>::MaxInRatio
+                    );
+                    let pool_amount_out: BalanceOf<T> = math::calc_pool_out_given_single_in(
+                        balance_in.saturated_into(),
+                        *pool.weights.get(&asset_in).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight.saturated_into(),
+                        asset_amount_in.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(pool_amount_out >= min_pool_amount_out, Error::<T>::LimitOut);
+                    Ok(pool_amount_out)
+                }
+            )
         }
 
         #[weight = 0]
-        fn joinswap_pool_amount_out(
+        fn join_swap_pool_amount_out(
             origin,
             pool_id: u128,
             asset_in: T::Hash,
             pool_amount_out: BalanceOf<T>,
             max_amount_in: BalanceOf<T>,
         ) {
-            let sender = ensure_signed(origin)?;
+            join_swap_amount!(
+                initial_params: (origin, pool_id, asset_in),
 
-            if let Some(pool) = Self::pools(pool_id) {
-                ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound);
-
-                let pool_account = Self::pool_account_id(pool_id);
-
-                let pool_shares_id = Self::pool_shares_id(pool_id);
-                let total_supply = T::Shares::total_supply(pool_shares_id);
-
-                let in_balance = T::Shares::free_balance(asset_in, &pool_account);
-
-                let asset_amount_in: BalanceOf<T> = math::calc_single_in_given_pool_out(
-                    in_balance.saturated_into(),
-                    *pool.weights.get(&asset_in).unwrap(),
-                    total_supply.saturated_into(),
-                    pool.total_weight,
-                    pool_amount_out.saturated_into(),
-                    pool.swap_fee.saturated_into(),
-                ).saturated_into();
-
-                ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximation);
-                ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
-
-                ensure!(asset_amount_in <= bmul(in_balance.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(), Error::<T>::MaxInRatio);
-
-                Self::mint_pool_shares(pool_id, &sender, pool_amount_out)?;
-                T::Shares::transfer(asset_in, &sender, &pool_account, asset_amount_in)?;
-
-                // emit an event
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
+                asset_amount_in: |balance_in: BalanceOf<T>, pool: &Pool<BalanceOf<T>, _>, total_supply: BalanceOf<T>| {
+                    let asset_amount_in: BalanceOf<T> = math::calc_single_in_given_pool_out(
+                        balance_in.saturated_into(),
+                        *pool.weights.get(&asset_in).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight.saturated_into(),
+                        pool_amount_out.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(asset_amount_in != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
+                    ensure!(
+                        asset_amount_in <= bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxInRatio
+                    );
+                    Ok(asset_amount_in)
+                },
+                pool_amount_out: |_, _, _| Ok(pool_amount_out)
+            )
         }
 
         #[weight = 0]
-        fn exitswap_pool_amount_in(
+        fn exit_swap_pool_amount_in(
             origin,
             pool_id: u128,
             asset_out: T::Hash,
             pool_amount_in: BalanceOf<T>,
             min_amount_out: BalanceOf<T>,
         ) {
-            let sender = ensure_signed(origin)?;
+            exit_swap_amount!(
+                initial_params: (origin, pool_id, asset_out),
 
-            if let Some(pool) = Self::pools(pool_id) {
-                ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound);
-                let pool_account = Self::pool_account_id(pool_id);
-
-                let out_balance = T::Shares::free_balance(asset_out, &pool_account);
-                let pool_shares_id = Self::pool_shares_id(pool_id);
-                let total_supply = T::Shares::total_supply(pool_shares_id);
-
-                let asset_amount_out: BalanceOf<T> = math::calc_single_out_given_pool_in(
-                    out_balance.saturated_into(),
-                    *pool.weights.get(&asset_out).unwrap(),
-                    total_supply.saturated_into(),
-                    pool.total_weight,
-                    pool_amount_in.saturated_into(),
-                    pool.swap_fee.saturated_into(),
-                ).saturated_into();
-
-                ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
-                ensure!(asset_amount_out <= bmul(out_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(), Error::<T>::MaxOutRatio);
-
-                let exit_fee = bmul(pool_amount_in.saturated_into(), T::ExitFee::get().saturated_into()).saturated_into();
-                // todo handle exit_fee
-
-                Self::burn_pool_shares(pool_id, &sender, pool_amount_in - exit_fee)?;
-                T::Shares::transfer(asset_out, &pool_account, &sender, asset_amount_out)?;
-
-
-                // emit an event
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
+                asset_amount_out: |balance_out: BalanceOf<T>, pool: &Pool<BalanceOf<T>, _>, total_supply: BalanceOf<T>| {
+                    let asset_amount_out: BalanceOf<T> = math::calc_single_out_given_pool_in(
+                        balance_out.saturated_into(),
+                        *pool.weights.get(&asset_out).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight,
+                        pool_amount_in.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
+                    ensure!(
+                        asset_amount_out <= bmul(balance_out.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxOutRatio
+                    );
+                    Ok(asset_amount_out)
+                },
+                ensure_balance: |_| Ok(()),
+                pool_amount_in: |_, _, _| Ok(pool_amount_in)
+            )
         }
 
         #[weight = 0]
-        fn exitswap_extern_amount_out(
+        fn exit_swap_extern_amount_out(
             origin,
             pool_id: u128,
             asset_out: T::Hash,
             asset_amount_out: BalanceOf<T>,
             max_pool_amount_in: BalanceOf<T>,
         ) {
-            let sender = ensure_signed(origin)?;
+            exit_swap_amount!(
+                initial_params: (origin, pool_id, asset_out),
 
-            if let Some(pool) = Self::pools(pool_id) {
-                ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound);
-
-                let pool_account = Self::pool_account_id(pool_id);
-
-                let out_balance = T::Shares::free_balance(asset_out, &pool_account);
-                ensure!(asset_amount_out <= bmul(out_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(), Error::<T>::MaxOutRatio);
-
-                let pool_shares_id = Self::pool_shares_id(pool_id);
-                let total_supply = T::Shares::total_supply(pool_shares_id);
-
-                let pool_amount_in: BalanceOf<T> = math::calc_pool_in_given_single_out(
-                    out_balance.saturated_into(),
-                    *pool.weights.get(&asset_out).unwrap(),
-                    total_supply.saturated_into(),
-                    pool.total_weight,
-                    asset_amount_out.saturated_into(),
-                    pool.swap_fee.saturated_into(),
-                ).saturated_into();
-
-                ensure!(pool_amount_in != Zero::zero(), Error::<T>::MathApproximation);
-                ensure!(pool_amount_in <= max_pool_amount_in, Error::<T>::LimitIn);
-
-                let exit_fee = bmul(pool_amount_in.saturated_into(), T::ExitFee::get().saturated_into()).saturated_into();
-
-                Self::burn_pool_shares(pool_id, &sender, pool_amount_in - exit_fee)?;
-                // todo do something with exit fee
-                T::Shares::transfer(asset_out, &pool_account, &sender, asset_amount_out)?;
-
-                // emit an event
-            } else {
-                Err(Error::<T>::PoolDoesNotExist)?;
-            }
+                asset_amount_out: |_, _, _| Ok(asset_amount_out),
+                ensure_balance: |balance_out: BalanceOf<T>| {
+                    ensure!(
+                        asset_amount_out <= bmul(balance_out.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxOutRatio
+                    );
+                    Ok(())
+                },
+                pool_amount_in: |balance_out: BalanceOf<T>, pool: &Pool<BalanceOf<T>, _>, total_supply: BalanceOf<T>| {
+                    let pool_amount_in: BalanceOf<T> = math::calc_pool_in_given_single_out(
+                        balance_out.saturated_into(),
+                        *pool.weights.get(&asset_out).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight,
+                        asset_amount_out.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(pool_amount_in != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(pool_amount_in <= max_pool_amount_in, Error::<T>::LimitIn);
+                    Ok(pool_amount_in)
+                }
+            )
         }
     }
 }
@@ -491,15 +414,15 @@ impl<T: Trait> Module<T> {
             // ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound)?;
 
             let pool_account = Self::pool_account_id(pool_id);
-            let in_balance = T::Shares::free_balance(asset_in, &pool_account);
+            let balance_in = T::Shares::free_balance(asset_in, &pool_account);
             let in_weight = pool.weights.get(&asset_in).unwrap();
-            let out_balance = T::Shares::free_balance(asset_out, &pool_account);
+            let balance_out = T::Shares::free_balance(asset_out, &pool_account);
             let out_weight = pool.weights.get(&asset_out).unwrap();
 
             return math::calc_spot_price(
-                in_balance.saturated_into(),
+                balance_in.saturated_into(),
                 *in_weight,
-                out_balance.saturated_into(),
+                balance_out.saturated_into(),
                 *out_weight,
                 0, //fee
             )
@@ -550,38 +473,43 @@ impl<T: Trait> Module<T> {
         // unimplemented
         0
     }
+
+    fn pool_by_id(
+        pool_id: u128
+    ) -> Result<Pool<BalanceOf<T>, T::Hash>, Error<T>>
+    where
+        T: Trait
+    {
+        Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist.into())
+    }
 }
 
 impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
     /// Deploys a new pool with the given assets and weights.
     ///
-    /// ## Arguments
+    /// # Arguments
     ///
-    /// - `creator` - The account that is the creator of the pool. Must have enough
-    ///               funds for each of the assets to cover the `MinLiqudity`.
+    /// - `who` - The account that is the creator of the pool. Must have enough
+    /// funds for each of the assets to cover the `MinLiqudity`.
     /// - `assets` - The assets that are used in the pool.
     /// - `swap_fee` - The fee applied to each swap.
     /// - `weights` - These are the denormalized weights (the raw weights).
     fn do_create_pool(
-        creator: T::AccountId,
+        who: T::AccountId,
         assets: Vec<T::Hash>,
         swap_fee: BalanceOf<T>,
         weights: Vec<u128>,
     ) -> sp_std::result::Result<u128, DispatchError> {
+        check_provided_values_len_must_equal_assets_len::<T, _>(&assets, &weights)?;
+
         ensure!(
             assets.len() <= T::MaxAssets::get().try_into().unwrap(),
             Error::<T>::TooManyAssets
         );
 
-        for i in 0..weights.len() {
-            ensure!(
-                weights[i] >= T::MinWeight::get(),
-                Error::<T>::BelowMinimumWeight
-            );
-            ensure!(
-                weights[i] <= T::MaxWeight::get(),
-                Error::<T>::AboveMaximumWeight
-            );
+        for weight in weights.iter().copied() {
+            ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
+            ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
         }
 
         let amount = T::MinLiquidity::get();
@@ -589,21 +517,18 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         let pool_account = Self::pool_account_id(next_pool_id);
 
         let mut map = BTreeMap::new();
-        for i in 0..assets.len() {
+        for (asset, weight) in assets.iter().copied().zip(weights.iter().copied()) {
             ensure!(
-                T::Shares::free_balance(assets[i], &creator) >= amount,
+                T::Shares::free_balance(asset, &who) >= amount,
                 Error::<T>::InsufficientBalance
             );
-            T::Shares::transfer(assets[i], &creator, &pool_account, amount)?;
+            T::Shares::transfer(asset, &who, &pool_account, amount)?;
 
-            map.insert(assets[i], weights[i]);
+            map.insert(asset, weight);
         }
 
         let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
-        ensure!(
-            total_weight <= T::MaxTotalWeight::get(),
-            Error::<T>::MaxTotalWeight
-        );
+        ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
 
         <Pools<T>>::insert(
             next_pool_id,
@@ -616,10 +541,26 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         );
 
         let pool_shares_id = Self::pool_shares_id(next_pool_id);
-        T::Shares::generate(pool_shares_id, &creator, amount)?;
+        T::Shares::generate(pool_shares_id, &who, amount)?;
 
-        Self::deposit_event(RawEvent::PoolCreated(next_pool_id, creator));
+        Self::deposit_event(RawEvent::PoolCreated(GenericPoolEvent {
+            pool_id: next_pool_id,
+            who
+        }));
 
         Ok(next_pool_id)
     }
+}
+
+fn check_provided_values_len_must_equal_assets_len<T, U>(
+    assets: &[T::Hash],
+    provided_values: &[U]
+) -> Result<(), Error<T>>
+where
+    T: Trait
+{
+    if assets.len() != provided_values.len() {
+        return Err(Error::<T>::ProvidedValuesLenMustEqualAssetsLen.into());
+    }
+    Ok(())
 }
