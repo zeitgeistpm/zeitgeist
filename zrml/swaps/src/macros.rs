@@ -1,10 +1,11 @@
-// Common code for `exit_swap_pool_amount_in` and `exit_swap_extern_amount_out` methods.
+// Common code for `exit_swap_pool_amount_in` and `exit_swap_pool_amount_out` methods.
 macro_rules! exit_swap_amount {
     (
         initial_params: ($origin:expr, $pool_id:expr, $asset_out:expr),
 
         asset_amount_out: $asset_amount_out:expr,
         ensure_balance: $ensure_balance:expr,
+        event: $event:ident,
         pool_amount_in: $pool_amount_in:expr
     ) => {{
         let who = ensure_signed($origin)?;
@@ -28,31 +29,31 @@ macro_rules! exit_swap_amount {
         // todo do something with exit fee
         T::Shares::transfer($asset_out, &pool_account, &who, asset_amount_out)?;
 
-        Self::deposit_event(RawEvent::Swap(GenericPoolEvent {
+        Self::deposit_event(RawEvent::$event(GenericPoolEvent {
             pool_id: $pool_id,
             who
         }));
     }}
 }
 
-// Common code for `join_swap_extern_amount_in` and `join_swap_pool_amount_out` methods.
+// Common code for `join_swap_pool_amount_in` and `join_swap_pool_amount_out` methods.
 macro_rules! join_swap_amount {
     (
         initial_params: ($origin:expr, $pool_id:expr, $asset_in:expr),
 
         asset_amount_in: $asset_amount_in:expr,
+        event: $event:ident,
         pool_amount_out: $pool_amount_out:expr
     ) => {{
         let who = ensure_signed($origin)?;
-
+        
         let pool = Self::pool_by_id($pool_id)?;
-
-        ensure!(pool.bound($asset_in), Error::<T>::AssetNotBound);
-
-        let pool_account_id = Self::pool_account_id($pool_id);
-        let balance_in = T::Shares::free_balance($asset_in, &pool_account_id);
         let pool_shares_id = Self::pool_shares_id($pool_id);
+        let pool_account_id = Self::pool_account_id($pool_id);
         let total_supply = T::Shares::total_supply(pool_shares_id);
+        
+        ensure!(pool.bound($asset_in), Error::<T>::AssetNotBound);
+        let balance_in = T::Shares::free_balance($asset_in, &pool_account_id);
 
         let asset_amount_in = ($asset_amount_in(balance_in, &pool, total_supply) as Result<_, DispatchError>)?;
         let pool_amount_out = ($pool_amount_out(balance_in, &pool, total_supply) as Result<_, DispatchError>)?;
@@ -60,7 +61,7 @@ macro_rules! join_swap_amount {
         Self::mint_pool_shares($pool_id, &who, pool_amount_out)?;
         T::Shares::transfer($asset_in, &who, &pool_account_id, asset_amount_in)?;
 
-        Self::deposit_event(RawEvent::Swap(GenericPoolEvent {
+        Self::deposit_event(RawEvent::$event(GenericPoolEvent {
             pool_id: $pool_id,
             who
         }));
@@ -78,17 +79,14 @@ macro_rules! pool {
     ) => {{
         let who = ensure_signed($origin)?;
 
-        let pool_shares_id = Self::pool_shares_id($pool_id);
-        let pool_shares_total = T::Shares::total_supply(pool_shares_id);
-        
-        let ratio: BalanceOf<T> = bdiv($pool_amount.saturated_into(), pool_shares_total.saturated_into()).saturated_into();
-        ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
-        
         let pool = Self::pool_by_id($pool_id)?;
-        
-        check_provided_values_len_must_equal_assets_len::<T, _>(&pool.assets, &$asset_bounds)?;
-        
+        let pool_shares_id = Self::pool_shares_id($pool_id);
         let pool_account_id = Self::pool_account_id($pool_id);
+        let total_supply = T::Shares::total_supply(pool_shares_id);
+        
+        let ratio: BalanceOf<T> = bdiv($pool_amount.saturated_into(), total_supply.saturated_into()).saturated_into();
+        check_provided_values_len_must_equal_assets_len::<T, _>(&pool.assets, &$asset_bounds)?;
+        ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
         
         for (asset, amount_bound) in pool.assets.into_iter().zip($asset_bounds) {
             let balance = T::Shares::free_balance(asset, &pool_account_id);
@@ -118,7 +116,8 @@ macro_rules! swap_exact_amount {
         ),
 
         asset_amount_in: $asset_amount_in:expr,
-        asset_amount_out: $asset_amount_out:expr
+        asset_amount_out: $asset_amount_out:expr,
+        event: $event:ident
     ) => {{
         let who = ensure_signed($origin)?;
 
@@ -140,7 +139,7 @@ macro_rules! swap_exact_amount {
         ensure!(spot_price_after <= $max_price, Error::<T>::BadLimitPrice);
         ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);
 
-        Self::deposit_event(RawEvent::Swap(GenericPoolEvent {
+        Self::deposit_event(RawEvent::$event(GenericPoolEvent {
             pool_id: $pool_id,
             who
         }));

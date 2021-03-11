@@ -86,14 +86,24 @@ decl_event! {
     where
         AccountId = <T as frame_system::Trait>::AccountId
     {
-        /// A new pool has been created. [pool_id, creator]
-        PoolCreated(GenericPoolEvent<AccountId>),
-        /// Someone has joined a pool. [pool_id, who]
-        JoinedPool(GenericPoolEvent<AccountId>),
-        /// Someone has exited a pool. [pool_id, who]
+        /// Someone has exited a pool.
         ExitedPool(GenericPoolEvent<AccountId>),
-        /// A swap has occurred. [pool_id]
-        Swap(GenericPoolEvent<AccountId>),
+        /// Exists a pool given an exactly amount of an asset
+        ExitSwapPoolAmountIn(GenericPoolEvent<AccountId>),
+        /// Exists a pool given an exactly pool's amount
+        ExitSwapPoolAmountOut(GenericPoolEvent<AccountId>),
+        /// Someone has joined a pool.
+        JoinedPool(GenericPoolEvent<AccountId>),
+        /// Joins a pool given an exactly amount of an asset
+        JoinSwapPoolAmountIn(GenericPoolEvent<AccountId>),
+        /// Joins a pool given an exactly pool's amount
+        JoinSwapPoolAmountOut(GenericPoolEvent<AccountId>),
+        /// A new pool has been created.
+        PoolCreated(GenericPoolEvent<AccountId>),
+        /// An exactly amount of an asset is entering the pool
+        SwapExactAmountIn(GenericPoolEvent<AccountId>),
+        /// An exactly amount of an asset is leaving the pool
+        SwapExactAmountOut(GenericPoolEvent<AccountId>),
     }
 }
 
@@ -135,7 +145,7 @@ decl_module! {
         ///
         /// # Arguments
         ///
-        /// * `origin`:Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
         /// * `pool_id`: Unique pool identifier.
         /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
         /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
@@ -161,18 +171,15 @@ decl_module! {
         ///
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
-        /// * `pool_amount`: The amount of LP shares for this pool being burned from provider to
-        /// retrieve assets.
+        /// * `pool_amount`: The amount of LP shares of this pool being burned based on the
+        /// retrieved assets.
         /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
         /// provided values.
         #[weight = 0]
         fn pool_exit(origin, pool_id: u128, pool_amount: BalanceOf<T>, min_assets_out: Vec<BalanceOf<T>>) {
-            let exit_fee_pct = T::ExitFee::get().saturated_into();
-            let exit_fee = bmul(pool_amount.saturated_into(), exit_fee_pct).saturated_into();
-            let pool_amount_minus_exit_fee = pool_amount - exit_fee;
             pool!(
                 initial_params: (min_assets_out, origin, pool_amount, pool_id),
-
+                
                 event: ExitedPool,
                 transfer_asset: |amount, amount_bound, asset, pool_account, who| {
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
@@ -180,6 +187,9 @@ decl_module! {
                     Ok(())
                 },
                 transfer_pool: |pool_account_id, pool_shares_id, who| {
+                    let exit_fee_pct = T::ExitFee::get().saturated_into();
+                    let exit_fee = bmul(pool_amount.saturated_into(), exit_fee_pct).saturated_into();
+                    let pool_amount_minus_exit_fee = pool_amount - exit_fee;
                     T::Shares::transfer(pool_shares_id, who, pool_account_id, exit_fee)?;
                     Self::burn_pool_shares(pool_id, who, pool_amount_minus_exit_fee)?;
                     Ok(())
@@ -187,6 +197,17 @@ decl_module! {
             )
         }
 
+        /// Swaps a given `asset_amount_in` of the `asset_in/asset_out` pair to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool. 
+        /// * `asset_amount_in`: Amount that will be transferred from the provider to the pool.
+        /// * `asset_out`: Asset leaving the pool.
+        /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
+        /// * `max_price`: Market price must be equal or less than the provided value.
         #[weight = 0]
         fn swap_exact_amount_in(
             origin,
@@ -194,7 +215,7 @@ decl_module! {
             asset_in: T::Hash,
             asset_amount_in: BalanceOf<T>,
             asset_out: T::Hash,
-            min_amount_out: BalanceOf<T>,
+            min_asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) {
             swap_exact_amount!(
@@ -218,19 +239,31 @@ decl_module! {
                         asset_amount_in.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     ).saturated_into();
-                    ensure!(asset_amount_out >= min_amount_out, Error::<T>::LimitOut);
+                    ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
                     Ok(asset_amount_out)
-                }
+                },
+                event: SwapExactAmountIn
             )
         }
 
+        /// Swaps a given `asset_amount_out` of the `asset_in/asset_out` pair to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool. 
+        /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
+        /// * `asset_out`: Asset leaving the pool.
+        /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
+        /// * `max_price`: Market price must be equal or less than the provided value.
         #[weight = 0]
         fn swap_exact_amount_out(
             origin,
             pool_id: u128,
             asset_in: T::Hash,
-            max_amount_in: BalanceOf<T>,
+            max_amount_asset_in: BalanceOf<T>,
             asset_out: T::Hash,
             asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
@@ -255,16 +288,28 @@ decl_module! {
                         asset_amount_out.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     ).saturated_into();
-                    ensure!(asset_amount_in <= max_amount_in, Error::<T>::LimitIn);
+                    ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
 
                     Ok(asset_amount_in)
                 },
-                asset_amount_out: |_, _| Ok(asset_amount_out)
+                asset_amount_out: |_, _| Ok(asset_amount_out),
+                event: SwapExactAmountOut
             )
         }
 
+        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
+        /// this method transfers the exactly amount of `asset_amount_in` to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool. 
+        /// * `asset_amount_in`: Asset amount that is entering the pool.
+        /// * `min_pool_amount_out`: The calculated amount for the pool must the equal or greater
+        /// than the given value.
         #[weight = 0]
-        fn join_swap_extern_amount_in(
+        fn join_swap_pool_amount_in(
             origin,
             pool_id: u128,
             asset_in: T::Hash,
@@ -275,6 +320,7 @@ decl_module! {
                 initial_params: (origin, pool_id, asset_in),
 
                 asset_amount_in: |_, _, _| Ok(asset_amount_in),
+                event: JoinSwapPoolAmountIn,
                 pool_amount_out: |balance_in: BalanceOf<T>, pool: &Pool<BalanceOf<T>, _>, total_supply: BalanceOf<T>| {
                     let mul: BalanceOf<T> = bmul(
                         balance_in.saturated_into(),
@@ -298,6 +344,17 @@ decl_module! {
             )
         }
 
+        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
+        /// this method injects the exactly amount of `pool_amount_out` to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool. 
+        /// * `pool_amount_out`: Asset amount that is entering the pool.
+        /// * `max_amount_in`: The calculated amount of assets for the pool must the equal or 
+        /// less than the given value.
         #[weight = 0]
         fn join_swap_pool_amount_out(
             origin,
@@ -326,10 +383,22 @@ decl_module! {
                     );
                     Ok(asset_amount_in)
                 },
+                event: JoinSwapPoolAmountOut,
                 pool_amount_out: |_, _, _| Ok(pool_amount_out)
             )
         }
 
+        /// Exists an asset provided from `origin` to `pool_id`. Differently from `pool_exit`,
+        /// this method transfers the exactly amount of `pool_amount_in` to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_out`: Asset leaving the pool. 
+        /// * `pool_amount_in`: Pool amount that is entering the pool.
+        /// * `min_amount_out`: The calculated amount for the asset must the equal or less
+        /// than the given value.
         #[weight = 0]
         fn exit_swap_pool_amount_in(
             origin,
@@ -358,12 +427,24 @@ decl_module! {
                     Ok(asset_amount_out)
                 },
                 ensure_balance: |_| Ok(()),
+                event: ExitSwapPoolAmountIn,
                 pool_amount_in: |_, _, _| Ok(pool_amount_in)
             )
         }
 
+        /// Exists an asset provided from `origin` to `pool_id`. Differently from `pool_exit`,
+        /// this method injects the exactly amount of `pool_amount_out` to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_out`: Asset leaving the pool. 
+        /// * `asset_amount_out`: Asset amount that is leaving the pool.
+        /// * `max_pool_amount_in`: The calculated amount of assets for the pool must the equal or 
+        /// greater than the given value.
         #[weight = 0]
-        fn exit_swap_extern_amount_out(
+        fn exit_swap_pool_amount_out(
             origin,
             pool_id: u128,
             asset_out: T::Hash,
@@ -381,6 +462,7 @@ decl_module! {
                     );
                     Ok(())
                 },
+                event: ExitSwapPoolAmountOut,
                 pool_amount_in: |balance_out: BalanceOf<T>, pool: &Pool<BalanceOf<T>, _>, total_supply: BalanceOf<T>| {
                     let pool_amount_in: BalanceOf<T> = math::calc_pool_in_given_single_out(
                         balance_out.saturated_into(),
@@ -489,11 +571,11 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
     ///
     /// # Arguments
     ///
-    /// - `who` - The account that is the creator of the pool. Must have enough
+    /// * `who`: The account that is the creator of the pool. Must have enough
     /// funds for each of the assets to cover the `MinLiqudity`.
-    /// - `assets` - The assets that are used in the pool.
-    /// - `swap_fee` - The fee applied to each swap.
-    /// - `weights` - These are the denormalized weights (the raw weights).
+    /// * `assets`: The assets that are used in the pool.
+    /// * `swap_fee`: The fee applied to each swap.
+    /// * `weights`: These are the denormalized weights (the raw weights).
     fn do_create_pool(
         who: T::AccountId,
         assets: Vec<T::Hash>,
