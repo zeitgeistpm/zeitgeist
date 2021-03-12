@@ -18,7 +18,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use events::GenericPoolEvent;
+use events::{CommonPoolEventParams, SwapEvent, PoolAssetEvent, PoolAssetsEvent};
 use fixed::*;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_support::traits::{Currency, Get, ReservableCurrency};
@@ -84,26 +84,27 @@ decl_storage! {
 decl_event! {
     pub enum Event<T>
     where
-        AccountId = <T as frame_system::Trait>::AccountId
+        AccountId = <T as frame_system::Trait>::AccountId,
+        Balance = BalanceOf<T>
     {
-        /// Someone has exited a pool.
-        ExitedPool(GenericPoolEvent<AccountId>),
-        /// Exists a pool given an exactly amount of an asset
-        ExitSwapPoolAmountIn(GenericPoolEvent<AccountId>),
-        /// Exists a pool given an exactly pool's amount
-        ExitSwapPoolAmountOut(GenericPoolEvent<AccountId>),
-        /// Someone has joined a pool.
-        JoinedPool(GenericPoolEvent<AccountId>),
-        /// Joins a pool given an exactly amount of an asset
-        JoinSwapPoolAmountIn(GenericPoolEvent<AccountId>),
-        /// Joins a pool given an exactly pool's amount
-        JoinSwapPoolAmountOut(GenericPoolEvent<AccountId>),
         /// A new pool has been created.
-        PoolCreated(GenericPoolEvent<AccountId>),
-        /// An exactly amount of an asset is entering the pool
-        SwapExactAmountIn(GenericPoolEvent<AccountId>),
-        /// An exactly amount of an asset is leaving the pool
-        SwapExactAmountOut(GenericPoolEvent<AccountId>),
+        PoolCreate(CommonPoolEventParams<AccountId>),
+        /// Someone has exited a pool.
+        PoolExit(PoolAssetsEvent<AccountId, Balance>),
+        /// Exists a pool given an exact amount of an asset
+        PoolExitWithExactAssetAmount(PoolAssetEvent<AccountId, Balance>),
+        /// Exists a pool given an exact pool's amount
+        PoolExitWithExactPoolAmount(PoolAssetEvent<AccountId, Balance>),
+        /// Someone has joined a pool.
+        PoolJoin(PoolAssetsEvent<AccountId, Balance>),
+        /// Joins a pool given an exact amount of an asset
+        PoolJoinWithExactAssetAmount(PoolAssetEvent<AccountId, Balance>),
+        /// Joins a pool given an exact pool's amount
+        PoolJoinWithExactPoolAmount(PoolAssetEvent<AccountId, Balance>),
+        /// An exact amount of an asset is entering the pool
+        SwapExactAmountIn(SwapEvent<AccountId, Balance>),
+        /// An exact amount of an asset is leaving the pool
+        SwapExactAmountOut(SwapEvent<AccountId, Balance>),
     }
 }
 
@@ -158,7 +159,7 @@ decl_module! {
             pool!(
                 initial_params: (min_assets_out, origin, pool_amount, pool_id),
                 
-                event: ExitedPool,
+                event: PoolExit,
                 transfer_asset: |amount, amount_bound, asset, pool_account, who| {
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::Shares::transfer(asset, pool_account, who, amount)?;
@@ -200,6 +201,7 @@ decl_module! {
                 initial_params: (origin, pool_id, asset),
 
                 asset_amount: |_, _, _| Ok(asset_amount),
+                bound: max_pool_amount,
                 ensure_balance: |pool_balance: BalanceOf<T>| {
                     ensure!(
                         asset_amount <= bmul(pool_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
@@ -207,7 +209,7 @@ decl_module! {
                     );
                     Ok(())
                 },
-                event: ExitSwapPoolAmountOut,
+                event: PoolExitWithExactPoolAmount,
                 pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = math::calc_pool_in_given_single_out(
                         pool_balance.saturated_into(),
@@ -224,7 +226,7 @@ decl_module! {
             )
         }
 
-        /// Pool - Exit with exact asset amount
+        /// Pool - Exit with exact pool amount
         ///
         /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
         /// this method injects the exactly amount of `pool_amount` to `pool_id`.
@@ -264,8 +266,9 @@ decl_module! {
                     );
                     Ok(asset_amount)
                 },
+                bound: min_asset_amount,
                 ensure_balance: |_| Ok(()),
-                event: ExitSwapPoolAmountIn,
+                event: PoolExitWithExactAssetAmount,
                 pool_amount: |_, _, _| Ok(pool_amount)
             )
         }
@@ -286,7 +289,7 @@ decl_module! {
             pool!(
                 initial_params: (max_assets_in, origin, pool_amount, pool_id),
 
-                event: JoinedPool,
+                event: PoolJoin,
                 transfer_asset: |amount, amount_bound, asset, pool_account, who| {
                     ensure!(amount <= amount_bound, Error::<T>::LimitIn);
                     T::Shares::transfer(asset, who, pool_account, amount)?;
@@ -321,7 +324,8 @@ decl_module! {
                 initial_params: (origin, pool_id, asset_in),
 
                 asset_amount: |_, _, _| Ok(asset_amount),
-                event: JoinSwapPoolAmountIn,
+                bound: min_pool_amount,
+                event: PoolJoinWithExactAssetAmount,
                 pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let mul: BalanceOf<T> = bmul(
                         pool_balance.saturated_into(),
@@ -345,7 +349,7 @@ decl_module! {
             )
         }
 
-        /// Pool - Join with exact poll amount
+        /// Pool - Join with exact pool amount
         ///
         /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
         /// this method injects the exactly amount of `pool_amount` to `origin`.
@@ -386,7 +390,8 @@ decl_module! {
                     );
                     Ok(asset_amount)
                 },
-                event: JoinSwapPoolAmountOut,
+                bound: max_asset_amount,
+                event: PoolJoinWithExactPoolAmount,
                 pool_amount: |_, _, _| Ok(pool_amount)
             )
         }
@@ -439,6 +444,7 @@ decl_module! {
 
                     Ok(asset_amount_out)
                 },
+                asset_bound: min_asset_amount_out,
                 event: SwapExactAmountIn
             )
         }
@@ -491,6 +497,7 @@ decl_module! {
                     Ok(asset_amount_in)
                 },
                 asset_amount_out: |_, _| Ok(asset_amount_out),
+                asset_bound: max_amount_asset_in,
                 event: SwapExactAmountOut
             )
         }
@@ -641,7 +648,7 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         let pool_shares_id = Self::pool_shares_id(next_pool_id);
         T::Shares::generate(pool_shares_id, &who, amount)?;
 
-        Self::deposit_event(RawEvent::PoolCreated(GenericPoolEvent {
+        Self::deposit_event(RawEvent::PoolCreate(CommonPoolEventParams {
             pool_id: next_pool_id,
             who
         }));

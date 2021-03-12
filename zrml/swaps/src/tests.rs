@@ -1,5 +1,8 @@
 use crate::{
-    GenericPoolEvent,
+    CommonPoolEventParams,
+    PoolAssetEvent,
+    PoolAssetsEvent,
+    SwapEvent,
     mock::*
 };
 use frame_support::{assert_noop, assert_ok};
@@ -168,7 +171,11 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
         create_initial_pool_with_funds_for_alice();
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 5 * BASE, 0));
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, BASE, 0));
-        assert!(event_exists(crate::RawEvent::ExitSwapPoolAmountIn(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::PoolExitWithExactAssetAmount(PoolAssetEvent {
+            bound: 0,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: 40870977315
+        })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240870977315);
     });
 }
@@ -180,7 +187,11 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
         create_initial_pool_with_funds_for_alice();
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 5 * BASE, 0));
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, BASE, BASE));
-        assert!(event_exists(crate::RawEvent::ExitSwapPoolAmountOut(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::PoolExitWithExactPoolAmount(PoolAssetEvent {
+            bound: BASE,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: BASE
+        })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 210000000000);
     });
 }
@@ -216,7 +227,11 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, BASE, 0));
-        assert!(event_exists(crate::RawEvent::JoinSwapPoolAmountIn(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::PoolJoinWithExactAssetAmount(PoolAssetEvent {
+            bound: 0,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: BASE,
+        })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240000000000);
     });
 }
@@ -227,7 +242,11 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, BASE, BASE));
-        assert!(event_exists(crate::RawEvent::JoinSwapPoolAmountOut(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::PoolJoinWithExactPoolAmount(PoolAssetEvent {
+            bound: BASE,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: 2500000000,
+        })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 247500000000);
     });
 }
@@ -294,7 +313,11 @@ fn pool_exit_decreases_correct_pool_parameters() {
             vec!(BASE, BASE, BASE, BASE),
         ));
 
-        assert!(event_exists(crate::RawEvent::ExitedPool(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::PoolExit(PoolAssetsEvent {
+            bounds: vec!(BASE, BASE, BASE, BASE),
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: vec!(BASE + 1, BASE + 1, BASE + 1, BASE + 1),
+        })));
         assert_eq!(Shares::free_balance(Swaps::pool_shares_id(0), &ALICE), 0);
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 25 * BASE + 1);
         assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 25 * BASE + 1);
@@ -315,8 +338,11 @@ fn pool_join_increases_correct_pool_parameters() {
             5 * BASE,
             vec!(25 * BASE, 25 * BASE, 25 * BASE, 25 * BASE),
         ));
-
-        assert!(event_exists(crate::RawEvent::JoinedPool(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::PoolJoin(PoolAssetsEvent {
+            bounds: vec!(25 * BASE, 25 * BASE, 25 * BASE, 25 * BASE),
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: vec!(5 * BASE, 5 * BASE, 5 * BASE, 5 * BASE),
+        })));
         assert_eq!(Shares::free_balance(Swaps::pool_shares_id(0), &ALICE), 5 * BASE);
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 20 * BASE);
         assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 20 * BASE);
@@ -354,7 +380,13 @@ fn swap_exact_amount_in_exchanges_correct_values() {
             BASE / 2,
             2 * BASE,
         ));
-        assert!(event_exists(crate::RawEvent::SwapExactAmountIn(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::SwapExactAmountIn(SwapEvent {
+            asset_amount_in: BASE,
+            asset_amount_out: 9900990100,
+            asset_bound: BASE / 2,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            max_price: 2 * BASE,
+        })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240000000000);
         assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 259900990100);
     });
@@ -374,7 +406,13 @@ fn swap_exact_amount_out_exchanges_correct_values() {
             BASE,
             3 * BASE,
         ));
-        assert!(event_exists(crate::RawEvent::SwapExactAmountOut(GenericPoolEvent { pool_id: 0, who: 0 })));
+        assert!(event_exists(crate::RawEvent::SwapExactAmountOut(SwapEvent {
+            asset_amount_in: 10101010100,
+            asset_amount_out: BASE,
+            asset_bound: 2 * BASE,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            max_price: 3 * BASE,
+        })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 239898989900);
         assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 260000000000);
     });
@@ -404,7 +442,7 @@ fn create_initial_pool_with_funds_for_alice() {
     let _ = Shares::generate(ASSET_D, &ALICE, 25 * BASE);
 }
 
-fn event_exists(raw_evt: crate::RawEvent<AccountId>) -> bool {
+fn event_exists(raw_evt: crate::RawEvent<AccountId, Balance >) -> bool {
     let evt = TestEvent::zrml_swaps(raw_evt);
     frame_system::Module::<Test>::events().iter().any(|e| e.event == evt)
 }
