@@ -4,6 +4,7 @@ macro_rules! pool_exit_with_exact_amount {
         initial_params: ($origin:expr, $pool_id:expr, $asset:expr),
 
         asset_amount: $asset_amount:expr,
+        bound: $bound:expr,
         ensure_balance: $ensure_balance:expr,
         event: $event:ident,
         pool_amount: $pool_amount:expr
@@ -29,9 +30,13 @@ macro_rules! pool_exit_with_exact_amount {
         // todo do something with exit fee
         T::Shares::transfer($asset, &pool_account, &who, asset_amount)?;
 
-        Self::deposit_event(RawEvent::$event(GenericPoolEvent {
-            pool_id: $pool_id,
-            who
+        Self::deposit_event(RawEvent::$event(PoolAssetEvent {
+            bound: $bound,
+            cpep: CommonPoolEventParams {
+                pool_id: $pool_id,
+                who
+            },
+            transferred: asset_amount
         }));
     }}
 }
@@ -42,6 +47,7 @@ macro_rules! pool_join_with_exact_amount {
         initial_params: ($origin:expr, $pool_id:expr, $asset:expr),
 
         asset_amount: $asset_amount:expr,
+        bound: $bound:expr,
         event: $event:ident,
         pool_amount: $pool_amount:expr
     ) => {{
@@ -61,9 +67,13 @@ macro_rules! pool_join_with_exact_amount {
         Self::mint_pool_shares($pool_id, &who, pool_amount)?;
         T::Shares::transfer($asset, &who, &pool_account_id, asset_amount)?;
 
-        Self::deposit_event(RawEvent::$event(GenericPoolEvent {
-            pool_id: $pool_id,
-            who
+        Self::deposit_event(RawEvent::$event(PoolAssetEvent {
+            bound: $bound,
+            cpep: CommonPoolEventParams {
+                pool_id: $pool_id,
+                who
+            },
+            transferred: asset_amount
         }));
     }}
 }
@@ -88,18 +98,25 @@ macro_rules! pool {
         check_provided_values_len_must_equal_assets_len::<T, _>(&pool.assets, &$asset_bounds)?;
         ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
         
-        for (asset, amount_bound) in pool.assets.into_iter().zip($asset_bounds) {
+        let mut transferred = Vec::with_capacity($asset_bounds.len());
+
+        for (asset, amount_bound) in pool.assets.into_iter().zip($asset_bounds.iter().cloned()) {
             let balance = T::Shares::free_balance(asset, &pool_account_id);
             let amount: BalanceOf<T> = bmul(ratio.saturated_into(), balance.saturated_into()).saturated_into();
+            transferred.push(amount);
             ensure!(amount != Zero::zero(), Error::<T>::MathApproximation);
             ($transfer_asset(amount, amount_bound, asset, &pool_account_id, &who) as DispatchResult)?;
         }
 
         ($transfer_pool(&pool_account_id, pool_shares_id, &who) as DispatchResult)?;
         
-        Self::deposit_event(RawEvent::$event(GenericPoolEvent {
-            pool_id: $pool_id,
-            who
+        Self::deposit_event(RawEvent::$event(PoolAssetsEvent {
+            bounds: $asset_bounds,
+            cpep: CommonPoolEventParams {
+                pool_id: $pool_id,
+                who
+            },
+            transferred
         }));
     }}
 }
@@ -117,6 +134,7 @@ macro_rules! swap_exact_amount {
 
         asset_amount_in: $asset_amount_in:expr,
         asset_amount_out: $asset_amount_out:expr,
+        asset_bound: $asset_bound:expr,
         event: $event:ident
     ) => {{
         let who = ensure_signed($origin)?;
@@ -139,9 +157,15 @@ macro_rules! swap_exact_amount {
         ensure!(spot_price_after <= $max_price, Error::<T>::BadLimitPrice);
         ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);
 
-        Self::deposit_event(RawEvent::$event(GenericPoolEvent {
-            pool_id: $pool_id,
-            who
+        Self::deposit_event(RawEvent::$event(SwapEvent {
+            asset_amount_in: asset_amount_in,
+            asset_amount_out: asset_amount_out,
+            asset_bound: $asset_bound,
+            cpep: CommonPoolEventParams {
+                pool_id: $pool_id,
+                who
+            },
+            max_price: $max_price
         }));
     }}
 }
