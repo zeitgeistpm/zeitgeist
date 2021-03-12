@@ -141,32 +141,6 @@ decl_module! {
             let _ = Self::do_create_pool(who, assets, Zero::zero(), weights)?;
         }
 
-        /// Pool - Join
-        ///
-        /// Joins a given set of assets provided from `origin` to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
-        /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
-        /// provided values.
-        #[weight = 0]
-        fn pool_join(origin, pool_id: u128, pool_amount: BalanceOf<T>, max_assets_in: Vec<BalanceOf<T>>) {
-            pool!(
-                initial_params: (max_assets_in, origin, pool_amount, pool_id),
-
-                event: JoinedPool,
-                transfer_asset: |amount, amount_bound, asset, pool_account, who| {
-                    ensure!(amount <= amount_bound, Error::<T>::LimitIn);
-                    T::Shares::transfer(asset, who, pool_account, amount)?;
-                    Ok(())
-                },
-                transfer_pool: |_, _, who| Self::mint_pool_shares(pool_id, who, pool_amount)
-            )
-        }
-
         /// Pool - Exit
         ///
         /// Retrieves a given set of assets from `pool_id` to `origin`.
@@ -198,6 +172,222 @@ decl_module! {
                     Self::burn_pool_shares(pool_id, who, pool_amount_minus_exit_fee)?;
                     Ok(())
                 }
+            )
+        }
+
+        /// Pool - Exit with exact pool amount
+        ///
+        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
+        /// this method injects the exactly amount of `asset_amount_out` to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset`: Asset leaving the pool. 
+        /// * `asset_amount_out`: Asset amount that is leaving the pool.
+        /// * `max_pool_amount`: The calculated amount of assets for the pool must the equal or 
+        /// greater than the given value.
+        #[weight = 0]
+        fn pool_exit_with_exact_asset_amount(
+            origin,
+            pool_id: u128,
+            asset: T::Hash,
+            asset_amount: BalanceOf<T>,
+            max_pool_amount: BalanceOf<T>,
+        ) {
+            pool_exit_with_exact_amount!(
+                initial_params: (origin, pool_id, asset),
+
+                asset_amount: |_, _, _| Ok(asset_amount),
+                ensure_balance: |pool_balance: BalanceOf<T>| {
+                    ensure!(
+                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxOutRatio
+                    );
+                    Ok(())
+                },
+                event: ExitSwapPoolAmountOut,
+                pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    let pool_amount: BalanceOf<T> = math::calc_pool_in_given_single_out(
+                        pool_balance.saturated_into(),
+                        *pool.weights.get(&asset).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight,
+                        asset_amount.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
+                    Ok(pool_amount)
+                }
+            )
+        }
+
+        /// Pool - Exit with exact asset amount
+        ///
+        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
+        /// this method injects the exactly amount of `pool_amount` to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset`: Asset leaving the pool. 
+        /// * `pool_amount`: Pool amount that is entering the pool.
+        /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
+        /// than the given value.
+        #[weight = 0]
+        fn pool_exit_with_exact_pool_amount(
+            origin,
+            pool_id: u128,
+            asset: T::Hash,
+            pool_amount: BalanceOf<T>,
+            min_asset_amount: BalanceOf<T>,
+        ) {
+            pool_exit_with_exact_amount!(
+                initial_params: (origin, pool_id, asset),
+
+                asset_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    let asset_amount: BalanceOf<T> = math::calc_single_out_given_pool_in(
+                        pool_balance.saturated_into(),
+                        *pool.weights.get(&asset).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight,
+                        pool_amount.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
+                    ensure!(
+                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxOutRatio
+                    );
+                    Ok(asset_amount)
+                },
+                ensure_balance: |_| Ok(()),
+                event: ExitSwapPoolAmountIn,
+                pool_amount: |_, _, _| Ok(pool_amount)
+            )
+        }
+        
+        /// Pool - Join
+        ///
+        /// Joins a given set of assets provided from `origin` to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
+        /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
+        /// provided values.
+        #[weight = 0]
+        fn pool_join(origin, pool_id: u128, pool_amount: BalanceOf<T>, max_assets_in: Vec<BalanceOf<T>>) {
+            pool!(
+                initial_params: (max_assets_in, origin, pool_amount, pool_id),
+
+                event: JoinedPool,
+                transfer_asset: |amount, amount_bound, asset, pool_account, who| {
+                    ensure!(amount <= amount_bound, Error::<T>::LimitIn);
+                    T::Shares::transfer(asset, who, pool_account, amount)?;
+                    Ok(())
+                },
+                transfer_pool: |_, _, who| Self::mint_pool_shares(pool_id, who, pool_amount)
+            )
+        }
+
+        /// Pool - Join with exact asset amount
+        ///
+        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
+        /// this method transfers the exactly amount of `asset_amount_in` to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool. 
+        /// * `asset_amount_in`: Asset amount that is entering the pool.
+        /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
+        /// than the given value.
+        #[weight = 0]
+        fn pool_join_with_exact_asset_amount(
+            origin,
+            pool_id: u128,
+            asset_in: T::Hash,
+            asset_amount: BalanceOf<T>,
+            min_pool_amount: BalanceOf<T>,
+        ) {
+            pool_join_with_exact_amount!(
+                initial_params: (origin, pool_id, asset_in),
+
+                asset_amount: |_, _, _| Ok(asset_amount),
+                event: JoinSwapPoolAmountIn,
+                pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    let mul: BalanceOf<T> = bmul(
+                        pool_balance.saturated_into(),
+                        T::MaxInRatio::get().saturated_into()
+                    ).saturated_into();
+                    ensure!(
+                        asset_amount <= mul,
+                        Error::<T>::MaxInRatio
+                    );
+                    let pool_amount: BalanceOf<T> = math::calc_pool_out_given_single_in(
+                        pool_balance.saturated_into(),
+                        *pool.weights.get(&asset_in).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight.saturated_into(),
+                        asset_amount.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(pool_amount >= min_pool_amount, Error::<T>::LimitOut);
+                    Ok(pool_amount)
+                }
+            )
+        }
+
+        /// Pool - Join with exact poll amount
+        ///
+        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
+        /// this method injects the exactly amount of `pool_amount` to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset`: Asset entering the pool. 
+        /// * `pool_amount`: Asset amount that is entering the pool.
+        /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or 
+        /// less than the given value.
+        #[weight = 0]
+        fn pool_join_with_exact_pool_amount(
+            origin,
+            pool_id: u128,
+            asset: T::Hash,
+            pool_amount: BalanceOf<T>,
+            max_asset_amount: BalanceOf<T>,
+        ) {
+            pool_join_with_exact_amount!(
+                initial_params: (origin, pool_id, asset),
+
+                asset_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    let asset_amount: BalanceOf<T> = math::calc_single_in_given_pool_out(
+                        pool_balance.saturated_into(),
+                        *pool.weights.get(&asset).unwrap(),
+                        total_supply.saturated_into(),
+                        pool.total_weight.saturated_into(),
+                        pool_amount.saturated_into(),
+                        pool.swap_fee.saturated_into(),
+                    ).saturated_into();
+                    ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
+                    ensure!(
+                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
+                        Error::<T>::MaxInRatio
+                    );
+                    Ok(asset_amount)
+                },
+                event: JoinSwapPoolAmountOut,
+                pool_amount: |_, _, _| Ok(pool_amount)
             )
         }
 
@@ -302,196 +492,6 @@ decl_module! {
                 },
                 asset_amount_out: |_, _| Ok(asset_amount_out),
                 event: SwapExactAmountOut
-            )
-        }
-
-        /// Pool - Join with exact asset amount
-        ///
-        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
-        /// this method transfers the exactly amount of `asset_amount_in` to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool. 
-        /// * `asset_amount_in`: Asset amount that is entering the pool.
-        /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
-        /// than the given value.
-        #[weight = 0]
-        fn pool_join_with_exact_asset_amount(
-            origin,
-            pool_id: u128,
-            asset_in: T::Hash,
-            asset_amount: BalanceOf<T>,
-            min_pool_amount: BalanceOf<T>,
-        ) {
-            pool_join_with_exact_amount!(
-                initial_params: (origin, pool_id, asset_in),
-
-                asset_amount: |_, _, _| Ok(asset_amount),
-                event: JoinSwapPoolAmountIn,
-                pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = bmul(
-                        pool_balance.saturated_into(),
-                        T::MaxInRatio::get().saturated_into()
-                    ).saturated_into();
-                    ensure!(
-                        asset_amount <= mul,
-                        Error::<T>::MaxInRatio
-                    );
-                    let pool_amount: BalanceOf<T> = math::calc_pool_out_given_single_in(
-                        pool_balance.saturated_into(),
-                        *pool.weights.get(&asset_in).unwrap(),
-                        total_supply.saturated_into(),
-                        pool.total_weight.saturated_into(),
-                        asset_amount.saturated_into(),
-                        pool.swap_fee.saturated_into(),
-                    ).saturated_into();
-                    ensure!(pool_amount >= min_pool_amount, Error::<T>::LimitOut);
-                    Ok(pool_amount)
-                }
-            )
-        }
-
-        /// Pool - Join with exact poll amount
-        ///
-        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
-        /// this method injects the exactly amount of `pool_amount` to `origin`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset entering the pool. 
-        /// * `pool_amount`: Asset amount that is entering the pool.
-        /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or 
-        /// less than the given value.
-        #[weight = 0]
-        fn pool_join_with_exact_pool_amount(
-            origin,
-            pool_id: u128,
-            asset: T::Hash,
-            pool_amount: BalanceOf<T>,
-            max_asset_amount: BalanceOf<T>,
-        ) {
-            pool_join_with_exact_amount!(
-                initial_params: (origin, pool_id, asset),
-
-                asset_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let asset_amount: BalanceOf<T> = math::calc_single_in_given_pool_out(
-                        pool_balance.saturated_into(),
-                        *pool.weights.get(&asset).unwrap(),
-                        total_supply.saturated_into(),
-                        pool.total_weight.saturated_into(),
-                        pool_amount.saturated_into(),
-                        pool.swap_fee.saturated_into(),
-                    ).saturated_into();
-                    ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
-                    ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
-                    ensure!(
-                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
-                        Error::<T>::MaxInRatio
-                    );
-                    Ok(asset_amount)
-                },
-                event: JoinSwapPoolAmountOut,
-                pool_amount: |_, _, _| Ok(pool_amount)
-            )
-        }
-
-        /// Pool - Exit with exact asset amount
-        ///
-        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
-        /// this method injects the exactly amount of `pool_amount` to `pool_id`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset leaving the pool. 
-        /// * `pool_amount`: Pool amount that is entering the pool.
-        /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
-        /// than the given value.
-        #[weight = 0]
-        fn pool_exit_with_exact_pool_amount(
-            origin,
-            pool_id: u128,
-            asset: T::Hash,
-            pool_amount: BalanceOf<T>,
-            min_asset_amount: BalanceOf<T>,
-        ) {
-            pool_exit_with_exact_amount!(
-                initial_params: (origin, pool_id, asset),
-
-                asset_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let asset_amount: BalanceOf<T> = math::calc_single_out_given_pool_in(
-                        pool_balance.saturated_into(),
-                        *pool.weights.get(&asset).unwrap(),
-                        total_supply.saturated_into(),
-                        pool.total_weight,
-                        pool_amount.saturated_into(),
-                        pool.swap_fee.saturated_into(),
-                    ).saturated_into();
-                    ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
-                    ensure!(
-                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
-                        Error::<T>::MaxOutRatio
-                    );
-                    Ok(asset_amount)
-                },
-                ensure_balance: |_| Ok(()),
-                event: ExitSwapPoolAmountIn,
-                pool_amount: |_, _, _| Ok(pool_amount)
-            )
-        }
-
-        /// Pool - Exit with exact pool amount
-        ///
-        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
-        /// this method injects the exactly amount of `asset_amount_out` to `origin`.
-        ///
-        /// # Arguments
-        ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
-        /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset leaving the pool. 
-        /// * `asset_amount_out`: Asset amount that is leaving the pool.
-        /// * `max_pool_amount`: The calculated amount of assets for the pool must the equal or 
-        /// greater than the given value.
-        #[weight = 0]
-        fn pool_exit_with_exact_asset_amount(
-            origin,
-            pool_id: u128,
-            asset: T::Hash,
-            asset_amount: BalanceOf<T>,
-            max_pool_amount: BalanceOf<T>,
-        ) {
-            pool_exit_with_exact_amount!(
-                initial_params: (origin, pool_id, asset),
-
-                asset_amount: |_, _, _| Ok(asset_amount),
-                ensure_balance: |pool_balance: BalanceOf<T>| {
-                    ensure!(
-                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
-                        Error::<T>::MaxOutRatio
-                    );
-                    Ok(())
-                },
-                event: ExitSwapPoolAmountOut,
-                pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let pool_amount: BalanceOf<T> = math::calc_pool_in_given_single_out(
-                        pool_balance.saturated_into(),
-                        *pool.weights.get(&asset).unwrap(),
-                        total_supply.saturated_into(),
-                        pool.total_weight,
-                        asset_amount.saturated_into(),
-                        pool.swap_fee.saturated_into(),
-                    ).saturated_into();
-                    ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
-                    ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
-                    Ok(pool_amount)
-                }
             )
         }
     }
