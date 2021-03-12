@@ -1,33 +1,33 @@
-// Common code for `exit_swap_pool_amount_in` and `exit_swap_pool_amount_out` methods.
-macro_rules! exit_swap_amount {
+// Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
+macro_rules! pool_exit_with_exact_amount {
     (
-        initial_params: ($origin:expr, $pool_id:expr, $asset_out:expr),
+        initial_params: ($origin:expr, $pool_id:expr, $asset:expr),
 
-        asset_amount_out: $asset_amount_out:expr,
+        asset_amount: $asset_amount:expr,
         ensure_balance: $ensure_balance:expr,
         event: $event:ident,
-        pool_amount_in: $pool_amount_in:expr
+        pool_amount: $pool_amount:expr
     ) => {{
         let who = ensure_signed($origin)?;
 
         let pool = Self::pool_by_id($pool_id)?;
 
-        ensure!(pool.bound($asset_out), Error::<T>::AssetNotBound);
+        ensure!(pool.bound($asset), Error::<T>::AssetNotBound);
         let pool_account = Self::pool_account_id($pool_id);
 
-        let balance_out = T::Shares::free_balance($asset_out, &pool_account);
-        ($ensure_balance(balance_out) as DispatchResult)?;
+        let pool_balance = T::Shares::free_balance($asset, &pool_account);
+        ($ensure_balance(pool_balance) as DispatchResult)?;
 
         let pool_shares_id = Self::pool_shares_id($pool_id);
         let total_supply = T::Shares::total_supply(pool_shares_id);
 
-        let asset_amount_out = ($asset_amount_out(balance_out, &pool, total_supply) as Result<BalanceOf<T>, DispatchError>)?;
-        let pool_amount_in = ($pool_amount_in(balance_out, &pool, total_supply) as Result<BalanceOf<T>, DispatchError>)?;
+        let asset_amount = ($asset_amount(&pool, pool_balance, total_supply) as Result<BalanceOf<T>, DispatchError>)?;
+        let pool_amount = ($pool_amount(&pool, pool_balance, total_supply) as Result<BalanceOf<T>, DispatchError>)?;
 
-        let exit_fee = bmul(pool_amount_in.saturated_into(), T::ExitFee::get().saturated_into()).saturated_into();
-        Self::burn_pool_shares($pool_id, &who, pool_amount_in - exit_fee)?;
+        let exit_fee = bmul(pool_amount.saturated_into(), T::ExitFee::get().saturated_into()).saturated_into();
+        Self::burn_pool_shares($pool_id, &who, pool_amount - exit_fee)?;
         // todo do something with exit fee
-        T::Shares::transfer($asset_out, &pool_account, &who, asset_amount_out)?;
+        T::Shares::transfer($asset, &pool_account, &who, asset_amount)?;
 
         Self::deposit_event(RawEvent::$event(GenericPoolEvent {
             pool_id: $pool_id,
@@ -36,14 +36,14 @@ macro_rules! exit_swap_amount {
     }}
 }
 
-// Common code for `join_swap_pool_amount_in` and `join_swap_pool_amount_out` methods.
-macro_rules! join_swap_amount {
+// Common code for `pool_join_with_exact_asset_amount` and `pool_join_with_exact_pool_amount` methods.
+macro_rules! pool_join_with_exact_amount {
     (
-        initial_params: ($origin:expr, $pool_id:expr, $asset_in:expr),
+        initial_params: ($origin:expr, $pool_id:expr, $asset:expr),
 
-        asset_amount_in: $asset_amount_in:expr,
+        asset_amount: $asset_amount:expr,
         event: $event:ident,
-        pool_amount_out: $pool_amount_out:expr
+        pool_amount: $pool_amount:expr
     ) => {{
         let who = ensure_signed($origin)?;
         
@@ -52,14 +52,14 @@ macro_rules! join_swap_amount {
         let pool_account_id = Self::pool_account_id($pool_id);
         let total_supply = T::Shares::total_supply(pool_shares_id);
         
-        ensure!(pool.bound($asset_in), Error::<T>::AssetNotBound);
-        let balance_in = T::Shares::free_balance($asset_in, &pool_account_id);
+        ensure!(pool.bound($asset), Error::<T>::AssetNotBound);
+        let pool_balance = T::Shares::free_balance($asset, &pool_account_id);
 
-        let asset_amount_in = ($asset_amount_in(balance_in, &pool, total_supply) as Result<_, DispatchError>)?;
-        let pool_amount_out = ($pool_amount_out(balance_in, &pool, total_supply) as Result<_, DispatchError>)?;
+        let asset_amount = ($asset_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
+        let pool_amount = ($pool_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
 
-        Self::mint_pool_shares($pool_id, &who, pool_amount_out)?;
-        T::Shares::transfer($asset_in, &who, &pool_account_id, asset_amount_in)?;
+        Self::mint_pool_shares($pool_id, &who, pool_amount)?;
+        T::Shares::transfer($asset, &who, &pool_account_id, asset_amount)?;
 
         Self::deposit_event(RawEvent::$event(GenericPoolEvent {
             pool_id: $pool_id,
