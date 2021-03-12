@@ -118,20 +118,20 @@ fn assets_must_be_bounded() {
         );
 
         assert_noop!(
-            Swaps::join_swap_pool_amount_in(alice_signed(), 0, ASSET_E, 1, 1),
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_E, 1, 1),
             crate::Error::<Test>::AssetNotBound
         );
         assert_noop!(
-            Swaps::join_swap_pool_amount_out(alice_signed(), 0, ASSET_E, 1, 1),
+            Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_E, 1, 1),
             crate::Error::<Test>::AssetNotBound
         );
 
         assert_noop!(
-            Swaps::exit_swap_pool_amount_in(alice_signed(), 0, ASSET_E, 1, 1),
+            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_E, 1, 1),
             crate::Error::<Test>::AssetNotBound
         );
         assert_noop!(
-            Swaps::exit_swap_pool_amount_out(alice_signed(), 0, ASSET_E, 1, 1),
+            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_E, 1, 1),
             crate::Error::<Test>::AssetNotBound
         );
     });
@@ -162,24 +162,24 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
 }
 
 #[test]
-fn exit_swap_pool_amount_in_exchanges_correct_values() {
+fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::join_swap_pool_amount_in(alice_signed(), 0, ASSET_A, 5 * BASE, 0));
-        assert_ok!(Swaps::exit_swap_pool_amount_in(alice_signed(), 0, ASSET_A, BASE, 0));
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 5 * BASE, 0));
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, BASE, 0));
         assert!(event_exists(crate::RawEvent::ExitSwapPoolAmountIn(GenericPoolEvent { pool_id: 0, who: 0 })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240870977315);
     });
 }
 
 #[test]
-fn exit_swap_pool_amount_out_exchanges_correct_values() {
+fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::join_swap_pool_amount_in(alice_signed(), 0, ASSET_A, 5 * BASE, 0));
-        assert_ok!(Swaps::exit_swap_pool_amount_out(alice_signed(), 0, ASSET_A, BASE, BASE));
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 5 * BASE, 0));
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, BASE, BASE));
         assert!(event_exists(crate::RawEvent::ExitSwapPoolAmountOut(GenericPoolEvent { pool_id: 0, who: 0 })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 210000000000);
     });
@@ -204,29 +204,29 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
         );
 
         assert_noop!(
-            Swaps::join_swap_pool_amount_in(alice_signed(), 0, ASSET_A, u128::MAX, 1),
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, u128::MAX, 1),
             crate::Error::<Test>::MaxInRatio
         );
     });
 }
 
 #[test]
-fn join_swap_pool_amount_in_exchanges_correct_values() {
+fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::join_swap_pool_amount_in(alice_signed(), 0, ASSET_A, BASE, 0));
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, BASE, 0));
         assert!(event_exists(crate::RawEvent::JoinSwapPoolAmountIn(GenericPoolEvent { pool_id: 0, who: 0 })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240000000000);
     });
 }
 
 #[test]
-fn join_swap_pool_amount_out_exchanges_correct_values() {
+fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::join_swap_pool_amount_out(alice_signed(), 0, ASSET_A, BASE, BASE));
+        assert_ok!(Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, BASE, BASE));
         assert!(event_exists(crate::RawEvent::JoinSwapPoolAmountOut(GenericPoolEvent { pool_id: 0, who: 0 })));
         assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 247500000000);
     });
@@ -251,7 +251,7 @@ fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
         );
 
         assert_noop!(
-            Swaps::exit_swap_pool_amount_out(alice_signed(), 0, ASSET_A, u128::MAX, 1),
+            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, u128::MAX, 1),
             crate::Error::<Test>::MaxOutRatio
         );
     });
