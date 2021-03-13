@@ -1,10 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_runtime::{
-    MultiSignature, generic, 
-    traits::{
-        Verify, IdentifyAccount,
-    }
+    generic,
+    traits::{IdentifyAccount, Verify},
+    MultiSignature,
 };
 
 /// An index to a block.

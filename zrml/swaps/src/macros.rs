@@ -22,10 +22,16 @@ macro_rules! pool_exit_with_exact_amount {
         let pool_shares_id = Self::pool_shares_id($pool_id);
         let total_supply = T::Shares::total_supply(pool_shares_id);
 
-        let asset_amount = ($asset_amount(&pool, pool_balance, total_supply) as Result<BalanceOf<T>, DispatchError>)?;
-        let pool_amount = ($pool_amount(&pool, pool_balance, total_supply) as Result<BalanceOf<T>, DispatchError>)?;
+        let asset_amount = ($asset_amount(&pool, pool_balance, total_supply)
+            as Result<BalanceOf<T>, DispatchError>)?;
+        let pool_amount = ($pool_amount(&pool, pool_balance, total_supply)
+            as Result<BalanceOf<T>, DispatchError>)?;
 
-        let exit_fee = bmul(pool_amount.saturated_into(), T::ExitFee::get().saturated_into()).saturated_into();
+        let exit_fee = bmul(
+            pool_amount.saturated_into(),
+            T::ExitFee::get().saturated_into(),
+        )
+        .saturated_into();
         Self::burn_pool_shares($pool_id, &who, pool_amount - exit_fee)?;
         // todo do something with exit fee
         T::Shares::transfer($asset, &pool_account, &who, asset_amount)?;
@@ -34,11 +40,11 @@ macro_rules! pool_exit_with_exact_amount {
             bound: $bound,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,
-                who
+                who,
             },
-            transferred: asset_amount
+            transferred: asset_amount,
         }));
-    }}
+    }};
 }
 
 // Common code for `pool_join_with_exact_asset_amount` and `pool_join_with_exact_pool_amount` methods.
@@ -52,17 +58,19 @@ macro_rules! pool_join_with_exact_amount {
         pool_amount: $pool_amount:expr
     ) => {{
         let who = ensure_signed($origin)?;
-        
+
         let pool = Self::pool_by_id($pool_id)?;
         let pool_shares_id = Self::pool_shares_id($pool_id);
         let pool_account_id = Self::pool_account_id($pool_id);
         let total_supply = T::Shares::total_supply(pool_shares_id);
-        
+
         ensure!(pool.bound($asset), Error::<T>::AssetNotBound);
         let pool_balance = T::Shares::free_balance($asset, &pool_account_id);
 
-        let asset_amount = ($asset_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
-        let pool_amount = ($pool_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
+        let asset_amount =
+            ($asset_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
+        let pool_amount =
+            ($pool_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
 
         Self::mint_pool_shares($pool_id, &who, pool_amount)?;
         T::Shares::transfer($asset, &who, &pool_account_id, asset_amount)?;
@@ -71,11 +79,11 @@ macro_rules! pool_join_with_exact_amount {
             bound: $bound,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,
-                who
+                who,
             },
-            transferred: asset_amount
+            transferred: asset_amount,
         }));
-    }}
+    }};
 }
 
 // Common code for `pool_join` and `pool_exit` methods.
@@ -93,32 +101,35 @@ macro_rules! pool {
         let pool_shares_id = Self::pool_shares_id($pool_id);
         let pool_account_id = Self::pool_account_id($pool_id);
         let total_supply = T::Shares::total_supply(pool_shares_id);
-        
-        let ratio: BalanceOf<T> = bdiv($pool_amount.saturated_into(), total_supply.saturated_into()).saturated_into();
+
+        let ratio: BalanceOf<T> =
+            bdiv($pool_amount.saturated_into(), total_supply.saturated_into()).saturated_into();
         check_provided_values_len_must_equal_assets_len::<T, _>(&pool.assets, &$asset_bounds)?;
         ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
-        
+
         let mut transferred = Vec::with_capacity($asset_bounds.len());
 
         for (asset, amount_bound) in pool.assets.into_iter().zip($asset_bounds.iter().cloned()) {
             let balance = T::Shares::free_balance(asset, &pool_account_id);
-            let amount: BalanceOf<T> = bmul(ratio.saturated_into(), balance.saturated_into()).saturated_into();
+            let amount: BalanceOf<T> =
+                bmul(ratio.saturated_into(), balance.saturated_into()).saturated_into();
             transferred.push(amount);
             ensure!(amount != Zero::zero(), Error::<T>::MathApproximation);
-            ($transfer_asset(amount, amount_bound, asset, &pool_account_id, &who) as DispatchResult)?;
+            ($transfer_asset(amount, amount_bound, asset, &pool_account_id, &who)
+                as DispatchResult)?;
         }
 
         ($transfer_pool(&pool_account_id, pool_shares_id, &who) as DispatchResult)?;
-        
+
         Self::deposit_event(RawEvent::$event(PoolAssetsEvent {
             bounds: $asset_bounds,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,
-                who
+                who,
             },
-            transferred
+            transferred,
         }));
-    }}
+    }};
 }
 
 // Common code for `swap_exact_amount_in` and `swap_exact_amount_out` methods.
@@ -144,18 +155,31 @@ macro_rules! swap_exact_amount {
         ensure!(pool.bound($asset_out), Error::<T>::AssetNotBound);
         let spot_price_before = Self::get_spot_price($pool_id, $asset_in, $asset_out);
         ensure!(spot_price_before <= $max_price, Error::<T>::BadLimitPrice);
-        
+
         let pool_account_id = Self::pool_account_id($pool_id);
-        let asset_amount_in = ($asset_amount_in(&pool, &pool_account_id) as Result<_, DispatchError>)?;
-        let asset_amount_out = ($asset_amount_out(&pool, &pool_account_id) as Result<_, DispatchError>)?;
-        
+        let asset_amount_in =
+            ($asset_amount_in(&pool, &pool_account_id) as Result<_, DispatchError>)?;
+        let asset_amount_out =
+            ($asset_amount_out(&pool, &pool_account_id) as Result<_, DispatchError>)?;
+
         T::Shares::transfer($asset_in, &who, &pool_account_id, asset_amount_in)?;
         T::Shares::transfer($asset_out, &pool_account_id, &who, asset_amount_out)?;
-        
+
         let spot_price_after = Self::get_spot_price($pool_id, $asset_in, $asset_out);
-        ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+        ensure!(
+            spot_price_after >= spot_price_before,
+            Error::<T>::MathApproximation
+        );
         ensure!(spot_price_after <= $max_price, Error::<T>::BadLimitPrice);
-        ensure!(spot_price_before <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into()).saturated_into(), Error::<T>::MathApproximation);
+        ensure!(
+            spot_price_before
+                <= bdiv(
+                    asset_amount_in.saturated_into(),
+                    asset_amount_out.saturated_into()
+                )
+                .saturated_into(),
+            Error::<T>::MathApproximation
+        );
 
         Self::deposit_event(RawEvent::$event(SwapEvent {
             asset_amount_in: asset_amount_in,
@@ -163,9 +187,9 @@ macro_rules! swap_exact_amount {
             asset_bound: $asset_bound,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,
-                who
+                who,
             },
-            max_price: $max_price
+            max_price: $max_price,
         }));
-    }}
+    }};
 }
