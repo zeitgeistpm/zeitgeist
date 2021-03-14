@@ -1,3 +1,4 @@
+use crate as zrml_swaps;
 use crate::{Module, Trait};
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
 use sp_core::H256;
@@ -6,7 +7,6 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     ModuleId, Perbill,
 };
-use crate as zrml_swaps;
 
 pub type AccountId = u128;
 pub type Balance = u128;

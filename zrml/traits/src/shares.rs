@@ -7,14 +7,14 @@ use sp_std::fmt::Debug;
 
 /// A share can also be an asset.
 pub trait Shares<AccountId, Balance, Hash> {
-	/// The balance of an account.
-	type Balance: AtLeast32Bit + FullCodec + Copy + MaybeSerializeDeserialize + Debug + Default;
+    /// The balance of an account.
+    type Balance: AtLeast32Bit + FullCodec + Copy + MaybeSerializeDeserialize + Debug + Default;
 
     // Getters
 
     /// Free `share_id` balance of a given `who`.
     fn free_balance(share_id: Hash, who: &AccountId) -> Balance;
-    
+
     /// Total supply of a given `share_id`.
     fn total_supply(share_id: Hash) -> Balance;
 
@@ -33,7 +33,12 @@ pub trait Shares<AccountId, Balance, Hash> {
     fn generate(share_id: Hash, to: &AccountId, amount: Balance) -> DispatchResult;
 
     /// Transfers a given `amount` of `share_id`.
-    fn transfer(share_id: Hash, from: &AccountId, to: &AccountId, amount: Balance) -> DispatchResult;
+    fn transfer(
+        share_id: Hash,
+        from: &AccountId,
+        to: &AccountId,
+        amount: Balance,
+    ) -> DispatchResult;
 }
 
 pub trait ReservableShares<AccountId, Balance, Hash> {

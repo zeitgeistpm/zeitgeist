@@ -1,7 +1,7 @@
 //! # Orderbook
 //!
 //! A module to trade shares using a naive on-chain orderbook.
-//! 
+//!
 //! ## Overview
 //!
 //! TODO
@@ -9,24 +9,17 @@
 //! ## Interface
 //!
 //! ### Dispatches
-//! 
+//!
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, 
-    ensure,
-};
-use frame_support::traits::{
-    Currency, ReservableCurrency, ExistenceRequirement, WithdrawReasons,
-};
+use frame_support::traits::{Currency, ExistenceRequirement, ReservableCurrency, WithdrawReasons};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 // use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
+use sp_runtime::traits::{CheckedMul, CheckedSub, Hash, Zero};
 use sp_runtime::RuntimeDebug;
-use sp_runtime::traits::{
-    CheckedSub, CheckedMul, Hash, Zero,
-};
 use sp_std::cmp;
 use sp_std::vec::Vec;
 use zrml_traits::shares::{ReservableShares, Shares};
@@ -59,11 +52,7 @@ pub struct Order<AccountId, Balance, Hash> {
     filled: Balance,
 }
 
-impl<
-    AccountId,
-    Balance: CheckedSub + CheckedMul,
-    Hash,
-> Order<AccountId, Balance, Hash> {
+impl<AccountId, Balance: CheckedSub + CheckedMul, Hash> Order<AccountId, Balance, Hash> {
     pub fn cost(&self) -> Balance {
         self.total
             .checked_sub(&self.filled)
@@ -80,7 +69,8 @@ pub trait Trait: frame_system::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash> + ReservableShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash>
+        + ReservableShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
 }
 
 decl_storage! {
@@ -88,7 +78,7 @@ decl_storage! {
         Bids get(fn bids): map hasher(blake2_128_concat) T::Hash => Vec<T::Hash>;
         Asks get(fn asks): map hasher(blake2_128_concat) T::Hash => Vec<T::Hash>;
 
-        OrderData get(fn order_data): map hasher(blake2_128_concat) T::Hash => 
+        OrderData get(fn order_data): map hasher(blake2_128_concat) T::Hash =>
             Option<Order<T::AccountId, BalanceOf<T>, T::Hash>>;
 
         Nonce get(fn nonce): u64;
@@ -97,7 +87,7 @@ decl_storage! {
 }
 
 decl_event! {
-    pub enum Event<T> 
+    pub enum Event<T>
     where
         AccountId = <T as frame_system::Trait>::AccountId,
         Hash = <T as frame_system::Trait>::Hash,
@@ -234,7 +224,7 @@ decl_module! {
                         let mut bids = Self::bids(share_id);
                         remove_item::<T::Hash>(&mut bids, order_hash);
                         <Bids<T>>::insert(share_id, bids);
-                    }   
+                    }
                     OrderSide::Ask => {
                         let mut asks = Self::asks(share_id);
                         remove_item::<T::Hash>(&mut asks, order_hash);

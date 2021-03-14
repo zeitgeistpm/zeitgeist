@@ -9,10 +9,9 @@
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub struct CommonPoolEventParams<AI>
-{
+pub struct CommonPoolEventParams<AI> {
     pub pool_id: u128,
-    pub who: AI
+    pub who: AI,
 }
 
 #[derive(
@@ -26,11 +25,10 @@ pub struct CommonPoolEventParams<AI>
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub struct PoolAssetsEvent<AI, B>
-{
+pub struct PoolAssetsEvent<AI, B> {
     pub bounds: Vec<B>,
     pub cpep: CommonPoolEventParams<AI>,
-    pub transferred: Vec<B>
+    pub transferred: Vec<B>,
 }
 
 #[derive(
@@ -44,11 +42,10 @@ pub struct PoolAssetsEvent<AI, B>
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub struct PoolAssetEvent<AI, B>
-{
+pub struct PoolAssetEvent<AI, B> {
     pub bound: B,
     pub cpep: CommonPoolEventParams<AI>,
-    pub transferred: B
+    pub transferred: B,
 }
 
 #[derive(
@@ -62,8 +59,7 @@ pub struct PoolAssetEvent<AI, B>
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub struct SwapEvent<AI, B>
-{
+pub struct SwapEvent<AI, B> {
     pub asset_amount_in: B,
     pub asset_amount_out: B,
     pub asset_bound: B,
