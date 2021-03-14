@@ -5,34 +5,27 @@ use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
+use sp_core::U256;
 use sp_runtime::{
     generic::BlockId,
-    traits::{Block as BlockT, MaybeDisplay, MaybeFromStr}
+    traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
 };
-use std::sync::Arc;
-use sp_core::U256;
 use sp_std::convert::TryFrom;
+use std::sync::Arc;
 
 pub use self::gen_client::Client as SwapsClient;
 pub use zrml_swaps_runtime_api::{BalanceInfo, SwapsApi as SwapsRuntimeApi};
 
 #[rpc]
 pub trait SwapsApi<BlockHash, PoolId, Hash, AccountId, Balance, BalanceType>
-    where Balance: std::str::FromStr,
+where
+    Balance: std::str::FromStr,
 {
     #[rpc(name = "swaps_poolSharesId")]
-    fn pool_shares_id(
-        &self,
-        pool_id: PoolId,
-        at: Option<BlockHash>,
-    ) -> Result<Hash>;
+    fn pool_shares_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Hash>;
 
     #[rpc(name = "swaps_poolAccountId")]
-    fn pool_account_id(
-        &self,
-        pool_id: PoolId,
-        at: Option<BlockHash>,
-    ) -> Result<AccountId>;
+    fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<AccountId>;
 
     #[rpc(name = "swaps_getSpotPrice")]
     fn get_spot_price(
@@ -74,7 +67,8 @@ impl From<Error> for i64 {
     }
 }
 
-impl<C, Block, PoolId, Hash, AccountId, Balance> SwapsApi<<Block as BlockT>::Hash, PoolId, Hash, AccountId, Balance, BalanceInfo<Balance>>
+impl<C, Block, PoolId, Hash, AccountId, Balance>
+    SwapsApi<<Block as BlockT>::Hash, PoolId, Hash, AccountId, Balance, BalanceInfo<Balance>>
     for Swaps<C, Block>
 where
     Block: BlockT,
@@ -86,22 +80,17 @@ where
     Balance: Codec + MaybeDisplay + MaybeFromStr + TryFrom<U256>,
     <Balance as TryFrom<U256>>::Error: sp_std::fmt::Debug,
 {
-    fn pool_shares_id(
-        &self,
-        pool_id: PoolId,
-        at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Hash> {
+    fn pool_shares_id(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<Hash> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             //if the block hash is not supplied assume the best block
             self.client.info().best_hash));
 
-        api.pool_shares_id(&at, pool_id)
-            .map_err(|e| RpcError {
-                code: ErrorCode::ServerError(Error::RuntimeError.into()),
-                message: "Unable to get pool shares identifier.".into(),
-                data: Some(format!("{:?}", e).into()),
-            })
+        api.pool_shares_id(&at, pool_id).map_err(|e| RpcError {
+            code: ErrorCode::ServerError(Error::RuntimeError.into()),
+            message: "Unable to get pool shares identifier.".into(),
+            data: Some(format!("{:?}", e).into()),
+        })
     }
 
     fn pool_account_id(
@@ -114,12 +103,11 @@ where
             //if the block hash is not supplied assume the best block
             self.client.info().best_hash));
 
-        api.pool_account_id(&at, pool_id)
-            .map_err(|e| RpcError {
-                code: ErrorCode::ServerError(Error::RuntimeError.into()),
-                message: "Unable to get pool account identifier.".into(),
-                data: Some(format!("{:?}", e).into()),
-            })
+        api.pool_account_id(&at, pool_id).map_err(|e| RpcError {
+            code: ErrorCode::ServerError(Error::RuntimeError.into()),
+            message: "Unable to get pool account identifier.".into(),
+            data: Some(format!("{:?}", e).into()),
+        })
     }
 
     fn get_spot_price(

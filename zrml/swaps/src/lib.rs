@@ -18,14 +18,14 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use events::{CommonPoolEventParams, SwapEvent, PoolAssetEvent, PoolAssetsEvent};
+use events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent};
 use fixed::*;
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_support::traits::{Currency, Get, ReservableCurrency};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_signed};
 use parity_scale_codec::{Decode, Encode};
-use sp_runtime::{DispatchError, DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion};
 use sp_runtime::traits::{AccountIdConversion, Hash, Zero};
+use sp_runtime::{DispatchError, DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion};
 use sp_std::collections::btree_map::BTreeMap;
 use sp_std::convert::TryInto;
 use sp_std::vec::Vec;
@@ -158,7 +158,7 @@ decl_module! {
         fn pool_exit(origin, pool_id: u128, pool_amount: BalanceOf<T>, min_assets_out: Vec<BalanceOf<T>>) {
             pool!(
                 initial_params: (min_assets_out, origin, pool_amount, pool_id),
-                
+
                 event: PoolExit,
                 transfer_asset: |amount, amount_bound, asset, pool_account, who| {
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
@@ -185,9 +185,9 @@ decl_module! {
         ///
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset leaving the pool. 
+        /// * `asset`: Asset leaving the pool.
         /// * `asset_amount_out`: Asset amount that is leaving the pool.
-        /// * `max_pool_amount`: The calculated amount of assets for the pool must the equal or 
+        /// * `max_pool_amount`: The calculated amount of assets for the pool must the equal or
         /// greater than the given value.
         #[weight = 0]
         fn pool_exit_with_exact_asset_amount(
@@ -235,7 +235,7 @@ decl_module! {
         ///
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset leaving the pool. 
+        /// * `asset`: Asset leaving the pool.
         /// * `pool_amount`: Pool amount that is entering the pool.
         /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
         /// than the given value.
@@ -272,7 +272,7 @@ decl_module! {
                 pool_amount: |_, _, _| Ok(pool_amount)
             )
         }
-        
+
         /// Pool - Join
         ///
         /// Joins a given set of assets provided from `origin` to `pool_id`.
@@ -308,7 +308,7 @@ decl_module! {
         ///
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool. 
+        /// * `asset_in`: Asset entering the pool.
         /// * `asset_amount_in`: Asset amount that is entering the pool.
         /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
         /// than the given value.
@@ -358,9 +358,9 @@ decl_module! {
         ///
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
-        /// * `asset`: Asset entering the pool. 
+        /// * `asset`: Asset entering the pool.
         /// * `pool_amount`: Asset amount that is entering the pool.
-        /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or 
+        /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or
         /// less than the given value.
         #[weight = 0]
         fn pool_join_with_exact_pool_amount(
@@ -404,7 +404,7 @@ decl_module! {
         ///
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
         /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool. 
+        /// * `asset_in`: Asset entering the pool.
         /// * `asset_amount_in`: Amount that will be transferred from the provider to the pool.
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
@@ -457,7 +457,7 @@ decl_module! {
         ///
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
-        /// * `asset_in`: Asset entering the pool. 
+        /// * `asset_in`: Asset entering the pool.
         /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
         /// * `asset_out`: Asset leaving the pool.
         /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
@@ -579,11 +579,9 @@ impl<T: Trait> Module<T> {
         0
     }
 
-    fn pool_by_id(
-        pool_id: u128
-    ) -> Result<Pool<BalanceOf<T>, T::Hash>, Error<T>>
+    fn pool_by_id(pool_id: u128) -> Result<Pool<BalanceOf<T>, T::Hash>, Error<T>>
     where
-        T: Trait
+        T: Trait,
     {
         Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist.into())
     }
@@ -613,8 +611,14 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         );
 
         for weight in weights.iter().copied() {
-            ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
-            ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
+            ensure!(
+                weight >= T::MinWeight::get(),
+                Error::<T>::BelowMinimumWeight
+            );
+            ensure!(
+                weight <= T::MaxWeight::get(),
+                Error::<T>::AboveMaximumWeight
+            );
         }
 
         let amount = T::MinLiquidity::get();
@@ -633,7 +637,10 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         }
 
         let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
-        ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
+        ensure!(
+            total_weight <= T::MaxTotalWeight::get(),
+            Error::<T>::MaxTotalWeight
+        );
 
         <Pools<T>>::insert(
             next_pool_id,
@@ -650,7 +657,7 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
 
         Self::deposit_event(RawEvent::PoolCreate(CommonPoolEventParams {
             pool_id: next_pool_id,
-            who
+            who,
         }));
 
         Ok(next_pool_id)
@@ -659,10 +666,10 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
 
 fn check_provided_values_len_must_equal_assets_len<T, U>(
     assets: &[T::Hash],
-    provided_values: &[U]
+    provided_values: &[U],
 ) -> Result<(), Error<T>>
 where
-    T: Trait
+    T: Trait,
 {
     if assets.len() != provided_values.len() {
         return Err(Error::<T>::ProvidedValuesLenMustEqualAssetsLen.into());
