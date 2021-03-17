@@ -15,6 +15,13 @@ pub enum MarketCreation {
     Advised,
 }
 
+/// Defines whether the end is represented as a blocknumber or a timestamp.
+#[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug, Copy)]
+pub enum MarketEnd {
+    Block(u64),
+    Timestamp(u64),
+}
+
 /// Defines the type of market.
 /// All markets also have the `Invalid` resolution.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
@@ -58,7 +65,7 @@ pub struct Market<AccountId> {
     // Oracle that reports the outcome of this market.
     pub oracle: AccountId,
     // Ending block for this market.
-    pub end: u64,
+    pub end: MarketEnd,
     // Metadata for the market, usually a content address of IPFS
     // hosted JSON.
     pub metadata: Vec<u8>,
