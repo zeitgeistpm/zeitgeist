@@ -79,7 +79,7 @@ impl<AccountId> Market<AccountId> {
         match self.market_type {
             MarketType::Binary => 2,
             MarketType::Categorical => self.categories.unwrap(),
-            MarketType::Scalar => 0, // TODO figure out scalar markets
+            MarketType::Scalar => 0, // TODO implement scalar markets
         }
     }
 }
