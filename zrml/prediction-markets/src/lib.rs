@@ -292,6 +292,23 @@ decl_module! {
             }
         }
 
+        #[weight = 10_000]
+        pub fn create_categorical_market(
+            origin,
+            oracle: T::AccountId,
+            end: u64,
+            metadata: Vec<u8>,
+            creation: MarketCreation,
+            categories: u16,
+        ) {
+            let sender = ensure_signed(origin)?;
+
+            ensure!(categories <= T::MaxCategories::get(), "Cannot exceed max categories for a new market.");
+            
+
+        }
+
+
         /// Creates a new prediction market, seeded with the intial values.
         ///
         #[weight = 0]
