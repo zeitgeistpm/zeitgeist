@@ -290,6 +290,7 @@ parameter_types! {
     pub const ValidityBond: Balance = 10;
     pub const AdvisoryBond: Balance = 10;
     pub const OracleBond: Balance = 10;
+    pub const MaxCategories: u16 = 8;
 }
 
 impl zrml_prediction_markets::Trait for Runtime {
@@ -309,6 +310,7 @@ impl zrml_prediction_markets::Trait for Runtime {
     type OracleBond = OracleBond;
     type Slash = ();
     type Swap = Swaps;
+    type MaxCategories = MaxCategories;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

@@ -56,7 +56,7 @@ mod mock;
 mod tests;
 
 mod market;
-use market::{Market, MarketCreation, MarketDispute, MarketStatus, MarketType};
+use market::{Market, MarketEnd, MarketCreation, MarketDispute, MarketStatus, MarketType};
 
 fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     let pos = items.iter().position(|&i| i == item).unwrap();
@@ -116,6 +116,9 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait {
     type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
     type Swap: Swaps<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+
+    /// The maximum number of categories available for categorical markets.
+    type MaxCategories: Get<u16>;
 }
 
 decl_storage! {
@@ -292,35 +295,29 @@ decl_module! {
             }
         }
 
-        /// Creates a new prediction market, seeded with the intial values.
-        ///
-        #[weight = 0]
-        pub fn create(
+        #[weight = 10_000]
+        pub fn create_categorical_market(
             origin,
             oracle: T::AccountId,
-            market_type: MarketType,
-            end: u64,
+            end: MarketEnd,
             metadata: Vec<u8>,
             creation: MarketCreation,
+            categories: u16,
         ) {
             let sender = ensure_signed(origin)?;
 
-            // PoC - Only binary markets are currently supported.
-            ensure!(market_type == MarketType::Binary, "Only binary markets are currently supported.");
-
-            // Check the end is in the future.
-            if end > 1_000_000_000 {
-                // unix timestamp
-                let now = <pallet_timestamp::Module<T>>::get();
-                ensure!(now < end.saturated_into(), "End timestamp must be before now.");
-            } else {
-                // block
-                let current_block = <frame_system::Module<T>>::block_number();
-                ensure!(current_block < end.saturated_into(), "End block must be in the future.");
-            }
-
-            // This will check if the length is correct for an IPFS CID
-            // ensure!(metadata.length == 46, "Incorrect metadata length");
+            ensure!(categories <= T::MaxCategories::get(), "Cannot exceed max categories for a new market.");
+            
+            match end {
+                MarketEnd::Block(block) => {
+                    let current_block = <frame_system::Module<T>>::block_number();
+                    ensure!(current_block < block.saturated_into(), "End block must be in the future.");
+                }
+                MarketEnd::Timestamp(timestamp) => {
+                    let now = <pallet_timestamp::Module<T>>::get();
+                    ensure!(now < timestamp.saturated_into(), "End timestamp must be before now.");
+                }
+            };
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
@@ -335,24 +332,24 @@ decl_module! {
                 }
             };
 
-            let new_market_id = Self::get_next_market_id()?;
-            let new_market = Market {
+            let market_id = Self::get_next_market_id()?;
+            let market = Market {
                 creator: sender.clone(),
                 creation,
                 creator_fee: 0,
                 oracle,
                 end,
                 metadata,
-                market_type,
+                market_type: MarketType::Categorical,
                 status,
                 reported_outcome: None,
                 reporter: None,
-                categories: None,
-            };
+                categories: Some(categories),
+            } ;
 
-            <Markets<T>>::insert(new_market_id.clone(), new_market);
+            <Markets<T>>::insert(market_id.clone(), market);
 
-            Self::deposit_event(RawEvent::MarketCreated(new_market_id, sender));
+            Self::deposit_event(RawEvent::MarketCreated(market_id, sender));
         }
 
         /// Approves a market that is waiting for approval from the
@@ -533,23 +530,26 @@ decl_module! {
                 ensure!(market.status != MarketStatus::Reported, Error::<T>::MarketAlreadyReported);
 
                 // ensure market is not active
-                ensure!(!Self::is_market_active(market.end.clone()), Error::<T>::MarketNotClosed);
+                ensure!(!Self::is_market_active(market.end), Error::<T>::MarketNotClosed);
 
                 let current_block = <frame_system::Module<T>>::block_number();
 
-                if market.end > 1_000_000_000 {
-                    // unix timestamp
-                    let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
-                    let reporting_period_in_ms = T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
-                    if now <= market.end + reporting_period_in_ms {
-                        ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
-                    } // otherwise anyone can be the reporter
-                } else {
-                    // blocks
-                    let end: T::BlockNumber = market.end.saturated_into();
-                    if current_block <= end + T::ReportingPeriod::get() {
-                        ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
-                    } // otherwise anyone can be the reporter
+                match market.end {
+                    MarketEnd::Block(block) => {
+                        // blocks
+                        let end: T::BlockNumber = block.saturated_into();
+                        if current_block <= end + T::ReportingPeriod::get() {
+                            ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                        } // otherwise anyone can be the reporter
+                    }
+                    MarketEnd::Timestamp(timestamp) => {
+                        // unix timestamp
+                        let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
+                        let reporting_period_in_ms = T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
+                        if now <= timestamp + reporting_period_in_ms {
+                            ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                        } // otherwise anyone can be the reporter
+                    }
                 }
 
                 market.reported_outcome = Some(reported_outcome);
@@ -693,15 +693,16 @@ impl<T: Trait> Module<T> {
         ("zge/pm", market_id, outcome).using_encoded(<T as frame_system::Trait>::Hashing::hash)
     }
 
-    fn is_market_active(end: u64) -> bool {
-        if end > 1_000_000_000 {
-            // unix timestamp
-            let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
-            return now < end;
-        } else {
-            // block number
-            let current_block = <frame_system::Module<T>>::block_number();
-            return current_block < end.saturated_into();
+    fn is_market_active(end: MarketEnd) -> bool {
+        match end {
+            MarketEnd::Block(block) => {
+                let current_block = <frame_system::Module<T>>::block_number();
+                return current_block < block.saturated_into();
+            }
+            MarketEnd::Timestamp(timestamp) => {
+                let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
+                return now < timestamp;
+            }
         }
     }
 
