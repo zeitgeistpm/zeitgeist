@@ -431,7 +431,7 @@ decl_module! {
         /// The sender should have enough funds to cover all of the required
         /// shares to seed the pool.
         #[weight = 0]
-        pub fn deploy_swap_pool_for_market(origin, market_id: T::MarketId, weights: Vec<u128>) {
+        pub fn deploy_swap_pool_for_market(origin, market_id: T::MarketId, weights: Vec<BalanceOf<T>>) {
             let sender = ensure_signed(origin)?;
 
             if let Some(market) = Self::markets(&market_id) {

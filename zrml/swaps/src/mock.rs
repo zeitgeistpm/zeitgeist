@@ -1,11 +1,11 @@
 use crate as zrml_swaps;
-use crate::{Module, Trait};
+use crate::{Module, Trait, BASE};
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    ModuleId, Perbill,
+    FixedPointNumber, FixedU128, ModuleId, Perbill,
 };
 
 pub type AccountId = u128;
@@ -18,8 +18,15 @@ pub const CHARLIE: AccountId = 2;
 pub const DAVE: AccountId = 3;
 pub const EVE: AccountId = 4;
 
-// BASE is used as the number of decimals in order to set constants elsewhere.
-pub const BASE: Balance = 10_000_000_000;
+pub const FIXEDU128_0_5: FixedU128 = FixedU128::from_inner(BASE / 2);
+pub const FIXEDU128_0: FixedU128 = from_integral(0);
+pub const FIXEDU128_1: FixedU128 = from_integral(1);
+pub const FIXEDU128_100: FixedU128 = from_integral(100);
+pub const FIXEDU128_2: FixedU128 = from_integral(2);
+pub const FIXEDU128_25: FixedU128 = from_integral(25);
+pub const FIXEDU128_3: FixedU128 = from_integral(3);
+pub const FIXEDU128_5: FixedU128 = from_integral(5);
+pub const FIXEDU128_50: FixedU128 = from_integral(50);
 
 impl_outer_event! {
     pub enum TestEvent for Test {
@@ -92,27 +99,26 @@ parameter_types! {
 }
 
 impl zrml_shares::Trait for Test {
+    type Currency = Currency;
     type Event = TestEvent;
-    type Balance = Balance;
-    type Currency = Balances;
     type ModuleId = SharesModuleId;
 }
 
 parameter_types! {
     pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
-    pub const ExitFee: Balance = 0;
-    pub const MaxInRatio: Balance = BASE / 2;
-    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
-    pub const MinWeight: Balance = BASE;
-    pub const MaxWeight: Balance = 50 * BASE;
-    pub const MaxTotalWeight: Balance = 50 * BASE;
-    pub const MaxAssets: Balance = 8;
-    pub const MinLiquidity: Balance = 100 * BASE;
+    pub const ExitFee: FixedU128 = FIXEDU128_0;
+    pub const MaxInRatio: FixedU128 = FIXEDU128_0_5;
+    pub const MaxOutRatio: FixedU128 = from_parts(0, (1 / 3) + 1);
+    pub const MinWeight: FixedU128 = FIXEDU128_1;
+    pub const MaxWeight: FixedU128 = FIXEDU128_50;
+    pub const MaxTotalWeight: FixedU128 = FIXEDU128_50;
+    pub const MaxAssets: usize = 8;
+    pub const MinLiquidity: FixedU128 = FIXEDU128_100;
 }
 
 impl Trait for Test {
     type Event = TestEvent;
-    type Currency = Balances;
+    type Currency = Currency;
     type Shares = Shares;
     type ModuleId = SwapsModuleId;
     type ExitFee = ExitFee;
@@ -125,7 +131,7 @@ impl Trait for Test {
     type MinLiquidity = MinLiquidity;
 }
 
-pub type Balances = pallet_balances::Module<Test>;
+pub type Currency = pallet_balances::Module<Test>;
 pub type Shares = zrml_shares::Module<Test>;
 pub type Swaps = Module<Test>;
 
@@ -161,4 +167,20 @@ impl ExtBuilder {
 
         t.into()
     }
+}
+
+// Creates a `FixedU128` instance from the integer part without overflow.
+#[inline]
+pub const fn from_integral(integral: u64) -> FixedU128 {
+    let integral_u128 = integral as u128;
+    FixedU128::from_inner(integral_u128.wrapping_mul(<FixedU128 as FixedPointNumber>::DIV))
+}
+
+// Creates a `FixedU128` instance from the integer and decimal parts without overflow.
+#[inline]
+pub const fn from_parts(integral: u64, decimal: u32) -> FixedU128 {
+    let integral_u128 = integral as u128;
+    let decimal_u128 = decimal as _;
+    let n = integral_u128.wrapping_mul(<FixedU128 as FixedPointNumber>::DIV);
+    FixedU128::from_inner(n.wrapping_add(decimal_u128))
 }
