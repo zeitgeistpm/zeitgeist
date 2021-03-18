@@ -140,6 +140,7 @@ parameter_types! {
     pub const OracleBond: Balance = 100;
     pub const ValidityBond: Balance = 200;
     pub const AdvisoryBond: Balance = 50;
+    pub const MaxCategories: u16 = 8;
 }
 
 ord_parameter_types! {
@@ -163,6 +164,7 @@ impl Trait for Test {
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountId>;
     type Slash = ();
     type Swap = Swaps;
+    type MaxCategories = MaxCategories;
 }
 
 pub type Balances = pallet_balances::Module<Test>;

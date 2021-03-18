@@ -26,8 +26,6 @@ pub enum MarketEnd {
 /// All markets also have the `Invalid` resolution.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
 pub enum MarketType {
-    // Binary market that can resolve either as `Yes`, `No`, or `Invalid`.
-    Binary,
     // A market with a number of categorical outcomes.
     Categorical,
     Scalar,
@@ -84,7 +82,6 @@ pub struct Market<AccountId> {
 impl<AccountId> Market<AccountId> {
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
-            MarketType::Binary => 2,
             MarketType::Categorical => self.categories.unwrap(),
             MarketType::Scalar => 0, // TODO implement scalar markets
         }
