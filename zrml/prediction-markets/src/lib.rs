@@ -277,7 +277,7 @@ decl_module! {
         ///
         /// todo: this should check if there's any outstanding funds reserved if it stays
         /// in for production
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn destroy_market(origin, market_id: T::MarketId) {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
@@ -359,7 +359,7 @@ decl_module! {
         ///
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn approve_market(origin, market_id: T::MarketId) {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
@@ -383,7 +383,7 @@ decl_module! {
         ///
         /// NOTE: Will slash the reserved `AdvisoryBond` from the market creator.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn reject_market(origin, market_id: T::MarketId) {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
@@ -403,7 +403,7 @@ decl_module! {
         /// in a production environment since this better aligns incentives.
         /// See also: Polkadot Treasury
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn cancel_pending_market(origin, market_id: T::MarketId) {
             let sender = ensure_signed(origin)?;
 
@@ -426,7 +426,7 @@ decl_module! {
         ///
         /// The sender should have enough funds to cover all of the required
         /// shares to seed the pool.
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn deploy_swap_pool_for_market(origin, market_id: T::MarketId, weights: Vec<u128>) {
             let sender = ensure_signed(origin)?;
 
@@ -460,7 +460,7 @@ decl_module! {
         ///
         /// NOTE: This is the only way to create new shares.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn buy_complete_set(
             origin,
             market_id: T::MarketId,
@@ -473,7 +473,7 @@ decl_module! {
 
         /// Destroys a complete set of outcomes shares for a market.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn sell_complete_set(
             origin,
             market_id: T::MarketId,
@@ -519,7 +519,7 @@ decl_module! {
 
         /// Reports the outcome of a market.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn report(origin, market_id: T::MarketId, outcome: u16) {
             let sender = ensure_signed(origin)?;
 
@@ -574,7 +574,7 @@ decl_module! {
         /// NOTE: Requires a `DisputeBond` + `DisputeFactor` * `num_disputes` amount of currency
         ///  to be reserved.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn dispute(origin, market_id: T::MarketId, outcome: u16) {
             let sender = ensure_signed(origin)?;
 
@@ -632,7 +632,7 @@ decl_module! {
         ///
         /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn global_dispute(origin, market_id: T::MarketId) {
             let _sender = ensure_signed(origin)?;
             if let Some(_market) = Self::markets(market_id.clone()) {
@@ -645,7 +645,7 @@ decl_module! {
 
         /// Redeems the winning shares of a prediction market.
         ///
-        #[weight = 0]
+        #[weight = 10_000]
         pub fn redeem_shares(origin, market_id: T::MarketId) {
             let sender = ensure_signed(origin)?;
 
