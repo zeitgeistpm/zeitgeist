@@ -1,4 +1,4 @@
-use crate::{mock::*, CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent};
+use crate::{mock::*, CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, BASE, SwapEvent};
 use frame_support::{assert_noop, assert_ok};
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
@@ -27,7 +27,7 @@ fn allows_the_full_user_lifecycle() {
         let asset_b_bal = Shares::free_balance(ASSET_B, &ALICE);
 
         // swap_exact_amount_in
-        let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B);
+        let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B).unwrap();
         assert_eq!(spot_price, BASE);
 
         let pool_account = Swaps::pool_account_id(0);
@@ -42,7 +42,7 @@ fn allows_the_full_user_lifecycle() {
             2 * BASE,
             BASE,
             0,
-        );
+        ).unwrap();
 
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
@@ -70,7 +70,7 @@ fn allows_the_full_user_lifecycle() {
             2 * BASE,
             BASE,
             0,
-        );
+        ).unwrap();
 
         assert_eq!(expected_in, 10_290_319_622);
 
