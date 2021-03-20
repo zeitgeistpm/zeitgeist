@@ -1,63 +1,71 @@
 use codec::FullCodec;
 use sp_runtime::{
     traits::{AtLeast32Bit, MaybeSerializeDeserialize},
-    DispatchResult,
+    DispatchError, DispatchResult,
 };
 use sp_std::fmt::Debug;
 
 /// A share can also be an asset.
-pub trait Shares<AccountId, Balance, Hash> {
+pub trait Shares<AccountId, Hash> {
     /// The balance of an account.
     type Balance: AtLeast32Bit + FullCodec + Copy + MaybeSerializeDeserialize + Debug + Default;
 
     // Getters
 
     /// Free `share_id` balance of a given `who`.
-    fn free_balance(share_id: Hash, who: &AccountId) -> Balance;
+    fn free_balance(share_id: Hash, who: &AccountId) -> Self::Balance;
 
     /// Total supply of a given `share_id`.
-    fn total_supply(share_id: Hash) -> Balance;
+    fn total_supply(share_id: Hash) -> Self::Balance;
 
     // Mutables
 
     /// Destroys a given `amount` of `from`.
-    fn destroy(share_id: Hash, from: &AccountId, amount: Balance) -> DispatchResult;
+    fn destroy(share_id: Hash, from: &AccountId, amount: Self::Balance) -> DispatchResult;
 
     /// Destroys all stored asset of a given `share_id`.
     fn destroy_all(share_id: Hash) -> DispatchResult;
 
     /// Checks if `who` has at least a minimum `amount` of `share_id`.
-    fn ensure_can_withdraw(share_id: Hash, who: &AccountId, amount: Balance) -> DispatchResult;
+    fn ensure_can_withdraw(
+        share_id: Hash,
+        who: &AccountId,
+        amount: Self::Balance,
+    ) -> DispatchResult;
 
     /// Sets a given `amount` for `to` and increases the total supply.
-    fn generate(share_id: Hash, to: &AccountId, amount: Balance) -> DispatchResult;
+    fn generate(share_id: Hash, to: &AccountId, amount: Self::Balance) -> DispatchResult;
 
     /// Transfers a given `amount` of `share_id`.
     fn transfer(
         share_id: Hash,
         from: &AccountId,
         to: &AccountId,
-        amount: Balance,
+        amount: Self::Balance,
     ) -> DispatchResult;
 }
 
-pub trait ReservableShares<AccountId, Balance, Hash> {
+pub trait ReservableShares<AccountId, Hash>: Shares<AccountId, Hash> {
     /// Checks if a given `share_id` of `who` has a minimum free balance of `value`
     /// that can be used as a reserve.
-    fn can_reserve(share_id: Hash, who: &AccountId, value: Balance) -> bool;
+    fn can_reserve(share_id: Hash, who: &AccountId, value: Self::Balance) -> bool;
 
     /// Reserved `share_id` balance of a given `who` account
-    fn reserved_balance(share_id: Hash, who: &AccountId) -> Balance;
+    fn reserved_balance(share_id: Hash, who: &AccountId) -> Self::Balance;
 
     /// Reserves a given `value` of `share_id` for `who`.
-    fn reserve(share_id: Hash, who: &AccountId, value: Balance) -> DispatchResult;
+    fn reserve(share_id: Hash, who: &AccountId, value: Self::Balance) -> DispatchResult;
 
     /// Un-reserves a given reserved `value` of `share_id` for `who`.
-    fn unreserve(share_id: Hash, who: &AccountId, value: Balance) -> Balance;
+    fn unreserve(
+        share_id: Hash,
+        who: &AccountId,
+        value: Self::Balance,
+    ) -> Result<Self::Balance, DispatchError>;
 }
 
-pub trait WrapperShares<AccountId, Balance, Hash> {
+pub trait WrapperShares<AccountId, Hash>: Shares<AccountId, Hash> {
     fn get_native_currency_id() -> Hash;
-    fn do_wrap_native_currency(who: AccountId, amount: Balance) -> DispatchResult;
-    fn do_unwrap_native_currency(who: AccountId, amount: Balance) -> DispatchResult;
+    fn do_wrap_native_currency(who: AccountId, amount: Self::Balance) -> DispatchResult;
+    fn do_unwrap_native_currency(who: AccountId, amount: Self::Balance) -> DispatchResult;
 }
