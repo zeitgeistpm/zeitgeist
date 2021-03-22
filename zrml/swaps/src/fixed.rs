@@ -25,8 +25,8 @@ pub fn bmul(a: u128, b: u128) -> Result<u128, DispatchError> {
 
 pub fn bdiv(a: u128, b: u128) -> Result<u128, DispatchError> {
     let c0 = a.check_mul_rslt(&BASE)?;
-    // let c1 = c0.check_add_rslt(&b.check_div_rslt(&2)?)?;
-    c0.check_div_rslt(&b)
+    let c1 = c0.check_add_rslt(&b.check_div_rslt(&2)?)?;
+    c1.check_div_rslt(&b)
 }
 
 pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
@@ -156,7 +156,7 @@ mod tests {
             bdiv;
             0 => ERR, Ok(0), Ok(0), Ok(0);
             1 => ERR, Ok(BASE), Ok(BASE / 2), Ok(BASE / 3);
-            2 => ERR, Ok(2 * BASE), Ok(BASE), Ok(6666666666);
+            2 => ERR, Ok(2 * BASE), Ok(BASE), Ok(6666666667);
             3 => ERR, Ok(3 * BASE), Ok(3 * BASE / 2), Ok(BASE);
             max_n => ERR, ERR, ERR, ERR;
             n_max => Ok(0), Ok(1 / BASE), Ok(2 / BASE), Ok(3 / BASE);
