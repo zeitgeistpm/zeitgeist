@@ -170,21 +170,24 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             5 * BASE,
             0
         ));
-        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+        let pool_shares = Shares::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
             alice_signed(),
             0,
             ASSET_A,
-            BASE,
-            0
+            5 * BASE,
+            pool_shares
         ));
         assert!(event_exists(crate::RawEvent::PoolExitWithExactAssetAmount(
             PoolAssetEvent {
-                bound: 0,
+                bound: pool_shares,
                 cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: 40870977315
+                transferred: 5 * BASE
             }
         )));
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240870977315);
+        let pool_shares_after = Shares::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        assert_eq!(pool_shares_after, 0);
+        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 25 * BASE);
     });
 }
 
@@ -193,28 +196,31 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
+        assert_ok!(Swaps::pool_join_with_exact_pool_amount(
             alice_signed(),
             0,
             ASSET_A,
-            5 * BASE,
-            0
+            BASE,
+            BASE / 4 // exact amount - calculated
         ));
-        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
+        let asset_after = Shares::free_balance(ASSET_A, &ALICE);
+        assert_eq!(asset_after, 25 * BASE - BASE / 4);
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             alice_signed(),
             0,
             ASSET_A,
             BASE,
             BASE
         ));
-        assert!(event_exists(crate::RawEvent::PoolExitWithExactPoolAmount(
-            PoolAssetEvent {
-                bound: BASE,
-                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: BASE
-            }
-        )));
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 210000000000);
+        // assert!(event_exists(crate::RawEvent::PoolExitWithExactPoolAmount(
+        //     PoolAssetEvent {
+        //         bound: BASE,
+        //         cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+        //         transferred: BASE
+        //     }
+        // )));
+
+        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 25 * BASE);
     });
 }
 
@@ -348,19 +354,19 @@ fn pool_exit_decreases_correct_pool_parameters() {
             alice_signed(),
             0,
             BASE,
-            vec!(BASE, BASE, BASE, BASE),
+            vec!(BASE - 100, BASE - 100, BASE - 100, BASE - 100),
         ));
 
         assert!(event_exists(crate::RawEvent::PoolExit(PoolAssetsEvent {
-            bounds: vec!(BASE, BASE, BASE, BASE),
+            bounds: vec!(BASE - 100, BASE - 100, BASE - 100, BASE - 100),
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: vec!(BASE + 1, BASE + 1, BASE + 1, BASE + 1),
+            transferred: vec!(BASE - 100, BASE - 100, BASE - 100, BASE - 100),
         })));
         assert_eq!(Shares::free_balance(Swaps::pool_shares_id(0), &ALICE), 0);
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 25 * BASE + 1);
-        assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 25 * BASE + 1);
-        assert_eq!(Shares::free_balance(ASSET_C, &ALICE), 25 * BASE + 1);
-        assert_eq!(Shares::free_balance(ASSET_D, &ALICE), 25 * BASE + 1);
+        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 25 * BASE - 100);
+        assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 25 * BASE - 100);
+        assert_eq!(Shares::free_balance(ASSET_C, &ALICE), 25 * BASE - 100);
+        assert_eq!(Shares::free_balance(ASSET_D, &ALICE), 25 * BASE - 100);
     })
 }
 

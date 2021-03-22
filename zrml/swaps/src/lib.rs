@@ -215,7 +215,7 @@ decl_module! {
                     );
                     Ok(())
                 },
-                event: PoolExitWithExactPoolAmount,
+                event: PoolExitWithExactAssetAmount,
                 pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = math::calc_pool_in_given_single_out(
                         pool_balance.saturated_into(),
@@ -274,7 +274,7 @@ decl_module! {
                 },
                 bound: min_asset_amount,
                 ensure_balance: |_| Ok(()),
-                event: PoolExitWithExactAssetAmount,
+                event: PoolExitWithExactPoolAmount,
                 pool_amount: |_, _, _| Ok(pool_amount)
             )
         }
