@@ -174,8 +174,11 @@ decl_event!(
         SoldCompleteSet(MarketId, AccountId),
         /// A market has been reported on [market_id, reported_outcome]
         MarketReported(MarketId, u16),
-        /// A market has been disputed [market_id, actual_outcome]
+        /// A market has been disputed [market_id, new_outcome]
         MarketDisputed(MarketId, u16),
+        /// A market has been resolved [market_id, real_outcome]
+        MarketResolved(MarketId, u16),
+        TestError,
     }
 );
 
@@ -530,7 +533,7 @@ decl_module! {
             if let Some(mut market) = Self::markets(market_id.clone()) {
                 ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
 
-                ensure!(market.status != MarketStatus::Reported, Error::<T>::MarketAlreadyReported);
+                ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
 
                 // ensure market is not active
                 ensure!(!Self::is_market_active(market.end), Error::<T>::MarketNotClosed);
@@ -583,8 +586,8 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             if let Some(market) = Self::markets(market_id.clone()) {
-                ensure!(market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed, Error::<T>::MarketNotReported);
-                ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
+                ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
+                ensure!(outcome < market.outcomes(), Error::<T>::OutcomeOutOfRange);
 
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes = disputes.len() as u16;
@@ -765,17 +768,36 @@ impl<T: Trait> Module<T> {
         let market = Self::markets(market_id).unwrap();
         let report = market.report.clone().unwrap();
 
-        // if the market was permissionless and not invalid, return `ValidityBond`.
-        if market.creation == MarketCreation::Permissionless {
-            if report.outcome != 0 {
-                T::Currency::unreserve(&market.creator, T::ValidityBond::get());
-            } else {
-                // Give it to the treasury instead.
-                let (imbalance, _) =
-                    T::Currency::slash_reserved(&market.creator, T::ValidityBond::get());
-                T::Slash::on_unbalanced(imbalance);
-            }
+        // DEBUG
+        if market.status != MarketStatus::Reported && market.status != MarketStatus::Disputed {
+            Self::deposit_event(RawEvent::TestError);
+            return;
         }
+
+        // if the market was permissionless and not invalid, return `ValidityBond`.
+        // if market.creation == MarketCreation::Permissionless {
+        //     if report.outcome != 0 {
+        //         T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+        //     } else {
+        //         // Give it to the treasury instead.
+        //         let (imbalance, _) =
+        //             T::Currency::slash_reserved(&market.creator, T::ValidityBond::get());
+        //         T::Slash::on_unbalanced(imbalance);
+        //     }
+        // }
+        T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+
+        let resolved_outcome = match market.status {
+            MarketStatus::Reported => market.report.clone().unwrap().outcome,
+            MarketStatus::Disputed => {
+                let disputes = Self::disputes(market_id.clone());
+                let num_disputes = disputes.len() as u16;
+                // count the last dispute's outcome as the winning one
+                let last_dispute = disputes[(num_disputes as usize) - 1].clone();
+                last_dispute.outcome
+            }
+            _ => 69,
+        };
 
         match market.status {
             MarketStatus::Reported => {
@@ -793,16 +815,14 @@ impl<T: Trait> Module<T> {
             MarketStatus::Disputed => {
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes = disputes.len() as u16;
-                // count the last dispute's outcome as the winning one
-                let last_dispute = disputes[(num_disputes as usize) - 1].clone();
-                let last_outcome = last_dispute.outcome;
+              
                 let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
                 let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
 
                 // if the reporter reported right, return the OracleBond, otherwise
                 // slash it to pay the correct reporters
-                if report.outcome == last_outcome {
+                if report.outcome == resolved_outcome {
                     T::Currency::unreserve(&market.creator, T::OracleBond::get());
                 } else {
                     let (imbalance, _) =
@@ -814,7 +834,7 @@ impl<T: Trait> Module<T> {
                 for i in 0..num_disputes {
                     let dispute = &disputes[i as usize];
                     let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * i.into();
-                    if dispute.outcome == last_outcome {
+                    if dispute.outcome == resolved_outcome {
                         T::Currency::unreserve(&dispute.by, dispute_bond);
 
                         correct_reporters.push(dispute.by.clone());
@@ -832,13 +852,13 @@ impl<T: Trait> Module<T> {
                     T::Currency::resolve_creating(&correct_reporters[i], amount);
                     overall_imbalance = leftover;
                 }
-            }
-            _ => panic!("Should never happen"), //TODO remove after testing
+            },
+            _ => (),
         };
 
         for i in 0..=market.outcomes() {
             // don't delete the winning outcome...
-            if i == report.outcome {
+            if i == resolved_outcome {
                 continue;
             }
             // ... but delete the rest
