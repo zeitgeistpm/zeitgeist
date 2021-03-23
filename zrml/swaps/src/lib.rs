@@ -376,9 +376,9 @@ decl_module! {
             pool_join_with_exact_amount!(
                 initial_params: (origin, pool_id, asset),
 
-                asset_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let asset_amount: BalanceOf<T> = math::calc_single_in_given_pool_out(
-                        pool_balance.saturated_into(),
+                        asset_balance.saturated_into(),
                         *pool.weights.get(&asset).unwrap(),
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
@@ -388,7 +388,7 @@ decl_module! {
                     ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
-                        asset_amount <= pool_balance.check_mul_rslt(&T::MaxInRatio::get())?,
+                        asset_amount <= asset_balance.check_mul_rslt(&T::MaxInRatio::get())?,
                         Error::<T>::MaxInRatio
                     );
                     Ok(asset_amount)
