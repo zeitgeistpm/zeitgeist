@@ -75,6 +75,8 @@ pub struct Market<AccountId, BlockNumber> {
     pub report: Option<Report<AccountId, BlockNumber>>,
     // Categories are only relevant to Categorical markets.
     pub categories: Option<u16>,
+    // The resolved outcome.
+    pub resolved_outcome: Option<u16>,
 }
 
 impl<AccountId, B> Market<AccountId, B> {
