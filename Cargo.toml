@@ -4,7 +4,6 @@ members = [
     "runtime",
     "primitives",
     "zrml/orderbook-v1",
-    # "zrml/orderbook-v2",
     "zrml/prediction-markets",
     "zrml/prediction-markets/rpc",
     "zrml/prediction-markets/rpc/runtime-api",
