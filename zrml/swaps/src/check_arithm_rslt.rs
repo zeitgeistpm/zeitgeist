@@ -1,6 +1,6 @@
+use crate::ARITHM_OF;
 use frame_support::dispatch::DispatchError;
 use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
-use crate::ARITHM_OF;
 
 /// Check Arithmetic - Result
 ///
