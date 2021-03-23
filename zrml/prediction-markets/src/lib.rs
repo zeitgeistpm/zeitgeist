@@ -224,6 +224,10 @@ decl_error! {
         MarketAlreadyReported,
         /// A swap pool already exists for this market.
         SwapPoolExists,
+        /// End timestamp is too soon.
+        EndTimestampTooSoon,
+        /// End block is too soon.
+        EndBlockTooSoon,
     }
 }
 
@@ -311,11 +315,11 @@ decl_module! {
             match end {
                 MarketEnd::Block(block) => {
                     let current_block = <frame_system::Module<T>>::block_number();
-                    ensure!(current_block < block.saturated_into(), "End block must be in the future.");
+                    ensure!(current_block < block.saturated_into(), Error::<T>::EndBlockTooSoon);
                 }
                 MarketEnd::Timestamp(timestamp) => {
                     let now = <pallet_timestamp::Module<T>>::get();
-                    ensure!(now < timestamp.saturated_into(), "End timestamp must be before now.");
+                    ensure!(now < timestamp.saturated_into(), Error::<T>::EndTimestampTooSoon);
                 }
             };
 
