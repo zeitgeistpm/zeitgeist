@@ -8,6 +8,7 @@
 #[macro_use]
 mod macros;
 
+mod check_arithm_rslt;
 mod consts;
 mod events;
 mod fixed;
@@ -18,19 +19,25 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+use check_arithm_rslt::CheckArithmRslt;
+use consts::{ARITHM_OF, BASE, BPOW_PRECISION, EXIT_FEE};
 use events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent};
-use fixed::*;
-use frame_support::traits::{Currency, Get, ReservableCurrency};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
-use frame_system::{self as system, ensure_signed};
+use fixed::{bdiv, bmul, bpow};
+use frame_support::{
+    decl_error, decl_event, decl_module, decl_storage, ensure,
+    traits::{Currency, Get, ReservableCurrency},
+};
+use frame_system::ensure_signed;
 use parity_scale_codec::{Decode, Encode};
-use sp_runtime::traits::{AccountIdConversion, Hash, Zero};
-use sp_runtime::{DispatchError, DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion};
-use sp_std::collections::btree_map::BTreeMap;
-use sp_std::convert::TryInto;
-use sp_std::vec::Vec;
-use zrml_traits::shares::{ReservableShares, Shares};
-use zrml_traits::swaps::Swaps;
+use sp_runtime::{
+    traits::{AccountIdConversion, Hash, Zero},
+    DispatchError, DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion,
+};
+use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
+use zrml_traits::{
+    shares::{ReservableShares, Shares},
+    swaps::Swaps,
+};
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Pool<Balance, Hash> {
@@ -47,20 +54,20 @@ impl<Balance, Hash: Ord> Pool<Balance, Hash> {
     }
 }
 
-type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+type BalanceOf<T> =
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 pub trait Trait: frame_system::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash>
-        + ReservableShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Shares: ReservableShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
 
     /// The module identifier.
     type ModuleId: Get<ModuleId>;
 
-    // The fee for exiting a pool.
+    /// The fee for exiting a pool.
     type ExitFee: Get<BalanceOf<Self>>;
 
     type MaxInRatio: Get<BalanceOf<Self>>;
@@ -68,7 +75,7 @@ pub trait Trait: frame_system::Trait {
     type MinWeight: Get<u128>;
     type MaxWeight: Get<u128>;
     type MaxTotalWeight: Get<u128>;
-    type MaxAssets: Get<u128>;
+    type MaxAssets: Get<usize>;
 
     /// The minimum amount of liqudity required to bootstrap a pool.
     type MinLiquidity: Get<BalanceOf<Self>>;
@@ -138,7 +145,6 @@ decl_module! {
         #[weight = 0]
         fn create_pool(origin, assets: Vec<T::Hash>, weights: Vec<u128>) {
             let who = ensure_signed(origin)?;
-
             let _ = Self::do_create_pool(who, assets, Zero::zero(), weights)?;
         }
 
@@ -167,8 +173,8 @@ decl_module! {
                 },
                 transfer_pool: |pool_account_id, pool_shares_id, who| {
                     let exit_fee_pct = T::ExitFee::get().saturated_into();
-                    let exit_fee = bmul(pool_amount.saturated_into(), exit_fee_pct).saturated_into();
-                    let pool_amount_minus_exit_fee = pool_amount - exit_fee;
+                    let exit_fee = bmul(pool_amount.saturated_into(), exit_fee_pct)?.saturated_into();
+                    let pool_amount_minus_exit_fee = pool_amount.check_sub_rslt(&exit_fee)?;
                     T::Shares::transfer(pool_shares_id, who, pool_account_id, exit_fee)?;
                     Self::burn_pool_shares(pool_id, who, pool_amount_minus_exit_fee)?;
                     Ok(())
@@ -202,23 +208,23 @@ decl_module! {
 
                 asset_amount: |_, _, _| Ok(asset_amount),
                 bound: max_pool_amount,
-                ensure_balance: |pool_balance: BalanceOf<T>| {
+                ensure_balance: |asset_balance: BalanceOf<T>| {
                     ensure!(
-                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        asset_amount <= bmul(asset_balance.saturated_into(), T::MaxOutRatio::get().saturated_into())?.saturated_into(),
                         Error::<T>::MaxOutRatio
                     );
                     Ok(())
                 },
-                event: PoolExitWithExactPoolAmount,
-                pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                event: PoolExitWithExactAssetAmount,
+                pool_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = math::calc_pool_in_given_single_out(
-                        pool_balance.saturated_into(),
+                        asset_balance.saturated_into(),
                         *pool.weights.get(&asset).unwrap(),
                         total_supply.saturated_into(),
                         pool.total_weight,
                         asset_amount.saturated_into(),
                         pool.swap_fee.saturated_into(),
-                    ).saturated_into();
+                    )?.saturated_into();
                     ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
                     ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
                     Ok(pool_amount)
@@ -250,25 +256,25 @@ decl_module! {
             pool_exit_with_exact_amount!(
                 initial_params: (origin, pool_id, asset),
 
-                asset_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let asset_amount: BalanceOf<T> = math::calc_single_out_given_pool_in(
-                        pool_balance.saturated_into(),
+                        asset_balance.saturated_into(),
                         *pool.weights.get(&asset).unwrap(),
                         total_supply.saturated_into(),
                         pool.total_weight,
                         pool_amount.saturated_into(),
                         pool.swap_fee.saturated_into(),
-                    ).saturated_into();
+                    )?.saturated_into();
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
                     ensure!(
-                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        asset_amount <= bmul(asset_balance.saturated_into(), T::MaxOutRatio::get().saturated_into())?.saturated_into(),
                         Error::<T>::MaxOutRatio
                     );
                     Ok(asset_amount)
                 },
                 bound: min_asset_amount,
                 ensure_balance: |_| Ok(()),
-                event: PoolExitWithExactAssetAmount,
+                event: PoolExitWithExactPoolAmount,
                 pool_amount: |_, _, _| Ok(pool_amount)
             )
         }
@@ -326,23 +332,20 @@ decl_module! {
                 asset_amount: |_, _, _| Ok(asset_amount),
                 bound: min_pool_amount,
                 event: PoolJoinWithExactAssetAmount,
-                pool_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                pool_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let mul: BalanceOf<T> = bmul(
-                        pool_balance.saturated_into(),
+                        asset_balance.saturated_into(),
                         T::MaxInRatio::get().saturated_into()
-                    ).saturated_into();
-                    ensure!(
-                        asset_amount <= mul,
-                        Error::<T>::MaxInRatio
-                    );
+                    )?.saturated_into();
+                    ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
                     let pool_amount: BalanceOf<T> = math::calc_pool_out_given_single_in(
-                        pool_balance.saturated_into(),
+                        asset_balance.saturated_into(),
                         *pool.weights.get(&asset_in).unwrap(),
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         asset_amount.saturated_into(),
                         pool.swap_fee.saturated_into(),
-                    ).saturated_into();
+                    )?.saturated_into();
                     ensure!(pool_amount >= min_pool_amount, Error::<T>::LimitOut);
                     Ok(pool_amount)
                 }
@@ -373,19 +376,19 @@ decl_module! {
             pool_join_with_exact_amount!(
                 initial_params: (origin, pool_id, asset),
 
-                asset_amount: |pool: &Pool<BalanceOf<T>, _>, pool_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let asset_amount: BalanceOf<T> = math::calc_single_in_given_pool_out(
-                        pool_balance.saturated_into(),
+                        asset_balance.saturated_into(),
                         *pool.weights.get(&asset).unwrap(),
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.saturated_into(),
-                    ).saturated_into();
+                    )?.saturated_into();
                     ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
-                        asset_amount <= bmul(pool_balance.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
+                        asset_amount <= asset_balance.check_mul_rslt(&T::MaxInRatio::get())?,
                         Error::<T>::MaxInRatio
                     );
                     Ok(asset_amount)
@@ -426,7 +429,7 @@ decl_module! {
                 asset_amount_out: |pool: &Pool<BalanceOf<T>, _>, pool_account_id| {
                     let balance_in = T::Shares::free_balance(asset_in, pool_account_id);
                     ensure!(
-                        asset_amount_in <= bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into()).saturated_into(),
+                        asset_amount_in <= bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into())?.saturated_into(),
                         Error::<T>::MaxInRatio
                     );
 
@@ -439,7 +442,7 @@ decl_module! {
                         *pool.weights.get(&asset_out).unwrap(),
                         asset_amount_in.saturated_into(),
                         pool.swap_fee.saturated_into(),
-                    ).saturated_into();
+                    )?.saturated_into();
                     ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
                     Ok(asset_amount_out)
@@ -480,7 +483,7 @@ decl_module! {
 
                     let balance_out = T::Shares::free_balance(asset_out, pool_account_id);
                     ensure!(
-                        asset_amount_out <= bmul(balance_out.saturated_into(), T::MaxOutRatio::get().saturated_into()).saturated_into(),
+                        asset_amount_out <= bmul(balance_out.saturated_into(), T::MaxOutRatio::get().saturated_into())?.saturated_into(),
                         Error::<T>::MaxOutRatio,
                     );
 
@@ -491,7 +494,7 @@ decl_module! {
                         *pool.weights.get(&asset_out).unwrap(),
                         asset_amount_out.saturated_into(),
                         pool.swap_fee.saturated_into(),
-                    ).saturated_into();
+                    )?.saturated_into();
                     ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
 
                     Ok(asset_amount_in)
@@ -513,7 +516,11 @@ impl<T: Trait> Module<T> {
         T::ModuleId::get().into_sub_account(pool_id)
     }
 
-    pub fn get_spot_price(pool_id: u128, asset_in: T::Hash, asset_out: T::Hash) -> BalanceOf<T> {
+    pub fn get_spot_price(
+        pool_id: u128,
+        asset_in: T::Hash,
+        asset_out: T::Hash,
+    ) -> Result<BalanceOf<T>, DispatchError> {
         if let Some(pool) = Self::pools(pool_id) {
             // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
             // ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound)?;
@@ -524,17 +531,17 @@ impl<T: Trait> Module<T> {
             let balance_out = T::Shares::free_balance(asset_out, &pool_account);
             let out_weight = pool.weights.get(&asset_out).unwrap();
 
-            return math::calc_spot_price(
+            Ok(math::calc_spot_price(
                 balance_in.saturated_into(),
                 *in_weight,
                 balance_out.saturated_into(),
                 *out_weight,
                 0, //fee
-            )
-            .saturated_into();
+            )?
+            .saturated_into())
         } else {
             // Err(Error::<T>::PoolDoesNotExist)?;
-            return Zero::zero();
+            Ok(Zero::zero())
         }
     }
 
@@ -565,13 +572,10 @@ impl<T: Trait> Module<T> {
     fn get_denormalized_weight(pool_id: u128, asset: T::Hash) -> u128 {
         if let Some(pool) = Self::pools(pool_id) {
             if let Some(val) = pool.weights.get(&asset) {
-                *val
-            } else {
-                0
+                return *val;
             }
-        } else {
-            0
         }
+        0
     }
 
     fn get_normalized_weight(_pool_id: u128, _asset: T::Hash) -> u128 {
@@ -587,7 +591,10 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
+impl<T> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T>
+where
+    T: Trait,
+{
     /// Deploys a new pool with the given assets and weights.
     ///
     /// # Arguments
@@ -606,11 +613,20 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
         check_provided_values_len_must_equal_assets_len::<T, _>(&assets, &weights)?;
 
         ensure!(
-            assets.len() <= T::MaxAssets::get().try_into().unwrap(),
+            assets.len() <= T::MaxAssets::get(),
             Error::<T>::TooManyAssets
         );
 
-        for weight in weights.iter().copied() {
+        let amount = T::MinLiquidity::get();
+
+        let next_pool_id = Self::inc_next_pool_id();
+        let pool_account = Self::pool_account_id(next_pool_id);
+        let mut map = BTreeMap::new();
+        let mut total_weight: u128 = 0;
+
+        for (asset, weight) in assets.iter().copied().zip(weights) {
+            let free_balance = T::Shares::free_balance(asset, &who);
+            ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
             ensure!(
                 weight >= T::MinWeight::get(),
                 Error::<T>::BelowMinimumWeight
@@ -619,24 +635,11 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
                 weight <= T::MaxWeight::get(),
                 Error::<T>::AboveMaximumWeight
             );
-        }
-
-        let amount = T::MinLiquidity::get();
-        let next_pool_id = Self::inc_next_pool_id();
-        let pool_account = Self::pool_account_id(next_pool_id);
-
-        let mut map = BTreeMap::new();
-        for (asset, weight) in assets.iter().copied().zip(weights.iter().copied()) {
-            ensure!(
-                T::Shares::free_balance(asset, &who) >= amount,
-                Error::<T>::InsufficientBalance
-            );
             T::Shares::transfer(asset, &who, &pool_account, amount)?;
-
             map.insert(asset, weight);
+            total_weight = total_weight.check_add_rslt(&weight)?;
         }
 
-        let total_weight = weights.into_iter().fold(0, |acc, x| acc + x);
         ensure!(
             total_weight <= T::MaxTotalWeight::get(),
             Error::<T>::MaxTotalWeight
@@ -664,6 +667,7 @@ impl<T: Trait> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
     }
 }
 
+#[inline]
 fn check_provided_values_len_must_equal_assets_len<T, U>(
     assets: &[T::Hash],
     provided_values: &[U],
