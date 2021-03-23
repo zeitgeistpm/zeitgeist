@@ -1,4 +1,4 @@
-use crate::{mock::*, CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, BASE, SwapEvent};
+use crate::{mock::*, CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent, BASE};
 use frame_support::{assert_noop, assert_ok};
 use sp_core::H256;
 use zrml_traits::shares::Shares as SharesTrait;
@@ -14,12 +14,16 @@ pub const ASSETS: [H256; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 const _1: u128 = BASE;
 const _2: u128 = 2 * BASE;
 const _3: u128 = 3 * BASE;
-const _4 u128 = 4 * BASE;
+const _4: u128 = 4 * BASE;
 const _5: u128 = 5 * BASE;
-const _8: u128 = 8 * _BASE;
+const _8: u128 = 8 * BASE;
 const _20: u128 = 20 * BASE;
+const _24: u128 = 24 * BASE;
 const _25: u128 = 25 * BASE;
+const _26: u128 = 26 * BASE;
+const _99: u128 = 99 * BASE;
 const _100: u128 = 100 * BASE;
+const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
 
 #[test]
@@ -53,7 +57,8 @@ fn allows_the_full_user_lifecycle() {
             _2,
             _1,
             0,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
@@ -81,7 +86,8 @@ fn allows_the_full_user_lifecycle() {
             _2,
             _1,
             0,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(expected_in, 10_290_319_622);
 
@@ -170,7 +176,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
 }
 
 #[test]
-fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
+fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
@@ -189,15 +195,28 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             pool_shares,
             _4
         ));
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), _25 - 335); //ok
+        assert!(event_exists(crate::RawEvent::PoolExitWithExactPoolAmount(
+            PoolAssetEvent {
+                bound: _4,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: _5 - 335,
+            }
+        )));
+        assert_all_parameters(
+            [_25 - 335, _25, _25, _25],
+            0,
+            [_100 + 335, _100, _100, _100],
+            _100,
+        )
     });
 }
 
 #[test]
-fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
+fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
+        let asset_before_join = Shares::free_balance(ASSET_A, &ALICE);
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(
             alice_signed(),
             0,
@@ -205,25 +224,23 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
             _1,
             _1 / 4 // calculated
         ));
-        let asset_after = Shares::free_balance(ASSET_A, &ALICE);
-        assert_eq!(asset_after, 25 * BASE - BASE / 4 + 9320700);
-        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+        let asset_after_join = asset_before_join - Shares::free_balance(ASSET_A, &ALICE);
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
             alice_signed(),
             0,
             ASSET_A,
-            BASE,
-            BASE / 4
+            asset_after_join,
+            _1 / 4
         ));
-        // assert!(event_exists(crate::RawEvent::PoolExitWithExactPoolAmount(
-        //     PoolAssetEvent {
-        //         bound: BASE,
-        //         cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-        //         transferred: BASE
-        //     }
-        // )));
-
-        assert_eq!(Shares::free_balance(Swaps::pool_shares_id(0), &ALICE), 0);
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), _25);
+        assert!(event_exists(crate::RawEvent::PoolExitWithExactAssetAmount(
+            PoolAssetEvent {
+                bound: _1 / 4,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: asset_after_join,
+            }
+        )));
+        assert_eq!(asset_after_join, 2490679300);
+        assert_all_parameters([_25, _25, _25, _25], 9372080677, [_100, _100, _100, _100], 1009372080677)
     });
 }
 
@@ -233,15 +250,7 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
         create_initial_pool();
 
         assert_noop!(
-            Swaps::swap_exact_amount_in(
-                alice_signed(),
-                0,
-                ASSET_A,
-                u128::MAX,
-                ASSET_B,
-                _1,
-                _1,
-            ),
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, u128::MAX, ASSET_B, _1, _1,),
             crate::Error::<Test>::MaxInRatio
         );
 
@@ -257,21 +266,28 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
+        let alice_sent = _1;
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(
             alice_signed(),
             0,
             ASSET_A,
-            BASE,
+            alice_sent,
             0
         ));
         assert!(event_exists(crate::RawEvent::PoolJoinWithExactAssetAmount(
             PoolAssetEvent {
                 bound: 0,
                 cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: BASE,
+                transferred: alice_sent
             }
         )));
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240000000000);
+        let alice_received = Shares::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        assert_all_parameters(
+            [_25 - alice_sent, _25, _25, _25],
+            alice_received,
+            [_100 + alice_sent, _100, _100, _100],
+            _100 + alice_received,
+        );
     });
 }
 
@@ -280,21 +296,30 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Module::<Test>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
+        let alice_initial = Shares::free_balance(ASSET_A, &ALICE);
+        let alice_sent = _1;
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(
             alice_signed(),
             0,
             ASSET_A,
-            BASE,
-            BASE
+            alice_sent,
+            _1
         ));
-        // assert!(event_exists(crate::RawEvent::PoolJoinWithExactPoolAmount(
-        //     PoolAssetEvent {
-        //         bound: BASE,
-        //         cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-        //         transferred: 2500000000,
-        //     }
-        // )));
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 247500000000);
+        assert!(event_exists(crate::RawEvent::PoolJoinWithExactPoolAmount(
+            PoolAssetEvent {
+                bound: _1,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: 2490679300, // TODO: Should be alice_sent
+            }
+        )));
+        let alice_received = alice_initial - Shares::free_balance(ASSET_A, &ALICE);
+        assert_eq!(alice_received, 2490679300);
+        assert_all_parameters(
+            [_25 - alice_received, _25, _25, _25],
+            alice_sent,
+            [_100 + alice_received, _100, _100, _100],
+            _100 + alice_sent,
+        );
     });
 }
 
@@ -304,15 +329,7 @@ fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
         create_initial_pool();
 
         assert_noop!(
-            Swaps::swap_exact_amount_out(
-                alice_signed(),
-                0,
-                ASSET_A,
-                _1,
-                ASSET_B,
-                u128::MAX,
-                _1,
-            ),
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _1, ASSET_B, u128::MAX, _1,),
             crate::Error::<Test>::MaxOutRatio
         );
 
@@ -365,11 +382,12 @@ fn pool_exit_decreases_correct_pool_parameters() {
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: vec!(_1 + 1, _1 + 1, _1 + 1, _1 + 1),
         })));
-        assert_eq!(Shares::free_balance(Swaps::pool_shares_id(0), &ALICE), 0);
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 25 * BASE + 1);
-        assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 25 * BASE + 1);
-        assert_eq!(Shares::free_balance(ASSET_C, &ALICE), 25 * BASE + 1);
-        assert_eq!(Shares::free_balance(ASSET_D, &ALICE), 25 * BASE + 1);
+        assert_all_parameters(
+            [_25 + 1, _25 + 1, _25 + 1, _25 + 1],
+            0,
+            [_100 - 1, _100 - 1, _100 - 1, _100 - 1],
+            _100,
+        );
     })
 }
 
@@ -390,14 +408,12 @@ fn pool_join_increases_correct_pool_parameters() {
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: vec!(_5, _5, _5, _5),
         })));
-        assert_eq!(
-            Shares::free_balance(Swaps::pool_shares_id(0), &ALICE),
-            _5
+        assert_all_parameters(
+            [_20, _20, _20, _20],
+            _5,
+            [_105, _105, _105, _105],
+            _105,
         );
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), _20);
-        assert_eq!(Shares::free_balance(ASSET_B, &ALICE), _20);
-        assert_eq!(Shares::free_balance(ASSET_C, &ALICE), _20);
-        assert_eq!(Shares::free_balance(ASSET_D, &ALICE), _20);
     })
 }
 
@@ -439,8 +455,12 @@ fn swap_exact_amount_in_exchanges_correct_values() {
                 max_price: _2,
             }
         )));
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 240000000000);
-        assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 259900990100);
+        assert_all_parameters(
+            [_24, _25 + 9900990100, _25, _25],
+            0,
+            [_101, _99 + 0099009900, _100, _100],
+            _100,
+        );
     });
 }
 
@@ -467,8 +487,12 @@ fn swap_exact_amount_out_exchanges_correct_values() {
                 max_price: _3,
             }
         )));
-        assert_eq!(Shares::free_balance(ASSET_A, &ALICE), 239898989900);
-        assert_eq!(Shares::free_balance(ASSET_B, &ALICE), 260000000000);
+        assert_all_parameters(
+            [239898989900, _26, _25, _25],
+            0,
+            [_101 + 0101010100, _99, _100, _100],
+            _100,
+        );
     });
 }
 
@@ -501,4 +525,28 @@ fn event_exists(raw_evt: crate::RawEvent<AccountId, Balance>) -> bool {
     frame_system::Module::<Test>::events()
         .iter()
         .any(|e| e.event == evt)
+}
+
+fn assert_all_parameters(
+    alice_assets: [u128; 4],
+    alice_pool_assets: u128,
+    pool_assets: [u128; 4],
+    total_supply: u128,
+) {
+    let pai = Swaps::pool_account_id(0);
+    let psi = Swaps::pool_shares_id(0);
+
+    assert_eq!(Shares::free_balance(ASSET_A, &ALICE), alice_assets[0]);
+    assert_eq!(Shares::free_balance(ASSET_B, &ALICE), alice_assets[1]);
+    assert_eq!(Shares::free_balance(ASSET_C, &ALICE), alice_assets[2]);
+    assert_eq!(Shares::free_balance(ASSET_D, &ALICE), alice_assets[3]);
+
+    assert_eq!(Shares::free_balance(psi, &ALICE), alice_pool_assets);
+
+    assert_eq!(Shares::free_balance(ASSET_A, &pai), pool_assets[0]);
+    assert_eq!(Shares::free_balance(ASSET_B, &pai), pool_assets[1]);
+    assert_eq!(Shares::free_balance(ASSET_C, &pai), pool_assets[2]);
+    assert_eq!(Shares::free_balance(ASSET_D, &pai), pool_assets[3]);
+
+    assert_eq!(Shares::total_supply(psi), total_supply);
 }

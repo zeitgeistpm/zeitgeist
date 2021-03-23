@@ -16,15 +16,15 @@ macro_rules! pool_exit_with_exact_amount {
         ensure!(pool.bound($asset), Error::<T>::AssetNotBound);
         let pool_account = Self::pool_account_id($pool_id);
 
-        let pool_balance = T::Shares::free_balance($asset, &pool_account);
-        ($ensure_balance(pool_balance) as DispatchResult)?;
+        let asset_balance = T::Shares::free_balance($asset, &pool_account);
+        ($ensure_balance(asset_balance) as DispatchResult)?;
 
         let pool_shares_id = Self::pool_shares_id($pool_id);
         let total_supply = T::Shares::total_supply(pool_shares_id);
 
-        let asset_amount = ($asset_amount(&pool, pool_balance, total_supply)
+        let asset_amount = ($asset_amount(&pool, asset_balance, total_supply)
             as Result<BalanceOf<T>, DispatchError>)?;
-        let pool_amount = ($pool_amount(&pool, pool_balance, total_supply)
+        let pool_amount = ($pool_amount(&pool, asset_balance, total_supply)
             as Result<BalanceOf<T>, DispatchError>)?;
 
         let exit_fee = bmul(
@@ -65,12 +65,12 @@ macro_rules! pool_join_with_exact_amount {
         let total_supply = T::Shares::total_supply(pool_shares_id);
 
         ensure!(pool.bound($asset), Error::<T>::AssetNotBound);
-        let pool_balance = T::Shares::free_balance($asset, &pool_account_id);
+        let asset_balance = T::Shares::free_balance($asset, &pool_account_id);
 
         let asset_amount =
-            ($asset_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
+            ($asset_amount(&pool, asset_balance, total_supply) as Result<_, DispatchError>)?;
         let pool_amount =
-            ($pool_amount(&pool, pool_balance, total_supply) as Result<_, DispatchError>)?;
+            ($pool_amount(&pool, asset_balance, total_supply) as Result<_, DispatchError>)?;
 
         Self::mint_pool_shares($pool_id, &who, pool_amount)?;
         T::Shares::transfer($asset, &who, &pool_account_id, asset_amount)?;
@@ -167,7 +167,10 @@ macro_rules! swap_exact_amount {
         T::Shares::transfer($asset_out, &pool_account_id, &who, asset_amount_out)?;
 
         let spot_price_after = Self::get_spot_price($pool_id, $asset_in, $asset_out)?;
-        ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+        ensure!(
+            spot_price_after >= spot_price_before,
+            Error::<T>::MathApproximation
+        );
         ensure!(spot_price_after <= $max_price, Error::<T>::BadLimitPrice);
         ensure!(
             spot_price_before

@@ -139,17 +139,13 @@ pub fn calc_pool_in_given_single_out(
     let zar = bmul(zoo, swap_fee)?;
     let asset_amount_out_before_swap_fee = bdiv(asset_amount_out, BASE.check_sub_rslt(&zar)?)?;
 
-    let new_asset_balance_out =
-        asset_balance_out.check_sub_rslt(&asset_amount_out_before_swap_fee)?;
+    let new_asset_balance_out = asset_balance_out.check_sub_rslt(&asset_amount_out_before_swap_fee)?;
     let asset_out_ratio = bdiv(new_asset_balance_out, asset_balance_out)?;
 
     let pool_ratio = bpow(asset_out_ratio, normalized_weight)?;
     let new_pool_supply = bmul(pool_ratio, pool_supply)?;
-    let pool_amount_in_after_exit_fee = pool_supply.check_sub_rslt(&new_pool_supply)?;
 
-    let pool_amount_in = bdiv(
-        pool_amount_in_after_exit_fee,
-        BASE.check_sub_rslt(&EXIT_FEE)?,
-    );
+    let pool_amount_in_after_exit_fee = pool_supply.check_sub_rslt(&new_pool_supply)?;
+    let pool_amount_in = bdiv(pool_amount_in_after_exit_fee, BASE.check_sub_rslt(&EXIT_FEE)?);
     pool_amount_in
 }
