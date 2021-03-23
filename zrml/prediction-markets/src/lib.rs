@@ -56,7 +56,7 @@ mod mock;
 mod tests;
 
 mod market;
-use market::{Market, MarketEnd, MarketCreation, Report, MarketDispute, MarketStatus, MarketType};
+use market::{Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Report};
 
 fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     let pos = items.iter().position(|&i| i == item).unwrap();
@@ -307,7 +307,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             ensure!(categories <= T::MaxCategories::get(), "Cannot exceed max categories for a new market.");
-            
+
             match end {
                 MarketEnd::Block(block) => {
                     let current_block = <frame_system::Module<T>>::block_number();
