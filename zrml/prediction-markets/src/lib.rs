@@ -178,7 +178,6 @@ decl_event!(
         MarketDisputed(MarketId, u16),
         /// A market has been resolved [market_id, real_outcome]
         MarketResolved(MarketId, u16),
-        TestError,
     }
 );
 
@@ -293,7 +292,7 @@ decl_module! {
                 <Markets<T>>::remove(&market_id);
 
                 // delete all the shares if any exist
-                for i in 0..=market.outcomes() {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
                     T::Shares::destroy_all(share_id).unwrap();
                 }
@@ -351,6 +350,7 @@ decl_module! {
                 status,
                 report: None,
                 categories: Some(categories),
+                resolved_outcome: None,
             } ;
 
             <Markets<T>>::insert(market_id.clone(), market);
@@ -448,8 +448,7 @@ decl_module! {
                 let wrapped_native_currency = T::Shares::get_native_currency_id();
                 let mut assets = Vec::from([wrapped_native_currency]);
 
-                for i in 0..=market.outcomes() {
-                    if i == 0 { continue; }
+                for i in 0..market.outcomes() {
                     assets.push(
                         Self::market_outcome_share_id(market_id, i)
                     );
@@ -497,7 +496,7 @@ decl_module! {
                     "Market account does not have sufficient reserves.",
                 );
 
-                for i in 0..=market.outcomes() {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     // Ensures that the sender has sufficient amount of each
@@ -510,7 +509,7 @@ decl_module! {
 
                 // This loop must be done twice because we check the entire
                 // set of shares before making any mutations to storage.
-                for i in 0..=market.outcomes() {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     T::Shares::destroy(share_id, &sender, amount)?;
@@ -663,8 +662,7 @@ decl_module! {
                 );
 
                 // Check to see if the sender has any winning shares.
-                let report = market.report.unwrap();
-                let winning_shares_id = Self::market_outcome_share_id(market_id.clone(), report.outcome);
+                let winning_shares_id = Self::market_outcome_share_id(market_id.clone(), market.resolved_outcome.unwrap());
                 let winning_balance = T::Shares::free_balance(winning_shares_id, &sender);
 
                 ensure!(
@@ -750,7 +748,7 @@ impl<T: Trait> Module<T> {
                 ExistenceRequirement::KeepAlive,
             )?;
 
-            for i in 0..=market.outcomes() {
+            for i in 0..market.outcomes() {
                 let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                 T::Shares::generate(share_id, &who, amount)?;
@@ -767,12 +765,6 @@ impl<T: Trait> Module<T> {
     fn internal_resolve(market_id: &T::MarketId) {
         let market = Self::markets(market_id).unwrap();
         let report = market.report.clone().unwrap();
-
-        // DEBUG
-        if market.status != MarketStatus::Reported && market.status != MarketStatus::Disputed {
-            Self::deposit_event(RawEvent::TestError);
-            return;
-        }
 
         // if the market was permissionless and not invalid, return `ValidityBond`.
         // if market.creation == MarketCreation::Permissionless {
@@ -856,7 +848,7 @@ impl<T: Trait> Module<T> {
             _ => (),
         };
 
-        for i in 0..=market.outcomes() {
+        for i in 0..market.outcomes() {
             // don't delete the winning outcome...
             if i == resolved_outcome {
                 continue;
@@ -868,6 +860,7 @@ impl<T: Trait> Module<T> {
 
         <Markets<T>>::mutate(&market_id, |m| {
             m.as_mut().unwrap().status = MarketStatus::Resolved;
+            m.as_mut().unwrap().resolved_outcome = Some(resolved_outcome);
         });
     }
 }

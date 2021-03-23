@@ -110,7 +110,7 @@ fn it_allows_to_buy_a_complete_set() {
         let market = PredictionMarkets::markets(0).unwrap();
 
         // Check the outcome balances
-        for i in 0..=market.outcomes() {
+        for i in 0..market.outcomes() {
             let share_id = PredictionMarkets::market_outcome_share_id(0, i);
             let bal = Shares::free_balance(share_id, &BOB);
             assert_eq!(bal, 100);
@@ -390,7 +390,7 @@ fn it_resolves_a_disputed_market() {
         // Per each: 112
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        // assert_eq!(charlie_balance, 1_000 * BASE + 112);
+        assert_eq!(charlie_balance, 1_000 * BASE + 112);
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(&EVE);
