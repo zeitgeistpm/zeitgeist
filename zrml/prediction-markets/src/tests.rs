@@ -194,14 +194,15 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Active);
-        assert_eq!(market.reporter, None);
+        assert_eq!(market.report.is_none(), true);
 
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
 
         let market_after = PredictionMarkets::markets(0).unwrap();
+        let report = market_after.report.unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
-        assert_eq!(market_after.reported_outcome.unwrap(), 1);
-        assert_eq!(market_after.reporter, Some(market_after.oracle));
+        assert_eq!(report.outcome, 1);
+        assert_eq!(report.by, market_after.oracle);
     });
 }
 
@@ -254,8 +255,8 @@ fn it_allows_anyone_to_report_an_unreported_market() {
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Reported);
-        assert_eq!(market.reporter, Some(ALICE));
-        // but lol oracle was bob
+        assert_eq!(market.report.unwrap().by, ALICE);
+        // but oracle was bob
         assert_eq!(market.oracle, BOB);
 
         // make sure it still resolves
