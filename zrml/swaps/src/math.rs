@@ -92,7 +92,8 @@ pub fn calc_single_in_given_pool_out(
     let new_pool_supply = pool_supply.check_add_rslt(&pool_amount_out)?;
     let pool_ratio = bdiv(new_pool_supply, pool_supply)?;
 
-    let asset_in_ratio = bpow(pool_ratio, normalized_weight)?;
+    let boo = bdiv(BASE, normalized_weight)?;
+    let asset_in_ratio = bpow(pool_ratio, boo)?;
     let new_asset_balance_in = bmul(asset_in_ratio, asset_balance_in)?;
     let asset_amount_in_after_fee = new_asset_balance_in.check_sub_rslt(&asset_balance_in)?;
 

@@ -222,25 +222,26 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             0,
             ASSET_A,
             _1,
-            _1 / 4 // calculated
+            _5
         ));
         let asset_after_join = asset_before_join - Shares::free_balance(ASSET_A, &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
             alice_signed(),
             0,
             ASSET_A,
-            asset_after_join,
-            _1 / 4
+            asset_after_join - 1000,
+            _1
         ));
         assert!(event_exists(crate::RawEvent::PoolExitWithExactAssetAmount(
             PoolAssetEvent {
-                bound: _1 / 4,
+                bound: _1,
                 cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: asset_after_join,
+                transferred: asset_after_join - 1000,
             }
         )));
-        assert_eq!(asset_after_join, 2490679300);
-        assert_all_parameters([_25, _25, _25, _25], 9372080677, [_100, _100, _100, _100], 1009372080677)
+        let pool_balance_of_alice = Shares::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        assert_eq!(asset_after_join, 40604010000);
+        assert_all_parameters([_25 - 1000, _25, _25, _25], 100, [_100 + 1000, _100, _100, _100], 1000000000100)
     });
 }
 
@@ -303,17 +304,18 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
             0,
             ASSET_A,
             alice_sent,
-            _1
+            _5
         ));
+        let asset_amount = alice_initial - Shares::free_balance(ASSET_A, &ALICE);
         assert!(event_exists(crate::RawEvent::PoolJoinWithExactPoolAmount(
             PoolAssetEvent {
-                bound: _1,
+                bound: _5,
                 cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: 2490679300, // TODO: Should be alice_sent
+                transferred: asset_amount,
             }
         )));
         let alice_received = alice_initial - Shares::free_balance(ASSET_A, &ALICE);
-        assert_eq!(alice_received, 2490679300);
+        assert_eq!(alice_received, 40604010000);
         assert_all_parameters(
             [_25 - alice_received, _25, _25, _25],
             alice_sent,
