@@ -103,7 +103,7 @@ pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> Result<u128, Dispa
 
 #[cfg(test)]
 mod tests {
-    use crate::{bmul, ARITHM_OF, BASE, bdiv, bpow};
+    use crate::{bdiv, bmul, bpow, ARITHM_OF, BASE};
     use frame_support::dispatch::DispatchError;
 
     pub const ERR: Result<u128, DispatchError> = Err(ARITHM_OF);
@@ -122,32 +122,32 @@ mod tests {
             assert_eq!($op(0, 1 * BASE), $_0_1);
             assert_eq!($op(0, 2 * BASE), $_0_2);
             assert_eq!($op(0, 3 * BASE), $_0_3);
-        
+
             assert_eq!($op(1 * BASE, 0 * BASE), $_1_0);
             assert_eq!($op(1 * BASE, 1 * BASE), $_1_1);
             assert_eq!($op(1 * BASE, 2 * BASE), $_1_2);
             assert_eq!($op(1 * BASE, 3 * BASE), $_1_3);
-        
+
             assert_eq!($op(2 * BASE, 0 * BASE), $_2_0);
             assert_eq!($op(2 * BASE, 1 * BASE), $_2_1);
             assert_eq!($op(2 * BASE, 2 * BASE), $_2_2);
             assert_eq!($op(2 * BASE, 3 * BASE), $_2_3);
-        
+
             assert_eq!($op(3 * BASE, 0 * BASE), $_3_0);
             assert_eq!($op(3 * BASE, 1 * BASE), $_3_1);
             assert_eq!($op(3 * BASE, 2 * BASE), $_3_2);
             assert_eq!($op(3 * BASE, 3 * BASE), $_3_3);
-        
+
             assert_eq!($op(u128::MAX, 0 * BASE), $max_n_0);
             assert_eq!($op(u128::MAX, 1 * BASE), $max_n_1);
             assert_eq!($op(u128::MAX, 2 * BASE), $max_n_2);
             assert_eq!($op(u128::MAX, 3 * BASE), $max_n_3);
-        
+
             assert_eq!($op(0, u128::MAX), $n_max_0);
             assert_eq!($op(1, u128::MAX), $n_max_1);
             assert_eq!($op(2, u128::MAX), $n_max_2);
             assert_eq!($op(3, u128::MAX), $n_max_3);
-        }
+        };
     }
 
     #[test]
@@ -162,7 +162,7 @@ mod tests {
             n_max => Ok(0), Ok(1 / BASE), Ok(2 / BASE), Ok(3 / BASE);
         );
     }
-    
+
     #[test]
     fn bmul_has_minimum_set_of_correct_values() {
         create_tests!(
@@ -175,7 +175,7 @@ mod tests {
             n_max => Ok(0), ERR, ERR, ERR;
         );
     }
-    
+
     #[test]
     fn bpow_has_minimum_set_of_correct_values() {
         create_tests!(
@@ -185,7 +185,7 @@ mod tests {
             2 => Ok(BASE), Ok(2 * BASE), Ok(4 * BASE), Ok(8 * BASE);
             3 => Ok(BASE), Ok(3 * BASE), Ok(9 * BASE), Ok(27 * BASE);
             max_n => Ok(BASE), Ok(u128::MAX), ERR, ERR;
-            n_max => Ok(0), Ok(0), Ok(0), Ok(0);
+            n_max => ERR, ERR, ERR, ERR;
         );
-    }    
+    }
 }
