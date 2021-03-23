@@ -53,7 +53,7 @@ pub enum MarketStatus {
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
-pub struct Market<AccountId> {
+pub struct Market<AccountId, BlockNumber> {
     // Creator of this market.
     pub creator: AccountId,
     // Creation type.
@@ -71,21 +71,26 @@ pub struct Market<AccountId> {
     pub market_type: MarketType,
     // The current status of the market.
     pub status: MarketStatus,
-    // The reported outcome. Only `Some` if it has been reported.
-    pub reported_outcome: Option<u16>,
-    // The actual reporter of the market.
-    pub reporter: Option<AccountId>,
+    // The report of the market. Only `Some` if it has been reported.
+    pub report: Option<Report<AccountId, BlockNumber>>,
     // Categories are only relevant to Categorical markets.
     pub categories: Option<u16>,
 }
 
-impl<AccountId> Market<AccountId> {
+impl<AccountId, B> Market<AccountId, B> {
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
             MarketType::Categorical => self.categories.unwrap(),
             MarketType::Scalar => 0, // TODO implement scalar markets
         }
     }
+}
+
+#[derive(Encode, Decode, RuntimeDebug, Clone)]
+pub struct Report<AccountId, BlockNumber> {
+    pub at: BlockNumber,
+    pub by: AccountId,
+    pub outcome: u16,
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
