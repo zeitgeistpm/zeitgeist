@@ -10,7 +10,7 @@ use zrml_traits::shares::{ReservableShares, Shares as SharesTrait};
 fn it_makes_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Give some shares for Bob.
-        Shares::set_balance(H256::repeat_byte(1), &BOB, 100);
+        assert_ok!(Shares::set_balance(H256::repeat_byte(1), &BOB, 100));
 
         // Make an order from Alice to buy shares.
         assert_ok!(Orderbook::make_order(
@@ -47,7 +47,7 @@ fn it_takes_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Give some shares for Bob.
         let shares_id = H256::repeat_byte(1);
-        Shares::set_balance(shares_id, &BOB, 100);
+        assert_ok!(Shares::set_balance(shares_id, &BOB, 100));
 
         // Make an order from Bob to sell shares.
         assert_ok!(Orderbook::make_order(
