@@ -63,6 +63,9 @@ fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     items.swap_remove(pos);
 }
 
+pub const NOT_RESOLVED: dispatch::DispatchError = dispatch::DispatchError::Other("Resolved outcome does not exist");
+pub const NO_REPORT: dispatch::DispatchError = dispatch::DispatchError::Other("Report does not exist");
+
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
@@ -264,9 +267,9 @@ decl_module! {
             let market_ids = Self::market_ids_per_report_block(now - dispute_period);
             if !market_ids.is_empty() {
                 market_ids.iter().for_each(|id| {
-                    let market = Self::markets(id).unwrap();
+                    let market = Self::markets(id).expect("Market stored in report block does not exist");
                     if market.status != MarketStatus::Reported { }
-                     else { Self::internal_resolve(id); }
+                     else { Self::internal_resolve(id).expect("Internal respolve failed"); }
                 });
             }
 
@@ -274,7 +277,7 @@ decl_module! {
             let disputed = Self::market_ids_per_dispute_block(now - dispute_period);
             if !disputed.is_empty() {
                 disputed.iter().for_each(|id| {
-                    Self::internal_resolve(id);
+                    Self::internal_resolve(id).expect("Internal resolve failed");
                 });
             }
         }
@@ -294,7 +297,7 @@ decl_module! {
                 // delete all the shares if any exist
                 for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-                    T::Shares::destroy_all(share_id).unwrap();
+                    T::Shares::destroy_all(share_id)?;
                 }
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
@@ -662,7 +665,8 @@ decl_module! {
                 );
 
                 // Check to see if the sender has any winning shares.
-                let winning_shares_id = Self::market_outcome_share_id(market_id.clone(), market.resolved_outcome.unwrap());
+                let resolved_outcome = market.resolved_outcome.ok_or_else(|| NOT_RESOLVED)?;
+                let winning_shares_id = Self::market_outcome_share_id(market_id.clone(), resolved_outcome);
                 let winning_balance = T::Shares::free_balance(winning_shares_id, &sender);
 
                 ensure!(
@@ -762,9 +766,9 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn internal_resolve(market_id: &T::MarketId) {
-        let market = Self::markets(market_id).unwrap();
-        let report = market.report.clone().unwrap();
+    fn internal_resolve(market_id: &T::MarketId) -> DispatchResult {
+        let market = Self::market_by_id(market_id)?;
+        let report = market.report.clone().ok_or_else(|| NO_REPORT)?;
 
         // if the market was permissionless and not invalid, return `ValidityBond`.
         // if market.creation == MarketCreation::Permissionless {
@@ -780,7 +784,7 @@ impl<T: Trait> Module<T> {
         T::Currency::unreserve(&market.creator, T::ValidityBond::get());
 
         let resolved_outcome = match market.status {
-            MarketStatus::Reported => market.report.clone().unwrap().outcome,
+            MarketStatus::Reported => report.outcome,
             MarketStatus::Disputed => {
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes = disputes.len() as u16;
@@ -855,12 +859,21 @@ impl<T: Trait> Module<T> {
             }
             // ... but delete the rest
             let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-            T::Shares::destroy_all(share_id).unwrap();
+            T::Shares::destroy_all(share_id)?;
         }
 
         <Markets<T>>::mutate(&market_id, |m| {
             m.as_mut().unwrap().status = MarketStatus::Resolved;
             m.as_mut().unwrap().resolved_outcome = Some(resolved_outcome);
         });
+
+        Ok(())
+    }
+
+    fn market_by_id(market_id: &T::MarketId) -> Result<Market<T::AccountId, T::BlockNumber>, Error<T>>
+    where
+        T: Trait,
+    {
+        Self::markets(market_id).ok_or(Error::<T>::MarketDoesNotExist.into())
     }
 }

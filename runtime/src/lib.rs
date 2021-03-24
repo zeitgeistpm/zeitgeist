@@ -519,7 +519,7 @@ impl_runtime_apis! {
             asset_in: Hash,
             asset_out: Hash,
         ) -> BalanceInfo<Balance> {
-            BalanceInfo{ amount: Swaps::get_spot_price(pool_id, asset_in, asset_out).unwrap() }
+            BalanceInfo{ amount: Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0) }
         }
     }
 }
