@@ -587,6 +587,7 @@ impl<T: Trait> Module<T> {
         T::Shares::destroy(shares_id, from, amount)
     }
 
+    #[allow(dead_code)]
     fn pool_master_account() -> T::AccountId {
         T::ModuleId::get().into_account()
     }
@@ -597,6 +598,7 @@ impl<T: Trait> Module<T> {
         id
     }
 
+    #[allow(dead_code)]
     fn get_denormalized_weight(pool_id: u128, asset: T::Hash) -> u128 {
         if let Some(pool) = Self::pools(pool_id) {
             if let Some(val) = pool.weights.get(&asset) {
@@ -606,6 +608,7 @@ impl<T: Trait> Module<T> {
         0
     }
 
+    #[allow(dead_code)]
     fn get_normalized_weight(_pool_id: u128, _asset: T::Hash) -> u128 {
         // unimplemented
         0

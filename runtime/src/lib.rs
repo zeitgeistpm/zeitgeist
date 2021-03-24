@@ -242,7 +242,6 @@ parameter_types! {
 
 impl zrml_shares::Trait for Runtime {
     type Event = Event;
-    type Balance = Balance;
     type Currency = Balances;
     type ModuleId = SharesModuleId;
 }
@@ -261,7 +260,7 @@ parameter_types! {
     pub const MinWeight: Balance = ZGE;
     pub const MaxWeight: Balance = 50 * ZGE;
     pub const MaxTotalWeight: Balance = 50 * ZGE;
-    pub const MaxAssets: Balance = 8;
+    pub const MaxAssets: usize = 8;
     pub const MinLiquidity: Balance = 100 * ZGE;
 }
 
@@ -520,7 +519,7 @@ impl_runtime_apis! {
             asset_in: Hash,
             asset_out: Hash,
         ) -> BalanceInfo<Balance> {
-            BalanceInfo{ amount: Swaps::get_spot_price(pool_id, asset_in, asset_out) }
+            BalanceInfo{ amount: Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0) }
         }
     }
 }

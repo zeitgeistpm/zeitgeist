@@ -110,7 +110,7 @@ fn it_allows_to_buy_a_complete_set() {
         let market = PredictionMarkets::markets(0).unwrap();
 
         // Check the outcome balances
-        for i in 0..=market.outcomes() {
+        for i in 0..market.outcomes() {
             let share_id = PredictionMarkets::market_outcome_share_id(0, i);
             let bal = Shares::free_balance(share_id, &BOB);
             assert_eq!(bal, 100);
@@ -328,19 +328,19 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 0));
 
         run_to_block(102);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, 2,));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, 1));
 
         run_to_block(103);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, 1,));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, 0));
 
         run_to_block(104);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0, 2,));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0, 1));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -374,7 +374,7 @@ fn it_resolves_a_disputed_market() {
         let market_after = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
 
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0,));
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
         // make sure rewards are right
         //
@@ -387,6 +387,8 @@ fn it_resolves_a_disputed_market() {
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
         assert_eq!(charlie_balance, 1_000 * BASE + 112);
+        let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
+        assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(&EVE);
         assert_eq!(eve_balance, 1_000 * BASE + 112);
 

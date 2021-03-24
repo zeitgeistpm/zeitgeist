@@ -69,8 +69,8 @@ pub trait Trait: frame_system::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash>
-        + ReservableShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, Self::Hash>
+        + ReservableShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
 }
 
 decl_storage! {
@@ -196,7 +196,7 @@ decl_module! {
                     OrderSide::Ask => {
                         T::Currency::ensure_can_withdraw(&sender, cost, WithdrawReasons::all(), Zero::zero())?;
 
-                        T::Shares::unreserve(share_id, &maker, order_data.total);
+                        T::Shares::unreserve(share_id, &maker, order_data.total)?;
                         T::Shares::transfer(share_id, &maker, &sender, order_data.total)?;
 
                         T::Currency::transfer(&sender, &maker, cost, ExistenceRequirement::AllowDeath)?;
