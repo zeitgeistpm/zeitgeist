@@ -1,5 +1,5 @@
 use crate as zrml_swaps;
-use crate::{Module, Trait};
+use crate::{Module, Trait, BASE};
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
@@ -17,9 +17,6 @@ pub const BOB: AccountId = 1;
 pub const CHARLIE: AccountId = 2;
 pub const DAVE: AccountId = 3;
 pub const EVE: AccountId = 4;
-
-// BASE is used as the number of decimals in order to set constants elsewhere.
-pub const BASE: Balance = 10_000_000_000;
 
 impl_outer_event! {
     pub enum TestEvent for Test {
@@ -92,9 +89,8 @@ parameter_types! {
 }
 
 impl zrml_shares::Trait for Test {
+    type Currency = Currency;
     type Event = TestEvent;
-    type Balance = Balance;
-    type Currency = Balances;
     type ModuleId = SharesModuleId;
 }
 
@@ -106,13 +102,13 @@ parameter_types! {
     pub const MinWeight: Balance = BASE;
     pub const MaxWeight: Balance = 50 * BASE;
     pub const MaxTotalWeight: Balance = 50 * BASE;
-    pub const MaxAssets: Balance = 8;
+    pub const MaxAssets: usize = 8;
     pub const MinLiquidity: Balance = 100 * BASE;
 }
 
 impl Trait for Test {
     type Event = TestEvent;
-    type Currency = Balances;
+    type Currency = Currency;
     type Shares = Shares;
     type ModuleId = SwapsModuleId;
     type ExitFee = ExitFee;
@@ -125,7 +121,7 @@ impl Trait for Test {
     type MinLiquidity = MinLiquidity;
 }
 
-pub type Balances = pallet_balances::Module<Test>;
+pub type Currency = pallet_balances::Module<Test>;
 pub type Shares = zrml_shares::Module<Test>;
 pub type Swaps = Module<Test>;
 

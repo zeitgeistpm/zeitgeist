@@ -1,17 +1,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::traits::{Currency, ExistenceRequirement, Get, ReservableCurrency};
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure, Parameter};
+use core::cmp;
+use frame_support::{
+    decl_error, decl_event, decl_module, decl_storage, ensure,
+    traits::{Currency, ExistenceRequirement, Get, ReservableCurrency},
+};
 use frame_system::ensure_signed;
-use sp_runtime::{traits::AccountIdConversion, SaturatedConversion};
 use sp_runtime::{
     traits::{
-        AtLeast32Bit, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, StaticLookup, Zero,
+        AccountIdConversion, CheckedAdd, CheckedSub, SaturatedConversion, StaticLookup, Zero,
     },
-    DispatchResult, ModuleId, RuntimeDebug,
+    DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
-use sp_std::{cmp, prelude::*};
 use zrml_traits::shares::{ReservableShares, Shares, WrapperShares};
 
 #[cfg(test)]
@@ -29,13 +30,8 @@ pub struct AccountShares<Balance> {
 }
 
 pub trait Trait: frame_system::Trait {
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-
-    type Balance: Parameter + Member + Copy + MaybeSerializeDeserialize + AtLeast32Bit + Default;
-
     type Currency: ReservableCurrency<Self::AccountId>;
-
-    /// The module identifier.
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type ModuleId: Get<ModuleId>;
 }
 
@@ -43,11 +39,9 @@ decl_storage! {
     trait Store for Module<T: Trait> as Shares {
         /// A double map that is keyed by (share_id, account). The reason to make the `share_id` the prefix
         /// key is so that we can efficiently wipe out shares.
-        pub Accounts get(fn accounts):
-            double_map hasher (identity) T::Hash, hasher (blake2_128_concat) T::AccountId  =>
-                AccountShares<T::Balance>;
+        pub Accounts get(fn accounts): double_map hasher (identity) T::Hash, hasher (blake2_128_concat) T::AccountId  => AccountShares<BalanceOf<T>>;
 
-        pub TotalSupply get(fn total_supply): map hasher (identity) T::Hash => T::Balance;
+        pub TotalSupply get(fn total_supply): map hasher (identity) T::Hash => BalanceOf<T>;
     }
 }
 
@@ -56,7 +50,7 @@ decl_event!(
     where
         AccountId = <T as frame_system::Trait>::AccountId,
         Hash = <T as frame_system::Trait>::Hash,
-        Balance = <T as Trait>::Balance,
+        Balance = BalanceOf<T>,
     {
         /// Some shares have been transferred. [shares_id, from, to, amount]
         Transferred(Hash, AccountId, AccountId, Balance),
@@ -87,11 +81,11 @@ decl_module! {
             origin,
             dest: <T::Lookup as StaticLookup>::Source,
             share_id: T::Hash,
-            #[compact] amount: T::Balance,
+            #[compact] amount: BalanceOf<T>,
         ) {
             let from = ensure_signed(origin)?;
             let to = T::Lookup::lookup(dest)?;
-            <Self as Shares<T::AccountId, T::Balance, T::Hash>>::transfer(share_id, &from, &to, amount)?;
+            <Self as Shares<T::AccountId, T::Hash>>::transfer(share_id, &from, &to, amount)?;
 
             Self::deposit_event(RawEvent::Transferred(share_id, from, to, amount));
         }
@@ -115,31 +109,42 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn set_balance(share_id: T::Hash, who: &T::AccountId, balance: T::Balance) {
+    pub fn set_balance(
+        share_id: T::Hash,
+        who: &T::AccountId,
+        balance: BalanceOf<T>,
+    ) -> DispatchResult {
         <Accounts<T>>::mutate(share_id, who, |data| data.free = balance);
+        Ok(())
     }
 
-    pub fn set_reserved(share_id: T::Hash, who: &T::AccountId, reserved: T::Balance) {
+    pub fn set_reserved(
+        share_id: T::Hash,
+        who: &T::AccountId,
+        reserved: BalanceOf<T>,
+    ) -> DispatchResult {
         <Accounts<T>>::mutate(share_id, who, |data| data.reserved = reserved);
+        Ok(())
     }
 
+    #[inline]
     fn get_module_id() -> T::AccountId {
         T::ModuleId::get().into_account()
     }
 }
 
-impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
-    type Balance = T::Balance;
+impl<T: Trait> Shares<T::AccountId, T::Hash> for Module<T> {
+    type Balance = BalanceOf<T>;
 
-    fn free_balance(share_id: T::Hash, who: &T::AccountId) -> Self::Balance {
+    fn free_balance(share_id: T::Hash, who: &T::AccountId) -> BalanceOf<T> {
         Self::accounts(share_id, who).free
     }
 
-    fn total_supply(share_id: T::Hash) -> Self::Balance {
+    fn total_supply(share_id: T::Hash) -> BalanceOf<T> {
         <TotalSupply<T>>::get(share_id)
     }
 
-    fn destroy(share_id: T::Hash, from: &T::AccountId, amount: Self::Balance) -> DispatchResult {
+    fn destroy(share_id: T::Hash, from: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         if amount.is_zero() {
             return Ok(());
         }
@@ -147,7 +152,7 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
         Self::ensure_can_withdraw(share_id, from, amount)?;
 
         <TotalSupply<T>>::mutate(share_id, |am| *am -= amount);
-        Self::set_balance(share_id, from, Self::free_balance(share_id, from) - amount);
+        Self::set_balance(share_id, from, Self::free_balance(share_id, from) - amount)?;
 
         Ok(())
     }
@@ -162,7 +167,7 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
     fn ensure_can_withdraw(
         share_id: T::Hash,
         who: &T::AccountId,
-        amount: Self::Balance,
+        amount: BalanceOf<T>,
     ) -> DispatchResult {
         if amount.is_zero() {
             return Ok(());
@@ -174,16 +179,15 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
         Ok(())
     }
 
-    fn generate(share_id: T::Hash, to: &T::AccountId, amount: Self::Balance) -> DispatchResult {
+    fn generate(share_id: T::Hash, to: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         if amount.is_zero() {
             return Ok(());
         }
-
         let new_total = Self::total_supply(share_id)
             .checked_add(&amount)
             .ok_or(Error::<T>::TotalIssuanceOverflow)?;
         <TotalSupply<T>>::insert(share_id, new_total);
-        Self::set_balance(share_id, to, Self::free_balance(share_id, to) + amount);
+        Self::set_balance(share_id, to, Self::free_balance(share_id, to) + amount)?;
 
         Ok(())
     }
@@ -192,7 +196,7 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
         share_id: T::Hash,
         from: &T::AccountId,
         to: &T::AccountId,
-        amount: Self::Balance,
+        amount: BalanceOf<T>,
     ) -> DispatchResult {
         if amount.is_zero() || from == to {
             return Ok(());
@@ -202,15 +206,15 @@ impl<T: Trait> Shares<T::AccountId, T::Balance, T::Hash> for Module<T> {
 
         let from_balance = Self::free_balance(share_id, from);
         let to_balance = Self::free_balance(share_id, to);
-        Self::set_balance(share_id, from, from_balance - amount);
-        Self::set_balance(share_id, to, to_balance + amount);
+        Self::set_balance(share_id, from, from_balance - amount)?;
+        Self::set_balance(share_id, to, to_balance + amount)?;
 
         Ok(())
     }
 }
 
-impl<T: Trait> ReservableShares<T::AccountId, T::Balance, T::Hash> for Module<T> {
-    fn can_reserve(share_id: T::Hash, who: &T::AccountId, value: T::Balance) -> bool {
+impl<T: Trait> ReservableShares<T::AccountId, T::Hash> for Module<T> {
+    fn can_reserve(share_id: T::Hash, who: &T::AccountId, value: BalanceOf<T>) -> bool {
         if value.is_zero() {
             return true;
         }
@@ -222,11 +226,11 @@ impl<T: Trait> ReservableShares<T::AccountId, T::Balance, T::Hash> for Module<T>
             })
     }
 
-    fn reserved_balance(share_id: T::Hash, who: &T::AccountId) -> T::Balance {
+    fn reserved_balance(share_id: T::Hash, who: &T::AccountId) -> BalanceOf<T> {
         Self::accounts(share_id, who).reserved
     }
 
-    fn reserve(share_id: T::Hash, who: &T::AccountId, value: T::Balance) -> DispatchResult {
+    fn reserve(share_id: T::Hash, who: &T::AccountId, value: BalanceOf<T>) -> DispatchResult {
         if value.is_zero() {
             return Ok(());
         }
@@ -236,15 +240,19 @@ impl<T: Trait> ReservableShares<T::AccountId, T::Balance, T::Hash> for Module<T>
         let new_free = free.checked_sub(&value).ok_or(Error::<T>::Underflow)?;
         let new_reserved = reserved.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 
-        Self::set_balance(share_id, who, new_free);
-        Self::set_reserved(share_id, who, new_reserved);
+        Self::set_balance(share_id, who, new_free)?;
+        Self::set_reserved(share_id, who, new_reserved)?;
         Self::deposit_event(RawEvent::Reserved(share_id, who.clone(), value));
         Ok(())
     }
 
-    fn unreserve(share_id: T::Hash, who: &T::AccountId, value: T::Balance) -> T::Balance {
+    fn unreserve(
+        share_id: T::Hash,
+        who: &T::AccountId,
+        value: BalanceOf<T>,
+    ) -> Result<BalanceOf<T>, DispatchError> {
         if value.is_zero() {
-            return Zero::zero();
+            return Ok(BalanceOf::<T>::zero());
         }
 
         let free = Self::free_balance(share_id, who);
@@ -253,15 +261,15 @@ impl<T: Trait> ReservableShares<T::AccountId, T::Balance, T::Hash> for Module<T>
         let new_free = free + actual;
         let new_reserved = reserved - actual;
 
-        Self::set_balance(share_id, who, new_free);
-        Self::set_reserved(share_id, who, new_reserved);
+        Self::set_balance(share_id, who, new_free)?;
+        Self::set_reserved(share_id, who, new_reserved)?;
         Self::deposit_event(RawEvent::Unreserved(share_id, who.clone(), actual));
 
-        actual
+        Ok(actual)
     }
 }
 
-impl<T: Trait> WrapperShares<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> {
+impl<T: Trait> WrapperShares<T::AccountId, T::Hash> for Module<T> {
     fn get_native_currency_id() -> T::Hash {
         let mut h = T::Hash::default();
         h.as_mut().iter_mut().for_each(|byte| *byte = 00);
@@ -271,7 +279,7 @@ impl<T: Trait> WrapperShares<T::AccountId, BalanceOf<T>, T::Hash> for Module<T> 
 
     fn do_wrap_native_currency(who: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         ensure!(
-            T::Currency::free_balance(&who) >= amount.into(),
+            T::Currency::free_balance(&who) >= amount,
             Error::<T>::BalanceTooLow
         );
 
