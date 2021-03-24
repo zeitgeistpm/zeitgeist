@@ -34,7 +34,7 @@ fn it_makes_orders() {
         ));
 
         let shares_reserved =
-            <Shares as ReservableShares<AccountId, Balance, H256>>::reserved_balance(
+            <Shares as ReservableShares<AccountId, H256>>::reserved_balance(
                 H256::repeat_byte(1),
                 &BOB,
             );
@@ -63,13 +63,13 @@ fn it_takes_orders() {
 
         let alice_bal = <Balances as Currency<AccountId>>::free_balance(&ALICE);
         let alice_shares =
-            <Shares as SharesTrait<AccountId, Balance, H256>>::free_balance(shares_id, &ALICE);
+            <Shares as SharesTrait<AccountId, H256>>::free_balance(shares_id, &ALICE);
         assert_eq!(alice_bal, 950);
         assert_eq!(alice_shares, 10);
 
         let bob_bal = <Balances as Currency<AccountId>>::free_balance(&BOB);
         let bob_shares =
-            <Shares as SharesTrait<AccountId, Balance, H256>>::free_balance(shares_id, &BOB);
+            <Shares as SharesTrait<AccountId, H256>>::free_balance(shares_id, &BOB);
         assert_eq!(bob_bal, 1_050);
         assert_eq!(bob_shares, 90);
     });
