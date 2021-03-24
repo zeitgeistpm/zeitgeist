@@ -75,12 +75,14 @@ pub struct Market<AccountId, BlockNumber> {
     pub report: Option<Report<AccountId, BlockNumber>>,
     // Categories are only relevant to Categorical markets.
     pub categories: Option<u16>,
+    // The resolved outcome.
+    pub resolved_outcome: Option<u16>,
 }
 
 impl<AccountId, B> Market<AccountId, B> {
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
-            MarketType::Categorical => self.categories.unwrap(),
+            MarketType::Categorical => self.categories.expect("Categorical market must have categories"),
             MarketType::Scalar => 0, // TODO implement scalar markets
         }
     }

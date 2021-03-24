@@ -55,6 +55,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod errors;
+use errors::{NO_REPORT, NOT_RESOLVED};
+
 mod market;
 use market::{Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Report};
 
@@ -74,8 +77,8 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash>
-        + WrapperShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>
+        + WrapperShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
 
     /// The identifier of individual markets.
     type MarketId: AtLeast32Bit + Parameter + Member + MaybeSerializeDeserialize + Default + Copy;
@@ -174,8 +177,10 @@ decl_event!(
         SoldCompleteSet(MarketId, AccountId),
         /// A market has been reported on [market_id, reported_outcome]
         MarketReported(MarketId, u16),
-        /// A market has been disputed [market_id, actual_outcome]
+        /// A market has been disputed [market_id, new_outcome]
         MarketDisputed(MarketId, u16),
+        /// A market has been resolved [market_id, real_outcome]
+        MarketResolved(MarketId, u16),
     }
 );
 
@@ -224,6 +229,10 @@ decl_error! {
         MarketAlreadyReported,
         /// A swap pool already exists for this market.
         SwapPoolExists,
+        /// End timestamp is too soon.
+        EndTimestampTooSoon,
+        /// End block is too soon.
+        EndBlockTooSoon,
     }
 }
 
@@ -258,9 +267,9 @@ decl_module! {
             let market_ids = Self::market_ids_per_report_block(now - dispute_period);
             if !market_ids.is_empty() {
                 market_ids.iter().for_each(|id| {
-                    let market = Self::markets(id).unwrap();
+                    let market = Self::markets(id).expect("Market stored in report block does not exist");
                     if market.status != MarketStatus::Reported { }
-                     else { Self::internal_resolve(id); }
+                     else { Self::internal_resolve(id).expect("Internal respolve failed"); }
                 });
             }
 
@@ -268,7 +277,7 @@ decl_module! {
             let disputed = Self::market_ids_per_dispute_block(now - dispute_period);
             if !disputed.is_empty() {
                 disputed.iter().for_each(|id| {
-                    Self::internal_resolve(id);
+                    Self::internal_resolve(id).expect("Internal resolve failed");
                 });
             }
         }
@@ -286,9 +295,9 @@ decl_module! {
                 <Markets<T>>::remove(&market_id);
 
                 // delete all the shares if any exist
-                for i in 0..=market.outcomes() {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-                    T::Shares::destroy_all(share_id).unwrap();
+                    T::Shares::destroy_all(share_id)?;
                 }
             } else {
                 Err(Error::<T>::MarketDoesNotExist)?;
@@ -311,11 +320,11 @@ decl_module! {
             match end {
                 MarketEnd::Block(block) => {
                     let current_block = <frame_system::Module<T>>::block_number();
-                    ensure!(current_block < block.saturated_into(), "End block must be in the future.");
+                    ensure!(current_block < block.saturated_into(), Error::<T>::EndBlockTooSoon);
                 }
                 MarketEnd::Timestamp(timestamp) => {
                     let now = <pallet_timestamp::Module<T>>::get();
-                    ensure!(now < timestamp.saturated_into(), "End timestamp must be before now.");
+                    ensure!(now < timestamp.saturated_into(), Error::<T>::EndTimestampTooSoon);
                 }
             };
 
@@ -344,6 +353,7 @@ decl_module! {
                 status,
                 report: None,
                 categories: Some(categories),
+                resolved_outcome: None,
             } ;
 
             <Markets<T>>::insert(market_id.clone(), market);
@@ -441,8 +451,7 @@ decl_module! {
                 let wrapped_native_currency = T::Shares::get_native_currency_id();
                 let mut assets = Vec::from([wrapped_native_currency]);
 
-                for i in 0..=market.outcomes() {
-                    if i == 0 { continue; }
+                for i in 0..market.outcomes() {
                     assets.push(
                         Self::market_outcome_share_id(market_id, i)
                     );
@@ -490,7 +499,7 @@ decl_module! {
                     "Market account does not have sufficient reserves.",
                 );
 
-                for i in 0..=market.outcomes() {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     // Ensures that the sender has sufficient amount of each
@@ -503,7 +512,7 @@ decl_module! {
 
                 // This loop must be done twice because we check the entire
                 // set of shares before making any mutations to storage.
-                for i in 0..=market.outcomes() {
+                for i in 0..market.outcomes() {
                     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                     T::Shares::destroy(share_id, &sender, amount)?;
@@ -526,7 +535,7 @@ decl_module! {
             if let Some(mut market) = Self::markets(market_id.clone()) {
                 ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
 
-                ensure!(market.status != MarketStatus::Reported, Error::<T>::MarketAlreadyReported);
+                ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
 
                 // ensure market is not active
                 ensure!(!Self::is_market_active(market.end), Error::<T>::MarketNotClosed);
@@ -579,8 +588,8 @@ decl_module! {
             let sender = ensure_signed(origin)?;
 
             if let Some(market) = Self::markets(market_id.clone()) {
-                ensure!(market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed, Error::<T>::MarketNotReported);
-                ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
+                ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
+                ensure!(outcome < market.outcomes(), Error::<T>::OutcomeOutOfRange);
 
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes = disputes.len() as u16;
@@ -656,8 +665,8 @@ decl_module! {
                 );
 
                 // Check to see if the sender has any winning shares.
-                let report = market.report.unwrap();
-                let winning_shares_id = Self::market_outcome_share_id(market_id.clone(), report.outcome);
+                let resolved_outcome = market.resolved_outcome.ok_or_else(|| NOT_RESOLVED)?;
+                let winning_shares_id = Self::market_outcome_share_id(market_id.clone(), resolved_outcome);
                 let winning_balance = T::Shares::free_balance(winning_shares_id, &sender);
 
                 ensure!(
@@ -743,7 +752,7 @@ impl<T: Trait> Module<T> {
                 ExistenceRequirement::KeepAlive,
             )?;
 
-            for i in 0..=market.outcomes() {
+            for i in 0..market.outcomes() {
                 let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
                 T::Shares::generate(share_id, &who, amount)?;
@@ -757,21 +766,34 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn internal_resolve(market_id: &T::MarketId) {
-        let market = Self::markets(market_id).unwrap();
-        let report = market.report.clone().unwrap();
+    fn internal_resolve(market_id: &T::MarketId) -> DispatchResult {
+        let market = Self::market_by_id(market_id)?;
+        let report = market.report.clone().ok_or_else(|| NO_REPORT)?;
 
         // if the market was permissionless and not invalid, return `ValidityBond`.
-        if market.creation == MarketCreation::Permissionless {
-            if report.outcome != 0 {
-                T::Currency::unreserve(&market.creator, T::ValidityBond::get());
-            } else {
-                // Give it to the treasury instead.
-                let (imbalance, _) =
-                    T::Currency::slash_reserved(&market.creator, T::ValidityBond::get());
-                T::Slash::on_unbalanced(imbalance);
+        // if market.creation == MarketCreation::Permissionless {
+        //     if report.outcome != 0 {
+        //         T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+        //     } else {
+        //         // Give it to the treasury instead.
+        //         let (imbalance, _) =
+        //             T::Currency::slash_reserved(&market.creator, T::ValidityBond::get());
+        //         T::Slash::on_unbalanced(imbalance);
+        //     }
+        // }
+        T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+
+        let resolved_outcome = match market.status {
+            MarketStatus::Reported => report.outcome,
+            MarketStatus::Disputed => {
+                let disputes = Self::disputes(market_id.clone());
+                let num_disputes = disputes.len() as u16;
+                // count the last dispute's outcome as the winning one
+                let last_dispute = disputes[(num_disputes as usize) - 1].clone();
+                last_dispute.outcome
             }
-        }
+            _ => 69,
+        };
 
         match market.status {
             MarketStatus::Reported => {
@@ -789,16 +811,14 @@ impl<T: Trait> Module<T> {
             MarketStatus::Disputed => {
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes = disputes.len() as u16;
-                // count the last dispute's outcome as the winning one
-                let last_dispute = disputes[(num_disputes as usize) - 1].clone();
-                let last_outcome = last_dispute.outcome;
+              
                 let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
                 let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
 
                 // if the reporter reported right, return the OracleBond, otherwise
                 // slash it to pay the correct reporters
-                if report.outcome == last_outcome {
+                if report.outcome == resolved_outcome {
                     T::Currency::unreserve(&market.creator, T::OracleBond::get());
                 } else {
                     let (imbalance, _) =
@@ -810,7 +830,7 @@ impl<T: Trait> Module<T> {
                 for i in 0..num_disputes {
                     let dispute = &disputes[i as usize];
                     let dispute_bond = T::DisputeBond::get() + T::DisputeFactor::get() * i.into();
-                    if dispute.outcome == last_outcome {
+                    if dispute.outcome == resolved_outcome {
                         T::Currency::unreserve(&dispute.by, dispute_bond);
 
                         correct_reporters.push(dispute.by.clone());
@@ -828,22 +848,32 @@ impl<T: Trait> Module<T> {
                     T::Currency::resolve_creating(&correct_reporters[i], amount);
                     overall_imbalance = leftover;
                 }
-            }
-            _ => panic!("Should never happen"), //TODO remove after testing
+            },
+            _ => (),
         };
 
-        for i in 0..=market.outcomes() {
+        for i in 0..market.outcomes() {
             // don't delete the winning outcome...
-            if i == report.outcome {
+            if i == resolved_outcome {
                 continue;
             }
             // ... but delete the rest
             let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-            T::Shares::destroy_all(share_id).unwrap();
+            T::Shares::destroy_all(share_id)?;
         }
 
         <Markets<T>>::mutate(&market_id, |m| {
             m.as_mut().unwrap().status = MarketStatus::Resolved;
+            m.as_mut().unwrap().resolved_outcome = Some(resolved_outcome);
         });
+
+        Ok(())
+    }
+
+    fn market_by_id(market_id: &T::MarketId) -> Result<Market<T::AccountId, T::BlockNumber>, Error<T>>
+    where
+        T: Trait,
+    {
+        Self::markets(market_id).ok_or(Error::<T>::MarketDoesNotExist.into())
     }
 }
