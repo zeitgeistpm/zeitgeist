@@ -55,6 +55,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod errors;
+use errors::{NO_REPORT, NOT_RESOLVED};
+
 mod market;
 use market::{Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,Report};
 
@@ -62,9 +65,6 @@ fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     let pos = items.iter().position(|&i| i == item).unwrap();
     items.swap_remove(pos);
 }
-
-pub const NOT_RESOLVED: dispatch::DispatchError = dispatch::DispatchError::Other("Resolved outcome does not exist");
-pub const NO_REPORT: dispatch::DispatchError = dispatch::DispatchError::Other("Report does not exist");
 
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
