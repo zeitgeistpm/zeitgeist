@@ -44,6 +44,8 @@ macro_rules! pool_exit_with_exact_amount {
             },
             transferred: asset_amount,
         }));
+
+        Ok(())
     }};
 }
 
@@ -83,6 +85,8 @@ macro_rules! pool_join_with_exact_amount {
             },
             transferred: asset_amount,
         }));
+
+        Ok(())
     }};
 }
 
@@ -129,6 +133,8 @@ macro_rules! pool {
             },
             transferred,
         }));
+
+        Ok(())
     }};
 }
 
@@ -192,5 +198,7 @@ macro_rules! swap_exact_amount {
             },
             max_price: $max_price,
         }));
+
+        Ok(())
     }};
 }
