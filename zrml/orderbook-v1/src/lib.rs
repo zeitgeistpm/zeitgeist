@@ -18,7 +18,7 @@ use frame_support::traits::{Currency, ExistenceRequirement, ReservableCurrency, 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 // use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{CheckedMul, CheckedSub, Hash, Zero, SaturatedConversion};
+use sp_runtime::traits::{CheckedMul, CheckedSub, Hash, Zero};
 use sp_runtime::RuntimeDebug;
 use sp_std::cmp;
 use sp_std::vec::Vec;
@@ -196,7 +196,7 @@ decl_module! {
                     OrderSide::Ask => {
                         T::Currency::ensure_can_withdraw(&sender, cost, WithdrawReasons::all(), Zero::zero())?;
 
-                        T::Shares::unreserve(share_id, &maker, order_data.total);
+                        T::Shares::unreserve(share_id, &maker, order_data.total)?;
                         T::Shares::transfer(share_id, &maker, &sender, order_data.total)?;
 
                         T::Currency::transfer(&sender, &maker, cost, ExistenceRequirement::AllowDeath)?;
