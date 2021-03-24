@@ -76,7 +76,6 @@ parameter_types! {
 
 impl zrml_shares::Trait for Test {
     type Event = ();
-    type Balance = Balance;
     type Currency = Balances;
     type ModuleId = SharesModuleId;
 }

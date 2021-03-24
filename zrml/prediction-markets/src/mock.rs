@@ -98,7 +98,6 @@ parameter_types! {
 
 impl zrml_shares::Trait for Test {
     type Event = ();
-    type Balance = Balance;
     type Currency = Balances;
     type ModuleId = SharesModuleId;
 }
@@ -111,7 +110,7 @@ parameter_types! {
     pub const MinWeight: Balance = BASE;
     pub const MaxWeight: Balance = 50 * BASE;
     pub const MaxTotalWeight: Balance = 50 * BASE;
-    pub const MaxAssets: Balance = 8;
+    pub const MaxAssets: usize = 8;
     pub const MinLiquidity: Balance = 100 * BASE;
 }
 
