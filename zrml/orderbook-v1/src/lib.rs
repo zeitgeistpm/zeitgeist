@@ -18,7 +18,7 @@ use frame_support::traits::{Currency, ExistenceRequirement, ReservableCurrency, 
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
 // use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{CheckedMul, CheckedSub, Hash, Zero};
+use sp_runtime::traits::{CheckedMul, CheckedSub, Hash, Zero, SaturatedConversion};
 use sp_runtime::RuntimeDebug;
 use sp_std::cmp;
 use sp_std::vec::Vec;
@@ -69,8 +69,8 @@ pub trait Trait: frame_system::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash>
-        + ReservableShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, Self::Hash>
+        + ReservableShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
 }
 
 decl_storage! {

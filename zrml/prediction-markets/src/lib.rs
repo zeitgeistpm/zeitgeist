@@ -74,8 +74,8 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, BalanceOf<Self>, Self::Hash>
-        + WrapperShares<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Shares: Shares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>
+        + WrapperShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
 
     /// The identifier of individual markets.
     type MarketId: AtLeast32Bit + Parameter + Member + MaybeSerializeDeserialize + Default + Copy;
