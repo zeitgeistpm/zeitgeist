@@ -82,7 +82,7 @@ pub struct Market<AccountId, BlockNumber> {
 impl<AccountId, B> Market<AccountId, B> {
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
-            MarketType::Categorical => self.categories.unwrap(),
+            MarketType::Categorical => self.categories.expect("Categorical market must have categories"),
             MarketType::Scalar => 0, // TODO implement scalar markets
         }
     }
