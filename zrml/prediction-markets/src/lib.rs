@@ -290,25 +290,74 @@ decl_module! {
         pub fn destroy_market(origin, market_id: T::MarketId) {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
-            if let Some(market) = Self::markets(&market_id) {
+            let market = Self::market_by_id(&market_id)?;
 
-                <Markets<T>>::remove(&market_id);
+            <Markets<T>>::remove(&market_id);
 
-                // delete all the shares if any exist
-                for i in 0..market.outcomes() {
-                    let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-                    T::Shares::destroy_all(share_id)?;
-                }
-            } else {
-                Err(Error::<T>::MarketDoesNotExist)?;
+            // delete all the shares if any exist
+            for i in 0..market.outcomes() {
+                let share_id = Self::market_outcome_share_id(market_id.clone(), i);
+                T::Shares::destroy_all(share_id)?;
             }
+ 
+        }
+
+        /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
+        ///
+        #[weight = 10_000]
+        pub fn admin_move_market_to_closed(origin, market_id: T::MarketId) {
+            T::ApprovalOrigin::ensure_origin(origin)?;
+
+            let market = Self::market_by_id(&market_id)?;
+            let new_end = match market.end {
+                MarketEnd::Block(_) => {
+                    let current_block = <frame_system::Module<T>>::block_number();
+                    MarketEnd::Block(current_block)
+                },
+                MarketEnd::Timestamp(_) => {
+                    let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
+                    MarketEnd::Timestamp(now)
+                }
+            };
+
+            <Markets<T>>::mutate(&market_id, |m| {
+                m.as_mut().unwrap().end = new_end;
+            });
+        }
+
+        /// Allows the `ApprovalOrigin` to immediately move a reported or disputed
+        /// market to resolved.
+        ////
+        #[weight = 10_000]
+        pub fn admin_move_market_to_resolved(origin, market_id: T::MarketId) {
+            T::ApprovalOrigin::ensure_origin(origin)?;
+
+            let market = Self::market_by_id(&market_id)?;
+            ensure!(market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed, "not reported nor disputed");
+            if market.status == MarketStatus::Reported {
+                let report = market.report.ok_or_else(|| NO_REPORT)?;
+                let mut old_reports_per_block = Self::market_ids_per_report_block(report.at);
+                remove_item::<T::MarketId>(&mut old_reports_per_block, market_id.clone());
+                <MarketIdsPerReportBlock<T>>::insert(report.at, old_reports_per_block);
+            }
+            if market.status == MarketStatus::Disputed {
+                let disputes = Self::disputes(market_id.clone());
+                let num_disputes = disputes.len() as u16;
+                let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
+                let at = prev_dispute.at;
+                let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
+                remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id.clone());
+                <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
+            }
+
+            Self::internal_resolve(&market_id)?;
         }
 
         #[weight = 10_000]
         pub fn create_categorical_market(
             origin,
             oracle: T::AccountId,
-            end: MarketEnd,
+            end: MarketEnd<T::BlockNumber>,
             metadata: Vec<u8>,
             creation: MarketCreation,
             categories: u16,
@@ -320,7 +369,7 @@ decl_module! {
             match end {
                 MarketEnd::Block(block) => {
                     let current_block = <frame_system::Module<T>>::block_number();
-                    ensure!(current_block < block.saturated_into(), Error::<T>::EndBlockTooSoon);
+                    ensure!(current_block < block, Error::<T>::EndBlockTooSoon);
                 }
                 MarketEnd::Timestamp(timestamp) => {
                     let now = <pallet_timestamp::Module<T>>::get();
@@ -545,8 +594,7 @@ decl_module! {
                 match market.end {
                     MarketEnd::Block(block) => {
                         // blocks
-                        let end: T::BlockNumber = block.saturated_into();
-                        if current_block <= end + T::ReportingPeriod::get() {
+                        if current_block <= block + T::ReportingPeriod::get() {
                             ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
                         } // otherwise anyone can be the reporter
                     }
@@ -704,11 +752,11 @@ impl<T: Trait> Module<T> {
         ("zge/pm", market_id, outcome).using_encoded(<T as frame_system::Trait>::Hashing::hash)
     }
 
-    fn is_market_active(end: MarketEnd) -> bool {
+    fn is_market_active(end: MarketEnd<T::BlockNumber>) -> bool {
         match end {
             MarketEnd::Block(block) => {
                 let current_block = <frame_system::Module<T>>::block_number();
-                return current_block < block.saturated_into();
+                return current_block < block;
             }
             MarketEnd::Timestamp(timestamp) => {
                 let now = <pallet_timestamp::Module<T>>::get().saturated_into::<u64>();
@@ -766,6 +814,13 @@ impl<T: Trait> Module<T> {
         }
     }
 
+    /// Performs the logic for resolving a market, including slashing and distributing
+    /// funds.
+    ///
+    /// NOTE: This function does not perform any checks on the market that is being given.
+    /// In the function calling this you should that the market is already in a reported or
+    /// disputed state.
+    ///
     fn internal_resolve(market_id: &T::MarketId) -> DispatchResult {
         let market = Self::market_by_id(market_id)?;
         let report = market.report.clone().ok_or_else(|| NO_REPORT)?;
