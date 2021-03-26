@@ -55,7 +55,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 11,
+    spec_version: 12,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -255,13 +255,13 @@ impl orderbook_v1::Trait for Runtime {
 parameter_types! {
     pub const SwapsModuleId: ModuleId = ModuleId(*b"zge/swap");
     pub const ExitFee: Balance = 0;
-    pub const MaxInRatio: Balance = ZGE / 2;
-    pub const MaxOutRatio: Balance = (ZGE / 3) + 1;
-    pub const MinWeight: Balance = ZGE;
-    pub const MaxWeight: Balance = 50 * ZGE;
-    pub const MaxTotalWeight: Balance = 50 * ZGE;
+    pub const MaxInRatio: Balance = ZTG / 2;
+    pub const MaxOutRatio: Balance = (ZTG / 3) + 1;
+    pub const MinWeight: Balance = ZTG;
+    pub const MaxWeight: Balance = 50 * ZTG;
+    pub const MaxTotalWeight: Balance = 50 * ZTG;
     pub const MaxAssets: usize = 8;
-    pub const MinLiquidity: Balance = 100 * ZGE;
+    pub const MinLiquidity: Balance = 100 * ZTG;
 }
 
 impl zrml_swaps::Trait for Runtime {
@@ -281,14 +281,14 @@ impl zrml_swaps::Trait for Runtime {
 
 parameter_types! {
     pub const PmModuleId: ModuleId = ModuleId(*b"zge/pred");
-    pub const ReportingPeriod: BlockNumber = 100;
-    pub const DisputePeriod: BlockNumber = 100;
-    pub const DisputeBond: Balance = 10;
-    pub const DisputeFactor: Balance = 5;
+    pub const ReportingPeriod: BlockNumber = DAY;
+    pub const DisputePeriod: BlockNumber = DAY;
+    pub const DisputeBond: Balance = 5 * ZTG;
+    pub const DisputeFactor: Balance = 2 * ZTG;
     pub const MaxDisputes: u16 = 6;
-    pub const ValidityBond: Balance = 10;
-    pub const AdvisoryBond: Balance = 10;
-    pub const OracleBond: Balance = 10;
+    pub const ValidityBond: Balance = 50 * DOLLARS;
+    pub const AdvisoryBond: Balance = DOLLARS;
+    pub const OracleBond: Balance = 50 * DOLLARS;
     pub const MaxCategories: u16 = 8;
 }
 
