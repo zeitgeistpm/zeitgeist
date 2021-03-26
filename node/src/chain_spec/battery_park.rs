@@ -65,10 +65,10 @@ fn battery_park_genesis(
     endowed_accounts: Vec<AccountId>,
     _enable_println: bool,
 ) -> zeitgeist_runtime::GenesisConfig {
-    use zeitgeist_runtime::constants::currency::ZGE;
+    use zeitgeist_runtime::constants::currency::ZTG;
     use zeitgeist_runtime::{AuraConfig, BalancesConfig, GrandpaConfig, SudoConfig, SystemConfig};
 
-    let initial_balance = 10_000 * ZGE;
+    let initial_balance = 10_000 * ZTG;
 
     zeitgeist_runtime::GenesisConfig {
         frame_system: Some(SystemConfig {
