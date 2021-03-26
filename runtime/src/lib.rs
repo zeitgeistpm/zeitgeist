@@ -287,7 +287,7 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * ZTG;
     pub const MaxDisputes: u16 = 6;
     pub const ValidityBond: Balance = 50 * DOLLARS;
-    pub const AdvisoryBond: Balance = DOLLARS;
+    pub const AdvisoryBond: Balance = 25 * DOLLARS;
     pub const OracleBond: Balance = 50 * DOLLARS;
     pub const MaxCategories: u16 = 8;
 }
