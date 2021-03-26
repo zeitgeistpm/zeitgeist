@@ -240,7 +240,12 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             }
         )));
         assert_eq!(asset_after_join, 40604010000);
-        assert_all_parameters([_25 - 1000, _25, _25, _25], 100, [_100 + 1000, _100, _100, _100], 1000000000100)
+        assert_all_parameters(
+            [_25 - 1000, _25, _25, _25],
+            100,
+            [_100 + 1000, _100, _100, _100],
+            1000000000100,
+        )
     });
 }
 
@@ -409,12 +414,7 @@ fn pool_join_increases_correct_pool_parameters() {
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: vec!(_5, _5, _5, _5),
         })));
-        assert_all_parameters(
-            [_20, _20, _20, _20],
-            _5,
-            [_105, _105, _105, _105],
-            _105,
-        );
+        assert_all_parameters([_20, _20, _20, _20], _5, [_105, _105, _105, _105], _105);
     })
 }
 

@@ -56,10 +56,10 @@ mod mock;
 mod tests;
 
 mod errors;
-use errors::{NO_REPORT, NOT_RESOLVED};
+use errors::{NOT_RESOLVED, NO_REPORT};
 
 mod market;
-use market::{Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,Report};
+use market::{Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Report};
 
 fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
     let pos = items.iter().position(|&i| i == item).unwrap();
@@ -839,7 +839,7 @@ impl<T: Trait> Module<T> {
             MarketStatus::Disputed => {
                 let disputes = Self::disputes(market_id.clone());
                 let num_disputes = disputes.len() as u16;
-              
+
                 let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
                 let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
@@ -876,7 +876,7 @@ impl<T: Trait> Module<T> {
                     T::Currency::resolve_creating(&correct_reporters[i], amount);
                     overall_imbalance = leftover;
                 }
-            },
+            }
             _ => (),
         };
 
@@ -898,7 +898,9 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn market_by_id(market_id: &T::MarketId) -> Result<Market<T::AccountId, T::BlockNumber>, Error<T>>
+    fn market_by_id(
+        market_id: &T::MarketId,
+    ) -> Result<Market<T::AccountId, T::BlockNumber>, Error<T>>
     where
         T: Trait,
     {
