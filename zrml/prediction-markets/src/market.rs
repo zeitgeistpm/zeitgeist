@@ -17,8 +17,8 @@ pub enum MarketCreation {
 
 /// Defines whether the end is represented as a blocknumber or a timestamp.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug, Copy)]
-pub enum MarketEnd {
-    Block(u64),
+pub enum MarketEnd<BlockNumber> {
+    Block(BlockNumber),
     Timestamp(u64),
 }
 
@@ -63,7 +63,7 @@ pub struct Market<AccountId, BlockNumber> {
     // Oracle that reports the outcome of this market.
     pub oracle: AccountId,
     // Ending block for this market.
-    pub end: MarketEnd,
+    pub end: MarketEnd<BlockNumber>,
     // Metadata for the market, usually a content address of IPFS
     // hosted JSON.
     pub metadata: Vec<u8>,
@@ -82,7 +82,9 @@ pub struct Market<AccountId, BlockNumber> {
 impl<AccountId, B> Market<AccountId, B> {
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
-            MarketType::Categorical => self.categories.expect("Categorical market must have categories"),
+            MarketType::Categorical => self
+                .categories
+                .expect("Categorical market must have categories"),
             MarketType::Scalar => 0, // TODO implement scalar markets
         }
     }
