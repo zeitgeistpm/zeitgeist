@@ -282,15 +282,17 @@ decl_module! {
             }
         }
 
-        /// Allows Root to destroy markets.
+        /// Allows the `ApprovalOrigin` to immediately destroy a market.
         ///
         /// todo: this should check if there's any outstanding funds reserved if it stays
         /// in for production
         #[weight = 10_000]
-        pub fn destroy_market(origin, market_id: T::MarketId) {
+        pub fn admin_destroy_market(origin, market_id: T::MarketId) {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
+
+            Self::clear_auto_resolve(&market_id)?;
 
             <Markets<T>>::remove(&market_id);
 
@@ -334,21 +336,7 @@ decl_module! {
 
             let market = Self::market_by_id(&market_id)?;
             ensure!(market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed, "not reported nor disputed");
-            if market.status == MarketStatus::Reported {
-                let report = market.report.ok_or_else(|| NO_REPORT)?;
-                let mut old_reports_per_block = Self::market_ids_per_report_block(report.at);
-                remove_item::<T::MarketId>(&mut old_reports_per_block, market_id.clone());
-                <MarketIdsPerReportBlock<T>>::insert(report.at, old_reports_per_block);
-            }
-            if market.status == MarketStatus::Disputed {
-                let disputes = Self::disputes(market_id.clone());
-                let num_disputes = disputes.len() as u16;
-                let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
-                let at = prev_dispute.at;
-                let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
-                remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id.clone());
-                <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
-            }
+            Self::clear_auto_resolve(&market_id)?;
 
             Self::internal_resolve(&market_id)?;
         }
@@ -894,6 +882,28 @@ impl<T: Trait> Module<T> {
             m.as_mut().unwrap().status = MarketStatus::Resolved;
             m.as_mut().unwrap().resolved_outcome = Some(resolved_outcome);
         });
+
+        Ok(())
+    }
+
+    /// Clears this market from being stored for automatic resolution.
+    fn clear_auto_resolve(market_id: &T::MarketId) -> Result<(), dispatch::DispatchError> {
+        let market = Self::market_by_id(&market_id)?;
+        if market.status == MarketStatus::Reported {
+            let report = market.report.ok_or_else(|| NO_REPORT)?;
+            let mut old_reports_per_block = Self::market_ids_per_report_block(report.at);
+            remove_item::<T::MarketId>(&mut old_reports_per_block, market_id.clone());
+            <MarketIdsPerReportBlock<T>>::insert(report.at, old_reports_per_block);
+        }
+        if market.status == MarketStatus::Disputed {
+            let disputes = Self::disputes(market_id.clone());
+            let num_disputes = disputes.len() as u16;
+            let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
+            let at = prev_dispute.at;
+            let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
+            remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id.clone());
+            <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
+        }
 
         Ok(())
     }
