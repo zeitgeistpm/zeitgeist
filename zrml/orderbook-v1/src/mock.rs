@@ -6,9 +6,11 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     ModuleId, Perbill,
 };
+use zeitgeist_primitives::Asset;
 
 pub type AccountId = u128;
 pub type Balance = u128;
+pub type MarketId = u128;
 
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
@@ -70,25 +72,29 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
-parameter_types! {
-    pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
+impl orml_tokens::Trait for Test {
+    type Amount = i128;
+    type Balance = Balance;
+    type CurrencyId = Asset<H256, MarketId>;
+    type Event = ();
+    type OnReceived = ();
+    type WeightInfo = ();
 }
 
-impl zrml_shares::Trait for Test {
-    type Event = ();
-    type Currency = Balances;
-    type ModuleId = SharesModuleId;
+parameter_types! {
+    pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
 }
 
 impl Trait for Test {
     type Event = ();
     type Currency = pallet_balances::Module<Test>;
-    type Shares = zrml_shares::Module<Test>;
+    type Shares = Tokens;
+    type MarketId = MarketId;
 }
 
 pub type Balances = pallet_balances::Module<Test>;
 pub type Orderbook = Module<Test>;
-pub type Shares = zrml_shares::Module<Test>;
+pub type Tokens = orml_tokens::Module<Test>;
 
 pub struct ExtBuilder {
     balances: Vec<(AccountId, Balance)>,

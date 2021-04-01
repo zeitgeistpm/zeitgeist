@@ -3,14 +3,19 @@ use frame_support::{
     assert_noop, assert_ok,
     traits::{Currency, ReservableCurrency},
 };
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_core::H256;
-use zrml_traits::shares::{ReservableShares, Shares as SharesTrait};
+use zeitgeist_primitives::Asset;
 
 #[test]
 fn it_makes_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Give some shares for Bob.
-        assert_ok!(Shares::set_balance(H256::repeat_byte(1), &BOB, 100));
+        assert_ok!(Tokens::deposit(
+            Asset::Share(H256::repeat_byte(1)),
+            &BOB,
+            100
+        ));
 
         // Make an order from Alice to buy shares.
         assert_ok!(Orderbook::make_order(
@@ -33,10 +38,7 @@ fn it_makes_orders() {
             5,
         ));
 
-        let shares_reserved = <Shares as ReservableShares<AccountId, H256>>::reserved_balance(
-            H256::repeat_byte(1),
-            &BOB,
-        );
+        let shares_reserved = Tokens::reserved_balance(Asset::Share(H256::repeat_byte(1)), &BOB);
         assert_eq!(shares_reserved, 10);
     });
 }
@@ -46,7 +48,7 @@ fn it_takes_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Give some shares for Bob.
         let shares_id = H256::repeat_byte(1);
-        assert_ok!(Shares::set_balance(shares_id, &BOB, 100));
+        assert_ok!(Tokens::deposit(Asset::Share(shares_id), &BOB, 100));
 
         // Make an order from Bob to sell shares.
         assert_ok!(Orderbook::make_order(
@@ -61,13 +63,12 @@ fn it_takes_orders() {
         assert_ok!(Orderbook::fill_order(Origin::signed(ALICE), order_hash));
 
         let alice_bal = <Balances as Currency<AccountId>>::free_balance(&ALICE);
-        let alice_shares =
-            <Shares as SharesTrait<AccountId, H256>>::free_balance(shares_id, &ALICE);
+        let alice_shares = Tokens::free_balance(Asset::Share(shares_id), &ALICE);
         assert_eq!(alice_bal, 950);
         assert_eq!(alice_shares, 10);
 
         let bob_bal = <Balances as Currency<AccountId>>::free_balance(&BOB);
-        let bob_shares = <Shares as SharesTrait<AccountId, H256>>::free_balance(shares_id, &BOB);
+        let bob_shares = Tokens::free_balance(Asset::Share(shares_id), &BOB);
         assert_eq!(bob_bal, 1_050);
         assert_eq!(bob_shares, 90);
     });

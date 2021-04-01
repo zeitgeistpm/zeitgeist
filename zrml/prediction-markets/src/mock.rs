@@ -8,6 +8,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     ModuleId, Perbill,
 };
+use zeitgeist_primitives::{Asset, BASE};
 
 pub type AccountId = u128;
 pub type Balance = u128;
@@ -21,15 +22,21 @@ pub const DAVE: AccountId = 3;
 pub const EVE: AccountId = 4;
 pub const SUDO: AccountId = 69;
 
-// BASE is used as the number of decimals in order to set constants elsewhere.
-pub const BASE: Balance = 10_000_000_000;
-
 impl_outer_origin! {
     pub enum Origin for Test {}
 }
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
+
+impl orml_tokens::Trait for Test {
+    type Amount = i128;
+    type Balance = Balance;
+    type CurrencyId = Asset<H256, MarketId>;
+    type Event = ();
+    type OnReceived = ();
+    type WeightInfo = ();
+}
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -96,12 +103,6 @@ parameter_types! {
     pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
 }
 
-impl zrml_shares::Trait for Test {
-    type Event = ();
-    type Currency = Balances;
-    type ModuleId = SharesModuleId;
-}
-
 parameter_types! {
     pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
     pub const ExitFee: Balance = 0;
@@ -116,10 +117,10 @@ parameter_types! {
 
 impl zrml_swaps::Trait for Test {
     type Event = ();
-    type Currency = Balances;
-    type Shares = Shares;
+    type Shares = Tokens;
     type ModuleId = SwapsModuleId;
     type ExitFee = ExitFee;
+    type MarketId = MarketId;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
     type MinWeight = MinWeight;
@@ -149,14 +150,14 @@ ord_parameter_types! {
 impl Trait for Test {
     type Event = ();
     type Currency = Balances;
-    type Shares = Shares;
-    type MarketId = MarketId;
+    type Shares = Tokens;
     type ModuleId = PmModuleId;
     type ReportingPeriod = ReportingPeriod;
     type DisputePeriod = DisputePeriod;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type MaxDisputes = MaxDisputes;
+    type MarketId = MarketId;
     type ValidityBond = ValidityBond;
     type AdvisoryBond = AdvisoryBond;
     type OracleBond = OracleBond;
@@ -169,9 +170,9 @@ impl Trait for Test {
 pub type Balances = pallet_balances::Module<Test>;
 pub type PredictionMarkets = Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;
-pub type Shares = zrml_shares::Module<Test>;
 pub type Swaps = zrml_swaps::Module<Test>;
 pub type System = frame_system::Module<Test>;
+pub type Tokens = orml_tokens::Module<Test>;
 
 pub struct ExtBuilder {
     balances: Vec<(AccountId, Balance)>,

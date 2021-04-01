@@ -14,15 +14,21 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::traits::{Currency, ExistenceRequirement, ReservableCurrency, WithdrawReasons};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, ensure};
+use frame_support::{
+    traits::{Currency, ExistenceRequirement, ReservableCurrency, WithdrawReasons},
+    Parameter,
+};
 // use frame_support::weights::Weight;
 use frame_system::{self as system, ensure_signed};
-use sp_runtime::traits::{CheckedMul, CheckedSub, Hash, Zero};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_runtime::traits::{
+    AtLeast32Bit, CheckedMul, CheckedSub, Hash, MaybeSerializeDeserialize, Member, Zero,
+};
 use sp_runtime::RuntimeDebug;
 use sp_std::cmp;
 use sp_std::vec::Vec;
-use zrml_traits::shares::{ReservableShares, Shares};
+use zeitgeist_primitives::Asset;
 
 #[cfg(test)]
 mod mock;
@@ -69,8 +75,13 @@ pub trait Trait: frame_system::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, Self::Hash>
-        + ReservableShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
+    type Shares: MultiReservableCurrency<
+        Self::AccountId,
+        Balance = BalanceOf<Self>,
+        CurrencyId = Asset<Self::Hash, Self::MarketId>,
+    >;
+
+    type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + Member + Parameter;
 }
 
 decl_storage! {
@@ -82,7 +93,6 @@ decl_storage! {
             Option<Order<T::AccountId, BalanceOf<T>, T::Hash>>;
 
         Nonce get(fn nonce): u64;
-
     }
 }
 
@@ -156,7 +166,7 @@ decl_module! {
                 }
                 OrderSide::Ask => {
                     ensure!(
-                        T::Shares::can_reserve(share_id, &sender, amount),
+                        T::Shares::can_reserve(Asset::Share(share_id), &sender, amount),
                         Error::<T>::InsufficientBalance,
                     );
 
@@ -164,7 +174,7 @@ decl_module! {
                         a.push(hash.clone());
                     });
 
-                    T::Shares::reserve(share_id, &sender, amount)?;
+                    T::Shares::reserve(Asset::Share(share_id), &sender, amount)?;
                 }
             }
 
@@ -186,18 +196,18 @@ decl_module! {
 
                 match order_data.side {
                     OrderSide::Bid => {
-                        T::Shares::ensure_can_withdraw(share_id, &sender, order_data.total)?;
+                        T::Shares::ensure_can_withdraw(Asset::Share(share_id), &sender, order_data.total)?;
 
                         T::Currency::unreserve(&maker, cost);
                         T::Currency::transfer(&maker, &sender, cost, ExistenceRequirement::AllowDeath)?;
 
-                        T::Shares::transfer(share_id, &sender, &maker, order_data.total)?;
+                        T::Shares::transfer(Asset::Share(share_id), &sender, &maker, order_data.total)?;
                     }
                     OrderSide::Ask => {
                         T::Currency::ensure_can_withdraw(&sender, cost, WithdrawReasons::all(), Zero::zero())?;
 
-                        T::Shares::unreserve(share_id, &maker, order_data.total)?;
-                        T::Shares::transfer(share_id, &maker, &sender, order_data.total)?;
+                        T::Shares::unreserve(Asset::Share(share_id), &maker, order_data.total);
+                        T::Shares::transfer(Asset::Share(share_id), &maker, &sender, order_data.total)?;
 
                         T::Currency::transfer(&sender, &maker, cost, ExistenceRequirement::AllowDeath)?;
                     }

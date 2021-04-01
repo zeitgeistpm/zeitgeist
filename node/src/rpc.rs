@@ -34,7 +34,7 @@ where
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: zrml_prediction_markets_rpc::PredictionMarketsRuntimeApi<Block, MarketId, Hash>,
-    C::Api: zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, Hash, AccountId, Balance>,
+    C::Api: zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, Hash, AccountId, Balance, MarketId>,
     C::Api: BlockBuilder<Block>,
     P: TransactionPool + 'static,
 {

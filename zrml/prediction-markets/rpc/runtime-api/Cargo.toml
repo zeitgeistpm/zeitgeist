@@ -10,6 +10,7 @@ codec = { package = "parity-scale-codec", version = "1.3.0", default-features = 
 sp-api = { version = "2.0.1", default-features = false }
 sp-runtime = { version = "2.0.1", default-features = false }
 sp-std = { version = "2.0.1", default-features = false }
+zeitgeist-primitives = { default-features = false, path = '../../../../primitives' }
 
 [features]
 default = ["std"]
@@ -19,4 +20,5 @@ std = [
     "sp-api/std",
     "sp-runtime/std",
     "sp-std/std",
+    "zeitgeist-primitives/std"
 ]
