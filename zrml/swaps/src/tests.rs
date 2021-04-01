@@ -1,15 +1,16 @@
 use crate::{mock::*, CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent, BASE};
 use frame_support::{assert_noop, assert_ok};
+use orml_traits::MultiCurrency;
 use sp_core::H256;
-use zrml_traits::shares::Shares as SharesTrait;
+use zeitgeist_primitives::Asset;
 
-pub const ASSET_A: H256 = H256::repeat_byte(65);
-pub const ASSET_B: H256 = H256::repeat_byte(66);
-pub const ASSET_C: H256 = H256::repeat_byte(67);
-pub const ASSET_D: H256 = H256::repeat_byte(68);
-pub const ASSET_E: H256 = H256::repeat_byte(69);
+pub const ASSET_A: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(65));
+pub const ASSET_B: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(66));
+pub const ASSET_C: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(67));
+pub const ASSET_D: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(68));
+pub const ASSET_E: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(69));
 
-pub const ASSETS: [H256; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
+pub const ASSETS: [Asset<H256, MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
 const _1: u128 = BASE;
 const _2: u128 = 2 * BASE;
@@ -504,7 +505,7 @@ fn alice_signed() -> Origin {
 
 fn create_initial_pool() {
     ASSETS.iter().cloned().for_each(|asset| {
-        let _ = Shares::generate(asset, &BOB, _100);
+        let _ = Shares::deposit(asset, &BOB, _100);
     });
     assert_ok!(Swaps::create_pool(
         Origin::signed(BOB),
@@ -515,10 +516,10 @@ fn create_initial_pool() {
 
 fn create_initial_pool_with_funds_for_alice() {
     create_initial_pool();
-    let _ = Shares::generate(ASSET_A, &ALICE, _25);
-    let _ = Shares::generate(ASSET_B, &ALICE, _25);
-    let _ = Shares::generate(ASSET_C, &ALICE, _25);
-    let _ = Shares::generate(ASSET_D, &ALICE, _25);
+    let _ = Shares::deposit(ASSET_A, &ALICE, _25);
+    let _ = Shares::deposit(ASSET_B, &ALICE, _25);
+    let _ = Shares::deposit(ASSET_C, &ALICE, _25);
+    let _ = Shares::deposit(ASSET_D, &ALICE, _25);
 }
 
 fn event_exists(raw_evt: crate::RawEvent<AccountId, Balance>) -> bool {
@@ -532,7 +533,7 @@ fn assert_all_parameters(
     alice_assets: [u128; 4],
     alice_pool_assets: u128,
     pool_assets: [u128; 4],
-    total_supply: u128,
+    total_issuance: u128,
 ) {
     let pai = Swaps::pool_account_id(0);
     let psi = Swaps::pool_shares_id(0);
@@ -549,5 +550,5 @@ fn assert_all_parameters(
     assert_eq!(Shares::free_balance(ASSET_C, &pai), pool_assets[2]);
     assert_eq!(Shares::free_balance(ASSET_D, &pai), pool_assets[3]);
 
-    assert_eq!(Shares::total_supply(psi), total_supply);
+    assert_eq!(Shares::total_issuance(psi), total_issuance);
 }

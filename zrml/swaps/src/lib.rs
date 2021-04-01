@@ -24,45 +24,43 @@ use consts::{ARITHM_OF, BASE, BPOW_PRECISION, EXIT_FEE};
 use events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent};
 use fixed::{bdiv, bmul, bpow};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, ensure,
-    traits::{Currency, Get, ReservableCurrency},
+    decl_error, decl_event, decl_module, decl_storage, ensure, traits::Get, Parameter,
 };
 use frame_system::ensure_signed;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{
-    traits::{AccountIdConversion, Hash, Zero},
+    traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member, Zero},
     DispatchError, DispatchResult, ModuleId, RuntimeDebug, SaturatedConversion,
 };
 use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
-use zrml_traits::{
-    shares::{ReservableShares, Shares},
-    swaps::Swaps,
-};
+use zeitgeist_primitives::{Asset, Swaps};
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
-pub struct Pool<Balance, Hash> {
-    pub assets: Vec<Hash>,
+pub struct Pool<Balance, Hash, MarketId> {
+    pub assets: Vec<Asset<Hash, MarketId>>,
     pub swap_fee: Balance,
     pub total_weight: u128,
-    pub weights: BTreeMap<Hash, u128>,
+    pub weights: BTreeMap<Asset<Hash, MarketId>, u128>,
 }
 
-impl<Balance, Hash: Ord> Pool<Balance, Hash> {
-    pub fn bound(&self, asset: Hash) -> bool {
-        let weight = BTreeMap::get(&self.weights, &asset);
+impl<Balance, Hash: Ord, MarketId: Ord> Pool<Balance, Hash, MarketId> {
+    pub fn bound(&self, asset: &Asset<Hash, MarketId>) -> bool {
+        let weight = BTreeMap::get(&self.weights, asset);
         weight.is_some()
     }
 }
 
 type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Trait>::Shares as MultiCurrency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 pub trait Trait: frame_system::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
-    type Currency: ReservableCurrency<Self::AccountId>;
-
-    type Shares: ReservableShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
+    type Shares: MultiReservableCurrency<
+        Self::AccountId,
+        CurrencyId = Asset<Self::Hash, Self::MarketId>,
+    >;
 
     /// The module identifier.
     type ModuleId: Get<ModuleId>;
@@ -79,11 +77,13 @@ pub trait Trait: frame_system::Trait {
 
     /// The minimum amount of liqudity required to bootstrap a pool.
     type MinLiquidity: Get<BalanceOf<Self>>;
+
+    type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + Member + Parameter;
 }
 
 decl_storage! {
     trait Store for Module<T: Trait> as Swaps {
-        Pools get(fn pools): map hasher(blake2_128_concat) u128 => Option<Pool<BalanceOf<T>, T::Hash>>;
+        Pools get(fn pools): map hasher(blake2_128_concat) u128 => Option<Pool<BalanceOf<T>, T::Hash, T::MarketId>>;
         NextPoolId get(fn next_pool_id): u128;
     }
 }
@@ -144,10 +144,10 @@ decl_module! {
         /// Temporary probably - The Swap is created per prediction market.
         #[weight = 0]
         #[frame_support::transactional]
-        fn create_pool(origin, assets: Vec<T::Hash>, weights: Vec<u128>) -> DispatchResult {
+        fn create_pool(origin, assets: Vec<Asset<T::Hash, T::MarketId>>, weights: Vec<u128>) -> DispatchResult {
             (|| {
                 let who = ensure_signed(origin)?;
-                let _ = Self::do_create_pool(who, assets, Zero::zero(), weights)?;
+                let _ = <Self as Swaps<T::AccountId>>::create_pool(who, assets, Zero::zero(), weights)?;
                 Ok(())
             })()
         }
@@ -207,7 +207,7 @@ decl_module! {
         fn pool_exit_with_exact_asset_amount(
             origin,
             pool_id: u128,
-            asset: T::Hash,
+            asset: Asset<T::Hash, T::MarketId>,
             asset_amount: BalanceOf<T>,
             max_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -225,7 +225,7 @@ decl_module! {
                         Ok(())
                     },
                     event: PoolExitWithExactAssetAmount,
-                    pool_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    pool_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                         let pool_amount: BalanceOf<T> = math::calc_pool_in_given_single_out(
                             asset_balance.saturated_into(),
                             *pool.weights.get(&asset).unwrap(),
@@ -260,7 +260,7 @@ decl_module! {
         fn pool_exit_with_exact_pool_amount(
             origin,
             pool_id: u128,
-            asset: T::Hash,
+            asset: Asset<T::Hash, T::MarketId>,
             pool_amount: BalanceOf<T>,
             min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -268,7 +268,7 @@ decl_module! {
                 pool_exit_with_exact_amount!(
                     initial_params: (origin, pool_id, asset),
 
-                    asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    asset_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                         let asset_amount: BalanceOf<T> = math::calc_single_out_given_pool_in(
                             asset_balance.saturated_into(),
                             *pool.weights.get(&asset).unwrap(),
@@ -339,7 +339,7 @@ decl_module! {
         fn pool_join_with_exact_asset_amount(
             origin,
             pool_id: u128,
-            asset_in: T::Hash,
+            asset_in: Asset<T::Hash, T::MarketId>,
             asset_amount: BalanceOf<T>,
             min_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -350,7 +350,7 @@ decl_module! {
                     asset_amount: |_, _, _| Ok(asset_amount),
                     bound: min_pool_amount,
                     event: PoolJoinWithExactAssetAmount,
-                    pool_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    pool_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                         let mul: BalanceOf<T> = bmul(
                             asset_balance.saturated_into(),
                             T::MaxInRatio::get().saturated_into()
@@ -389,7 +389,7 @@ decl_module! {
         fn pool_join_with_exact_pool_amount(
             origin,
             pool_id: u128,
-            asset: T::Hash,
+            asset: Asset<T::Hash, T::MarketId>,
             pool_amount: BalanceOf<T>,
             max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -397,7 +397,7 @@ decl_module! {
                 pool_join_with_exact_amount!(
                     initial_params: (origin, pool_id, asset),
 
-                    asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                    asset_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                         let asset_amount: BalanceOf<T> = math::calc_single_in_given_pool_out(
                             asset_balance.saturated_into(),
                             *pool.weights.get(&asset).unwrap(),
@@ -439,9 +439,9 @@ decl_module! {
         fn swap_exact_amount_in(
             origin,
             pool_id: u128,
-            asset_in: T::Hash,
+            asset_in: Asset<T::Hash, T::MarketId>,
             asset_amount_in: BalanceOf<T>,
-            asset_out: T::Hash,
+            asset_out: Asset<T::Hash, T::MarketId>,
             min_asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) -> DispatchResult {
@@ -450,7 +450,7 @@ decl_module! {
                     initial_params: (asset_in, asset_out, max_price, origin, pool_id),
 
                     asset_amount_in: |_, _| Ok(asset_amount_in),
-                    asset_amount_out: |pool: &Pool<BalanceOf<T>, _>, pool_account_id| {
+                    asset_amount_out: |pool: &Pool<BalanceOf<T>, _, _>, pool_account_id| {
                         let balance_in = T::Shares::free_balance(asset_in, pool_account_id);
                         ensure!(
                             asset_amount_in <= bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into())?.saturated_into(),
@@ -495,9 +495,9 @@ decl_module! {
         fn swap_exact_amount_out(
             origin,
             pool_id: u128,
-            asset_in: T::Hash,
+            asset_in: Asset<T::Hash, T::MarketId>,
             max_amount_asset_in: BalanceOf<T>,
-            asset_out: T::Hash,
+            asset_out: Asset<T::Hash, T::MarketId>,
             asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) -> DispatchResult {
@@ -505,7 +505,7 @@ decl_module! {
                 swap_exact_amount!(
                     initial_params: (asset_in, asset_out, max_price, origin, pool_id),
 
-                    asset_amount_in: |pool: &Pool<BalanceOf<T>, _>, pool_account_id| {
+                    asset_amount_in: |pool: &Pool<BalanceOf<T>, _, _>, pool_account_id| {
                         let balance_in = T::Shares::free_balance(asset_in, pool_account_id);
 
                         let balance_out = T::Shares::free_balance(asset_out, pool_account_id);
@@ -536,8 +536,8 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn pool_shares_id(pool_id: u128) -> T::Hash {
-        ("zge/swaps", pool_id).using_encoded(<T as frame_system::Trait>::Hashing::hash)
+    pub fn pool_shares_id(pool_id: u128) -> Asset<T::Hash, T::MarketId> {
+        Asset::PoolShare(pool_id)
     }
 
     pub fn pool_account_id(pool_id: u128) -> T::AccountId {
@@ -546,8 +546,8 @@ impl<T: Trait> Module<T> {
 
     pub fn get_spot_price(
         pool_id: u128,
-        asset_in: T::Hash,
-        asset_out: T::Hash,
+        asset_in: Asset<T::Hash, T::MarketId>,
+        asset_out: Asset<T::Hash, T::MarketId>,
     ) -> Result<BalanceOf<T>, DispatchError> {
         if let Some(pool) = Self::pools(pool_id) {
             // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
@@ -575,7 +575,7 @@ impl<T: Trait> Module<T> {
 
     fn mint_pool_shares(pool_id: u128, to: &T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
         let shares_id = Self::pool_shares_id(pool_id);
-        T::Shares::generate(shares_id, to, amount)
+        T::Shares::deposit(shares_id, to, amount)
     }
 
     fn burn_pool_shares(
@@ -584,7 +584,8 @@ impl<T: Trait> Module<T> {
         amount: BalanceOf<T>,
     ) -> DispatchResult {
         let shares_id = Self::pool_shares_id(pool_id);
-        T::Shares::destroy(shares_id, from, amount)
+        T::Shares::slash(shares_id, from, amount);
+        Ok(())
     }
 
     #[allow(dead_code)]
@@ -599,9 +600,9 @@ impl<T: Trait> Module<T> {
     }
 
     #[allow(dead_code)]
-    fn get_denormalized_weight(pool_id: u128, asset: T::Hash) -> u128 {
+    fn get_denormalized_weight(pool_id: u128, asset: &Asset<T::Hash, T::MarketId>) -> u128 {
         if let Some(pool) = Self::pools(pool_id) {
-            if let Some(val) = pool.weights.get(&asset) {
+            if let Some(val) = pool.weights.get(asset) {
                 return *val;
             }
         }
@@ -614,7 +615,7 @@ impl<T: Trait> Module<T> {
         0
     }
 
-    fn pool_by_id(pool_id: u128) -> Result<Pool<BalanceOf<T>, T::Hash>, Error<T>>
+    fn pool_by_id(pool_id: u128) -> Result<Pool<BalanceOf<T>, T::Hash, T::MarketId>, Error<T>>
     where
         T: Trait,
     {
@@ -622,10 +623,14 @@ impl<T: Trait> Module<T> {
     }
 }
 
-impl<T> Swaps<T::AccountId, BalanceOf<T>, T::Hash> for Module<T>
+impl<T> Swaps<T::AccountId> for Module<T>
 where
     T: Trait,
 {
+    type Balance = BalanceOf<T>;
+    type Hash = T::Hash;
+    type MarketId = T::MarketId;
+
     /// Deploys a new pool with the given assets and weights.
     ///
     /// # Arguments
@@ -635,9 +640,9 @@ where
     /// * `assets`: The assets that are used in the pool.
     /// * `swap_fee`: The fee applied to each swap.
     /// * `weights`: These are the denormalized weights (the raw weights).
-    fn do_create_pool(
+    fn create_pool(
         who: T::AccountId,
-        assets: Vec<T::Hash>,
+        assets: Vec<Asset<T::Hash, T::MarketId>>,
         swap_fee: BalanceOf<T>,
         weights: Vec<u128>,
     ) -> sp_std::result::Result<u128, DispatchError> {
@@ -666,6 +671,7 @@ where
                 weight <= T::MaxWeight::get(),
                 Error::<T>::AboveMaximumWeight
             );
+
             T::Shares::transfer(asset, &who, &pool_account, amount)?;
             map.insert(asset, weight);
             total_weight = total_weight.check_add_rslt(&weight)?;
@@ -687,7 +693,7 @@ where
         );
 
         let pool_shares_id = Self::pool_shares_id(next_pool_id);
-        T::Shares::generate(pool_shares_id, &who, amount)?;
+        T::Shares::deposit(pool_shares_id, &who, amount)?;
 
         Self::deposit_event(RawEvent::PoolCreate(CommonPoolEventParams {
             pool_id: next_pool_id,
@@ -700,7 +706,7 @@ where
 
 #[inline]
 fn check_provided_values_len_must_equal_assets_len<T, U>(
-    assets: &[T::Hash],
+    assets: &[Asset<T::Hash, T::MarketId>],
     provided_values: &[U],
 ) -> Result<(), Error<T>>
 where

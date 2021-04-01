@@ -13,10 +13,9 @@ pallet-timestamp = { version = "2.0.1", default-features = false }
 zeitgeist-primitives = { path = "../primitives", version = "0.1.0", default-features = false }
 zrml-prediction-markets = { path = "../zrml/prediction-markets", version = "0.1.0", default-features = false }
 zrml-prediction-markets-runtime-api = { path = "../zrml/prediction-markets/rpc/runtime-api", version = "0.1.0", default-features = false }
-zrml-shares = { path = "../zrml/shares", version = "0.1.0", default-features = false }
 zrml-swaps = { path = "../zrml/swaps", version = "0.1.0", default-features = false }
 zrml-swaps-runtime-api = { path = "../zrml/swaps/rpc/runtime-api", version = "0.1.0", default-features = false }
-zrml-traits = { path = "../zrml/traits", version = "0.1.0", default-features = false }
+orml-tokens = { default-features = false, version = '0.3' }
 
 [dependencies.codec]
 default-features = false
@@ -149,10 +148,8 @@ std = [
     'zeitgeist-primitives/std',
     'zrml-prediction-markets/std',
     'zrml-prediction-markets-runtime-api/std',
-    'zrml-shares/std',
-    'zrml-swaps/std',
+    'orml-tokens/std',
     'zrml-swaps-runtime-api/std',
-    'zrml-traits/std'
 ]
 
 [build-dependencies.wasm-builder-runner]

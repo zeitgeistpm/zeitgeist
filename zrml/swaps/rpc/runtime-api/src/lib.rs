@@ -7,6 +7,7 @@ use codec::{Codec, Decode, Encode};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 use sp_std::prelude::*;
+use zeitgeist_primitives::Asset;
 
 #[derive(Eq, PartialEq, Encode, Decode, Default)]
 #[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
@@ -43,14 +44,15 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(
 }
 
 sp_api::decl_runtime_apis! {
-    pub trait SwapsApi<PoolId, Hash, AccountId, Balance> where
+    pub trait SwapsApi<PoolId, Hash, AccountId, Balance, MarketId> where
         PoolId: Codec,
         Hash: Codec,
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr,
+        MarketId: Codec
     {
-        fn pool_shares_id(pool_id: PoolId) -> Hash;
+        fn pool_shares_id(pool_id: PoolId) -> Asset<Hash, MarketId>;
         fn pool_account_id(pool_id: PoolId) -> AccountId;
-        fn get_spot_price(pool_id: PoolId, asset_in: Hash, asset_out: Hash) -> BalanceInfo<Balance>;
+        fn get_spot_price(pool_id: PoolId, asset_in: Asset<Hash, MarketId>, asset_out: Asset<Hash, MarketId>) -> BalanceInfo<Balance>;
     }
 }
