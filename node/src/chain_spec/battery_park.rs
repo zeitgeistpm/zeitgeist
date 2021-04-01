@@ -66,7 +66,7 @@ fn battery_park_genesis(
     _enable_println: bool,
 ) -> zeitgeist_runtime::GenesisConfig {
     use zeitgeist_runtime::constants::currency::ZTG;
-    use zeitgeist_runtime::{AuraConfig, BalancesConfig, GrandpaConfig, SudoConfig, SystemConfig};
+    use zeitgeist_runtime::{AuraConfig, BalancesConfig, GrandpaConfig, SudoConfig, SystemConfig, TokensConfig};
 
     let initial_balance = 10_000 * ZTG;
 
@@ -84,6 +84,7 @@ fn battery_park_genesis(
                 .map(|k| (k, initial_balance))
                 .collect(),
         }),
+        orml_tokens: Some(TokensConfig::default()),
         pallet_aura: Some(AuraConfig {
             authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
         }),

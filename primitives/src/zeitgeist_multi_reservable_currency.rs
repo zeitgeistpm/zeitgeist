@@ -2,7 +2,6 @@ use alloc::vec::Vec;
 use frame_support::{storage::IterableStorageDoubleMap, StorageDoubleMap, StorageMap};
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
 use orml_traits::currency::MultiReservableCurrency;
-use sp_runtime::traits::Zero;
 
 /// Custom `MultiReservableCurrency` trait.
 pub trait ZeitgeistMultiReservableCurrency<AccountId>: MultiReservableCurrency<AccountId> {
@@ -39,11 +38,9 @@ where
     where
         I: Iterator<Item = (T::AccountId, AccountData<Self::Balance>)>,
     {
-        let mut total = Self::Balance::zero();
-        for (k0, v) in accounts {
+        for (k0, _) in accounts {
             <Accounts<T>>::remove(k0, currency_id);
-            total += v.free + v.reserved;
         }
-        <TotalIssuance<T>>::mutate(currency_id, |v| *v -= total);
+        <TotalIssuance<T>>::remove(currency_id);
     }
 }
