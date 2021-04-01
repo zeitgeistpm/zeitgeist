@@ -1,16 +1,19 @@
 use crate as zrml_swaps;
 use crate::{Module, Trait, BASE};
 use frame_support::{impl_outer_event, impl_outer_origin, parameter_types, weights::Weight};
+use orml_currencies::BasicCurrencyAdapter;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     ModuleId, Perbill,
 };
+use zeitgeist_primitives::Asset;
 
 pub type AccountId = u128;
 pub type Balance = u128;
 pub type BlockNumber = u64;
+pub type MarketId = u128;
 
 pub const ALICE: AccountId = 0;
 pub const BOB: AccountId = 1;
@@ -21,8 +24,9 @@ pub const EVE: AccountId = 4;
 impl_outer_event! {
     pub enum TestEvent for Test {
         frame_system<T>,
+        orml_currencies<T>,
+        orml_tokens<T>,
         pallet_balances<T>,
-        zrml_shares<T>,
         zrml_swaps<T>,
     }
 }
@@ -88,11 +92,28 @@ parameter_types! {
     pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
 }
 
-impl zrml_shares::Trait for Test {
-    type Currency = Currency;
+impl orml_tokens::Trait for Test {
+    type Amount = i128;
+    type Balance = Balance;
+    type CurrencyId = Asset<H256, MarketId>;
     type Event = TestEvent;
-    type ModuleId = SharesModuleId;
+    type OnReceived = ();
+    type WeightInfo = ();
 }
+
+parameter_types! {
+    pub const GetNativeCurrencyId: Asset<H256, MarketId> = Asset::Ztg;
+}
+
+impl orml_currencies::Trait for Test {
+    type Event = TestEvent;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = AdaptedBasicCurrency;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type WeightInfo = ();
+}
+
+pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Test, Currency, i128, u128>;
 
 parameter_types! {
     pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
@@ -108,22 +129,23 @@ parameter_types! {
 
 impl Trait for Test {
     type Event = TestEvent;
-    type Currency = Currency;
-    type Shares = Shares;
-    type ModuleId = SwapsModuleId;
     type ExitFee = ExitFee;
+    type MarketId = MarketId;
+    type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
-    type MinWeight = MinWeight;
-    type MaxWeight = MaxWeight;
     type MaxTotalWeight = MaxTotalWeight;
-    type MaxAssets = MaxAssets;
+    type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
+    type MinWeight = MinWeight;
+    type ModuleId = SwapsModuleId;
+    type Shares = Shares;
 }
 
 pub type Currency = pallet_balances::Module<Test>;
-pub type Shares = zrml_shares::Module<Test>;
+pub type Shares = orml_currencies::Module<Test>;
 pub type Swaps = Module<Test>;
+pub type Tokens = orml_tokens::Module<Test>;
 
 pub struct ExtBuilder {
     balances: Vec<(AccountId, Balance)>,

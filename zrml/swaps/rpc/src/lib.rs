@@ -12,17 +12,21 @@ use sp_runtime::{
 };
 use sp_std::convert::TryFrom;
 use std::sync::Arc;
+use zeitgeist_primitives::Asset;
 
-pub use self::gen_client::Client as SwapsClient;
 pub use zrml_swaps_runtime_api::{BalanceInfo, SwapsApi as SwapsRuntimeApi};
 
 #[rpc]
-pub trait SwapsApi<BlockHash, PoolId, Hash, AccountId, Balance, BalanceType>
+pub trait SwapsApi<BlockHash, PoolId, Hash, AccountId, Balance, BalanceType, MarketId>
 where
     Balance: std::str::FromStr,
 {
     #[rpc(name = "swaps_poolSharesId")]
-    fn pool_shares_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Hash>;
+    fn pool_shares_id(
+        &self,
+        pool_id: PoolId,
+        at: Option<BlockHash>,
+    ) -> Result<Asset<Hash, MarketId>>;
 
     #[rpc(name = "swaps_poolAccountId")]
     fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<AccountId>;
@@ -31,8 +35,8 @@ where
     fn get_spot_price(
         &self,
         pool_id: PoolId,
-        asset_in: Hash,
-        asset_out: Hash,
+        asset_in: Asset<Hash, MarketId>,
+        asset_out: Asset<Hash, MarketId>,
         at: Option<BlockHash>,
     ) -> Result<BalanceType>;
 }
@@ -67,20 +71,32 @@ impl From<Error> for i64 {
     }
 }
 
-impl<C, Block, PoolId, Hash, AccountId, Balance>
-    SwapsApi<<Block as BlockT>::Hash, PoolId, Hash, AccountId, Balance, BalanceInfo<Balance>>
-    for Swaps<C, Block>
+impl<C, Block, PoolId, Hash, AccountId, Balance, MarketId>
+    SwapsApi<
+        <Block as BlockT>::Hash,
+        PoolId,
+        Hash,
+        AccountId,
+        Balance,
+        BalanceInfo<Balance>,
+        MarketId,
+    > for Swaps<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-    C::Api: SwapsRuntimeApi<Block, PoolId, Hash, AccountId, Balance>,
+    C::Api: SwapsRuntimeApi<Block, PoolId, Hash, AccountId, Balance, MarketId>,
     PoolId: Codec,
     Hash: Codec,
     AccountId: Codec,
     Balance: Codec + MaybeDisplay + MaybeFromStr + TryFrom<U256>,
     <Balance as TryFrom<U256>>::Error: sp_std::fmt::Debug,
+    MarketId: Codec,
 {
-    fn pool_shares_id(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<Hash> {
+    fn pool_shares_id(
+        &self,
+        pool_id: PoolId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Asset<Hash, MarketId>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             //if the block hash is not supplied assume the best block
@@ -113,8 +129,8 @@ where
     fn get_spot_price(
         &self,
         pool_id: PoolId,
-        asset_in: Hash,
-        asset_out: Hash,
+        asset_in: Asset<Hash, MarketId>,
+        asset_out: Asset<Hash, MarketId>,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<BalanceInfo<Balance>> {
         let api = self.client.runtime_api();

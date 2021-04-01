@@ -16,3 +16,4 @@ sp-blockchain = "2.0.1"
 sp-core = "2.0.1"
 sp-std = "2.0.1"
 zrml-swaps-runtime-api = { path = "runtime-api" }
+zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
