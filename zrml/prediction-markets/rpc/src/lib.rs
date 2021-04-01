@@ -7,8 +7,8 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
+use zeitgeist_primitives::Asset;
 
-pub use self::gen_client::Client as PmClient;
 pub use zrml_prediction_markets_runtime_api::PredictionMarketsApi as PredictionMarketsRuntimeApi;
 
 #[rpc]
@@ -19,7 +19,7 @@ pub trait PredictionMarketsApi<BlockHash, MarketId, Hash> {
         market_id: MarketId,
         outcome: u16,
         at: Option<BlockHash>,
-    ) -> Result<Hash>;
+    ) -> Result<Asset<Hash, MarketId>>;
 }
 
 /// A struct that implements the [`PredictionMarketsApi`].
@@ -66,7 +66,7 @@ where
         market_id: MarketId,
         outcome: u16,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Hash> {
+    ) -> Result<Asset<Hash, MarketId>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume

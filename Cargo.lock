@@ -3473,14 +3473,63 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "orml-tokens",
+ "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "zrml-shares",
- "zrml-traits",
+ "zeitgeist-primitives",
+]
+
+[[package]]
+name = "orml-currencies"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e25d0216a08759868edcbf434b198a8a76cf1f04015a6e4509fbf09d5f4825c0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-tokens"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4382384f7c205d8c62654e36fd623c31b90ce6a36f3353426d33a1a6c4ac4c1b"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-traits"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1894c45ef7dd34390c71ee63189d1bfdb873347982d33c7378a7698d818aba1f"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -7908,6 +7957,13 @@ dependencies = [
 name = "zeitgeist-primitives"
 version = "0.1.0"
 dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
  "sp-core",
  "sp-runtime",
 ]
@@ -7921,6 +7977,7 @@ dependencies = [
  "frame-system",
  "frame-system-rpc-runtime-api",
  "orderbook-v1",
+ "orml-tokens",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
@@ -7946,10 +8003,8 @@ dependencies = [
  "zeitgeist-primitives",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
- "zrml-shares",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
- "zrml-traits",
 ]
 
 [[package]]
@@ -7980,6 +8035,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orderbook-v1",
+ "orml-tokens",
+ "orml-traits",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -7987,9 +8044,8 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "zrml-shares",
+ "zeitgeist-primitives",
  "zrml-swaps",
- "zrml-traits",
 ]
 
 [[package]]
@@ -8004,6 +8060,7 @@ dependencies = [
  "sp-api",
  "sp-blockchain",
  "sp-runtime",
+ "zeitgeist-primitives",
  "zrml-prediction-markets-runtime-api",
 ]
 
@@ -8016,20 +8073,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "zrml-shares"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "zrml-traits",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
@@ -8038,14 +8082,16 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "zrml-shares",
- "zrml-traits",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
@@ -8062,6 +8108,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
+ "zeitgeist-primitives",
  "zrml-swaps-runtime-api",
 ]
 
@@ -8074,15 +8121,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "zrml-traits"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec",
- "sp-runtime",
- "sp-std",
+ "zeitgeist-primitives",
 ]
 
 [[package]]

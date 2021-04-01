@@ -49,7 +49,6 @@ pub use sp_runtime::{Perbill, Permill};
 /// Zeitgeist pallets.
 pub use orderbook_v1;
 pub use zrml_prediction_markets;
-pub use zrml_shares;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
@@ -240,16 +239,11 @@ parameter_types! {
     pub const SharesModuleId: ModuleId = ModuleId(*b"zge/shar");
 }
 
-impl zrml_shares::Trait for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type ModuleId = SharesModuleId;
-}
-
 impl orderbook_v1::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type Shares = Shares;
+    type Shares = Tokens;
+    type MarketId = MarketId;
 }
 
 parameter_types! {
@@ -266,11 +260,11 @@ parameter_types! {
 
 impl zrml_swaps::Trait for Runtime {
     type Event = Event;
-    type Currency = Balances;
-    type Shares = Shares;
+    type Shares = Tokens;
     type ModuleId = SwapsModuleId;
     type ExitFee = ExitFee;
     type MaxInRatio = MaxInRatio;
+    type MarketId = MarketId;
     type MaxOutRatio = MaxOutRatio;
     type MinWeight = MinWeight;
     type MaxWeight = MaxWeight;
@@ -295,7 +289,7 @@ parameter_types! {
 impl zrml_prediction_markets::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type Shares = Shares;
+    type Shares = Tokens;
     type MarketId = MarketId;
     type ModuleId = PmModuleId;
     type ReportingPeriod = ReportingPeriod;
@@ -310,6 +304,15 @@ impl zrml_prediction_markets::Trait for Runtime {
     type Slash = ();
     type Swap = Swaps;
     type MaxCategories = MaxCategories;
+}
+
+impl orml_tokens::Trait for Runtime {
+    type Amount = i128;
+    type Balance = Balance;
+    type CurrencyId = Asset<Hash, MarketId>;
+    type Event = Event;
+    type OnReceived = ();
+    type WeightInfo = ();
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -327,8 +330,8 @@ construct_runtime!(
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>}, // 5
         TransactionPayment: pallet_transaction_payment::{Module, Storage}, // 6
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>}, // 7
+        Tokens: orml_tokens::{Event<T>},
         // Zeitgeist pallets.
-        Shares: zrml_shares::{Module, Call, Storage, Event<T>}, // 8
         Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>}, // 9
         PredictionMarkets: zrml_prediction_markets::{Module, Call, Storage, Event<T>}, // 10
         Swaps: zrml_swaps::{Module, Call, Storage, Event<T>}, // 11
@@ -496,15 +499,15 @@ impl_runtime_apis! {
         fn market_outcome_share_id(
             market_id: MarketId,
             outcome: u16,
-        ) -> Hash {
+        ) -> Asset<Hash, MarketId> {
             PredictionMarkets::market_outcome_share_id(market_id, outcome)
         }
     }
 
-    impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, Hash, AccountId, Balance> for Runtime {
+    impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, Hash, AccountId, Balance, MarketId> for Runtime {
         fn pool_shares_id(
             pool_id: u128,
-         ) -> Hash {
+         ) -> Asset<Hash, MarketId> {
              Swaps::pool_shares_id(pool_id)
         }
 
@@ -516,8 +519,8 @@ impl_runtime_apis! {
 
         fn get_spot_price(
             pool_id: u128,
-            asset_in: Hash,
-            asset_out: Hash,
+            asset_in: Asset<Hash, MarketId>,
+            asset_out: Asset<Hash, MarketId>,
         ) -> BalanceInfo<Balance> {
             BalanceInfo{ amount: Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0) }
         }

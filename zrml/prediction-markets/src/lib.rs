@@ -31,27 +31,26 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Encode;
-use frame_support::traits::{
-    Currency, EnsureOrigin, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
-};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch, ensure, Parameter,
+    traits::{
+        Currency, EnsureOrigin, ExistenceRequirement, Get, Imbalance, OnUnbalanced,
+        ReservableCurrency,
+    },
+    Parameter,
 };
 use frame_system::ensure_signed;
+use orml_traits::MultiCurrency;
 use sp_runtime::traits::{
-    AccountIdConversion, AtLeast32Bit, CheckedAdd, Hash, MaybeSerializeDeserialize, Member, One,
-    Zero,
+    AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, One, Zero,
 };
 use sp_runtime::{DispatchResult, ModuleId, SaturatedConversion};
 use sp_std::cmp;
 use sp_std::vec::Vec;
-use zrml_traits::shares::{Shares, WrapperShares};
-use zrml_traits::swaps::Swaps;
+use zeitgeist_primitives::{Asset, Swaps, ZeitgeistMultiReservableCurrency};
 
 #[cfg(test)]
 mod mock;
-
 #[cfg(test)]
 mod tests;
 
@@ -77,11 +76,14 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait {
 
     type Currency: ReservableCurrency<Self::AccountId>;
 
-    type Shares: Shares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>
-        + WrapperShares<Self::AccountId, Self::Hash, Balance = BalanceOf<Self>>;
+    type Shares: ZeitgeistMultiReservableCurrency<
+        Self::AccountId,
+        Balance = BalanceOf<Self>,
+        CurrencyId = Asset<Self::Hash, Self::MarketId>,
+    >;
 
     /// The identifier of individual markets.
-    type MarketId: AtLeast32Bit + Parameter + Member + MaybeSerializeDeserialize + Default + Copy;
+    type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + Member + Parameter;
 
     /// The module identifier.
     type ModuleId: Get<ModuleId>;
@@ -118,7 +120,12 @@ pub trait Trait: frame_system::Trait + pallet_timestamp::Trait {
 
     type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-    type Swap: Swaps<Self::AccountId, BalanceOf<Self>, Self::Hash>;
+    type Swap: Swaps<
+        Self::AccountId,
+        Balance = BalanceOf<Self>,
+        Hash = Self::Hash,
+        MarketId = Self::MarketId,
+    >;
 
     /// The maximum number of categories available for categorical markets.
     type MaxCategories: Get<u16>;
@@ -299,7 +306,8 @@ decl_module! {
             // delete all the shares if any exist
             for i in 0..market.outcomes() {
                 let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-                T::Shares::destroy_all(share_id)?;
+                let accounts = T::Shares::accounts_by_currency_id(share_id);
+                T::Shares::destroy_all(share_id, accounts.iter().cloned());
             }
         }
 
@@ -478,16 +486,13 @@ decl_module! {
             // ensure a swap pool does not already exist
             ensure!(Self::market_to_swap_pool(&market_id).is_none(), Error::<T>::SwapPoolExists);
 
-            let wrapped_native_currency = T::Shares::get_native_currency_id();
-            let mut assets = Vec::from([wrapped_native_currency]);
+            let mut assets = Vec::from([Asset::Ztg]);
 
             for i in 0..market.outcomes() {
-                assets.push(
-                    Self::market_outcome_share_id(market_id, i)
-                );
+                assets.push(Self::market_outcome_share_id(market_id, i));
             }
 
-            let pool_id = T::Swap::do_create_pool(sender, assets, Zero::zero(), weights)?;
+            let pool_id = T::Swap::create_pool(sender, assets, Zero::zero(), weights)?;
 
             <MarketToSwapPool<T>>::insert(market_id, pool_id);
         }
@@ -542,7 +547,7 @@ decl_module! {
             for i in 0..market.outcomes() {
                 let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
-                T::Shares::destroy(share_id, &sender, amount)?;
+                T::Shares::slash(share_id, &sender, amount);
             }
 
             T::Currency::transfer(&market_account, &sender, amount, ExistenceRequirement::AllowDeath)?;
@@ -698,7 +703,7 @@ decl_module! {
             );
 
             // Destory the shares.
-            T::Shares::destroy(winning_shares_id, &sender, winning_balance)?;
+            T::Shares::slash(winning_shares_id, &sender, winning_balance);
 
             // Pay out the winner. One full unit of currency per winning share.
             T::Currency::transfer(&market_account, &sender, winning_balance, ExistenceRequirement::AllowDeath)?;
@@ -712,8 +717,11 @@ impl<T: Trait> Module<T> {
         T::ModuleId::get().into_sub_account(market_id)
     }
 
-    pub fn market_outcome_share_id(market_id: T::MarketId, outcome: u16) -> T::Hash {
-        ("zge/pm", market_id, outcome).using_encoded(<T as frame_system::Trait>::Hashing::hash)
+    pub fn market_outcome_share_id(
+        market_id: T::MarketId,
+        outcome: u16,
+    ) -> Asset<T::Hash, T::MarketId> {
+        Asset::PredictionMarketShare(market_id, outcome)
     }
 
     fn is_market_active(end: MarketEnd<T::BlockNumber>) -> bool {
@@ -767,7 +775,7 @@ impl<T: Trait> Module<T> {
         for i in 0..market.outcomes() {
             let share_id = Self::market_outcome_share_id(market_id.clone(), i);
 
-            T::Shares::generate(share_id, &who, amount)?;
+            T::Shares::deposit(share_id, &who, amount)?;
         }
 
         Self::deposit_event(RawEvent::BoughtCompleteSet(market_id, who));
@@ -875,7 +883,8 @@ impl<T: Trait> Module<T> {
             }
             // ... but delete the rest
             let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-            T::Shares::destroy_all(share_id)?;
+            let accounts = T::Shares::accounts_by_currency_id(share_id);
+            T::Shares::destroy_all(share_id, accounts.iter().cloned());
         }
 
         <Markets<T>>::mutate(&market_id, |m| {

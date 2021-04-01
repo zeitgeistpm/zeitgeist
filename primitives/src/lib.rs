@@ -1,10 +1,23 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
+mod asset;
+mod swaps;
+mod zeitgeist_currencies_extension;
+mod zeitgeist_multi_reservable_currency;
+
+pub use asset::Asset;
 use sp_runtime::{
     generic,
     traits::{IdentifyAccount, Verify},
     MultiSignature,
 };
+pub use swaps::Swaps;
+pub use zeitgeist_currencies_extension::ZeitgeistCurrenciesExtension;
+pub use zeitgeist_multi_reservable_currency::ZeitgeistMultiReservableCurrency;
+
+pub const BASE: u128 = 10_000_000_000;
 
 /// An index to a block.
 pub type BlockNumber = u32;

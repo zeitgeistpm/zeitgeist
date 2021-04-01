@@ -5,12 +5,26 @@ authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"
 
 [dependencies]
-sp-core = { version = "2.0.1", default-features = false }
-sp-runtime = { version = "2.0.1", default-features = false }
+frame-support = { default-features = false, version = "2.0" }
+frame-system = { default-features = false, version = "2.0" }
+orml-currencies = { default-features = false, version = "0.3" }
+orml-tokens = { default-features = false, version = "0.3" }
+orml-traits = { default-features = false, version = "0.3" }
+parity-scale-codec = { default-features = false, features = ["derive"], version = "1.0" }
+serde = { default-features = false, features = ["derive"], optional = true, version = "1.0" }
+sp-core = { default-features = false, version = "2.0" }
+sp-runtime = { default-features = false, version = "2.0" }
 
 [features]
 default = ["std"]
 std = [
+    "frame-support/std",
+    "frame-system/std",
+    "orml-currencies/std",
+    "orml-tokens/std",
+    "orml-traits/std",
+    "parity-scale-codec/std",
+    "serde/std",
     "sp-core/std",
-    "sp-runtime/std"
+    "sp-runtime/std",
 ]
