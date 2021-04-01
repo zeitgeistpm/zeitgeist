@@ -66,7 +66,9 @@ fn battery_park_genesis(
     _enable_println: bool,
 ) -> zeitgeist_runtime::GenesisConfig {
     use zeitgeist_runtime::constants::currency::ZTG;
-    use zeitgeist_runtime::{AuraConfig, BalancesConfig, GrandpaConfig, SudoConfig, SystemConfig, TokensConfig};
+    use zeitgeist_runtime::{
+        AuraConfig, BalancesConfig, GrandpaConfig, SudoConfig, SystemConfig, TokensConfig,
+    };
 
     let initial_balance = 10_000 * ZTG;
 
