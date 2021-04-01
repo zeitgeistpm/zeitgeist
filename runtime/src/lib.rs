@@ -46,10 +46,6 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-/// Zeitgeist pallets.
-pub use orderbook_v1;
-pub use zrml_prediction_markets;
-
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
@@ -315,6 +311,20 @@ impl orml_tokens::Trait for Runtime {
     type WeightInfo = ();
 }
 
+parameter_types! {
+    pub const GetNativeCurrencyId: Asset<Hash, MarketId> = Asset::Ztg;
+}
+
+pub type AdaptedBasicCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, i128, u128>;
+
+impl orml_currencies::Trait for Runtime {
+    type Event = Event;
+    type MultiCurrency= Tokens;
+    type NativeCurrency = AdaptedBasicCurrency;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -330,7 +340,8 @@ construct_runtime!(
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>}, // 5
         TransactionPayment: pallet_transaction_payment::{Module, Storage}, // 6
         Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>}, // 7
-        Tokens: orml_tokens::{Event<T>},
+        Tokens: orml_tokens::{Module, Config<T>, Storage, Event<T>},
+        Currency: orml_currencies::{Module, Call, Storage, Event<T>},
         // Zeitgeist pallets.
         Orderbook: orderbook_v1::{Module, Call, Storage, Event<T>}, // 9
         PredictionMarkets: zrml_prediction_markets::{Module, Call, Storage, Event<T>}, // 10
