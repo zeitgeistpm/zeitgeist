@@ -5,7 +5,8 @@ use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::{AccountId, Signature};
 use zeitgeist_runtime::{
-    AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, TokensConfig, SudoConfig, SystemConfig, WASM_BINARY,
+    AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, SudoConfig, SystemConfig,
+    TokensConfig, WASM_BINARY,
 };
 
 // The PoC-1 "Battery Park" testnet configuration.

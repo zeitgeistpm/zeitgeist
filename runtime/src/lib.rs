@@ -315,11 +315,12 @@ parameter_types! {
     pub const GetNativeCurrencyId: Asset<Hash, MarketId> = Asset::Ztg;
 }
 
-pub type AdaptedBasicCurrency = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, i128, u128>;
+pub type AdaptedBasicCurrency =
+    orml_currencies::BasicCurrencyAdapter<Runtime, Balances, i128, u128>;
 
 impl orml_currencies::Trait for Runtime {
     type Event = Event;
-    type MultiCurrency= Tokens;
+    type MultiCurrency = Tokens;
     type NativeCurrency = AdaptedBasicCurrency;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type WeightInfo = ();
