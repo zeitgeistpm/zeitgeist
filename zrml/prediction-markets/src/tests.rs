@@ -117,7 +117,7 @@ fn it_allows_to_buy_a_complete_set() {
         // Check the outcome balances
         for i in 0..market.outcomes() {
             let share_id = PredictionMarkets::market_outcome_share_id(0, i);
-            let bal = Tokens::free_balance(share_id, &BOB);
+            let bal = Shares::free_balance(share_id, &BOB);
             assert_eq!(bal, 100);
         }
 
@@ -145,10 +145,10 @@ fn it_allows_to_deploy_a_pool() {
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
-            <Test as crate::Trait>::ModuleId::get().into_account(),
+            <Runtime as crate::Config>::ModuleId::get().into_account(),
             100 * BASE
         ));
-        assert_ok!(Tokens::deposit(Asset::Ztg, &BOB, 100 * BASE));
+        assert_ok!(Shares::deposit(Asset::Ztg, &BOB, 100 * BASE));
 
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
@@ -181,7 +181,7 @@ fn it_allows_to_sell_a_complete_set() {
         // Check the outcome balances
         for i in 0..=market.outcomes() {
             let share_id = PredictionMarkets::market_outcome_share_id(0, i);
-            let bal = Tokens::free_balance(share_id, &BOB);
+            let bal = Shares::free_balance(share_id, &BOB);
             assert_eq!(bal, 0);
         }
 
@@ -302,21 +302,21 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         // check to make sure all but the winning share was deleted
         let share_a = PredictionMarkets::market_outcome_share_id(0, 0);
-        let share_a_total = Tokens::total_issuance(share_a);
+        let share_a_total = Shares::total_issuance(share_a);
         assert_eq!(share_a_total, 0);
-        let share_a_bal = Tokens::free_balance(share_a, &CHARLIE);
+        let share_a_bal = Shares::free_balance(share_a, &CHARLIE);
         assert_eq!(share_a_bal, 0);
 
         let share_b = PredictionMarkets::market_outcome_share_id(0, 1);
-        let share_b_total = Tokens::total_issuance(share_b);
+        let share_b_total = Shares::total_issuance(share_b);
         assert_eq!(share_b_total, 100);
-        let share_b_bal = Tokens::free_balance(share_b, &CHARLIE);
+        let share_b_bal = Shares::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, 100);
 
         let share_c = PredictionMarkets::market_outcome_share_id(0, 2);
-        let share_c_total = Tokens::total_issuance(share_c);
+        let share_c_total = Shares::total_issuance(share_c);
         assert_eq!(share_c_total, 0);
-        let share_c_bal = Tokens::free_balance(share_c, &CHARLIE);
+        let share_c_bal = Shares::free_balance(share_c, &CHARLIE);
         assert_eq!(share_c_bal, 0);
     });
 }
@@ -464,7 +464,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
 
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,),
-            Error::<Test>::MarketNotActive,
+            Error::<Runtime>::MarketNotActive,
         );
 
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));

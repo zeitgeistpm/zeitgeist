@@ -1,8 +1,6 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
-use codec::{Decode, Encode};
+use alloc::vec::Vec;
+use parity_scale_codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
-use sp_std::vec::Vec;
 
 /// Defines the type of market creation.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]

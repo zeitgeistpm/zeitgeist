@@ -1,161 +1,156 @@
-[package]
-authors = ['Logan Saether <x@logansaether.com']
-edition = '2018'
-name = 'zeitgeist-runtime'
-version = '0.1.0'
-
-[package.metadata.docs.rs]
-targets = ['x86_64-unknown-linux-gnu']
+[build-dependencies]
+substrate-wasm-builder = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 
 [dependencies]
-orderbook-v1 = { path = "../zrml/orderbook-v1", version = "0.1.0", default-features = false }
-pallet-timestamp = { version = "2.0.1", default-features = false }
-zeitgeist-primitives = { path = "../primitives", version = "0.1.0", default-features = false }
-zrml-prediction-markets = { path = "../zrml/prediction-markets", version = "0.1.0", default-features = false }
-zrml-prediction-markets-runtime-api = { path = "../zrml/prediction-markets/rpc/runtime-api", version = "0.1.0", default-features = false }
-zrml-swaps = { path = "../zrml/swaps", version = "0.1.0", default-features = false }
-zrml-swaps-runtime-api = { path = "../zrml/swaps/rpc/runtime-api", version = "0.1.0", default-features = false }
-orml-currencies = { default-features = false, version = '0.3' }
-orml-tokens = { default-features = false, version = '0.3' }
+frame-executive = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system-rpc-runtime-api = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+orml-currencies = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+orml-tokens = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+pallet-balances = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-randomness-collective-flip = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-sudo = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-timestamp = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-transaction-payment = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-transaction-payment-rpc-runtime-api = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
+serde = { features = ["derive"], optional = true, version = "1.0" }
+sp-api = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-block-builder = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-inherents = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-offchain = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-session = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-std = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-transaction-pool = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-version = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 
-[dependencies.codec]
-default-features = false
-features = ['derive']
-package = 'parity-scale-codec'
-version = '1.3.4'
+# Benchmark
 
-[dependencies.frame-executive]
-default-features = false
-version = '2.0.1'
+frame-benchmarking = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.0" }
+frame-system-benchmarking = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.0" }
+hex-literal = { optional = true, version = "0.3" }
 
-[dependencies.frame-support]
-default-features = false
-version = '2.0.1'
+# Cumulus
 
-[dependencies.frame-system]
-default-features = false
-version = '2.0.1'
+cumulus-pallet-parachain-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-pallet-xcm-handler = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+parachain-info = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
 
-[dependencies.frame-system-rpc-runtime-api]
-default-features = false
-version = '2.0.1'
+# Polkadot
 
-[dependencies.pallet-aura]
-default-features = false
-version = '2.0.1'
+polkadot-parachain = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm-builder = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+xcm-executor = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 
-[dependencies.pallet-balances]
-default-features = false
-version = '2.0.1'
+# Standalone
 
-[dependencies.pallet-grandpa]
-default-features = false
-version = '2.0.1'
+pallet-aura = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-grandpa = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-consensus-aura = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-finality-grandpa = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 
-[dependencies.pallet-randomness-collective-flip]
-default-features = false
-version = '2.0.1'
+# Zeitgeist
 
-[dependencies.pallet-sudo]
-default-features = false
-version = '2.0.1'
-
-[dependencies.pallet-transaction-payment]
-default-features = false
-version = '2.0.1'
-
-[dependencies.pallet-transaction-payment-rpc-runtime-api]
-default-features = false
-version = '2.0.1'
-
-[dependencies.serde]
-features = ['derive']
-optional = true
-version = '1.0.101'
-
-[dependencies.sp-api]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-block-builder]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-consensus-aura]
-default-features = false
-version = '0.8.0'
-
-[dependencies.sp-core]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-inherents]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-offchain]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-runtime]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-session]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-std]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-transaction-pool]
-default-features = false
-version = '2.0.1'
-
-[dependencies.sp-version]
-default-features = false
-version = '2.0.1'
+zeitgeist-primitives = { default-features = false, path = "../primitives" }
+zrml-orderbook-v1 = { default-features = false, path = "../zrml/orderbook-v1" }
+zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
+zrml-prediction-markets-runtime-api = { default-features = false, path = "../zrml/prediction-markets/rpc/runtime-api" }
+zrml-swaps = { default-features = false, path = "../zrml/swaps" }
+zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/rpc/runtime-api" }
 
 [features]
-default = ['std']
+default = ["std"]
+parachain = [
+	# Cumulus
+
+	"cumulus-pallet-parachain-system",
+	"cumulus-pallet-xcm-handler",
+	"parachain-info",
+
+	# Polkadot
+
+	"polkadot-parachain",
+	"xcm",
+	"xcm-builder",
+	"xcm-executor",
+]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system-benchmarking",
+    "frame-system/runtime-benchmarks",
+    "hex-literal",
+    "pallet-balances/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks",
+    "sp-runtime/runtime-benchmarks",
+]
 std = [
-    'codec/std',
-    'frame-executive/std',
-    'frame-support/std',
-    'frame-system/std',
-    'frame-system-rpc-runtime-api/std',
-    'pallet-aura/std',
-    'pallet-balances/std',
-    'pallet-grandpa/std',
-    'pallet-randomness-collective-flip/std',
-    'pallet-sudo/std',
-    'pallet-timestamp/std',
-    'pallet-transaction-payment/std',
-    'pallet-transaction-payment-rpc-runtime-api/std',
-    'serde',
-    'sp-api/std',
-    'sp-block-builder/std',
-    'sp-consensus-aura/std',
-    'sp-core/std',
-    'sp-inherents/std',
-    'sp-offchain/std',
-    'sp-runtime/std',
-    'sp-session/std',
-    'sp-std/std',
-    'sp-transaction-pool/std',
-    'sp-version/std',
-    'orderbook-v1/std',
-    'orml-tokens/std',
-    'orml-currencies/std',
-    'zeitgeist-primitives/std',
-    'zrml-prediction-markets/std',
-    'zrml-prediction-markets-runtime-api/std',
-    'zrml-swaps-runtime-api/std',
+	"frame-executive/std",
+	"frame-support/std",
+	"frame-system/std",
+	"orml-currencies/std",
+	"orml-tokens/std",
+	"orml-traits/std",
+	"pallet-balances/std",
+	"pallet-randomness-collective-flip/std",
+	"pallet-sudo/std",
+	"pallet-timestamp/std",
+	"frame-system-rpc-runtime-api/std",
+	"pallet-transaction-payment/std",
+	"pallet-transaction-payment-rpc-runtime-api/std",
+	"parity-scale-codec/std",
+	"serde",
+	"sp-api/std",
+	"sp-block-builder/std",
+	"sp-core/std",
+	"sp-inherents/std",
+	"sp-offchain/std",
+	"sp-runtime/std",
+	"sp-session/std",
+	"sp-std/std",
+	"sp-transaction-pool/std",
+	"sp-version/std",
+
+	# Cumulus
+
+	"cumulus-pallet-parachain-system/std",
+	"cumulus-pallet-xcm-handler/std",
+	"parachain-info/std",
+
+	# Polkadot
+
+	"polkadot-parachain/std",
+	"xcm/std",
+	"xcm-builder/std",
+	"xcm-executor/std",
+
+	# Standalone
+
+	"pallet-aura/std",
+	"pallet-grandpa/std",
+	"sp-consensus-aura/std",
+	"sp-finality-grandpa/std",
+
+	# Zeitgeist
+
+	"zeitgeist-primitives/std",
+	"zrml-orderbook-v1/std",
+	"zrml-prediction-markets-runtime-api/std",
+	"zrml-prediction-markets/std",
+	"zrml-swaps-runtime-api/std",
+	"zrml-swaps/std",
 ]
 
-[build-dependencies.wasm-builder-runner]
-git = 'https://github.com/paritytech/substrate.git'
-package = 'substrate-wasm-builder-runner'
-tag = 'v2.0.1'
-version = '1.0.5'
+[package]
+authors = ["Logan Saether <x@logansaether.com"]
+edition = "2018"
+name = "zeitgeist-runtime"
+version = "0.1.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

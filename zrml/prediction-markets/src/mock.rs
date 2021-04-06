@@ -1,181 +1,178 @@
-use crate::{Module, Trait};
-use frame_support::traits::{OnFinalize, OnInitialize};
-use frame_support::{impl_outer_origin, ord_parameter_types, parameter_types, weights::Weight};
+use crate as prediction_markets;
+use frame_support::{
+    construct_runtime, ord_parameter_types, parameter_types,
+    traits::{OnFinalize, OnInitialize},
+    weights::Weight,
+};
 use frame_system::EnsureSignedBy;
-use sp_core::H256;
+use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
     ModuleId, Perbill,
 };
-use zeitgeist_primitives::{Asset, BASE};
+use zeitgeist_primitives::{
+    AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
+    UncheckedExtrinsicTest, BASE,
+};
 
-pub type AccountId = u128;
-pub type Balance = u128;
-pub type BlockNumber = u64;
-pub type MarketId = u128;
+pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
+pub const DAVE: AccountIdTest = 3;
+pub const EVE: AccountIdTest = 4;
+pub const SUDO: AccountIdTest = 69;
 
-pub const ALICE: AccountId = 0;
-pub const BOB: AccountId = 1;
-pub const CHARLIE: AccountId = 2;
-pub const DAVE: AccountId = 3;
-pub const EVE: AccountId = 4;
-pub const SUDO: AccountId = 69;
-
-impl_outer_origin! {
-    pub enum Origin for Test {}
-}
-
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
-
-impl orml_tokens::Trait for Test {
-    type Amount = i128;
-    type Balance = Balance;
-    type CurrencyId = Asset<H256, MarketId>;
-    type Event = ();
-    type OnReceived = ();
-    type WeightInfo = ();
-}
-
-parameter_types! {
-    pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-}
-
-impl frame_system::Trait for Test {
-    type BaseCallFilter = ();
-    type Origin = Origin;
-    type Call = ();
-    type Index = u64;
-    type BlockNumber = BlockNumber;
-    type Hash = H256;
-    type Hashing = BlakeTwo256;
-    type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
-    type Event = ();
-    type BlockHashCount = BlockHashCount;
-    type MaximumBlockWeight = MaximumBlockWeight;
-    type DbWeight = ();
-    type BlockExecutionWeight = ();
-    type ExtrinsicBaseWeight = ();
-    type MaximumExtrinsicWeight = MaximumBlockWeight;
-    type MaximumBlockLength = MaximumBlockLength;
-    type AvailableBlockRatio = AvailableBlockRatio;
-    type Version = ();
-    type PalletInfo = ();
-    type AccountData = pallet_balances::AccountData<Balance>;
-    type OnNewAccount = ();
-    type OnKilledAccount = ();
-    type SystemWeightInfo = ();
-}
-
-parameter_types! {
-    pub const ExistentialDeposit: u64 = 1;
-    pub const MaxLocks: u32 = 50;
-}
-
-impl pallet_balances::Trait for Test {
-    type Event = ();
-    type Balance = Balance;
-    type DustRemoval = ();
-    type ExistentialDeposit = ExistentialDeposit;
-    type AccountStore = frame_system::Module<Test>;
-    type MaxLocks = MaxLocks;
-    type WeightInfo = ();
-}
-
-parameter_types! {
-    pub const MinimumPeriod: u64 = 0;
-}
-
-impl pallet_timestamp::Trait for Test {
-    type Moment = u64;
-    type OnTimestampSet = ();
-    type MinimumPeriod = MinimumPeriod;
-    type WeightInfo = ();
-}
-
-parameter_types! {
-    pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
-}
-
-parameter_types! {
-    pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
-    pub const ExitFee: Balance = 0;
-    pub const MaxInRatio: Balance = BASE / 2;
-    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
-    pub const MinWeight: Balance = BASE;
-    pub const MaxWeight: Balance = 50 * BASE;
-    pub const MaxTotalWeight: Balance = 50 * BASE;
-    pub const MaxAssets: usize = 8;
-    pub const MinLiquidity: Balance = 100 * BASE;
-}
-
-impl zrml_swaps::Trait for Test {
-    type Event = ();
-    type Shares = Tokens;
-    type ModuleId = SwapsModuleId;
-    type ExitFee = ExitFee;
-    type MarketId = MarketId;
-    type MaxInRatio = MaxInRatio;
-    type MaxOutRatio = MaxOutRatio;
-    type MinWeight = MinWeight;
-    type MaxWeight = MaxWeight;
-    type MaxTotalWeight = MaxTotalWeight;
-    type MaxAssets = MaxAssets;
-    type MinLiquidity = MinLiquidity;
-}
-
-parameter_types! {
-    pub const PmModuleId: ModuleId = ModuleId(*b"test/prm");
-    pub const ReportingPeriod: BlockNumber = 10;
-    pub const DisputePeriod: BlockNumber = 10;
-    pub const DisputeBond: Balance = 100;
-    pub const DisputeFactor: Balance = 25;
-    pub const MaxDisputes: u16 = 5;
-    pub const OracleBond: Balance = 100;
-    pub const ValidityBond: Balance = 200;
-    pub const AdvisoryBond: Balance = 50;
-    pub const MaxCategories: u16 = 8;
-}
+pub type Block = BlockTest<Runtime>;
+pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 ord_parameter_types! {
-    pub const Sudo: AccountId = 69;
+    pub const Sudo: AccountIdTest = 69;
 }
 
-impl Trait for Test {
-    type Event = ();
+parameter_types! {
+    pub const AdvisoryBond: Balance = 50;
+    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+    pub const BlockHashCount: u64 = 250;
+    pub const DisputeBond: Balance = 100;
+    pub const DisputeFactor: Balance = 25;
+    pub const DisputePeriod: BlockNumber = 10;
+    pub const ExistentialDeposit: u64 = 1;
+    pub const ExitFee: Balance = 0;
+    pub const MaxAssets: usize = 8;
+    pub const MaxCategories: u16 = 8;
+    pub const MaxDisputes: u16 = 5;
+    pub const MaximumBlockLength: u32 = 2 * 1024;
+    pub const MaximumBlockWeight: Weight = 1024;
+    pub const MaxInRatio: Balance = BASE / 2;
+    pub const MaxLocks: u32 = 50;
+    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+    pub const MaxTotalWeight: Balance = 50 * BASE;
+    pub const MaxWeight: Balance = 50 * BASE;
+    pub const MinimumPeriod: u64 = 0;
+    pub const MinLiquidity: Balance = 100 * BASE;
+    pub const MinWeight: Balance = BASE;
+    pub const OracleBond: Balance = 100;
+    pub const PmModuleId: ModuleId = ModuleId(*b"test/prm");
+    pub const ReportingPeriod: BlockNumber = 10;
+    pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
+    pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
+    pub const ValidityBond: Balance = 200;
+    pub DustAccount: AccountIdTest = ModuleId(*b"orml/dst").into_account();
+}
+
+parameter_type_with_key! {
+  pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+    Default::default()
+  };
+}
+
+construct_runtime!(
+    pub enum Runtime
+    where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
+        Shares: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
+        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
+    }
+);
+
+impl crate::Config for Runtime {
+    type AdvisoryBond = AdvisoryBond;
+    type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Currency = Balances;
-    type Shares = Tokens;
-    type ModuleId = PmModuleId;
-    type ReportingPeriod = ReportingPeriod;
-    type DisputePeriod = DisputePeriod;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
-    type MaxDisputes = MaxDisputes;
+    type DisputePeriod = DisputePeriod;
+    type Event = Event;
     type MarketId = MarketId;
-    type ValidityBond = ValidityBond;
-    type AdvisoryBond = AdvisoryBond;
+    type MaxCategories = MaxCategories;
+    type MaxDisputes = MaxDisputes;
+    type ModuleId = PmModuleId;
     type OracleBond = OracleBond;
-    type ApprovalOrigin = EnsureSignedBy<Sudo, AccountId>;
+    type ReportingPeriod = ReportingPeriod;
+    type Shares = Shares;
     type Slash = ();
     type Swap = Swaps;
-    type MaxCategories = MaxCategories;
+    type ValidityBond = ValidityBond;
 }
 
-pub type Balances = pallet_balances::Module<Test>;
-pub type PredictionMarkets = Module<Test>;
-pub type Timestamp = pallet_timestamp::Module<Test>;
-pub type Swaps = zrml_swaps::Module<Test>;
-pub type System = frame_system::Module<Test>;
-pub type Tokens = orml_tokens::Module<Test>;
+impl frame_system::Config for Runtime {
+    type AccountData = pallet_balances::AccountData<Balance>;
+    type AccountId = AccountIdTest;
+    type BaseCallFilter = ();
+    type BlockHashCount = BlockHashCount;
+    type BlockLength = ();
+    type BlockNumber = BlockNumber;
+    type BlockWeights = ();
+    type Call = Call;
+    type DbWeight = ();
+    type Event = Event;
+    type Hash = Hash;
+    type Hashing = BlakeTwo256;
+    type Header = Header;
+    type Index = Index;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type OnKilledAccount = ();
+    type OnNewAccount = ();
+    type OnSetCode = ();
+    type Origin = Origin;
+    type PalletInfo = PalletInfo;
+    type SS58Prefix = ();
+    type SystemWeightInfo = ();
+    type Version = ();
+}
+
+impl orml_tokens::Config for Runtime {
+    type Amount = Amount;
+    type Balance = Balance;
+    type CurrencyId = CurrencyId;
+    type Event = Event;
+    type ExistentialDeposits = ExistentialDeposits;
+    type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+    type WeightInfo = ();
+}
+
+impl pallet_balances::Config for Runtime {
+    type AccountStore = System;
+    type Balance = Balance;
+    type DustRemoval = ();
+    type Event = Event;
+    type ExistentialDeposit = ExistentialDeposit;
+    type MaxLocks = ();
+    type WeightInfo = ();
+}
+
+impl pallet_timestamp::Config for Runtime {
+    type MinimumPeriod = MinimumPeriod;
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type WeightInfo = ();
+}
+
+impl zrml_swaps::Config for Runtime {
+    type Event = Event;
+    type ExitFee = ExitFee;
+    type MarketId = MarketId;
+    type MaxAssets = MaxAssets;
+    type MaxInRatio = MaxInRatio;
+    type MaxOutRatio = MaxOutRatio;
+    type MaxTotalWeight = MaxTotalWeight;
+    type MaxWeight = MaxWeight;
+    type MinLiquidity = MinLiquidity;
+    type MinWeight = MinWeight;
+    type ModuleId = SwapsModuleId;
+    type Shares = Shares;
+}
 
 pub struct ExtBuilder {
-    balances: Vec<(AccountId, Balance)>,
+    balances: Vec<(AccountIdTest, Balance)>,
 }
 
 impl Default for ExtBuilder {
@@ -195,10 +192,10 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default()
-            .build_storage::<Test>()
+            .build_storage::<Runtime>()
             .unwrap();
 
-        pallet_balances::GenesisConfig::<Test> {
+        pallet_balances::GenesisConfig::<Runtime> {
             balances: self.balances,
         }
         .assimilate_storage(&mut t)
