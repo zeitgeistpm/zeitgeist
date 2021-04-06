@@ -1,8 +1,8 @@
 [workspace]
 members = [
     "node",
-    "runtime",
     "primitives",
+    "runtime",
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
     "zrml/prediction-markets/rpc",
@@ -11,3 +11,4 @@ members = [
     "zrml/swaps/rpc",
     "zrml/swaps/rpc/runtime-api",
 ]
+resolver = "2"

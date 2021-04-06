@@ -1,5 +1,6 @@
-use crate::{CheckArithmRslt, BASE, BPOW_PRECISION};
+use crate::{check_arithm_rslt::CheckArithmRslt, consts::BPOW_PRECISION};
 use frame_support::dispatch::DispatchError;
+use zeitgeist_primitives::BASE;
 
 pub fn btoi(a: u128) -> Result<u128, DispatchError> {
     a.check_div_rslt(&BASE)
@@ -103,21 +104,43 @@ pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> Result<u128, Dispa
 
 #[cfg(test)]
 mod tests {
-    use crate::{bdiv, bmul, bpow, ARITHM_OF, BASE};
+    use crate::{
+        consts::ARITHM_OF,
+        fixed::{bdiv, bmul, bpow},
+    };
     use frame_support::dispatch::DispatchError;
+    use zeitgeist_primitives::BASE;
 
     pub const ERR: Result<u128, DispatchError> = Err(ARITHM_OF);
 
     macro_rules! create_tests {
         (
-            $op:ident;
-            0 => $_0_0:expr, $_0_1:expr, $_0_2:expr, $_0_3:expr;
-            1 => $_1_0:expr, $_1_1:expr, $_1_2:expr, $_1_3:expr;
-            2 => $_2_0:expr, $_2_1:expr, $_2_2:expr, $_2_3:expr;
-            3 => $_3_0:expr, $_3_1:expr, $_3_2:expr, $_3_3:expr;
-            max_n => $max_n_0:expr, $max_n_1:expr, $max_n_2:expr, $max_n_3:expr;
-            n_max => $n_max_0:expr, $n_max_1:expr, $n_max_2:expr, $n_max_3:expr;
-        ) => {
+      $op:ident; 0 =>
+      $_0_0:expr,
+      $_0_1:expr,
+      $_0_2:expr,
+      $_0_3:expr; 1 =>
+      $_1_0:expr,
+      $_1_1:expr,
+      $_1_2:expr,
+      $_1_3:expr; 2 =>
+      $_2_0:expr,
+      $_2_1:expr,
+      $_2_2:expr,
+      $_2_3:expr; 3 =>
+      $_3_0:expr,
+      $_3_1:expr,
+      $_3_2:expr,
+      $_3_3:expr; max_n =>
+      $max_n_0:expr,
+      $max_n_1:expr,
+      $max_n_2:expr,
+      $max_n_3:expr; n_max =>
+      $n_max_0:expr,
+      $n_max_1:expr,
+      $n_max_2:expr,
+      $n_max_3:expr;
+    ) => {
             assert_eq!($op(0, 0 * BASE), $_0_0);
             assert_eq!($op(0, 1 * BASE), $_0_1);
             assert_eq!($op(0, 2 * BASE), $_0_2);
