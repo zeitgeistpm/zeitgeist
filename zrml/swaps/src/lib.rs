@@ -16,12 +16,17 @@ mod events;
 mod fixed;
 mod math;
 mod pool;
+pub mod weights;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarks;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub(crate) use pallet::*;
 pub use pallet::{Config, Error, Event, Pallet};
 
 #[frame_support::pallet]
@@ -31,6 +36,7 @@ mod pallet {
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
         fixed::{bdiv, bmul},
         pool::Pool,
+        weights::*,
     };
     use alloc::{collections::btree_map::BTreeMap, vec::Vec};
     use core::marker::PhantomData;
@@ -48,13 +54,13 @@ mod pallet {
     };
     use zeitgeist_primitives::{Asset, Swaps};
 
-    type BalanceOf<T> =
+    pub(crate) type BalanceOf<T> =
         <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Temporary probably - The Swap is created per prediction market.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::create_pool(weights.len() as u32))]
         #[frame_support::transactional]
         pub fn create_pool(
             origin: OriginFor<T>,
@@ -78,7 +84,7 @@ mod pallet {
         /// retrieved assets.
         /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
         /// provided values.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_exit(min_assets_out.len() as u32))]
         #[frame_support::transactional]
         pub fn pool_exit(
             origin: OriginFor<T>,
@@ -119,7 +125,7 @@ mod pallet {
         /// * `asset_amount_out`: Asset amount that is leaving the pool.
         /// * `max_pool_amount`: The calculated amount of assets for the pool must the equal or
         /// greater than the given value.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
         #[frame_support::transactional]
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
@@ -170,7 +176,7 @@ mod pallet {
         /// * `pool_amount`: Pool amount that is entering the pool.
         /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
         /// than the given value.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_exit_with_exact_pool_amount())]
         #[frame_support::transactional]
         pub fn pool_exit_with_exact_pool_amount(
             origin: OriginFor<T>,
@@ -216,7 +222,7 @@ mod pallet {
         /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
         /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
         /// provided values.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_join(max_assets_in.len() as u32))]
         #[frame_support::transactional]
         pub fn pool_join(
             origin: OriginFor<T>,
@@ -250,7 +256,7 @@ mod pallet {
         /// * `asset_amount_in`: Asset amount that is entering the pool.
         /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
         /// than the given value.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
         #[frame_support::transactional]
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
@@ -298,7 +304,7 @@ mod pallet {
         /// * `pool_amount`: Asset amount that is entering the pool.
         /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or
         /// less than the given value.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_join_with_exact_pool_amount())]
         #[frame_support::transactional]
         pub fn pool_join_with_exact_pool_amount(
             origin: OriginFor<T>,
@@ -346,7 +352,7 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_in())]
         #[frame_support::transactional]
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
@@ -400,7 +406,7 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
         /// * `max_price`: Market price must be equal or less than the provided value.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_out())]
         #[frame_support::transactional]
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
@@ -473,6 +479,8 @@ mod pallet {
             Self::AccountId,
             CurrencyId = Asset<Self::Hash, Self::MarketId>,
         >;
+
+        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]
@@ -532,6 +540,7 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
