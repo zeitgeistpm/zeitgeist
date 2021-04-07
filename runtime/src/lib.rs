@@ -69,7 +69,7 @@ const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 pub type AdaptedBasicCurrency =
-    orml_currencies::BasicCurrencyAdapter<Runtime, Balances, i128, u128>;
+    orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 pub type Balance = u128;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -375,7 +375,7 @@ impl zrml_swaps::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type ModuleId = SwapsModuleId;
-    type Shares = Tokens;
+    type Shares = Currency;
 }
 
 impl_runtime_apis! {
