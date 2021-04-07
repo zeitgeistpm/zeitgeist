@@ -1,5 +1,4 @@
 use alloc::vec::Vec;
-use frame_support::{storage::IterableStorageDoubleMap, StorageDoubleMap, StorageMap};
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
 use orml_traits::currency::MultiReservableCurrency;
 
@@ -16,9 +15,9 @@ pub trait ZeitgeistMultiReservableCurrency<AccountId>: MultiReservableCurrency<A
         I: Iterator<Item = (AccountId, AccountData<Self::Balance>)>;
 }
 
-impl<T> ZeitgeistMultiReservableCurrency<T::AccountId> for orml_tokens::Module<T>
+impl<T> ZeitgeistMultiReservableCurrency<T::AccountId> for orml_tokens::Pallet<T>
 where
-    T: orml_tokens::Trait,
+    T: orml_tokens::Config,
 {
     fn accounts_by_currency_id(
         currency_id: Self::CurrencyId,

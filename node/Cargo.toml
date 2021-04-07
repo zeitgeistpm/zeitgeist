@@ -1,3 +1,99 @@
+[[bin]]
+name = 'zeitgeist'
+path = './src/main.rs'
+
+[build-dependencies]
+substrate-build-script-utils = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+
+[dependencies]
+derive_more = { version = "0.15" }
+frame-benchmarking = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+frame-benchmarking-cli = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+hex-literal = { version = "0.2" }
+jsonrpc-core = { version = "15.0" }
+log = { version = "0.4" }
+pallet-transaction-payment-rpc = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+parity-scale-codec = { version = "2.0" }
+sc-basic-authorship = { branch = "rococo-v1",git = "https://github.com/paritytech/substrate" }
+sc-chain-spec = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-cli = { branch = "rococo-v1", features = ["wasmtime"], git = "https://github.com/paritytech/substrate" }
+sc-client-api = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-consensus = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-executor = { branch = "rococo-v1", features = ["wasmtime"], git = "https://github.com/paritytech/substrate" }
+sc-keystore = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-rpc = { branch = "rococo-v1",  git = "https://github.com/paritytech/substrate" }
+sc-rpc-api = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-service = { branch = "rococo-v1", features = ["wasmtime"], git = "https://github.com/paritytech/substrate" }
+sc-telemetry = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-tracing = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-transaction-pool = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+serde = { features = ["derive"], version = "1.0" }
+sp-api = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-block-builder = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-blockchain = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-consensus = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-core = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-inherents = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-timestamp = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-transaction-pool = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-trie = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+structopt = { version = "0.3" }
+substrate-frame-rpc-system = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+
+# Cumulus
+
+cumulus-client-collator = { branch = "rococo-v1", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-consensus-relay-chain = { branch = "rococo-v1", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-network = { branch = "rococo-v1", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-client-service = { branch = "rococo-v1", git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-core = { branch = "rococo-v1", git = "https://github.com/paritytech/cumulus", optional = true }
+
+# Polkadot
+
+polkadot-cli = { branch = "rococo-v1", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-parachain = { branch = "rococo-v1", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-primitives = { branch = "rococo-v1", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-service = { branch = "rococo-v1", git = "https://github.com/paritytech/polkadot", optional = true }
+polkadot-test-service = { branch = "rococo-v1", git = "https://github.com/paritytech/polkadot", optional = true }
+
+# Standalone
+
+sc-consensus-aura = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sc-finality-grandpa = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-consensus-aura = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-finality-grandpa = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+
+# Zeitgeist
+
+zeitgeist-primitives = { path = "../primitives" }
+zeitgeist-runtime = { path = "../runtime" }
+zrml-prediction-markets-rpc = { path = "../zrml/prediction-markets/rpc" }
+zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
+
+[features]
+default = []
+parachain = [
+    "zeitgeist-runtime/parachain",
+
+    # Cumulus
+
+    "cumulus-client-collator",
+    "cumulus-client-consensus-relay-chain",
+    "cumulus-client-network",
+    "cumulus-client-service",
+    "cumulus-primitives-core",
+
+    # Polkadot
+
+    "polkadot-cli",
+    "polkadot-parachain",
+    "polkadot-primitives",
+    "polkadot-service",
+    "polkadot-test-service",
+]
+runtime-benchmarks = ["zeitgeist-runtime/runtime-benchmarks"]
+
 [package]
 authors = ['Logan Saether <x@logansaether.com>']
 build = 'build.rs'
@@ -8,97 +104,5 @@ name = 'zeitgeist-node'
 version = '0.1.0'
 
 [package.metadata.docs.rs]
-targets = ['x86_64-unknown-linux-gnu']
+targets = ["x86_64-unknown-linux-gnu"]
 
-[[bin]]
-name = 'zeitgeist'
-path = './src/main.rs'
-
-[dependencies]
-hex-literal = "*"
-jsonrpc-core = '15.0.0'
-sc-rpc = "2.0.1"
-structopt = '0.3.8'
-zeitgeist-primitives = { path = "../primitives", version = "0.1.0" }
-zrml-prediction-markets-rpc = { path = "../zrml/prediction-markets/rpc" }
-zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
-
-# These dependencies are used for runtime benchmarking
-frame-benchmarking = { version = "2.0.1" }
-frame-benchmarking-cli = { version = "2.0.1" }
-
-[dependencies.zeitgeist-runtime]
-path = '../runtime'
-version = '0.1.0'
-
-[dependencies.pallet-transaction-payment-rpc]
-version = '2.0.1'
-
-[dependencies.sc-basic-authorship]
-version = '0.8.0'
-
-[dependencies.sc-cli]
-features = ['wasmtime']
-version = '0.8.0'
-
-[dependencies.sc-client-api]
-version = '2.0.1'
-
-[dependencies.sc-consensus]
-version = '0.8.0'
-
-[dependencies.sc-consensus-aura]
-version = '0.8.0'
-
-[dependencies.sc-executor]
-features = ['wasmtime']
-version = '0.8.0'
-
-[dependencies.sc-finality-grandpa]
-version = '0.8.0'
-
-[dependencies.sc-rpc-api]
-version = '0.8.0'
-
-[dependencies.sc-service]
-features = ['wasmtime']
-version = '0.8.0'
-
-[dependencies.sc-transaction-pool]
-version = '2.0.1'
-
-[dependencies.sp-api]
-version = '2.0.1'
-
-[dependencies.sp-block-builder]
-version = '2.0.1'
-
-[dependencies.sp-blockchain]
-version = '2.0.1'
-
-[dependencies.sp-consensus]
-version = '0.8.0'
-
-[dependencies.sp-consensus-aura]
-version = '0.8.0'
-
-[dependencies.sp-core]
-version = '2.0.1'
-
-[dependencies.sp-finality-grandpa]
-version = '2.0.1'
-
-[dependencies.sp-inherents]
-version = '2.0.1'
-
-[dependencies.sp-runtime]
-version = '2.0.1'
-
-[dependencies.sp-transaction-pool]
-version = '2.0.1'
-
-[dependencies.substrate-frame-rpc-system]
-version = '2.0.1'
-
-[build-dependencies.substrate-build-script-utils]
-version = '2.0.1'

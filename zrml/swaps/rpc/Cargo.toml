@@ -1,19 +1,18 @@
+[dependencies]
+jsonrpc-core = { default-features = false, version = "15.0" }
+jsonrpc-core-client = { default-features = false, version = "15.0" }
+jsonrpc-derive = { default-features = false, version = "15.0" }
+parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
+serde = { default-features = false, features = ["derive"], version = "1.0" }
+sp-api = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-blockchain = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
+zrml-swaps-runtime-api = { default-features = false, path = "runtime-api" }
+
 [package]
-name = "zrml-swaps-rpc"
-version = "0.1.0"
 authors = ["Logan Saether <x@logansaether.com>"]
 edition = "2018"
-
-[dependencies]
-serde = { version = "1.0.101", features = ["derive"] }
-codec = { package = "parity-scale-codec", version = "1.3.0" }
-jsonrpc-core = "15.0.0"
-jsonrpc-core-client = "15.0.0"
-jsonrpc-derive = "15.0.0"
-sp-runtime = "2.0.1"
-sp-api = "2.0.1"
-sp-blockchain = "2.0.1"
-sp-core = "2.0.1"
-sp-std = "2.0.1"
-zrml-swaps-runtime-api = { path = "runtime-api" }
-zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
+name = "zrml-swaps-rpc"
+version = "0.1.0"

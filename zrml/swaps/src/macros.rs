@@ -1,14 +1,14 @@
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
 macro_rules! pool_exit_with_exact_amount {
     (
-        initial_params: ($origin:expr, $pool_id:expr, $asset:expr),
-
-        asset_amount: $asset_amount:expr,
-        bound: $bound:expr,
-        ensure_balance: $ensure_balance:expr,
-        event: $event:ident,
-        pool_amount: $pool_amount:expr
-    ) => {{
+    initial_params:
+    ($origin:expr, $pool_id:expr, $asset:expr),asset_amount:
+    $asset_amount:expr,bound:
+    $bound:expr,ensure_balance:
+    $ensure_balance:expr,event:
+    $event:ident,pool_amount:
+    $pool_amount:expr
+  ) => {{
         let who = ensure_signed($origin)?;
 
         let pool = Self::pool_by_id($pool_id)?;
@@ -36,7 +36,7 @@ macro_rules! pool_exit_with_exact_amount {
         // todo do something with exit fee
         T::Shares::transfer($asset, &pool_account, &who, asset_amount)?;
 
-        Self::deposit_event(RawEvent::$event(PoolAssetEvent {
+        Self::deposit_event(Event::$event(PoolAssetEvent {
             bound: $bound,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,
@@ -52,13 +52,13 @@ macro_rules! pool_exit_with_exact_amount {
 // Common code for `pool_join_with_exact_asset_amount` and `pool_join_with_exact_pool_amount` methods.
 macro_rules! pool_join_with_exact_amount {
     (
-        initial_params: ($origin:expr, $pool_id:expr, $asset:expr),
-
-        asset_amount: $asset_amount:expr,
-        bound: $bound:expr,
-        event: $event:ident,
-        pool_amount: $pool_amount:expr
-    ) => {{
+    initial_params:
+    ($origin:expr, $pool_id:expr, $asset:expr),asset_amount:
+    $asset_amount:expr,bound:
+    $bound:expr,event:
+    $event:ident,pool_amount:
+    $pool_amount:expr
+  ) => {{
         let who = ensure_signed($origin)?;
 
         let pool = Self::pool_by_id($pool_id)?;
@@ -77,7 +77,7 @@ macro_rules! pool_join_with_exact_amount {
         Self::mint_pool_shares($pool_id, &who, pool_amount)?;
         T::Shares::transfer($asset, &who, &pool_account_id, asset_amount)?;
 
-        Self::deposit_event(RawEvent::$event(PoolAssetEvent {
+        Self::deposit_event(Event::$event(PoolAssetEvent {
             bound: $bound,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,
@@ -93,12 +93,12 @@ macro_rules! pool_join_with_exact_amount {
 // Common code for `pool_join` and `pool_exit` methods.
 macro_rules! pool {
     (
-        initial_params: ($asset_bounds:expr, $origin:expr, $pool_amount:expr, $pool_id:expr),
-
-        event: $event:ident,
-        transfer_asset: $transfer_asset:expr,
-        transfer_pool: $transfer_pool:expr
-    ) => {{
+    initial_params:
+    ($asset_bounds:expr, $origin:expr, $pool_amount:expr, $pool_id:expr),event:
+    $event:ident,transfer_asset:
+    $transfer_asset:expr,transfer_pool:
+    $transfer_pool:expr
+  ) => {{
         let who = ensure_signed($origin)?;
 
         let pool = Self::pool_by_id($pool_id)?;
@@ -111,7 +111,7 @@ macro_rules! pool {
             total_issuance.saturated_into(),
         )?
         .saturated_into();
-        check_provided_values_len_must_equal_assets_len::<T, _>(&pool.assets, &$asset_bounds)?;
+        Self::check_provided_values_len_must_equal_assets_len(&pool.assets, &$asset_bounds)?;
         ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
 
         let mut transferred = Vec::with_capacity($asset_bounds.len());
@@ -128,7 +128,7 @@ macro_rules! pool {
 
         ($transfer_pool(&pool_account_id, pool_shares_id, &who) as DispatchResult)?;
 
-        Self::deposit_event(RawEvent::$event(PoolAssetsEvent {
+        Self::deposit_event(Event::$event(PoolAssetsEvent {
             bounds: $asset_bounds,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,
@@ -144,19 +144,13 @@ macro_rules! pool {
 // Common code for `swap_exact_amount_in` and `swap_exact_amount_out` methods.
 macro_rules! swap_exact_amount {
     (
-        initial_params: (
-            $asset_in:expr,
-            $asset_out:expr,
-            $max_price:expr,
-            $origin:expr,
-            $pool_id:expr
-        ),
-
-        asset_amount_in: $asset_amount_in:expr,
-        asset_amount_out: $asset_amount_out:expr,
-        asset_bound: $asset_bound:expr,
-        event: $event:ident
-    ) => {{
+    initial_params:
+    ($asset_in:expr, $asset_out:expr, $max_price:expr, $origin:expr, $pool_id:expr),asset_amount_in:
+    $asset_amount_in:expr,asset_amount_out:
+    $asset_amount_out:expr,asset_bound:
+    $asset_bound:expr,event:
+    $event:ident
+  ) => {{
         let who = ensure_signed($origin)?;
 
         let pool = Self::pool_by_id($pool_id)?;
@@ -191,7 +185,7 @@ macro_rules! swap_exact_amount {
             Error::<T>::MathApproximation
         );
 
-        Self::deposit_event(RawEvent::$event(SwapEvent {
+        Self::deposit_event(Event::$event(SwapEvent {
             asset_amount_in: asset_amount_in,
             asset_amount_out: asset_amount_out,
             asset_bound: $asset_bound,

@@ -1,4 +1,4 @@
-use crate::ARITHM_OF;
+use crate::consts::ARITHM_OF;
 use frame_support::dispatch::DispatchError;
 use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub};
 

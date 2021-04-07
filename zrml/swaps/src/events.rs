@@ -1,4 +1,4 @@
-use crate::Vec;
+use alloc::vec::Vec;
 
 #[derive(
     Clone,
