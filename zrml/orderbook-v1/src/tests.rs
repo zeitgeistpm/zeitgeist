@@ -5,7 +5,7 @@ use frame_support::{
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_core::H256;
-use zeitgeist_primitives::Asset;
+use zeitgeist_primitives::{AccountIdTest, Asset};
 
 #[test]
 fn it_makes_orders() {
@@ -26,7 +26,8 @@ fn it_makes_orders() {
             10,
         ));
 
-        let reserved_funds = <Balances as ReservableCurrency<AccountId>>::reserved_balance(&ALICE);
+        let reserved_funds =
+            <Balances as ReservableCurrency<AccountIdTest>>::reserved_balance(&ALICE);
         assert_eq!(reserved_funds, 250);
 
         // Make an order from Bob to sell shares.
@@ -62,12 +63,12 @@ fn it_takes_orders() {
         let order_hash = Orderbook::order_hash(&BOB, shares_id, 0);
         assert_ok!(Orderbook::fill_order(Origin::signed(ALICE), order_hash));
 
-        let alice_bal = <Balances as Currency<AccountId>>::free_balance(&ALICE);
+        let alice_bal = <Balances as Currency<AccountIdTest>>::free_balance(&ALICE);
         let alice_shares = Tokens::free_balance(Asset::Share(shares_id), &ALICE);
         assert_eq!(alice_bal, 950);
         assert_eq!(alice_shares, 10);
 
-        let bob_bal = <Balances as Currency<AccountId>>::free_balance(&BOB);
+        let bob_bal = <Balances as Currency<AccountIdTest>>::free_balance(&BOB);
         let bob_shares = Tokens::free_balance(Asset::Share(shares_id), &BOB);
         assert_eq!(bob_bal, 1_050);
         assert_eq!(bob_shares, 90);
@@ -91,7 +92,7 @@ fn it_cancels_orders() {
 
         assert_noop!(
             Orderbook::cancel_order(Origin::signed(BOB), share_id, order_hash),
-            Error::<Test>::NotOrderCreator,
+            Error::<Runtime>::NotOrderCreator,
         );
 
         assert_ok!(Orderbook::cancel_order(

@@ -1,5 +1,10 @@
-use crate::{bdiv, bmul, bpow, CheckArithmRslt, BASE, EXIT_FEE};
+use crate::{
+    check_arithm_rslt::CheckArithmRslt,
+    consts::EXIT_FEE,
+    fixed::{bdiv, bmul, bpow},
+};
 use frame_support::dispatch::DispatchError;
+use zeitgeist_primitives::BASE;
 
 pub fn calc_spot_price(
     asset_balance_in: u128,

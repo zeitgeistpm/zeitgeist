@@ -5,13 +5,12 @@
 
 #![warn(missing_docs)]
 
-use std::sync::Arc;
-
 pub use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
+use std::sync::Arc;
 use zeitgeist_primitives::{AccountId, Balance, Hash, Index, MarketId, PoolId};
 use zeitgeist_runtime::opaque::Block;
 
@@ -19,10 +18,10 @@ use zeitgeist_runtime::opaque::Block;
 pub struct FullDeps<C, P> {
     /// The client instance to use.
     pub client: Arc<C>,
-    /// Transaction pool instance.
-    pub pool: Arc<P>,
     /// Whether to deny unsafe calls
     pub deny_unsafe: DenyUnsafe,
+    /// Transaction pool instance.
+    pub pool: Arc<P>,
 }
 
 /// Instantiate all full RPC extensions.
@@ -57,11 +56,6 @@ where
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
         client.clone(),
     )));
-
-    // Extend this RPC with a custom API by using the following syntax.
-    // `YourRpcStruct` should have a reference to a client, which is needed
-    // to call into the runtime.
-    // `io.extend_with(YourRpcTrait::to_delegate(YourRpcStruct::new(ReferenceToClient, ...)));`
 
     io.extend_with(
         zrml_prediction_markets_rpc::PredictionMarketsApi::to_delegate(

@@ -1,19 +1,13 @@
-[package]
-name = "zeitgeist-primitives"
-version = "0.1.0"
-authors = ["Logan Saether <x@logansaether.com>"]
-edition = "2018"
-
 [dependencies]
-frame-support = { default-features = false, version = "2.0" }
-frame-system = { default-features = false, version = "2.0" }
-orml-currencies = { default-features = false, version = "0.3" }
-orml-tokens = { default-features = false, version = "0.3" }
-orml-traits = { default-features = false, version = "0.3" }
-parity-scale-codec = { default-features = false, features = ["derive"], version = "1.0" }
+frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+orml-currencies = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+orml-tokens = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 serde = { default-features = false, features = ["derive"], optional = true, version = "1.0" }
-sp-core = { default-features = false, version = "2.0" }
-sp-runtime = { default-features = false, version = "2.0" }
+sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]
@@ -28,3 +22,9 @@ std = [
     "sp-core/std",
     "sp-runtime/std",
 ]
+
+[package]
+authors = ["Logan Saether <x@logansaether.com>"]
+edition = "2018"
+name = "zeitgeist-primitives"
+version = "0.1.0"

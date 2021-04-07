@@ -2,8 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Codec;
-use sp_std::prelude::*;
+use parity_scale_codec::Codec;
 use zeitgeist_primitives::Asset;
 
 sp_api::decl_runtime_apis! {

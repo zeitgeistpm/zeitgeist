@@ -2,11 +2,11 @@ use crate::ZeitgeistMultiReservableCurrency;
 use frame_support::dispatch::DispatchResult;
 use orml_traits::MultiCurrency;
 
-type CurrencyIdOf<T> = <<T as orml_currencies::Trait>::MultiCurrency as MultiCurrency<
-    <T as frame_system::Trait>::AccountId,
+type CurrencyIdOf<T> = <<T as orml_currencies::Config>::MultiCurrency as MultiCurrency<
+    <T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
-pub trait ZeitgeistCurrenciesExtension: orml_currencies::Trait
+pub trait ZeitgeistCurrenciesExtension: orml_currencies::Config
 where
     Self::MultiCurrency: ZeitgeistMultiReservableCurrency<Self::AccountId>,
 {

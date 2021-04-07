@@ -2,11 +2,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Codec, Decode, Encode};
+use parity_scale_codec::{Codec, Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
-use sp_std::prelude::*;
 use zeitgeist_primitives::Asset;
 
 #[derive(Eq, PartialEq, Encode, Decode, Default)]

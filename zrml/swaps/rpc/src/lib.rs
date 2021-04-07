@@ -1,8 +1,9 @@
 //! RPC interface for the Swaps pallet.
 
-use codec::Codec;
+use core::convert::TryFrom;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
+use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::U256;
@@ -10,7 +11,6 @@ use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
 };
-use sp_std::convert::TryFrom;
 use std::sync::Arc;
 use zeitgeist_primitives::Asset;
 
@@ -19,7 +19,7 @@ pub use zrml_swaps_runtime_api::{BalanceInfo, SwapsApi as SwapsRuntimeApi};
 #[rpc]
 pub trait SwapsApi<BlockHash, PoolId, Hash, AccountId, Balance, BalanceType, MarketId>
 where
-    Balance: std::str::FromStr,
+    Balance: core::str::FromStr,
 {
     #[rpc(name = "swaps_poolSharesId")]
     fn pool_shares_id(
@@ -44,7 +44,7 @@ where
 /// A struct that implements the [`SwapsApi`].
 pub struct Swaps<C, B> {
     client: Arc<C>,
-    _marker: std::marker::PhantomData<B>,
+    _marker: core::marker::PhantomData<B>,
 }
 
 impl<C, B> Swaps<C, B> {
@@ -89,7 +89,7 @@ where
     Hash: Codec,
     AccountId: Codec,
     Balance: Codec + MaybeDisplay + MaybeFromStr + TryFrom<U256>,
-    <Balance as TryFrom<U256>>::Error: sp_std::fmt::Debug,
+    <Balance as TryFrom<U256>>::Error: core::fmt::Debug,
     MarketId: Codec,
 {
     fn pool_shares_id(
