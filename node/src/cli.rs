@@ -1,12 +1,121 @@
 #[cfg(feature = "parachain")]
 mod cli_parachain;
-#[cfg(not(feature = "parachain"))]
-mod cli_standalone;
 
 #[cfg(feature = "parachain")]
-pub use cli_parachain::{Cli, RelayChainCli, Subcommand};
+pub use cli_parachain::RelayChainCli;
+
+use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
+
+const COPYRIGHT_START_YEAR: i32 = 2021;
+const IMPL_NAME: &str = "Zeitgeist Node";
+const SUPPORT_URL: &str = "support.anonymous.an";
+
+#[cfg(feature = "parachain")]
+type RunCmd = cli_parachain::RunCmd;
 #[cfg(not(feature = "parachain"))]
-pub use cli_standalone::{Cli, Subcommand};
+type RunCmd = sc_cli::RunCmd;
+
+#[derive(Debug, structopt::StructOpt)]
+pub enum Subcommand {
+    /// The custom benchmark subcommmand benchmarking runtime pallets.
+    #[cfg(not(feature = "parachain"))]
+    #[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+    Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
+    /// Build a chain specification.
+    BuildSpec(sc_cli::BuildSpecCmd),
+
+    /// Validate blocks.
+    CheckBlock(sc_cli::CheckBlockCmd),
+
+    /// Export blocks.
+    ExportBlocks(sc_cli::ExportBlocksCmd),
+
+    /// Export the genesis state of the parachain.
+    #[cfg(feature = "parachain")]
+    #[structopt(name = "export-genesis-state")]
+    ExportGenesisState(cli_parachain::ExportGenesisStateCommand),
+
+    /// Export the genesis wasm of the parachain.
+    #[cfg(feature = "parachain")]
+    #[structopt(name = "export-genesis-wasm")]
+    ExportGenesisWasm(cli_parachain::ExportGenesisWasmCommand),
+
+    /// Export the state of a given block into a chain spec.
+    ExportState(sc_cli::ExportStateCmd),
+
+    /// Import blocks.
+    ImportBlocks(sc_cli::ImportBlocksCmd),
+
+    #[cfg(not(feature = "parachain"))]
+    /// Key management cli utilities
+    Key(sc_cli::KeySubcommand),
+
+    /// Remove the whole chain.
+    PurgeChain(sc_cli::PurgeChainCmd),
+
+    /// Revert the chain to a previous state.
+    Revert(sc_cli::RevertCmd),
+}
+
+#[derive(Debug, structopt::StructOpt)]
+pub struct Cli {
+    #[structopt(flatten)]
+    pub run: RunCmd,
+
+    #[structopt(subcommand)]
+    pub subcommand: Option<Subcommand>,
+
+    /// Run node as collator.
+    ///
+    /// Note that this is the same as running with `--validator`.
+    #[cfg(feature = "parachain")]
+    #[structopt(long, conflicts_with = "validator")]
+    pub collator: bool,
+
+    /// Relaychain arguments
+    #[cfg(feature = "parachain")]
+    #[structopt(raw = true)]
+    pub relaychain_args: Vec<String>,
+}
+
+impl SubstrateCli for Cli {
+    fn author() -> String {
+        env!("CARGO_PKG_AUTHORS").into()
+    }
+
+    fn copyright_start_year() -> i32 {
+        COPYRIGHT_START_YEAR
+    }
+
+    fn description() -> String {
+        env!("CARGO_PKG_DESCRIPTION").into()
+    }
+
+    fn impl_name() -> String {
+        IMPL_NAME.into()
+    }
+
+    fn impl_version() -> String {
+        env!("SUBSTRATE_CLI_IMPL_VERSION").into()
+    }
+
+    fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+        load_spec(
+            id,
+            #[cfg(feature = "parachain")]
+            self.run.parachain_id.unwrap_or(200).into(),
+        )
+    }
+
+    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+        &zeitgeist_runtime::VERSION
+    }
+
+    fn support_url() -> String {
+        SUPPORT_URL.into()
+    }
+}
 
 pub fn load_spec(
     id: &str,
