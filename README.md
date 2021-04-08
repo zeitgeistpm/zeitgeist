@@ -31,9 +31,23 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   prediction market outcomes.
 - [court](./zrml-court)- coming soon
 
-## How to Build
+## How to Build Nodes
 
-TODO
+Zeitgeist node comes in two flavors, one for standalone self-contained execution and another for Kusama/Polkadot parachain integration.
+
+To build the standalone version, simply point to the top directory of this project and type:
+
+```bash
+cargo build --release
+```
+
+For parachain, it is necessary to change the current directory to `node` and then select the appropriated compiler feature flag.
+
+```
+cargo build --features parachain --release
+```
+
+Optimized binaries are usually used for development (faster and smaller) but this behavior is optionally up to you. If desirable, it is also possible to run commands directly with `cargo run` instead of running `./target/(debug|release)/zeitgeist`.
 
 ### Using Docker
 

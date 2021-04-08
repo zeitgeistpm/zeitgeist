@@ -1,7 +1,6 @@
 use crate::cli::{Cli, Subcommand};
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
-use structopt::StructOpt;
 use zeitgeist_runtime::Block;
 #[cfg(feature = "parachain")]
 use {
@@ -10,7 +9,7 @@ use {
 };
 
 pub fn run() -> sc_cli::Result<()> {
-    let cli = <Cli as StructOpt>::from_args();
+    let cli = <Cli as SubstrateCli>::from_args();
 
     match &cli.subcommand {
         #[cfg(not(feature = "parachain"))]
