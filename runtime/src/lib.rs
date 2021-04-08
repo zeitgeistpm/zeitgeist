@@ -149,61 +149,41 @@ parameter_type_with_key! {
     };
 }
 
+macro_rules! create_zeitgeist_runtime {
+    ($($additional_pallets:tt)*) => {
+        construct_runtime!(
+            pub enum Runtime where
+                Block = Block,
+                NodeBlock = opaque::Block,
+                UncheckedExtrinsic = UncheckedExtrinsic,
+            {
+                Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
+                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage},
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage},
+                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Call, Pallet, Storage},
+                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage},
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage},
+                System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
+                Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
+                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+                TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+
+                $($additional_pallets)*
+            }
+        );
+    }
+}
 #[cfg(feature = "parachain")]
-construct_runtime!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = opaque::Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
-    {
-        // Common - Should match both runtimes
-
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
-        Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage},
-        PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Call, Pallet, Storage},
-        Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
-
-        // Parachain
-
-        ParachainInfo: parachain_info::{Config, Pallet, Storage},
-        ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event},
-        XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin},
-    }
+create_zeitgeist_runtime!(
+    ParachainInfo: parachain_info::{Config, Pallet, Storage},
+    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event},
+    XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin},
 );
-
 #[cfg(not(feature = "parachain"))]
-construct_runtime!(
-    pub enum Runtime where
-        Block = Block,
-        NodeBlock = opaque::Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
-    {
-        // Common - Should match both runtimes
-
-        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
-        Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage},
-        PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Call, Pallet, Storage},
-        Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
-
-        // Standalone
-
-        Aura: pallet_aura::{Config<T>, Pallet},
-        Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage},
-    }
+create_zeitgeist_runtime!(
+    Aura: pallet_aura::{Config<T>, Pallet},
+    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage},
 );
 
 #[cfg(feature = "parachain")]

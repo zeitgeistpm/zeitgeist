@@ -6,100 +6,6 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use std::{net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
-/// Sub-commands supported by the collator.
-#[derive(Debug, StructOpt)]
-pub enum Subcommand {
-    /// Export the genesis state of the parachain.
-    #[structopt(name = "export-genesis-state")]
-    ExportGenesisState(ExportGenesisStateCommand),
-
-    /// Export the genesis wasm of the parachain.
-    #[structopt(name = "export-genesis-wasm")]
-    ExportGenesisWasm(ExportGenesisWasmCommand),
-
-    /// Build a chain specification.
-    BuildSpec(sc_cli::BuildSpecCmd),
-
-    /// Validate blocks.
-    CheckBlock(sc_cli::CheckBlockCmd),
-
-    /// Export blocks.
-    ExportBlocks(sc_cli::ExportBlocksCmd),
-
-    /// Export the state of a given block into a chain spec.
-    ExportState(sc_cli::ExportStateCmd),
-
-    /// Import blocks.
-    ImportBlocks(sc_cli::ImportBlocksCmd),
-
-    /// Remove the whole chain.
-    PurgeChain(sc_cli::PurgeChainCmd),
-
-    /// Revert the chain to a previous state.
-    Revert(sc_cli::RevertCmd),
-}
-
-#[derive(Debug, StructOpt)]
-#[structopt(settings = &[
-	structopt::clap::AppSettings::GlobalVersion,
-	structopt::clap::AppSettings::ArgsNegateSubcommands,
-	structopt::clap::AppSettings::SubcommandsNegateReqs,
-])]
-pub struct Cli {
-    #[structopt(subcommand)]
-    pub subcommand: Option<Subcommand>,
-
-    #[structopt(flatten)]
-    pub run: RunCmd,
-
-    /// Run node as collator.
-    ///
-    /// Note that this is the same as running with `--validator`.
-    #[structopt(long, conflicts_with = "validator")]
-    pub collator: bool,
-
-    /// Relaychain arguments
-    #[structopt(raw = true)]
-    pub relaychain_args: Vec<String>,
-}
-
-impl sc_cli::SubstrateCli for Cli {
-    fn author() -> String {
-        env!("CARGO_PKG_AUTHORS").into()
-    }
-
-    fn copyright_start_year() -> i32 {
-        2017
-    }
-
-    fn description() -> String {
-        "Parachain Collator Template\n\nThe command-line arguments provided first will be passed to \
-     the parachain node, while the arguments provided after -- will be passed to the relaychain \
-     node.\n\nrococo-collator [parachain-args] -- [relaychain-args]"
-      .into()
-    }
-
-    fn impl_name() -> String {
-        "Parachain Collator Template".into()
-    }
-
-    fn impl_version() -> String {
-        env!("SUBSTRATE_CLI_IMPL_VERSION").into()
-    }
-
-    fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-        crate::cli::load_spec(id, self.run.parachain_id.unwrap_or(200).into())
-    }
-
-    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &zeitgeist_runtime::VERSION
-    }
-
-    fn support_url() -> String {
-        "https://github.com/substrate-developer-hub/substrate-parachain-template/issues/new".into()
-    }
-}
-
 #[derive(Debug)]
 pub struct RelayChainCli {
     /// The actual relay chain cli object.
@@ -257,35 +163,28 @@ impl sc_cli::DefaultConfigurationValues for RelayChainCli {
 }
 
 impl sc_cli::SubstrateCli for RelayChainCli {
+    fn author() -> String {
+        env!("CARGO_PKG_AUTHORS").into()
+    }
+
+    fn copyright_start_year() -> i32 {
+        crate::cli::COPYRIGHT_START_YEAR.into()
+    }
+
+    fn description() -> String {
+        env!("CARGO_PKG_DESCRIPTION").into()
+    }
+
     fn impl_name() -> String {
-        "Parachain Collator Template".into()
+        crate::cli::IMPL_NAME.into()
     }
 
     fn impl_version() -> String {
         env!("SUBSTRATE_CLI_IMPL_VERSION").into()
     }
 
-    fn description() -> String {
-        "Parachain Collator Template\n\nThe command-line arguments provided first will be passed to \
-     the parachain node, while the arguments provided after -- will be passed to the relaychain \
-     node.\n\nrococo-collator [parachain-args] -- [relaychain-args]"
-      .into()
-    }
-
-    fn author() -> String {
-        env!("CARGO_PKG_AUTHORS").into()
-    }
-
-    fn support_url() -> String {
-        "https://github.com/substrate-developer-hub/substrate-parachain-template/issues/new".into()
-    }
-
-    fn copyright_start_year() -> i32 {
-        2017
-    }
-
-    fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-        <polkadot_cli::Cli as sc_cli::SubstrateCli>::from_iter(
+    fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+        <polkadot_cli::Cli as SubstrateCli>::from_iter(
             [RelayChainCli::executable_name().to_string()].iter(),
         )
         .load_spec(id)
@@ -294,7 +193,12 @@ impl sc_cli::SubstrateCli for RelayChainCli {
     fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
         polkadot_cli::Cli::native_runtime_version(chain_spec)
     }
+
+    fn support_url() -> String {
+        crate::cli::SUPPORT_URL.into()
+    }
 }
+
 /// Command for exporting the genesis state of the parachain
 #[derive(Debug, StructOpt)]
 pub struct ExportGenesisStateCommand {
@@ -303,7 +207,7 @@ pub struct ExportGenesisStateCommand {
     pub output: Option<PathBuf>,
 
     /// Id of the parachain this state is for.
-    #[structopt(long, default_value = "100")]
+    #[structopt(long, default_value = "200")]
     pub parachain_id: u32,
 
     /// Write output in binary. Default is to write in hex.
@@ -316,7 +220,7 @@ pub struct ExportGenesisStateCommand {
 }
 
 /// Command for exporting the genesis wasm file.
-#[derive(Debug, StructOpt)]
+#[derive(Debug, structopt::StructOpt)]
 pub struct ExportGenesisWasmCommand {
     /// Output file name or stdout if unspecified.
     #[structopt(parse(from_os_str))]
