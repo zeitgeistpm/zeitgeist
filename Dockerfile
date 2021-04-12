@@ -7,6 +7,7 @@ LABEL description="This is the build stage for the Zeitgeist node. Here is creat
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG PROFILE=release
+ARG FEATURES=default
 WORKDIR /zeitgeist
 
 COPY . /zeitgeist
@@ -20,13 +21,13 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     rustup toolchain install nightly-2020-10-06 && \
     rustup target add wasm32-unknown-unknown --toolchain nightly-2020-10-06 && \
     rustup default stable && \
-    cargo build "--$PROFILE"
+    cargo build "--$PROFILE" --features "$FEATURES" --manifest-path node/Cargo.toml
 
 # ==== SECOND STAGE ====
 
 FROM phusion/baseimage:0.10.2
 LABEL maintainer="hi@zeitgeist.pm"
-LABEL description="THis is the 2nd stage: a very small image where we copy the Zeigeist node binary."
+LABEL description="This is the 2nd stage: a very small image where we copy the Zeigeist node binary."
 ARG PROFILE=release
 
 RUN mv /usr/share/ca* /tmp && \

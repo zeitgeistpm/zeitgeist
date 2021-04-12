@@ -1,0 +1,25 @@
+name: Chachacha
+
+on:
+  push:
+    branches: [ chachacha ]
+  pull_request:
+    # Temporary! Only for this chachacha PR testing  
+    branches: [ "*" ]
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Publish
+        uses: appleboy/ssh-action@master
+        with:
+          host: 45.33.117.205
+          key: ${{ secrets.CHACHACHA_VM_PRIVATE_KEY }}
+          passphrase: ${{ secrets.CHACHACHA_VM_PASSWORD }}
+          script: ./.github/workflows/chachacha.sh
+          username: zeitgeist
