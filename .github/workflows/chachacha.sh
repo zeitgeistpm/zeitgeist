@@ -90,13 +90,5 @@ sudo docker run \
     --chain /zeitgeist/data/rococo-chachacha.json \
     --execution wasm
 
-echo "***** GENESIS *****"
-
-cat $DATA_DIR/zeitgeist-genesis-state
-echo ""
-cat $DATA_DIR/zeitgeist-genesis-wasm
-
-echo "***** ROTATE KEYS ******"
-
 echo $ROTATE_KEY_0
 echo $ROTATE_KEY_1
