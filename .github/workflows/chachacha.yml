@@ -1,0 +1,31 @@
+name: Chachacha
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Copy deployment file
+        uses: appleboy/scp-action@master
+        with:
+          host: 45.33.117.205
+          key: ${{ secrets.CHACHACHA_VM_PRIVATE_KEY }}
+          passphrase: ${{ secrets.CHACHACHA_VM_PASSWORD }}
+          source: ".github/workflows/chachacha.sh"
+          target: "/home/ci"
+          username: ci
+
+      - name: Publish
+        uses: appleboy/ssh-action@master
+        with:
+          host: 45.33.117.205
+          key: ${{ secrets.CHACHACHA_VM_PRIVATE_KEY }}
+          passphrase: ${{ secrets.CHACHACHA_VM_PASSWORD }}
+          script: bash /home/ci/.github/workflows/chachacha.sh
+          username: ci
