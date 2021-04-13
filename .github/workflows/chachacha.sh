@@ -92,9 +92,9 @@ sudo docker run \
 
 echo "***** GENESIS *****"
 
-echo $DATA_DIR/zeitgeist-genesis-state
+cat $DATA_DIR/zeitgeist-genesis-state
 echo ""
-echo $DATA_DIR/zeitgeist-genesis-wasm
+cat $DATA_DIR/zeitgeist-genesis-wasm
 
 echo "***** ROTATE KEYS ******"
 
