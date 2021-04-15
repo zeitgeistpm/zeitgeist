@@ -17,7 +17,7 @@ use zeitgeist_primitives::Asset;
 pub use zrml_swaps_runtime_api::{BalanceInfo, SwapsApi as SwapsRuntimeApi};
 
 #[rpc]
-pub trait SwapsApi<BlockHash, PoolId, Hash, AccountId, Balance, BalanceType, MarketId>
+pub trait SwapsApi<BlockHash, PoolId, AccountId, Balance, BalanceType, MarketId>
 where
     Balance: core::str::FromStr,
 {
@@ -26,7 +26,7 @@ where
         &self,
         pool_id: PoolId,
         at: Option<BlockHash>,
-    ) -> Result<Asset<Hash, MarketId>>;
+    ) -> Result<Asset<MarketId>>;
 
     #[rpc(name = "swaps_poolAccountId")]
     fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<AccountId>;
@@ -35,8 +35,8 @@ where
     fn get_spot_price(
         &self,
         pool_id: PoolId,
-        asset_in: Asset<Hash, MarketId>,
-        asset_out: Asset<Hash, MarketId>,
+        asset_in: Asset<MarketId>,
+        asset_out: Asset<MarketId>,
         at: Option<BlockHash>,
     ) -> Result<BalanceType>;
 }
@@ -71,11 +71,10 @@ impl From<Error> for i64 {
     }
 }
 
-impl<C, Block, PoolId, Hash, AccountId, Balance, MarketId>
+impl<C, Block, PoolId, AccountId, Balance, MarketId>
     SwapsApi<
         <Block as BlockT>::Hash,
         PoolId,
-        Hash,
         AccountId,
         Balance,
         BalanceInfo<Balance>,
@@ -84,9 +83,8 @@ impl<C, Block, PoolId, Hash, AccountId, Balance, MarketId>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-    C::Api: SwapsRuntimeApi<Block, PoolId, Hash, AccountId, Balance, MarketId>,
+    C::Api: SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
     PoolId: Codec,
-    Hash: Codec,
     AccountId: Codec,
     Balance: Codec + MaybeDisplay + MaybeFromStr + TryFrom<U256>,
     <Balance as TryFrom<U256>>::Error: core::fmt::Debug,
@@ -96,7 +94,7 @@ where
         &self,
         pool_id: PoolId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Asset<Hash, MarketId>> {
+    ) -> Result<Asset< MarketId>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             //if the block hash is not supplied assume the best block
@@ -129,8 +127,8 @@ where
     fn get_spot_price(
         &self,
         pool_id: PoolId,
-        asset_in: Asset<Hash, MarketId>,
-        asset_out: Asset<Hash, MarketId>,
+        asset_in: Asset<MarketId>,
+        asset_out: Asset<MarketId>,
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<BalanceInfo<Balance>> {
         let api = self.client.runtime_api();

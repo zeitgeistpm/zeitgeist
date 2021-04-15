@@ -94,13 +94,12 @@ mod pallet {
                 ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
 
                 let cost = order_data.cost();
-                let share_id = order_data.share_id;
                 let maker = order_data.maker;
 
                 match order_data.side {
                     OrderSide::Bid => {
                         T::Shares::ensure_can_withdraw(
-                            Asset::Share(share_id),
+                            order_data.asset,
                             &sender,
                             order_data.total,
                         )?;
@@ -114,7 +113,7 @@ mod pallet {
                         )?;
 
                         T::Shares::transfer(
-                            Asset::Share(share_id),
+                            order_data.asset,
                             &sender,
                             &maker,
                             order_data.total,
@@ -128,9 +127,9 @@ mod pallet {
                             Zero::zero(),
                         )?;
 
-                        T::Shares::unreserve(Asset::Share(share_id), &maker, order_data.total);
+                        T::Shares::unreserve(order_data.asset, &maker, order_data.total);
                         T::Shares::transfer(
-                            Asset::Share(share_id),
+                            order_data.asset,
                             &maker,
                             &sender,
                             order_data.total,
@@ -155,7 +154,7 @@ mod pallet {
         #[pallet::weight(0)]
         pub fn make_order(
             origin: OriginFor<T>,
-            share_id: T::Hash,
+            asset: Asset<T::MarketId>,
             side: OrderSide,
             amount: BalanceOf<T>,
             price: BalanceOf<T>,
@@ -194,7 +193,7 @@ mod pallet {
                 }
                 OrderSide::Ask => {
                     ensure!(
-                        T::Shares::can_reserve(Asset::Share(share_id), &sender, amount),
+                        T::Shares::can_reserve(asset, &sender, amount),
                         Error::<T>::InsufficientBalance,
                     );
 
@@ -202,7 +201,7 @@ mod pallet {
                         a.push(hash.clone());
                     });
 
-                    T::Shares::reserve(Asset::Share(share_id), &sender, amount)?;
+                    T::Shares::reserve(asset, &sender, amount)?;
                 }
             }
 
@@ -229,7 +228,7 @@ mod pallet {
         type Shares: MultiReservableCurrency<
             Self::AccountId,
             Balance = BalanceOf<Self>,
-            CurrencyId = Asset<Self::Hash, Self::MarketId>,
+            CurrencyId = Asset<Self::MarketId>,
         >;
     }
 
@@ -283,7 +282,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::Hash,
-        Option<Order<T::AccountId, BalanceOf<T>, T::Hash>>,
+        Option<Order<T::AccountId, BalanceOf<T>, T::Hash, T::MarketId>>,
         ValueQuery,
     >;
 
@@ -306,11 +305,11 @@ pub enum OrderSide {
 }
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
-pub struct Order<AccountId, Balance, Hash> {
+pub struct Order<AccountId, Balance, Hash, MarketId> {
     side: OrderSide,
     maker: AccountId,
     taker: Option<AccountId>,
-    share_id: Hash,
+    asset: Asset<MarketId>,
     total: Balance,
     price: Balance,
     filled: Balance,

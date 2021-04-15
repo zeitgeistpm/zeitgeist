@@ -25,8 +25,8 @@ pub enum MarketEnd<BlockNumber> {
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
 pub enum MarketType {
     // A market with a number of categorical outcomes.
-    Categorical,
-    Scalar,
+    Categorical(u16),
+    Scalar((u128, u128)),
 }
 
 /// Defines the state of the market.
@@ -50,6 +50,12 @@ pub enum MarketStatus {
     Resolved,
 }
 
+#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug, Clone)]
+pub enum Outcome {
+    Categorical(u16),
+    Scalar(u128),
+}
+
 #[derive(Encode, Decode, RuntimeDebug)]
 pub struct Market<AccountId, BlockNumber> {
     // Creator of this market.
@@ -57,7 +63,7 @@ pub struct Market<AccountId, BlockNumber> {
     // Creation type.
     pub creation: MarketCreation,
     // The fee the creator gets from each winning share.
-    pub creator_fee: u8, //TODO: Make this into a percent.
+    pub creator_fee: u8,
     // Oracle that reports the outcome of this market.
     pub oracle: AccountId,
     // Ending block for this market.
@@ -74,16 +80,15 @@ pub struct Market<AccountId, BlockNumber> {
     // Categories are only relevant to Categorical markets.
     pub categories: Option<u16>,
     // The resolved outcome.
-    pub resolved_outcome: Option<u16>,
+    pub resolved_outcome: Option<Outcome>,
 }
 
 impl<AccountId, B> Market<AccountId, B> {
+    // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
-            MarketType::Categorical => self
-                .categories
-                .expect("Categorical market must have categories"),
-            MarketType::Scalar => 0, // TODO implement scalar markets
+            MarketType::Categorical(categories) => categories,
+            MarketType::Scalar(_) => 2,
         }
     }
 }
@@ -92,12 +97,12 @@ impl<AccountId, B> Market<AccountId, B> {
 pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
-    pub outcome: u16,
+    pub outcome: Outcome,
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
-    pub outcome: u16,
+    pub outcome: Outcome,
 }

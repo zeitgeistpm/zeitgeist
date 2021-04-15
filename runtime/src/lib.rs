@@ -103,7 +103,7 @@ parameter_types! {
   pub const DisputePeriod: BlockNumber = DAYS;
   pub const ExistentialDeposit: u128 = 500;
   pub const ExitFee: Balance = 0;
-  pub const GetNativeCurrencyId: Asset<Hash, MarketId> = Asset::Ztg;
+  pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
   pub const MaxAssets: usize = 8;
   pub const MaxCategories: u16 = 8;
   pub const MaxDisputes: u16 = 6;
@@ -529,18 +529,18 @@ impl_runtime_apis! {
     }
 
     impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<Block, MarketId, Hash> for Runtime {
-        fn market_outcome_share_id(market_id: MarketId, outcome: u16) -> Asset<Hash, MarketId> {
+        fn market_outcome_share_id(market_id: MarketId, outcome: u16) -> Asset<MarketId> {
             PredictionMarkets::market_outcome_share_id(market_id, outcome)
         }
     }
 
-    impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, Hash, AccountId, Balance, MarketId>
+    impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, AccountId, Balance, MarketId>
       for Runtime
     {
         fn get_spot_price(
             pool_id: u128,
-            asset_in: Asset<Hash, MarketId>,
-            asset_out: Asset<Hash, MarketId>,
+            asset_in: Asset<MarketId>,
+            asset_out: Asset<MarketId>,
         ) -> BalanceInfo<Balance> {
             BalanceInfo {
                 amount: Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0),
@@ -551,7 +551,7 @@ impl_runtime_apis! {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_shares_id(pool_id: u128) -> Asset<Hash, MarketId> {
+        fn pool_shares_id(pool_id: u128) -> Asset<MarketId> {
             Swaps::pool_shares_id(pool_id)
         }
     }

@@ -43,15 +43,15 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(
 }
 
 sp_api::decl_runtime_apis! {
-    pub trait SwapsApi<PoolId, Hash, AccountId, Balance, MarketId> where
+    pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where
         PoolId: Codec,
         Hash: Codec,
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr,
         MarketId: Codec
     {
-        fn pool_shares_id(pool_id: PoolId) -> Asset<Hash, MarketId>;
+        fn pool_shares_id(pool_id: PoolId) -> Asset<MarketId>;
         fn pool_account_id(pool_id: PoolId) -> AccountId;
-        fn get_spot_price(pool_id: PoolId, asset_in: Asset<Hash, MarketId>, asset_out: Asset<Hash, MarketId>) -> BalanceInfo<Balance>;
+        fn get_spot_price(pool_id: PoolId, asset_in: Asset<MarketId>, asset_out: Asset<MarketId>) -> BalanceInfo<Balance>;
     }
 }
