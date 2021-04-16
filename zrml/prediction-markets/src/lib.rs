@@ -509,7 +509,6 @@ mod pallet {
                                 }
 
                                 let payout_long: u128 = (final_value - low) / (high - low);
-                                // let payout_long = one;
                                 (
                                     payout_long.saturated_into(),
                                     one - payout_long.saturated_into(),
