@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DATA_DIR="$HOME/rococo"
+PARACHAIN_CHAIN="battery_park"
 PARACHAIN_ID="9123"
 
 CENTRIFUGE_POLKADOT_IMAGE="centrifugeio/rococo:chachacha-v1"
@@ -68,8 +69,17 @@ launch_validator "$CHACHACHA_VALIDATOR_1" "-p 30001:30333 -p 8001:9933 -p 9001:9
 
 # Parachains
 
-sudo docker run --rm $ZEITGEST_PARACHAIN_IMAGE export-genesis-state --parachain-id $PARACHAIN_ID > $DATA_DIR/zeitgeist-genesis-state
-sudo docker run --rm $ZEITGEST_PARACHAIN_IMAGE export-genesis-wasm > $DATA_DIR/zeitgeist-genesis-wasm
+sudo docker run \
+    --rm \
+    $ZEITGEST_PARACHAIN_IMAGE \
+    export-genesis-state \
+    --chain $PARACHAIN_CHAIN \
+    --parachain-id $PARACHAIN_ID > $DATA_DIR/zeitgeist-genesis-state
+sudo docker run \
+    --rm \
+    $ZEITGEST_PARACHAIN_IMAGE \
+    export-genesis-wasm \
+    --chain $PARACHAIN_CHAIN $DATA_DIR/zeitgeist-genesis-wasm
 curl -o $DATA_DIR/$ZEITGEST_PARACHAIN_0/rococo-chachacha.json https://storage.googleapis.com/centrifuge-artifact-releases/rococo-chachacha.json
 
 sudo docker run \
@@ -81,6 +91,7 @@ sudo docker run \
     --name $ZEITGEST_PARACHAIN_0 \
     --restart always \
     $ZEITGEST_PARACHAIN_IMAGE \
+    --chain $PARACHAIN_CHAIN \
     --collator \
     --parachain-id $PARACHAIN_ID \
     --rpc-cors all \

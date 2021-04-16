@@ -60,7 +60,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             OnUnbalanced, ReservableCurrency,
         },
-        Blake2_128Concat, Parameter,
+        Blake2_128Concat, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -69,7 +69,7 @@ mod pallet {
             AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, One,
             Zero,
         },
-        DispatchResult, ModuleId, SaturatedConversion,
+        DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{Asset, Swaps, ZeitgeistMultiReservableCurrency};
 
@@ -622,7 +622,7 @@ mod pallet {
         type MaxDisputes: Get<u16>;
 
         /// The module identifier.
-        type ModuleId: Get<ModuleId>;
+        type PalletId: Get<PalletId>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports
         ///  in a timely manner.
@@ -824,7 +824,7 @@ mod pallet {
         }
 
         pub(crate) fn market_account(market_id: T::MarketId) -> T::AccountId {
-            T::ModuleId::get().into_sub_account(market_id)
+            T::PalletId::get().into_sub_account(market_id)
         }
 
         /// Clears this market from being stored for automatic resolution.
