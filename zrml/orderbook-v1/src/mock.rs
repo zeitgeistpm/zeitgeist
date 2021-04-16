@@ -1,10 +1,10 @@
 use crate as orderbook_v1;
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    ModuleId, Perbill,
+    Perbill,
 };
 use zeitgeist_primitives::{
     AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
@@ -21,8 +21,8 @@ parameter_types! {
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
     pub const BlockHashCount: u64 = 250;
     pub const ExistentialDeposit: Balance = 1;
-    pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
-    pub DustAccount: AccountIdTest = ModuleId(*b"orml/dst").into_account();
+    pub const SharesPalletId: PalletId = PalletId(*b"test/sha");
+    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 
     pub const MaxLocks: u32 = 50;
 }

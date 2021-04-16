@@ -1,12 +1,10 @@
 use crate as zrml_swaps;
-use frame_support::construct_runtime;
-use frame_support::parameter_types;
+use frame_support::{construct_runtime, parameter_types, PalletId};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    ModuleId,
 };
 use zeitgeist_primitives::{
     AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -25,8 +23,8 @@ parameter_types! {
     pub const MaxWeight: Balance = 50 * BASE;
     pub const MinLiquidity: Balance = 100 * BASE;
     pub const MinWeight: Balance = BASE;
-    pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
-    pub DustAccount: AccountIdTest = ModuleId(*b"orml/dst").into_account();
+    pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
+    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 parameter_type_with_key! {
@@ -71,7 +69,7 @@ impl crate::Config for Runtime {
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
-    type ModuleId = SwapsModuleId;
+    type PalletId = SwapsPalletId;
     type Shares = Shares;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }

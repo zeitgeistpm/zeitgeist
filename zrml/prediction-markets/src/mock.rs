@@ -3,13 +3,14 @@ use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{OnFinalize, OnInitialize},
     weights::Weight,
+    PalletId,
 };
 use frame_system::EnsureSignedBy;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    ModuleId, Perbill,
+    Perbill,
 };
 use zeitgeist_primitives::{
     AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
@@ -53,12 +54,12 @@ parameter_types! {
     pub const MinLiquidity: Balance = 100 * BASE;
     pub const MinWeight: Balance = BASE;
     pub const OracleBond: Balance = 100;
-    pub const PmModuleId: ModuleId = ModuleId(*b"test/prm");
+    pub const PmPalletId: PalletId = PalletId(*b"test/prm");
     pub const ReportingPeriod: BlockNumber = 10;
-    pub const SharesModuleId: ModuleId = ModuleId(*b"test/sha");
-    pub const SwapsModuleId: ModuleId = ModuleId(*b"test/swa");
+    pub const SharesPalletId: PalletId = PalletId(*b"test/sha");
+    pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
     pub const ValidityBond: Balance = 200;
-    pub DustAccount: AccountIdTest = ModuleId(*b"orml/dst").into_account();
+    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 parameter_type_with_key! {
@@ -94,7 +95,7 @@ impl crate::Config for Runtime {
     type MarketId = MarketId;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
-    type ModuleId = PmModuleId;
+    type PalletId = PmPalletId;
     type OracleBond = OracleBond;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Shares;
@@ -167,7 +168,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
-    type ModuleId = SwapsModuleId;
+    type PalletId = SwapsPalletId;
     type Shares = Shares;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
