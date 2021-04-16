@@ -355,7 +355,8 @@ impl zrml_swaps::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type ModuleId = SwapsModuleId;
-    type Shares = Currency;
+    type Shares = Tokens;
+    type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
 impl_runtime_apis! {
@@ -393,6 +394,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+            add_benchmark!(params, batches, zrml_swaps, Swaps);
 
             if batches.is_empty() {
                 return Err("Benchmark not found for this pallet.".into());
