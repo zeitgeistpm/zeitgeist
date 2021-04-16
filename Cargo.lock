@@ -10958,6 +10958,7 @@ dependencies = [
 name = "zrml-swaps"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-currencies",
@@ -10969,6 +10970,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
  "zeitgeist-primitives",
 ]
 

@@ -169,6 +169,7 @@ impl zrml_swaps::Config for Runtime {
     type MinWeight = MinWeight;
     type ModuleId = SwapsModuleId;
     type Shares = Shares;
+    type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
 pub struct ExtBuilder {
