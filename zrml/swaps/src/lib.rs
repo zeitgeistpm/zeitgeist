@@ -44,13 +44,13 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Get, Hooks, IsType},
-        Blake2_128Concat, Parameter,
+        Blake2_128Concat, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use sp_runtime::{
         traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member, Zero},
-        DispatchError, DispatchResult, ModuleId, SaturatedConversion,
+        DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{Asset, Swaps};
 
@@ -473,7 +473,7 @@ mod pallet {
         type MinLiquidity: Get<BalanceOf<Self>>;
 
         /// The module identifier.
-        type ModuleId: Get<ModuleId>;
+        type PalletId: Get<PalletId>;
 
         type Shares: MultiReservableCurrency<
             Self::AccountId,
@@ -642,7 +642,7 @@ mod pallet {
         }
 
         pub fn pool_account_id(pool_id: u128) -> T::AccountId {
-            T::ModuleId::get().into_sub_account(pool_id)
+            T::PalletId::get().into_sub_account(pool_id)
         }
 
         fn pool_by_id(pool_id: u128) -> Result<Pool<BalanceOf<T>, T::Hash, T::MarketId>, Error<T>>
@@ -654,7 +654,7 @@ mod pallet {
 
         #[allow(dead_code)]
         fn pool_master_account() -> T::AccountId {
-            T::ModuleId::get().into_account()
+            T::PalletId::get().into_account()
         }
 
         pub fn pool_shares_id(pool_id: u128) -> Asset<T::Hash, T::MarketId> {

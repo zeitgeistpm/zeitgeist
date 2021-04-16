@@ -22,6 +22,7 @@ use frame_support::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         DispatchClass, IdentityFee, Weight,
     },
+    PalletId,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
@@ -36,7 +37,7 @@ use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, ModuleId, Perbill,
+    ApplyExtrinsicResult, Perbill,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -50,7 +51,7 @@ pub const DOLLARS: Balance = BASE / 100; // 100_000_000
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const CENTS: Balance = DOLLARS / 100; // 1_000_000
 pub const MILLICENTS: Balance = CENTS / 1000; // 1_000
-pub const MILLISECS_PER_BLOCK: u64 = 12000;
+pub const MILLISECS_PER_BLOCK: u64 = 6000;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
@@ -116,14 +117,14 @@ parameter_types! {
   pub const MinLiquidity: Balance = 100 * BASE;
   pub const MinWeight: Balance = BASE;
   pub const OracleBond: Balance = 50 * DOLLARS;
-  pub const PmModuleId: ModuleId = ModuleId(*b"zge/pred");
+  pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
   pub const ReportingPeriod: BlockNumber = DAYS;
   pub const SS58Prefix: u8 = 42;
-  pub const SwapsModuleId: ModuleId = ModuleId(*b"zge/swap");
+  pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
   pub const TransactionByteFee: Balance = 1;
   pub const ValidityBond: Balance = 50 * DOLLARS;
   pub const Version: RuntimeVersion = VERSION;
-  pub DustAccount: AccountId = ModuleId(*b"orml/dst").into_account();
+  pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
   pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
   pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
     .base_block(BlockExecutionWeight::get())
@@ -176,9 +177,13 @@ macro_rules! create_zeitgeist_runtime {
 }
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
+    CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
+    CumulusXcm: cumulus_pallet_xcm::{Origin, Pallet},
     ParachainInfo: parachain_info::{Config, Pallet, Storage},
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event},
-    XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin},
+    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>},
+    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet},
+    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage},
+
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
@@ -188,21 +193,35 @@ create_zeitgeist_runtime!(
 
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_parachain_system::Config for Runtime {
-    type DownwardMessageHandlers = XcmHandler;
+    type DownwardMessageHandlers = cumulus_primitives_utility::UnqueuedDmpAsParent<
+        MaxDownwardMessageWeight,
+        xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+        Call,
+    >;
     type Event = Event;
     type OnValidationData = ();
-    type SelfParaId = parachain_info::Pallet<Runtime>;
-    type XcmpMessageHandlers = XcmHandler;
+    type OutboundXcmpMessageSource = XcmpQueue;
+    type ReservedXcmpWeight = ReservedXcmpWeight;
+    type SelfParaId = parachain_info::Module<Runtime>;
+    type XcmpMessageHandler = XcmpQueue;
 }
 
 #[cfg(feature = "parachain")]
-impl cumulus_pallet_xcm_handler::Config for Runtime {
-    type AccountIdConverter = parachain_params::LocationConverter;
+impl cumulus_pallet_xcm::Config for Runtime {}
+
+#[cfg(feature = "parachain")]
+impl cumulus_pallet_xcmp_queue::Config for Runtime {
+    type ChannelInfo = ParachainSystem;
     type Event = Event;
-    type SendXcmOrigin = EnsureRoot<AccountId>;
-    type UpwardMessageSender = ParachainSystem;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-    type XcmpMessageSender = ParachainSystem;
+}
+
+#[cfg(feature = "parachain")]
+impl cumulus_ping::Config for Runtime {
+    type Call = Call;
+    type Event = Event;
+    type Origin = Origin;
+    type XcmSender = XcmRouter;
 }
 
 impl frame_system::Config for Runtime {
@@ -224,7 +243,7 @@ impl frame_system::Config for Runtime {
     type OnKilledAccount = ();
     type OnNewAccount = ();
     #[cfg(feature = "parachain")]
-    type OnSetCode = ParachainSystem;
+    type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
     #[cfg(not(feature = "parachain"))]
     type OnSetCode = ();
     type Origin = Origin;
@@ -261,6 +280,15 @@ impl pallet_grandpa::Config for Runtime {
     type HandleEquivocation = ();
 
     type WeightInfo = ();
+}
+
+#[cfg(feature = "parachain")]
+impl pallet_xcm::Config for Runtime {
+    type Event = Event;
+    type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+    type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
+    type XcmRouter = XcmRouter;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -334,7 +362,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MarketId = MarketId;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
-    type ModuleId = PmModuleId;
+    type PalletId = PmPalletId;
     type OracleBond = OracleBond;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
@@ -354,8 +382,8 @@ impl zrml_swaps::Config for Runtime {
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
-    type ModuleId = SwapsModuleId;
-    type Shares = Tokens;
+    type PalletId = SwapsPalletId;
+    type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 

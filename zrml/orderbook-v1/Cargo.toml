@@ -2,7 +2,7 @@
 [dependencies]
 frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-io = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -11,7 +11,7 @@ zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-swaps = { default-features = false, path = "../swaps" }
 
 [dev-dependencies]
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 serde = "1.0"
 

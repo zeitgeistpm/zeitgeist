@@ -6,9 +6,9 @@ frame-executive = { branch = "rococo-v1", default-features = false, git = "https
 frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system-rpc-runtime-api = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-currencies = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
-orml-tokens = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
-orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "db10cfda77388524b6b30faa7300b165c740e6d4" }
+orml-currencies = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-tokens = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-randomness-collective-flip = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-sudo = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -37,11 +37,16 @@ hex-literal = { optional = true, version = "0.3" }
 # Cumulus
 
 cumulus-pallet-parachain-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-cumulus-pallet-xcm-handler = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-pallet-xcm = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-pallet-xcmp-queue = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-ping = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-primitives-utility = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
 parachain-info = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
 
 # Polkadot
 
+pallet-xcm = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 polkadot-parachain = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-builder = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
@@ -69,15 +74,20 @@ parachain = [
 	# Cumulus
 
 	"cumulus-pallet-parachain-system",
-	"cumulus-pallet-xcm-handler",
+	"cumulus-pallet-xcm",
+	"cumulus-pallet-xcmp-queue",
+	"cumulus-ping",
+	"cumulus-primitives-core",
+	"cumulus-primitives-utility",
 	"parachain-info",
 
 	# Polkadot
 
+	"pallet-xcm",
 	"polkadot-parachain",
-	"xcm",
 	"xcm-builder",
 	"xcm-executor",
+	"xcm",
 ]
 runtime-benchmarks = [
     "frame-benchmarking",
@@ -120,15 +130,20 @@ std = [
 	# Cumulus
 
 	"cumulus-pallet-parachain-system/std",
-	"cumulus-pallet-xcm-handler/std",
+	"cumulus-pallet-xcm/std",
+	"cumulus-pallet-xcmp-queue/std",
+	"cumulus-ping/std",
+	"cumulus-primitives-core/std",
+	"cumulus-primitives-utility/std",
 	"parachain-info/std",
 
 	# Polkadot
 
+	"pallet-xcm/std",
 	"polkadot-parachain/std",
-	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
+	"xcm/std",
 
 	# Standalone
 
