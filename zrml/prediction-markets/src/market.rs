@@ -77,8 +77,6 @@ pub struct Market<AccountId, BlockNumber> {
     pub status: MarketStatus,
     // The report of the market. Only `Some` if it has been reported.
     pub report: Option<Report<AccountId, BlockNumber>>,
-    // Categories are only relevant to Categorical markets.
-    pub categories: Option<u16>,
     // The resolved outcome.
     pub resolved_outcome: Option<Outcome>,
 }

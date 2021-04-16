@@ -46,7 +46,7 @@ pub use pallet::{Config, Error, Event, Pallet};
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        errors::{NOT_RESOLVED, NO_REPORT},
+        errors::*,
         market::{
             Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Outcome, Report,
         },
@@ -263,7 +263,6 @@ mod pallet {
                 market_type: MarketType::Categorical(categories),
                 status,
                 report: None,
-                categories: Some(categories),
                 resolved_outcome: None,
             };
 
@@ -312,7 +311,6 @@ mod pallet {
                 market_type: MarketType::Scalar(outcome_range),
                 status,
                 report: None,
-                categories: None,
                 resolved_outcome: None,
             };
 
@@ -377,14 +375,14 @@ mod pallet {
                 if let MarketType::Categorical(categories) = market.market_type {
                     ensure!(inner < categories-1, Error::<T>::OutcomeOutOfRange);
                 } else {
-                    // throw error
+                    return Err(OUTCOME_MISMATCH);
                 }
             }
             if let Outcome::Scalar(inner) = outcome {
                 if let MarketType::Scalar(outcome_range) = market.market_type {
                     ensure!(inner >= outcome_range.0 && inner <= outcome_range.1, "some");
                 } else {
-                    // throw error
+                    return Err(OUTCOME_MISMATCH);
                 }
             }
 

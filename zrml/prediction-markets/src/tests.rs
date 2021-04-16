@@ -115,9 +115,9 @@ fn it_allows_to_buy_a_complete_set() {
         let market = PredictionMarkets::markets(0).unwrap();
 
         // Check the outcome balances
-        for i in 0..market.outcomes() {
-            let share_id = PredictionMarkets::market_outcome_share_id(0, i);
-            let bal = Shares::free_balance(share_id, &BOB);
+        let assets = PredictionMarkets::outcome_assets(0, market);
+        for asset in assets.iter() {
+            let bal = Shares::free_balance(*asset, &BOB);
             assert_eq!(bal, 100);
         }
 
@@ -179,9 +179,9 @@ fn it_allows_to_sell_a_complete_set() {
         let market = PredictionMarkets::markets(0).unwrap();
 
         // Check the outcome balances
-        for i in 0..=market.outcomes() {
-            let share_id = PredictionMarkets::market_outcome_share_id(0, i);
-            let bal = Shares::free_balance(share_id, &BOB);
+        let assets = PredictionMarkets::outcome_assets(0, market);
+        for asset in assets.iter() {
+            let bal = Shares::free_balance(*asset, &BOB);
             assert_eq!(bal, 0);
         }
 
@@ -203,12 +203,12 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         assert_eq!(market.status, MarketStatus::Active);
         assert_eq!(market.report.is_none(), true);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
 
         let market_after = PredictionMarkets::markets(0).unwrap();
         let report = market_after.report.unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
-        assert_eq!(report.outcome, 1);
+        assert_eq!(report.outcome, Outcome::Categorical(1));
         assert_eq!(report.by, market_after.oracle);
     });
 }
@@ -222,12 +222,12 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         // Run to the end of the trading phase.
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
 
         // Dispute phase is 10 blocks... so only run 5 of them.
         run_to_block(105);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, 0,));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, Outcome::Categorical(0)));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -237,7 +237,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         let dispute = &disputes[0];
         assert_eq!(dispute.at, 105);
         assert_eq!(dispute.by, CHARLIE);
-        assert_eq!(dispute.outcome, 0);
+        assert_eq!(dispute.outcome, Outcome::Categorical(0));
 
         let market_ids = PredictionMarkets::market_ids_per_dispute_block(105);
         assert_eq!(market_ids.len(), 1);
@@ -257,7 +257,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(ALICE), // alice reports her own market now
             0,
-            1,
+            Outcome::Categorical(1),
         ));
 
         let market = PredictionMarkets::markets(0).unwrap();
@@ -288,7 +288,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
 
         let reported_ids = PredictionMarkets::market_ids_per_report_block(100);
         assert_eq!(reported_ids.len(), 1);
@@ -301,19 +301,19 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         assert_eq!(market.unwrap().status, MarketStatus::Resolved);
 
         // check to make sure all but the winning share was deleted
-        let share_a = PredictionMarkets::market_outcome_share_id(0, 0);
+        let share_a = Asset::CategoricalOutcome(0, 0);
         let share_a_total = Shares::total_issuance(share_a);
         assert_eq!(share_a_total, 0);
         let share_a_bal = Shares::free_balance(share_a, &CHARLIE);
         assert_eq!(share_a_bal, 0);
 
-        let share_b = PredictionMarkets::market_outcome_share_id(0, 1);
+        let share_b = Asset::CategoricalOutcome(0, 1);
         let share_b_total = Shares::total_issuance(share_b);
         assert_eq!(share_b_total, 100);
         let share_b_bal = Shares::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, 100);
 
-        let share_c = PredictionMarkets::market_outcome_share_id(0, 2);
+        let share_c = Asset::CategoricalOutcome(0, 2);
         let share_c_total = Shares::total_issuance(share_c);
         assert_eq!(share_c_total, 0);
         let share_c_bal = Shares::free_balance(share_c, &CHARLIE);
@@ -335,19 +335,19 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 0));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(0)));
 
         run_to_block(102);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, 1));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, Outcome::Categorical(1)));
 
         run_to_block(103);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, 0));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, Outcome::Categorical(0)));
 
         run_to_block(104);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0, 1));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0, Outcome::Categorical(1)));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -426,14 +426,14 @@ fn it_allows_to_redeem_shares() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
 
         run_to_block(111);
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Resolved);
 
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), Outcome::Categorical(0)));
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
     });
