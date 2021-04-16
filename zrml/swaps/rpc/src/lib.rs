@@ -22,11 +22,7 @@ where
     Balance: core::str::FromStr,
 {
     #[rpc(name = "swaps_poolSharesId")]
-    fn pool_shares_id(
-        &self,
-        pool_id: PoolId,
-        at: Option<BlockHash>,
-    ) -> Result<Asset<MarketId>>;
+    fn pool_shares_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Asset<MarketId>>;
 
     #[rpc(name = "swaps_poolAccountId")]
     fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<AccountId>;
@@ -72,14 +68,8 @@ impl From<Error> for i64 {
 }
 
 impl<C, Block, PoolId, AccountId, Balance, MarketId>
-    SwapsApi<
-        <Block as BlockT>::Hash,
-        PoolId,
-        AccountId,
-        Balance,
-        BalanceInfo<Balance>,
-        MarketId,
-    > for Swaps<C, Block>
+    SwapsApi<<Block as BlockT>::Hash, PoolId, AccountId, Balance, BalanceInfo<Balance>, MarketId>
+    for Swaps<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
@@ -94,7 +84,7 @@ where
         &self,
         pool_id: PoolId,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Asset< MarketId>> {
+    ) -> Result<Asset<MarketId>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             //if the block hash is not supplied assume the best block

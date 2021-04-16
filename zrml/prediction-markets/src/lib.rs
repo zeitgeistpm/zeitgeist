@@ -48,7 +48,8 @@ mod pallet {
     use crate::{
         errors::*,
         market::{
-            Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Outcome, Report,
+            Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Outcome,
+            Report,
         },
     };
     use alloc::vec::Vec;
@@ -102,7 +103,7 @@ mod pallet {
             for asset in Self::outcome_assets(market_id, market).iter() {
                 let accounts = T::Shares::accounts_by_currency_id(*asset);
                 T::Shares::destroy_all(*asset, accounts.iter().cloned());
-            };
+            }
 
             Ok(())
         }
@@ -280,7 +281,7 @@ mod pallet {
             end: MarketEnd<T::BlockNumber>,
             metadata: Vec<u8>,
             creation: MarketCreation,
-            outcome_range: (u128, u128)
+            outcome_range: (u128, u128),
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             Self::ensure_create_market_end(end)?;
@@ -470,7 +471,10 @@ mod pallet {
                 Outcome::Categorical(category_index) => {
                     let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
                     let winning_balance = T::Shares::free_balance(winning_currency_id, &sender);
-                    ensure!(winning_balance >= BalanceOf::<T>::zero(), Error::<T>::NoWinningBalance);
+                    ensure!(
+                        winning_balance >= BalanceOf::<T>::zero(),
+                        Error::<T>::NoWinningBalance
+                    );
 
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
@@ -489,32 +493,44 @@ mod pallet {
                     let zero = BalanceOf::<T>::zero();
                     let one = BalanceOf::<T>::one();
 
-                    ensure!(long_balance >= zero || short_balance >= zero, Error::<T>::NoWinningBalance);
+                    ensure!(
+                        long_balance >= zero || short_balance >= zero,
+                        Error::<T>::NoWinningBalance
+                    );
 
                     if let MarketType::Scalar((bound_low, bound_high)) = market.market_type {
-                        let calc_payouts = |final_value, low, high| -> (BalanceOf<T>, BalanceOf<T>) {
-                            if final_value < low {
-                                return (zero, one);
-                            }
-                            if final_value > high {
-                                return (one, zero);
-                            }
+                        let calc_payouts =
+                            |final_value, low, high| -> (BalanceOf<T>, BalanceOf<T>) {
+                                if final_value < low {
+                                    return (zero, one);
+                                }
+                                if final_value > high {
+                                    return (one, zero);
+                                }
 
-                            let payout_long: u128 = (final_value - low) / (high - low);
-                            // let payout_long = one;
-                            (payout_long.saturated_into(), one - payout_long.saturated_into()) 
-                        };
+                                let payout_long: u128 = (final_value - low) / (high - low);
+                                // let payout_long = one;
+                                (
+                                    payout_long.saturated_into(),
+                                    one - payout_long.saturated_into(),
+                                )
+                            };
 
-                        let (long_payout, short_payout) = calc_payouts(value, bound_low, bound_high);
+                        let (long_payout, short_payout) =
+                            calc_payouts(value, bound_low, bound_high);
 
                         // Ensure the market account has enough to pay out - if this is
                         // ever not true then we have an accounting problem.
                         ensure!(
-                            T::Currency::free_balance(&market_account) >= long_payout + short_payout,
+                            T::Currency::free_balance(&market_account)
+                                >= long_payout + short_payout,
                             Error::<T>::InsufficientFundsInMarketAccount,
                         );
 
-                        vec![(long_currency_id, long_payout), (short_currency_id, short_payout)]
+                        vec![
+                            (long_currency_id, long_payout),
+                            (short_currency_id, short_payout),
+                        ]
                     } else {
                         panic!("should never happen");
                     }
@@ -897,7 +913,6 @@ mod pallet {
         StorageMap<_, Blake2_128Concat, T::MarketId, Option<u128>, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
-
         pub fn outcome_assets(
             market_id: T::MarketId,
             market: Market<T::AccountId, T::BlockNumber>,
@@ -911,7 +926,10 @@ mod pallet {
                     assets
                 }
                 MarketType::Scalar(_) => {
-                    vec![Asset::ScalarOutcome(market_id, ScalarPosition::Long), Asset::ScalarOutcome(market_id, ScalarPosition::Short)]
+                    vec![
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                    ]
                 }
             }
         }
@@ -968,7 +986,7 @@ mod pallet {
 
             for asset in Self::outcome_assets(market_id, market).iter() {
                 T::Shares::deposit(*asset, &who, amount)?;
-            };
+            }
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, who));
 
@@ -1086,7 +1104,9 @@ mod pallet {
                     let assets = Self::outcome_assets(*market_id, market);
                     for asset in assets.iter() {
                         if let Asset::CategoricalOutcome(_, inner_index) = asset {
-                            if index == *inner_index { continue; }
+                            if index == *inner_index {
+                                continue;
+                            }
                             let accounts = T::Shares::accounts_by_currency_id(*asset);
                             T::Shares::destroy_all(*asset, accounts.iter().cloned());
                         }
@@ -1138,9 +1158,9 @@ mod pallet {
                     );
                 }
             };
-    
+
             Ok(())
-        }    
+        }
     }
 
     fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {

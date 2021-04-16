@@ -203,7 +203,11 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         assert_eq!(market.status, MarketStatus::Active);
         assert_eq!(market.report.is_none(), true);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            Outcome::Categorical(1)
+        ));
 
         let market_after = PredictionMarkets::markets(0).unwrap();
         let report = market_after.report.unwrap();
@@ -222,12 +226,20 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         // Run to the end of the trading phase.
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            Outcome::Categorical(1)
+        ));
 
         // Dispute phase is 10 blocks... so only run 5 of them.
         run_to_block(105);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, Outcome::Categorical(0)));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            Outcome::Categorical(0)
+        ));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -288,7 +300,11 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            Outcome::Categorical(1)
+        ));
 
         let reported_ids = PredictionMarkets::market_ids_per_report_block(100);
         assert_eq!(reported_ids.len(), 1);
@@ -335,19 +351,35 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(0)));
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            Outcome::Categorical(0)
+        ));
 
         run_to_block(102);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, Outcome::Categorical(1)));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            Outcome::Categorical(1)
+        ));
 
         run_to_block(103);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, Outcome::Categorical(0)));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            Outcome::Categorical(0)
+        ));
 
         run_to_block(104);
 
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0, Outcome::Categorical(1)));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(EVE),
+            0,
+            Outcome::Categorical(1)
+        ));
 
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -426,7 +458,11 @@ fn it_allows_to_redeem_shares() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            Outcome::Categorical(1)
+        ));
 
         run_to_block(111);
 
@@ -467,6 +503,10 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             Error::<Runtime>::MarketNotActive,
         );
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            Outcome::Categorical(1)
+        ));
     });
 }

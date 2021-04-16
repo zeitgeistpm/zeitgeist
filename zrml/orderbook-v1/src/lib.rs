@@ -112,12 +112,7 @@ mod pallet {
                             ExistenceRequirement::AllowDeath,
                         )?;
 
-                        T::Shares::transfer(
-                            order_data.asset,
-                            &sender,
-                            &maker,
-                            order_data.total,
-                        )?;
+                        T::Shares::transfer(order_data.asset, &sender, &maker, order_data.total)?;
                     }
                     OrderSide::Ask => {
                         T::Currency::ensure_can_withdraw(
@@ -128,12 +123,7 @@ mod pallet {
                         )?;
 
                         T::Shares::unreserve(order_data.asset, &maker, order_data.total);
-                        T::Shares::transfer(
-                            order_data.asset,
-                            &maker,
-                            &sender,
-                            order_data.total,
-                        )?;
+                        T::Shares::transfer(order_data.asset, &maker, &sender, order_data.total)?;
 
                         T::Currency::transfer(
                             &sender,

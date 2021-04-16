@@ -469,10 +469,7 @@ mod pallet {
         /// The module identifier.
         type ModuleId: Get<ModuleId>;
 
-        type Shares: MultiReservableCurrency<
-            Self::AccountId,
-            CurrencyId = Asset<Self::MarketId>,
-        >;
+        type Shares: MultiReservableCurrency<Self::AccountId, CurrencyId = Asset<Self::MarketId>>;
     }
 
     #[pallet::error]
@@ -536,13 +533,8 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn pools)]
-    pub type Pools<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        u128,
-        Option<Pool<BalanceOf<T>, T::MarketId>>,
-        ValueQuery,
-    >;
+    pub type Pools<T: Config> =
+        StorageMap<_, Blake2_128Concat, u128, Option<Pool<BalanceOf<T>, T::MarketId>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]

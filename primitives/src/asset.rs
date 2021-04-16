@@ -25,7 +25,17 @@ pub enum Asset<MI> {
 pub type CategoryIndex = u16;
 
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, parity_scale_codec::Decode, parity_scale_codec::Encode)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+)]
 pub enum ScalarPosition {
     Long,
     Short,
