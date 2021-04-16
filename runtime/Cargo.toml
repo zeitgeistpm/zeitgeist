@@ -30,7 +30,7 @@ sp-version = { branch = "rococo-v1", default-features = false, git = "https://gi
 
 # Benchmark
 
-frame-benchmarking = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.0" }
+frame-benchmarking = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.1.0" }
 frame-system-benchmarking = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.0" }
 hex-literal = { optional = true, version = "0.3" }
 
@@ -88,6 +88,7 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
+	"zrml-swaps/runtime-benchmarks",
 ]
 std = [
 	"frame-executive/std",

@@ -1,5 +1,6 @@
 use crate as zrml_swaps;
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::construct_runtime;
+use frame_support::parameter_types;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
@@ -11,16 +12,6 @@ use zeitgeist_primitives::{
     AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
     MarketId, UncheckedExtrinsicTest, BASE,
 };
-
-pub const ALICE: AccountIdTest = 0;
-pub const BOB: AccountIdTest = 1;
-pub const CHARLIE: AccountIdTest = 2;
-pub const DAVE: AccountIdTest = 3;
-pub const EVE: AccountIdTest = 4;
-
-pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, Balances, i128, u128>;
-pub type Block = BlockTest<Runtime>;
-pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
     pub const BlockHashCount: u32 = 250;
@@ -43,6 +34,16 @@ parameter_type_with_key! {
     Default::default()
   };
 }
+
+pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
+pub const DAVE: AccountIdTest = 3;
+pub const EVE: AccountIdTest = 4;
+
+pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, Balances, i128, u128>;
+pub type Block = BlockTest<Runtime>;
+pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 construct_runtime!(
     pub enum Runtime
@@ -72,6 +73,7 @@ impl crate::Config for Runtime {
     type MinWeight = MinWeight;
     type ModuleId = SwapsModuleId;
     type Shares = Shares;
+    type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
