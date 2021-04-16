@@ -433,7 +433,7 @@ fn it_allows_to_redeem_shares() {
         let market = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market.status, MarketStatus::Resolved);
 
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), Outcome::Categorical(0)));
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
     });
@@ -463,10 +463,10 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         Timestamp::set_timestamp(123_456_789);
 
         assert_noop!(
-            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,),
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100),
             Error::<Runtime>::MarketNotActive,
         );
 
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, 1,));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
     });
 }

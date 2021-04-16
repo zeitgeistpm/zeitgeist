@@ -373,7 +373,7 @@ mod pallet {
 
             if let Outcome::Categorical(inner) = outcome {
                 if let MarketType::Categorical(categories) = market.market_type {
-                    ensure!(inner < categories-1, Error::<T>::OutcomeOutOfRange);
+                    ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
                 } else {
                     return Err(OUTCOME_MISMATCH);
                 }
@@ -1081,16 +1081,18 @@ mod pallet {
                 _ => (),
             };
 
-            // for i in 0..market.outcomes() {
-            //     // don't delete the winning outcome...
-            //     if i == resolved_outcome {
-            //         continue;
-            //     }
-            //     // ... but delete the rest
-            //     let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-            //     let accounts = T::Shares::accounts_by_currency_id(share_id);
-            //     T::Shares::destroy_all(share_id, accounts.iter().cloned());
-            // }
+            if let MarketType::Categorical(_) = market.market_type {
+                if let Outcome::Categorical(index) = resolved_outcome {
+                    let assets = Self::outcome_assets(*market_id, market);
+                    for asset in assets.iter() {
+                        if let Asset::CategoricalOutcome(_, inner_index) = asset {
+                            if index == *inner_index { continue; }
+                            let accounts = T::Shares::accounts_by_currency_id(*asset);
+                            T::Shares::destroy_all(*asset, accounts.iter().cloned());
+                        }
+                    }
+                }
+            }
 
             <Markets<T>>::mutate(&market_id, |m| {
                 m.as_mut().unwrap().status = MarketStatus::Resolved;
