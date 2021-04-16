@@ -86,7 +86,7 @@ mod pallet {
         ///
         /// todo: this should check if there's any outstanding funds reserved if it stays
         /// in for production
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -110,7 +110,7 @@ mod pallet {
 
         /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -138,7 +138,7 @@ mod pallet {
         /// Allows the `ApprovalOrigin` to immediately move a reported or disputed
         /// market to resolved.
         ////
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -164,7 +164,7 @@ mod pallet {
         ///
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn approve_market(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
@@ -185,7 +185,7 @@ mod pallet {
         ///
         /// NOTE: This is the only way to create new shares.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -200,7 +200,7 @@ mod pallet {
         /// in a production environment since this better aligns incentives.
         /// See also: Polkadot Treasury
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn cancel_pending_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -223,7 +223,7 @@ mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn create_categorical_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
@@ -327,7 +327,7 @@ mod pallet {
         ///
         /// The sender should have enough funds to cover all of the required
         /// shares to seed the pool.
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -360,7 +360,7 @@ mod pallet {
         /// NOTE: Requires a `DisputeBond` + `DisputeFactor` * `num_disputes` amount of currency
         ///  to be reserved.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn dispute(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -445,7 +445,7 @@ mod pallet {
         ///
         /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn global_dispute(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
             let _sender = ensure_signed(origin)?;
             let _market = Self::market_by_id(&market_id)?;
@@ -455,7 +455,7 @@ mod pallet {
 
         /// Redeems the winning shares of a prediction market.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn redeem_shares(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -560,7 +560,7 @@ mod pallet {
         ///
         /// NOTE: Will slash the reserved `AdvisoryBond` from the market creator.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn reject_market(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
@@ -576,7 +576,7 @@ mod pallet {
 
         /// Reports the outcome of a market.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn report(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -634,7 +634,7 @@ mod pallet {
 
         /// Destroys a complete set of outcomes shares for a market.
         ///
-        #[pallet::weight(10_000)]
+        #[pallet::weight(50_000_000)]
         pub fn sell_complete_set(
             origin: OriginFor<T>,
             market_id: T::MarketId,
