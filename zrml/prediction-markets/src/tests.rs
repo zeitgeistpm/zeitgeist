@@ -145,7 +145,7 @@ fn it_allows_to_deploy_a_pool() {
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
-            <Runtime as crate::Config>::ModuleId::get().into_account(),
+            <Runtime as crate::Config>::PalletId::get().into_account(),
             100 * BASE
         ));
         assert_ok!(Shares::deposit(Asset::Ztg, &BOB, 100 * BASE));
