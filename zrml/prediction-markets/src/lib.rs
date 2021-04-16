@@ -381,7 +381,10 @@ mod pallet {
             }
             if let Outcome::Scalar(inner) = outcome {
                 if let MarketType::Scalar(outcome_range) = market.market_type {
-                    ensure!(inner >= outcome_range.0 && inner <= outcome_range.1, Error::<T>::OutcomeOutOfRange);
+                    ensure!(
+                        inner >= outcome_range.0 && inner <= outcome_range.1,
+                        Error::<T>::OutcomeOutOfRange
+                    );
                 } else {
                     return Err(OUTCOME_MISMATCH);
                 }
