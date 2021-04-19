@@ -97,7 +97,7 @@ parachain = [
 runtime-benchmarks = ["zeitgeist-runtime/runtime-benchmarks"]
 
 [package]
-authors = ['Logan Saether <x@logansaether.com>']
+authors = ['Zeitgeist PM <contact@zeitgeist.pm>']
 build = 'build.rs'
 description = 'A prediction market blockchain.'
 edition = '2018'

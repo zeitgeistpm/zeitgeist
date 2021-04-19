@@ -38,7 +38,7 @@ std = [
 runtime-benchmarks = ["frame-benchmarking", "orml-currencies", "orml-tokens", "pallet-balances"]
 
 [package]
-authors = ["Logan Saether <x@logansaether.com>", "Caio Fernandes <c410.f3r@gmail.com>", "Harald Heckmann <mail@haraldheckmann.de>"]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zrml-swaps"
 version = "0.1.0"
