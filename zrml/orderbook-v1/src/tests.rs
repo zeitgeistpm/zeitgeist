@@ -10,11 +10,7 @@ use zeitgeist_primitives::{AccountIdTest, Asset};
 fn it_makes_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Give some shares for Bob.
-        assert_ok!(Tokens::deposit(
-            Asset::CategoricalOutcome(0, 1),
-            &BOB,
-            100
-        ));
+        assert_ok!(Tokens::deposit(Asset::CategoricalOutcome(0, 1), &BOB, 100));
 
         // Make an order from Alice to buy shares.
         assert_ok!(Orderbook::make_order(
