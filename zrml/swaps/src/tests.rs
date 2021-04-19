@@ -7,13 +7,13 @@ use orml_traits::MultiCurrency;
 use sp_core::H256;
 use zeitgeist_primitives::{Asset, MarketId, BASE};
 
-pub const ASSET_A: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(65));
-pub const ASSET_B: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(66));
-pub const ASSET_C: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(67));
-pub const ASSET_D: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(68));
-pub const ASSET_E: Asset<H256, MarketId> = Asset::Share(H256::repeat_byte(69));
+pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
+pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
+pub const ASSET_C: Asset<MarketId> = Asset::CategoricalOutcome(0, 67);
+pub const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 68);
+pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
 
-pub const ASSETS: [Asset<H256, MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
+pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
 const _1: u128 = BASE;
 const _2: u128 = 2 * BASE;
