@@ -659,7 +659,6 @@ mod pallet {
         T: Config,
     {
         type Balance = BalanceOf<T>;
-        type Hash = T::Hash;
         type MarketId = T::MarketId;
 
         /// Deploys a new pool with the given assets and weights.
