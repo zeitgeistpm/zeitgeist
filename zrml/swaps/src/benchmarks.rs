@@ -17,8 +17,8 @@ fn generate_assets<T: Config>(
     owner: &T::AccountId,
     asset_count: usize,
     asset_amount: Option<BalanceOf<T>>,
-) -> Vec<Asset<T::Hash, T::MarketId>> {
-    let mut assets: Vec<Asset<T::Hash, T::MarketId>> = Vec::new();
+) -> Vec<Asset<T::MarketId>> {
+    let mut assets: Vec<Asset<T::MarketId>> = Vec::new();
 
     let asset_amount_unwrapped: BalanceOf<T> = {
         match asset_amount {
@@ -42,7 +42,7 @@ fn bench_create_pool<T: Config>(
     caller: T::AccountId,
     asset_count: Option<usize>,
     asset_amount: Option<BalanceOf<T>>,
-) -> (u128, Vec<Asset<T::Hash, T::MarketId>>) {
+) -> (u128, Vec<Asset<T::MarketId>>) {
     let asset_count_unwrapped: usize = {
         match asset_count {
             Some(ac) => ac,
