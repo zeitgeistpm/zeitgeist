@@ -30,7 +30,7 @@ pub enum MarketType {
     // A market with a number of categorical outcomes.
     Categorical(u16),
     // A market with a range of potential outcomes.
-    Scalar(Range<u128>),
+    Scalar(RangeInclusive<u128>),
 }
 
 /// Defines the state of the market.
