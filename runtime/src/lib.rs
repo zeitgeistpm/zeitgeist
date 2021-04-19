@@ -530,12 +530,6 @@ impl_runtime_apis! {
         }
     }
 
-    impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<Block, MarketId, Hash> for Runtime {
-        fn market_outcome_share_id(market_id: MarketId, outcome: u16) -> Asset<MarketId> {
-            PredictionMarkets::market_outcome_share_id(market_id, outcome)
-        }
-    }
-
     impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, AccountId, Balance, MarketId>
       for Runtime
     {

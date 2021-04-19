@@ -52,6 +52,7 @@ mod pallet {
             Report,
         },
     };
+    use alloc::vec;
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{

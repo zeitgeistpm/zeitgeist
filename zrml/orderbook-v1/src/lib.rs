@@ -20,6 +20,7 @@ use sp_runtime::{
     traits::{CheckedMul, CheckedSub},
     RuntimeDebug,
 };
+use zeitgeist_primitives::Asset;
 
 #[cfg(test)]
 mod mock;
@@ -58,7 +59,7 @@ mod pallet {
         #[pallet::weight(10_000_000)]
         pub fn cancel_order(
             origin: OriginFor<T>,
-            share_id: T::Hash,
+            asset: Asset<T::MarketId>,
             order_hash: T::Hash,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
@@ -68,14 +69,14 @@ mod pallet {
 
                 match order_data.side {
                     OrderSide::Bid => {
-                        let mut bids = Self::bids(share_id);
+                        let mut bids = Self::bids(asset);
                         remove_item::<T::Hash>(&mut bids, order_hash);
-                        <Bids<T>>::insert(share_id, bids);
+                        <Bids<T>>::insert(asset, bids);
                     }
                     OrderSide::Ask => {
-                        let mut asks = Self::asks(share_id);
+                        let mut asks = Self::asks(asset);
                         remove_item::<T::Hash>(&mut asks, order_hash);
-                        <Asks<T>>::insert(share_id, asks);
+                        <Asks<T>>::insert(asset, asks);
                     }
                 }
 
@@ -153,14 +154,14 @@ mod pallet {
 
             // Only store nonce in memory for now.
             let nonce = <Nonce<T>>::get();
-            let hash = Self::order_hash(&sender, share_id.clone(), nonce);
+            let hash = Self::order_hash(&sender, asset.clone(), nonce);
 
             // Love the smell of fresh orders in the morning.
             let order = Order {
                 side: side.clone(),
                 maker: sender.clone(),
                 taker: None,
-                share_id,
+                asset,
                 total: amount,
                 price,
                 filled: Zero::zero(),
@@ -175,7 +176,7 @@ mod pallet {
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Bids<T>>::mutate(share_id, |b: &mut Vec<T::Hash>| {
+                    <Bids<T>>::mutate(asset, |b: &mut Vec<T::Hash>| {
                         b.push(hash.clone());
                     });
 
@@ -187,7 +188,7 @@ mod pallet {
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Asks<T>>::mutate(share_id, |a| {
+                    <Asks<T>>::mutate(asset, |a| {
                         a.push(hash.clone());
                     });
 
@@ -256,11 +257,13 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn asks)]
-    pub type Asks<T: Config> = StorageMap<_, Blake2_128Concat, T::Hash, Vec<T::Hash>, ValueQuery>;
+    pub type Asks<T: Config> =
+        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, Vec<T::Hash>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn bids)]
-    pub type Bids<T: Config> = StorageMap<_, Blake2_128Concat, T::Hash, Vec<T::Hash>, ValueQuery>;
+    pub type Bids<T: Config> =
+        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, Vec<T::Hash>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn nonce)]
@@ -272,13 +275,17 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::Hash,
-        Option<Order<T::AccountId, BalanceOf<T>, T::Hash, T::MarketId>>,
+        Option<Order<T::AccountId, BalanceOf<T>, T::MarketId>>,
         ValueQuery,
     >;
 
     impl<T: Config> Pallet<T> {
-        pub fn order_hash(creator: &T::AccountId, share_id: T::Hash, nonce: u64) -> T::Hash {
-            (&creator, share_id, nonce).using_encoded(T::Hashing::hash)
+        pub fn order_hash(
+            creator: &T::AccountId,
+            asset: Asset<T::MarketId>,
+            nonce: u64,
+        ) -> T::Hash {
+            (&creator, asset, nonce).using_encoded(T::Hashing::hash)
         }
     }
 
@@ -295,7 +302,7 @@ pub enum OrderSide {
 }
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
-pub struct Order<AccountId, Balance, Hash, MarketId> {
+pub struct Order<AccountId, Balance, MarketId> {
     side: OrderSide,
     maker: AccountId,
     taker: Option<AccountId>,
@@ -305,7 +312,7 @@ pub struct Order<AccountId, Balance, Hash, MarketId> {
     filled: Balance,
 }
 
-impl<AccountId, Balance: CheckedSub + CheckedMul, Hash> Order<AccountId, Balance, Hash> {
+impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId> {
     pub fn cost(&self) -> Balance {
         self.total
             .checked_sub(&self.filled)
