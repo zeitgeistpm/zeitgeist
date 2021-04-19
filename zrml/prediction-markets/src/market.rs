@@ -20,13 +20,17 @@ pub enum MarketEnd<BlockNumber> {
     Timestamp(u64),
 }
 
+/// An inclusive range between the left side (lower) and right (upper).
+pub type RangeInclusive<T> = (T, T);
+
 /// Defines the type of market.
 /// All markets also have the `Invalid` resolution.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
 pub enum MarketType {
     // A market with a number of categorical outcomes.
     Categorical(u16),
-    Scalar((u128, u128)),
+    // A market with a range of potential outcomes.
+    Scalar(Range<u128>),
 }
 
 /// Defines the state of the market.

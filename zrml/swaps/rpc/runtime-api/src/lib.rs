@@ -45,7 +45,6 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(
 sp_api::decl_runtime_apis! {
     pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where
         PoolId: Codec,
-        Hash: Codec,
         AccountId: Codec,
         Balance: Codec + MaybeDisplay + MaybeFromStr,
         MarketId: Codec

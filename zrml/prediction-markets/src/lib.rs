@@ -504,10 +504,10 @@ mod pallet {
                     if let MarketType::Scalar((bound_low, bound_high)) = market.market_type {
                         let calc_payouts =
                             |final_value, low, high| -> (BalanceOf<T>, BalanceOf<T>) {
-                                if final_value < low {
+                                if final_value <= low {
                                     return (zero, one);
                                 }
-                                if final_value > high {
+                                if final_value >= high {
                                     return (one, zero);
                                 }
 
