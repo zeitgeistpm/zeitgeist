@@ -64,7 +64,7 @@ mod pallet {
         #[frame_support::transactional]
         pub fn create_pool(
             origin: OriginFor<T>,
-            assets: Vec<Asset<T::Hash, T::MarketId>>,
+            assets: Vec<Asset<T::MarketId>>,
             weights: Vec<u128>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -130,7 +130,7 @@ mod pallet {
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
             pool_id: u128,
-            asset: Asset<T::Hash, T::MarketId>,
+            asset: Asset<T::MarketId>,
             asset_amount: BalanceOf<T>,
             max_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -147,7 +147,7 @@ mod pallet {
                     Ok(())
                 },
                 event: PoolExitWithExactAssetAmount,
-                pool_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                pool_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_in_given_single_out(
                         asset_balance.saturated_into(),
                         *pool.weights.get(&asset).unwrap(),
@@ -181,14 +181,14 @@ mod pallet {
         pub fn pool_exit_with_exact_pool_amount(
             origin: OriginFor<T>,
             pool_id: u128,
-            asset: Asset<T::Hash, T::MarketId>,
+            asset: Asset<T::MarketId>,
             pool_amount: BalanceOf<T>,
             min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             pool_exit_with_exact_amount!(
                 initial_params: (origin, pool_id, asset),
 
-                asset_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
                         *pool.weights.get(&asset).unwrap(),
@@ -261,7 +261,7 @@ mod pallet {
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
             pool_id: u128,
-            asset_in: Asset<T::Hash, T::MarketId>,
+            asset_in: Asset<T::MarketId>,
             asset_amount: BalanceOf<T>,
             min_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -271,7 +271,7 @@ mod pallet {
                 asset_amount: |_, _, _| Ok(asset_amount),
                 bound: min_pool_amount,
                 event: PoolJoinWithExactAssetAmount,
-                pool_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                pool_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let mul: BalanceOf<T> = bmul(
                         asset_balance.saturated_into(),
                         T::MaxInRatio::get().saturated_into()
@@ -309,14 +309,14 @@ mod pallet {
         pub fn pool_join_with_exact_pool_amount(
             origin: OriginFor<T>,
             pool_id: u128,
-            asset: Asset<T::Hash, T::MarketId>,
+            asset: Asset<T::MarketId>,
             pool_amount: BalanceOf<T>,
             max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             pool_join_with_exact_amount!(
                 initial_params: (origin, pool_id, asset),
 
-                asset_amount: |pool: &Pool<BalanceOf<T>, _, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
+                asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_in_given_pool_out(
                         asset_balance.saturated_into(),
                         *pool.weights.get(&asset).unwrap(),
@@ -357,9 +357,9 @@ mod pallet {
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
             pool_id: u128,
-            asset_in: Asset<T::Hash, T::MarketId>,
+            asset_in: Asset<T::MarketId>,
             asset_amount_in: BalanceOf<T>,
-            asset_out: Asset<T::Hash, T::MarketId>,
+            asset_out: Asset<T::MarketId>,
             min_asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) -> DispatchResult {
@@ -367,7 +367,7 @@ mod pallet {
                 initial_params: (asset_in, asset_out, max_price, origin, pool_id),
 
                 asset_amount_in: |_, _| Ok(asset_amount_in),
-                asset_amount_out: |pool: &Pool<BalanceOf<T>, _, _>, pool_account_id| {
+                asset_amount_out: |pool: &Pool<BalanceOf<T>, _>, pool_account_id| {
                     let balance_in = T::Shares::free_balance(asset_in, pool_account_id);
                     ensure!(
                         asset_amount_in <= bmul(balance_in.saturated_into(), T::MaxInRatio::get().saturated_into())?.saturated_into(),
@@ -411,16 +411,16 @@ mod pallet {
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
             pool_id: u128,
-            asset_in: Asset<T::Hash, T::MarketId>,
+            asset_in: Asset<T::MarketId>,
             max_amount_asset_in: BalanceOf<T>,
-            asset_out: Asset<T::Hash, T::MarketId>,
+            asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) -> DispatchResult {
             swap_exact_amount!(
                 initial_params: (asset_in, asset_out, max_price, origin, pool_id),
 
-                asset_amount_in: |pool: &Pool<BalanceOf<T>, _, _>, pool_account_id| {
+                asset_amount_in: |pool: &Pool<BalanceOf<T>, _>, pool_account_id| {
                     let balance_in = T::Shares::free_balance(asset_in, pool_account_id);
 
                     let balance_out = T::Shares::free_balance(asset_out, pool_account_id);
@@ -475,10 +475,7 @@ mod pallet {
         /// The module identifier.
         type PalletId: Get<PalletId>;
 
-        type Shares: MultiReservableCurrency<
-            Self::AccountId,
-            CurrencyId = Asset<Self::Hash, Self::MarketId>,
-        >;
+        type Shares: MultiReservableCurrency<Self::AccountId, CurrencyId = Asset<Self::MarketId>>;
 
         type WeightInfo: WeightInfoZeitgeist;
     }
@@ -545,13 +542,8 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn pools)]
-    pub type Pools<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        u128,
-        Option<Pool<BalanceOf<T>, T::Hash, T::MarketId>>,
-        ValueQuery,
-    >;
+    pub type Pools<T: Config> =
+        StorageMap<_, Blake2_128Concat, u128, Option<Pool<BalanceOf<T>, T::MarketId>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
@@ -570,7 +562,7 @@ mod pallet {
 
         #[inline]
         fn check_provided_values_len_must_equal_assets_len<U>(
-            assets: &[Asset<T::Hash, T::MarketId>],
+            assets: &[Asset<T::MarketId>],
             provided_values: &[U],
         ) -> Result<(), Error<T>>
         where
@@ -583,7 +575,7 @@ mod pallet {
         }
 
         #[allow(dead_code)]
-        fn get_denormalized_weight(pool_id: u128, asset: &Asset<T::Hash, T::MarketId>) -> u128 {
+        fn get_denormalized_weight(pool_id: u128, asset: &Asset<T::MarketId>) -> u128 {
             if let Some(pool) = Self::pools(pool_id) {
                 if let Some(val) = pool.weights.get(asset) {
                     return *val;
@@ -599,8 +591,8 @@ mod pallet {
 
         pub fn get_spot_price(
             pool_id: u128,
-            asset_in: Asset<T::Hash, T::MarketId>,
-            asset_out: Asset<T::Hash, T::MarketId>,
+            asset_in: Asset<T::MarketId>,
+            asset_out: Asset<T::MarketId>,
         ) -> Result<BalanceOf<T>, DispatchError> {
             if let Some(pool) = Self::pools(pool_id) {
                 // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
@@ -645,7 +637,7 @@ mod pallet {
             T::PalletId::get().into_sub_account(pool_id)
         }
 
-        fn pool_by_id(pool_id: u128) -> Result<Pool<BalanceOf<T>, T::Hash, T::MarketId>, Error<T>>
+        fn pool_by_id(pool_id: u128) -> Result<Pool<BalanceOf<T>, T::MarketId>, Error<T>>
         where
             T: Config,
         {
@@ -657,7 +649,7 @@ mod pallet {
             T::PalletId::get().into_account()
         }
 
-        pub fn pool_shares_id(pool_id: u128) -> Asset<T::Hash, T::MarketId> {
+        pub fn pool_shares_id(pool_id: u128) -> Asset<T::MarketId> {
             Asset::PoolShare(pool_id)
         }
     }
@@ -681,7 +673,7 @@ mod pallet {
         /// * `weights`: These are the denormalized weights (the raw weights).
         fn create_pool(
             who: T::AccountId,
-            assets: Vec<Asset<T::Hash, T::MarketId>>,
+            assets: Vec<Asset<T::MarketId>>,
             swap_fee: BalanceOf<T>,
             weights: Vec<u128>,
         ) -> Result<u128, DispatchError> {

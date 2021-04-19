@@ -46,11 +46,13 @@ pub use pallet::{Config, Error, Event, Pallet};
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        errors::{NOT_RESOLVED, NO_REPORT},
+        errors::*,
         market::{
-            Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Report,
+            Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Outcome,
+            Report,
         },
     };
+    use alloc::vec;
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{
@@ -71,7 +73,7 @@ mod pallet {
         },
         DispatchResult, SaturatedConversion,
     };
-    use zeitgeist_primitives::{Asset, Swaps, ZeitgeistMultiReservableCurrency};
+    use zeitgeist_primitives::{Asset, ScalarPosition, Swaps, ZeitgeistMultiReservableCurrency};
 
     type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -98,12 +100,12 @@ mod pallet {
 
             <Markets<T>>::remove(&market_id);
 
-            // delete all the shares if any exist
-            for i in 0..market.outcomes() {
-                let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-                let accounts = T::Shares::accounts_by_currency_id(share_id);
-                T::Shares::destroy_all(share_id, accounts.iter().cloned());
+            // Delete of this market's outcome assets.
+            for asset in Self::outcome_assets(market_id, market).iter() {
+                let accounts = T::Shares::accounts_by_currency_id(*asset);
+                T::Shares::destroy_all(*asset, accounts.iter().cloned());
             }
+
             Ok(())
         }
 
@@ -232,25 +234,12 @@ mod pallet {
             categories: u16,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
+            Self::ensure_create_market_end(end)?;
 
             ensure!(
                 categories <= T::MaxCategories::get(),
                 "Cannot exceed max categories for a new market."
             );
-
-            match end {
-                MarketEnd::Block(block) => {
-                    let current_block = <frame_system::Pallet<T>>::block_number();
-                    ensure!(current_block < block, Error::<T>::EndBlockTooSoon);
-                }
-                MarketEnd::Timestamp(timestamp) => {
-                    let now = <pallet_timestamp::Pallet<T>>::get();
-                    ensure!(
-                        now < timestamp.saturated_into(),
-                        Error::<T>::EndTimestampTooSoon
-                    );
-                }
-            };
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
@@ -273,10 +262,57 @@ mod pallet {
                 oracle,
                 end,
                 metadata,
-                market_type: MarketType::Categorical,
+                market_type: MarketType::Categorical(categories),
                 status,
                 report: None,
-                categories: Some(categories),
+                resolved_outcome: None,
+            };
+
+            <Markets<T>>::insert(market_id.clone(), Some(market));
+
+            Self::deposit_event(Event::MarketCreated(market_id, sender));
+
+            Ok(())
+        }
+
+        #[pallet::weight(10_000)]
+        pub fn create_scalar_market(
+            origin: OriginFor<T>,
+            oracle: T::AccountId,
+            end: MarketEnd<T::BlockNumber>,
+            metadata: Vec<u8>,
+            creation: MarketCreation,
+            outcome_range: (u128, u128),
+        ) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            Self::ensure_create_market_end(end)?;
+
+            ensure!(outcome_range.0 < outcome_range.1, "Invalid range provided.");
+
+            let status: MarketStatus = match creation {
+                MarketCreation::Permissionless => {
+                    let required_bond = T::ValidityBond::get() + T::OracleBond::get();
+                    T::Currency::reserve(&sender, required_bond)?;
+                    MarketStatus::Active
+                }
+                MarketCreation::Advised => {
+                    let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
+                    T::Currency::reserve(&sender, required_bond)?;
+                    MarketStatus::Proposed
+                }
+            };
+
+            let market_id = Self::get_next_market_id()?;
+            let market = Market {
+                creator: sender.clone(),
+                creation,
+                creator_fee: 0,
+                oracle,
+                end,
+                metadata,
+                market_type: MarketType::Scalar(outcome_range),
+                status,
+                report: None,
                 resolved_outcome: None,
             };
 
@@ -311,11 +347,8 @@ mod pallet {
                 Error::<T>::SwapPoolExists
             );
 
-            let mut assets = Vec::from([Asset::Ztg]);
-
-            for i in 0..market.outcomes() {
-                assets.push(Self::market_outcome_share_id(market_id, i));
-            }
+            let mut assets = Self::outcome_assets(market_id, market);
+            assets.push(Asset::Ztg);
 
             let pool_id = T::Swap::create_pool(sender, assets, Zero::zero(), weights)?;
 
@@ -332,14 +365,31 @@ mod pallet {
         pub fn dispute(
             origin: OriginFor<T>,
             market_id: T::MarketId,
-            outcome: u16,
+            outcome: Outcome,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
 
             ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
-            ensure!(outcome < market.outcomes(), Error::<T>::OutcomeOutOfRange);
+
+            if let Outcome::Categorical(inner) = outcome {
+                if let MarketType::Categorical(categories) = market.market_type {
+                    ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
+                } else {
+                    return Err(OUTCOME_MISMATCH);
+                }
+            }
+            if let Outcome::Scalar(inner) = outcome {
+                if let MarketType::Scalar(outcome_range) = market.market_type {
+                    ensure!(
+                        inner >= outcome_range.0 && inner <= outcome_range.1,
+                        Error::<T>::OutcomeOutOfRange
+                    );
+                } else {
+                    return Err(OUTCOME_MISMATCH);
+                }
+            }
 
             let disputes = Self::disputes(market_id.clone());
             let num_disputes = disputes.len() as u16;
@@ -377,7 +427,7 @@ mod pallet {
                 disputes.push(MarketDispute {
                     at: current_block,
                     by: sender,
-                    outcome,
+                    outcome: outcome.clone(),
                 })
             });
 
@@ -411,6 +461,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
+            let market_account = Self::market_account(market_id);
 
             ensure!(
                 market.status == MarketStatus::Resolved,
@@ -419,33 +470,89 @@ mod pallet {
 
             // Check to see if the sender has any winning shares.
             let resolved_outcome = market.resolved_outcome.ok_or_else(|| NOT_RESOLVED)?;
-            let winning_shares_id =
-                Self::market_outcome_share_id(market_id.clone(), resolved_outcome);
-            let winning_balance = T::Shares::free_balance(winning_shares_id, &sender);
 
-            ensure!(
-                winning_balance >= BalanceOf::<T>::zero(),
-                Error::<T>::NoWinningBalance,
-            );
+            let winning_assets = match resolved_outcome {
+                Outcome::Categorical(category_index) => {
+                    let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
+                    let winning_balance = T::Shares::free_balance(winning_currency_id, &sender);
+                    ensure!(
+                        winning_balance >= BalanceOf::<T>::zero(),
+                        Error::<T>::NoWinningBalance
+                    );
 
-            // Ensure the market account has enough to pay out - if this is
-            // ever not true then we have an accounting problem.
-            let market_account = Self::market_account(market_id);
-            ensure!(
-                T::Currency::free_balance(&market_account) >= winning_balance,
-                Error::<T>::InsufficientFundsInMarketAccount,
-            );
+                    // Ensure the market account has enough to pay out - if this is
+                    // ever not true then we have an accounting problem.
+                    ensure!(
+                        T::Currency::free_balance(&market_account) >= winning_balance,
+                        Error::<T>::InsufficientFundsInMarketAccount,
+                    );
 
-            // Destory the shares.
-            T::Shares::slash(winning_shares_id, &sender, winning_balance);
+                    vec![(winning_currency_id, winning_balance)]
+                }
+                Outcome::Scalar(value) => {
+                    let long_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
+                    let short_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Short);
+                    let long_balance = T::Shares::free_balance(long_currency_id, &sender);
+                    let short_balance = T::Shares::free_balance(short_currency_id, &sender);
+                    let zero = BalanceOf::<T>::zero();
+                    let one = BalanceOf::<T>::one();
 
-            // Pay out the winner. One full unit of currency per winning share.
-            T::Currency::transfer(
-                &market_account,
-                &sender,
-                winning_balance,
-                ExistenceRequirement::AllowDeath,
-            )?;
+                    ensure!(
+                        long_balance >= zero || short_balance >= zero,
+                        Error::<T>::NoWinningBalance
+                    );
+
+                    if let MarketType::Scalar((bound_low, bound_high)) = market.market_type {
+                        let calc_payouts =
+                            |final_value, low, high| -> (BalanceOf<T>, BalanceOf<T>) {
+                                if final_value <= low {
+                                    return (zero, one);
+                                }
+                                if final_value >= high {
+                                    return (one, zero);
+                                }
+
+                                let payout_long: u128 = (final_value - low) / (high - low);
+                                (
+                                    payout_long.saturated_into(),
+                                    one - payout_long.saturated_into(),
+                                )
+                            };
+
+                        let (long_payout, short_payout) =
+                            calc_payouts(value, bound_low, bound_high);
+
+                        // Ensure the market account has enough to pay out - if this is
+                        // ever not true then we have an accounting problem.
+                        ensure!(
+                            T::Currency::free_balance(&market_account)
+                                >= long_payout + short_payout,
+                            Error::<T>::InsufficientFundsInMarketAccount,
+                        );
+
+                        vec![
+                            (long_currency_id, long_payout),
+                            (short_currency_id, short_payout),
+                        ]
+                    } else {
+                        panic!("should never happen");
+                    }
+                }
+            };
+
+            for (currency_id, amount) in winning_assets {
+                // Destory the shares.
+                T::Shares::slash(currency_id, &sender, amount);
+
+                // Pay out the winner. One full unit of currency per winning share.
+                T::Currency::transfer(
+                    &market_account,
+                    &sender,
+                    amount,
+                    ExistenceRequirement::AllowDeath,
+                )?;
+            }
+
             Ok(())
         }
 
@@ -474,13 +581,14 @@ mod pallet {
         pub fn report(
             origin: OriginFor<T>,
             market_id: T::MarketId,
-            outcome: u16,
+            outcome: Outcome,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             let mut market = Self::market_by_id(&market_id)?;
 
-            ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
+            // TODO make this a conditional check
+            // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
             ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
 
             // ensure market is not active
@@ -512,7 +620,7 @@ mod pallet {
             market.report = Some(Report {
                 at: current_block,
                 by: sender.clone(),
-                outcome,
+                outcome: outcome.clone(),
             });
             market.status = MarketStatus::Reported;
             <Markets<T>>::insert(market_id.clone(), Some(market));
@@ -547,23 +655,15 @@ mod pallet {
                 "Market account does not have sufficient reserves.",
             );
 
-            for i in 0..market.outcomes() {
-                let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-
+            for asset in Self::outcome_assets(market_id, market).iter() {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
                 ensure!(
-                    T::Shares::free_balance(share_id, &sender) >= amount,
+                    T::Shares::free_balance(*asset, &sender) >= amount,
                     Error::<T>::InsufficientShareBalance,
                 );
-            }
 
-            // This loop must be done twice because we check the entire
-            // set of shares before making any mutations to storage.
-            for i in 0..market.outcomes() {
-                let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-
-                T::Shares::slash(share_id, &sender, amount);
+                T::Shares::slash(*asset, &sender, amount);
             }
 
             T::Currency::transfer(
@@ -604,7 +704,7 @@ mod pallet {
         type Shares: ZeitgeistMultiReservableCurrency<
             Self::AccountId,
             Balance = BalanceOf<Self>,
-            CurrencyId = Asset<Self::Hash, Self::MarketId>,
+            CurrencyId = Asset<Self::MarketId>,
         >;
 
         /// The identifier of individual markets.
@@ -715,12 +815,12 @@ mod pallet {
         /// A pending market has been cancelled. [market_id, creator]
         MarketCancelled(<T as Config>::MarketId),
         /// A market has been disputed [market_id, new_outcome]
-        MarketDisputed(<T as Config>::MarketId, u16),
+        MarketDisputed(<T as Config>::MarketId, Outcome),
         /// NOTE: Maybe we should only allow rejections.
         /// A pending market has been rejected as invalid. [market_id]
         MarketRejected(<T as Config>::MarketId),
         /// A market has been reported on [market_id, reported_outcome]
-        MarketReported(<T as Config>::MarketId, u16),
+        MarketReported(<T as Config>::MarketId, Outcome),
         /// A market has been resolved [market_id, real_outcome]
         MarketResolved(<T as Config>::MarketId, u16),
         /// A complete set of shares has been sold [market_id, seller]
@@ -816,11 +916,25 @@ mod pallet {
         StorageMap<_, Blake2_128Concat, T::MarketId, Option<u128>, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
-        pub fn market_outcome_share_id(
+        pub fn outcome_assets(
             market_id: T::MarketId,
-            outcome: u16,
-        ) -> Asset<T::Hash, T::MarketId> {
-            Asset::PredictionMarketShare(market_id, outcome)
+            market: Market<T::AccountId, T::BlockNumber>,
+        ) -> Vec<Asset<T::MarketId>> {
+            match market.market_type {
+                MarketType::Categorical(categories) => {
+                    let mut assets = Vec::new();
+                    for i in 0..categories {
+                        assets.push(Asset::CategoricalOutcome(market_id, i));
+                    }
+                    assets
+                }
+                MarketType::Scalar(_) => {
+                    vec![
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
+                        Asset::ScalarOutcome(market_id, ScalarPosition::Short),
+                    ]
+                }
+            }
         }
 
         pub(crate) fn market_account(market_id: T::MarketId) -> T::AccountId {
@@ -873,10 +987,8 @@ mod pallet {
                 ExistenceRequirement::KeepAlive,
             )?;
 
-            for i in 0..market.outcomes() {
-                let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-
-                T::Shares::deposit(share_id, &who, amount)?;
+            for asset in Self::outcome_assets(market_id, market).iter() {
+                T::Shares::deposit(*asset, &who, amount)?;
             }
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, who));
@@ -920,7 +1032,7 @@ mod pallet {
             T::Currency::unreserve(&market.creator, T::ValidityBond::get());
 
             let resolved_outcome = match market.status {
-                MarketStatus::Reported => report.outcome,
+                MarketStatus::Reported => report.clone().outcome,
                 MarketStatus::Disputed => {
                     let disputes = Self::disputes(market_id.clone());
                     let num_disputes = disputes.len() as u16;
@@ -928,7 +1040,7 @@ mod pallet {
                     let last_dispute = disputes[(num_disputes as usize) - 1].clone();
                     last_dispute.outcome
                 }
-                _ => 69,
+                _ => panic!("Cannot happen"),
             };
 
             match market.status {
@@ -990,15 +1102,19 @@ mod pallet {
                 _ => (),
             };
 
-            for i in 0..market.outcomes() {
-                // don't delete the winning outcome...
-                if i == resolved_outcome {
-                    continue;
+            if let MarketType::Categorical(_) = market.market_type {
+                if let Outcome::Categorical(index) = resolved_outcome {
+                    let assets = Self::outcome_assets(*market_id, market);
+                    for asset in assets.iter() {
+                        if let Asset::CategoricalOutcome(_, inner_index) = asset {
+                            if index == *inner_index {
+                                continue;
+                            }
+                            let accounts = T::Shares::accounts_by_currency_id(*asset);
+                            T::Shares::destroy_all(*asset, accounts.iter().cloned());
+                        }
+                    }
                 }
-                // ... but delete the rest
-                let share_id = Self::market_outcome_share_id(market_id.clone(), i);
-                let accounts = T::Shares::accounts_by_currency_id(share_id);
-                T::Shares::destroy_all(share_id, accounts.iter().cloned());
             }
 
             <Markets<T>>::mutate(&market_id, |m| {
@@ -1029,6 +1145,24 @@ mod pallet {
             T: Config,
         {
             Self::markets(market_id).ok_or(Error::<T>::MarketDoesNotExist.into())
+        }
+
+        fn ensure_create_market_end(end: MarketEnd<T::BlockNumber>) -> DispatchResult {
+            match end {
+                MarketEnd::Block(block) => {
+                    let current_block = <frame_system::Pallet<T>>::block_number();
+                    ensure!(current_block < block, Error::<T>::EndBlockTooSoon);
+                }
+                MarketEnd::Timestamp(timestamp) => {
+                    let now = <pallet_timestamp::Pallet<T>>::get();
+                    ensure!(
+                        now < timestamp.saturated_into(),
+                        Error::<T>::EndTimestampTooSoon
+                    );
+                }
+            };
+
+            Ok(())
         }
     }
 

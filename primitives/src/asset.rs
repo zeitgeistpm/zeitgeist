@@ -14,9 +14,29 @@
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub enum Asset<H, MI> {
-    Share(H),
-    PredictionMarketShare(MI, u16),
+pub enum Asset<MI> {
+    CategoricalOutcome(MI, CategoryIndex),
+    ScalarOutcome(MI, ScalarPosition),
+    CombinatorialOutcome,
     PoolShare(u128),
     Ztg,
+}
+
+pub type CategoryIndex = u16;
+
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+)]
+pub enum ScalarPosition {
+    Long,
+    Short,
 }

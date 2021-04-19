@@ -7,7 +7,7 @@ mod swaps;
 mod zeitgeist_currencies_extension;
 mod zeitgeist_multi_reservable_currency;
 
-pub use asset::Asset;
+pub use asset::*;
 use sp_runtime::{
     generic,
     traits::{IdentifyAccount, Verify},
@@ -36,7 +36,7 @@ pub type Balance = u128;
 /// An index to a block.
 pub type BlockNumber = u64;
 
-pub type CurrencyId = Asset<Hash, MarketId>;
+pub type CurrencyId = Asset<MarketId>;
 
 /// Index of a transaction in the chain.
 pub type Index = u64;
