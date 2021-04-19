@@ -65,6 +65,8 @@ mod mock;
 mod tests;
 
 pub use pallet::{Config, Error, Event, Pallet};
+#[cfg(feature = "runtime-benchmarks")]
+pub(crate) use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
