@@ -19,7 +19,7 @@ pub trait PredictionMarketsApi<BlockHash, MarketId, Hash> {
         market_id: MarketId,
         outcome: u16,
         at: Option<BlockHash>,
-    ) -> Result<Asset<Hash, MarketId>>;
+    ) -> Result<Asset<MarketId>>;
 }
 
 /// A struct that implements the [`PredictionMarketsApi`].
@@ -66,7 +66,7 @@ where
         market_id: MarketId,
         outcome: u16,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Asset<Hash, MarketId>> {
+    ) -> Result<Asset<MarketId>> {
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             // If the block hash is not supplied assume

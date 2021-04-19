@@ -10,6 +10,6 @@ sp_api::decl_runtime_apis! {
         MarketId: Codec,
         Hash: Codec,
     {
-        fn market_outcome_share_id(market_id: MarketId, outcome: u16) -> Asset<Hash, MarketId>;
+        fn market_outcome_share_id(market_id: MarketId, outcome: u16) -> Asset<MarketId>;
     }
 }

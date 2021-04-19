@@ -20,6 +20,7 @@ use sp_runtime::{
     traits::{CheckedMul, CheckedSub},
     RuntimeDebug,
 };
+use zeitgeist_primitives::Asset;
 
 #[cfg(test)]
 mod mock;
@@ -58,7 +59,7 @@ mod pallet {
         #[pallet::weight(10_000_000)]
         pub fn cancel_order(
             origin: OriginFor<T>,
-            share_id: T::Hash,
+            asset: Asset<T::MarketId>,
             order_hash: T::Hash,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
@@ -68,14 +69,14 @@ mod pallet {
 
                 match order_data.side {
                     OrderSide::Bid => {
-                        let mut bids = Self::bids(share_id);
+                        let mut bids = Self::bids(asset);
                         remove_item::<T::Hash>(&mut bids, order_hash);
-                        <Bids<T>>::insert(share_id, bids);
+                        <Bids<T>>::insert(asset, bids);
                     }
                     OrderSide::Ask => {
-                        let mut asks = Self::asks(share_id);
+                        let mut asks = Self::asks(asset);
                         remove_item::<T::Hash>(&mut asks, order_hash);
-                        <Asks<T>>::insert(share_id, asks);
+                        <Asks<T>>::insert(asset, asks);
                     }
                 }
 
@@ -94,13 +95,12 @@ mod pallet {
                 ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
 
                 let cost = order_data.cost();
-                let share_id = order_data.share_id;
                 let maker = order_data.maker;
 
                 match order_data.side {
                     OrderSide::Bid => {
                         T::Shares::ensure_can_withdraw(
-                            Asset::Share(share_id),
+                            order_data.asset,
                             &sender,
                             order_data.total,
                         )?;
@@ -113,12 +113,7 @@ mod pallet {
                             ExistenceRequirement::AllowDeath,
                         )?;
 
-                        T::Shares::transfer(
-                            Asset::Share(share_id),
-                            &sender,
-                            &maker,
-                            order_data.total,
-                        )?;
+                        T::Shares::transfer(order_data.asset, &sender, &maker, order_data.total)?;
                     }
                     OrderSide::Ask => {
                         T::Currency::ensure_can_withdraw(
@@ -128,13 +123,8 @@ mod pallet {
                             Zero::zero(),
                         )?;
 
-                        T::Shares::unreserve(Asset::Share(share_id), &maker, order_data.total);
-                        T::Shares::transfer(
-                            Asset::Share(share_id),
-                            &maker,
-                            &sender,
-                            order_data.total,
-                        )?;
+                        T::Shares::unreserve(order_data.asset, &maker, order_data.total);
+                        T::Shares::transfer(order_data.asset, &maker, &sender, order_data.total)?;
 
                         T::Currency::transfer(
                             &sender,
@@ -155,7 +145,7 @@ mod pallet {
         #[pallet::weight(10_000_000)]
         pub fn make_order(
             origin: OriginFor<T>,
-            share_id: T::Hash,
+            asset: Asset<T::MarketId>,
             side: OrderSide,
             amount: BalanceOf<T>,
             price: BalanceOf<T>,
@@ -164,14 +154,14 @@ mod pallet {
 
             // Only store nonce in memory for now.
             let nonce = <Nonce<T>>::get();
-            let hash = Self::order_hash(&sender, share_id.clone(), nonce);
+            let hash = Self::order_hash(&sender, asset.clone(), nonce);
 
             // Love the smell of fresh orders in the morning.
             let order = Order {
                 side: side.clone(),
                 maker: sender.clone(),
                 taker: None,
-                share_id,
+                asset,
                 total: amount,
                 price,
                 filled: Zero::zero(),
@@ -186,7 +176,7 @@ mod pallet {
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Bids<T>>::mutate(share_id, |b: &mut Vec<T::Hash>| {
+                    <Bids<T>>::mutate(asset, |b: &mut Vec<T::Hash>| {
                         b.push(hash.clone());
                     });
 
@@ -194,15 +184,15 @@ mod pallet {
                 }
                 OrderSide::Ask => {
                     ensure!(
-                        T::Shares::can_reserve(Asset::Share(share_id), &sender, amount),
+                        T::Shares::can_reserve(asset, &sender, amount),
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Asks<T>>::mutate(share_id, |a| {
+                    <Asks<T>>::mutate(asset, |a| {
                         a.push(hash.clone());
                     });
 
-                    T::Shares::reserve(Asset::Share(share_id), &sender, amount)?;
+                    T::Shares::reserve(asset, &sender, amount)?;
                 }
             }
 
@@ -229,7 +219,7 @@ mod pallet {
         type Shares: MultiReservableCurrency<
             Self::AccountId,
             Balance = BalanceOf<Self>,
-            CurrencyId = Asset<Self::Hash, Self::MarketId>,
+            CurrencyId = Asset<Self::MarketId>,
         >;
     }
 
@@ -267,11 +257,13 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn asks)]
-    pub type Asks<T: Config> = StorageMap<_, Blake2_128Concat, T::Hash, Vec<T::Hash>, ValueQuery>;
+    pub type Asks<T: Config> =
+        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, Vec<T::Hash>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn bids)]
-    pub type Bids<T: Config> = StorageMap<_, Blake2_128Concat, T::Hash, Vec<T::Hash>, ValueQuery>;
+    pub type Bids<T: Config> =
+        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, Vec<T::Hash>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn nonce)]
@@ -283,13 +275,17 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::Hash,
-        Option<Order<T::AccountId, BalanceOf<T>, T::Hash>>,
+        Option<Order<T::AccountId, BalanceOf<T>, T::MarketId>>,
         ValueQuery,
     >;
 
     impl<T: Config> Pallet<T> {
-        pub fn order_hash(creator: &T::AccountId, share_id: T::Hash, nonce: u64) -> T::Hash {
-            (&creator, share_id, nonce).using_encoded(T::Hashing::hash)
+        pub fn order_hash(
+            creator: &T::AccountId,
+            asset: Asset<T::MarketId>,
+            nonce: u64,
+        ) -> T::Hash {
+            (&creator, asset, nonce).using_encoded(T::Hashing::hash)
         }
     }
 
@@ -306,17 +302,17 @@ pub enum OrderSide {
 }
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
-pub struct Order<AccountId, Balance, Hash> {
+pub struct Order<AccountId, Balance, MarketId> {
     side: OrderSide,
     maker: AccountId,
     taker: Option<AccountId>,
-    share_id: Hash,
+    asset: Asset<MarketId>,
     total: Balance,
     price: Balance,
     filled: Balance,
 }
 
-impl<AccountId, Balance: CheckedSub + CheckedMul, Hash> Order<AccountId, Balance, Hash> {
+impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId> {
     pub fn cost(&self) -> Balance {
         self.total
             .checked_sub(&self.filled)

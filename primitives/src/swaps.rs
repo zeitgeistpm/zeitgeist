@@ -9,7 +9,7 @@ pub trait Swaps<AccountId> {
 
     fn create_pool(
         creator: AccountId,
-        assets: Vec<Asset<Self::Hash, Self::MarketId>>,
+        assets: Vec<Asset<Self::MarketId>>,
         swap_fee: Self::Balance,
         weights: Vec<u128>,
     ) -> Result<u128, DispatchError>;
