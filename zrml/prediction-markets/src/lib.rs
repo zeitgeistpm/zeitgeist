@@ -87,7 +87,7 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
-    use sp_arithmetic::per_things::Percent;
+    use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
         traits::{
             AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, One,
@@ -498,7 +498,7 @@ mod pallet {
                     let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
                     let winning_balance = T::Shares::free_balance(winning_currency_id, &sender);
                     ensure!(
-                        winning_balance >= BalanceOf::<T>::zero(),
+                        winning_balance > BalanceOf::<T>::zero(),
                         Error::<T>::NoWinningBalance
                     );
 
@@ -518,50 +518,51 @@ mod pallet {
                     let short_balance = T::Shares::free_balance(short_currency_id, &sender);
 
                     ensure!(
-                        long_balance >= BalanceOf::<T>::zero()
-                            || short_balance >= BalanceOf::<T>::zero(),
+                        long_balance > BalanceOf::<T>::zero()
+                            || short_balance > BalanceOf::<T>::zero(),
                         Error::<T>::NoWinningBalance
                     );
 
-                    if let MarketType::Scalar((bound_low, bound_high)) = market.market_type {
-                        let calc_payouts = |final_value, low, high| -> (Percent, Percent) {
-                            if final_value <= low {
-                                return (Percent::zero(), Percent::one());
-                            }
-                            if final_value >= high {
-                                return (Percent::one(), Percent::zero());
-                            }
-
-                            let payout_long: Percent =
-                                Percent::from_rational(final_value - low, high - low);
-                            (
-                                payout_long,
-                                Percent::from_parts(
-                                    Percent::one().deconstruct() - payout_long.deconstruct(),
-                                ),
-                            )
+                    let (bound_low, bound_high) =
+                        if let MarketType::Scalar(range) = market.market_type {
+                            range
+                        } else {
+                            return Err(Error::<T>::InvalidMarketType.into());
                         };
 
-                        let (long_percent, short_percent) =
-                            calc_payouts(value, bound_low, bound_high);
+                    let calc_payouts = |final_value, low, high| -> (Perbill, Perbill) {
+                        if final_value <= low {
+                            return (Perbill::zero(), Perbill::one());
+                        }
+                        if final_value >= high {
+                            return (Perbill::one(), Perbill::zero());
+                        }
 
-                        let long_payout = long_percent.mul_floor(long_balance);
-                        let short_payout = short_percent.mul_floor(short_balance);
-                        // Ensure the market account has enough to pay out - if this is
-                        // ever not true then we have an accounting problem.
-                        ensure!(
-                            T::Currency::free_balance(&market_account)
-                                >= long_payout + short_payout,
-                            Error::<T>::InsufficientFundsInMarketAccount,
-                        );
+                        let payout_long: Perbill =
+                            Perbill::from_rational(final_value - low, high - low);
+                        (
+                            payout_long,
+                            Perbill::from_parts(
+                                Perbill::one().deconstruct() - payout_long.deconstruct(),
+                            ),
+                        )
+                    };
 
-                        vec![
-                            (long_currency_id, long_payout, long_balance),
-                            (short_currency_id, short_payout, short_balance),
-                        ]
-                    } else {
-                        panic!("should never happen");
-                    }
+                    let (long_percent, short_percent) = calc_payouts(value, bound_low, bound_high);
+
+                    let long_payout = long_percent.mul_floor(long_balance);
+                    let short_payout = short_percent.mul_floor(short_balance);
+                    // Ensure the market account has enough to pay out - if this is
+                    // ever not true then we have an accounting problem.
+                    ensure!(
+                        T::Currency::free_balance(&market_account) >= long_payout + short_payout,
+                        Error::<T>::InsufficientFundsInMarketAccount,
+                    );
+
+                    vec![
+                        (long_currency_id, long_payout, long_balance),
+                        (short_currency_id, short_payout, short_balance),
+                    ]
                 }
             };
 
@@ -814,6 +815,8 @@ mod pallet {
         ShareBalanceTooLow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
+        /// An invalid market type was found.
+        InvalidMarketType,
     }
 
     #[pallet::event]
