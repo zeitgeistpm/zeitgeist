@@ -82,15 +82,10 @@ mod pallet {
     use alloc::vec;
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
-    use frame_support::{
-        dispatch, ensure,
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
-        traits::{
+    use frame_support::{Blake2_128Concat, PalletId, Parameter, dispatch::{self, DispatchResultWithPostInfo}, ensure, pallet_prelude::{StorageMap, StorageValue, ValueQuery}, traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             OnUnbalanced, ReservableCurrency, Time,
-        },
-        Blake2_128Concat, PalletId, Parameter,
-    };
+        }};
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
@@ -214,15 +209,16 @@ mod pallet {
         ///
         /// NOTE: This is the only way to create new shares.
         ///
-        #[pallet::weight(50_000_000)]
+        // Weight is corrected, because weight calculation is dependant
+        // on values from storage (inclusion in weight annotation forbidden)
+        #[pallet::weight(T::WeightInfo::buy_complete_set())]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
             market_id: T::MarketId,
             #[pallet::compact] amount: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            Self::do_buy_complete_set(sender, market_id, amount)?;
-            Ok(())
+            Self::do_buy_complete_set(sender, market_id, amount)
         }
 
         /// NOTE: Only for PoC probably - should only allow rejections
@@ -1004,7 +1000,7 @@ mod pallet {
             who: T::AccountId,
             market_id: T::MarketId,
             amount: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             ensure!(
                 T::Currency::free_balance(&who) >= amount.into(),
                 Error::<T>::NotEnoughBalance,
@@ -1023,14 +1019,23 @@ mod pallet {
                 amount,
                 ExistenceRequirement::KeepAlive,
             )?;
-
-            for asset in Self::outcome_assets(market_id, market).iter() {
+            
+            let assets = Self::outcome_assets(market_id, market);
+            for asset in assets.iter() {
                 T::Shares::deposit(*asset, &who, amount)?;
             }
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, who));
 
-            Ok(())
+            // This part deals with weight correction
+            let assets_len: u32 = assets.len().saturated_into();
+            let max_cats: u32 = T::MaxCategories::get().into();
+
+            if assets_len == max_cats {
+                return Ok(None.into());
+            } else {
+                return Ok(Some(T::WeightInfo::buy_complete_set_range_weight_correction(assets_len)).into());
+            }
         }
 
         /// DANGEROUS - MUTATES PALLET STORAGE

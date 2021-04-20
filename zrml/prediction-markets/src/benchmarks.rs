@@ -87,6 +87,20 @@ benchmarks! {
         let (caller, marketid) = create_categorical_market_common::<T>(MarketCreation::Permissionless);
         let amount = BASE * 1_000;
     }: _(RawOrigin::Signed(caller), marketid, amount.saturated_into())
+
+    buy_complete_set_range_weight_correction {
+        // Note: buy_complete_sets weight consumption is dependant on how many assets exists
+        // Unfortunately this information can only be retrieved with a storage call, therefore
+        // The worst-case scenario is assumed and the correct weight is calculated with the
+        // help of this benchmark. The difference is returned to the caller.
+        let a in 0..T::MaxCategories::get() as u32;
+        let (caller, oracle, end, metadata, creation) =
+            create_market_common_parameters::<T>(MarketCreation::Permissionless);
+        let _ = Call::<T>::create_categorical_market(oracle, end, metadata, creation, a.saturated_into())
+                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
+        let marketid = Pallet::<T>::market_count() - 1u32.into();
+        let amount = BASE * 1_000;
+    }: buy_complete_set(RawOrigin::Signed(caller), marketid, amount.saturated_into())
 }
 
 impl_benchmark_test_suite!(

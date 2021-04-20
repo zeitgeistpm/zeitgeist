@@ -18,7 +18,7 @@
 // --extrinsic
 // *
 // --steps
-// 0
+// 8
 // --repeat
 // 5000
 // --template
@@ -41,6 +41,8 @@ pub trait WeightInfoZeitgeist {
     fn reject_market() -> Weight;
     fn admin_destroy_market() -> Weight;
     fn cancel_pending_market() -> Weight;
+    fn buy_complete_set() -> Weight;
+    fn buy_complete_set_range_weight_correction(a: u32, ) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -76,4 +78,18 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
+    fn buy_complete_set() -> Weight {
+		(276_528_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(18 as Weight))
+			.saturating_add(T::DbWeight::get().writes(17 as Weight))
+	}
+    fn buy_complete_set_range_weight_correction(a: u32, ) -> Weight {
+		(90_106_000 as Weight)
+			// Standard Error: 2_000
+			.saturating_add((23_616_000 as Weight).saturating_mul(a as Weight))
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+	}
 }
