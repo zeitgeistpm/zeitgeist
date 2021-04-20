@@ -77,7 +77,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
-        Shares: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -98,7 +98,7 @@ impl crate::Config for Runtime {
     type PalletId = PmPalletId;
     type OracleBond = OracleBond;
     type ReportingPeriod = ReportingPeriod;
-    type Shares = Shares;
+    type Shares = Tokens;
     type Slash = ();
     type Swap = Swaps;
     type ValidityBond = ValidityBond;
@@ -169,7 +169,7 @@ impl zrml_swaps::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type Shares = Shares;
+    type Shares = Tokens;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 

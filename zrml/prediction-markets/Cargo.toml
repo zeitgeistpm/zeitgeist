@@ -4,6 +4,7 @@ frame-system = { branch = "rococo-v1", default-features = false, git = "https://
 orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-timestamp = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
+sp-arithmetic = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-io = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -23,6 +24,7 @@ std = [
     'orml-traits/std',
     'pallet-timestamp/std',
     'parity-scale-codec/std',
+    'sp-arithmetic/std',
     'sp-core/std',
     'sp-io/std',
     'sp-runtime/std',

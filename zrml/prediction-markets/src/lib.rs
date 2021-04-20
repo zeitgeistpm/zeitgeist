@@ -87,6 +87,7 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
+    use sp_arithmetic::per_things::Percent;
     use sp_runtime::{
         traits::{
             AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, One,
@@ -508,41 +509,44 @@ mod pallet {
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
 
-                    vec![(winning_currency_id, winning_balance)]
+                    vec![(winning_currency_id, winning_balance, winning_balance)]
                 }
                 Outcome::Scalar(value) => {
                     let long_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
                     let short_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Short);
                     let long_balance = T::Shares::free_balance(long_currency_id, &sender);
                     let short_balance = T::Shares::free_balance(short_currency_id, &sender);
-                    let zero = BalanceOf::<T>::zero();
-                    let one = BalanceOf::<T>::one();
 
                     ensure!(
-                        long_balance >= zero || short_balance >= zero,
+                        long_balance >= BalanceOf::<T>::zero()
+                            || short_balance >= BalanceOf::<T>::zero(),
                         Error::<T>::NoWinningBalance
                     );
 
                     if let MarketType::Scalar((bound_low, bound_high)) = market.market_type {
-                        let calc_payouts =
-                            |final_value, low, high| -> (BalanceOf<T>, BalanceOf<T>) {
-                                if final_value <= low {
-                                    return (zero, one);
-                                }
-                                if final_value >= high {
-                                    return (one, zero);
-                                }
+                        let calc_payouts = |final_value, low, high| -> (Percent, Percent) {
+                            if final_value <= low {
+                                return (Percent::zero(), Percent::one());
+                            }
+                            if final_value >= high {
+                                return (Percent::one(), Percent::zero());
+                            }
 
-                                let payout_long: u128 = (final_value - low) / (high - low);
-                                (
-                                    payout_long.saturated_into(),
-                                    one - payout_long.saturated_into(),
-                                )
-                            };
+                            let payout_long: Percent =
+                                Percent::from_rational(final_value - low, high - low);
+                            (
+                                payout_long,
+                                Percent::from_parts(
+                                    Percent::one().deconstruct() - payout_long.deconstruct(),
+                                ),
+                            )
+                        };
 
-                        let (long_payout, short_payout) =
+                        let (long_percent, short_percent) =
                             calc_payouts(value, bound_low, bound_high);
 
+                        let long_payout = long_percent.mul_floor(long_balance);
+                        let short_payout = short_percent.mul_floor(short_balance);
                         // Ensure the market account has enough to pay out - if this is
                         // ever not true then we have an accounting problem.
                         ensure!(
@@ -552,8 +556,8 @@ mod pallet {
                         );
 
                         vec![
-                            (long_currency_id, long_payout),
-                            (short_currency_id, short_payout),
+                            (long_currency_id, long_payout, long_balance),
+                            (short_currency_id, short_payout, short_balance),
                         ]
                     } else {
                         panic!("should never happen");
@@ -561,15 +565,17 @@ mod pallet {
                 }
             };
 
-            for (currency_id, amount) in winning_assets {
+            for (currency_id, payout, balance) in winning_assets {
                 // Destory the shares.
-                T::Shares::slash(currency_id, &sender, amount);
+                T::Shares::slash(currency_id, &sender, balance);
 
-                // Pay out the winner. One full unit of currency per winning share.
+                // Pay out the winner.
+                let remaining_bal = T::Currency::free_balance(&market_account);
+
                 T::Currency::transfer(
                     &market_account,
                     &sender,
-                    amount,
+                    payout.min(remaining_bal),
                     ExistenceRequirement::AllowDeath,
                 )?;
             }
