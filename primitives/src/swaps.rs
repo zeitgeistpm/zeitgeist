@@ -4,7 +4,6 @@ use frame_support::dispatch::DispatchError;
 
 pub trait Swaps<AccountId> {
     type Balance;
-    type Hash;
     type MarketId;
 
     fn create_pool(

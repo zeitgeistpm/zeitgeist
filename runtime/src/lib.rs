@@ -105,7 +105,7 @@ parameter_types! {
   pub const ExistentialDeposit: u128 = 500;
   pub const ExitFee: Balance = 0;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
-  pub const MaxAssets: usize = 8;
+  pub const MaxAssets: usize = 9;
   pub const MaxCategories: u16 = 8;
   pub const MaxDisputes: u16 = 6;
   pub const MaxInRatio: Balance = BASE / 2;
