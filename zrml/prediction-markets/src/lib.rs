@@ -193,7 +193,7 @@ mod pallet {
         ///
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::approve_market())]
         pub fn approve_market(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
