@@ -36,6 +36,7 @@ use sp_std::marker::PhantomData;
 /// zrml_prediction_markets (automatically generated)
 pub trait WeightInfoZeitgeist {
     fn create_categorical_market() -> Weight;
+    fn create_scalar_market() -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -43,6 +44,11 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     fn create_categorical_market() -> Weight {
         (52_721_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    fn create_scalar_market() -> Weight {
+        (50_706_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
