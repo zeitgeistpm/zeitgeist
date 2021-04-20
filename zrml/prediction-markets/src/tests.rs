@@ -3,7 +3,7 @@ use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::{Asset, BASE};
+use zeitgeist_primitives::{Asset, ScalarPosition, BASE};
 
 fn gen_metadata(byte: u8) -> Vec<u8> {
     H256::repeat_byte(byte).to_fixed_bytes().to_vec()
@@ -117,7 +117,7 @@ fn it_allows_to_buy_a_complete_set() {
         // Check the outcome balances
         let assets = PredictionMarkets::outcome_assets(0, market);
         for asset in assets.iter() {
-            let bal = Shares::free_balance(*asset, &BOB);
+            let bal = Tokens::free_balance(*asset, &BOB);
             assert_eq!(bal, 100);
         }
 
@@ -148,7 +148,7 @@ fn it_allows_to_deploy_a_pool() {
             <Runtime as crate::Config>::PalletId::get().into_account(),
             100 * BASE
         ));
-        assert_ok!(Shares::deposit(Asset::Ztg, &BOB, 100 * BASE));
+        assert_ok!(Tokens::deposit(Asset::Ztg, &BOB, 100 * BASE));
 
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
@@ -181,7 +181,7 @@ fn it_allows_to_sell_a_complete_set() {
         // Check the outcome balances
         let assets = PredictionMarkets::outcome_assets(0, market);
         for asset in assets.iter() {
-            let bal = Shares::free_balance(*asset, &BOB);
+            let bal = Tokens::free_balance(*asset, &BOB);
             assert_eq!(bal, 0);
         }
 
@@ -318,21 +318,21 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         // check to make sure all but the winning share was deleted
         let share_a = Asset::CategoricalOutcome(0, 0);
-        let share_a_total = Shares::total_issuance(share_a);
+        let share_a_total = Tokens::total_issuance(share_a);
         assert_eq!(share_a_total, 0);
-        let share_a_bal = Shares::free_balance(share_a, &CHARLIE);
+        let share_a_bal = Tokens::free_balance(share_a, &CHARLIE);
         assert_eq!(share_a_bal, 0);
 
         let share_b = Asset::CategoricalOutcome(0, 1);
-        let share_b_total = Shares::total_issuance(share_b);
+        let share_b_total = Tokens::total_issuance(share_b);
         assert_eq!(share_b_total, 100);
-        let share_b_bal = Shares::free_balance(share_b, &CHARLIE);
+        let share_b_bal = Tokens::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, 100);
 
         let share_c = Asset::CategoricalOutcome(0, 2);
-        let share_c_total = Shares::total_issuance(share_c);
+        let share_c_total = Tokens::total_issuance(share_c);
         assert_eq!(share_c_total, 0);
-        let share_c_bal = Shares::free_balance(share_c, &CHARLIE);
+        let share_c_bal = Tokens::free_balance(share_c, &CHARLIE);
         assert_eq!(share_c_bal, 0);
     });
 }
@@ -509,4 +509,93 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             Outcome::Categorical(1)
         ));
     });
+}
+
+#[test]
+fn full_scalar_market_lifecycle() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_scalar_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketEnd::Timestamp(100_000_000),
+            gen_metadata(3),
+            MarketCreation::Permissionless,
+            (10, 30),
+        ));
+
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(CHARLIE),
+            0,
+            100 * BASE,
+        ));
+
+        // check balances
+        let market = PredictionMarkets::markets(0).unwrap();
+        let assets = PredictionMarkets::outcome_assets(0, market);
+        assert_eq!(assets.len(), 2);
+        for asset in assets.iter() {
+            let bal = Tokens::free_balance(*asset, &CHARLIE);
+            assert_eq!(bal, 100 * BASE);
+        }
+
+        Timestamp::set_timestamp(123_456_789);
+        run_to_block(100);
+
+        // report
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            Outcome::Scalar(100)
+        ));
+
+        let market_after_report = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market_after_report.report.is_some(), true);
+        let report = market_after_report.report.unwrap();
+        assert_eq!(report.at, 100);
+        assert_eq!(report.by, BOB);
+        assert_eq!(report.outcome, Outcome::Scalar(100));
+
+        // dispute
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            Outcome::Scalar(20)
+        ));
+        let disputes = PredictionMarkets::disputes(0);
+        assert_eq!(disputes.len(), 1);
+
+        run_to_block(150);
+
+        let market_after_resolve = PredictionMarkets::markets(0).unwrap();
+        assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
+
+        // give EVE some shares
+        assert_ok!(Tokens::transfer(
+            Origin::signed(CHARLIE),
+            EVE,
+            Asset::ScalarOutcome(0, ScalarPosition::Short),
+            100 * BASE
+        ));
+
+        assert_eq!(
+            Tokens::free_balance(Asset::ScalarOutcome(0, ScalarPosition::Short), &CHARLIE),
+            0
+        );
+
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+        for asset in assets.iter() {
+            let bal = Tokens::free_balance(*asset, &CHARLIE);
+            assert_eq!(bal, 0);
+        }
+
+        // check payouts is right for each CHARLIE and EVE
+        let ztg_bal_charlie = Balances::free_balance(&CHARLIE);
+        let ztg_bal_eve = Balances::free_balance(&EVE);
+        assert_eq!(ztg_bal_charlie, 950 * BASE);
+        assert_eq!(ztg_bal_eve, 1000 * BASE);
+
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
+        let ztg_bal_eve_after = Balances::free_balance(&EVE);
+        assert_eq!(ztg_bal_eve_after, 1050 * BASE);
+    })
 }
