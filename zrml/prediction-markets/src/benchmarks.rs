@@ -31,6 +31,17 @@ fn create_market_common_parameters<T: Config>(permission: MarketCreation) -> (
     (caller, oracle, end, metadata, creation)
 }
 
+fn create_categorical_market_common<T: Config>(permission: MarketCreation)
+        -> (T::AccountId, T::MarketId) {
+    let (caller, oracle, end, metadata, creation) =
+        create_market_common_parameters::<T>(permission);
+    let _ = Call::<T>::create_categorical_market(
+            oracle, end, metadata, creation, T::MaxCategories::get()
+        ).dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
+    let marketid = Pallet::<T>::market_count() - 1u32.into();
+    (caller, marketid)
+}
+
 benchmarks! {
     create_categorical_market {
         let (caller, oracle, end, metadata, creation) =
@@ -45,12 +56,11 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, categories)
 
     approve_market {
-        let (caller, oracle, end, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Advised);
-        let categories = T::MaxCategories::get();
-        let _ = Call::<T>::create_categorical_market(oracle, end, metadata, creation, categories)
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
-        let marketid = Pallet::<T>::market_count() - 1u32.saturated_into();
+        let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
+    }: _(RawOrigin::Root, marketid)
+
+    reject_market {
+        let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
     }: _(RawOrigin::Root, marketid)
 }
 
