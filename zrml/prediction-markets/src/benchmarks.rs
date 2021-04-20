@@ -1,14 +1,14 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::{
-    Config,
-    market::{MarketCreation, MarketEnd}
-};
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
+use crate::{
+    market::{MarketCreation, MarketEnd},
+    Config,
+};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller, Vec};
-use frame_support::traits::{Get, Currency};
+use frame_support::traits::{Currency, Get};
 use frame_system::RawOrigin;
 use sp_runtime::traits::SaturatedConversion;
 

@@ -366,7 +366,9 @@ impl zrml_prediction_markets::Config for Runtime {
     type Shares = Tokens;
     type Slash = ();
     type Swap = Swaps;
+    type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
+    type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_swaps::Config for Runtime {

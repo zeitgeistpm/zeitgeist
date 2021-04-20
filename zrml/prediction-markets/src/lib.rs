@@ -56,6 +56,7 @@ extern crate alloc;
 
 mod errors;
 mod market;
+pub mod weights;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
@@ -64,9 +65,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub use pallet::{Config, Error, Event, Pallet};
 #[cfg(feature = "runtime-benchmarks")]
 pub(crate) use pallet::*;
+pub use pallet::{Config, Error, Event, Pallet};
 
 #[frame_support::pallet]
 mod pallet {
@@ -76,6 +77,7 @@ mod pallet {
             Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType, Outcome,
             Report,
         },
+        weights::*,
     };
     use alloc::vec;
     use alloc::vec::Vec;
@@ -85,7 +87,7 @@ mod pallet {
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            OnUnbalanced, ReservableCurrency,
+            OnUnbalanced, ReservableCurrency, Time,
         },
         Blake2_128Concat, PalletId, Parameter,
     };
@@ -151,7 +153,7 @@ mod pallet {
                     MarketEnd::Block(current_block)
                 }
                 MarketEnd::Timestamp(_) => {
-                    let now = <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>();
+                    let now = T::Timestamp::now().saturated_into::<u64>();
                     MarketEnd::Timestamp(now)
                 }
             };
@@ -250,7 +252,7 @@ mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::create_categorical_market())]
         pub fn create_categorical_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
@@ -641,7 +643,7 @@ mod pallet {
                 }
                 MarketEnd::Timestamp(timestamp) => {
                     // unix timestamp
-                    let now = <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>();
+                    let now = T::Timestamp::now().saturated_into::<u64>();
                     let reporting_period_in_ms =
                         T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
                     if now <= timestamp + reporting_period_in_ms {
@@ -713,7 +715,7 @@ mod pallet {
     }
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_timestamp::Config {
+    pub trait Config: frame_system::Config {
         /// The base amount of currency that must be bonded for a market approved by the
         ///  advisory committee.
         type AdvisoryBond: Get<BalanceOf<Self>>;
@@ -768,9 +770,14 @@ mod pallet {
 
         type Swap: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = Self::MarketId>;
 
+        /// The type that offers timestamping functionality
+        type Timestamp: Time;
+
         /// The base amount of currency that must be bonded for a permissionless market,
         /// guaranteeing that it will resolve as anything but `Invalid`.
         type ValidityBond: Get<BalanceOf<Self>>;
+
+        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]
@@ -1162,8 +1169,8 @@ mod pallet {
                     return current_block < block;
                 }
                 MarketEnd::Timestamp(timestamp) => {
-                    let now = <pallet_timestamp::Pallet<T>>::get().saturated_into::<u64>();
-                    return now < timestamp;
+                    let now = T::Timestamp::now();
+                    return now < timestamp.saturated_into();
                 }
             }
         }
@@ -1184,7 +1191,7 @@ mod pallet {
                     ensure!(current_block < block, Error::<T>::EndBlockTooSoon);
                 }
                 MarketEnd::Timestamp(timestamp) => {
-                    let now = <pallet_timestamp::Pallet<T>>::get();
+                    let now = T::Timestamp::now();
                     ensure!(
                         now < timestamp.saturated_into(),
                         Error::<T>::EndTimestampTooSoon

@@ -102,6 +102,7 @@ impl crate::Config for Runtime {
     type Slash = ();
     type Swap = Swaps;
     type ValidityBond = ValidityBond;
+    type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
