@@ -596,7 +596,7 @@ mod pallet {
         ///
         /// NOTE: Will slash the reserved `AdvisoryBond` from the market creator.
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::reject_market())]
         pub fn reject_market(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
