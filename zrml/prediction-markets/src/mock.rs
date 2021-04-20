@@ -101,6 +101,7 @@ impl crate::Config for Runtime {
     type Shares = Tokens;
     type Slash = ();
     type Swap = Swaps;
+    type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
 }
