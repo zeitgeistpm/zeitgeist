@@ -35,6 +35,15 @@ where
         asset_out: Asset<MarketId>,
         at: Option<BlockHash>,
     ) -> Result<BalanceType>;
+
+    #[rpc(name = "swaps_getSpotPrices")]
+    fn get_spot_prices(
+        &self,
+        pool_id: PoolId,
+        asset_in: Asset<MarketId>,
+        asset_out: Asset<MarketId>,
+        blocks: Vec<BlockHash>,
+    ) -> Result<Vec<BalanceType>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -67,6 +76,24 @@ impl From<Error> for i64 {
     }
 }
 
+macro_rules! get_spot_price_rslt {
+    (
+        $api_ref:expr,
+        $asset_in:expr,
+        $asset_out:expr,
+        $at:expr,
+        $pool_id:expr
+    ) => {
+        $api_ref
+            .get_spot_price($at, $pool_id, $asset_in, $asset_out)
+            .map_err(|e| RpcError {
+                code: ErrorCode::ServerError(Error::RuntimeError.into()),
+                message: "Unable to get spot price.".into(),
+                data: Some(format!("{:?}", e).into()),
+            })
+    };
+}
+
 impl<C, Block, PoolId, AccountId, Balance, MarketId>
     SwapsApi<<Block as BlockT>::Hash, PoolId, AccountId, Balance, BalanceInfo<Balance>, MarketId>
     for Swaps<C, Block>
@@ -74,11 +101,11 @@ where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
-    PoolId: Codec,
+    PoolId: Clone + Codec,
     AccountId: Codec,
     Balance: Codec + MaybeDisplay + MaybeFromStr + TryFrom<U256>,
     <Balance as TryFrom<U256>>::Error: core::fmt::Debug,
-    MarketId: Codec,
+    MarketId: Clone + Codec,
 {
     fn pool_shares_id(
         &self,
@@ -114,6 +141,7 @@ where
         })
     }
 
+    /// If block hash is not supplied, the best block is assumed.
     fn get_spot_price(
         &self,
         pool_id: PoolId,
@@ -122,15 +150,30 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> Result<BalanceInfo<Balance>> {
         let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(||
-            //if the block hash is not supplied assume the best block
-            self.client.info().best_hash));
+        let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+        get_spot_price_rslt!(api, asset_in, asset_out, &at, pool_id)
+    }
 
-        api.get_spot_price(&at, pool_id, asset_in, asset_out)
-            .map_err(|e| RpcError {
-                code: ErrorCode::ServerError(Error::RuntimeError.into()),
-                message: "Unable to get spot price.".into(),
-                data: Some(format!("{:?}", e).into()),
+    fn get_spot_prices(
+        &self,
+        pool_id: PoolId,
+        asset_in: Asset<MarketId>,
+        asset_out: Asset<MarketId>,
+        blocks: Vec<<Block as BlockT>::Hash>,
+    ) -> Result<Vec<BalanceInfo<Balance>>> {
+        let api = self.client.runtime_api();
+        blocks
+            .into_iter()
+            .map(|block| {
+                let hash = BlockId::hash(block);
+                get_spot_price_rslt!(
+                    &api,
+                    asset_in.clone(),
+                    asset_out.clone(),
+                    &hash,
+                    pool_id.clone()
+                )
             })
+            .collect::<Result<Vec<_>>>()
     }
 }
