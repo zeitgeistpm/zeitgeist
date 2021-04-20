@@ -14,6 +14,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use sp_runtime::traits::SaturatedConversion;
+use zeitgeist_primitives::BASE;
 
 fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
@@ -60,8 +61,8 @@ benchmarks! {
     create_scalar_market {
         let (caller, oracle, end, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless);
-        let categories = (0u128, u128::MAX);
-    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, categories)
+        let outcome_range = (0u128, u128::MAX);
+    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, outcome_range)
 
     approve_market {
         let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
@@ -78,6 +79,14 @@ benchmarks! {
     cancel_pending_market {
         let (caller, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
     }: _(RawOrigin::Signed(caller), marketid)
+
+    buy_complete_set {
+        // Note: buy_complete_sets weight consumption is dependant on how many assets exists
+        // Unfortunately this information can only be retrieved with a storage call, therefore
+        // The worst-case scenario is assumed and weight is returned at the end of buy_complete_set
+        let (caller, marketid) = create_categorical_market_common::<T>(MarketCreation::Permissionless);
+        let amount = BASE * 1_000;
+    }: _(RawOrigin::Signed(caller), marketid, amount.saturated_into())
 }
 
 impl_benchmark_test_suite!(
