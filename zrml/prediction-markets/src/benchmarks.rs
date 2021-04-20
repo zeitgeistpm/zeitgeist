@@ -9,13 +9,15 @@ use crate::{
 };
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller, Vec};
 use frame_support::{
-    traits::{Currency, Get},
     dispatch::UnfilteredDispatchable,
+    traits::{Currency, Get},
 };
 use frame_system::RawOrigin;
 use sp_runtime::traits::SaturatedConversion;
 
-fn create_market_common_parameters<T: Config>(permission: MarketCreation) -> (
+fn create_market_common_parameters<T: Config>(
+    permission: MarketCreation,
+) -> (
     T::AccountId,
     T::AccountId,
     MarketEnd<T::BlockNumber>,
@@ -31,13 +33,19 @@ fn create_market_common_parameters<T: Config>(permission: MarketCreation) -> (
     (caller, oracle, end, metadata, creation)
 }
 
-fn create_categorical_market_common<T: Config>(permission: MarketCreation)
-        -> (T::AccountId, T::MarketId) {
+fn create_categorical_market_common<T: Config>(
+    permission: MarketCreation,
+) -> (T::AccountId, T::MarketId) {
     let (caller, oracle, end, metadata, creation) =
         create_market_common_parameters::<T>(permission);
     let _ = Call::<T>::create_categorical_market(
-            oracle, end, metadata, creation, T::MaxCategories::get()
-        ).dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
+        oracle,
+        end,
+        metadata,
+        creation,
+        T::MaxCategories::get(),
+    )
+    .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
     let marketid = Pallet::<T>::market_count() - 1u32.into();
     (caller, marketid)
 }
@@ -60,6 +68,10 @@ benchmarks! {
     }: _(RawOrigin::Root, marketid)
 
     reject_market {
+        let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
+    }: _(RawOrigin::Root, marketid)
+
+    admin_destroy_market {
         let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
     }: _(RawOrigin::Root, marketid)
 }
