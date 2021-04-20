@@ -74,6 +74,10 @@ benchmarks! {
     admin_destroy_market {
         let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
     }: _(RawOrigin::Root, marketid)
+
+    cancel_pending_market {
+        let (caller, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
+    }: _(RawOrigin::Signed(caller), marketid)
 }
 
 impl_benchmark_test_suite!(
