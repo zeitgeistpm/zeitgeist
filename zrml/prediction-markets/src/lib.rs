@@ -115,7 +115,7 @@ mod pallet {
         ///
         /// todo: this should check if there's any outstanding funds reserved if it stays
         /// in for production
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::admin_destroy_market())]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
