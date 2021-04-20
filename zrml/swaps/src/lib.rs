@@ -150,7 +150,7 @@ mod pallet {
                 pool_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_in_given_single_out(
                         asset_balance.saturated_into(),
-                        *pool.weights.get(&asset).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset)?,
                         total_supply.saturated_into(),
                         pool.total_weight,
                         asset_amount.saturated_into(),
@@ -191,7 +191,7 @@ mod pallet {
                 asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
-                        *pool.weights.get(&asset).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset)?,
                         total_supply.saturated_into(),
                         pool.total_weight,
                         pool_amount.saturated_into(),
@@ -279,7 +279,7 @@ mod pallet {
                     ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
                         asset_balance.saturated_into(),
-                        *pool.weights.get(&asset_in).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset_in)?,
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         asset_amount.saturated_into(),
@@ -319,7 +319,7 @@ mod pallet {
                 asset_amount: |pool: &Pool<BalanceOf<T>, _>, asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_in_given_pool_out(
                         asset_balance.saturated_into(),
-                        *pool.weights.get(&asset).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset)?,
                         total_supply.saturated_into(),
                         pool.total_weight.saturated_into(),
                         pool_amount.saturated_into(),
@@ -378,9 +378,9 @@ mod pallet {
 
                     let asset_amount_out: BalanceOf<T> = crate::math::calc_out_given_in(
                         balance_in.saturated_into(),
-                        *pool.weights.get(&asset_in).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset_in)?,
                         balance_out.saturated_into(),
-                        *pool.weights.get(&asset_out).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset_out)?,
                         asset_amount_in.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?.saturated_into();
@@ -431,9 +431,9 @@ mod pallet {
 
                     let asset_amount_in: BalanceOf<T> = crate::math::calc_in_given_out(
                         balance_in.saturated_into(),
-                        *pool.weights.get(&asset_in).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset_in)?,
                         balance_out.saturated_into(),
-                        *pool.weights.get(&asset_out).unwrap(),
+                        *pool.get_weight_rslt::<T>(&asset_out)?,
                         asset_amount_out.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?.saturated_into();
@@ -594,28 +594,26 @@ mod pallet {
             asset_in: Asset<T::MarketId>,
             asset_out: Asset<T::MarketId>,
         ) -> Result<BalanceOf<T>, DispatchError> {
-            if let Some(pool) = Self::pools(pool_id) {
-                // ensure!(pool.bound(asset_in), Error::<T>::AssetNotBound)?;
-                // ensure!(pool.bound(asset_out), Error::<T>::AssetNotBound)?;
-
-                let pool_account = Self::pool_account_id(pool_id);
-                let balance_in = T::Shares::free_balance(asset_in, &pool_account);
-                let in_weight = pool.weights.get(&asset_in).unwrap();
-                let balance_out = T::Shares::free_balance(asset_out, &pool_account);
-                let out_weight = pool.weights.get(&asset_out).unwrap();
-
-                Ok(crate::math::calc_spot_price(
-                    balance_in.saturated_into(),
-                    *in_weight,
-                    balance_out.saturated_into(),
-                    *out_weight,
-                    0, //fee
-                )?
-                .saturated_into())
+            let pool = if let Some(pool) = Self::pools(pool_id) {
+                pool
             } else {
-                // Err(Error::<T>::PoolDoesNotExist)?;
-                Ok(Zero::zero())
-            }
+                return Err(Error::<T>::PoolDoesNotExist.into());
+            };
+
+            let pool_account = Self::pool_account_id(pool_id);
+            let balance_in = T::Shares::free_balance(asset_in, &pool_account);
+            let in_weight = pool.get_weight_rslt::<T>(&asset_in)?;
+            let balance_out = T::Shares::free_balance(asset_out, &pool_account);
+            let out_weight = pool.get_weight_rslt::<T>(&asset_out)?;
+
+            Ok(crate::math::calc_spot_price(
+                balance_in.saturated_into(),
+                *in_weight,
+                balance_out.saturated_into(),
+                *out_weight,
+                0, //fee
+            )?
+            .saturated_into())
         }
 
         fn inc_next_pool_id() -> u128 {
