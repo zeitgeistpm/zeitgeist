@@ -303,7 +303,7 @@ mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::create_scalar_market())]
         pub fn create_scalar_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
