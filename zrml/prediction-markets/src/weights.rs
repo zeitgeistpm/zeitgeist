@@ -40,6 +40,7 @@ pub trait WeightInfoZeitgeist {
     fn approve_market() -> Weight;
     fn reject_market() -> Weight;
     fn admin_destroy_market() -> Weight;
+    fn cancel_pending_market() -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -69,5 +70,10 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         (74_503_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(9 as Weight))
+    }
+    fn cancel_pending_market() -> Weight {
+        (50_246_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }

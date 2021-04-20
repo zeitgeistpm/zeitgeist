@@ -229,7 +229,7 @@ mod pallet {
         /// in a production environment since this better aligns incentives.
         /// See also: Polkadot Treasury
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::cancel_pending_market())]
         pub fn cancel_pending_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
