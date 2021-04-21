@@ -617,7 +617,7 @@ mod pallet {
 
         /// Reports the outcome of a market.
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::report())]
         pub fn report(
             origin: OriginFor<T>,
             market_id: T::MarketId,

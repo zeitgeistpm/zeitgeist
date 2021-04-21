@@ -44,6 +44,7 @@ pub trait WeightInfoZeitgeist {
     fn buy_complete_set(a: u32) -> Weight;
     fn admin_move_market_to_closed() -> Weight;
     fn sell_complete_set(a: u32) -> Weight;
+    fn report() -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -102,4 +103,9 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
     }
+    fn report() -> Weight {
+		(37_331_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
 }
