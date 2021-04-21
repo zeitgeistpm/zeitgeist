@@ -36,6 +36,7 @@ fn create_market_common_parameters<T: Config>(
 
 fn create_categorical_market_common<T: Config>(
     permission: MarketCreation,
+    categories: u16
 ) -> (T::AccountId, T::MarketId) {
     let (caller, oracle, end, metadata, creation) =
         create_market_common_parameters::<T>(permission);
@@ -44,7 +45,7 @@ fn create_categorical_market_common<T: Config>(
         end,
         metadata,
         creation,
-        T::MaxCategories::get(),
+        categories,
     )
     .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
     let marketid = Pallet::<T>::market_count() - 1u32.into();
@@ -65,34 +66,66 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, outcome_range)
 
     approve_market {
-        let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
+        let (_, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Advised,
+            T::MaxCategories::get()
+        );
     }: _(RawOrigin::Root, marketid)
 
     reject_market {
-        let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
-    }: _(RawOrigin::Root, marketid)
-
-    admin_destroy_market {
-        let (_, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
+        let (_, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Advised,
+            T::MaxCategories::get()
+        );
     }: _(RawOrigin::Root, marketid)
 
     cancel_pending_market {
-        let (caller, marketid) = create_categorical_market_common::<T>(MarketCreation::Advised);
+        let (caller, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Advised,
+            T::MaxCategories::get()
+        );
     }: _(RawOrigin::Signed(caller), marketid)
 
     buy_complete_set {
         let a in 0..T::MaxCategories::get() as u32;
-        let (caller, oracle, end, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless);
-        let _ = Call::<T>::create_categorical_market(oracle, end, metadata, creation, a.saturated_into())
-                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
-        let marketid = Pallet::<T>::market_count() - 1u32.into();
-        let amount = BASE * 1_000;
-    }: buy_complete_set(RawOrigin::Signed(caller), marketid, amount.saturated_into())
 
-    admin_move_market_to_closed {
-        let (caller, marketid) = create_categorical_market_common::<T>(MarketCreation::Permissionless);
+        let (caller, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Advised,
+            a.saturated_into()
+        );
+
+        let amount = BASE * 1_000;
+    }: _(RawOrigin::Signed(caller), marketid, amount.saturated_into())
+
+    sell_complete_set {
+        let a in 0..T::MaxCategories::get() as u32;
+
+        let (caller, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Advised,
+            a.saturated_into()
+        );
+
+        let amount: BalanceOf<T> = (BASE * 1_000).saturated_into();
+        let _ = Call::<T>::buy_complete_set(marketid, amount)
+            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
+    }: _(RawOrigin::Signed(caller), marketid, amount)
+
+    // TODO: logical paths + different asset count benchmarks for admin_*
+
+    admin_destroy_market{
+        let (_, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Advised,
+            T::MaxCategories::get()
+        );
     }: _(RawOrigin::Root, marketid)
+
+    /*
+    admin_move_market_to_closed {
+        let (caller, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Permissionless,
+            T::MaxCategories::get()
+        );
+    }: _(RawOrigin::Root, marketid)*/
 }
 
 impl_benchmark_test_suite!(
