@@ -83,14 +83,6 @@ benchmarks! {
     buy_complete_set {
         // Note: buy_complete_sets weight consumption is dependant on how many assets exists
         // Unfortunately this information can only be retrieved with a storage call, therefore
-        // The worst-case scenario is assumed and weight is returned at the end of buy_complete_set
-        let (caller, marketid) = create_categorical_market_common::<T>(MarketCreation::Permissionless);
-        let amount = BASE * 1_000;
-    }: _(RawOrigin::Signed(caller), marketid, amount.saturated_into())
-
-    buy_complete_set_range_weight_correction {
-        // Note: buy_complete_sets weight consumption is dependant on how many assets exists
-        // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated with the
         // help of this benchmark. The difference is returned to the caller.
         let a in 0..T::MaxCategories::get() as u32;

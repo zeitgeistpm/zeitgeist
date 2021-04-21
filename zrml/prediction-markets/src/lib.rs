@@ -209,9 +209,12 @@ mod pallet {
         ///
         /// NOTE: This is the only way to create new shares.
         ///
-        // Weight is corrected, because weight calculation is dependant
-        // on values from storage (inclusion in weight annotation forbidden)
-        #[pallet::weight(T::WeightInfo::buy_complete_set())]
+        // Note: buy_complete_sets weight consumption is dependant on how many assets exists
+        // Unfortunately this information can only be retrieved with a storage call, therefore
+        // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
+        #[pallet::weight(
+            T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32)
+        )]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -1034,7 +1037,7 @@ mod pallet {
             if assets_len == max_cats {
                 return Ok(None.into());
             } else {
-                return Ok(Some(T::WeightInfo::buy_complete_set_range_weight_correction(assets_len)).into());
+                return Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into());
             }
         }
 
