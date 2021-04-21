@@ -41,7 +41,9 @@ pub fn battery_park_config(
                 wasm_binary,
             )
         },
-        vec![],
+        vec![
+            "/ip4/139.162.171.58/tcp/30333/p2p/12D3KooWPvu5rpH2FNYnAmiQ8X8XqkMiuSFTjH2jwMCSjoam7RGQ".parse().unwrap()
+        ],
         TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
         Some("battery_park"),
         Some(properties),
