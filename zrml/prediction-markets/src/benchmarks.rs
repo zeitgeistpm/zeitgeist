@@ -36,18 +36,12 @@ fn create_market_common_parameters<T: Config>(
 
 fn create_categorical_market_common<T: Config>(
     permission: MarketCreation,
-    categories: u16
+    categories: u16,
 ) -> (T::AccountId, T::MarketId) {
     let (caller, oracle, end, metadata, creation) =
         create_market_common_parameters::<T>(permission);
-    let _ = Call::<T>::create_categorical_market(
-        oracle,
-        end,
-        metadata,
-        creation,
-        categories,
-    )
-    .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
+    let _ = Call::<T>::create_categorical_market(oracle, end, metadata, creation, categories)
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into());
     let marketid = Pallet::<T>::market_count() - 1u32.into();
     (caller, marketid)
 }

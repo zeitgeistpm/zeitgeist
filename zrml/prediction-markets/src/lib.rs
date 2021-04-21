@@ -83,7 +83,7 @@ mod pallet {
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{
-        dispatch::{self, DispatchResultWithPostInfo},
+        dispatch::{self, DispatchResultWithPostInfo, Weight},
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{
@@ -675,12 +675,14 @@ mod pallet {
 
         /// Destroys a complete set of outcomes shares for a market.
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(
+            T::WeightInfo::sell_complete_set(T::MaxCategories::get() as u32)
+        )]
         pub fn sell_complete_set(
             origin: OriginFor<T>,
             market_id: T::MarketId,
             #[pallet::compact] amount: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
@@ -695,7 +697,9 @@ mod pallet {
                 "Market account does not have sufficient reserves.",
             );
 
-            for asset in Self::outcome_assets(market_id, market).iter() {
+            let assets = Self::outcome_assets(market_id, market);
+
+            for asset in assets.iter() {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
                 ensure!(
@@ -714,8 +718,13 @@ mod pallet {
             )?;
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, sender));
-
-            Ok(())
+            let assets_len: u32 = assets.len().saturated_into();
+            let max_cats: u32 = T::MaxCategories::get().into();
+            Self::calculate_actual_weight(
+                &T::WeightInfo::sell_complete_set, 
+                assets_len, 
+                max_cats
+            )
         }
     }
 
@@ -983,6 +992,18 @@ mod pallet {
             T::PalletId::get().into_sub_account(market_id)
         }
 
+        fn calculate_actual_weight(
+            func: &dyn Fn(u32) -> Weight,
+            weight_parameter: u32,
+            max_weight_parameter: u32,
+        ) -> DispatchResultWithPostInfo {
+            if weight_parameter == max_weight_parameter {
+                return Ok(None.into());
+            } else {
+                return Ok(Some(func(weight_parameter)).into());
+            }
+        }
+
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &T::MarketId) -> Result<(), dispatch::DispatchError> {
             let market = Self::market_by_id(&market_id)?;
@@ -1036,15 +1057,13 @@ mod pallet {
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, who));
 
-            // This part deals with weight correction
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
-
-            if assets_len == max_cats {
-                return Ok(None.into());
-            } else {
-                return Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into());
-            }
+            Self::calculate_actual_weight(
+                &T::WeightInfo::buy_complete_set, 
+                assets_len, 
+                max_cats
+            )
         }
 
         /// DANGEROUS - MUTATES PALLET STORAGE
