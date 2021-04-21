@@ -82,10 +82,16 @@ mod pallet {
     use alloc::vec;
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
-    use frame_support::{Blake2_128Concat, PalletId, Parameter, dispatch::{self, DispatchResultWithPostInfo}, ensure, pallet_prelude::{StorageMap, StorageValue, ValueQuery}, traits::{
+    use frame_support::{
+        dispatch::{self, DispatchResultWithPostInfo},
+        ensure,
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             OnUnbalanced, ReservableCurrency, Time,
-        }};
+        },
+        Blake2_128Concat, PalletId, Parameter,
+    };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
@@ -134,7 +140,7 @@ mod pallet {
 
         /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::admin_move_market_to_closed())]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -1022,7 +1028,7 @@ mod pallet {
                 amount,
                 ExistenceRequirement::KeepAlive,
             )?;
-            
+
             let assets = Self::outcome_assets(market_id, market);
             for asset in assets.iter() {
                 T::Shares::deposit(*asset, &who, amount)?;
