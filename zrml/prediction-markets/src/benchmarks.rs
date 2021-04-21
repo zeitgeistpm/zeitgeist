@@ -4,7 +4,7 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
 use crate::{
-    market::{MarketCreation, MarketEnd},
+    market::{MarketCreation, MarketEnd, Outcome},
     Config,
 };
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller, Vec};
@@ -106,20 +106,31 @@ benchmarks! {
 
     // TODO: logical paths + different asset count benchmarks for admin_*
 
+    /*
     admin_destroy_market{
         let (_, marketid) = create_categorical_market_common::<T>(
             MarketCreation::Advised,
             T::MaxCategories::get()
         );
     }: _(RawOrigin::Root, marketid)
+    */
 
-    /*
     admin_move_market_to_closed {
         let (caller, marketid) = create_categorical_market_common::<T>(
             MarketCreation::Permissionless,
             T::MaxCategories::get()
         );
-    }: _(RawOrigin::Root, marketid)*/
+    }: _(RawOrigin::Root, marketid)
+
+    report {
+        let (caller, marketid) = create_categorical_market_common::<T>(
+            MarketCreation::Permissionless,
+            T::MaxCategories::get()
+        );
+        let outcome = Outcome::Categorical(0);
+        let _ = Call::<T>::admin_move_market_to_closed(marketid)
+            .dispatch_bypass_filter(RawOrigin::Root.into());
+    }: _(RawOrigin::Signed(caller), marketid, outcome)
 }
 
 impl_benchmark_test_suite!(

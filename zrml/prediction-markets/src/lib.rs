@@ -720,11 +720,7 @@ mod pallet {
             Self::deposit_event(Event::SoldCompleteSet(market_id, sender));
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(
-                &T::WeightInfo::sell_complete_set, 
-                assets_len, 
-                max_cats
-            )
+            Self::calculate_actual_weight(&T::WeightInfo::sell_complete_set, assets_len, max_cats)
         }
     }
 
@@ -1059,11 +1055,7 @@ mod pallet {
 
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(
-                &T::WeightInfo::buy_complete_set, 
-                assets_len, 
-                max_cats
-            )
+            Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
         }
 
         /// DANGEROUS - MUTATES PALLET STORAGE

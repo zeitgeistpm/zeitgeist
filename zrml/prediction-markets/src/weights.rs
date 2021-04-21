@@ -43,7 +43,7 @@ pub trait WeightInfoZeitgeist {
     fn cancel_pending_market() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
     fn admin_move_market_to_closed() -> Weight;
-    fn sell_complete_set(a: u32, ) -> Weight;
+    fn sell_complete_set(a: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -93,13 +93,13 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-	fn sell_complete_set(a: u32, ) -> Weight {
-		(76_316_000 as Weight)
-			// Standard Error: 2_000
-			.saturating_add((31_238_000 as Weight).saturating_mul(a as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
-	}
+    fn sell_complete_set(a: u32) -> Weight {
+        (76_316_000 as Weight)
+            // Standard Error: 2_000
+            .saturating_add((31_238_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+    }
 }
