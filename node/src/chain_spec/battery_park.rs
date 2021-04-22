@@ -42,7 +42,7 @@ pub fn battery_park_config(
             )
         },
         vec![
-            "/ip4/139.162.171.58/tcp/30333/p2p/12D3KooWPvu5rpH2FNYnAmiQ8X8XqkMiuSFTjH2jwMCSjoam7RGQ".parse().unwrap()
+            "/ip4/139.162.171.58/tcp/30333/p2p/12D3KooWPvu5rpH2FNYnAmiQ8X8XqkMiuSFTjH2jwMCSjoam7RGQ".parse().map_err(|_| "invalid bootnoode id")?
         ],
         TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
         Some("battery_park"),
