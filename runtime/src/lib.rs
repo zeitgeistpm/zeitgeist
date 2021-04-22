@@ -113,8 +113,8 @@ parameter_types! {
   pub const MaxTotalWeight: Balance = 50 * BASE;
   pub const MaxWeight: Balance = 50 * BASE;
   pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
-  pub const MinLiquidity: Balance = 100 * BASE;
-  pub const MinWeight: Balance = BASE;
+  pub const MinLiquidity: Balance = MIN_LIQUIDITY;
+  pub const MinWeight: Balance = MIN_WEIGHT;
   pub const OracleBond: Balance = 50 * DOLLARS;
   pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
   pub const ReportingPeriod: BlockNumber = DAYS;

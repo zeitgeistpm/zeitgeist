@@ -1025,7 +1025,7 @@ mod pallet {
             Ok(())
         }
 
-        fn do_buy_complete_set(
+        pub(crate) fn do_buy_complete_set(
             who: T::AccountId,
             market_id: T::MarketId,
             amount: BalanceOf<T>,

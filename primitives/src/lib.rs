@@ -20,6 +20,8 @@ pub use zeitgeist_currencies_extension::ZeitgeistCurrenciesExtension;
 pub use zeitgeist_multi_reservable_currency::ZeitgeistMultiReservableCurrency;
 
 pub const BASE: u128 = 10_000_000_000;
+pub const MIN_LIQUIDITY: Balance = BASE * 100;
+pub const MIN_WEIGHT: Balance = BASE;
 
 /// Signed counter-part of Balance
 pub type Amount = i128;
