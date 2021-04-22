@@ -362,7 +362,9 @@ mod pallet {
         ///
         /// The sender should have enough funds to cover all of the required
         /// shares to seed the pool.
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(
+            T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
+        )]
         #[frame_support::transactional]
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
