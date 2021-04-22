@@ -218,6 +218,7 @@ mod pallet {
         // Note: buy_complete_sets weight consumption is dependant on how many assets exists
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
+        // This also occurs in numereous other functions
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32)
         )]
@@ -395,12 +396,12 @@ mod pallet {
         /// NOTE: Requires a `DisputeBond` + `DisputeFactor` * `num_disputes` amount of currency
         ///  to be reserved.
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::dispute(T::MaxDisputes::get() as u32))]
         pub fn dispute(
             origin: OriginFor<T>,
             market_id: T::MarketId,
             outcome: Outcome,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
@@ -411,7 +412,7 @@ mod pallet {
                 if let MarketType::Categorical(categories) = market.market_type {
                     ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
                 } else {
-                    return Err(OUTCOME_MISMATCH);
+                    return Err(OUTCOME_MISMATCH.into());
                 }
             }
             if let Outcome::Scalar(inner) = outcome {
@@ -421,16 +422,14 @@ mod pallet {
                         Error::<T>::OutcomeOutOfRange
                     );
                 } else {
-                    return Err(OUTCOME_MISMATCH);
+                    return Err(OUTCOME_MISMATCH.into());
                 }
             }
 
             let disputes = Self::disputes(market_id.clone());
             let num_disputes = disputes.len() as u16;
-            ensure!(
-                num_disputes < T::MaxDisputes::get(),
-                Error::<T>::MaxDisputesReached
-            );
+            let max_disputes = T::MaxDisputes::get();
+            ensure!(num_disputes < max_disputes, Error::<T>::MaxDisputesReached);
 
             if num_disputes > 0 {
                 ensure!(
@@ -473,7 +472,11 @@ mod pallet {
             }
 
             Self::deposit_event(Event::MarketDisputed(market_id, outcome));
-            Ok(())
+            Self::calculate_actual_weight(
+                &T::WeightInfo::dispute,
+                num_disputes as u32,
+                max_disputes as u32,
+            )
         }
 
         /// Starts a global dispute.
@@ -896,7 +899,7 @@ mod pallet {
                         Self::markets(id).expect("Market stored in report block does not exist");
                     if market.status != MarketStatus::Reported {
                     } else {
-                        Self::internal_resolve(id).expect("Internal respolve failed");
+                        Self::internal_resolve(id).expect("Internal resolve failed");
                     }
                 });
             }
