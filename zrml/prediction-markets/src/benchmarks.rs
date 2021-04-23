@@ -17,7 +17,7 @@ use frame_support::{
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
-use zeitgeist_primitives::{Asset, ScalarPosition, BASE, MIN_LIQUIDITY, MIN_WEIGHT};
+use zeitgeist_primitives::{Asset, BASE, MIN_LIQUIDITY, MIN_WEIGHT};
 
 fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
@@ -77,14 +77,22 @@ fn create_close_and_report_market<T: Config>(
     Ok((caller, marketid))
 }
 
-fn generate_accounts_with_assets<T: Config>(num: u32, asset: Asset<T::MarketId>) 
+fn generate_accounts_with_assets<T: Config>(num_total: u32, num_asset: u32, asset: Asset<T::MarketId>) 
     -> Result<(), &'static str> 
 {
     let min_liquidity: BalanceOf<T> = MIN_LIQUIDITY.saturated_into();
+    let fake_asset = Asset::CategoricalOutcome::<T::MarketId>(u128::MAX.saturated_into(), 0);
+    let mut mut_num_asset = num_asset;
 
-    for i in 0..num {
-        let acc = account("AssetHolder", i, 0);
-        let _ = T::Shares::deposit(asset, &acc, min_liquidity)?;
+    for i in 0..num_total {
+        if mut_num_asset > 0 {
+            let acc = account("AssetHolder", i, 0);
+            let _ = T::Shares::deposit(asset, &acc, min_liquidity)?;
+            mut_num_asset -= 1;
+        } else {
+            let acc = account("AssetHolder", i, 0);
+            let _ = T::Shares::deposit(fake_asset, &acc, min_liquidity)?;
+        }
     }
 
     Ok(())
@@ -144,65 +152,46 @@ benchmarks! {
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), marketid, amount)
 
-    admin_destroy_disputed_scalar_market{
-        // a = num. accounts with shares
-        let a in 0..100;
+    admin_destroy_disputed_market{
+        // a = total accounts
+        let a in 0..10;
+        // b = num. accounts with assets
+        // Unfortunately frame-benchmarking does not allow to b = b.min(a) here
+        let b in 0..10;
+        // c = num. asset types
+        let c in 0..T::MaxCategories::get() as u32;
+        // Complexity: O(c*a) + O(c*b)
+
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
-            MarketType::Scalar((0u128, u128::MAX)),
-            Outcome::Scalar(u128::MAX)
-        )?;
-        let _ = generate_accounts_with_assets::<T>(
-            a,
-            Asset::ScalarOutcome(marketid, ScalarPosition::Long)
-        )?;
-
-        for i in 0..T::MaxDisputes::get() as u128 {
-            let _ = Call::<T>::dispute(marketid, Outcome::Scalar(i))
-                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-        }
-    }: admin_destroy_market(RawOrigin::Root, marketid)
-
-    admin_destroy_disputed_categorical_market{
-        // a = num. accounts with shares
-        let a in 0..100;
-        let (caller, marketid) = create_close_and_report_market::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Categorical(T::MaxCategories::get()),
+            MarketType::Categorical(c.saturated_into()),
             Outcome::Categorical(0)
         )?;
-        let _ = generate_accounts_with_assets::<T>(a, Asset::CategoricalOutcome(marketid, 0))?;
+        let asset = Asset::CategoricalOutcome(marketid, 0);
+        let _ = generate_accounts_with_assets::<T>(a, b, Asset::CategoricalOutcome(marketid, 0))?;
 
-        for i in 0..T::MaxDisputes::get() as u128 {
+        for i in 0..c.min(T::MaxDisputes::get() as u32) {
             let _ = Call::<T>::dispute(marketid, Outcome::Categorical(i.saturated_into()))
                 .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         }
     }: admin_destroy_market(RawOrigin::Root, marketid)
 
-    admin_destroy_reported_categorical_market{
-        // a = num. accounts with shares
-        let a in 0..100;
+    admin_destroy_reported_market{
+        // a = total accounts
+        let a in 0..10;
+        // b = num. accounts with assets
+        let b in 0..10;
+        // c = num. asset types
+        let c in 0..T::MaxCategories::get() as u32;
+        // Complexity: O(c*a) + O(c*b)
+
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(T::MaxCategories::get()),
+            MarketType::Categorical(c.saturated_into()),
             Outcome::Categorical(0)
         )?;
-
-        let _ = generate_accounts_with_assets::<T>(a, Asset::CategoricalOutcome(marketid, 0))?;
-    }: admin_destroy_market(RawOrigin::Root, marketid)
-
-    admin_destroy_reported_scalar_market{
-        // a = num. accounts with shares
-        let a in 0..100;
-        let (caller, marketid) = create_close_and_report_market::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Scalar((0u128, u128::MAX)),
-            Outcome::Scalar(u128::MAX)
-        )?;
-        let _ = generate_accounts_with_assets::<T>(
-            a,
-            Asset::ScalarOutcome(marketid, ScalarPosition::Long)
-        )?;
+        let asset = Asset::CategoricalOutcome(marketid, 0);
+        let _ = generate_accounts_with_assets::<T>(a, b, Asset::CategoricalOutcome(marketid, 0))?;
     }: admin_destroy_market(RawOrigin::Root, marketid)
 
     admin_move_market_to_closed {
