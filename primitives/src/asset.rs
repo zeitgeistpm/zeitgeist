@@ -1,3 +1,5 @@
+use crate::SerdeWrapper;
+
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.
 ///
@@ -20,7 +22,7 @@ pub enum Asset<MI> {
     CategoricalOutcome(MI, CategoryIndex),
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
-    PoolShare(u128),
+    PoolShare(SerdeWrapper<u128>),
     Ztg,
 }
 

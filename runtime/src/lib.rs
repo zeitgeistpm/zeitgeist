@@ -563,16 +563,16 @@ impl_runtime_apis! {
             pool_id: u128,
             asset_in: Asset<MarketId>,
             asset_out: Asset<MarketId>,
-        ) -> BalanceInfo<Balance> {
-            BalanceInfo(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
+        ) -> SerdeWrapper<Balance> {
+            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
         }
 
         fn pool_account_id(pool_id: u128) -> AccountId {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_shares_id(pool_id: u128) -> Asset<MarketId> {
-            Swaps::pool_shares_id(pool_id)
+        fn pool_shares_id(pool_id: u128) -> Asset<SerdeWrapper<MarketId>> {
+            Asset::PoolShare(SerdeWrapper(pool_id))
         }
     }
 }

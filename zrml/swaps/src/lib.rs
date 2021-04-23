@@ -52,7 +52,7 @@ mod pallet {
         traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
-    use zeitgeist_primitives::{Asset, Swaps};
+    use zeitgeist_primitives::{Asset, SerdeWrapper, Swaps};
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -648,7 +648,7 @@ mod pallet {
         }
 
         pub fn pool_shares_id(pool_id: u128) -> Asset<T::MarketId> {
-            Asset::PoolShare(pool_id)
+            Asset::PoolShare(SerdeWrapper(pool_id))
         }
     }
 
