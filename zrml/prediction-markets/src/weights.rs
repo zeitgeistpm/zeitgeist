@@ -47,6 +47,8 @@ pub trait WeightInfoZeitgeist {
     fn report() -> Weight;
     fn dispute(a: u32) -> Weight;
     fn deploy_swap_pool_for_market(a: u32) -> Weight;
+    fn admin_destroy_disputed_market(a: u32, b: u32, c: u32) -> Weight;
+    fn admin_destroy_reported_market(a: u32, b: u32, c: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -125,5 +127,29 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+    }
+    fn admin_destroy_disputed_market(a: u32, b: u32, c: u32) -> Weight {
+        (0 as Weight)
+            // Standard Error: 22_000
+            .saturating_add((40_222_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 29_000
+            .saturating_add((49_451_000 as Weight).saturating_mul(c as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(c as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(b as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(c as Weight)))
+    }
+    fn admin_destroy_reported_market(a: u32, b: u32, c: u32) -> Weight {
+        (0 as Weight)
+            // Standard Error: 21_000
+            .saturating_add((40_426_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 28_000
+            .saturating_add((49_252_000 as Weight).saturating_mul(c as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(c as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(b as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(c as Weight)))
     }
 }

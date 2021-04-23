@@ -12,7 +12,7 @@ where
 {
     /// Destroy all storage items for a `currency_id`.
     fn destroy_all(currency_id: CurrencyIdOf<Self>) -> DispatchResult {
-        let accounts = Self::MultiCurrency::accounts_by_currency_id(currency_id);
+        let (_, accounts) = Self::MultiCurrency::accounts_by_currency_id(currency_id);
         Self::MultiCurrency::destroy_all(currency_id, accounts.iter().cloned());
         Ok(())
     }

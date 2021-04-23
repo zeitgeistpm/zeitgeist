@@ -116,26 +116,58 @@ mod pallet {
         ///
         /// todo: this should check if there's any outstanding funds reserved if it stays
         /// in for production
-        #[pallet::weight(T::WeightInfo::admin_destroy_market())]
+        #[pallet::weight(
+            T::WeightInfo::admin_destroy_reported_market(
+                80_000,
+                80_000,
+                T::MaxCategories::get() as u32
+            ).max(T::WeightInfo::admin_destroy_disputed_market(
+                80_000,
+                80_000,
+                T::MaxCategories::get() as u32
+            ))
+        )]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
+            let mut total_accounts = 0u32;
+            let mut share_accounts = 0usize;
             let market = Self::market_by_id(&market_id)?;
-
+            let market_status = market.status;
+            let outcome_assets = Self::outcome_assets(market_id, market);
+            let outcome_assets_amount = outcome_assets.len();
             Self::clear_auto_resolve(&market_id)?;
-
             <Markets<T>>::remove(&market_id);
 
             // Delete of this market's outcome assets.
-            for asset in Self::outcome_assets(market_id, market).iter() {
-                let accounts = T::Shares::accounts_by_currency_id(*asset);
+            for asset in outcome_assets.iter() {
+                let (accs, accounts) = T::Shares::accounts_by_currency_id(*asset);
+                total_accounts = accs;
+                share_accounts = share_accounts.saturating_add(accounts.len());
                 T::Shares::destroy_all(*asset, accounts.iter().cloned());
             }
 
-            Ok(())
+            // Weight correction
+            if market_status == MarketStatus::Reported {
+                return Ok(Some(T::WeightInfo::admin_destroy_reported_market(
+                    total_accounts,
+                    share_accounts.saturated_into(),
+                    outcome_assets_amount.saturated_into(),
+                ))
+                .into());
+            } else if market_status == MarketStatus::Disputed {
+                return Ok(Some(T::WeightInfo::admin_destroy_disputed_market(
+                    total_accounts,
+                    share_accounts.saturated_into(),
+                    outcome_assets_amount.saturated_into(),
+                ))
+                .into());
+            } else {
+                return Ok(None.into());
+            }
         }
 
         /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
@@ -1177,7 +1209,7 @@ mod pallet {
                             if index == *inner_index {
                                 continue;
                             }
-                            let accounts = T::Shares::accounts_by_currency_id(*asset);
+                            let (_, accounts) = T::Shares::accounts_by_currency_id(*asset);
                             T::Shares::destroy_all(*asset, accounts.iter().cloned());
                         }
                     }

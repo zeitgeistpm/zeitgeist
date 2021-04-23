@@ -77,9 +77,11 @@ fn create_close_and_report_market<T: Config>(
     Ok((caller, marketid))
 }
 
-fn generate_accounts_with_assets<T: Config>(num_total: u32, num_asset: u32, asset: Asset<T::MarketId>) 
-    -> Result<(), &'static str> 
-{
+fn generate_accounts_with_assets<T: Config>(
+    num_total: u32,
+    num_asset: u32,
+    asset: Asset<T::MarketId>,
+) -> Result<(), &'static str> {
     let min_liquidity: BalanceOf<T> = MIN_LIQUIDITY.saturated_into();
     let fake_asset = Asset::CategoricalOutcome::<T::MarketId>(u128::MAX.saturated_into(), 0);
     let mut mut_num_asset = num_asset;
