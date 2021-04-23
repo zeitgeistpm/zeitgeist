@@ -44,7 +44,6 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::*;
-use zrml_swaps_runtime_api::BalanceInfo;
 
 pub const DAYS: BlockNumber = HOURS * 24;
 pub const DOLLARS: Balance = BASE / 100; // 100_000_000
@@ -72,7 +71,6 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 pub type AdaptedBasicCurrency =
     orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
-pub type Balance = u128;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
@@ -566,9 +564,7 @@ impl_runtime_apis! {
             asset_in: Asset<MarketId>,
             asset_out: Asset<MarketId>,
         ) -> BalanceInfo<Balance> {
-            BalanceInfo {
-                amount: Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0),
-            }
+            BalanceInfo(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
         }
 
         fn pool_account_id(pool_id: u128) -> AccountId {

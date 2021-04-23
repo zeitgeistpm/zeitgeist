@@ -12,9 +12,9 @@ use sp_runtime::{
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
 };
 use std::sync::Arc;
-use zeitgeist_primitives::Asset;
+use zeitgeist_primitives::{Asset, BalanceInfo};
 
-pub use zrml_swaps_runtime_api::{BalanceInfo, SwapsApi as SwapsRuntimeApi};
+pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
 #[rpc]
 pub trait SwapsApi<BlockHash, PoolId, AccountId, Balance, BalanceType, MarketId>
