@@ -4,7 +4,9 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
+use sp_api::BlockId;
 use zeitgeist_primitives::{Asset, MarketId, BASE};
+use zrml_swaps_runtime_api::SwapsApi;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
@@ -28,6 +30,17 @@ const _99: u128 = 99 * BASE;
 const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
+
+#[test]
+fn rpc_serialization_deserialization_do_not_panic() {
+    ExtBuilder::default().build().execute_with(|| {
+        let runtime = Runtime;
+        let block_id = BlockId::Number(0);
+        let _ = runtime.get_spot_price(&block_id, 1, Asset::PoolShare(0), Asset::PoolShare(1));
+        let _ = runtime.pool_account_id(&block_id, 1);
+        let _ = runtime.pool_shares_id(&block_id, 1);
+    });
+}
 
 #[test]
 fn allows_the_full_user_lifecycle() {

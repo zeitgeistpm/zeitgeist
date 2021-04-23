@@ -9,7 +9,7 @@ use frame_support::dispatch::UnfilteredDispatchable;
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{Hash, SaturatedConversion};
+use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{Asset, BASE};
 
 // Generates ``asset_count`` assets
@@ -28,7 +28,7 @@ fn generate_assets<T: Config>(
     };
     // Generate MaxAssets assets and generate enough liquidity
     for i in 0..asset_count {
-        let asset = Asset::Share(T::Hashing::hash_of(&(i as u32)));
+        let asset = Asset::PoolShare(i as _);
         assets.push(asset.clone());
         T::Shares::deposit(asset, owner, asset_amount_unwrapped).unwrap();
     }

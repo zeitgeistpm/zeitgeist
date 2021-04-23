@@ -11412,11 +11412,13 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
+ "sp-api",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
+ "zrml-prediction-markets-runtime-api",
  "zrml-swaps",
 ]
 
@@ -11460,11 +11462,13 @@ dependencies = [
  "pallet-balances",
  "parity-scale-codec",
  "serde",
+ "sp-api",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
  "zeitgeist-primitives",
+ "zrml-swaps-runtime-api",
 ]
 
 [[package]]

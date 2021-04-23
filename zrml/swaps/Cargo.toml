@@ -18,6 +18,8 @@ pallet-balances = { optional = true, default-features = false, branch = "rococo-
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-api = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = "./rpc/runtime-api" }
 
 [features]
 default = ["std"]

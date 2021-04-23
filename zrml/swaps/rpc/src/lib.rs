@@ -1,25 +1,24 @@
 //! RPC interface for the Swaps pallet.
 
-use core::convert::TryFrom;
+use core::{fmt, str::FromStr};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use parity_scale_codec::Codec;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_core::U256;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
 };
 use std::sync::Arc;
-use zeitgeist_primitives::Asset;
+use zeitgeist_primitives::{Asset, BalanceInfo};
 
-pub use zrml_swaps_runtime_api::{BalanceInfo, SwapsApi as SwapsRuntimeApi};
+pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
 #[rpc]
-pub trait SwapsApi<BlockHash, PoolId, AccountId, Balance, BalanceType, MarketId>
+pub trait SwapsApi<BlockHash, PoolId, AccountId, Balance, MarketId>
 where
-    Balance: core::str::FromStr,
+    Balance: FromStr + fmt::Display,
 {
     #[rpc(name = "swaps_poolSharesId")]
     fn pool_shares_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<Asset<MarketId>>;
@@ -34,7 +33,7 @@ where
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
         at: Option<BlockHash>,
-    ) -> Result<BalanceType>;
+    ) -> Result<BalanceInfo<Balance>>;
 
     #[rpc(name = "swaps_getSpotPrices")]
     fn get_spot_prices(
@@ -43,7 +42,7 @@ where
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
         blocks: Vec<BlockHash>,
-    ) -> Result<Vec<BalanceType>>;
+    ) -> Result<Vec<BalanceInfo<Balance>>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -95,16 +94,14 @@ macro_rules! get_spot_price_rslt {
 }
 
 impl<C, Block, PoolId, AccountId, Balance, MarketId>
-    SwapsApi<<Block as BlockT>::Hash, PoolId, AccountId, Balance, BalanceInfo<Balance>, MarketId>
-    for Swaps<C, Block>
+    SwapsApi<<Block as BlockT>::Hash, PoolId, AccountId, Balance, MarketId> for Swaps<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
     C::Api: SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
     PoolId: Clone + Codec,
     AccountId: Codec,
-    Balance: Codec + MaybeDisplay + MaybeFromStr + TryFrom<U256>,
-    <Balance as TryFrom<U256>>::Error: core::fmt::Debug,
+    Balance: Codec + MaybeDisplay + MaybeFromStr,
     MarketId: Clone + Codec,
 {
     fn pool_shares_id(
