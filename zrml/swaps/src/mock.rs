@@ -7,8 +7,8 @@ use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-    MarketId, UncheckedExtrinsicTest, BASE,
+    AccountIdTest, Amount, Asset, Balance, BalanceInfo, BlockNumber, BlockTest, CurrencyId, Hash,
+    Index, MarketId, PoolId, UncheckedExtrinsicTest, BASE,
 };
 
 parameter_types! {
@@ -159,5 +159,27 @@ impl ExtBuilder {
         .unwrap();
 
         t.into()
+    }
+}
+
+sp_api::mock_impl_runtime_apis! {
+    impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, AccountIdTest, Balance, MarketId>
+      for Runtime
+    {
+        fn get_spot_price(
+            pool_id: u128,
+            asset_in: Asset<MarketId>,
+            asset_out: Asset<MarketId>,
+        ) -> BalanceInfo<Balance> {
+            BalanceInfo(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
+        }
+
+        fn pool_account_id(pool_id: u128) -> AccountIdTest {
+            Swaps::pool_account_id(pool_id)
+        }
+
+        fn pool_shares_id(pool_id: u128) -> Asset<MarketId> {
+            Swaps::pool_shares_id(pool_id)
+        }
     }
 }

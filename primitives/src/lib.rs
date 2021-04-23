@@ -3,11 +3,13 @@
 extern crate alloc;
 
 mod asset;
+mod balance_info;
 mod swaps;
 mod zeitgeist_currencies_extension;
 mod zeitgeist_multi_reservable_currency;
 
 pub use asset::*;
+pub use balance_info::BalanceInfo;
 use sp_runtime::{
     generic,
     traits::{IdentifyAccount, Verify},

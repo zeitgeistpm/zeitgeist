@@ -15,6 +15,8 @@ zrml-swaps = { default-features = false, path = "../swaps" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 serde = "1.0"
+sp-api = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+zrml-prediction-markets-runtime-api = { default-features = false, features = ["std"], path = "./rpc/runtime-api" }
 
 [features]
 default = ["std"]
