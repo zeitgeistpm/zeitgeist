@@ -9,7 +9,7 @@ sp-blockchain = { branch = "rococo-v1", default-features = false, git = "https:/
 sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
-zrml-swaps-runtime-api = { default-features = false, path = "runtime-api" }
+zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = "runtime-api" }
 
 [package]
 authors = ["Logan Saether <x@logansaether.com>"]

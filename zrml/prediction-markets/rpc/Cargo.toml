@@ -8,7 +8,7 @@ sp-api = { branch = "rococo-v1", default-features = false, git = "https://github
 sp-blockchain = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
-zrml-prediction-markets-runtime-api = { default-features = false, path = "runtime-api" }
+zrml-prediction-markets-runtime-api = { default-features = false, features = ["std"], path = "runtime-api" }
 
 [package]
 authors = ["Logan Saether <x@logansaether.com>"]

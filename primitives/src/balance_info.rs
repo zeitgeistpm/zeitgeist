@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-/// Used to workaround serde serialization/de-serialization problems involving `u128`.
+/// Used to workaround serde serialization/deserialization problems involving `u128`.
 ///
 /// # Types
 ///
