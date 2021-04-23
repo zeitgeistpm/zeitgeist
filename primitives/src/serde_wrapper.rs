@@ -6,10 +6,21 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// # Types
 ///
 /// * `B`: Balance
-#[derive(Default, Eq, PartialEq, parity_scale_codec::Decode, parity_scale_codec::Encode)]
-#[cfg_attr(feature = "std", derive(Debug, Serialize, Deserialize))]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct BalanceInfo<B>(
+pub struct SerdeWrapper<B>(
     #[cfg_attr(feature = "std", serde(bound(serialize = "B: std::fmt::Display")))]
     #[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
     #[cfg_attr(feature = "std", serde(bound(deserialize = "B: std::str::FromStr")))]

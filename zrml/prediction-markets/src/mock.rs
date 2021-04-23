@@ -14,7 +14,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-    MarketId, UncheckedExtrinsicTest, BASE,
+    MarketId, SerdeWrapper, UncheckedExtrinsicTest, BASE,
 };
 
 pub const ALICE: AccountIdTest = 0;
@@ -222,7 +222,7 @@ pub fn run_to_block(n: BlockNumber) {
 sp_api::mock_impl_runtime_apis! {
     impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<Block, MarketId, Hash> for Runtime {
         fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
-            Asset::PoolShare(1)
+            Asset::PoolShare(SerdeWrapper(1))
         }
     }
 }
