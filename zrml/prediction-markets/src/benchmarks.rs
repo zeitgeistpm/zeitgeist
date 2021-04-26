@@ -162,15 +162,15 @@ benchmarks! {
         let b in 0..10;
         // c = num. asset types
         let c in 0..T::MaxCategories::get() as u32;
-        // Complexity: O(c*a) + O(c*b)
+        // Complexity: c*a + c*b ∈ O(a)
 
+        let c_u16 = c.saturated_into();
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(c.saturated_into()),
-            Outcome::Categorical(0)
+            MarketType::Categorical(c_u16),
+            Outcome::Categorical(c_u16)
         )?;
-        let asset = Asset::CategoricalOutcome(marketid, 0);
-        let _ = generate_accounts_with_assets::<T>(a, b, Asset::CategoricalOutcome(marketid, 0))?;
+        let _ = generate_accounts_with_assets::<T>(a, b, Asset::CategoricalOutcome(marketid, c_u16 - 1))?;
 
         for i in 0..c.min(T::MaxDisputes::get() as u32) {
             let _ = Call::<T>::dispute(marketid, Outcome::Categorical(i.saturated_into()))
@@ -185,15 +185,15 @@ benchmarks! {
         let b in 0..10;
         // c = num. asset types
         let c in 0..T::MaxCategories::get() as u32;
-        // Complexity: O(c*a) + O(c*b)
+        // Complexity: c*a + c*b ∈ O(a)
 
+        let c_u16 = c.saturated_into();
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(c.saturated_into()),
-            Outcome::Categorical(0)
+            MarketType::Categorical(c_u16),
+            Outcome::Categorical(c_u16)
         )?;
-        let asset = Asset::CategoricalOutcome(marketid, 0);
-        let _ = generate_accounts_with_assets::<T>(a, b, Asset::CategoricalOutcome(marketid, 0))?;
+        let _ = generate_accounts_with_assets::<T>(a, b, Asset::CategoricalOutcome(marketid, c_u16 - 1))?;
     }: admin_destroy_market(RawOrigin::Root, marketid)
 
     admin_move_market_to_closed {

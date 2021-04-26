@@ -130,10 +130,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     fn admin_destroy_disputed_market(a: u32, b: u32, c: u32) -> Weight {
         (0 as Weight)
-            // Standard Error: 22_000
-            .saturating_add((40_222_000 as Weight).saturating_mul(a as Weight))
-            // Standard Error: 29_000
-            .saturating_add((49_451_000 as Weight).saturating_mul(c as Weight))
+            // Standard Error: 18_000
+            .saturating_add((57_623_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 18_000
+            .saturating_add((5_284_000 as Weight).saturating_mul(b as Weight))
+            // Standard Error: 24_000
+            .saturating_add((72_600_000 as Weight).saturating_mul(c as Weight))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(c as Weight)))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
@@ -142,10 +144,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     fn admin_destroy_reported_market(a: u32, b: u32, c: u32) -> Weight {
         (0 as Weight)
-            // Standard Error: 21_000
-            .saturating_add((40_426_000 as Weight).saturating_mul(a as Weight))
-            // Standard Error: 28_000
-            .saturating_add((49_252_000 as Weight).saturating_mul(c as Weight))
+            // Standard Error: 17_000
+            .saturating_add((57_590_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 17_000
+            .saturating_add((5_786_000 as Weight).saturating_mul(b as Weight))
+            // Standard Error: 22_000
+            .saturating_add((72_699_000 as Weight).saturating_mul(c as Weight))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(c as Weight)))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))

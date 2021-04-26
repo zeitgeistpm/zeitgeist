@@ -145,7 +145,11 @@ mod pallet {
             // Delete of this market's outcome assets.
             for asset in outcome_assets.iter() {
                 let (accs, accounts) = T::Shares::accounts_by_currency_id(*asset);
-                total_accounts = accs;
+
+                if total_accounts == 0 {
+                    total_accounts = accs;
+                }
+
                 share_accounts = share_accounts.saturating_add(accounts.len());
                 T::Shares::destroy_all(*asset, accounts.iter().cloned());
             }
@@ -517,7 +521,7 @@ mod pallet {
         ///
         /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
         ///
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(10_000_000)]
         pub fn global_dispute(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
             let _sender = ensure_signed(origin)?;
             let _market = Self::market_by_id(&market_id)?;
