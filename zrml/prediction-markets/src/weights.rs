@@ -55,6 +55,8 @@ pub trait WeightInfoZeitgeist {
     fn internal_resolve_scalar_reported() -> Weight;
     fn internal_resolve_scalar_disputed(d: u32) -> Weight;
     fn admin_move_market_to_resolved_overhead() -> Weight;
+    fn redeem_shares_categorical() -> Weight;
+    fn redeem_shares_scalar() -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -208,8 +210,18 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn admin_move_market_to_resolved_overhead() -> Weight {
-		(86_915_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
+        (86_915_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    fn redeem_shares_categorical() -> Weight {
+        (104_178_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(4 as Weight))
+            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+    }
+    fn redeem_shares_scalar() -> Weight {
+        (135_186_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes(5 as Weight))
+    }
 }

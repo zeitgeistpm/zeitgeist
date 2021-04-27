@@ -207,10 +207,11 @@ mod pallet {
         ////
         #[pallet::weight(T::WeightInfo::admin_move_market_to_resolved_overhead()
             .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
-            80_000,
-            80_000,
-            T::MaxCategories::get() as u32
-        )))]
+                80_000,
+                80_000,
+                T::MaxCategories::get() as u32
+            ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
+        ))]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -224,7 +225,12 @@ mod pallet {
             );
             Self::clear_auto_resolve(&market_id)?;
             let weight = Self::internal_resolve(&market_id)?;
-            Ok(Some(weight + T::WeightInfo::admin_move_market_to_resolved_overhead()).into())
+            Ok(Some(
+                weight
+                    .saturating_add(T::WeightInfo::admin_move_market_to_resolved_overhead())
+                    .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported()),
+            )
+            .into())
         }
 
         /// Approves a market that is waiting for approval from the
@@ -536,8 +542,13 @@ mod pallet {
 
         /// Redeems the winning shares of a prediction market.
         ///
-        #[pallet::weight(50_000_000)]
-        pub fn redeem_shares(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
+        #[pallet::weight(T::WeightInfo::redeem_shares_categorical()
+            .max(T::WeightInfo::redeem_shares_scalar())
+        )]
+        pub fn redeem_shares(
+            origin: OriginFor<T>,
+            market_id: T::MarketId,
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
@@ -639,7 +650,14 @@ mod pallet {
                 )?;
             }
 
-            Ok(())
+            // Weight correction
+            if let Outcome::Categorical(_) = resolved_outcome {
+                return Ok(Some(T::WeightInfo::redeem_shares_categorical()).into());
+            } else if let Outcome::Scalar(_) = resolved_outcome {
+                return Ok(Some(T::WeightInfo::redeem_shares_scalar()).into());
+            }
+
+            Ok(None.into())
         }
 
         /// Rejects a market that is waiting for approval from the advisory

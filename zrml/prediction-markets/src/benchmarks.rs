@@ -113,18 +113,17 @@ fn setup_resolve_common_categorical<T: Config>(
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories),
-        Outcome::Categorical(categories),
+        Outcome::Categorical(categories - 1),
     )?;
     let _ = generate_accounts_with_assets::<T>(
         acc_total,
         acc_asset,
         Asset::CategoricalOutcome(marketid, categories - 1),
     )?;
-
     Ok((caller, marketid))
 }
 
-// Setup a categorical market for fn `internal_resolve`
+// Setup a scalar market for fn `internal_resolve`
 fn setup_resolve_common_scalar<T: Config>(
     acc_total: u32,
     acc_asset: u32,
@@ -139,7 +138,36 @@ fn setup_resolve_common_scalar<T: Config>(
         acc_asset,
         Asset::ScalarOutcome(marketid, ScalarPosition::Long),
     )?;
+    Ok((caller, marketid))
+}
 
+// Setup a categorical market for fn `internal_resolve`
+fn setup_redeem_shares_common<T: Config>(
+    market_type: MarketType,
+) -> Result<(T::AccountId, T::MarketId), &'static str> {
+    let (caller, marketid) =
+        create_market_common::<T>(MarketCreation::Permissionless, market_type.clone())?;
+    let outcome: Outcome;
+
+    if let MarketType::Categorical(categories) = market_type {
+        outcome = Outcome::Categorical(categories - 1);
+    } else if let MarketType::Scalar(range) = market_type {
+        outcome = Outcome::Scalar(range.1);
+    } else {
+        panic!(
+            "setup_redeem_shares_common: Unsupported market type: {:?}",
+            market_type
+        );
+    }
+
+    let _ =
+        Pallet::<T>::do_buy_complete_set(caller.clone(), marketid, MIN_LIQUIDITY.saturated_into())?;
+    let _ = Call::<T>::admin_move_market_to_closed(marketid)
+        .dispatch_bypass_filter(RawOrigin::Root.into())?;
+    let _ = Call::<T>::report(marketid, outcome)
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    let _ = Call::<T>::admin_move_market_to_resolved(marketid)
+        .dispatch_bypass_filter(RawOrigin::Root.into())?;
     Ok((caller, marketid))
 }
 
@@ -266,7 +294,11 @@ benchmarks! {
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into())
         )?;
-        let _ = Pallet::<T>::do_buy_complete_set(caller.clone(), marketid, MIN_LIQUIDITY.saturated_into())?;
+        let _ = Pallet::<T>::do_buy_complete_set(
+            caller.clone(),
+            marketid,
+            MIN_LIQUIDITY.saturated_into()
+        )?;
         let weights = vec![MIN_WEIGHT; (a + 1) as usize];
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
@@ -307,22 +339,17 @@ benchmarks! {
     }: { Pallet::<T>::internal_resolve(&marketid)? }
 
     internal_resolve_scalar_reported {
-        // a = total accounts
-        let a = 10u32;
-        // b = num. accounts with assets
-        let b = 10u32;
-        let (_, marketid) = setup_resolve_common_scalar::<T>(a, b)?;
+        let total_accounts = 10u32;
+        let asset_accounts = 10u32;
+        let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
     }: { Pallet::<T>::internal_resolve(&marketid)? }
 
     internal_resolve_scalar_disputed {
-        // a = total accounts
-        let a = 10u32;
-        // b = num. accounts with assets
-        let b = 10u32;
-        // d = num. disputes
+        let total_accounts = 10u32;
+        let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get() as u32;
 
-        let (caller, marketid) = setup_resolve_common_scalar::<T>(a, b)?;
+        let (caller, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d.into() {
             let _ = Call::<T>::dispute(marketid, Outcome::Scalar(i))
@@ -335,41 +362,22 @@ benchmarks! {
     // is the resulting weight from this benchmark minus the weight for
     // fn `internal_resolve` of a reported and non-disputed scalar market.
     admin_move_market_to_resolved_overhead {
-        // a = total accounts
-        let a = 10u32;
-        // b = num. accounts with assets
-        let b = 10u32;
-        let (_, marketid) = setup_resolve_common_scalar::<T>(a, b)?;
+        let total_accounts = 10u32;
+        let asset_accounts = 10u32;
+        let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
     }: admin_move_market_to_resolved(RawOrigin::Root, marketid)
 
-    /*
     redeem_shares_categorical {
-        let (caller, marketid) = create_market_common::<T>(
-            MarketCreation::Permissionless,
+        let (caller, marketid) = setup_redeem_shares_common::<T>(
             MarketType::Categorical(T::MaxCategories::get())
-        );
-        let signed_call = RawOrigin::Signed(caller);
-        Call::<T>::admin_move_market_to_closed(marketid)
-            .dispatch_bypass_filter(RawOrigin::Root.into())?;
-        Call::<T>::report(marketid, Outcome::Categorical(0))
-            .dispatch_bypass_filter(signed_call.clone().into())?;
-        // TODO: Resolve
-    }: redeem_shares(signed_call, marketid)
-
+        )?;
+    }: redeem_shares(RawOrigin::Signed(caller), marketid)
 
     redeem_shares_scalar {
-        let (caller, marketid) = create_market_common::<T>(
-            MarketCreation::Permissionless,
+        let (caller, marketid) = setup_redeem_shares_common::<T>(
             MarketType::Scalar((0u128, u128::MAX))
-        );
-        let signed_call = RawOrigin::Signed(caller);
-        Call::<T>::admin_move_market_to_closed(marketid)
-            .dispatch_bypass_filter(RawOrigin::Root.into())?;
-        Call::<T>::report(marketid, Outcome::Scalar(42))
-            .dispatch_bypass_filter(signed_call.clone().into())?;
-        // TODO: Resolve
-    }: redeem_shares(signed_call, marketid)
-    */
+        )?;
+    }: redeem_shares(RawOrigin::Signed(caller), marketid)
 }
 
 impl_benchmark_test_suite!(
