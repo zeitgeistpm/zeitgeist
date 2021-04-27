@@ -920,13 +920,13 @@ mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        /// The finalize function will move all reported markets to resolved.
+        /// The initialize function will move all reported markets to resolved.
         ///
         /// Disputed markets need to be resolved manually.
-        fn on_finalize(now: T::BlockNumber) {
+        fn on_initialize(now: T::BlockNumber) -> Weight {
             let dispute_period = T::DisputePeriod::get();
             if now <= dispute_period {
-                return;
+                return 1_000_000;
             }
 
             // Resolve all regularly reported markets.
@@ -949,6 +949,8 @@ mod pallet {
                     Self::internal_resolve(id).expect("Internal resolve failed");
                 });
             }
+
+            return 50_000_000;
         }
     }
 
@@ -1117,7 +1119,7 @@ mod pallet {
         /// In the function calling this you should that the market is already in a reported or
         /// disputed state.
         ///
-        fn internal_resolve(market_id: &T::MarketId) -> DispatchResult {
+        pub(crate) fn internal_resolve(market_id: &T::MarketId) -> DispatchResult {
             let market = Self::market_by_id(market_id)?;
             let report = market.report.clone().ok_or_else(|| NO_REPORT)?;
 
