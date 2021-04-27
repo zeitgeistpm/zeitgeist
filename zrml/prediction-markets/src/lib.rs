@@ -176,6 +176,7 @@ mod pallet {
 
         /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
         ///
+
         #[pallet::weight(T::WeightInfo::admin_move_market_to_closed())]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -204,11 +205,16 @@ mod pallet {
         /// Allows the `ApprovalOrigin` to immediately move a reported or disputed
         /// market to resolved.
         ////
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(T::WeightInfo::admin_move_market_to_resolved_overhead()
+            .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
+            80_000,
+            80_000,
+            T::MaxCategories::get() as u32
+        )))]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
             market_id: T::MarketId,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
@@ -217,9 +223,8 @@ mod pallet {
                 "not reported nor disputed"
             );
             Self::clear_auto_resolve(&market_id)?;
-
-            Self::internal_resolve(&market_id)?;
-            Ok(())
+            let weight = Self::internal_resolve(&market_id)?;
+            Ok(Some(weight + T::WeightInfo::admin_move_market_to_resolved_overhead()).into())
         }
 
         /// Approves a market that is waiting for approval from the

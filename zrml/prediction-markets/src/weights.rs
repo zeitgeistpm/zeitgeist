@@ -54,6 +54,7 @@ pub trait WeightInfoZeitgeist {
     fn internal_resolve_categorical_disputed(a: u32, b: u32, c: u32, d: u32) -> Weight;
     fn internal_resolve_scalar_reported() -> Weight;
     fn internal_resolve_scalar_disputed(d: u32) -> Weight;
+    fn admin_move_market_to_resolved_overhead() -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -206,4 +207,9 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
+    fn admin_move_market_to_resolved_overhead() -> Weight {
+		(86_915_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
 }
