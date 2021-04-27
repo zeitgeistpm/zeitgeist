@@ -34,12 +34,12 @@ use parachain_params::*;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
-    create_runtime_str, generic, impl_opaque_keys,
+    create_runtime_str, generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill,
 };
-use sp_std::prelude::*;
+use sp_std::{boxed::Box, vec::Vec};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -65,6 +65,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
+const EXISTENTIAL_DEPOSIT: Balance = 100 * CENTS;
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
@@ -100,7 +101,7 @@ parameter_types! {
   pub const DisputeBond: Balance = 5 * BASE;
   pub const DisputeFactor: Balance = 2 * BASE;
   pub const DisputePeriod: BlockNumber = DAYS;
-  pub const ExistentialDeposit: u128 = 500;
+  pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const ExitFee: Balance = 0;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
   pub const MaxAssets: usize = 9;
@@ -117,9 +118,9 @@ parameter_types! {
   pub const OracleBond: Balance = 50 * DOLLARS;
   pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
   pub const ReportingPeriod: BlockNumber = DAYS;
-  pub const SS58Prefix: u8 = 42;
+  pub const SS58Prefix: u8 = 73;
   pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
-  pub const TransactionByteFee: Balance = 1;
+  pub const TransactionByteFee: Balance = 1 * MILLICENTS;
   pub const ValidityBond: Balance = 50 * DOLLARS;
   pub const Version: RuntimeVersion = VERSION;
   pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
@@ -181,7 +182,6 @@ create_zeitgeist_runtime!(
     ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>},
     PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet},
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage},
-
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
