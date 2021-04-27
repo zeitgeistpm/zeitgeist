@@ -19,6 +19,8 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{Asset, ScalarPosition, BASE, MIN_LIQUIDITY, MIN_WEIGHT};
 
+// Get default values for market creation. Also spawns an account with maximum
+// amount of native currency
 fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
 ) -> Result<
@@ -40,6 +42,7 @@ fn create_market_common_parameters<T: Config>(
     Ok((caller, oracle, end, metadata, creation))
 }
 
+// Create a market based on common parameters
 fn create_market_common<T: Config>(
     permission: MarketCreation,
     options: MarketType,
@@ -77,6 +80,7 @@ fn create_close_and_report_market<T: Config>(
     Ok((caller, marketid))
 }
 
+// Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
 fn generate_accounts_with_assets<T: Config>(
     acc_total: u32,
     acc_asset: u32,
@@ -100,6 +104,7 @@ fn generate_accounts_with_assets<T: Config>(
     Ok(())
 }
 
+// Setup a categorical market for fn `internal_resolve`
 fn setup_resolve_common_categorical<T: Config>(
     acc_total: u32,
     acc_asset: u32,
@@ -119,6 +124,7 @@ fn setup_resolve_common_categorical<T: Config>(
     Ok((caller, marketid))
 }
 
+// Setup a categorical market for fn `internal_resolve`
 fn setup_resolve_common_scalar<T: Config>(
     acc_total: u32,
     acc_asset: u32,
@@ -264,7 +270,7 @@ benchmarks! {
         let weights = vec![MIN_WEIGHT; (a + 1) as usize];
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
-    // This benchmark measures the cost of on_initialize minus the resolution.
+    // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
         let starting_block = frame_system::Pallet::<T>::block_number() + T::DisputePeriod::get();
     }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
@@ -323,6 +329,18 @@ benchmarks! {
                 .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         }
     }: { Pallet::<T>::internal_resolve(&marketid)? }
+
+    // This benchmark measures the cost of fn `admin_move_market_to_resolved`
+    // and assumes a scalar market is used. The default cost for this function
+    // is the resulting weight from this benchmark minus the weight for
+    // fn `internal_resolve` of a reported and non-disputed scalar market.
+    admin_move_market_to_resolved_overhead {
+        // a = total accounts
+        let a = 10u32;
+        // b = num. accounts with assets
+        let b = 10u32;
+        let (_, marketid) = setup_resolve_common_scalar::<T>(a, b)?;
+    }: admin_move_market_to_resolved(RawOrigin::Root, marketid)
 
     /*
     redeem_shares_categorical {
