@@ -126,6 +126,29 @@ pub fn run() -> sc_cli::Result<()> {
         }
         #[cfg(not(feature = "parachain"))]
         Some(Subcommand::Key(cmd)) => cmd.run(&cli),
+        #[cfg(feature = "parachain")]
+        Some(Subcommand::PurgeChain(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+
+            runner.sync_run(|config| {
+                let polkadot_cli = crate::cli::RelayChainCli::new(
+                    &config,
+                    [crate::cli::RelayChainCli::executable_name().to_string()]
+                        .iter()
+                        .chain(cli.relaychain_args.iter()),
+                );
+
+                let polkadot_config = SubstrateCli::create_configuration(
+                    &polkadot_cli,
+                    &polkadot_cli,
+                    config.task_executor.clone(),
+                )
+                .map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+                cmd.run(config, polkadot_config)
+            })
+        }
+        #[cfg(not(feature = "parachain"))]
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.database))
@@ -163,20 +186,22 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     runner.run_node_until_exit(|config| async move {
         let key = sp_core::Pair::generate().0;
 
-        let extension = crate::chain_spec::Extensions::try_get(&*config.chain_spec);
-        let relay_chain_id = extension.map(|e| e.relay_chain.clone());
-        let para_id = extension.map(|e| e.para_id);
+        let para_id =
+            crate::chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
         let polkadot_cli = crate::cli::RelayChainCli::new(
-            config.base_path.as_ref().map(|x| x.path().join("polkadot")),
-            relay_chain_id,
+            &config,
             [crate::cli::RelayChainCli::executable_name().to_string()]
                 .iter()
                 .chain(cli.relaychain_args.iter()),
         );
 
-        let id =
-            cumulus_primitives_core::ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(200));
+        let id = cumulus_primitives_core::ParaId::from(
+            cli.run
+                .parachain_id
+                .or(para_id)
+                .unwrap_or(crate::DEFAULT_PARACHAIN_ID),
+        );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<
             polkadot_primitives::v0::AccountId,

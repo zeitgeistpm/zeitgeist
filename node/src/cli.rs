@@ -51,6 +51,11 @@ pub enum Subcommand {
     /// Key management cli utilities
     Key(sc_cli::KeySubcommand),
 
+    #[cfg(feature = "parachain")]
+    /// Remove the whole chain.
+    PurgeChain(cumulus_client_cli::PurgeChainCmd),
+
+    #[cfg(not(feature = "parachain"))]
     /// Remove the whole chain.
     PurgeChain(sc_cli::PurgeChainCmd),
 
@@ -59,6 +64,11 @@ pub enum Subcommand {
 }
 
 #[derive(Debug, structopt::StructOpt)]
+#[structopt(settings = &[
+	structopt::clap::AppSettings::GlobalVersion,
+	structopt::clap::AppSettings::ArgsNegateSubcommands,
+	structopt::clap::AppSettings::SubcommandsNegateReqs,
+])]
 pub struct Cli {
     #[structopt(flatten)]
     pub run: RunCmd,
@@ -104,7 +114,10 @@ impl SubstrateCli for Cli {
         load_spec(
             id,
             #[cfg(feature = "parachain")]
-            self.run.parachain_id.unwrap_or(200).into(),
+            self.run
+                .parachain_id
+                .unwrap_or(crate::DEFAULT_PARACHAIN_ID)
+                .into(),
         )
     }
 
