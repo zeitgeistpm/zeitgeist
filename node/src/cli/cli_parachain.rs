@@ -19,7 +19,7 @@ pub struct RelayChainCli {
 }
 
 impl RelayChainCli {
-    /// Parse the relay chain CLI parameters using the para chain `Configuration`.
+    /// Parse the relay chain CLI parameters using the parachain `Configuration`.
     pub fn new<'a>(
         para_config: &sc_service::Configuration,
         relay_chain_args: impl Iterator<Item = &'a String>,
