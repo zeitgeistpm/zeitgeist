@@ -100,7 +100,7 @@ mod pallet {
             AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, One,
             Zero,
         },
-        DispatchResult, SaturatedConversion,
+        DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{Asset, ScalarPosition, Swaps, ZeitgeistMultiReservableCurrency};
 
@@ -930,6 +930,7 @@ mod pallet {
             }
 
             // Resolve all regularly reported markets.
+            let mut total_weight: Weight = 0;
             let market_ids = Self::market_ids_per_report_block(now - dispute_period);
             if !market_ids.is_empty() {
                 market_ids.iter().for_each(|id| {
@@ -937,7 +938,8 @@ mod pallet {
                         Self::markets(id).expect("Market stored in report block does not exist");
                     if market.status != MarketStatus::Reported {
                     } else {
-                        Self::internal_resolve(id).expect("Internal resolve failed");
+                        let weight = Self::internal_resolve(id).expect("Internal resolve failed");
+                        total_weight = total_weight.saturating_add(weight);
                     }
                 });
             }
@@ -946,11 +948,12 @@ mod pallet {
             let disputed = Self::market_ids_per_dispute_block(now - dispute_period);
             if !disputed.is_empty() {
                 disputed.iter().for_each(|id| {
-                    Self::internal_resolve(id).expect("Internal resolve failed");
+                    let weight = Self::internal_resolve(id).expect("Internal resolve failed");
+                    total_weight = total_weight.saturating_add(weight);
                 });
             }
 
-            return 50_000_000;
+            return total_weight;
         }
     }
 
@@ -1119,9 +1122,13 @@ mod pallet {
         /// In the function calling this you should that the market is already in a reported or
         /// disputed state.
         ///
-        pub(crate) fn internal_resolve(market_id: &T::MarketId) -> DispatchResult {
+        pub(crate) fn internal_resolve(market_id: &T::MarketId) -> Result<Weight, DispatchError> {
             let market = Self::market_by_id(market_id)?;
             let report = market.report.clone().ok_or_else(|| NO_REPORT)?;
+            let mut total_accounts = 0u32;
+            let mut total_asset_accounts = 0u32;
+            let mut total_categories = 0u32;
+            let mut total_disputes = 0u32;
 
             // if the market was permissionless and not invalid, return `ValidityBond`.
             // if market.creation == MarketCreation::Permissionless {
@@ -1148,6 +1155,7 @@ mod pallet {
                 _ => panic!("Cannot happen"),
             };
 
+            let market_status = market.status;
             match market.status {
                 MarketStatus::Reported => {
                     // the oracle bond gets returned if the reporter was the oracle
@@ -1164,6 +1172,7 @@ mod pallet {
                 MarketStatus::Disputed => {
                     let disputes = Self::disputes(market_id.clone());
                     let num_disputes = disputes.len() as u16;
+                    total_disputes = num_disputes.into();
 
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
@@ -1207,15 +1216,24 @@ mod pallet {
                 _ => (),
             };
 
+            let market_type = market.market_type.clone();
             if let MarketType::Categorical(_) = market.market_type {
                 if let Outcome::Categorical(index) = resolved_outcome {
                     let assets = Self::outcome_assets(*market_id, market);
+                    total_categories = assets.len().saturated_into();
                     for asset in assets.iter() {
                         if let Asset::CategoricalOutcome(_, inner_index) = asset {
                             if index == *inner_index {
                                 continue;
                             }
-                            let (_, accounts) = T::Shares::accounts_by_currency_id(*asset);
+
+                            let (total_accs, accounts) = T::Shares::accounts_by_currency_id(*asset);
+                            if total_accounts == 0 {
+                                total_accounts = total_accs;
+                            }
+
+                            total_asset_accounts = total_asset_accounts
+                                .saturating_add(accounts.len().saturated_into());
                             T::Shares::destroy_all(*asset, accounts.iter().cloned());
                         }
                     }
@@ -1227,7 +1245,32 @@ mod pallet {
                 m.as_mut().unwrap().resolved_outcome = Some(resolved_outcome);
             });
 
-            Ok(())
+            // Calculate required weight
+            // MUST be updated when new market types are added.
+            if let MarketType::Categorical(_) = market_type {
+                if let MarketStatus::Reported = market_status {
+                    return Ok(T::WeightInfo::internal_resolve_categorical_reported(
+                        total_accounts,
+                        total_asset_accounts,
+                        total_categories,
+                    ));
+                } else {
+                    return Ok(T::WeightInfo::internal_resolve_categorical_disputed(
+                        total_accounts,
+                        total_asset_accounts,
+                        total_categories,
+                        total_disputes,
+                    ));
+                }
+            } else {
+                if let MarketStatus::Reported = market_status {
+                    return Ok(T::WeightInfo::internal_resolve_scalar_reported());
+                } else {
+                    return Ok(T::WeightInfo::internal_resolve_scalar_disputed(
+                        total_disputes,
+                    ));
+                }
+            }
         }
 
         fn is_market_active(end: MarketEnd<T::BlockNumber>) -> bool {

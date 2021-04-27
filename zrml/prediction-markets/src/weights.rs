@@ -49,6 +49,11 @@ pub trait WeightInfoZeitgeist {
     fn deploy_swap_pool_for_market(a: u32) -> Weight;
     fn admin_destroy_disputed_market(a: u32, b: u32, c: u32) -> Weight;
     fn admin_destroy_reported_market(a: u32, b: u32, c: u32) -> Weight;
+    fn on_initialize_resolve_overhead() -> Weight;
+    fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight;
+    fn internal_resolve_categorical_disputed(a: u32, b: u32, c: u32, d: u32) -> Weight;
+    fn internal_resolve_scalar_reported() -> Weight;
+    fn internal_resolve_scalar_disputed(d: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -155,5 +160,50 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(b as Weight)))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(c as Weight)))
+    }
+    fn on_initialize_resolve_overhead() -> Weight {
+        (8_557_000 as Weight).saturating_add(T::DbWeight::get().reads(2 as Weight))
+    }
+    fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight {
+        (0 as Weight)
+            // Standard Error: 18_000
+            .saturating_add((57_905_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 18_000
+            .saturating_add((5_832_000 as Weight).saturating_mul(b as Weight))
+            // Standard Error: 24_000
+            .saturating_add((73_662_000 as Weight).saturating_mul(c as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(c as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(b as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(c as Weight)))
+    }
+    fn internal_resolve_categorical_disputed(a: u32, b: u32, c: u32, d: u32) -> Weight {
+        (0 as Weight)
+            // Standard Error: 14_000
+            .saturating_add((49_617_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 14_000
+            .saturating_add((4_248_000 as Weight).saturating_mul(b as Weight))
+            // Standard Error: 19_000
+            .saturating_add((85_021_000 as Weight).saturating_mul(c as Weight))
+            // Standard Error: 27_000
+            .saturating_add((10_665_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(c as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(b as Weight)))
+            .saturating_add(T::DbWeight::get().writes((3 as Weight).saturating_mul(c as Weight)))
+    }
+    fn internal_resolve_scalar_reported() -> Weight {
+        (67_388_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn internal_resolve_scalar_disputed(d: u32) -> Weight {
+        (82_488_000 as Weight)
+            // Standard Error: 25_000
+            .saturating_add((14_706_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
