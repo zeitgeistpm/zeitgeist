@@ -19,12 +19,17 @@ pub struct RelayChainCli {
 }
 
 impl RelayChainCli {
-    /// Create a new instance of `Self`.
+    /// Parse the relay chain CLI parameters using the parachain `Configuration`.
     pub fn new<'a>(
-        base_path: Option<PathBuf>,
-        chain_id: Option<String>,
+        para_config: &sc_service::Configuration,
         relay_chain_args: impl Iterator<Item = &'a String>,
     ) -> Self {
+        let extension = crate::chain_spec::Extensions::try_get(&*para_config.chain_spec);
+        let chain_id = extension.map(|e| e.relay_chain.clone());
+        let base_path = para_config
+            .base_path
+            .as_ref()
+            .map(|x| x.path().join("polkadot"));
         Self {
             base_path,
             chain_id,
@@ -207,7 +212,8 @@ pub struct ExportGenesisStateCommand {
     pub output: Option<PathBuf>,
 
     /// Id of the parachain this state is for.
-    #[structopt(long, default_value = "200")]
+    // Sync with crate::DEFAULT_PARACHAIN_ID
+    #[structopt(long, default_value = "9123")]
     pub parachain_id: u32,
 
     /// Write output in binary. Default is to write in hex.
