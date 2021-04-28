@@ -37,10 +37,11 @@ pub use pallet::{Config, Error, Event, Pallet};
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{Order, OrderSide, weights::*,};
+    use crate::{weights::*, Order, OrderSide};
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{
+        dispatch::{DispatchResult, DispatchResultWithPostInfo},
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{
@@ -51,10 +52,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::Encode;
-    use sp_runtime::{
-        traits::{AtLeast32Bit, Hash, MaybeSerializeDeserialize, Member, Zero},
-        DispatchResult,
-    };
+    use sp_runtime::traits::{AtLeast32Bit, Hash, MaybeSerializeDeserialize, Member, Zero};
     use zeitgeist_primitives::Asset;
 
     pub(crate) type BalanceOf<T> =
@@ -148,23 +146,23 @@ mod pallet {
             Ok(())
         }
 
-<<<<<<< HEAD
-        #[pallet::weight(50_000_000)]
-=======
-        #[pallet::weight(T::WeightInfo::make_order())]
->>>>>>> Add weight: make_order
+        #[pallet::weight(
+            T::WeightInfo::make_order_bid()
+            .max(T::WeightInfo::make_order_ask())
+        )]
         pub fn make_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
             side: OrderSide,
             amount: BalanceOf<T>,
             price: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
             // Only store nonce in memory for now.
             let nonce = <Nonce<T>>::get();
             let hash = Self::order_hash(&sender, asset.clone(), nonce);
+            let mut bid = true;
 
             // Love the smell of fresh orders in the morning.
             let order = Order {
@@ -203,13 +201,19 @@ mod pallet {
                     });
 
                     T::Shares::reserve(asset, &sender, amount)?;
+                    bid = false;
                 }
             }
 
             <OrderData<T>>::insert(hash, Some(order));
             <Nonce<T>>::mutate(|n| *n += 1);
             Self::deposit_event(Event::OrderMade(sender, hash));
-            Ok(())
+
+            if bid {
+                Ok(Some(T::WeightInfo::make_order_bid()).into())
+            } else {
+                Ok(Some(T::WeightInfo::make_order_ask()).into())
+            }
         }
     }
 
