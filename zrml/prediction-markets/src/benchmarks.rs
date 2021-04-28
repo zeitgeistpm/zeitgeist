@@ -123,24 +123,6 @@ fn setup_resolve_common_categorical<T: Config>(
     Ok((caller, marketid))
 }
 
-// Setup a scalar market for fn `internal_resolve`
-fn setup_resolve_common_scalar<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-) -> Result<(T::AccountId, T::MarketId), &'static str> {
-    let (caller, marketid) = create_close_and_report_market::<T>(
-        MarketCreation::Permissionless,
-        MarketType::Scalar((0u128, u128::MAX)),
-        Outcome::Scalar(u128::MAX),
-    )?;
-    let _ = generate_accounts_with_assets::<T>(
-        acc_total,
-        acc_asset,
-        Asset::ScalarOutcome(marketid, ScalarPosition::Long),
-    )?;
-    Ok((caller, marketid))
-}
-
 // Setup a categorical market for fn `internal_resolve`
 fn setup_redeem_shares_common<T: Config>(
     market_type: MarketType,
@@ -171,60 +153,25 @@ fn setup_redeem_shares_common<T: Config>(
     Ok((caller, marketid))
 }
 
+// Setup a scalar market for fn `internal_resolve`
+fn setup_resolve_common_scalar<T: Config>(
+    acc_total: u32,
+    acc_asset: u32,
+) -> Result<(T::AccountId, T::MarketId), &'static str> {
+    let (caller, marketid) = create_close_and_report_market::<T>(
+        MarketCreation::Permissionless,
+        MarketType::Scalar((0u128, u128::MAX)),
+        Outcome::Scalar(u128::MAX),
+    )?;
+    let _ = generate_accounts_with_assets::<T>(
+        acc_total,
+        acc_asset,
+        Asset::ScalarOutcome(marketid, ScalarPosition::Long),
+    )?;
+    Ok((caller, marketid))
+}
+
 benchmarks! {
-    create_categorical_market {
-        let (caller, oracle, end, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-        let categories = T::MaxCategories::get();
-    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, categories)
-
-    create_scalar_market {
-        let (caller, oracle, end, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-        let outcome_range = (0u128, u128::MAX);
-    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, outcome_range)
-
-    approve_market {
-        let (_, marketid) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get())
-        )?;
-    }: _(RawOrigin::Root, marketid)
-
-    reject_market {
-        let (_, marketid) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get())
-        )?;
-    }: _(RawOrigin::Root, marketid)
-
-    cancel_pending_market {
-        let (caller, marketid) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get())
-        )?;
-    }: _(RawOrigin::Signed(caller), marketid)
-
-    buy_complete_set {
-        let a in 0..T::MaxCategories::get() as u32;
-        let (caller, marketid) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(a.saturated_into())
-        )?;
-        let amount = BASE * 1_000;
-    }: _(RawOrigin::Signed(caller), marketid, amount.saturated_into())
-
-    sell_complete_set {
-        let a in 0..T::MaxCategories::get() as u32;
-        let (caller, marketid) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(a.saturated_into())
-        )?;
-        let amount: BalanceOf<T> = (BASE * 1_000).saturated_into();
-        let _ = Call::<T>::buy_complete_set(marketid, amount)
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    }: _(RawOrigin::Signed(caller), marketid, amount)
-
     admin_destroy_disputed_market{
         // a = total accounts
         let a in 0..10;
@@ -264,29 +211,50 @@ benchmarks! {
         )?;
     }: _(RawOrigin::Root, marketid)
 
-    report {
-        let (caller, marketid) = create_market_common::<T>(
-            MarketCreation::Permissionless,
+    // This benchmark measures the cost of fn `admin_move_market_to_resolved`
+    // and assumes a scalar market is used. The default cost for this function
+    // is the resulting weight from this benchmark minus the weight for
+    // fn `internal_resolve` of a reported and non-disputed scalar market.
+    admin_move_market_to_resolved_overhead {
+        let total_accounts = 10u32;
+        let asset_accounts = 10u32;
+        let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
+    }: admin_move_market_to_resolved(RawOrigin::Root, marketid)
+
+    approve_market {
+        let (_, marketid) = create_market_common::<T>(
+            MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get())
         )?;
-        let outcome = Outcome::Categorical(0);
-        let _ = Call::<T>::admin_move_market_to_closed(marketid)
-            .dispatch_bypass_filter(RawOrigin::Root.into())?;
-    }: _(RawOrigin::Signed(caller), marketid, outcome)
+    }: _(RawOrigin::Root, marketid)
 
-    dispute {
-        let a in 0..(T::MaxDisputes::get() - 1) as u32;
-        let (caller, marketid) = create_close_and_report_market::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Scalar((0u128, u128::MAX)),
-            Outcome::Scalar(42)
+    buy_complete_set {
+        let a in 0..T::MaxCategories::get() as u32;
+        let (caller, marketid) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(a.saturated_into())
         )?;
+        let amount = BASE * 1_000;
+    }: _(RawOrigin::Signed(caller), marketid, amount.saturated_into())
 
-        for i in 0..a as u128 {
-            let _ = Call::<T>::dispute(marketid, Outcome::Scalar(i))
-                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-        }
-    }: _(RawOrigin::Signed(caller), marketid, Outcome::Scalar((a + 1) as u128))
+    cancel_pending_market {
+        let (caller, marketid) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(T::MaxCategories::get())
+        )?;
+    }: _(RawOrigin::Signed(caller), marketid)
+
+    create_categorical_market {
+        let (caller, oracle, end, metadata, creation) =
+            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
+        let categories = T::MaxCategories::get();
+    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, categories)
+
+    create_scalar_market {
+        let (caller, oracle, end, metadata, creation) =
+            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
+        let outcome_range = (0u128, u128::MAX);
+    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, outcome_range)
 
     deploy_swap_pool_for_market {
         let a in 0..T::MaxCategories::get() as u32;
@@ -302,10 +270,19 @@ benchmarks! {
         let weights = vec![MIN_WEIGHT; (a + 1) as usize];
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
-    // This benchmark measures the cost of fn `on_initialize` minus the resolution.
-    on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + T::DisputePeriod::get();
-    }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
+    dispute {
+        let a in 0..(T::MaxDisputes::get() - 1) as u32;
+        let (caller, marketid) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar((0u128, u128::MAX)),
+            Outcome::Scalar(42)
+        )?;
+
+        for i in 0..a as u128 {
+            let _ = Call::<T>::dispute(marketid, Outcome::Scalar(i))
+                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        }
+    }: _(RawOrigin::Signed(caller), marketid, Outcome::Scalar((a + 1) as u128))
 
     internal_resolve_categorical_reported {
         // a = total accounts
@@ -357,15 +334,10 @@ benchmarks! {
         }
     }: { Pallet::<T>::internal_resolve(&marketid)? }
 
-    // This benchmark measures the cost of fn `admin_move_market_to_resolved`
-    // and assumes a scalar market is used. The default cost for this function
-    // is the resulting weight from this benchmark minus the weight for
-    // fn `internal_resolve` of a reported and non-disputed scalar market.
-    admin_move_market_to_resolved_overhead {
-        let total_accounts = 10u32;
-        let asset_accounts = 10u32;
-        let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
-    }: admin_move_market_to_resolved(RawOrigin::Root, marketid)
+    // This benchmark measures the cost of fn `on_initialize` minus the resolution.
+    on_initialize_resolve_overhead {
+        let starting_block = frame_system::Pallet::<T>::block_number() + T::DisputePeriod::get();
+    }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
 
     redeem_shares_categorical {
         let (caller, marketid) = setup_redeem_shares_common::<T>(
@@ -378,6 +350,34 @@ benchmarks! {
             MarketType::Scalar((0u128, u128::MAX))
         )?;
     }: redeem_shares(RawOrigin::Signed(caller), marketid)
+
+    reject_market {
+        let (_, marketid) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(T::MaxCategories::get())
+        )?;
+    }: _(RawOrigin::Root, marketid)
+
+    report {
+        let (caller, marketid) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(T::MaxCategories::get())
+        )?;
+        let outcome = Outcome::Categorical(0);
+        let _ = Call::<T>::admin_move_market_to_closed(marketid)
+            .dispatch_bypass_filter(RawOrigin::Root.into())?;
+    }: _(RawOrigin::Signed(caller), marketid, outcome)
+
+    sell_complete_set {
+        let a in 0..T::MaxCategories::get() as u32;
+        let (caller, marketid) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(a.saturated_into())
+        )?;
+        let amount: BalanceOf<T> = (BASE * 1_000).saturated_into();
+        let _ = Call::<T>::buy_complete_set(marketid, amount)
+            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    }: _(RawOrigin::Signed(caller), marketid, amount)
 }
 
 impl_benchmark_test_suite!(
