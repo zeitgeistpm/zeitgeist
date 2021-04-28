@@ -53,7 +53,7 @@ mod pallet {
     };
     use zeitgeist_primitives::Asset;
 
-    type BalanceOf<T> =
+    pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::call]
