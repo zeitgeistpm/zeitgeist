@@ -35,21 +35,33 @@ use sp_std::marker::PhantomData;
 ///  Trait containing the required functions for weight retrival within
 /// zrml_orderbook_v1 (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn make_order_bid() -> Weight;
     fn make_order_ask() -> Weight;
+    fn make_order_bid() -> Weight;
+    fn cancel_order_ask() -> Weight;
+    fn cancel_order_bid() -> Weight;
 }
 
 /// Weight functions for zrml_orderbook_v1 (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
-    fn make_order_bid() -> Weight {
-        (66_716_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
-    }
     fn make_order_ask() -> Weight {
         (77_246_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
+    fn make_order_bid() -> Weight {
+        (66_716_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+    }
+    fn cancel_order_ask() -> Weight {
+		(21_711_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+    fn cancel_order_bid() -> Weight {
+		(22_332_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
 }

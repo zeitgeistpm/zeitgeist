@@ -60,13 +60,16 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(
+            T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
+        )]
         pub fn cancel_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
             order_hash: T::Hash,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            let mut bid = true;
 
             if let Some(order_data) = Self::order_data(order_hash) {
                 ensure!(sender == order_data.maker, Error::<T>::NotOrderCreator);
@@ -81,6 +84,7 @@ mod pallet {
                         let mut asks = Self::asks(asset);
                         remove_item::<T::Hash>(&mut asks, order_hash);
                         <Asks<T>>::insert(asset, asks);
+                        bid = false;
                     }
                 }
 
@@ -88,7 +92,12 @@ mod pallet {
             } else {
                 Err(Error::<T>::OrderDoesNotExist)?;
             }
-            Ok(())
+
+            if bid {
+                Ok(Some(T::WeightInfo::cancel_order_bid()).into())
+            } else {
+                Ok(Some(T::WeightInfo::cancel_order_ask()).into())
+            }
         }
 
         #[pallet::weight(50_000_000)]
@@ -147,8 +156,7 @@ mod pallet {
         }
 
         #[pallet::weight(
-            T::WeightInfo::make_order_bid()
-            .max(T::WeightInfo::make_order_ask())
+            T::WeightInfo::make_order_ask().max(T::WeightInfo::make_order_bid())
         )]
         pub fn make_order(
             origin: OriginFor<T>,
