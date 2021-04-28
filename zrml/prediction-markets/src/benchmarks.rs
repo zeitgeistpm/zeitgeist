@@ -142,11 +142,8 @@ fn setup_redeem_shares_common<T: Config>(
         );
     }
 
-    let _ = Pallet::<T>::do_buy_complete_set(
-        caller.clone(),
-        marketid,
-        MIN_LIQUIDITY.saturated_into()
-    )?;
+    let _ =
+        Pallet::<T>::do_buy_complete_set(caller.clone(), marketid, MIN_LIQUIDITY.saturated_into())?;
     let approval_origin = T::ApprovalOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
         .dispatch_bypass_filter(approval_origin.clone())?;
