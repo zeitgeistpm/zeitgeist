@@ -10,6 +10,7 @@ serde = { features = ["derive"], version = "1.0.102", optional = true }
 sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-io = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-std = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-swaps = { default-features = false, path = "../swaps" }
 
@@ -28,6 +29,7 @@ std = [
     'sp-core/std',
     'sp-io/std',
     'sp-runtime/std',
+    'sp-std/std',
     'zeitgeist-primitives/std',
     'zrml-swaps/std'
 ]

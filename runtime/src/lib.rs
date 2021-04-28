@@ -347,6 +347,7 @@ impl zrml_orderbook_v1::Config for Runtime {
     type Event = Event;
     type MarketId = MarketId;
     type Shares = Tokens;
+    type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_prediction_markets::Config for Runtime {

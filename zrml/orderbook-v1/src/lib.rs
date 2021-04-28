@@ -22,6 +22,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::Asset;
 
+pub mod weights;
+
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 #[cfg(test)]
@@ -29,11 +31,13 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub(crate) use pallet::*;
 pub use pallet::{Config, Error, Event, Pallet};
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{Order, OrderSide};
+    use crate::{Order, OrderSide, weights::*,};
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{
@@ -144,7 +148,11 @@ mod pallet {
             Ok(())
         }
 
+<<<<<<< HEAD
         #[pallet::weight(50_000_000)]
+=======
+        #[pallet::weight(T::WeightInfo::make_order())]
+>>>>>>> Add weight: make_order
         pub fn make_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
@@ -223,6 +231,8 @@ mod pallet {
             Balance = BalanceOf<Self>,
             CurrencyId = Asset<Self::MarketId>,
         >;
+
+        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]

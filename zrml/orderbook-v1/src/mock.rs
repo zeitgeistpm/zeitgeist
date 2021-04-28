@@ -52,6 +52,7 @@ impl crate::Config for Runtime {
     type Event = ();
     type MarketId = MarketId;
     type Shares = Tokens;
+    type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {

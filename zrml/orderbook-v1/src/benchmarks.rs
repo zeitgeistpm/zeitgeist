@@ -1,9 +1,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
-use super::{
-    pallet::*,
-    OrderSide,
-};
+use super::*;
 #[cfg(test)]
 use crate::Pallet as OrderBook;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
