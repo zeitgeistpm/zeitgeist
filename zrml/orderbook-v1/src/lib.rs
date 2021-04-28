@@ -22,6 +22,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::Asset;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarks;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]

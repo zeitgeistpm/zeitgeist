@@ -397,7 +397,6 @@ impl_runtime_apis! {
                 add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
-
             impl frame_system_benchmarking::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
@@ -425,7 +424,11 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
+<<<<<<< HEAD
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
+=======
+            add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
+>>>>>>> Add benchmark scaffold
 
             if batches.is_empty() {
                 return Err("Benchmark not found for this pallet.".into());
