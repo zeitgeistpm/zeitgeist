@@ -262,7 +262,7 @@ mod pallet {
         ///
         /// NOTE: This is the only way to create new shares.
         ///
-        // Note: buy_complete_sets weight consumption is dependant on how many assets exists
+        // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
         // This also occurs in numereous other functions
