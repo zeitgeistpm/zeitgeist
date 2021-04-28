@@ -2,9 +2,7 @@
 frame-benchmarking = { branch = "rococo-v1", default-features = false, version = "3.1.0", optional = true, git = "https://github.com/paritytech/substrate" }
 frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-tokens = { optional = true, default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-pallet-balances = { optional = true, default-features = false, branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-arithmetic = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 serde = { features = ["derive"], version = "1.0.102", optional = true }
@@ -38,7 +36,11 @@ std = [
     'zeitgeist-primitives/std',
     'zrml-swaps/std',
 ]
-runtime-benchmarks = ["frame-benchmarking", "orml-tokens", "pallet-balances"]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks"
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

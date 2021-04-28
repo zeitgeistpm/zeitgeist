@@ -12,7 +12,7 @@ use frame_benchmarking::{
 };
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    traits::{Currency, Get, Hooks},
+    traits::{Currency, EnsureOrigin, Get, Hooks},
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -74,7 +74,7 @@ fn create_close_and_report_market<T: Config>(
 ) -> Result<(T::AccountId, T::MarketId), &'static str> {
     let (caller, marketid) = create_market_common::<T>(permission, options)?;
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
-        .dispatch_bypass_filter(RawOrigin::Root.into())?;
+        .dispatch_bypass_filter(T::ApprovalOrigin::successful_origin())?;
     let _ = Call::<T>::report(marketid, outcome)
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, marketid))
@@ -113,12 +113,12 @@ fn setup_resolve_common_categorical<T: Config>(
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories),
-        Outcome::Categorical(categories - 1),
+        Outcome::Categorical(categories.saturating_sub(1)),
     )?;
     let _ = generate_accounts_with_assets::<T>(
         acc_total,
         acc_asset,
-        Asset::CategoricalOutcome(marketid, categories - 1),
+        Asset::CategoricalOutcome(marketid, categories.saturating_sub(1)),
     )?;
     Ok((caller, marketid))
 }
@@ -132,7 +132,7 @@ fn setup_redeem_shares_common<T: Config>(
     let outcome: Outcome;
 
     if let MarketType::Categorical(categories) = market_type {
-        outcome = Outcome::Categorical(categories - 1);
+        outcome = Outcome::Categorical(categories.saturating_sub(1));
     } else if let MarketType::Scalar(range) = market_type {
         outcome = Outcome::Scalar(range.1);
     } else {
@@ -142,14 +142,18 @@ fn setup_redeem_shares_common<T: Config>(
         );
     }
 
-    let _ =
-        Pallet::<T>::do_buy_complete_set(caller.clone(), marketid, MIN_LIQUIDITY.saturated_into())?;
+    let _ = Pallet::<T>::do_buy_complete_set(
+        caller.clone(),
+        marketid,
+        MIN_LIQUIDITY.saturated_into()
+    )?;
+    let approval_origin = T::ApprovalOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
-        .dispatch_bypass_filter(RawOrigin::Root.into())?;
+        .dispatch_bypass_filter(approval_origin.clone())?;
     let _ = Call::<T>::report(marketid, outcome)
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let _ = Call::<T>::admin_move_market_to_resolved(marketid)
-        .dispatch_bypass_filter(RawOrigin::Root.into())?;
+        .dispatch_bypass_filter(approval_origin)?;
     Ok((caller, marketid))
 }
 
@@ -189,7 +193,10 @@ benchmarks! {
             let _ = Call::<T>::dispute(marketid, Outcome::Categorical(i.saturated_into()))
                 .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         }
-    }: admin_destroy_market(RawOrigin::Root, marketid)
+
+        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let call = Call::<T>::admin_destroy_market(marketid);
+    }: { call.dispatch_bypass_filter(approval_origin)? }
 
     admin_destroy_reported_market{
         // a = total accounts
@@ -202,14 +209,18 @@ benchmarks! {
 
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
-    }: admin_destroy_market(RawOrigin::Root, marketid)
+        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let call = Call::<T>::admin_destroy_market(marketid);
+    }: { call.dispatch_bypass_filter(approval_origin)? }
 
     admin_move_market_to_closed {
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get())
         )?;
-    }: _(RawOrigin::Root, marketid)
+        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let call = Call::<T>::admin_move_market_to_closed(marketid);
+    }: { call.dispatch_bypass_filter(approval_origin)? }
 
     // This benchmark measures the cost of fn `admin_move_market_to_resolved`
     // and assumes a scalar market is used. The default cost for this function
@@ -219,14 +230,19 @@ benchmarks! {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
         let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
-    }: admin_move_market_to_resolved(RawOrigin::Root, marketid)
+        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let call = Call::<T>::admin_move_market_to_resolved(marketid);
+    }: { call.dispatch_bypass_filter(approval_origin)? }
 
     approve_market {
         let (_, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get())
         )?;
-    }: _(RawOrigin::Root, marketid)
+
+        let origin = T::ApprovalOrigin::successful_origin();
+        let call = Call::<T>::approve_market(marketid);
+    }: { call.dispatch_bypass_filter(origin)? }
 
     buy_complete_set {
         let a in 0..T::MaxCategories::get() as u32;
@@ -262,11 +278,11 @@ benchmarks! {
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into())
         )?;
-        let _ = Pallet::<T>::do_buy_complete_set(
-            caller.clone(),
-            marketid,
-            MIN_LIQUIDITY.saturated_into()
-        )?;
+        let min_liquidity: BalanceOf::<T> = MIN_LIQUIDITY.saturated_into();
+        let _ = Call::<T>::buy_complete_set(marketid, min_liquidity)
+            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        T::Shares::deposit(Asset::Ztg, &caller, min_liquidity)?;
+
         let weights = vec![MIN_WEIGHT; (a + 1) as usize];
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
@@ -356,7 +372,9 @@ benchmarks! {
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get())
         )?;
-    }: _(RawOrigin::Root, marketid)
+        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let call = Call::<T>::reject_market(marketid);
+    }: { call.dispatch_bypass_filter(approval_origin)? }
 
     report {
         let (caller, marketid) = create_market_common::<T>(
@@ -364,8 +382,9 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get())
         )?;
         let outcome = Outcome::Categorical(0);
+        let approval_origin = T::ApprovalOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed(marketid)
-            .dispatch_bypass_filter(RawOrigin::Root.into())?;
+            .dispatch_bypass_filter(approval_origin)?;
     }: _(RawOrigin::Signed(caller), marketid, outcome)
 
     sell_complete_set {
@@ -374,7 +393,7 @@ benchmarks! {
             MarketCreation::Advised,
             MarketType::Categorical(a.saturated_into())
         )?;
-        let amount: BalanceOf<T> = (BASE * 1_000).saturated_into();
+        let amount: BalanceOf<T> = MIN_LIQUIDITY.saturated_into();
         let _ = Call::<T>::buy_complete_set(marketid, amount)
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), marketid, amount)

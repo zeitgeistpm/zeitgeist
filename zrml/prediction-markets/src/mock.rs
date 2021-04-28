@@ -40,7 +40,7 @@ parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
     pub const ExitFee: Balance = 0;
-    pub const MaxAssets: usize = 8;
+    pub const MaxAssets: usize = 9;
     pub const MaxCategories: u16 = 8;
     pub const MaxDisputes: u16 = 5;
     pub const MaximumBlockLength: u32 = 2 * 1024;
