@@ -7,6 +7,7 @@ use crate::SerdeWrapper;
 ///
 /// * `MI`: Market Id
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
     Clone,
     Copy,
@@ -34,6 +35,7 @@ pub type CategoryIndex = u16;
 /// or a `Short` position meaning that they think the outcome will be closer
 /// to the lower bound.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
     Clone,
     Copy,
