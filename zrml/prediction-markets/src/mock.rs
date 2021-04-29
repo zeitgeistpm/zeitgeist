@@ -26,6 +26,8 @@ pub const SUDO: AccountIdTest = 69;
 
 pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
+pub type AdaptedBasicCurrency =
+    orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = 69;
@@ -40,7 +42,8 @@ parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
     pub const ExitFee: Balance = 0;
-    pub const MaxAssets: usize = 8;
+    pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
+    pub const MaxAssets: usize = 9;
     pub const MaxCategories: u16 = 8;
     pub const MaxDisputes: u16 = 5;
     pub const MaximumBlockLength: u32 = 2 * 1024;
@@ -76,6 +79,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
@@ -101,7 +105,9 @@ impl crate::Config for Runtime {
     type Shares = Tokens;
     type Slash = ();
     type Swap = Swaps;
+    type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
+    type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
@@ -128,6 +134,14 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = ();
     type SystemWeightInfo = ();
     type Version = ();
+}
+
+impl orml_currencies::Config for Runtime {
+    type Event = Event;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = AdaptedBasicCurrency;
+    type WeightInfo = ();
 }
 
 impl orml_tokens::Config for Runtime {
@@ -169,7 +183,7 @@ impl zrml_swaps::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type Shares = Tokens;
+    type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 

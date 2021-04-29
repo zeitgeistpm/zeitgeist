@@ -11368,8 +11368,10 @@ dependencies = [
 name = "zrml-prediction-markets"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -11381,6 +11383,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
  "zeitgeist-primitives",
  "zrml-prediction-markets-runtime-api",
  "zrml-swaps",

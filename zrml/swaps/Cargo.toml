@@ -4,15 +4,12 @@ frame-support = { branch = "rococo-v1", default-features = false, git = "https:/
 frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
-serde = { default-features = false, optional = true, version = "1.0" }
+serde = { features = ["derive"], version = "1.0.102", optional = true }
 sp-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-io = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-std = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-orml-currencies = { optional = true, default-features = false,  git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-tokens = { optional = true, default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-pallet-balances = { optional = true, default-features = false, branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 
 [dev-dependencies]
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
@@ -29,18 +26,17 @@ std = [
     "frame-system/std",
     "orml-traits/std",
     "parity-scale-codec/std",
-    "serde/std",
+    "serde",
     "sp-core/std",
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
     "zeitgeist-primitives/std",
-    
 ]
-runtime-benchmarks = ["frame-benchmarking", "orml-currencies", "orml-tokens", "pallet-balances"]
+runtime-benchmarks = ["frame-benchmarking"]
 
 [package]
-authors = ["Logan Saether <x@logansaether.com>"]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zrml-swaps"
 version = "0.1.0"

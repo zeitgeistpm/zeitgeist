@@ -8,7 +8,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-    MarketId, PoolId, SerdeWrapper, UncheckedExtrinsicTest, BASE,
+    MarketId, PoolId, SerdeWrapper, UncheckedExtrinsicTest, BASE, MIN_LIQUIDITY, MIN_WEIGHT,
 };
 
 parameter_types! {
@@ -21,8 +21,8 @@ parameter_types! {
     pub const MaxOutRatio: Balance = (BASE / 3) + 1;
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
-    pub const MinLiquidity: Balance = 100 * BASE;
-    pub const MinWeight: Balance = BASE;
+    pub const MinLiquidity: Balance = MIN_LIQUIDITY;
+    pub const MinWeight: Balance = MIN_WEIGHT;
     pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
