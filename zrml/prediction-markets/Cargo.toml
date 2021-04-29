@@ -14,6 +14,7 @@ zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-swaps = { default-features = false, path = "../swaps" }
 
 [dev-dependencies]
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 pallet-timestamp = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }

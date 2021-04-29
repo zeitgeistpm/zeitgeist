@@ -278,7 +278,6 @@ benchmarks! {
         let min_liquidity: BalanceOf::<T> = MIN_LIQUIDITY.saturated_into();
         let _ = Call::<T>::buy_complete_set(marketid, min_liquidity)
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-        T::Shares::deposit(Asset::Ztg, &caller, min_liquidity)?;
 
         let weights = vec![MIN_WEIGHT; (a + 1) as usize];
     }: _(RawOrigin::Signed(caller), marketid, weights)
