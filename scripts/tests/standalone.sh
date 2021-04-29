@@ -6,6 +6,6 @@ set -euxo pipefail
 
 . "$(dirname "$0")/aux-functions.sh" --source-only
 
-build_package_with_feature runtime std
+check_package_with_feature runtime std
 
-build_package_with_feature node default
+check_package_with_feature node default

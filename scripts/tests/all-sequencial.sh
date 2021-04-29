@@ -7,3 +7,4 @@
 . "$(dirname "$0")/misc.sh" --source-only
 . "$(dirname "$0")/standalone.sh" --source-only
 . "$(dirname "$0")/parachain.sh" --source-only
+. "$(dirname "$0")/wasm.sh" --source-only
