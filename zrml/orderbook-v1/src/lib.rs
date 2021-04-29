@@ -41,7 +41,7 @@ mod pallet {
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{
-        dispatch::{DispatchResult, DispatchResultWithPostInfo},
+        dispatch::DispatchResultWithPostInfo,
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{
@@ -72,15 +72,18 @@ mod pallet {
             let mut bid = true;
 
             if let Some(order_data) = Self::order_data(order_hash) {
-                ensure!(sender == order_data.maker, Error::<T>::NotOrderCreator);
+                let maker = order_data.maker.clone();
+                ensure!(sender == maker, Error::<T>::NotOrderCreator);
 
                 match order_data.side {
                     OrderSide::Bid => {
+                        T::Currency::unreserve(&maker, order_data.cost());
                         let mut bids = Self::bids(asset);
                         remove_item::<T::Hash>(&mut bids, order_hash);
                         <Bids<T>>::insert(asset, bids);
                     }
                     OrderSide::Ask => {
+                        T::Shares::unreserve(order_data.asset, &maker, order_data.total);
                         let mut asks = Self::asks(asset);
                         remove_item::<T::Hash>(&mut asks, order_hash);
                         <Asks<T>>::insert(asset, asks);
@@ -100,9 +103,12 @@ mod pallet {
             }
         }
 
-        #[pallet::weight(50_000_000)]
-        pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResult {
+        #[pallet::weight(
+            T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
+        )]
+        pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            let mut bid = true;
 
             if let Some(order_data) = Self::order_data(order_hash) {
                 ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
@@ -145,6 +151,7 @@ mod pallet {
                             cost,
                             ExistenceRequirement::AllowDeath,
                         )?;
+                        bid = false;
                     }
                 }
 
@@ -152,7 +159,12 @@ mod pallet {
             } else {
                 Err(Error::<T>::OrderDoesNotExist)?;
             }
-            Ok(())
+
+            if bid {
+                Ok(Some(T::WeightInfo::fill_order_bid()).into())
+            } else {
+                Ok(Some(T::WeightInfo::fill_order_ask()).into())
+            }
         }
 
         #[pallet::weight(
