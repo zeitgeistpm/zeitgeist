@@ -113,8 +113,8 @@ parameter_types! {
   pub const MaxTotalWeight: Balance = 50 * BASE;
   pub const MaxWeight: Balance = 50 * BASE;
   pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
-  pub const MinLiquidity: Balance = 100 * BASE;
-  pub const MinWeight: Balance = BASE;
+  pub const MinLiquidity: Balance = MIN_LIQUIDITY;
+  pub const MinWeight: Balance = MIN_WEIGHT;
   pub const OracleBond: Balance = 50 * DOLLARS;
   pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
   pub const ReportingPeriod: BlockNumber = DAYS;
@@ -366,7 +366,9 @@ impl zrml_prediction_markets::Config for Runtime {
     type Shares = Tokens;
     type Slash = ();
     type Swap = Swaps;
+    type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
+    type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_swaps::Config for Runtime {
@@ -391,7 +393,9 @@ impl_runtime_apis! {
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig,
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{add_benchmark, BenchmarkBatch, Benchmarking, TrackedStorageKey};
+            use frame_benchmarking::{
+                add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
+            };
             use frame_system_benchmarking::Pallet as SystemBench;
 
             impl frame_system_benchmarking::Config for Runtime {}
@@ -421,6 +425,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
+            add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
 
             if batches.is_empty() {
                 return Err("Benchmark not found for this pallet.".into());

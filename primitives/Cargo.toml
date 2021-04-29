@@ -24,7 +24,7 @@ std = [
 ]
 
 [package]
-authors = ["Logan Saether <x@logansaether.com>"]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zeitgeist-primitives"
 version = "0.1.0"

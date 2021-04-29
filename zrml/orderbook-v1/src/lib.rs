@@ -56,7 +56,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000_000)]
+        #[pallet::weight(50_000_000)]
         pub fn cancel_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
@@ -87,7 +87,7 @@ mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000_000)]
+        #[pallet::weight(50_000_000)]
         pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -142,7 +142,7 @@ mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000_000)]
+        #[pallet::weight(50_000_000)]
         pub fn make_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,

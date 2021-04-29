@@ -11,7 +11,7 @@ zeitgeist-primitives = { default-features = false, path = '../../../primitives' 
 zrml-prediction-markets-runtime-api = { default-features = false, features = ["std"], path = "runtime-api" }
 
 [package]
-authors = ["Logan Saether <x@logansaether.com>"]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zrml-prediction-markets-rpc"
 version = "0.1.0"
