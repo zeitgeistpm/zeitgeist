@@ -175,6 +175,14 @@ fn setup_resolve_common_scalar<T: Config>(
 benchmarks! {
     admin_destroy_disputed_market{
         // a = total accounts
+        // A higher number increases the benchmark runtime significantly, while increasing the
+        // error due to a lower number of repetitions (the data points that are used to approximate
+        // the weight function weight(a) are less precise).
+        // The required weight per account is a linear function of degree 1, i.e.
+        // fn(a) = ba^1 + ca^0. The first few data points of the curve are already approximating
+        // the function and its constant gradient fairly well, provided that these few data points
+        // are very precise (many repetitions). If the gradient is well estimated, any value can be
+        // derived, up to infinity, assuming that at no point the function fn(a) is non-linear.
         let a in 0..10;
         // b = num. accounts with assets
         // Unfortunately frame-benchmarking does not allow to b = b.min(a) here
