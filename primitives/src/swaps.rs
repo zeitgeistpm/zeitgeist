@@ -1,4 +1,4 @@
-use crate::Asset;
+use crate::types::Asset;
 use alloc::vec::Vec;
 use frame_support::dispatch::DispatchError;
 

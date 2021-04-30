@@ -4,7 +4,7 @@
 
 use parity_scale_codec::Codec;
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
-use zeitgeist_primitives::{Asset, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
 sp_api::decl_runtime_apis! {
     pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where

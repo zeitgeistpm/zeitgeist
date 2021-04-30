@@ -7,9 +7,14 @@ use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, ExitFee, Hash,
-    Index, MarketId, MaxAssets, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight, MinLiquidity,
-    MinWeight, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+    constants::{
+        ExitFee, MaxAssets, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight, MinLiquidity,
+        MinWeight,
+    },
+    types::{
+        AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
+        MarketId, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+    },
 };
 
 // parameter_types imported from zeitgeist_primitives

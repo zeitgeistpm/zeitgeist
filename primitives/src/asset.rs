@@ -1,4 +1,4 @@
-use crate::SerdeWrapper;
+use crate::types::SerdeWrapper;
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.

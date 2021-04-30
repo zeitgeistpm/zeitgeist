@@ -4,7 +4,7 @@ use jsonrpc_core::serde_json::Map;
 use sc_service::{config::TelemetryEndpoints, ChainType};
 #[cfg(not(feature = "parachain"))]
 use sp_core::crypto::UncheckedInto;
-use zeitgeist_primitives::{AccountId, BASE};
+use zeitgeist_primitives::{constants::BASE, types::AccountId};
 
 pub fn battery_park_config(
     #[cfg(feature = "parachain")] id: cumulus_primitives_core::ParaId,

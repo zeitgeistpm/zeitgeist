@@ -11,7 +11,7 @@ use sp_runtime::{
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
 };
 use std::sync::Arc;
-use zeitgeist_primitives::{Asset, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 

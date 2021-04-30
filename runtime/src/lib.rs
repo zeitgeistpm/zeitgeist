@@ -43,15 +43,8 @@ use sp_std::{boxed::Box, vec::Vec};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use zeitgeist_primitives::*;
+use zeitgeist_primitives::{constants::*, types::*};
 
-pub const DAYS: BlockNumber = HOURS * 24;
-pub const DOLLARS: Balance = BASE / 100; // 100_000_000
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const CENTS: Balance = DOLLARS / 100; // 1_000_000
-pub const MILLICENTS: Balance = CENTS / 1000; // 1_000
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -98,21 +91,12 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 parameter_types! {
   pub const AdvisoryBond: Balance = 25 * DOLLARS;
   pub const BlockHashCount: BlockNumber = 250;
-  pub const DisputeBond: Balance = 5 * BASE;
-  pub const DisputeFactor: Balance = 2 * BASE;
-  pub const DisputePeriod: BlockNumber = DAYS;
   pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
-  pub const MaxCategories: u16 = 8;
-  pub const MaxDisputes: u16 = 6;
   pub const MaxLocks: u32 = 50;
   pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
-  pub const OracleBond: Balance = 50 * DOLLARS;
-  pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
-  pub const ReportingPeriod: BlockNumber = DAYS;
   pub const SS58Prefix: u8 = 73;
   pub const TransactionByteFee: Balance = 1 * MILLICENTS;
-  pub const ValidityBond: Balance = 50 * DOLLARS;
   pub const Version: RuntimeVersion = VERSION;
   pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
   pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
