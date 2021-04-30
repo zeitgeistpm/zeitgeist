@@ -11350,6 +11350,7 @@ dependencies = [
 name = "zrml-orderbook-v1"
 version = "0.1.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "orml-tokens",
@@ -11360,6 +11361,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
  "zeitgeist-primitives",
  "zrml-swaps",
 ]

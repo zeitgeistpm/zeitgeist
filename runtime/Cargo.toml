@@ -101,6 +101,7 @@ runtime-benchmarks = [
     "sp-runtime/runtime-benchmarks",
 	"zrml-swaps/runtime-benchmarks",
 	"zrml-prediction-markets/runtime-benchmarks",
+	"zrml-orderbook-v1/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 ]
 std = [

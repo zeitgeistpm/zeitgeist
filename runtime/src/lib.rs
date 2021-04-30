@@ -347,6 +347,7 @@ impl zrml_orderbook_v1::Config for Runtime {
     type Event = Event;
     type MarketId = MarketId;
     type Shares = Tokens;
+    type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_prediction_markets::Config for Runtime {
@@ -397,7 +398,6 @@ impl_runtime_apis! {
                 add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
-
             impl frame_system_benchmarking::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
@@ -426,6 +426,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
+            add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
 
             if batches.is_empty() {
                 return Err("Benchmark not found for this pallet.".into());

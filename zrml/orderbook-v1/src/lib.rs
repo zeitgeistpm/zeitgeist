@@ -22,19 +22,26 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::Asset;
 
+pub mod weights;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarks;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+pub(crate) use pallet::*;
 pub use pallet::{Config, Error, Event, Pallet};
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{Order, OrderSide};
+    use crate::{weights::*, Order, OrderSide};
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{
@@ -45,38 +52,42 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::Encode;
-    use sp_runtime::{
-        traits::{AtLeast32Bit, Hash, MaybeSerializeDeserialize, Member, Zero},
-        DispatchResult,
-    };
+    use sp_runtime::traits::{AtLeast32Bit, Hash, MaybeSerializeDeserialize, Member, Zero};
     use zeitgeist_primitives::Asset;
 
-    type BalanceOf<T> =
+    pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(
+            T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
+        )]
         pub fn cancel_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
             order_hash: T::Hash,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            let mut bid = true;
 
             if let Some(order_data) = Self::order_data(order_hash) {
-                ensure!(sender == order_data.maker, Error::<T>::NotOrderCreator);
+                let maker = order_data.maker.clone();
+                ensure!(sender == maker, Error::<T>::NotOrderCreator);
 
                 match order_data.side {
                     OrderSide::Bid => {
+                        T::Currency::unreserve(&maker, order_data.cost());
                         let mut bids = Self::bids(asset);
                         remove_item::<T::Hash>(&mut bids, order_hash);
                         <Bids<T>>::insert(asset, bids);
                     }
                     OrderSide::Ask => {
+                        T::Shares::unreserve(order_data.asset, &maker, order_data.total);
                         let mut asks = Self::asks(asset);
                         remove_item::<T::Hash>(&mut asks, order_hash);
                         <Asks<T>>::insert(asset, asks);
+                        bid = false;
                     }
                 }
 
@@ -84,12 +95,20 @@ mod pallet {
             } else {
                 Err(Error::<T>::OrderDoesNotExist)?;
             }
-            Ok(())
+
+            if bid {
+                Ok(Some(T::WeightInfo::cancel_order_bid()).into())
+            } else {
+                Ok(Some(T::WeightInfo::cancel_order_ask()).into())
+            }
         }
 
-        #[pallet::weight(50_000_000)]
-        pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResult {
+        #[pallet::weight(
+            T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
+        )]
+        pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            let mut bid = true;
 
             if let Some(order_data) = Self::order_data(order_hash) {
                 ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
@@ -132,6 +151,7 @@ mod pallet {
                             cost,
                             ExistenceRequirement::AllowDeath,
                         )?;
+                        bid = false;
                     }
                 }
 
@@ -139,22 +159,30 @@ mod pallet {
             } else {
                 Err(Error::<T>::OrderDoesNotExist)?;
             }
-            Ok(())
+
+            if bid {
+                Ok(Some(T::WeightInfo::fill_order_bid()).into())
+            } else {
+                Ok(Some(T::WeightInfo::fill_order_ask()).into())
+            }
         }
 
-        #[pallet::weight(50_000_000)]
+        #[pallet::weight(
+            T::WeightInfo::make_order_ask().max(T::WeightInfo::make_order_bid())
+        )]
         pub fn make_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
             side: OrderSide,
             amount: BalanceOf<T>,
             price: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
             // Only store nonce in memory for now.
             let nonce = <Nonce<T>>::get();
             let hash = Self::order_hash(&sender, asset.clone(), nonce);
+            let mut bid = true;
 
             // Love the smell of fresh orders in the morning.
             let order = Order {
@@ -193,13 +221,19 @@ mod pallet {
                     });
 
                     T::Shares::reserve(asset, &sender, amount)?;
+                    bid = false;
                 }
             }
 
             <OrderData<T>>::insert(hash, Some(order));
             <Nonce<T>>::mutate(|n| *n += 1);
             Self::deposit_event(Event::OrderMade(sender, hash));
-            Ok(())
+
+            if bid {
+                Ok(Some(T::WeightInfo::make_order_bid()).into())
+            } else {
+                Ok(Some(T::WeightInfo::make_order_ask()).into())
+            }
         }
     }
 
@@ -221,6 +255,8 @@ mod pallet {
             Balance = BalanceOf<Self>,
             CurrencyId = Asset<Self::MarketId>,
         >;
+
+        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]
