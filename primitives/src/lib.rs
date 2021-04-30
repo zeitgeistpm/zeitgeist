@@ -9,6 +9,7 @@ mod zeitgeist_currencies_extension;
 mod zeitgeist_multi_reservable_currency;
 
 pub use asset::*;
+use frame_support::{parameter_types, PalletId};
 pub use serde_wrapper::SerdeWrapper;
 use sp_runtime::{
     generic,
@@ -20,8 +21,19 @@ pub use zeitgeist_currencies_extension::ZeitgeistCurrenciesExtension;
 pub use zeitgeist_multi_reservable_currency::ZeitgeistMultiReservableCurrency;
 
 pub const BASE: u128 = 10_000_000_000;
-pub const MIN_LIQUIDITY: Balance = 100 * BASE;
-pub const MIN_WEIGHT: Balance = BASE;
+
+// Swaps parameters
+parameter_types! {
+    pub const ExitFee: Balance = 0;
+    pub const MaxAssets: usize = 9;
+    pub const MaxInRatio: Balance = BASE / 2;
+    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+    pub const MaxTotalWeight: Balance = 50 * BASE;
+    pub const MaxWeight: Balance = 50 * BASE;
+    pub const MinLiquidity: Balance = 100 * BASE;
+    pub const MinWeight: Balance = BASE;
+    pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
+}
 
 /// Signed counter-part of Balance
 pub type Amount = i128;

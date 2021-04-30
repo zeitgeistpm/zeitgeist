@@ -1,8 +1,8 @@
 /// Money matters.
 pub mod currency {
-    use zeitgeist_primitives::Balance;
+    use zeitgeist_primitives::{Balance, BASE};
 
-    pub const ZTG: Balance = 10_000_000_000;
+    pub const ZTG: Balance = BASE;
     pub const DOLLARS: Balance = ZTG / 100; // 100_000_000
     pub const CENTS: Balance = DOLLARS / 100; // 1_000_000
     pub const MILLICENTS: Balance = CENTS / 1000; // 1_000

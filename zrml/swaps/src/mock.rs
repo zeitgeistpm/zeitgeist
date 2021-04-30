@@ -7,22 +7,16 @@ use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-    MarketId, PoolId, SerdeWrapper, UncheckedExtrinsicTest, BASE, MIN_LIQUIDITY, MIN_WEIGHT,
+    AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, ExitFee, Hash,
+    Index, MarketId, MaxAssets, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight, MinLiquidity,
+    MinWeight, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
 };
 
+// parameter_types imported from zeitgeist_primitives
 parameter_types! {
     pub const BlockHashCount: u32 = 250;
     pub const ExistentialDeposit: u32 = 1;
-    pub const ExitFee: Balance = 0;
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub const MaxAssets: usize = 8;
-    pub const MaxInRatio: Balance = BASE / 2;
-    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
-    pub const MaxTotalWeight: Balance = 50 * BASE;
-    pub const MaxWeight: Balance = 50 * BASE;
-    pub const MinLiquidity: Balance = MIN_LIQUIDITY;
-    pub const MinWeight: Balance = MIN_WEIGHT;
     pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
