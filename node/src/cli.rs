@@ -135,19 +135,19 @@ pub fn load_spec(
     #[cfg(feature = "parachain")] para_id: cumulus_primitives_core::ParaId,
 ) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
-        "dev" => Box::new(crate::chain_spec::dev_config(
+        "dev" => Box::new(zeitgeist_node::chain_spec::dev_config(
             #[cfg(feature = "parachain")]
             para_id,
         )?),
-        "" | "local" => Box::new(crate::chain_spec::local_testnet_config(
+        "" | "local" => Box::new(zeitgeist_node::chain_spec::local_testnet_config(
             #[cfg(feature = "parachain")]
             para_id,
         )?),
-        "battery_park" => Box::new(crate::chain_spec::battery_park_config(
+        "battery_park" => Box::new(zeitgeist_node::chain_spec::battery_park_config(
             #[cfg(feature = "parachain")]
             para_id,
         )?),
-        path => Box::new(crate::chain_spec::ChainSpec::from_json_file(
+        path => Box::new(zeitgeist_node::chain_spec::ChainSpec::from_json_file(
             std::path::PathBuf::from(path),
         )?),
     })

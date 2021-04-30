@@ -24,7 +24,7 @@ impl RelayChainCli {
         para_config: &sc_service::Configuration,
         relay_chain_args: impl Iterator<Item = &'a String>,
     ) -> Self {
-        let extension = crate::chain_spec::Extensions::try_get(&*para_config.chain_spec);
+        let extension = zeitgeist_node::chain_spec::Extensions::try_get(&*para_config.chain_spec);
         let chain_id = extension.map(|e| e.relay_chain.clone());
         let base_path = para_config
             .base_path

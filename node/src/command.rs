@@ -187,7 +187,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         let key = sp_core::Pair::generate().0;
 
         let para_id =
-            crate::chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
+            zeitgeist_node::chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
         let polkadot_cli = crate::cli::RelayChainCli::new(
             &config,

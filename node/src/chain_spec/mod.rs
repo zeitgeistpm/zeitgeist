@@ -40,11 +40,11 @@ fn generic_genesis(
         pallet_aura: zeitgeist_runtime::AuraConfig {
             authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
         },
-        pallet_balances: BalancesConfig {
+        pallet_balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
-                .map(|k| (k, 1 << 60))
+                .map(|k| (k, initial_balance))
                 .collect(),
         },
         #[cfg(not(feature = "parachain"))]

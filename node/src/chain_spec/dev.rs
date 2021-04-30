@@ -19,10 +19,7 @@ pub fn dev_config(
                     get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
                 ],
-                #[cfg(feature = "parachain")]
-                id,
-                #[cfg(not(feature = "parachain"))]
-                vec![crate::chain_spec::authority_keys_from_seed("Alice")],
+                1 << 60,
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 wasm_binary,
             )
