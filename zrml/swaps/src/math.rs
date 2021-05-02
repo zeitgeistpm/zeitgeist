@@ -4,7 +4,7 @@ use crate::{
     fixed::{bdiv, bmul, bpow},
 };
 use frame_support::dispatch::DispatchError;
-use zeitgeist_primitives::BASE;
+use zeitgeist_primitives::constants::BASE;
 
 pub fn calc_spot_price(
     asset_balance_in: u128,

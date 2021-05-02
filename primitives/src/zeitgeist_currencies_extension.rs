@@ -1,4 +1,4 @@
-use crate::ZeitgeistMultiReservableCurrency;
+use crate::traits::ZeitgeistMultiReservableCurrency;
 use frame_support::dispatch::DispatchResult;
 use orml_traits::MultiCurrency;
 

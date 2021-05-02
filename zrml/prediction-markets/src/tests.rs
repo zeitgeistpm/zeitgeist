@@ -3,7 +3,10 @@ use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::{Asset, ScalarPosition, BASE};
+use zeitgeist_primitives::{
+    constants::BASE,
+    types::{Asset, ScalarPosition},
+};
 
 fn gen_metadata(byte: u8) -> Vec<u8> {
     H256::repeat_byte(byte).to_fixed_bytes().to_vec()

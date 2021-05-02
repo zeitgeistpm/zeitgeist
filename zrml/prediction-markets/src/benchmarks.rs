@@ -17,7 +17,10 @@ use frame_support::{
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
-use zeitgeist_primitives::{Asset, ScalarPosition, BASE, MIN_LIQUIDITY, MIN_WEIGHT};
+use zeitgeist_primitives::{
+    constants::{MinLiquidity, MinWeight, BASE},
+    types::{Asset, ScalarPosition},
+};
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
@@ -86,7 +89,7 @@ fn generate_accounts_with_assets<T: Config>(
     acc_asset: u32,
     asset: Asset<T::MarketId>,
 ) -> Result<(), &'static str> {
-    let min_liquidity: BalanceOf<T> = MIN_LIQUIDITY.saturated_into();
+    let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
     let fake_asset = Asset::CategoricalOutcome::<T::MarketId>(u128::MAX.saturated_into(), 0);
     let mut mut_acc_asset = acc_asset;
 
@@ -142,8 +145,11 @@ fn setup_redeem_shares_common<T: Config>(
         );
     }
 
-    let _ =
-        Pallet::<T>::do_buy_complete_set(caller.clone(), marketid, MIN_LIQUIDITY.saturated_into())?;
+    let _ = Pallet::<T>::do_buy_complete_set(
+        caller.clone(),
+        marketid,
+        MinLiquidity::get().saturated_into(),
+    )?;
     let approval_origin = T::ApprovalOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
         .dispatch_bypass_filter(approval_origin.clone())?;
@@ -283,11 +289,11 @@ benchmarks! {
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into())
         )?;
-        let min_liquidity: BalanceOf::<T> = MIN_LIQUIDITY.saturated_into();
+        let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
         let _ = Call::<T>::buy_complete_set(marketid, min_liquidity)
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
-        let weights = vec![MIN_WEIGHT; (a + 1) as usize];
+        let weights = vec![MinWeight::get(); (a + 1) as usize];
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
     dispute {
@@ -397,7 +403,7 @@ benchmarks! {
             MarketCreation::Advised,
             MarketType::Categorical(a.saturated_into())
         )?;
-        let amount: BalanceOf<T> = MIN_LIQUIDITY.saturated_into();
+        let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
         let _ = Call::<T>::buy_complete_set(marketid, amount)
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), marketid, amount)

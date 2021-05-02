@@ -7,7 +7,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
-use zeitgeist_primitives::Asset;
+use zeitgeist_primitives::types::Asset;
 
 pub use zrml_prediction_markets_runtime_api::PredictionMarketsApi as PredictionMarketsRuntimeApi;
 

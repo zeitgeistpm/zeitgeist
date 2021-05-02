@@ -11,7 +11,7 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 use std::sync::Arc;
-use zeitgeist_primitives::{AccountId, Balance, Index, MarketId, PoolId};
+use zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId};
 use zeitgeist_runtime::opaque::Block;
 
 /// Full client dependencies.

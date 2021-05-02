@@ -13,8 +13,14 @@ use sp_runtime::{
     Perbill,
 };
 use zeitgeist_primitives::{
-    AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-    MarketId, SerdeWrapper, UncheckedExtrinsicTest, BASE,
+    constants::{
+        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
+        MaxWeight, MinLiquidity, MinWeight, BASE,
+    },
+    types::{
+        AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
+        MarketId, SerdeWrapper, UncheckedExtrinsicTest,
+    },
 };
 
 pub const ALICE: AccountIdTest = 0;
@@ -41,21 +47,11 @@ parameter_types! {
     pub const DisputeFactor: Balance = 25;
     pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
-    pub const ExitFee: Balance = 0;
     pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
-    pub const MaxAssets: usize = 9;
-    pub const MaxCategories: u16 = 8;
-    pub const MaxDisputes: u16 = 5;
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaxInRatio: Balance = BASE / 2;
     pub const MaxLocks: u32 = 50;
-    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
-    pub const MaxTotalWeight: Balance = 50 * BASE;
-    pub const MaxWeight: Balance = 50 * BASE;
     pub const MinimumPeriod: u64 = 0;
-    pub const MinLiquidity: Balance = 100 * BASE;
-    pub const MinWeight: Balance = BASE;
     pub const OracleBond: Balance = 100;
     pub const PmPalletId: PalletId = PalletId(*b"test/prm");
     pub const ReportingPeriod: BlockNumber = 10;
