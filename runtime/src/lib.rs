@@ -95,7 +95,7 @@ parameter_types! {
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
   pub const MaxLocks: u32 = 50;
   pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
-  pub const SS58Prefix: u8 = 73;
+  pub const SS58Prefix: u8 = 42; // @TODO: Change back to 73 once https://github.com/paritytech/substrate/pull/8509 is merged
   pub const TransactionByteFee: Balance = 1 * MILLICENTS;
   pub const Version: RuntimeVersion = VERSION;
   pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
