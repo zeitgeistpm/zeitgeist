@@ -1,6 +1,6 @@
 use crate::Error;
 use alloc::{collections::BTreeMap, vec::Vec};
-use zeitgeist_primitives::Asset;
+use zeitgeist_primitives::types::Asset;
 
 #[derive(
     Clone,

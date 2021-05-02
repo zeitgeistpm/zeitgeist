@@ -8,7 +8,7 @@ use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::SaturatedConversion;
-use zeitgeist_primitives::{Asset, BASE};
+use zeitgeist_primitives::{constants::BASE, types::Asset};
 
 // Takes a `seed` and returns an account. Use None to generate a whitelisted caller
 fn generate_funded_account<T: Config>(seed: Option<u32>) -> Result<T::AccountId, &'static str> {

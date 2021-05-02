@@ -6,7 +6,7 @@ use sp_runtime::{
     traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
     Perbill,
 };
-use zeitgeist_primitives::{
+use zeitgeist_primitives::types::{
     AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
     UncheckedExtrinsicTest,
 };

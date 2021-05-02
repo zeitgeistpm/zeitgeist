@@ -4,7 +4,10 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
-use zeitgeist_primitives::{Asset, MarketId, BASE};
+use zeitgeist_primitives::{
+    constants::BASE,
+    types::{Asset, MarketId},
+};
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);

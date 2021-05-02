@@ -1,6 +1,6 @@
 use crate::{check_arithm_rslt::CheckArithmRslt, consts::BPOW_PRECISION};
 use frame_support::dispatch::DispatchError;
-use zeitgeist_primitives::BASE;
+use zeitgeist_primitives::constants::BASE;
 
 pub fn btoi(a: u128) -> Result<u128, DispatchError> {
     a.check_div_rslt(&BASE)
@@ -109,7 +109,7 @@ mod tests {
         fixed::{bdiv, bmul, bpow},
     };
     use frame_support::dispatch::DispatchError;
-    use zeitgeist_primitives::BASE;
+    use zeitgeist_primitives::constants::BASE;
 
     pub const ERR: Result<u128, DispatchError> = Err(ARITHM_OF);
 

@@ -20,7 +20,7 @@ use sp_runtime::{
     traits::{CheckedMul, CheckedSub},
     RuntimeDebug,
 };
-use zeitgeist_primitives::Asset;
+use zeitgeist_primitives::types::Asset;
 
 pub mod weights;
 
@@ -53,7 +53,7 @@ mod pallet {
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::Encode;
     use sp_runtime::traits::{AtLeast32Bit, Hash, MaybeSerializeDeserialize, Member, Zero};
-    use zeitgeist_primitives::Asset;
+    use zeitgeist_primitives::types::Asset;
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;

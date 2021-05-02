@@ -4,7 +4,7 @@ use frame_support::{
     traits::{Currency, ReservableCurrency},
 };
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use zeitgeist_primitives::{AccountIdTest, Asset};
+use zeitgeist_primitives::types::{AccountIdTest, Asset};
 
 #[test]
 fn it_makes_orders() {

@@ -3,7 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use parity_scale_codec::Codec;
-use zeitgeist_primitives::Asset;
+use zeitgeist_primitives::types::Asset;
 
 sp_api::decl_runtime_apis! {
     pub trait PredictionMarketsApi<MarketId, Hash> where

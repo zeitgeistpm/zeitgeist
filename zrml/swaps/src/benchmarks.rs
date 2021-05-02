@@ -10,7 +10,7 @@ use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
-use zeitgeist_primitives::{Asset, BASE};
+use zeitgeist_primitives::{constants::BASE, types::Asset};
 
 // Generates ``asset_count`` assets
 fn generate_assets<T: Config>(

@@ -52,7 +52,10 @@ mod pallet {
         traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
-    use zeitgeist_primitives::{Asset, SerdeWrapper, Swaps};
+    use zeitgeist_primitives::{
+        traits::Swaps,
+        types::{Asset, SerdeWrapper},
+    };
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;

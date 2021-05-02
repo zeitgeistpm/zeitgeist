@@ -102,7 +102,10 @@ mod pallet {
         },
         DispatchError, DispatchResult, SaturatedConversion,
     };
-    use zeitgeist_primitives::{Asset, ScalarPosition, Swaps, ZeitgeistMultiReservableCurrency};
+    use zeitgeist_primitives::{
+        traits::{Swaps, ZeitgeistMultiReservableCurrency},
+        types::{Asset, ScalarPosition},
+    };
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
