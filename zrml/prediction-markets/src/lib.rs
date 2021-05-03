@@ -321,8 +321,12 @@ mod pallet {
             Self::ensure_create_market_end(end)?;
 
             ensure!(
+                categories >= T::MinCategories::get(),
+                <Error<T>>::NotEnoughCategories
+            );
+            ensure!(
                 categories <= T::MaxCategories::get(),
-                "Cannot exceed max categories for a new market."
+                <Error<T>>::TooManyCategories
             );
 
             let status: MarketStatus = match creation {
@@ -827,6 +831,9 @@ mod pallet {
             + Member
             + Parameter;
 
+        /// The minimum number of categories available for categorical markets.
+        type MinCategories: Get<u16>;
+
         /// The maximum number of categories available for categorical markets.
         type MaxCategories: Get<u16>;
 
@@ -872,6 +879,8 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
+        /// An invalid market type was found.
+        InvalidMarketType,
         /// A market with the provided ID does not exist.
         MarketDoesNotExist,
         /// The market status is something other than active.
@@ -896,6 +905,8 @@ mod pallet {
         MarketNotResolved,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
+        /// The number of categories for a categorical market is too low
+        NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
         /// The report is not coming from designated oracle.
@@ -904,8 +915,8 @@ mod pallet {
         ShareBalanceTooLow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
-        /// An invalid market type was found.
-        InvalidMarketType,
+        /// Too many categories for a categorical market
+        TooManyCategories,
     }
 
     #[pallet::event]
