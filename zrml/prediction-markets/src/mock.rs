@@ -14,8 +14,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
-        MaxWeight, MinLiquidity, MinWeight, BASE,
+        ExitFee, MaxAssets, MinCategories, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
+        MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -93,6 +93,7 @@ impl crate::Config for Runtime {
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type MarketId = MarketId;
+    type MinCategories = MinCategories;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type PalletId = PmPalletId;

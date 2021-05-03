@@ -334,6 +334,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type MarketId = MarketId;
+    type MinCategories = MinCategories;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type PalletId = PmPalletId;

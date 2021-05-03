@@ -508,31 +508,31 @@ mod pallet {
     where
         T: Config,
     {
-        /// A new pool has been created.
+        /// A new pool has been created. \[account\]
         PoolCreate(CommonPoolEventParams<<T as frame_system::Config>::AccountId>),
-        /// Someone has exited a pool.
+        /// Someone has exited a pool. \[account, amount\]
         PoolExit(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// Exists a pool given an exact amount of an asset
+        /// Exits a pool given an exact amount of an asset. \[account, amount\]
         PoolExitWithExactAssetAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
-        /// Exists a pool given an exact pool's amount
+        /// Exits a pool given an exact pool's amount. \[account, amount\]
         PoolExitWithExactPoolAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
-        /// Someone has joined a pool.
+        /// Someone has joined a pool. \[account, amount\]
         PoolJoin(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// Joins a pool given an exact amount of an asset
+        /// Joins a pool given an exact amount of an asset. \[account, amount\]
         PoolJoinWithExactAssetAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
-        /// Joins a pool given an exact pool's amount
+        /// Joins a pool given an exact pool's amount. \[account, amount\]
         PoolJoinWithExactPoolAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
-        /// An exact amount of an asset is entering the pool
+        /// An exact amount of an asset is entering the pool. \[account, amount\]
         SwapExactAmountIn(SwapEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// An exact amount of an asset is leaving the pool
+        /// An exact amount of an asset is leaving the pool. \[account, amount\]
         SwapExactAmountOut(SwapEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
     }
 
