@@ -3,6 +3,7 @@ members = [
     "node",
     "primitives",
     "runtime",
+    "zrml/liquidity-mining",
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
     "zrml/prediction-markets/rpc",

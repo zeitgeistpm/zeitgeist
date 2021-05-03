@@ -1,39 +1,22 @@
-use crate as orderbook_v1;
-use frame_support::{construct_runtime, parameter_types, PalletId};
-use orml_traits::parameter_type_with_key;
+use crate as zeitgeist_liquidity_mining;
+use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
 use sp_runtime::{
     testing::Header,
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    Perbill,
+    traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::BLOCK_HASH_COUNT,
-    types::{
-        AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
-        UncheckedExtrinsicTest,
-    },
+    constants::{BASE, BLOCK_HASH_COUNT},
+    types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
 };
 
 pub const ALICE: AccountIdTest = 0;
-pub const BOB: AccountIdTest = 1;
 
-pub type Block = BlockTest<Runtime>;
-pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
+type Block = BlockTest<Runtime>;
+type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+    pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
     pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
-    pub const ExistentialDeposit: Balance = 1;
-    pub const SharesPalletId: PalletId = PalletId(*b"test/sha");
-    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
-
-    pub const MaxLocks: u32 = 50;
-}
-
-parameter_type_with_key! {
-  pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-    Default::default()
-  };
 }
 
 construct_runtime!(
@@ -44,18 +27,15 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        ZeitgeistLiquidityMining: zeitgeist_liquidity_mining::{Config<T>, Event<T>, Pallet, Storage},
     }
 );
 
 impl crate::Config for Runtime {
     type Currency = Balances;
     type Event = ();
-    type MarketId = MarketId;
-    type Shares = Tokens;
-    type WeightInfo = orderbook_v1::weights::WeightInfo<Runtime>;
+    type PalletId = LmPalletId;
 }
 
 impl frame_system::Config for Runtime {
@@ -84,34 +64,28 @@ impl frame_system::Config for Runtime {
     type OnSetCode = ();
 }
 
-impl orml_tokens::Config for Runtime {
-    type Amount = Amount;
-    type Balance = Balance;
-    type CurrencyId = CurrencyId;
-    type Event = ();
-    type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
-    type WeightInfo = ();
-}
-
 impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
     type Event = ();
-    type ExistentialDeposit = ExistentialDeposit;
-    type MaxLocks = MaxLocks;
+    type ExistentialDeposit = ();
+    type MaxLocks = ();
     type WeightInfo = ();
 }
 
 pub struct ExtBuilder {
-    balances: Vec<(AccountIdTest, Balance)>,
+    pub(crate) balances: Vec<(AccountIdTest, Balance)>,
+    pub(crate) initial_balance: Balance,
+    pub(crate) per_block_distribution: Balance,
 }
 
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
-            balances: vec![(ALICE, 1_000), (BOB, 1_000)],
+            balances: vec![(ALICE, 1_000 * BASE)],
+            initial_balance: 100 * BASE,
+            per_block_distribution: 1 * BASE,
         }
     }
 }
@@ -121,6 +95,13 @@ impl ExtBuilder {
         let mut t = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
             .unwrap();
+
+        crate::GenesisConfig::<Runtime> {
+            initial_balance: self.initial_balance,
+            per_block_distribution: self.per_block_distribution,
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
         pallet_balances::GenesisConfig::<Runtime> {
             balances: self.balances,
