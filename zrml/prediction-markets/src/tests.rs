@@ -1,4 +1,4 @@
-use crate::{market::*, mock::*, Error, Config};
+use crate::{market::*, mock::*, Config, Error};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::Get};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
@@ -47,28 +47,34 @@ fn it_creates_binary_markets() {
 #[test]
 fn it_does_not_create_market_with_too_few_categories() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(PredictionMarkets::create_categorical_market(
-            Origin::signed(ALICE),
-            BOB,
-            MarketEnd::Block(100),
-            gen_metadata(2),
-            MarketCreation::Advised,
-            <Runtime as Config>::MinCategories::get() - 1
-        ), Error::<Runtime>::NotEnoughCategories);
+        assert_noop!(
+            PredictionMarkets::create_categorical_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketEnd::Block(100),
+                gen_metadata(2),
+                MarketCreation::Advised,
+                <Runtime as Config>::MinCategories::get() - 1
+            ),
+            Error::<Runtime>::NotEnoughCategories
+        );
     });
 }
 
 #[test]
 fn it_does_not_create_market_with_too_many_categories() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(PredictionMarkets::create_categorical_market(
-            Origin::signed(ALICE),
-            BOB,
-            MarketEnd::Block(100),
-            gen_metadata(2),
-            MarketCreation::Advised,
-            <Runtime as Config>::MaxCategories::get() + 1
-        ), Error::<Runtime>::TooManyCategories);
+        assert_noop!(
+            PredictionMarkets::create_categorical_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketEnd::Block(100),
+                gen_metadata(2),
+                MarketCreation::Advised,
+                <Runtime as Config>::MaxCategories::get() + 1
+            ),
+            Error::<Runtime>::TooManyCategories
+        );
     });
 }
 

@@ -320,8 +320,14 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::ensure_create_market_end(end)?;
 
-            ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
-            ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+            ensure!(
+                categories >= T::MinCategories::get(),
+                <Error<T>>::NotEnoughCategories
+            );
+            ensure!(
+                categories <= T::MaxCategories::get(),
+                <Error<T>>::TooManyCategories
+            );
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {

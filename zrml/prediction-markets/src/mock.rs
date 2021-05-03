@@ -14,8 +14,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MinCategories, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
-        MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight, BASE,
+        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
+        MaxWeight, MinCategories, MinLiquidity, MinWeight, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
