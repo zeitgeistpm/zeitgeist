@@ -2,6 +2,8 @@
 
 extern crate alloc;
 
+pub mod ztg;
+
 mod asset;
 pub mod constants;
 mod serde_wrapper;

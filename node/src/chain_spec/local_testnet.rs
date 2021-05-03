@@ -1,4 +1,6 @@
-use crate::chain_spec::{generic_genesis, get_account_id_from_seed, ChainSpec};
+use crate::chain_spec::{
+    generic_genesis, get_account_id_from_seed, AdditionalChainSpec, ChainSpec,
+};
 use sc_service::ChainType;
 use sp_core::sr25519;
 
@@ -13,6 +15,30 @@ pub fn local_testnet_config(
         ChainType::Local,
         move || {
             generic_genesis(
+                #[cfg(feature = "parachain")]
+                AdditionalChainSpec {
+                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+                    stakers: vec![
+                        (
+                            get_account_id_from_seed::<sr25519::Public>("Bob"),
+                            None,
+                            1_000 * zeitgeist_primitives::constants::BASE,
+                        ),
+                        (
+                            get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                            None,
+                            1_000 * zeitgeist_primitives::constants::BASE,
+                        ),
+                    ],
+                    parachain_id: id,
+                },
+                #[cfg(not(feature = "parachain"))]
+                AdditionalChainSpec {
+                    initial_authorities: vec![
+                        crate::chain_spec::authority_keys_from_seed("Alice"),
+                        crate::chain_spec::authority_keys_from_seed("Bob"),
+                    ],
+                },
                 vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
                     get_account_id_from_seed::<sr25519::Public>("Bob"),

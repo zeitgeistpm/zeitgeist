@@ -14,7 +14,5 @@ test_package_with_feature primitives std
 for package in zrml/*
 do
   test_package_with_feature "$package" std
+  test_package_with_feature zrml/swaps std,runtime-benchmarks
 done
-
-test_package_with_feature zrml/prediction-markets std,runtime-benchmarks
-test_package_with_feature zrml/swaps std,runtime-benchmarks

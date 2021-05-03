@@ -45,8 +45,6 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
-pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
@@ -58,9 +56,11 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
+const BOND_DURATION: u32 = 2;
 const EXISTENTIAL_DEPOSIT: Balance = 100 * CENTS;
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
 pub type AdaptedBasicCurrency =
     orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
@@ -90,12 +90,27 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 
 parameter_types! {
   pub const AdvisoryBond: Balance = 25 * DOLLARS;
-  pub const BlockHashCount: BlockNumber = 250;
+  pub const BlockHashCount: BlockNumber = BLOCK_HASH_COUNT;
+  pub const BondDuration: u32 = 2; // Two hours
+  pub const CrowdloanLeasePeriod: u64 = 4;
+  pub const CrowdloanVestingPeriod: u64 = 3;
+  pub const DefaultBlocksPerRound: u32 = BLOCKS_PER_HOUR as _;
+  pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
+  pub const DisputeBond: Balance = 5 * BASE;
+  pub const DisputeFactor: Balance = 2 * BASE;
+  pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
   pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
+  pub const MaxCollatorsPerNominator: u32 = 24;
   pub const MaxLocks: u32 = 50;
+  pub const MaxNominatorsPerCollator: u32 = 8;
+  pub const MinBlocksPerRound: u32 = BOND_DURATION * BLOCKS_PER_HOUR as u32;
+  pub const MinCollatorStake: u128 = 1_000 * BASE;
   pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
-  pub const SS58Prefix: u8 = 42; // @TODO: Change back to 73 once https://github.com/paritytech/substrate/pull/8509 is merged
+  pub const MinNominatorStake: u128 = 5 * BASE;
+  pub const MinSelectedCandidates: u32 = 2;
+  pub const MinVestedTransfer: u64 = 16;
+  pub const SS58Prefix: u8 = 42; // @TODO: Change back to 73 once https://github.com/paritytech/substrate/pull/8509 is merge
   pub const TransactionByteFee: Balance = 1 * MILLICENTS;
   pub const Version: RuntimeVersion = VERSION;
   pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
@@ -151,18 +166,41 @@ macro_rules! create_zeitgeist_runtime {
 }
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
+    CfReward: cf_reward::{Call, Config<T>, Event<T>, Pallet, Storage},
     CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
     CumulusXcm: cumulus_pallet_xcm::{Origin, Pallet},
     ParachainInfo: parachain_info::{Config, Pallet, Storage},
+    ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
     ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>},
     PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet},
+    Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage},
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage},
+
+    // Must be last
+    AuthorInherent: author_inherent::{Pallet, Call, Storage, Inherent},
+    AuthorFilter: pallet_author_filter::{Pallet, Call, Storage, Event<T>,}
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
     Aura: pallet_aura::{Config<T>, Pallet},
     Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage},
 );
+
+#[cfg(feature = "parachain")]
+impl author_inherent::Config for Runtime {
+    type EventHandler = ParachainStaking;
+    type FinalCanAuthor = AuthorFilter;
+    type PreliminaryCanAuthor = ParachainStaking;
+}
+
+#[cfg(feature = "parachain")]
+impl cf_reward::Config for Runtime {
+    type Event = Event;
+    type LeasePeriod = CrowdloanLeasePeriod;
+    type RelayChainAccountId = AccountId;
+    type RelayChainBalance = Balance;
+    type VestingPeriod = CrowdloanVestingPeriod;
+}
 
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -231,6 +269,12 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
 }
 
+#[cfg(feature = "parachain")]
+impl pallet_author_filter::Config for Runtime {
+    type Event = Event;
+    type RandomnessSource = RandomnessCollectiveFlip;
+}
+
 #[cfg(not(feature = "parachain"))]
 impl pallet_grandpa::Config for Runtime {
     type Event = Event;
@@ -256,12 +300,38 @@ impl pallet_grandpa::Config for Runtime {
 }
 
 #[cfg(feature = "parachain")]
+impl pallet_vesting::Config for Runtime {
+    type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
+    type Currency = Balances;
+    type Event = Event;
+    type MinVestedTransfer = MinVestedTransfer;
+    type WeightInfo = ();
+}
+
+#[cfg(feature = "parachain")]
 impl pallet_xcm::Config for Runtime {
     type Event = Event;
     type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
     type XcmRouter = XcmRouter;
+}
+
+#[cfg(feature = "parachain")]
+impl parachain_staking::Config for Runtime {
+    type BondDuration = BondDuration;
+    type Currency = Balances;
+    type DefaultBlocksPerRound = DefaultBlocksPerRound;
+    type DefaultCollatorCommission = DefaultCollatorCommission;
+    type Event = Event;
+    type MaxCollatorsPerNominator = MaxCollatorsPerNominator;
+    type MaxNominatorsPerCollator = MaxNominatorsPerCollator;
+    type MinBlocksPerRound = MinBlocksPerRound;
+    type MinCollatorCandidateStk = MinCollatorStake;
+    type MinCollatorStk = MinCollatorStake;
+    type MinNomination = MinNominatorStake;
+    type MinNominatorStk = MinNominatorStake;
+    type MinSelectedCandidates = MinSelectedCandidates;
 }
 
 impl orml_currencies::Config for Runtime {

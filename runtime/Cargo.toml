@@ -34,6 +34,11 @@ frame-benchmarking = { branch = "rococo-v1", default-features = false, git = "ht
 frame-system-benchmarking = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.0" }
 hex-literal = { optional = true, version = "0.3" }
 
+# Bugfix
+
+# `cargo check` => error[E0599]: no method named `to_low_u64_be` found for struct `H256` in the current scope
+fixed-hash = { default-features = false, features = ["byteorder"], version = "0.7" }
+
 # Cumulus
 
 cumulus-pallet-parachain-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
@@ -51,6 +56,14 @@ polkadot-parachain = { branch = "rococo-v1", default-features = false, git = "ht
 xcm = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-builder = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-executor = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+
+# Parachain
+
+author-inherent = { branch = "stuff", default-features = false, git = "https://github.com/c410-f3r/moonbeam", optional = true }
+cf-reward = { branch = "stuff", default-features = false, git = "https://github.com/c410-f3r/centrifuge-chain", optional = true }
+pallet-author-filter = { branch = "stuff", default-features = false, git = "https://github.com/c410-f3r/moonbeam", optional = true }
+pallet-vesting = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true }
+parachain-staking = { branch = "stuff",  default-features = false, git = "https://github.com/c410-f3r/moonbeam", optional = true }
 
 # Standalone
 
@@ -80,6 +93,14 @@ parachain = [
 	"cumulus-primitives-core",
 	"cumulus-primitives-utility",
 	"parachain-info",
+
+	# Parachain
+
+	"author-inherent",
+	"cf-reward",
+	"pallet-vesting",
+	"pallet-author-filter",
+	"parachain-staking",
 
 	# Polkadot
 
@@ -131,6 +152,10 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-version/std",
 
+	# Bugfix
+
+	"fixed-hash/std",
+
 	# Cumulus
 
 	"cumulus-pallet-parachain-system/std",
@@ -140,6 +165,14 @@ std = [
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-utility/std",
 	"parachain-info/std",
+
+	# Parachain
+
+	"author-inherent/std",
+	"cf-reward/std",
+	"pallet-author-filter/std",
+	"pallet-vesting/std",
+	"parachain-staking/std",
 
 	# Polkadot
 

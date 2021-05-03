@@ -1,4 +1,4 @@
-use crate::chain_spec::{ChainSpec, TELEMETRY_URL};
+use crate::chain_spec::{generic_genesis, AdditionalChainSpec, ChainSpec, TELEMETRY_URL};
 use hex_literal::hex;
 use jsonrpc_core::serde_json::Map;
 use sc_service::{config::TelemetryEndpoints, ChainType};
@@ -23,16 +23,26 @@ pub fn battery_park_config(
         move || {
             generic_genesis(
                 #[cfg(feature = "parachain")]
-                id,
+                AdditionalChainSpec {
+                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+                    stakers: vec![],
+                    parachain_id: id,
+                },
                 #[cfg(not(feature = "parachain"))]
-                vec![(
-                    // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
-                    hex!["8a9a54bdf73fb4a757f5ab81fabe2f173922fdb92bb8b6e8bedf8b17fa38f500"]
-                        .unchecked_into(),
-                    // 5HGProUwcyCDMJDxjBBKbv8u7ehr5uoTBS3bckYHPcZMTifW
-                    hex!["e61786c6426b55a034f9c4b78dc57d4183927cef8e64b2e496225ed6fca41758"]
-                        .unchecked_into(),
-                )],
+                AdditionalChainSpec {
+                    initial_authorities: vec![(
+                        // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
+                        hex!["8a9a54bdf73fb4a757f5ab81fabe2f173922fdb92bb8b6e8bedf8b17fa38f500"]
+                            .unchecked_into(),
+                        // 5HGProUwcyCDMJDxjBBKbv8u7ehr5uoTBS3bckYHPcZMTifW
+                        hex!["e61786c6426b55a034f9c4b78dc57d4183927cef8e64b2e496225ed6fca41758"]
+                            .unchecked_into(),
+                    )],
+                },
+                vec![
+                    // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
+                    hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
+                ],
                 10_000 * BASE,
                 hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
                 wasm_binary,
