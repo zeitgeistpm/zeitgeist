@@ -90,8 +90,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             OnUnbalanced, ReservableCurrency, Time,
         },
-        transactional,
-        Blake2_128Concat, PalletId, Parameter,
+        transactional, Blake2_128Concat, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
