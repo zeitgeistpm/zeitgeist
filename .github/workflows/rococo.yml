@@ -1,4 +1,4 @@
-name: Chachacha
+name: Rococo
 
 on:
   workflow_dispatch:
@@ -27,5 +27,5 @@ jobs:
           host: 45.33.117.205
           key: ${{ secrets.CHACHACHA_VM_PRIVATE_KEY }}
           passphrase: ${{ secrets.CHACHACHA_VM_PASSWORD }}
-          script: bash /home/ci/scripts/parachain/chachacha.sh
+          script: bash /home/ci/scripts/parachain/rococo.sh
           username: ci
