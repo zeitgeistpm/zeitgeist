@@ -90,6 +90,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             OnUnbalanced, ReservableCurrency, Time,
         },
+        transactional,
         Blake2_128Concat, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -272,6 +273,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32)
         )]
+        #[transactional]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -419,7 +421,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
         )]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
