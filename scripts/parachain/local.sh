@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
 # Creates a local relay chain with two validators and one parachain
-#
-# It is still necessary to register Zeitgeist through a parathread or sudoScheduleParaInitialize
 
 set -euxo pipefail
 
