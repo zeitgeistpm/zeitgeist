@@ -770,6 +770,7 @@ mod pallet {
 
             let assets = Self::outcome_assets(market_id, market);
 
+            // verify first.
             for asset in assets.iter() {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
@@ -777,7 +778,10 @@ mod pallet {
                     T::Shares::free_balance(*asset, &sender) >= amount,
                     Error::<T>::InsufficientShareBalance,
                 );
+            }
 
+            // write last.
+            for asset in assets.iter() {
                 T::Shares::slash(*asset, &sender, amount);
             }
 
