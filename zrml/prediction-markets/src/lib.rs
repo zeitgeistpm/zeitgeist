@@ -110,12 +110,12 @@ mod pallet {
         /// in for production
         #[pallet::weight(
             T::WeightInfo::admin_destroy_reported_market(
-                80_000,
-                80_000,
+                4_500,
+                4_500,
                 T::MaxCategories::get() as u32
             ).max(T::WeightInfo::admin_destroy_disputed_market(
-                80_000,
-                80_000,
+                4_500,
+                4_500,
                 T::MaxCategories::get() as u32
             ))
         )]
