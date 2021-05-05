@@ -90,7 +90,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             OnUnbalanced, ReservableCurrency, Time,
         },
-        Blake2_128Concat, PalletId, Parameter,
+        transactional, Blake2_128Concat, PalletId, Parameter,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -272,6 +272,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32)
         )]
+        #[transactional]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -419,7 +420,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
         )]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
             market_id: T::MarketId,
@@ -770,6 +771,7 @@ mod pallet {
 
             let assets = Self::outcome_assets(market_id, market);
 
+            // verify first.
             for asset in assets.iter() {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
@@ -777,7 +779,10 @@ mod pallet {
                     T::Shares::free_balance(*asset, &sender) >= amount,
                     Error::<T>::InsufficientShareBalance,
                 );
+            }
 
+            // write last.
+            for asset in assets.iter() {
                 T::Shares::slash(*asset, &sender, amount);
             }
 
