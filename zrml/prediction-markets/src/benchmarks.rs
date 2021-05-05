@@ -16,7 +16,10 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
-    types::{Asset, MarketCreation, MarketEnd, MarketType, OutcomeReport, ScalarPosition},
+    types::{
+        Asset, MarketCreation, MarketEnd, MarketType, MultiHashSha384, OutcomeReport,
+        ScalarPosition
+    },
 };
 
 // Get default values for market creation. Also spawns an account with maximum
@@ -28,7 +31,7 @@ fn create_market_common_parameters<T: Config>(
         T::AccountId,
         T::AccountId,
         MarketEnd<T::BlockNumber>,
-        Vec<u8>,
+        MultiHashSha384,
         MarketCreation,
     ),
     &'static str,
@@ -37,7 +40,9 @@ fn create_market_common_parameters<T: Config>(
     let _ = T::Currency::deposit_creating(&caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let end = <MarketEnd<T::BlockNumber>>::Block((u128::MAX).saturated_into());
-    let metadata = <Vec<u8>>::new();
+    let mut metadata = [0u8; 50];
+    metadata[0] = 0x15;
+    metadata[1] = 0x30;
     let creation = permission;
     Ok((caller, oracle, end, metadata, creation))
 }

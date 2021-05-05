@@ -92,7 +92,7 @@ mod pallet {
         traits::{Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
-            OutcomeReport, PoolId, PoolStatus, Report, ScalarPosition,
+            MultiHash, OutcomeReport, PoolId, PoolStatus, Report, ScalarPosition,
         },
     };
 
@@ -204,8 +204,8 @@ mod pallet {
         ////
         #[pallet::weight(T::WeightInfo::admin_move_market_to_resolved_overhead()
             .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
-                80_000,
-                80_000,
+                4_200,
+                4_200,
                 T::MaxCategories::get() as u32
             ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
         ))]
@@ -308,7 +308,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             end: MarketEnd<T::BlockNumber>,
-            metadata: Vec<u8>,
+            metadata: MultiHashSha384,
             creation: MarketCreation,
             categories: u16,
         ) -> DispatchResult {
@@ -322,6 +322,11 @@ mod pallet {
             ensure!(
                 categories <= T::MaxCategories::get(),
                 <Error<T>>::TooManyCategories
+            );
+            // Require sha3-384 as multihash.
+            ensure!(
+                metadata[0] == 0x15 && metadata[1] == 0x30,
+                <Error<T>>::InvalidMultihash
             );
 
             let status: MarketStatus = match creation {
@@ -338,13 +343,14 @@ mod pallet {
             };
 
             let market_id = Self::get_next_market_id()?;
+
             let market = Market {
                 creator: sender.clone(),
                 creation,
                 creator_fee: 0,
                 oracle,
                 end,
-                metadata,
+                metadata: Vec::from(metadata),
                 market_type: MarketType::Categorical(categories),
                 status,
                 report: None,
@@ -363,7 +369,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             end: MarketEnd<T::BlockNumber>,
-            metadata: Vec<u8>,
+            metadata: MultiHashSha384,
             creation: MarketCreation,
             outcome_range: (u128, u128),
         ) -> DispatchResult {
@@ -371,6 +377,11 @@ mod pallet {
             Self::ensure_create_market_end(end)?;
 
             ensure!(outcome_range.0 < outcome_range.1, "Invalid range provided.");
+            // Require sha3-384 as multihash.
+            ensure!(
+                metadata[0] == 0x15 && metadata[1] == 0x30,
+                <Error<T>>::InvalidMultihash
+            );
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
@@ -392,7 +403,7 @@ mod pallet {
                 creator_fee: 0,
                 oracle,
                 end,
-                metadata,
+                metadata: Vec::from(metadata),
                 market_type: MarketType::Scalar(outcome_range),
                 status,
                 report: None,
@@ -879,6 +890,8 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
+        /// An invalid Hash was included in a multihash parameter
+        InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
         /// A market with the provided ID does not exist.

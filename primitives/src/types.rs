@@ -30,6 +30,12 @@ pub type BlockNumber = u64;
 /// The index of the category for a `CategoricalOutcome` asset.
 pub type CategoryIndex = u16;
 
+/// Multihash for digest sizes up to 384 bit.
+/// The multicodec encoding the hash algorithm uses only 1 byte,
+/// effecitvely limiting the number of available hash types.
+/// HashType (1B) + DigestSize (1B) + Hash (48B).
+pub type MultiHashSha384 = [u8; 50];
+
 pub type CurrencyId = Asset<MarketId>;
 
 /// Index of a transaction in the chain.

@@ -7,17 +7,20 @@ use frame_support::{
     traits::Get,
 };
 use orml_traits::MultiCurrency;
-use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::BASE,
     types::{
-        Asset, Market, MarketCreation, MarketEnd, MarketStatus, OutcomeReport, ScalarPosition,
+        Asset, Market, MarketCreation, MarketEnd, MarketStatus, MultiHashSha384 OutcomeReport,
+        ScalarPosition,
     },
 };
 
-fn gen_metadata(byte: u8) -> Vec<u8> {
-    H256::repeat_byte(byte).to_fixed_bytes().to_vec()
+fn gen_metadata(byte: u8) -> MultiHashSha384 {
+    let mut metadata = [byte; 50];
+    metadata[0] = 0x15;
+    metadata[1] = 0x30;
+    metadata
 }
 
 fn simple_create_categorical_market<T: crate::Config>(creation: MarketCreation) {
