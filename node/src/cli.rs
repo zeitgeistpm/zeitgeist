@@ -145,11 +145,11 @@ pub fn load_spec(
         )?),
         #[cfg(not(feature = "parachain"))]
         "battery_park" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
-            &include_bytes!("../res/bp.json")[..]
+            &include_bytes!("../res/bp.json")[..],
         )?),
         #[cfg(feature = "parachain")]
         "battery_park" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
-            &include_bytes!("../res/bp_parachain.json")[..]
+            &include_bytes!("../res/bp_parachain.json")[..],
         )?),
         path => Box::new(crate::chain_spec::ChainSpec::from_json_file(
             std::path::PathBuf::from(path),
