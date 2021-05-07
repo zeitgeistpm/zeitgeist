@@ -1,6 +1,6 @@
 # Based from https://github.com/paritytech/substrate/blob/master/.maintain/Dockerfile
 
-FROM paritytech/ci-linux:production as builder
+FROM phusion/baseimage:bionic-1.0.0 as builder
 LABEL maintainer="hi@zeitgeit.pm"
 LABEL description="This is the build stage for the Zeitgeist node. Here is created the binary."
 
@@ -12,21 +12,20 @@ WORKDIR /zeitgeist
 
 COPY . /zeitgeist
 
-RUN cargo build --$PROFILE
-# RUN apt-get update && \
-#     apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
-#     apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
+RUN apt-get update && \
+    apt-get dist-upgrade -y -o Dpkg::Options::="--force-confold" && \
+    apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev
 
-# RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-#     export PATH="$PATH:$HOME/.cargo/bin" && \
-#     rustup toolchain install nightly-2021-03-10 && \
-#     rustup target add wasm32-unknown-unknown --toolchain nightly-2021-03-10 && \
-#     rustup default stable && \
-#     cargo build "--$PROFILE" --features "$FEATURES"
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+    export PATH="$PATH:$HOME/.cargo/bin" && \
+    rustup toolchain install nightly-2021-03-10 && \
+    rustup target add wasm32-unknown-unknown --toolchain nightly-2021-03-10 && \
+    rustup default stable && \
+    cargo build "--$PROFILE" --features "$FEATURES"
 
 # ==== SECOND STAGE ====
 
-FROM debian:buster-slim
+FROM phusion/baseimage:bionic-1.0.0
 LABEL maintainer="hi@zeitgeist.pm"
 LABEL description="This is the 2nd stage: a very small image where we copy the Zeigeist node binary."
 ARG PROFILE=release

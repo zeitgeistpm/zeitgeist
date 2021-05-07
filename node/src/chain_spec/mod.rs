@@ -1,16 +1,12 @@
-mod battery_park;
 mod dev;
 mod local_testnet;
 
-pub use battery_park::battery_park_config;
 pub use dev::dev_config;
 pub use local_testnet::local_testnet_config;
 use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::types::{AccountId, Signature};
 use zeitgeist_runtime::{BalancesConfig, TokensConfig};
-
-const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 #[cfg(feature = "parachain")]
 pub type ChainSpec =
