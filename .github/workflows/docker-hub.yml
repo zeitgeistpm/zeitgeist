@@ -2,6 +2,8 @@ name: Docker Hub
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   publish:
