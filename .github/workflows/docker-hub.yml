@@ -30,7 +30,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       
       - name: Build and publish
-        run: ./scripts/docker-hub-publish.sh xxxx ${{ matrix.features }}
+        run: ./scripts/docker-hub-publish.sh ${GITHUB_SHA} ${{ matrix.features }}
 
       # - name: Build and push
       #   uses: docker/build-push-action@v2

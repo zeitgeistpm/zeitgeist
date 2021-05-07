@@ -10,5 +10,5 @@ fi
 
 docker build --build-arg FEATURES=$FEATURES . -t zeitgeistpm/zeitgeist-node-{$2}:$1 -t zeitgeistpm/zeitgeist-node:latest
 docker build --build-arg FEATURES=$FEATURES . -t zeitgeistpm/zeitgeist-node-{$2}:latest
-docker push zeitgeistpm/zeitgeist-node-{$2}:$1
-docker push zeitgeistpm/zeitgeist-node-{$2}:latest
+docker push zeitgeistpm/zeitgeist-node-$2:$1
+docker push zeitgeistpm/zeitgeist-node-$2:latest
