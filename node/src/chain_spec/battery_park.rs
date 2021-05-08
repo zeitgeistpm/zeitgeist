@@ -6,7 +6,7 @@ use sc_service::{config::TelemetryEndpoints, ChainType};
 use sp_core::crypto::UncheckedInto;
 use zeitgeist_primitives::{constants::BASE, types::AccountId};
 
-pub fn battery_park_config(
+pub fn battery_park_staging_config(
     #[cfg(feature = "parachain")] id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {
     let wasm_binary = zeitgeist_runtime::WASM_BINARY
@@ -17,14 +17,16 @@ pub fn battery_park_config(
     properties.insert("tokenDecimals".into(), 10.into());
 
     Ok(ChainSpec::from_genesis(
-        "Zeitgeist Battery Park",
-        "battery_park",
+        "Zeitgeist Battery Park Staging",
+        "battery_park_staging",
         ChainType::Live,
         move || {
-            battery_park_genesis(
+            battery_park_staging_genesis(
                 vec![
                     // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
                     hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
+                    // 5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX
+                    hex!["725bb6fd13d52b3d6830e5a9faed1f6499ca0f5e8aa285df09490646e71e831b"].into(),
                 ],
                 #[cfg(feature = "parachain")]
                 id,
@@ -41,11 +43,9 @@ pub fn battery_park_config(
                 wasm_binary,
             )
         },
-        vec![
-            "/ip4/139.162.171.58/tcp/30333/p2p/12D3KooWPvu5rpH2FNYnAmiQ8X8XqkMiuSFTjH2jwMCSjoam7RGQ".parse().map_err(|_| "invalid bootnoode id")?
-        ],
+        vec![],
         TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
-        Some("battery_park"),
+        Some("battery_park_staging"),
         Some(properties),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
@@ -57,7 +57,7 @@ pub fn battery_park_config(
     ))
 }
 
-fn battery_park_genesis(
+fn battery_park_staging_genesis(
     endowed_accounts: Vec<AccountId>,
     #[cfg(feature = "parachain")] id: cumulus_primitives_core::ParaId,
     #[cfg(not(feature = "parachain"))] initial_authorities: Vec<(
