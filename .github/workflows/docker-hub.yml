@@ -9,12 +9,6 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        features: [
-          "default",
-          "parachain"
-        ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -26,4 +20,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       
       - name: Build and publish
-        run: ./scripts/docker-hub-publish.sh ${GITHUB_SHA} ${{ matrix.features }}
+        run: ./scripts/docker-hub-publish.sh ${GITHUB_SHA}
