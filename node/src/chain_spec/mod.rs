@@ -2,7 +2,7 @@ mod battery_park;
 mod dev;
 mod local_testnet;
 
-pub use battery_park::battery_park_config;
+pub use battery_park::battery_park_staging_config;
 pub use dev::dev_config;
 pub use local_testnet::local_testnet_config;
 use sp_core::{Pair, Public};
