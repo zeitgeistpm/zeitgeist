@@ -112,7 +112,7 @@ macro_rules! pool {
         )?
         .saturated_into();
         Self::check_provided_values_len_must_equal_assets_len(&pool.assets, &$asset_bounds)?;
-        ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
+        ensure!(ratio != Zero::zero(), Error::<T>::MathApproximationRatio);
 
         let mut transferred = Vec::with_capacity($asset_bounds.len());
 
@@ -121,7 +121,7 @@ macro_rules! pool {
             let amount: BalanceOf<T> =
                 bmul(ratio.saturated_into(), balance.saturated_into())?.saturated_into();
             transferred.push(amount);
-            ensure!(amount != Zero::zero(), Error::<T>::MathApproximation);
+            ensure!(amount != Zero::zero(), Error::<T>::MathApproximationAmount);
             ($transfer_asset(amount, amount_bound, asset, &pool_account_id, &who)
                 as DispatchResult)?;
         }

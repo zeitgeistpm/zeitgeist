@@ -31,6 +31,7 @@ const _99: u128 = 99 * BASE;
 const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
+const _500: u128 = 500 * BASE;
 
 #[test]
 fn allows_the_full_user_lifecycle() {
@@ -263,6 +264,42 @@ fn pool_exit_decreases_correct_pool_parameters() {
             [_100 - 1, _100 - 1, _100 - 1, _100 - 1],
             _100,
         );
+    })
+}
+
+#[test]
+fn pool_exit_works_with_intermittent_trading() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice_extra();
+
+        assert_ok!(Swaps::pool_join(
+            alice_signed(),
+            0,
+            _500,
+            vec!(_500, _500, _500, _500, _500),
+        ));
+
+        // Perform some trades
+        let pool = Swaps::pools(0).unwrap();
+        for asset in pool.assets.iter() {
+            assert_ok!(Swaps::swap_exact_amount_in(
+                charlie_signed(),
+                0,
+                Asset::Ztg,
+                _100,
+                *asset,
+                0,
+                _500,
+            ));
+        }
+
+        assert_ok!(Swaps::pool_exit(
+            alice_signed(),
+            0,
+            _500,
+            vec!(0, 0, 0, 0, 0),
+        ));
     })
 }
 
@@ -504,14 +541,39 @@ fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
 
+#[inline]
+fn bob_signed() -> Origin {
+    Origin::signed(BOB)
+}
+
+#[inline]
+fn charlie_signed() -> Origin {
+    Origin::signed(CHARLIE)
+}
+
 fn create_initial_pool() {
     ASSETS.iter().cloned().for_each(|asset| {
         let _ = Shares::deposit(asset, &BOB, _100);
     });
     assert_ok!(Swaps::create_pool(
-        Origin::signed(BOB),
+        bob_signed(),
         ASSETS.iter().cloned().collect(),
         vec!(_2, _2, _2, _2),
+    ));
+}
+
+fn create_initial_pool_extra() {
+    ASSETS.iter().cloned().for_each(|asset| {
+        let _ = Shares::deposit(asset, &BOB, _100);
+    });
+
+    let mut extra_assets = ASSETS.to_vec();
+    extra_assets.push(Asset::Ztg);
+
+    assert_ok!(Swaps::create_pool(
+        bob_signed(),
+        extra_assets.iter().cloned().collect(),
+        vec!(_2, _2, _2, _2, _8),
     ));
 }
 
@@ -521,6 +583,14 @@ fn create_initial_pool_with_funds_for_alice() {
     let _ = Shares::deposit(ASSET_B, &ALICE, _25);
     let _ = Shares::deposit(ASSET_C, &ALICE, _25);
     let _ = Shares::deposit(ASSET_D, &ALICE, _25);
+}
+
+fn create_initial_pool_with_funds_for_alice_extra() {
+    create_initial_pool_extra();
+    let _ = Shares::deposit(ASSET_A, &ALICE, _500);
+    let _ = Shares::deposit(ASSET_B, &ALICE, _500);
+    let _ = Shares::deposit(ASSET_C, &ALICE, _500);
+    let _ = Shares::deposit(ASSET_D, &ALICE, _500);
 }
 
 fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {

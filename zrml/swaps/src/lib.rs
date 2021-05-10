@@ -493,6 +493,8 @@ mod pallet {
         LimitIn,
         LimitOut,
         MathApproximation,
+        MathApproximationRatio,
+        MathApproximationAmount,
         MathApproximationDebug,
         MaxInRatio,
         MaxOutRatio,
