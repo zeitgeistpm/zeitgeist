@@ -223,12 +223,12 @@ fn pool_amount_must_not_be_zero() {
 
         assert_noop!(
             Swaps::pool_join(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::MathApproximationRatio
         );
 
         assert_noop!(
             Swaps::pool_exit(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::MathApproximationRatio
         );
     });
 }
@@ -297,7 +297,7 @@ fn pool_exit_works_with_intermittent_trading() {
         assert_ok!(Swaps::pool_exit(
             alice_signed(),
             0,
-            _500,
+            _500 + _100,
             vec!(0, 0, 0, 0, 0),
         ));
     })
@@ -564,14 +564,14 @@ fn create_initial_pool() {
 
 fn create_initial_pool_extra() {
     ASSETS.iter().cloned().for_each(|asset| {
-        let _ = Shares::deposit(asset, &BOB, _100);
+        let _ = Shares::deposit(asset, &ALICE, _100);
     });
 
     let mut extra_assets = ASSETS.to_vec();
     extra_assets.push(Asset::Ztg);
 
     assert_ok!(Swaps::create_pool(
-        bob_signed(),
+        alice_signed(),
         extra_assets.iter().cloned().collect(),
         vec!(_2, _2, _2, _2, _8),
     ));
