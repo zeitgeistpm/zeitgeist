@@ -3,7 +3,8 @@
   "id": "battery_park",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/139.162.171.58/tcp/30333/p2p/12D3KooWPvu5rpH2FNYnAmiQ8X8XqkMiuSFTjH2jwMCSjoam7RGQ"
+    "/ip4/172.105.248.31/tcp/30333/p2p/12D3KooWLr4PKzyzuvEEa7Y3ReVoHsEqtCXXa9x9jPjkKcw7irQx",
+    "/ip4/172.105.248.31/tcp/30335/p2p/12D3KooWF2U2p7HyXRseaocoYcqBQXAnVw8qryNdP36nFTCSQGym"
   ],
   "telemetryEndpoints": [
     [
@@ -44,13 +45,23 @@
       },
       "palletAura": {
         "authorities": [
-          "5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu"
+          "5DV43wUishx47uasQTczUvhohk7RiFkb2NtzrPe5HnJEvHfK",
+          "5DRx7icbtuAkKUFGrRYLf3BW7PcdxRhgNiqRT945vjyPBRDg",
+          "5CafLvMcwkCiCjZDQ8iZ5tjzvv5hzuXUPi7Hd96qAkqJcspj"
         ]
       },
       "palletGrandpa": {
         "authorities": [
           [
-            "5HGProUwcyCDMJDxjBBKbv8u7ehr5uoTBS3bckYHPcZMTifW",
+            "5DuZZh11LPccXhzYKKxwpsv4gRqaeLBzenrc3xrSy6QzqA5t",
+            1
+          ],
+          [
+            "5FQKHx4ctCytUXmqHL1PFSsdawdxTCLwuvYNbuSVywjRzK7d",
+            1
+          ],
+          [
+            "5Dvamw3e13NsfW4Jo9hJWaFbhysThRdNQwfh2pLf4xmis8R9",
             1
           ]
         ]
