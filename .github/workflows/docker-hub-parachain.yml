@@ -11,6 +11,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          flavor: |
+            latest=true
+          images: |
+            zeitgeistpm/zeitgeist-node-parachain
+          tags: |
+            type=sha
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -29,7 +40,6 @@ jobs:
           build-args: |
             FEATURES=parachain
           push: true
-          tags: 
-            - zeitgeistpm/zeitgeist-node-parachain:latest
-            - zeitgeistpm/zeitgeist-node-parachain:${GITHUB_SHA}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
             

@@ -2,9 +2,7 @@
   "name": "Zeitgeist Battery Park",
   "id": "battery_park",
   "chainType": "Live",
-  "bootNodes": [
-    "/ip4/139.162.171.58/tcp/30333/p2p/12D3KooWPvu5rpH2FNYnAmiQ8X8XqkMiuSFTjH2jwMCSjoam7RGQ"
-  ],
+  "bootNodes": [],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
