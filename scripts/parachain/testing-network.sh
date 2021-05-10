@@ -12,40 +12,10 @@ set -euxo pipefail
 
 # Variables
 
-CHACHACHA_BOOTNODES="--bootnodes /ip4/34.89.248.129/tcp/30333/p2p/12D3KooWD8CAZBgpeZiSVVbaj8mijR6mfgUsHNAmCKwsRoRnFod4 --bootnodes /ip4/35.242.217.240/tcp/30333/p2p/12D3KooWBthdCz4JshkMb4GxJXVwrHPv9GpWAgfh2hAdkyXQDKyN"
-
-BOOTNODES="${BOOTNODES:-$CHACHACHA_BOOTNODES}"
-DOCKER_POLKADOT_BIN="${DOCKER_POLKADOT_BIN:-/usr/local/bin/polkadot}"
-DATA_DIR="${DATA_DIR:-$HOME/rococo}"
-PARACHAIN_CHAIN="${PARACHAIN_CHAIN:-battery_park}"
 PARACHAIN_ID="${PARACHAIN_ID:-9123}"
-VALIDATOR_CHAIN="${VALIDATOR_CHAIN:-rococo-chachacha}"
-
 PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain}"
-POLKADOT_IMAGE="${POLKADOT_IMAGE:-centrifugeio/rococo:chachacha-v1}"
-
-PARACHAIN_0="${PARACHAIN_0:-zeitgeist-chachacha-parachain-0}"
-PARACHAIN_0_PORT="${PARACHAIN_0_PORT:-30000}"
-PARACHAIN_0_RPC_PORT="${PARACHAIN_0_RPC_PORT:-8000}"
-PARACHAIN_0_WS_PORT="${PARACHAIN_0_WS_PORT:-9000}"
-
-VALIDATOR_0="${VALIDATOR_0:-zeitgeist-chachacha-validator-0}"
-VALIDATOR_0_PORT="${VALIDATOR_0_PORT:-31000}"
-VALIDATOR_0_RPC_PORT="${VALIDATOR_0_RPC_PORT:-8100}"
-VALIDATOR_0_WS_PORT="${VALIDATOR_0_WS_PORT:-9100}"
-
-VALIDATOR_1="${VALIDATOR_1:-zeitgeist-chachacha-validator-1}"
-VALIDATOR_1_PORT="${VALIDATOR_1_PORT:-31001}"
-VALIDATOR_1_RPC_PORT="${VALIDATOR_1_RPC_PORT:-8101}"
-VALIDATOR_1_WS_PORT="${VALIDATOR_1_WS_PORT:-9101}"
-
-sudo apt update
-sudo apt install -y curl docker.io
-sudo docker stop $PARACHAIN_0 $VALIDATOR_0 $VALIDATOR_1 &> /dev/null || true
-sudo docker rm $PARACHAIN_0 $VALIDATOR_0 $VALIDATOR_1 &> /dev/null || true
-sudo docker pull $PARACHAIN_IMAGE
-sudo docker pull $POLKADOT_IMAGE
-mkdir -p $DATA_DIR/$VALIDATOR_0 $DATA_DIR/$VALIDATOR_1 $DATA_DIR/$PARACHAIN_0
+PARACHAINS_NUM=$(($PARACHAINS_NUM - 1))
+VALIDATORS_NUM=$(($VALIDATORS_NUM - 1))
 
 # Functions
 
@@ -54,6 +24,12 @@ delete_validator() {
 
     sudo docker stop $container_name
     sudo docker rm $container_name
+}
+
+initial_container_configurations() {
+    local container_name=$1
+
+    mkdir -p $DATA_DIR/$container_name
 }
 
 generate_rotate_key() {
@@ -84,51 +60,80 @@ launch_validator() {
         $validator_extra_params
 }
 
+# Init
+
+sudo apt update
+sudo apt install -y curl docker.io
+sudo docker pull $PARACHAIN_IMAGE
+sudo docker pull $POLKADOT_IMAGE
+sudo docker kill $(sudo docker ps -q)
+sudo docker rm $(sudo docker ps -a -q)
+
 # Validators
 
-launch_validator "$VALIDATOR_0" "-p $VALIDATOR_0_PORT:30333 -p $VALIDATOR_0_RPC_PORT:9933 -p $VALIDATOR_0_WS_PORT:9944" "--rpc-cors all --rpc-methods=Unsafe --unsafe-rpc-external"
-ROTATE_KEY_0=$(generate_rotate_key $VALIDATOR_0_RPC_PORT)
-delete_validator "$VALIDATOR_0"
-launch_validator "$VALIDATOR_0" "-p $VALIDATOR_0_PORT:30333 -p $VALIDATOR_0_RPC_PORT:9933 -p $VALIDATOR_0_WS_PORT:9944" ""
+for idx in $(seq 0 $VALIDATORS_NUM)
+do
+    LOCAL_CONTAINER_NAME="$VALIDATOR-$idx"
+    LOCAL_PORT=$(($VALIDATOR_PORT + $idx))
+    LOCAL_RPC_PORT=$(($VALIDATOR_RPC_PORT + $idx))
+    LOCAL_WS_PORT=$(($VALIDATOR_WS_PORT + $idx))
 
-launch_validator "$VALIDATOR_1" "-p $VALIDATOR_1_PORT:30333 -p $VALIDATOR_1_RPC_PORT:9933 -p $VALIDATOR_1_WS_PORT:9944" "--rpc-cors all --rpc-methods=Unsafe --unsafe-rpc-external"
-ROTATE_KEY_1=$(generate_rotate_key $VALIDATOR_1_RPC_PORT)
-delete_validator "$VALIDATOR_1"
-launch_validator "$VALIDATOR_1" "-p $VALIDATOR_1_PORT:30333 -p $VALIDATOR_1_RPC_PORT:9933 -p $VALIDATOR_1_WS_PORT:9944" ""
+    initial_container_configurations $LOCAL_CONTAINER_NAME
+
+    launch_validator $LOCAL_CONTAINER_NAME "-p $LOCAL_PORT:30333 -p $LOCAL_RPC_PORT:9933 -p $LOCAL_WS_PORT:9944" "--rpc-cors all --rpc-methods=Unsafe --unsafe-rpc-external"
+    generate_rotate_key $LOCAL_RPC_PORT
+    delete_validator "$LOCAL_CONTAINER_NAME"
+    launch_validator "$LOCAL_CONTAINER_NAME" "-p $LOCAL_PORT:30333 -p $LOCAL_RPC_PORT:9933 -p $LOCAL_WS_PORT:9944" ""
+done
 
 # Parachains
 
+cp $PARACHAIN_SPEC_FILE $DATA_DIR/parachain-spec.json
+cp $RELAY_CHAIN_SPEC_FILE $DATA_DIR/relay-chain-spec.json
+
 sudo docker run \
+    -v $DATA_DIR/parachain-spec.json:/zeitgeist/parachain-spec.json \
     --rm \
     $PARACHAIN_IMAGE \
     export-genesis-state \
-    --chain $PARACHAIN_CHAIN \
+    --chain /zeitgeist/parachain-spec.json \
     --parachain-id $PARACHAIN_ID > $DATA_DIR/zeitgeist-genesis-state
+
 sudo docker run \
+    -v $DATA_DIR/parachain-spec.json:/zeitgeist/parachain-spec.json \
     --rm \
     $PARACHAIN_IMAGE \
     export-genesis-wasm \
-    --chain $PARACHAIN_CHAIN > $DATA_DIR/zeitgeist-genesis-wasm
-cp $RELAY_CHAIN_SPEC_FILE $DATA_DIR/$PARACHAIN_0/relay-chain-spec.json
+    --chain /zeitgeist/parachain-spec.json > $DATA_DIR/zeitgeist-genesis-wasm
 
-sudo docker run \
-    -d \
-    -p $PARACHAIN_0_PORT:30333 \
-    -p $PARACHAIN_0_RPC_PORT:9933 \
-    -p $PARACHAIN_0_WS_PORT:9944 \
-    -v $DATA_DIR/$PARACHAIN_0:/zeitgeist/data \
-    --name $PARACHAIN_0 \
-    --restart always \
-    $PARACHAIN_IMAGE \
-    --chain $PARACHAIN_CHAIN \
-    --collator \
-    --parachain-id $PARACHAIN_ID \
-    --rpc-cors all \
-    --rpc-external \
-    --ws-external \
-    -- \
-    --chain /zeitgeist/data/relay-chain-spec.json \
-    --execution wasm
+for idx in $(seq 0 $PARACHAINS_NUM)
+do
+    LOCAL_CONTAINER_NAME="$PARACHAIN-$idx"
+    LOCAL_PORT=$(($PARACHAIN_PORT + $idx))
+    LOCAL_RPC_PORT=$(($PARACHAIN_RPC_PORT + $idx))
+    LOCAL_WS_PORT=$(($PARACHAIN_WS_PORT + $idx))
 
-echo $ROTATE_KEY_0
-echo $ROTATE_KEY_1
+    initial_container_configurations $LOCAL_CONTAINER_NAME
+
+    sudo docker run \
+        -d \
+        -p $LOCAL_PORT:30333 \
+        -p $LOCAL_RPC_PORT:9933 \
+        -p $LOCAL_WS_PORT:9944 \
+        -v $DATA_DIR/$LOCAL_CONTAINER_NAME:/zeitgeist/data \
+        -v $DATA_DIR/parachain-spec.json:/zeitgeist/parachain-spec.json \
+        -v $DATA_DIR/relay-chain-spec.json:/zeitgeist/relay-chain-spec.json \
+        --name $LOCAL_CONTAINER_NAME \
+        --restart always \
+        $PARACHAIN_IMAGE \
+        --base-path /zeitgeist/data \
+        --chain /zeitgeist/parachain-spec.json \
+        --collator \
+        --parachain-id $PARACHAIN_ID \
+        --rpc-cors all \
+        --rpc-external \
+        --ws-external \
+        -- \
+        --chain /zeitgeist/relay-chain-spec.json \
+        --execution wasm
+done
