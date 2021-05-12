@@ -20,7 +20,7 @@ parameter_types! {
     pub const DisputeFactor: Balance = 2 * BASE;
     pub const DisputePeriod: BlockNumber = DAYS;
     pub const MinCategories: u16 = 2;
-    pub const MaxCategories: u16 = 8;
+    pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const OracleBond: Balance = 50 * DOLLARS;
