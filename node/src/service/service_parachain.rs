@@ -17,19 +17,19 @@ use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
 /// Start a parachain node.
 pub async fn new_full(
-    parachain_config: Configuration,
     collator_key: CollatorPair,
+    parachain_config: Configuration,
+    parachain_id: ParaId,
     polkadot_config: Configuration,
-    id: ParaId,
     validator: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
     do_new_full(
-        parachain_config,
         collator_key,
+        parachain_config,
+        parachain_id,
         polkadot_config,
-        id,
-        validator,
         |_| Default::default(),
+        validator,
     )
     .await
 }
@@ -112,12 +112,12 @@ pub fn new_partial(
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn do_new_full<RB>(
-    parachain_config: Configuration,
     collator_key: CollatorPair,
+    parachain_config: Configuration,
+    parachain_id: ParaId,
     polkadot_config: Configuration,
-    id: ParaId,
-    validator: bool,
     rpc_ext_builder: RB,
+    validator: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
 where
     RB: Fn(
@@ -153,7 +153,7 @@ where
     let backend = params.backend.clone();
     let block_announce_validator = build_block_announce_validator(
         polkadot_full_node.client.clone(),
-        id,
+        parachain_id,
         Box::new(polkadot_full_node.network.clone()),
         polkadot_full_node.backend.clone(),
     );
@@ -208,35 +208,35 @@ where
         let spawner = task_manager.spawn_handle();
 
         let parachain_consensus = build_relay_chain_consensus(BuildRelayChainConsensusParams {
-            para_id: id,
-            proposer_factory,
-            inherent_data_providers: params.inherent_data_providers,
             block_import: client.clone(),
-            relay_chain_client: polkadot_full_node.client.clone(),
+            inherent_data_providers: params.inherent_data_providers,
+            para_id: parachain_id,
+            proposer_factory,
             relay_chain_backend: polkadot_full_node.backend.clone(),
+            relay_chain_client: polkadot_full_node.client.clone(),
         });
 
         let params = StartCollatorParams {
-            para_id: id,
-            block_status: client.clone(),
             announce_block,
+            backend,
+            block_status: client.clone(),
             client: client.clone(),
-            task_manager: &mut task_manager,
             collator_key,
+            para_id: parachain_id,
+            parachain_consensus,
             relay_chain_full_node: polkadot_full_node,
             spawner,
-            backend,
-            parachain_consensus,
+            task_manager: &mut task_manager,
         };
 
         start_collator(params).await?;
     } else {
         let params = StartFullNodeParams {
-            client: client.clone(),
             announce_block,
-            task_manager: &mut task_manager,
-            para_id: id,
+            client: client.clone(),
+            para_id: parachain_id,
             polkadot_full_node,
+            task_manager: &mut task_manager,
         };
 
         start_full_node(params)?;

@@ -45,8 +45,6 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
-pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
@@ -61,6 +59,7 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 const EXISTENTIAL_DEPOSIT: Balance = 100 * CENTS;
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
 pub type AdaptedBasicCurrency =
     orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
@@ -89,8 +88,7 @@ pub type SignedExtra = (
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 parameter_types! {
-  pub const AdvisoryBond: Balance = 25 * DOLLARS;
-  pub const BlockHashCount: BlockNumber = 250;
+  pub const BlockHashCount: BlockNumber = BLOCK_HASH_COUNT;
   pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
   pub const MaxLocks: u32 = 50;

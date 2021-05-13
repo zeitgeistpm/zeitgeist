@@ -79,13 +79,12 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         let pool = transaction_pool.clone();
 
         Box::new(move |deny_unsafe, _| {
-            let deps = zeitgeist_node::rpc::FullDeps {
+            let deps = crate::rpc::FullDeps {
                 client: client.clone(),
                 pool: pool.clone(),
                 deny_unsafe,
             };
-
-            zeitgeist_node::rpc::create_full(deps)
+            crate::rpc::create_full(deps)
         })
     };
 
