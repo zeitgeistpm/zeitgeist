@@ -1,8 +1,10 @@
-use crate::{AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue};
+use crate::{
+    AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue, MAXIMUM_BLOCK_WEIGHT,
+};
 use frame_support::{
     parameter_types,
     traits::{All, IsInVec},
-    weights::{constants::WEIGHT_PER_SECOND, Weight},
+    weights::Weight,
 };
 use polkadot_parachain::primitives::Sibling;
 use sp_std::{vec, vec::Vec};
@@ -13,8 +15,6 @@ use xcm_builder::{
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
     TakeWeightCredit,
 };
-
-const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
 parameter_types! {
     pub AllowUnpaidFrom: Vec<MultiLocation> = vec![ MultiLocation::X1(Junction::Parent) ];

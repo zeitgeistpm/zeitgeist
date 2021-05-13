@@ -1,10 +1,12 @@
 #![warn(unused_extern_crates)]
 
 mod chain_spec;
-#[macro_use]
-mod service;
 mod cli;
 mod command;
+#[cfg(not(feature = "parachain"))]
+mod rpc;
+#[macro_use]
+mod service;
 
 #[cfg(feature = "parachain")]
 const DEFAULT_PARACHAIN_ID: u32 = 9123;

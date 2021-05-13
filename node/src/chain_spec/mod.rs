@@ -1,32 +1,30 @@
+mod additional_chain_spec;
 mod battery_park;
 mod dev;
 mod local_testnet;
 
+pub use additional_chain_spec::AdditionalChainSpec;
 pub use battery_park::battery_park_staging_config;
 pub use dev::dev_config;
 pub use local_testnet::local_testnet_config;
 use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use zeitgeist_primitives::types::{AccountId, Signature};
-use zeitgeist_runtime::{BalancesConfig, TokensConfig};
+use zeitgeist_primitives::types::{AccountId, Balance, Signature};
+use zeitgeist_runtime::TokensConfig;
 
 const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 #[cfg(feature = "parachain")]
-pub type ChainSpec =
-    sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, crate::chain_spec::Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
 #[cfg(not(feature = "parachain"))]
 pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
 fn generic_genesis(
+    acs: AdditionalChainSpec,
     endowed_accounts: Vec<AccountId>,
-    #[cfg(feature = "parachain")] id: cumulus_primitives_core::ParaId,
-    #[cfg(not(feature = "parachain"))] initial_authorities: Vec<(
-        sp_consensus_aura::sr25519::AuthorityId,
-        sp_finality_grandpa::AuthorityId,
-    )>,
+    initial_balance: Balance,
     root_key: AccountId,
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
@@ -38,25 +36,32 @@ fn generic_genesis(
         orml_tokens: TokensConfig::default(),
         #[cfg(not(feature = "parachain"))]
         pallet_aura: zeitgeist_runtime::AuraConfig {
-            authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+            authorities: acs
+                .initial_authorities
+                .iter()
+                .map(|x| (x.0.clone()))
+                .collect(),
         },
-        pallet_balances: BalancesConfig {
+        pallet_balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
-                .map(|k| (k, 1 << 60))
+                .map(|k| (k, initial_balance))
                 .collect(),
         },
         #[cfg(not(feature = "parachain"))]
         pallet_grandpa: zeitgeist_runtime::GrandpaConfig {
-            authorities: initial_authorities
+            authorities: acs
+                .initial_authorities
                 .iter()
                 .map(|x| (x.1.clone(), 1))
                 .collect(),
         },
         pallet_sudo: zeitgeist_runtime::SudoConfig { key: root_key },
         #[cfg(feature = "parachain")]
-        parachain_info: zeitgeist_runtime::ParachainInfoConfig { parachain_id: id },
+        parachain_info: zeitgeist_runtime::ParachainInfoConfig {
+            parachain_id: acs.parachain_id,
+        },
     }
 }
 
@@ -81,7 +86,7 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
 #[serde(deny_unknown_fields)]
 pub struct Extensions {
     /// The id of the Parachain.
-    pub para_id: u32,
+    pub parachain_id: u32,
     /// The relay chain of the Parachain.
     pub relay_chain: String,
 }
