@@ -1,11 +1,16 @@
+pub mod ztg;
+
 use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
+// General
+pub const BLOCK_HASH_COUNT: BlockNumber = 250;
+
 // Definitions for time
-pub const DAYS: BlockNumber = HOURS * 24;
+pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
+pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
+pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60;
 
 // Definitions for currency
 pub const BASE: u128 = 10_000_000_000;
@@ -18,13 +23,13 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * DOLLARS;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
-    pub const DisputePeriod: BlockNumber = DAYS;
-    pub const MinCategories: u16 = 2;
+    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
-    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const MinCategories: u16 = 2;
     pub const OracleBond: Balance = 50 * DOLLARS;
-    pub const ReportingPeriod: BlockNumber = DAYS;
+    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const ReportingPeriod: BlockNumber = BLOCKS_PER_DAY;
     pub const ValidityBond: Balance = 50 * DOLLARS;
 }
 

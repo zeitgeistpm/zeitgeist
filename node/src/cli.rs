@@ -132,28 +132,26 @@ impl SubstrateCli for Cli {
 
 pub fn load_spec(
     id: &str,
-    #[cfg(feature = "parachain")] para_id: cumulus_primitives_core::ParaId,
+    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
         "dev" => Box::new(crate::chain_spec::dev_config(
             #[cfg(feature = "parachain")]
-            para_id,
+            parachain_id,
         )?),
         "" | "local" => Box::new(crate::chain_spec::local_testnet_config(
             #[cfg(feature = "parachain")]
-            para_id,
+            parachain_id,
         )?),
-        #[cfg(not(feature = "parachain"))]
         "battery_park" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
-            &include_bytes!("../res/bp.json")[..],
-        )?),
-        #[cfg(feature = "parachain")]
-        "battery_park" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
+            #[cfg(feature = "parachain")]
             &include_bytes!("../res/bp_parachain.json")[..],
+            #[cfg(not(feature = "parachain"))]
+            &include_bytes!("../res/bp.json")[..],
         )?),
         "battery_park_staging" => Box::new(crate::chain_spec::battery_park_staging_config(
             #[cfg(feature = "parachain")]
-            para_id,
+            parachain_id,
         )?),
         path => Box::new(crate::chain_spec::ChainSpec::from_json_file(
             std::path::PathBuf::from(path),

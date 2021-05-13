@@ -3,9 +3,7 @@
 //! used by Substrate nodes. This file extends those RPC definitions with
 //! capabilities that are specific to this project's runtime configuration.
 
-#![warn(missing_docs)]
-
-pub use sc_rpc_api::DenyUnsafe;
+use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
