@@ -14,8 +14,8 @@
     "tokenDecimals": 10,
     "tokenSymbol": "ZBP"
   },
-  "para_id": 9123,
-  "relay_chain": "rococo-battery-park",
+  "parachain_id": 9123,
+  "relay_chain": "rococo",
   "consensusEngine": null,
   "lightSyncState": null,
   "genesis": {
@@ -24,6 +24,10 @@
         "balances": [
           [
             "5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P",
+            100000000000000
+          ],
+          [
+            "5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX",
             100000000000000
           ]
         ]

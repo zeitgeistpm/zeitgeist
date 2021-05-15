@@ -3,7 +3,7 @@
 # See `testing-network.sh`.
 
 export BOOTNODES="--bootnodes /ip4/34.89.248.129/tcp/30333/p2p/12D3KooWD8CAZBgpeZiSVVbaj8mijR6mfgUsHNAmCKwsRoRnFod4 --bootnodes /ip4/35.242.217.240/tcp/30333/p2p/12D3KooWBthdCz4JshkMb4GxJXVwrHPv9GpWAgfh2hAdkyXQDKyN"
-export DATA_DIR="$HOME/rococo"
+export DATA_DIR="$HOME/chachacha"
 export DOCKER_POLKADOT_BIN="/usr/local/bin/polkadot"
 export PARACHAINS_NUM="1"
 export POLKADOT_IMAGE="centrifugeio/rococo:chachacha-v1"
@@ -20,8 +20,7 @@ export VALIDATOR_PORT="31000"
 export VALIDATOR_RPC_PORT="8100"
 export VALIDATOR_WS_PORT="9100"
 
-export PARACHAIN_SPEC_FILE="/tmp/parachain-spec.json"
-curl -o $PARACHAIN_SPEC_FILE https://raw.githubusercontent.com/zeitgeistpm/zeitgeist/main/node/res/bp_parachain.json
+export PARACHAIN_CHAIN="battery_park"
 export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
 curl -o $RELAY_CHAIN_SPEC_FILE https://storage.googleapis.com/centrifuge-artifact-releases/rococo-chachacha.json
 
