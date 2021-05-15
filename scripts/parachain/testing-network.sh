@@ -2,18 +2,18 @@
 
 # Not meant to be called directly.
 #
-# Common script used by live testing network (Rococo, Chachacha, etc) scipts. Spin-ups 2
-# validators and one parachain using Docker.
+# Common script used by live testing network (Rococo, Chachacha, etc) scipts. Spin-ups $VALIDATORS_NUM
+# validators and $PARACHAINS_NUM parachains using Docker.
 #
-# Only required variable is "RELAY_CHAIN_SPEC_FILE", everything else defaults to common or
-# Chachacha values if not specified.
+# Only required variable is "RELAY_CHAIN_SPEC_FILE", everything else defaults to common
+# values if not specified.
 
 set -euxo pipefail
 
 # Variables
 
 PARACHAIN_ID="${PARACHAIN_ID:-9123}"
-PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain}"
+PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-da2664e}"
 PARACHAINS_NUM=$(($PARACHAINS_NUM - 1))
 VALIDATORS_NUM=$(($VALIDATORS_NUM - 1))
 
@@ -66,8 +66,14 @@ sudo apt update
 sudo apt install -y curl docker.io
 sudo docker pull $PARACHAIN_IMAGE
 sudo docker pull $POLKADOT_IMAGE
-sudo docker kill $(sudo docker ps -q)
-sudo docker rm $(sudo docker ps -a -q)
+
+sudo docker container stop $(sudo docker container ls -aq --filter name=$PARACHAIN*) &> /dev/null || true
+sudo docker container stop $(sudo docker container ls -aq --filter name=$VALIDATOR*) &> /dev/null || true
+
+sudo docker container rm $(sudo docker container ls -aq --filter name=$PARACHAIN*) &> /dev/null || true
+sudo docker container rm $(sudo docker container ls -aq --filter name=$VALIDATOR*) &> /dev/null || true
+
+mkdir -p $DATA_DIR
 
 # Validators
 
@@ -88,23 +94,20 @@ done
 
 # Parachains
 
-cp $PARACHAIN_SPEC_FILE $DATA_DIR/parachain-spec.json
 cp $RELAY_CHAIN_SPEC_FILE $DATA_DIR/relay-chain-spec.json
 
 sudo docker run \
-    -v $DATA_DIR/parachain-spec.json:/zeitgeist/parachain-spec.json \
     --rm \
     $PARACHAIN_IMAGE \
     export-genesis-state \
-    --chain /zeitgeist/parachain-spec.json \
+    --chain $PARACHAIN_CHAIN \
     --parachain-id $PARACHAIN_ID > $DATA_DIR/zeitgeist-genesis-state
 
 sudo docker run \
-    -v $DATA_DIR/parachain-spec.json:/zeitgeist/parachain-spec.json \
     --rm \
     $PARACHAIN_IMAGE \
     export-genesis-wasm \
-    --chain /zeitgeist/parachain-spec.json > $DATA_DIR/zeitgeist-genesis-wasm
+    --chain $PARACHAIN_CHAIN > $DATA_DIR/zeitgeist-genesis-wasm
 
 for idx in $(seq 0 $PARACHAINS_NUM)
 do
@@ -121,13 +124,12 @@ do
         -p $LOCAL_RPC_PORT:9933 \
         -p $LOCAL_WS_PORT:9944 \
         -v $DATA_DIR/$LOCAL_CONTAINER_NAME:/zeitgeist/data \
-        -v $DATA_DIR/parachain-spec.json:/zeitgeist/parachain-spec.json \
         -v $DATA_DIR/relay-chain-spec.json:/zeitgeist/relay-chain-spec.json \
         --name $LOCAL_CONTAINER_NAME \
         --restart always \
         $PARACHAIN_IMAGE \
         --base-path /zeitgeist/data \
-        --chain /zeitgeist/parachain-spec.json \
+        --chain $PARACHAIN_CHAIN \
         --collator \
         --parachain-id $PARACHAIN_ID \
         --rpc-cors all \

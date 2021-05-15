@@ -3,7 +3,7 @@
 # See `testing-network.sh`.
 
 export BOOTNODES=" "
-export DATA_DIR="$HOME/chachacha"
+export DATA_DIR="$HOME/rococo"
 export DOCKER_POLKADOT_BIN=" "
 export PARACHAINS_NUM="2"
 export POLKADOT_IMAGE="parity/rococo:rococo-v1-0.8.30-943038a8-f14fa75f"
@@ -20,8 +20,7 @@ export VALIDATOR_PORT="33000"
 export VALIDATOR_RPC_PORT="8300"
 export VALIDATOR_WS_PORT="9300"
 
-export PARACHAIN_SPEC_FILE="/tmp/parachain-spec.json"
-curl -o $PARACHAIN_SPEC_FILE https://raw.githubusercontent.com/zeitgeistpm/zeitgeist/main/node/res/bp_parachain.json
+export PARACHAIN_CHAIN="battery_park"
 export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
 curl -o $RELAY_CHAIN_SPEC_FILE https://raw.githubusercontent.com/paritytech/polkadot/943038a888bfaf736142642e2610b248f7af486c/node/service/res/rococo.json
 
