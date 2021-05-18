@@ -9,6 +9,7 @@ pub fn local_testnet_config(
 ) -> Result<ChainSpec, String> {
     let wasm_binary = zeitgeist_runtime::WASM_BINARY
         .ok_or("Development wasm binary not available".to_string())?;
+    let stake_amount = 2_000 * zeitgeist_primitives::constants::BASE;
     Ok(ChainSpec::from_genesis(
         "Local Testnet",
         "local_testnet",
@@ -16,7 +17,22 @@ pub fn local_testnet_config(
         move || {
             generic_genesis(
                 #[cfg(feature = "parachain")]
-                AdditionalChainSpec { parachain_id },
+                AdditionalChainSpec {
+                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+                    stakers: vec![
+                        (
+                            get_account_id_from_seed::<sr25519::Public>("Alice"),
+                            None,
+                            stake_amount,
+                        ),
+                        (
+                            get_account_id_from_seed::<sr25519::Public>("Bob"),
+                            None,
+                            stake_amount,
+                        ),
+                    ],
+                    parachain_id,
+                },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {
                     initial_authorities: vec![
