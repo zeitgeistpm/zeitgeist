@@ -97,5 +97,4 @@ start_collator() {
 
 # Feel free to comment, add or remove collators. Just remember that #Validators > #Collators
 
-start_collator " " 30333 9933 9944 32000 8200 9200 &> /dev/null & node_pid=$!
-start_collator " " 30334 9934 9945 32001 8201 9201
+start_collator --author-id=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY 30333 9933 9944 32000 8200 9200
