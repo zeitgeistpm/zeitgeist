@@ -29,8 +29,6 @@ use frame_system::{
     EnsureRoot,
 };
 use orml_traits::parameter_type_with_key;
-#[cfg(feature = "parachain")]
-use parachain_params::*;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
@@ -44,6 +42,11 @@ use sp_std::{boxed::Box, vec::Vec};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
+#[cfg(feature = "parachain")]
+use {
+    nimbus_primitives::{CanAuthor, NimbusId},
+    parachain_params::*,
+};
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
@@ -89,10 +92,18 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 
 parameter_types! {
   pub const BlockHashCount: BlockNumber = BLOCK_HASH_COUNT;
+  pub const BondDuration: u32 = 1;
+  pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
   pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
+  pub const MaxCollatorsPerNominator: u32 = 24;
   pub const MaxLocks: u32 = 50;
+  pub const MaxNominatorsPerCollator: u32 = 8;
+  pub const MinBlocksPerRound: u32 = BLOCKS_PER_MINUTE as _;
+  pub const MinCollatorStake: u128 = 100 * BASE;
   pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
+  pub const MinNominatorStake: u128 = 5 * BASE;
+  pub const MinSelectedCandidates: u32 = 1;
   pub const SS58Prefix: u8 = 42; // @TODO: Change back to 73 once https://github.com/paritytech/substrate/pull/8509 is merged
   pub const TransactionByteFee: Balance = 10 * MILLICENTS;
   pub const Version: RuntimeVersion = VERSION;
@@ -152,9 +163,15 @@ create_zeitgeist_runtime!(
     CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
     CumulusXcm: cumulus_pallet_xcm::{Origin, Pallet},
     ParachainInfo: parachain_info::{Config, Pallet, Storage},
+    ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
     ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>},
     PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet},
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage},
+
+    // Order here matters
+    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage},
+    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage},
+    AuthorMapping: pallet_author_mapping::{Pallet, Config<T>, Storage},
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
@@ -229,6 +246,28 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
 }
 
+#[cfg(feature = "parachain")]
+impl pallet_author_inherent::Config for Runtime {
+    type AuthorId = NimbusId;
+    type EventHandler = pallet_author_mapping::MappedEventHandler<Self, ParachainStaking>;
+    type FullCanAuthor = pallet_author_mapping::MappedCanAuthor<Self, AuthorFilter>;
+    type PreliminaryCanAuthor = pallet_author_mapping::MappedCanAuthor<Self, ParachainStaking>;
+    type SlotBeacon = pallet_author_inherent::RelayChainBeacon<Self>;
+}
+
+#[cfg(feature = "parachain")]
+impl pallet_author_mapping::Config for Runtime {
+    type AuthorId = NimbusId;
+}
+
+#[cfg(feature = "parachain")]
+impl pallet_author_slot_filter::Config for Runtime {
+    type AuthorId = AccountId;
+    type Event = Event;
+    type RandomnessSource = RandomnessCollectiveFlip;
+    type PotentialAuthors = ParachainStaking;
+}
+
 #[cfg(not(feature = "parachain"))]
 impl pallet_grandpa::Config for Runtime {
     type Event = Event;
@@ -260,6 +299,24 @@ impl pallet_xcm::Config for Runtime {
     type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
     type XcmRouter = XcmRouter;
+}
+
+#[cfg(feature = "parachain")]
+impl parachain_staking::Config for Runtime {
+    type BondDuration = BondDuration;
+    type Currency = Balances;
+    type DefaultBlocksPerRound = DefaultBlocksPerRound;
+    type DefaultCollatorCommission = DefaultCollatorCommission;
+    type Event = Event;
+    type MaxCollatorsPerNominator = MaxCollatorsPerNominator;
+    type MaxNominatorsPerCollator = MaxNominatorsPerCollator;
+    type MinBlocksPerRound = MinBlocksPerRound;
+    type MinCollatorCandidateStk = MinCollatorStake;
+    type MinCollatorStk = MinCollatorStake;
+    type MinNomination = MinNominatorStake;
+    type MinNominatorStk = MinNominatorStake;
+    type MinSelectedCandidates = MinSelectedCandidates;
+    type WeightInfo = ();
 }
 
 impl orml_currencies::Config for Runtime {
@@ -363,6 +420,13 @@ impl zrml_swaps::Config for Runtime {
 }
 
 impl_runtime_apis! {
+    #[cfg(feature = "parachain")]
+    impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
+        fn can_author(author: NimbusId, slot: u32) -> bool {
+            <Runtime as pallet_author_inherent::Config>::FullCanAuthor::can_author(&author, &slot)
+        }
+    }
+
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
         fn dispatch_benchmark(
@@ -558,7 +622,10 @@ impl_runtime_apis! {
 }
 
 #[cfg(feature = "parachain")]
-cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(
+    Runtime,
+    pallet_author_inherent::BlockExecutor<Runtime, Executive>
+);
 
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {

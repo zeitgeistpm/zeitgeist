@@ -34,15 +34,20 @@ frame-benchmarking = { branch = "rococo-v1", default-features = false, git = "ht
 frame-system-benchmarking = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.0" }
 hex-literal = { optional = true, version = "0.3" }
 
+# Bugfix
+
+# `cargo check` => error[E0599]: no method named `to_low_u64_be` found for struct `H256` in the current scope
+fixed-hash = { default-features = false, features = ["byteorder"], version = "0.7" }
+
 # Cumulus
 
-cumulus-pallet-parachain-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-cumulus-pallet-xcm = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-cumulus-pallet-xcmp-queue = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-cumulus-ping = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-cumulus-primitives-core = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-cumulus-primitives-utility = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
-parachain-info = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/cumulus", optional = true }
+cumulus-pallet-parachain-system = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-pallet-xcm = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-pallet-xcmp-queue = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-ping = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-primitives-core = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-primitives-utility = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+parachain-info = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 
 # Polkadot
 
@@ -51,6 +56,14 @@ polkadot-parachain = { branch = "rococo-v1", default-features = false, git = "ht
 xcm = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-builder = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
 xcm-executor = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/polkadot", optional = true }
+
+# Parachain
+
+nimbus-primitives = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+pallet-author-inherent = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+pallet-author-mapping = { default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
+pallet-author-slot-filter = { branch = "nimbus", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+parachain-staking = { default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
 
 # Standalone
 
@@ -80,6 +93,14 @@ parachain = [
 	"cumulus-primitives-core",
 	"cumulus-primitives-utility",
 	"parachain-info",
+
+	# Parachain
+
+	"nimbus-primitives",
+	"pallet-author-inherent",
+	"pallet-author-mapping",
+	"pallet-author-slot-filter",
+	"parachain-staking",
 
 	# Polkadot
 
@@ -131,6 +152,10 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-version/std",
 
+	# Bugfix
+
+	"fixed-hash/std",
+
 	# Cumulus
 
 	"cumulus-pallet-parachain-system/std",
@@ -140,6 +165,14 @@ std = [
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-utility/std",
 	"parachain-info/std",
+
+	# Parachain
+
+	"nimbus-primitives/std",
+	"pallet-author-inherent/std",
+	"pallet-author-mapping/std",
+	"pallet-author-slot-filter/std",
+	"parachain-staking/std",
 
 	# Polkadot
 

@@ -1,8 +1,14 @@
 #[cfg(feature = "parachain")]
-use cumulus_primitives_core::ParaId;
+use {
+    cumulus_primitives_core::ParaId,
+    parachain_staking::InflationInfo,
+    zeitgeist_primitives::types::{AccountId, Balance},
+};
 
 #[cfg(feature = "parachain")]
 pub struct AdditionalChainSpec {
+    pub inflation_info: InflationInfo<Balance>,
+    pub stakers: Vec<(AccountId, Option<AccountId>, Balance)>,
     pub parachain_id: ParaId,
 }
 

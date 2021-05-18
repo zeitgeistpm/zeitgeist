@@ -15,6 +15,7 @@ pub type SessionHandlers = ();
 #[cfg(feature = "parachain")]
 impl_opaque_keys! {
     pub struct SessionKeys {
+        pub author_inherent: crate::AuthorInherent,
     }
 }
 

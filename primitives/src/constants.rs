@@ -45,3 +45,8 @@ parameter_types! {
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
 }
+
+// Collator staking
+parameter_types! {
+    pub const DefaultBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
+}
