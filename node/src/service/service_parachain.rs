@@ -1,15 +1,14 @@
-use crate::service::Executor;
-use cumulus_client_consensus_relay_chain::{
-    build_relay_chain_consensus, BuildRelayChainConsensusParams,
-};
+use crate::{inherents::build_inherent_data_providers, service::Executor};
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
+use nimbus_consensus::{build_filtering_consensus, BuildFilteringConsensusParams};
 use polkadot_primitives::v0::CollatorPair;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
+use sp_core::crypto::AccountId32;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
 use std::sync::Arc;
@@ -17,6 +16,7 @@ use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
 /// Start a parachain node.
 pub async fn new_full(
+    author_id: Option<AccountId32>,
     collator_key: CollatorPair,
     parachain_config: Configuration,
     parachain_id: ParaId,
@@ -24,6 +24,7 @@ pub async fn new_full(
     validator: bool,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
     do_new_full(
+        author_id,
         collator_key,
         parachain_config,
         parachain_id,
@@ -35,6 +36,7 @@ pub async fn new_full(
 }
 
 pub fn new_partial(
+    author_id: Option<AccountId32>,
     config: &Configuration,
 ) -> Result<
     PartialComponents<
@@ -47,7 +49,7 @@ pub fn new_partial(
     >,
     sc_service::Error,
 > {
-    let inherent_data_providers = sp_inherents::InherentDataProviders::new();
+    let inherent_data_providers = build_inherent_data_providers(author_id)?;
 
     let telemetry = config
         .telemetry_endpoints
@@ -112,6 +114,7 @@ pub fn new_partial(
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn do_new_full<RB>(
+    author_id: Option<AccountId32>,
     collator_key: CollatorPair,
     parachain_config: Configuration,
     parachain_id: ParaId,
@@ -132,11 +135,8 @@ where
 
     let parachain_config = prepare_node_config(parachain_config);
 
-    let params = new_partial(&parachain_config)?;
-    params
-        .inherent_data_providers
-        .register_provider(sp_timestamp::InherentDataProvider)
-        .unwrap();
+    let params = new_partial(author_id, &parachain_config)?;
+
     let (mut telemetry, telemetry_worker_handle) = params.other;
 
     let polkadot_full_node = cumulus_client_service::build_polkadot_full_node(
@@ -207,10 +207,12 @@ where
         );
         let spawner = task_manager.spawn_handle();
 
-        let parachain_consensus = build_relay_chain_consensus(BuildRelayChainConsensusParams {
+        let parachain_consensus = build_filtering_consensus(BuildFilteringConsensusParams {
+            keystore: params.keystore_container.sync_keystore(),
             block_import: client.clone(),
             inherent_data_providers: params.inherent_data_providers,
             para_id: parachain_id,
+            parachain_client: client.clone(),
             proposer_factory,
             relay_chain_backend: polkadot_full_node.backend.clone(),
             relay_chain_client: polkadot_full_node.client.clone(),

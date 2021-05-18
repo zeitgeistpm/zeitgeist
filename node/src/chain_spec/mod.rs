@@ -8,10 +8,49 @@ pub use battery_park::battery_park_staging_config;
 pub use dev::dev_config;
 pub use local_testnet::local_testnet_config;
 use sp_core::{Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{
+    traits::{IdentifyAccount, Verify},
+    Percent,
+};
 use zeitgeist_primitives::types::{AccountId, Balance, Signature};
 use zeitgeist_runtime::TokensConfig;
 
+#[cfg(feature = "parachain")]
+use {
+    sp_runtime::Perbill,
+    zeitgeist_primitives::constants::{ztg, DefaultBlocksPerRound, MILLISECS_PER_BLOCK},
+};
+
+#[cfg(feature = "parachain")]
+const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
+    let hours_per_year = 8766;
+    let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
+    let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK;
+    let rounds_per_year = millisecs_per_year / round_millisecs;
+
+    let annual_inflation = Perbill::from_percent(ztg::STAKING);
+    let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
+    let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
+    let round_inflation = Perbill::from_parts(round_inflation_parts as _);
+
+    parachain_staking::InflationInfo {
+        annual: parachain_staking::Range {
+            ideal: annual_inflation,
+            max: annual_inflation,
+            min: annual_inflation,
+        },
+        expect: parachain_staking::Range {
+            ideal: expected_annual_amount,
+            max: expected_annual_amount,
+            min: expected_annual_amount,
+        },
+        round: parachain_staking::Range {
+            ideal: round_inflation,
+            min: round_inflation,
+            max: round_inflation,
+        },
+    }
+};
 const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 #[cfg(feature = "parachain")]
@@ -42,6 +81,24 @@ fn generic_genesis(
                 .map(|x| (x.0.clone()))
                 .collect(),
         },
+        #[cfg(feature = "parachain")]
+        pallet_author_mapping: zeitgeist_runtime::AuthorMappingConfig {
+            author_ids: acs
+                .stakers
+                .clone()
+                .iter()
+                .take(1)
+                .map(|staker| {
+                    let author_id = get_from_seed::<nimbus_primitives::NimbusId>("Alice");
+                    let account_id = staker.0.clone();
+                    (author_id, account_id)
+                })
+                .collect(),
+        },
+        #[cfg(feature = "parachain")]
+        pallet_author_slot_filter: zeitgeist_runtime::AuthorFilterConfig {
+            eligible_ratio: Percent::from_percent(50),
+        },
         pallet_balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
@@ -61,6 +118,11 @@ fn generic_genesis(
         #[cfg(feature = "parachain")]
         parachain_info: zeitgeist_runtime::ParachainInfoConfig {
             parachain_id: acs.parachain_id,
+        },
+        #[cfg(feature = "parachain")]
+        parachain_staking: zeitgeist_runtime::ParachainStakingConfig {
+            inflation_config: acs.inflation_info,
+            stakers: acs.stakers,
         },
     }
 }
