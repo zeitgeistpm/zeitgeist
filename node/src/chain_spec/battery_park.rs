@@ -10,7 +10,7 @@ pub fn battery_park_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {
     let wasm_binary = zeitgeist_runtime::WASM_BINARY
-        .ok_or("Development wasm binary not available".to_string())?;
+        .ok_or_else(|| "Development wasm binary not available".to_string())?;
 
     let mut properties = Map::new();
     properties.insert("tokenSymbol".into(), "ZBP".into());

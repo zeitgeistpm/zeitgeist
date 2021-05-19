@@ -185,8 +185,8 @@ macro_rules! swap_exact_amount {
         );
 
         Self::deposit_event(Event::$event(SwapEvent {
-            asset_amount_in: asset_amount_in,
-            asset_amount_out: asset_amount_out,
+            asset_amount_in,
+            asset_amount_out,
             asset_bound: $asset_bound,
             cpep: CommonPoolEventParams {
                 pool_id: $pool_id,

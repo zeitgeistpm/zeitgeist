@@ -1,3 +1,5 @@
+#![cfg(feature = "mock")]
+
 use crate as zrml_swaps;
 use frame_support::{construct_runtime, parameter_types, PalletId};
 use orml_currencies::BasicCurrencyAdapter;

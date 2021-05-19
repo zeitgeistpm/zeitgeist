@@ -77,9 +77,9 @@ sp-finality-grandpa = { branch = "rococo-v1", default-features = false, git = "h
 zeitgeist-primitives = { default-features = false, path = "../primitives" }
 zrml-orderbook-v1 = { default-features = false, path = "../zrml/orderbook-v1" }
 zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
-zrml-prediction-markets-runtime-api = { default-features = false, path = "../zrml/prediction-markets/rpc/runtime-api" }
+zrml-prediction-markets-runtime-api = { default-features = false, path = "../zrml/prediction-markets/runtime-api" }
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
-zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/rpc/runtime-api" }
+zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
 
 [features]
 default = ["std"]

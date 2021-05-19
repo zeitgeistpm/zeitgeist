@@ -55,7 +55,7 @@ where
     )));
 
     io.extend_with(zrml_swaps_rpc::SwapsApi::to_delegate(
-        zrml_swaps_rpc::Swaps::new(client.clone()),
+        zrml_swaps_rpc::Swaps::new(client),
     ));
 
     io
