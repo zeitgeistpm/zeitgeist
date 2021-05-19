@@ -1,0 +1,21 @@
+[[bin]]
+doc = false
+name = "full_workflow"
+path = "full_workflow.rs"
+test = false
+
+[dependencies]
+arbitrary = { features = ["derive"], version = "1.0" }
+libfuzzer-sys = "0.4"
+zrml-swaps = { features = ["mock"], path = ".." }
+zeitgeist-primitives = { path = "../../../primitives" }
+
+[package]
+authors = ["Automatically generated"]
+edition = "2018"
+name = "zrml-swaps-fuzz"
+publish = false
+version = "0.0.0"
+
+[package.metadata]
+cargo-fuzz = true

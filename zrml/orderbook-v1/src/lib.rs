@@ -15,6 +15,7 @@
 
 extern crate alloc;
 
+pub use pallet::*;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{
     traits::{CheckedMul, CheckedSub},
@@ -22,18 +23,13 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::types::Asset;
 
-pub mod weights;
-
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-
-#[cfg(feature = "runtime-benchmarks")]
-pub(crate) use pallet::*;
-pub use pallet::{Config, Error, Event, Pallet};
+pub mod weights;
 
 #[frame_support::pallet]
 mod pallet {
@@ -93,7 +89,7 @@ mod pallet {
 
                 <OrderData<T>>::remove(order_hash);
             } else {
-                Err(Error::<T>::OrderDoesNotExist)?;
+                return Err(Error::<T>::OrderDoesNotExist.into());
             }
 
             if bid {
@@ -157,7 +153,7 @@ mod pallet {
 
                 Self::deposit_event(Event::OrderFilled(sender, order_hash));
             } else {
-                Err(Error::<T>::OrderDoesNotExist)?;
+                return Err(Error::<T>::OrderDoesNotExist.into());
             }
 
             if bid {
@@ -181,7 +177,7 @@ mod pallet {
 
             // Only store nonce in memory for now.
             let nonce = <Nonce<T>>::get();
-            let hash = Self::order_hash(&sender, asset.clone(), nonce);
+            let hash = Self::order_hash(&sender, asset, nonce);
             let mut bid = true;
 
             // Love the smell of fresh orders in the morning.
@@ -205,7 +201,7 @@ mod pallet {
                     );
 
                     <Bids<T>>::mutate(asset, |b: &mut Vec<T::Hash>| {
-                        b.push(hash.clone());
+                        b.push(hash);
                     });
 
                     T::Currency::reserve(&sender, cost)?;
@@ -217,7 +213,7 @@ mod pallet {
                     );
 
                     <Asks<T>>::mutate(asset, |a| {
-                        a.push(hash.clone());
+                        a.push(hash);
                     });
 
                     T::Shares::reserve(asset, &sender, amount)?;

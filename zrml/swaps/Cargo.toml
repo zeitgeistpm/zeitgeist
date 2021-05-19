@@ -11,15 +11,26 @@ sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://gi
 sp-std = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
+# Mock
+
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate", optional = true }
+sp-api = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate", optional = true }
+zrml-swaps-runtime-api = { default-features = false, features = ["std"], optional = true, path = "./runtime-api" }
+
 [dev-dependencies]
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
-sp-api = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
-zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = "./rpc/runtime-api" }
+zrml-swaps = { features = ["mock"], path = "." }
 
 [features]
 default = ["std"]
+mock = [
+    "orml-currencies",
+    "orml-tokens",
+    "pallet-balances",
+    "sp-api",
+    "zrml-swaps-runtime-api",
+]
 std = [
     "frame-benchmarking/std",
     "frame-support/std",

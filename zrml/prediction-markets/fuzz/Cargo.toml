@@ -1,0 +1,22 @@
+[[bin]]
+doc = false
+name = "full_workflow"
+path = "full_workflow.rs"
+test = false
+
+[dependencies]
+arbitrary = { features = ["derive"], version = "1.0" }
+frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+libfuzzer-sys = "0.4"
+zeitgeist-primitives = { default-features = false, path = "../../../primitives" }
+zrml-prediction-markets = { features = ["mock"], path = ".." }
+
+[package]
+authors = ["Automatically generated"]
+edition = "2018"
+name = "zrml-prediction-markets-fuzz"
+publish = false
+version = "0.0.0"
+
+[package.metadata]
+cargo-fuzz = true

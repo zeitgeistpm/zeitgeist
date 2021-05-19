@@ -94,7 +94,7 @@ pub fn run() -> sc_cli::Result<()> {
             let _ = builder.init();
 
             let raw_wasm_blob =
-                extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
+                extract_genesis_wasm(cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
             let output_buf = if params.raw {
                 raw_wasm_blob
             } else {
@@ -149,7 +149,7 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| {
                 let polkadot_cli = crate::cli::RelayChainCli::new(
                     &config,
-                    [crate::cli::RelayChainCli::executable_name().to_string()]
+                    [crate::cli::RelayChainCli::executable_name()]
                         .iter()
                         .chain(cli.relaychain_args.iter()),
                 );
@@ -190,7 +190,7 @@ pub fn run() -> sc_cli::Result<()> {
 }
 
 #[cfg(feature = "parachain")]
-fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> sc_cli::Result<Vec<u8>> {
+fn extract_genesis_wasm(chain_spec: Box<dyn sc_service::ChainSpec>) -> sc_cli::Result<Vec<u8>> {
     let mut storage = chain_spec.build_storage()?;
 
     storage
@@ -214,7 +214,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 
         let polkadot_cli = crate::cli::RelayChainCli::new(
             &parachain_config,
-            [crate::cli::RelayChainCli::executable_name().to_string()]
+            [crate::cli::RelayChainCli::executable_name()]
                 .iter()
                 .chain(cli.relaychain_args.iter()),
         );

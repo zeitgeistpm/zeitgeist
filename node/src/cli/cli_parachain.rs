@@ -174,7 +174,7 @@ impl sc_cli::SubstrateCli for RelayChainCli {
     }
 
     fn copyright_start_year() -> i32 {
-        crate::cli::COPYRIGHT_START_YEAR.into()
+        crate::cli::COPYRIGHT_START_YEAR
     }
 
     fn description() -> String {
@@ -190,10 +190,8 @@ impl sc_cli::SubstrateCli for RelayChainCli {
     }
 
     fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-        <polkadot_cli::Cli as SubstrateCli>::from_iter(
-            [RelayChainCli::executable_name().to_string()].iter(),
-        )
-        .load_spec(id)
+        <polkadot_cli::Cli as SubstrateCli>::from_iter([RelayChainCli::executable_name()].iter())
+            .load_spec(id)
     }
 
     fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {

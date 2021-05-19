@@ -1,3 +1,5 @@
+#![cfg(all(feature = "mock", test))]
+
 use crate::{market::*, mock::*, Config, Error};
 use frame_support::{
     assert_noop, assert_ok,

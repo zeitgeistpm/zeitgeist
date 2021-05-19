@@ -5,10 +5,12 @@ members = [
     "runtime",
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
+    "zrml/prediction-markets/fuzz",
     "zrml/prediction-markets/rpc",
-    "zrml/prediction-markets/rpc/runtime-api",
+    "zrml/prediction-markets/runtime-api",
     "zrml/swaps",
+    "zrml/swaps/fuzz",
     "zrml/swaps/rpc",
-    "zrml/swaps/rpc/runtime-api",
+    "zrml/swaps/runtime-api",
 ]
 resolver = "2"
