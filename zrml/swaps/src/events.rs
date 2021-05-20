@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use zeitgeist_primitives::types::PoolId;
 
 #[derive(
     Clone,
@@ -12,7 +13,7 @@ use alloc::vec::Vec;
     parity_scale_codec::Encode,
 )]
 pub struct CommonPoolEventParams<AI> {
-    pub pool_id: u128,
+    pub pool_id: PoolId,
     pub who: AI,
 }
 

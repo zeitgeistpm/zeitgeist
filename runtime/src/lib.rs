@@ -52,7 +52,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 15,
+    spec_version: 16,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -604,18 +604,18 @@ impl_runtime_apis! {
       for Runtime
     {
         fn get_spot_price(
-            pool_id: u128,
+            pool_id: PoolId,
             asset_in: Asset<MarketId>,
             asset_out: Asset<MarketId>,
         ) -> SerdeWrapper<Balance> {
             SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
         }
 
-        fn pool_account_id(pool_id: u128) -> AccountId {
+        fn pool_account_id(pool_id: PoolId) -> AccountId {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_shares_id(pool_id: u128) -> Asset<SerdeWrapper<MarketId>> {
+        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
     }
