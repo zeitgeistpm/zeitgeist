@@ -1,132 +1,144 @@
 {
-    "Address": "MultiAddress",
-    "Amount": "i128",
-    "AmountOf": "i128",
-    "Asset": {
-      "_enum": {
-        "CategoricalOutcome": "(MarketId, CategoryIndex)",
-        "ScalarOutcome": "(MarketId, ScalarPosition)",
-        "CombinatorialOutcome": null,
-        "PoolShare": "u128",
-        "Ztg": null
-      }
-    },
-    "SerdeWrapper": "Balance",
-    "BlockNumber": "u64",
-    "CategoryIndex": "u16",
-    "CurrencyIdOf": "Asset",
-    "CurrencyId": "Asset",
-    "Index": "u64",
-    "Lookup": "MultiAddress",
-    "ScalarPosition": {
-      "_enum": [
-        "Long",
-        "Short"
-      ]
-    },
-    "Pool": {
-      "assets": "Vec<Asset>",
-      "swap_fee": "Balance",
-      "total_weight": "u128",
-      "weights": "BTreeMap<Asset, u128>"
-    },
-    "CommonPoolEventParams": {
-      "pool_id": "u128",
-      "who": "AccountId"
-    },
-    "PoolAssetsEvent": {
-      "bounds": "Vec<Balance>",
-      "cpep": "CommonPoolEventParams<AccountId>",
-      "transferred": "Vec<Balance>"
-    },
-    "PoolAssetEvent": {
-      "bound": "Balance",
-      "cpep": "CommonPoolEventParams<AccountId>",
-      "transferred": "Balance"
-    },
-    "SwapEvent": {
-      "asset_amount_in": "Balance",
-      "asset_amount_out": "Balance",
-      "asset_bound": "Balance",
-      "cpep": "CommonPoolEventParams<AccountId>",
-      "max_price": "Balance"
-    },
-    "MarketCreation": {
-      "_enum": [
-        "Permissionless",
-        "Advised"
-      ]
-    },
-    "MarketEnd": {
-      "_enum": {
-        "Block": "BlockNumber",
-        "Timestamp": "u64"
-      }
-    },
-    "MarketId": "u128",
-    "MarketType": {
-      "_enum": {
-        "Categorical": "u16",
-        "Scalar": "(u128, u128)"
-      }
-    },
-    "MarketStatus": {
-      "_enum": [
-        "Proposed",
-        "Active",
-        "Suspended",
-        "Closed",
-        "Reported",
-        "Disputed",
-        "Resolved"
-      ]
-    },
-    "Market": {
-      "creator": "AccountId",
-      "creation": "MarketCreation",
-      "creator_fee": "u8",
-      "oracle": "AccountId",
-      "end": "MarketEnd",
-      "metadata": "Vec<u8>",
-      "market_type": "MarketType",
-      "market_status": "MarketStatus",
-      "report": "Option<Report>",
-      "resolved_outcome": "Option<Outcome>"
-    },
-    "Outcome": {
-      "_enum": {
-        "Categorical": "u16",
-        "Scalar": "u128"
-      }
-    },
-    "Report": {
-      "at": "BlockNumber",
-      "by": "AccountId",
-      "outcome": "Outcome"
-    },
-    "MarketDispute": {
-      "at": "BlockNumber",
-      "by": "AccountId",
-      "outcome": "Outcome"
-    },
-    "OrderSide": {
-      "_enum": [
-        "Bid",
-        "Ask"
-      ]
-    },
-    "Order": {
-      "side": "OrderSide",
-      "maker": "AccountId",
-      "taker": "Option<AccountId>",
-      "share_id": "Hash",
-      "total": "Balance",
-      "price": "Balance",
-      "filled": "Balance"
-    },
-    "AccountData": {
-      "free": "Balance",
-      "reserved": "Balance",
-      "frozen": "Balance"
+  "alias": {
+    "tokens": {
+      "AccountData": "TokensAccountData"
     }
+  },
+  "AccountData": {
+    "free": "Balance",
+    "reserved": "Balance",
+    "misc_frozen": "Balance",
+    "fee_frozen": "Balance"
+  },
+  "Address": "MultiAddress",
+  "Amount": "i128",
+  "AmountOf": "i128",
+  "Asset": {
+    "_enum": {
+      "CategoricalOutcome": "(MarketId, CategoryIndex)",
+      "ScalarOutcome": "(MarketId, ScalarPosition)",
+      "CombinatorialOutcome": null,
+      "PoolShare": "u128",
+      "Ztg": null
+    }
+  },
+  "BlockNumber": "u64",
+  "CategoryIndex": "u16",
+  "CommonPoolEventParams": {
+    "pool_id": "u128",
+    "who": "AccountId"
+  },
+  "CurrencyId": "Asset",
+  "CurrencyIdOf": "Asset",
+  "Index": "u64",
+  "Lookup": "MultiAddress",
+  "Market": {
+    "creator": "AccountId",
+    "creation": "MarketCreation",
+    "creator_fee": "u8",
+    "oracle": "AccountId",
+    "end": "MarketEnd",
+    "metadata": "Vec<u8>",
+    "market_type": "MarketType",
+    "market_status": "MarketStatus",
+    "report": "Option<Report>",
+    "resolved_outcome": "Option<Outcome>"
+  },
+  "MarketCreation": {
+    "_enum": [
+      "Permissionless",
+      "Advised"
+    ]
+  },
+  "MarketDispute": {
+    "at": "BlockNumber",
+    "by": "AccountId",
+    "outcome": "Outcome"
+  },
+  "MarketEnd": {
+    "_enum": {
+      "Block": "BlockNumber",
+      "Timestamp": "u64"
+    }
+  },
+  "MarketId": "u128",
+  "MarketType": {
+    "_enum": {
+      "Categorical": "u16",
+      "Scalar": "(u128, u128)"
+    }
+  },
+  "MarketStatus": {
+    "_enum": [
+      "Proposed",
+      "Active",
+      "Suspended",
+      "Closed",
+      "Reported",
+      "Disputed",
+      "Resolved"
+    ]
+  },
+  "Order": {
+    "side": "OrderSide",
+    "maker": "AccountId",
+    "taker": "Option<AccountId>",
+    "share_id": "Hash",
+    "total": "Balance",
+    "price": "Balance",
+    "filled": "Balance"
+  },
+  "OrderSide": {
+    "_enum": [
+      "Bid",
+      "Ask"
+    ]
+  },
+  "Outcome": {
+    "_enum": {
+      "Categorical": "u16",
+      "Scalar": "u128"
+    }
+  },
+  "Pool": {
+    "assets": "Vec<Asset>",
+    "swap_fee": "Balance",
+    "total_weight": "u128",
+    "weights": "BTreeMap<Asset, u128>"
+  },
+  "PoolAssetEvent": {
+    "bound": "Balance",
+    "cpep": "CommonPoolEventParams<AccountId>",
+    "transferred": "Balance"
+  },
+  "PoolAssetsEvent": {
+    "bounds": "Vec<Balance>",
+    "cpep": "CommonPoolEventParams<AccountId>",
+    "transferred": "Vec<Balance>"
+  },
+  "PoolId": "u128",
+  "Report": {
+    "at": "BlockNumber",
+    "by": "AccountId",
+    "outcome": "Outcome"
+  },
+  "ScalarPosition": {
+    "_enum": [
+      "Long",
+      "Short"
+    ]
+  },
+  "SerdeWrapper": "Balance",
+  "SwapEvent": {
+    "asset_amount_in": "Balance",
+    "asset_amount_out": "Balance",
+    "asset_bound": "Balance",
+    "cpep": "CommonPoolEventParams<AccountId>",
+    "max_price": "Balance"
+  },
+  "TokensAccountData": {
+    "free": "Balance",
+    "reserved": "Balance",
+    "frozen": "Balance"
   }
+}
