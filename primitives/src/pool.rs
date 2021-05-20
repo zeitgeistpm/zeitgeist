@@ -1,6 +1,5 @@
-use crate::Error;
+use crate::types::Asset;
 use alloc::{collections::BTreeMap, vec::Vec};
-use zeitgeist_primitives::types::Asset;
 
 #[derive(
     Clone,
@@ -24,9 +23,5 @@ where
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
         let weight = BTreeMap::get(&self.weights, asset);
         weight.is_some()
-    }
-
-    pub fn get_weight_rslt<T>(&self, asset: &Asset<MarketId>) -> Result<&u128, Error<T>> {
-        self.weights.get(asset).ok_or(Error::<T>::AssetNotBound)
     }
 }

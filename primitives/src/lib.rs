@@ -4,9 +4,11 @@ extern crate alloc;
 
 mod asset;
 pub mod constants;
+mod market_type;
+mod outcome_report;
+mod pool;
 mod serde_wrapper;
 mod swaps;
 pub mod traits;
 pub mod types;
-mod zeitgeist_currencies_extension;
 mod zeitgeist_multi_reservable_currency;

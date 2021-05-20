@@ -1,4 +1,4 @@
-use crate::types::SerdeWrapper;
+use crate::types::{CategoryIndex, PoolId, SerdeWrapper};
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.
@@ -23,12 +23,9 @@ pub enum Asset<MI> {
     CategoricalOutcome(MI, CategoryIndex),
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
-    PoolShare(SerdeWrapper<u128>),
+    PoolShare(SerdeWrapper<PoolId>),
     Ztg,
 }
-
-/// The index of the category for a `CategoricalOutcome` asset.
-pub type CategoryIndex = u16;
 
 /// In a scalar market, users can either choose a `Long` position,
 /// meaning that they think the outcome will be closer to the upper bound

@@ -1,4 +1,7 @@
 pub use crate::asset::*;
+pub use crate::market_type::MarketType;
+pub use crate::outcome_report::OutcomeReport;
+pub use crate::pool::Pool;
 pub use crate::serde_wrapper::*;
 use sp_runtime::{
     generic,
@@ -23,6 +26,9 @@ pub type Balance = u128;
 /// An index to a block.
 pub type BlockNumber = u64;
 
+/// The index of the category for a `CategoricalOutcome` asset.
+pub type CategoryIndex = u16;
+
 pub type CurrencyId = Asset<MarketId>;
 
 /// Index of a transaction in the chain.
@@ -37,7 +43,7 @@ pub type DigestItem = generic::DigestItem<Hash>;
 /// The market identifier type.
 pub type MarketId = u128;
 
-/// TODO
+/// Time
 pub type Moment = u64;
 
 /// The identifier type for pools.

@@ -28,6 +28,7 @@ pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
 pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
+pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 
 pub type Block = BlockTest<Runtime>;
@@ -197,6 +198,7 @@ impl Default for ExtBuilder {
                 (CHARLIE, 1_000 * BASE),
                 (DAVE, 1_000 * BASE),
                 (EVE, 1_000 * BASE),
+                (FRED, 1_000 * BASE),
             ],
         }
     }

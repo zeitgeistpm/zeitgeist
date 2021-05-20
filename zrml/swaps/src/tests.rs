@@ -44,8 +44,8 @@ fn allows_the_full_user_lifecycle() {
             vec!(_25, _25, _25, _25),
         ));
 
-        let asset_a_bal = Shares::free_balance(ASSET_A, &ALICE);
-        let asset_b_bal = Shares::free_balance(ASSET_B, &ALICE);
+        let asset_a_bal = Currencies::free_balance(ASSET_A, &ALICE);
+        let asset_b_bal = Currencies::free_balance(ASSET_B, &ALICE);
 
         // swap_exact_amount_in
         let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B).unwrap();
@@ -53,13 +53,13 @@ fn allows_the_full_user_lifecycle() {
 
         let pool_account = Swaps::pool_account_id(0);
 
-        let in_balance = Shares::free_balance(ASSET_A, &pool_account);
+        let in_balance = Currencies::free_balance(ASSET_A, &pool_account);
         assert_eq!(in_balance, _105);
 
         let expected = crate::math::calc_out_given_in(
             in_balance,
             _2,
-            Shares::free_balance(ASSET_B, &pool_account),
+            Currencies::free_balance(ASSET_B, &pool_account),
             _2,
             _1,
             0,
@@ -76,19 +76,19 @@ fn allows_the_full_user_lifecycle() {
             _2,
         ));
 
-        let asset_a_bal_after = Shares::free_balance(ASSET_A, &ALICE);
+        let asset_a_bal_after = Currencies::free_balance(ASSET_A, &ALICE);
         assert_eq!(asset_a_bal_after, asset_a_bal - _1);
 
-        let asset_b_bal_after = Shares::free_balance(ASSET_B, &ALICE);
+        let asset_b_bal_after = Currencies::free_balance(ASSET_B, &ALICE);
         assert_eq!(asset_b_bal_after - asset_b_bal, expected);
 
         assert_eq!(expected, 9_905_660_415);
 
         // swap_exact_amount_out
         let expected_in = crate::math::calc_in_given_out(
-            Shares::free_balance(ASSET_A, &pool_account),
+            Currencies::free_balance(ASSET_A, &pool_account),
             _2,
-            Shares::free_balance(ASSET_B, &pool_account),
+            Currencies::free_balance(ASSET_B, &pool_account),
             _2,
             _1,
             0,
@@ -107,10 +107,10 @@ fn allows_the_full_user_lifecycle() {
             _3,
         ));
 
-        let asset_a_bal_after_2 = Shares::free_balance(ASSET_A, &ALICE);
+        let asset_a_bal_after_2 = Currencies::free_balance(ASSET_A, &ALICE);
         assert_eq!(asset_a_bal_after_2, asset_a_bal_after - expected_in);
 
-        let asset_b_bal_after_2 = Shares::free_balance(ASSET_B, &ALICE);
+        let asset_b_bal_after_2 = Currencies::free_balance(ASSET_B, &ALICE);
         assert_eq!(asset_b_bal_after_2 - asset_b_bal_after, _1);
     });
 }
@@ -278,7 +278,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
             _5,
             0
         ));
-        let pool_shares = Shares::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        let pool_shares = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             alice_signed(),
             0,
@@ -307,7 +307,7 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        let asset_before_join = Shares::free_balance(ASSET_A, &ALICE);
+        let asset_before_join = Currencies::free_balance(ASSET_A, &ALICE);
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(
             alice_signed(),
             0,
@@ -315,7 +315,7 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             _1,
             _5
         ));
-        let asset_after_join = asset_before_join - Shares::free_balance(ASSET_A, &ALICE);
+        let asset_after_join = asset_before_join - Currencies::free_balance(ASSET_A, &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
             alice_signed(),
             0,
@@ -381,7 +381,7 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
                 transferred: alice_sent
             }
         )));
-        let alice_received = Shares::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        let alice_received = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         assert_all_parameters(
             [_25 - alice_sent, _25, _25, _25],
             alice_received,
@@ -396,7 +396,7 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        let alice_initial = Shares::free_balance(ASSET_A, &ALICE);
+        let alice_initial = Currencies::free_balance(ASSET_A, &ALICE);
         let alice_sent = _1;
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(
             alice_signed(),
@@ -405,7 +405,7 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
             alice_sent,
             _5
         ));
-        let asset_amount = alice_initial - Shares::free_balance(ASSET_A, &ALICE);
+        let asset_amount = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
         assert!(event_exists(crate::Event::PoolJoinWithExactPoolAmount(
             PoolAssetEvent {
                 bound: _5,
@@ -413,7 +413,7 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
                 transferred: asset_amount,
             }
         )));
-        let alice_received = alice_initial - Shares::free_balance(ASSET_A, &ALICE);
+        let alice_received = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
         assert_eq!(alice_received, 40604010000);
         assert_all_parameters(
             [_25 - alice_received, _25, _25, _25],
@@ -506,7 +506,7 @@ fn alice_signed() -> Origin {
 
 fn create_initial_pool() {
     ASSETS.iter().cloned().for_each(|asset| {
-        let _ = Shares::deposit(asset, &BOB, _100);
+        let _ = Currencies::deposit(asset, &BOB, _100);
     });
     assert_ok!(Swaps::create_pool(
         Origin::signed(BOB),
@@ -517,10 +517,10 @@ fn create_initial_pool() {
 
 fn create_initial_pool_with_funds_for_alice() {
     create_initial_pool();
-    let _ = Shares::deposit(ASSET_A, &ALICE, _25);
-    let _ = Shares::deposit(ASSET_B, &ALICE, _25);
-    let _ = Shares::deposit(ASSET_C, &ALICE, _25);
-    let _ = Shares::deposit(ASSET_D, &ALICE, _25);
+    let _ = Currencies::deposit(ASSET_A, &ALICE, _25);
+    let _ = Currencies::deposit(ASSET_B, &ALICE, _25);
+    let _ = Currencies::deposit(ASSET_C, &ALICE, _25);
+    let _ = Currencies::deposit(ASSET_D, &ALICE, _25);
 }
 
 fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
@@ -539,17 +539,17 @@ fn assert_all_parameters(
     let pai = Swaps::pool_account_id(0);
     let psi = Swaps::pool_shares_id(0);
 
-    assert_eq!(Shares::free_balance(ASSET_A, &ALICE), alice_assets[0]);
-    assert_eq!(Shares::free_balance(ASSET_B, &ALICE), alice_assets[1]);
-    assert_eq!(Shares::free_balance(ASSET_C, &ALICE), alice_assets[2]);
-    assert_eq!(Shares::free_balance(ASSET_D, &ALICE), alice_assets[3]);
+    assert_eq!(Currencies::free_balance(ASSET_A, &ALICE), alice_assets[0]);
+    assert_eq!(Currencies::free_balance(ASSET_B, &ALICE), alice_assets[1]);
+    assert_eq!(Currencies::free_balance(ASSET_C, &ALICE), alice_assets[2]);
+    assert_eq!(Currencies::free_balance(ASSET_D, &ALICE), alice_assets[3]);
 
-    assert_eq!(Shares::free_balance(psi, &ALICE), alice_pool_assets);
+    assert_eq!(Currencies::free_balance(psi, &ALICE), alice_pool_assets);
 
-    assert_eq!(Shares::free_balance(ASSET_A, &pai), pool_assets[0]);
-    assert_eq!(Shares::free_balance(ASSET_B, &pai), pool_assets[1]);
-    assert_eq!(Shares::free_balance(ASSET_C, &pai), pool_assets[2]);
-    assert_eq!(Shares::free_balance(ASSET_D, &pai), pool_assets[3]);
+    assert_eq!(Currencies::free_balance(ASSET_A, &pai), pool_assets[0]);
+    assert_eq!(Currencies::free_balance(ASSET_B, &pai), pool_assets[1]);
+    assert_eq!(Currencies::free_balance(ASSET_C, &pai), pool_assets[2]);
+    assert_eq!(Currencies::free_balance(ASSET_D, &pai), pool_assets[3]);
 
-    assert_eq!(Shares::total_issuance(psi), total_issuance);
+    assert_eq!(Currencies::total_issuance(psi), total_issuance);
 }
