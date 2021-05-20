@@ -4,7 +4,7 @@ use super::*;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
 use crate::{
-    market::{MarketCreation, MarketEnd, MarketType, Outcome},
+    market::{MarketCreation, MarketEnd},
     Config,
 };
 use frame_benchmarking::{
@@ -19,7 +19,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
-    types::{Asset, ScalarPosition},
+    types::{Asset, MarketType, OutcomeReport, ScalarPosition},
 };
 
 // Get default values for market creation. Also spawns an account with maximum
@@ -73,7 +73,7 @@ fn create_market_common<T: Config>(
 fn create_close_and_report_market<T: Config>(
     permission: MarketCreation,
     options: MarketType,
-    outcome: Outcome,
+    outcome: OutcomeReport,
 ) -> Result<(T::AccountId, T::MarketId), &'static str> {
     let (caller, marketid) = create_market_common::<T>(permission, options)?;
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
@@ -116,7 +116,7 @@ fn setup_resolve_common_categorical<T: Config>(
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories),
-        Outcome::Categorical(categories.saturating_sub(1)),
+        OutcomeReport::Categorical(categories.saturating_sub(1)),
     )?;
     let _ = generate_accounts_with_assets::<T>(
         acc_total,
@@ -132,12 +132,12 @@ fn setup_redeem_shares_common<T: Config>(
 ) -> Result<(T::AccountId, T::MarketId), &'static str> {
     let (caller, marketid) =
         create_market_common::<T>(MarketCreation::Permissionless, market_type.clone())?;
-    let outcome: Outcome;
+    let outcome: OutcomeReport;
 
     if let MarketType::Categorical(categories) = market_type {
-        outcome = Outcome::Categorical(categories.saturating_sub(1));
+        outcome = OutcomeReport::Categorical(categories.saturating_sub(1));
     } else if let MarketType::Scalar(range) = market_type {
-        outcome = Outcome::Scalar(range.1);
+        outcome = OutcomeReport::Scalar(range.1);
     } else {
         panic!(
             "setup_redeem_shares_common: Unsupported market type: {:?}",
@@ -168,7 +168,7 @@ fn setup_resolve_common_scalar<T: Config>(
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Scalar((0u128, u128::MAX)),
-        Outcome::Scalar(u128::MAX),
+        OutcomeReport::Scalar(u128::MAX),
     )?;
     let _ = generate_accounts_with_assets::<T>(
         acc_total,
@@ -201,7 +201,7 @@ benchmarks! {
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
         for i in 0..c.min(T::MaxDisputes::get() as u32) {
-            let _ = Call::<T>::dispute(marketid, Outcome::Categorical(i.saturated_into()))
+            let _ = Call::<T>::dispute(marketid, OutcomeReport::Categorical(i.saturated_into()))
                 .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         }
 
@@ -301,14 +301,14 @@ benchmarks! {
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar((0u128, u128::MAX)),
-            Outcome::Scalar(42)
+            OutcomeReport::Scalar(42)
         )?;
 
         for i in 0..a as u128 {
-            let _ = Call::<T>::dispute(marketid, Outcome::Scalar(i))
+            let _ = Call::<T>::dispute(marketid, OutcomeReport::Scalar(i))
                 .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         }
-    }: _(RawOrigin::Signed(caller), marketid, Outcome::Scalar((a + 1) as u128))
+    }: _(RawOrigin::Signed(caller), marketid, OutcomeReport::Scalar((a + 1) as u128))
 
     internal_resolve_categorical_reported {
         // a = total accounts
@@ -336,7 +336,7 @@ benchmarks! {
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
         for i in 0..c.min(d) {
-            let _ = Call::<T>::dispute(marketid, Outcome::Categorical(i.saturated_into()))
+            let _ = Call::<T>::dispute(marketid, OutcomeReport::Categorical(i.saturated_into()))
                 .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         }
     }: { Pallet::<T>::internal_resolve(&marketid)? }
@@ -355,7 +355,7 @@ benchmarks! {
         let (caller, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d.into() {
-            let _ = Call::<T>::dispute(marketid, Outcome::Scalar(i))
+            let _ = Call::<T>::dispute(marketid, OutcomeReport::Scalar(i))
                 .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
         }
     }: { Pallet::<T>::internal_resolve(&marketid)? }
@@ -391,7 +391,7 @@ benchmarks! {
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get())
         )?;
-        let outcome = Outcome::Categorical(0);
+        let outcome = OutcomeReport::Categorical(0);
         let approval_origin = T::ApprovalOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed(marketid)
             .dispatch_bypass_filter(approval_origin)?;

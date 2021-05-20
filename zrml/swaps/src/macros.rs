@@ -93,7 +93,7 @@ macro_rules! pool_join_with_exact_amount {
 // Common code for `pool_join` and `pool_exit` methods.
 macro_rules! pool {
     (
-        initial_params: ($asset_bounds:expr, $origin:expr, $pool_amount:expr, $pool_id:expr),
+        initial_params: ($asset_bounds:expr, $origin:expr, $pool_amount:expr, $pool:expr, $pool_id:expr),
 
         event: $event:ident,
         transfer_asset: $transfer_asset:expr,
@@ -101,7 +101,6 @@ macro_rules! pool {
     ) => {{
         let who = ensure_signed($origin)?;
 
-        let pool = Self::pool_by_id($pool_id)?;
         let pool_shares_id = Self::pool_shares_id($pool_id);
         let pool_account_id = Self::pool_account_id($pool_id);
         let total_issuance = T::Shares::total_issuance(pool_shares_id);
@@ -111,12 +110,12 @@ macro_rules! pool {
             total_issuance.saturated_into(),
         )?
         .saturated_into();
-        Self::check_provided_values_len_must_equal_assets_len(&pool.assets, &$asset_bounds)?;
+        Self::check_provided_values_len_must_equal_assets_len(&$pool.assets, &$asset_bounds)?;
         ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
 
         let mut transferred = Vec::with_capacity($asset_bounds.len());
 
-        for (asset, amount_bound) in pool.assets.into_iter().zip($asset_bounds.iter().cloned()) {
+        for (asset, amount_bound) in $pool.assets.into_iter().zip($asset_bounds.iter().cloned()) {
             let balance = T::Shares::free_balance(asset, &pool_account_id);
             let amount: BalanceOf<T> =
                 bmul(ratio.saturated_into(), balance.saturated_into())?.saturated_into();

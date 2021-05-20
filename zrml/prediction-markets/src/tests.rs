@@ -1,11 +1,15 @@
 use crate::{market::*, mock::*, Config, Error};
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::Get};
+use frame_support::{
+    assert_noop, assert_ok,
+    dispatch::{DispatchError, DispatchResult},
+    traits::Get,
+};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{Asset, ScalarPosition},
+    types::{Asset, OutcomeReport, ScalarPosition},
 };
 
 fn gen_metadata(byte: u8) -> Vec<u8> {
@@ -152,7 +156,7 @@ fn it_allows_to_buy_a_complete_set() {
         let market = PredictionMarkets::markets(0).unwrap();
 
         // Check the outcome balances
-        let assets = PredictionMarkets::outcome_assets(0, market);
+        let assets = PredictionMarkets::outcome_assets(0, &market);
         for asset in assets.iter() {
             let bal = Tokens::free_balance(*asset, &BOB);
             assert_eq!(bal, 100);
@@ -216,7 +220,7 @@ fn it_allows_to_sell_a_complete_set() {
         let market = PredictionMarkets::markets(0).unwrap();
 
         // Check the outcome balances
-        let assets = PredictionMarkets::outcome_assets(0, market);
+        let assets = PredictionMarkets::outcome_assets(0, &market);
         for asset in assets.iter() {
             let bal = Tokens::free_balance(*asset, &BOB);
             assert_eq!(bal, 0);
@@ -243,13 +247,13 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            Outcome::Categorical(1)
+            OutcomeReport::Categorical(1)
         ));
 
         let market_after = PredictionMarkets::markets(0).unwrap();
         let report = market_after.report.unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
-        assert_eq!(report.outcome, Outcome::Categorical(1));
+        assert_eq!(report.outcome, OutcomeReport::Categorical(1));
         assert_eq!(report.by, market_after.oracle);
     });
 }
@@ -266,7 +270,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            Outcome::Categorical(1)
+            OutcomeReport::Categorical(1)
         ));
 
         // Dispute phase is 10 blocks... so only run 5 of them.
@@ -275,7 +279,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
-            Outcome::Categorical(0)
+            OutcomeReport::Categorical(0)
         ));
 
         let market = PredictionMarkets::markets(0).unwrap();
@@ -286,7 +290,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         let dispute = &disputes[0];
         assert_eq!(dispute.at, 105);
         assert_eq!(dispute.by, CHARLIE);
-        assert_eq!(dispute.outcome, Outcome::Categorical(0));
+        assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
         let market_ids = PredictionMarkets::market_ids_per_dispute_block(105);
         assert_eq!(market_ids.len(), 1);
@@ -306,7 +310,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(ALICE), // alice reports her own market now
             0,
-            Outcome::Categorical(1),
+            OutcomeReport::Categorical(1),
         ));
 
         let market = PredictionMarkets::markets(0).unwrap();
@@ -340,7 +344,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            Outcome::Categorical(1)
+            OutcomeReport::Categorical(1)
         ));
 
         let reported_ids = PredictionMarkets::market_ids_per_report_block(100);
@@ -391,7 +395,7 @@ fn it_resolves_a_disputed_market() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            Outcome::Categorical(0)
+            OutcomeReport::Categorical(0)
         ));
 
         run_to_block(102);
@@ -399,7 +403,7 @@ fn it_resolves_a_disputed_market() {
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
-            Outcome::Categorical(1)
+            OutcomeReport::Categorical(1)
         ));
 
         run_to_block(103);
@@ -407,7 +411,7 @@ fn it_resolves_a_disputed_market() {
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(DAVE),
             0,
-            Outcome::Categorical(0)
+            OutcomeReport::Categorical(0)
         ));
 
         run_to_block(104);
@@ -415,7 +419,7 @@ fn it_resolves_a_disputed_market() {
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(EVE),
             0,
-            Outcome::Categorical(1)
+            OutcomeReport::Categorical(1)
         ));
 
         let market = PredictionMarkets::markets(0).unwrap();
@@ -498,7 +502,7 @@ fn it_allows_to_redeem_shares() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            Outcome::Categorical(1)
+            OutcomeReport::Categorical(1)
         ));
 
         run_to_block(111);
@@ -543,7 +547,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            Outcome::Categorical(1)
+            OutcomeReport::Categorical(1)
         ));
     });
 }
@@ -567,8 +571,7 @@ fn full_scalar_market_lifecycle() {
         ));
 
         // check balances
-        let market = PredictionMarkets::markets(0).unwrap();
-        let assets = PredictionMarkets::outcome_assets(0, market);
+        let assets = PredictionMarkets::outcome_assets(0, &PredictionMarkets::markets(0).unwrap());
         assert_eq!(assets.len(), 2);
         for asset in assets.iter() {
             let bal = Tokens::free_balance(*asset, &CHARLIE);
@@ -582,7 +585,7 @@ fn full_scalar_market_lifecycle() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            Outcome::Scalar(100)
+            OutcomeReport::Scalar(100)
         ));
 
         let market_after_report = PredictionMarkets::markets(0).unwrap();
@@ -590,13 +593,13 @@ fn full_scalar_market_lifecycle() {
         let report = market_after_report.report.unwrap();
         assert_eq!(report.at, 100);
         assert_eq!(report.by, BOB);
-        assert_eq!(report.outcome, Outcome::Scalar(100));
+        assert_eq!(report.outcome, OutcomeReport::Scalar(100));
 
         // dispute
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(DAVE),
             0,
-            Outcome::Scalar(20)
+            OutcomeReport::Scalar(20)
         ));
         let disputes = PredictionMarkets::disputes(0);
         assert_eq!(disputes.len(), 1);
@@ -635,4 +638,69 @@ fn full_scalar_market_lifecycle() {
         let ztg_bal_eve_after = Balances::free_balance(&EVE);
         assert_eq!(ztg_bal_eve_after, 1050 * BASE);
     })
+}
+
+#[test]
+fn market_resolve_does_not_hold_liquidity_withdraw() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketEnd::Block(100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            3,
+        ));
+        deploy_swap_pool(PredictionMarkets::markets(0).unwrap(), 0).unwrap();
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(ALICE),
+            0,
+            1 * BASE
+        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(BOB),
+            0,
+            2 * BASE
+        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(
+            Origin::signed(CHARLIE),
+            0,
+            3 * BASE
+        ));
+
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(2)
+        ));
+
+        run_to_block(150);
+        assert_ok!(Swaps::pool_exit(
+            Origin::signed(BOB),
+            0,
+            BASE * 100,
+            vec![0, 0]
+        ));
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
+    })
+}
+
+fn deploy_swap_pool(market: Market<u128, u64>, market_id: u128) -> DispatchResult {
+    assert_ok!(PredictionMarkets::buy_complete_set(
+        Origin::signed(FRED),
+        0,
+        100 * BASE,
+    ));
+    assert_ok!(Balances::transfer(
+        Origin::signed(FRED),
+        <Runtime as crate::Config>::PalletId::get().into_account(),
+        100 * BASE
+    ));
+    let outcome_assets_len = PredictionMarkets::outcome_assets(market_id, &market).len();
+    PredictionMarkets::deploy_swap_pool_for_market(
+        Origin::signed(FRED),
+        0,
+        (0..outcome_assets_len + 1).map(|_| BASE).collect(),
+    )
 }
