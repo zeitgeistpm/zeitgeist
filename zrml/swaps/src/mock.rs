@@ -50,7 +50,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Shares: orml_currencies::{Event<T>, Pallet},
+        Currencies: orml_currencies::{Event<T>, Pallet},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
@@ -69,7 +69,7 @@ impl crate::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type Shares = Shares;
+    type Shares = Currencies;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -166,18 +166,18 @@ sp_api::mock_impl_runtime_apis! {
       for Runtime
     {
         fn get_spot_price(
-            pool_id: u128,
+            pool_id: PoolId,
             asset_in: Asset<MarketId>,
             asset_out: Asset<MarketId>,
         ) -> SerdeWrapper<Balance> {
             SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
         }
 
-        fn pool_account_id(pool_id: u128) -> AccountIdTest {
+        fn pool_account_id(pool_id: PoolId) -> AccountIdTest {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_shares_id(pool_id: u128) -> Asset<SerdeWrapper<MarketId>> {
+        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
         }
     }

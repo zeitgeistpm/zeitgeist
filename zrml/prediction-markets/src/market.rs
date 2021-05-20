@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
+use zeitgeist_primitives::types::{MarketType, OutcomeReport};
 
 /// Defines the type of market creation.
 #[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
@@ -18,19 +19,6 @@ pub enum MarketCreation {
 pub enum MarketEnd<BlockNumber> {
     Block(BlockNumber),
     Timestamp(u64),
-}
-
-/// An inclusive range between the left side (lower) and right (upper).
-pub type RangeInclusive<T> = (T, T);
-
-/// Defines the type of market.
-/// All markets also have the `Invalid` resolution.
-#[derive(Eq, PartialEq, Encode, Decode, Clone, RuntimeDebug)]
-pub enum MarketType {
-    // A market with a number of categorical outcomes.
-    Categorical(u16),
-    // A market with a range of potential outcomes.
-    Scalar(RangeInclusive<u128>),
 }
 
 /// Defines the state of the market.
@@ -52,12 +40,6 @@ pub enum MarketStatus {
     // The market outcome has been resolved and can be cleaned up
     // after the `MarketWipeDelay`.
     Resolved,
-}
-
-#[derive(Eq, PartialEq, Encode, Decode, RuntimeDebug, Clone)]
-pub enum Outcome {
-    Categorical(u16),
-    Scalar(u128),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
@@ -82,7 +64,7 @@ pub struct Market<AccountId, BlockNumber> {
     // The report of the market. Only `Some` if it has been reported.
     pub report: Option<Report<AccountId, BlockNumber>>,
     // The resolved outcome.
-    pub resolved_outcome: Option<Outcome>,
+    pub resolved_outcome: Option<OutcomeReport>,
 }
 
 impl<AccountId, B> Market<AccountId, B> {
@@ -99,12 +81,12 @@ impl<AccountId, B> Market<AccountId, B> {
 pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
-    pub outcome: Outcome,
+    pub outcome: OutcomeReport,
 }
 
 #[derive(Encode, Decode, RuntimeDebug, Clone)]
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
-    pub outcome: Outcome,
+    pub outcome: OutcomeReport,
 }
