@@ -2,11 +2,8 @@
 
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::types::OutcomeReport;
-use zrml_prediction_markets::{
-    market::{MarketCreation, MarketEnd},
-    mock::{ExtBuilder, Origin, PredictionMarkets, System},
-};
+use zeitgeist_primitives::types::{MarketCreation, MarketEnd, OutcomeReport};
+use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();

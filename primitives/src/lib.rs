@@ -4,7 +4,7 @@ extern crate alloc;
 
 mod asset;
 pub mod constants;
-mod market_type;
+mod market;
 mod outcome_report;
 mod pool;
 mod serde_wrapper;

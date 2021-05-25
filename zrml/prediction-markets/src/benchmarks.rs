@@ -1,12 +1,9 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
+use crate::Config;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
-use crate::{
-    market::{MarketCreation, MarketEnd},
-    Config,
-};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -19,7 +16,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
-    types::{Asset, MarketType, OutcomeReport, ScalarPosition},
+    types::{Asset, MarketCreation, MarketEnd, MarketType, OutcomeReport, ScalarPosition},
 };
 
 // Get default values for market creation. Also spawns an account with maximum
