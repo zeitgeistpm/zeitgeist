@@ -21,11 +21,7 @@ fn generate_funded_account<T: Config>(seed: Option<u32>) -> Result<T::AccountId,
     }
 
     let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), 0);
-    let _ = T::Shares::deposit(
-        asset.into(),
-        &acc,
-        BASE.saturating_mul(1_000).saturated_into(),
-    )?;
+    let _ = T::Shares::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
     let _ = T::Currency::deposit_creating(&acc, BASE.saturating_mul(1_000).saturated_into());
     Ok(acc)
 }
@@ -59,13 +55,13 @@ fn create_order<T: Config>(
             .last()
             .copied()
             .ok_or("No bids found")?;
-        return Ok((acc, asset, hash));
+        Ok((acc, asset, hash))
     } else {
         let hash = Pallet::<T>::asks(asset)
             .last()
             .copied()
             .ok_or("No asks found")?;
-        return Ok((acc, asset, hash));
+        Ok((acc, asset, hash))
     }
 }
 
