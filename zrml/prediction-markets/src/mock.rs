@@ -1,3 +1,5 @@
+#![cfg(feature = "mock")]
+
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,

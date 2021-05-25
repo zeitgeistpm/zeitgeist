@@ -3,13 +3,13 @@ parity-scale-codec = { default-features = false, features = ["derive"], version 
 serde = { default-features = false, features = ["derive"], optional = true, version = "1.0" }
 sp-api = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
-zeitgeist-primitives = { default-features = false, path = '../../../../primitives' }
+zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
 
 [features]
 default = ["std"]
 std = [
     "parity-scale-codec/std",
-    "serde",
+    "serde/std",
     "sp-api/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std"
@@ -18,5 +18,5 @@ std = [
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
-name = "zrml-prediction-markets-runtime-api"
+name = "zrml-swaps-runtime-api"
 version = "0.1.0"

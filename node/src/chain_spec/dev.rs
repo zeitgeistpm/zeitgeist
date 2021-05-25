@@ -4,12 +4,14 @@ use crate::chain_spec::{
 use sc_service::ChainType;
 use sp_core::sr25519;
 
+#[cfg(feature = "parachain")]
+const STAKE_AMOUNT: u128 = 2_000 * zeitgeist_primitives::constants::BASE;
+
 pub fn dev_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {
     let wasm_binary = zeitgeist_runtime::WASM_BINARY
-        .ok_or("Development wasm binary not available".to_string())?;
-    let stake_amount = 2_000 * zeitgeist_primitives::constants::BASE;
+        .ok_or_else(|| "Development wasm binary not available".to_string())?;
     Ok(ChainSpec::from_genesis(
         "Development",
         "dev",
@@ -23,12 +25,12 @@ pub fn dev_config(
                         (
                             get_account_id_from_seed::<sr25519::Public>("Alice"),
                             None,
-                            stake_amount,
+                            STAKE_AMOUNT,
                         ),
                         (
                             get_account_id_from_seed::<sr25519::Public>("Bob"),
                             None,
-                            stake_amount,
+                            STAKE_AMOUNT,
                         ),
                     ],
                     parachain_id,

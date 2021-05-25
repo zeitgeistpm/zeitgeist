@@ -8,10 +8,7 @@ pub use battery_park::battery_park_staging_config;
 pub use dev::dev_config;
 pub use local_testnet::local_testnet_config;
 use sp_core::{Pair, Public};
-use sp_runtime::{
-    traits::{IdentifyAccount, Verify},
-    Percent,
-};
+use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::types::{AccountId, Balance, Signature};
 use zeitgeist_runtime::TokensConfig;
 
@@ -85,7 +82,6 @@ fn generic_genesis(
         pallet_author_mapping: zeitgeist_runtime::AuthorMappingConfig {
             author_ids: acs
                 .stakers
-                .clone()
                 .iter()
                 .take(1)
                 .map(|staker| {
@@ -97,7 +93,7 @@ fn generic_genesis(
         },
         #[cfg(feature = "parachain")]
         pallet_author_slot_filter: zeitgeist_runtime::AuthorFilterConfig {
-            eligible_ratio: Percent::from_percent(50),
+            eligible_ratio: sp_runtime::Percent::from_percent(50),
         },
         pallet_balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts

@@ -10,23 +10,17 @@ extern crate alloc;
 #[macro_use]
 mod macros;
 
+mod benchmarks;
 mod check_arithm_rslt;
 mod consts;
 mod events;
 mod fixed;
 mod math;
+pub mod mock;
+mod tests;
 pub mod weights;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarks;
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
-
-#[cfg(feature = "runtime-benchmarks")]
-pub(crate) use pallet::*;
-pub use pallet::{Config, Error, Event, Pallet};
+pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
@@ -576,7 +570,7 @@ mod pallet {
             T: Config,
         {
             if assets.len() != provided_values.len() {
-                return Err(Error::<T>::ProvidedValuesLenMustEqualAssetsLen.into());
+                return Err(Error::<T>::ProvidedValuesLenMustEqualAssetsLen);
             }
             Ok(())
         }
@@ -627,7 +621,7 @@ mod pallet {
         where
             T: Config,
         {
-            Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist.into())
+            Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist)
         }
 
         fn pool_weight_rslt(
@@ -725,7 +719,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
         ) -> Result<(), DispatchError> {
             if let MarketType::Categorical(_) = market_type {
-                if let &OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
+                if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                     <Pools<T>>::try_mutate(pool_id, |pool| {
                         let pool_mut = if let Some(el) = pool {
                             el
@@ -733,12 +727,10 @@ mod pallet {
                             return Err(Error::<T>::PoolDoesNotExist.into());
                         };
                         pool_mut.assets.retain(|el| {
-                            if let &Asset::CategoricalOutcome(_, idx) = el {
+                            if let Asset::CategoricalOutcome(_, idx) = el {
                                 idx == winning_asset_idx
-                            } else if let Asset::Ztg = el {
-                                true
                             } else {
-                                false
+                                matches!(el, Asset::Ztg)
                             }
                         });
                         Ok::<_, DispatchError>(())

@@ -29,7 +29,7 @@ fn generate_assets<T: Config>(
     // Generate MaxAssets assets and generate enough liquidity
     for i in 0..asset_count {
         let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
-        assets.push(asset.clone());
+        assets.push(asset);
         T::Shares::deposit(asset, owner, asset_amount_unwrapped).unwrap();
     }
 
@@ -54,7 +54,7 @@ fn bench_create_pool<T: Config>(
     let weights = vec![T::MinWeight::get(); asset_count_unwrapped];
     let _ = Call::<T>::create_pool(assets.clone(), weights)
         .dispatch_bypass_filter(RawOrigin::Signed(caller).into());
-    return (<NextPoolId<T>>::get() - 1, assets);
+    (<NextPoolId<T>>::get() - 1, assets)
 }
 
 benchmarks! {

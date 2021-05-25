@@ -36,8 +36,8 @@ pub fn calc_out_given_in(
         asset_balance_in,
         asset_balance_in.check_add_rslt(&adjusted_in)?,
     )?;
-    let foo = bpow(y, weight_ratio)?;
-    let bar = BASE.check_sub_rslt(&foo)?;
+    let pow = bpow(y, weight_ratio)?;
+    let bar = BASE.check_sub_rslt(&pow)?;
     let asset_amount_out = bmul(asset_balance_out, bar);
     asset_amount_out
 }
@@ -53,9 +53,9 @@ pub fn calc_in_given_out(
     let weight_ratio = bdiv(asset_weight_out, asset_weight_in)?;
     let diff = asset_balance_out.check_sub_rslt(&asset_amount_out)?;
     let y = bdiv(asset_balance_out, diff)?;
-    let foo = bpow(y, weight_ratio)?.check_sub_rslt(&BASE)?;
+    let pow = bpow(y, weight_ratio)?.check_sub_rslt(&BASE)?;
     let asset_amount_in = bdiv(
-        bmul(asset_balance_in, foo)?,
+        bmul(asset_balance_in, pow)?,
         BASE.check_sub_rslt(&swap_fee)?,
     );
     asset_amount_in

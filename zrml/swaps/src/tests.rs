@@ -1,3 +1,5 @@
+#![cfg(all(feature = "mock", test))]
+
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,

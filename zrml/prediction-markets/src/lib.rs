@@ -54,20 +54,14 @@
 
 extern crate alloc;
 
+mod benchmarks;
 mod errors;
-mod market;
+pub mod market;
+pub mod mock;
+mod tests;
 pub mod weights;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarks;
-#[cfg(test)]
-mod mock;
-#[cfg(test)]
-mod tests;
-
-#[cfg(feature = "runtime-benchmarks")]
-pub(crate) use pallet::*;
-pub use pallet::{Config, Error, Event, Pallet};
+pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
@@ -161,21 +155,21 @@ mod pallet {
 
             // Weight correction
             if market_status == MarketStatus::Reported {
-                return Ok(Some(T::WeightInfo::admin_destroy_reported_market(
+                Ok(Some(T::WeightInfo::admin_destroy_reported_market(
                     total_accounts.saturated_into(),
                     share_accounts.saturated_into(),
                     outcome_assets_amount.saturated_into(),
                 ))
-                .into());
+                .into())
             } else if market_status == MarketStatus::Disputed {
-                return Ok(Some(T::WeightInfo::admin_destroy_disputed_market(
+                Ok(Some(T::WeightInfo::admin_destroy_disputed_market(
                     total_accounts.saturated_into(),
                     share_accounts.saturated_into(),
                     outcome_assets_amount.saturated_into(),
                 ))
-                .into());
+                .into())
             } else {
-                return Ok(None.into());
+                Ok(None.into())
             }
         }
 
@@ -359,7 +353,7 @@ mod pallet {
                 resolved_outcome: None,
             };
 
-            <Markets<T>>::insert(market_id.clone(), Some(market));
+            <Markets<T>>::insert(market_id, Some(market));
 
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
@@ -407,7 +401,7 @@ mod pallet {
                 resolved_outcome: None,
             };
 
-            <Markets<T>>::insert(market_id.clone(), Some(market));
+            <Markets<T>>::insert(market_id, Some(market));
 
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
@@ -485,7 +479,7 @@ mod pallet {
                 }
             }
 
-            let disputes = Self::disputes(market_id.clone());
+            let disputes = Self::disputes(market_id);
             let num_disputes = disputes.len() as u16;
             let max_disputes = T::MaxDisputes::get();
             ensure!(num_disputes < max_disputes, Error::<T>::MaxDisputesReached);
@@ -507,15 +501,15 @@ mod pallet {
                 let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
                 let at = prev_dispute.at;
                 let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
-                remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id.clone());
+                remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id);
                 <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
             }
 
             <MarketIdsPerDisputeBlock<T>>::mutate(current_block, |ids| {
-                ids.push(market_id.clone());
+                ids.push(market_id);
             });
 
-            <Disputes<T>>::mutate(market_id.clone(), |disputes| {
+            <Disputes<T>>::mutate(market_id, |disputes| {
                 disputes.push(MarketDispute {
                     at: current_block,
                     by: sender,
@@ -525,7 +519,7 @@ mod pallet {
 
             // if not already in dispute
             if market.status != MarketStatus::Disputed {
-                <Markets<T>>::mutate(market_id.clone(), |m| {
+                <Markets<T>>::mutate(market_id, |m| {
                     m.as_mut().unwrap().status = MarketStatus::Disputed;
                 });
             }
@@ -570,7 +564,7 @@ mod pallet {
             );
 
             // Check to see if the sender has any winning shares.
-            let resolved_outcome = market.resolved_outcome.ok_or_else(|| NOT_RESOLVED)?;
+            let resolved_outcome = market.resolved_outcome.ok_or(NOT_RESOLVED)?;
 
             let winning_assets = match resolved_outcome {
                 OutcomeReport::Categorical(category_index) => {
@@ -734,15 +728,14 @@ mod pallet {
 
             market.report = Some(Report {
                 at: current_block,
-                by: sender.clone(),
+                by: sender,
                 outcome: outcome.clone(),
             });
             market.status = MarketStatus::Reported;
-
-            <Markets<T>>::insert(market_id.clone(), Some(market));
+            <Markets<T>>::insert(market_id, Some(market));
 
             <MarketIdsPerReportBlock<T>>::mutate(current_block, |v| {
-                v.push(market_id.clone());
+                v.push(market_id);
             });
 
             Self::deposit_event(Event::MarketReported(market_id, outcome));
@@ -767,7 +760,7 @@ mod pallet {
                 Error::<T>::MarketNotActive
             );
 
-            let market_account = Self::market_account(market_id.clone());
+            let market_account = Self::market_account(market_id);
             ensure!(
                 T::Currency::free_balance(&market_account) >= amount,
                 "Market account does not have sufficient reserves.",
@@ -996,7 +989,7 @@ mod pallet {
                 total_weight = total_weight.saturating_add(weight);
             });
 
-            return total_weight;
+            total_weight
         }
     }
 
@@ -1083,9 +1076,9 @@ mod pallet {
             max_weight_parameter: u32,
         ) -> DispatchResultWithPostInfo {
             if weight_parameter == max_weight_parameter {
-                return Ok(None.into());
+                Ok(None.into())
             } else {
-                return Ok(Some(func(weight_parameter)).into());
+                Ok(Some(func(weight_parameter)).into())
             }
         }
 
@@ -1093,18 +1086,18 @@ mod pallet {
         fn clear_auto_resolve(market_id: &T::MarketId) -> Result<(), dispatch::DispatchError> {
             let market = Self::market_by_id(&market_id)?;
             if market.status == MarketStatus::Reported {
-                let report = market.report.ok_or_else(|| NO_REPORT)?;
+                let report = market.report.ok_or(NO_REPORT)?;
                 let mut old_reports_per_block = Self::market_ids_per_report_block(report.at);
-                remove_item::<T::MarketId>(&mut old_reports_per_block, market_id.clone());
+                remove_item::<T::MarketId>(&mut old_reports_per_block, *market_id);
                 <MarketIdsPerReportBlock<T>>::insert(report.at, old_reports_per_block);
             }
             if market.status == MarketStatus::Disputed {
-                let disputes = Self::disputes(market_id.clone());
+                let disputes = Self::disputes(market_id);
                 let num_disputes = disputes.len() as u16;
                 let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
                 let at = prev_dispute.at;
                 let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
-                remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id.clone());
+                remove_item::<T::MarketId>(&mut old_disputes_per_block, *market_id);
                 <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
             }
 
@@ -1117,7 +1110,7 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure!(
-                T::Currency::free_balance(&who) >= amount.into(),
+                T::Currency::free_balance(&who) >= amount,
                 Error::<T>::NotEnoughBalance,
             );
 
@@ -1127,7 +1120,7 @@ mod pallet {
                 Error::<T>::MarketNotActive
             );
 
-            let market_account = Self::market_account(market_id.clone());
+            let market_account = Self::market_account(market_id);
             T::Currency::transfer(
                 &who,
                 &market_account,
@@ -1167,7 +1160,7 @@ mod pallet {
         ///
         pub(crate) fn internal_resolve(market_id: &T::MarketId) -> Result<Weight, DispatchError> {
             let market = Self::market_by_id(market_id)?;
-            let report = market.report.clone().ok_or_else(|| NO_REPORT)?;
+            let report = market.report.clone().ok_or(NO_REPORT)?;
             let mut total_accounts = 0u32;
             let mut total_asset_accounts = 0u32;
             let mut total_categories = 0u32;
@@ -1189,7 +1182,7 @@ mod pallet {
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => report.clone().outcome,
                 MarketStatus::Disputed => {
-                    let disputes = Self::disputes(market_id.clone());
+                    let disputes = Self::disputes(*market_id);
                     let num_disputes = disputes.len() as u16;
                     // count the last dispute's outcome as the winning one
                     let last_dispute = disputes[(num_disputes as usize) - 1].clone();
@@ -1213,7 +1206,7 @@ mod pallet {
                     }
                 }
                 MarketStatus::Disputed => {
-                    let disputes = Self::disputes(market_id.clone());
+                    let disputes = Self::disputes(*market_id);
                     let num_disputes = disputes.len() as u16;
                     total_disputes = num_disputes.into();
 
@@ -1250,9 +1243,9 @@ mod pallet {
                     // fold all the imbalances into one and reward the correct reporters.
                     let reward_per_each =
                         overall_imbalance.peek() / (correct_reporters.len() as u32).into();
-                    for i in 0..correct_reporters.len() {
+                    for correct_reporter in &correct_reporters {
                         let (amount, leftover) = overall_imbalance.split(reward_per_each);
-                        T::Currency::resolve_creating(&correct_reporters[i], amount);
+                        T::Currency::resolve_creating(correct_reporter, amount);
                         overall_imbalance = leftover;
                     }
                 }
@@ -1277,27 +1270,25 @@ mod pallet {
             // MUST be updated when new market types are added.
             if let MarketType::Categorical(_) = market.market_type {
                 if let MarketStatus::Reported = market_status {
-                    return Ok(T::WeightInfo::internal_resolve_categorical_reported(
+                    Ok(T::WeightInfo::internal_resolve_categorical_reported(
                         total_accounts,
                         total_asset_accounts,
                         total_categories,
-                    ));
+                    ))
                 } else {
-                    return Ok(T::WeightInfo::internal_resolve_categorical_disputed(
+                    Ok(T::WeightInfo::internal_resolve_categorical_disputed(
                         total_accounts,
                         total_asset_accounts,
                         total_categories,
                         total_disputes,
-                    ));
+                    ))
                 }
+            } else if let MarketStatus::Reported = market_status {
+                Ok(T::WeightInfo::internal_resolve_scalar_reported())
             } else {
-                if let MarketStatus::Reported = market_status {
-                    return Ok(T::WeightInfo::internal_resolve_scalar_reported());
-                } else {
-                    return Ok(T::WeightInfo::internal_resolve_scalar_disputed(
-                        total_disputes,
-                    ));
-                }
+                Ok(T::WeightInfo::internal_resolve_scalar_disputed(
+                    total_disputes,
+                ))
             }
         }
 
@@ -1305,11 +1296,11 @@ mod pallet {
             match end {
                 MarketEnd::Block(block) => {
                     let current_block = <frame_system::Pallet<T>>::block_number();
-                    return current_block < block;
+                    current_block < block
                 }
                 MarketEnd::Timestamp(timestamp) => {
                     let now = T::Timestamp::now();
-                    return now < timestamp.saturated_into();
+                    now < timestamp.saturated_into()
                 }
             }
         }
@@ -1325,14 +1316,14 @@ mod pallet {
             let mut total_categories: usize = 0;
 
             if let MarketType::Categorical(_) = market.market_type {
-                if let &OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
+                if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                     let assets = Self::outcome_assets(*market_id, market);
                     total_categories = assets.len().saturated_into();
 
                     let mut assets_iter = assets.iter().cloned();
-                    let mut manage_asset = |asset: Asset<_>, winning_asset_idx| {
+                    let mut manage_asset = |asset: Asset<_>| {
                         if let Asset::CategoricalOutcome(_, idx) = asset {
-                            if idx == winning_asset_idx {
+                            if idx == *winning_asset_idx {
                                 return 0;
                             }
                             let (total_accounts, accounts) =
@@ -1347,10 +1338,10 @@ mod pallet {
                     };
 
                     if let Some(first_asset) = assets_iter.next() {
-                        total_accounts = manage_asset(first_asset, winning_asset_idx);
+                        total_accounts = manage_asset(first_asset);
                     }
                     for asset in assets_iter {
-                        let _ = manage_asset(asset, winning_asset_idx);
+                        let _ = manage_asset(asset);
                     }
                 }
             }
@@ -1377,7 +1368,7 @@ mod pallet {
         where
             T: Config,
         {
-            Self::markets(market_id).ok_or(Error::<T>::MarketDoesNotExist.into())
+            Self::markets(market_id).ok_or(Error::<T>::MarketDoesNotExist)
         }
 
         // Returns the corresponding **stored** pool id of a market id
