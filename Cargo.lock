@@ -11578,6 +11578,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-court"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-swaps",
+]
+
+[[package]]
 name = "zrml-orderbook-v1"
 version = "0.1.0"
 dependencies = [

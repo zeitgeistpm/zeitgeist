@@ -56,7 +56,6 @@ extern crate alloc;
 
 mod benchmarks;
 mod errors;
-pub mod market;
 pub mod mock;
 mod tests;
 pub mod weights;
@@ -65,11 +64,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{
-        errors::*,
-        market::{Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, Report},
-        weights::*,
-    };
+    use crate::{errors::*, weights::*};
     use alloc::vec;
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
@@ -95,7 +90,10 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{Swaps, ZeitgeistMultiReservableCurrency},
-        types::{Asset, MarketType, OutcomeReport, PoolId, ScalarPosition},
+        types::{
+            Asset, Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
+            OutcomeReport, PoolId, Report, ScalarPosition,
+        },
     };
 
     pub(crate) type BalanceOf<T> =
