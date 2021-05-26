@@ -1,6 +1,6 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{market::*, mock::*, Config, Error};
+use crate::{mock::*, Config, Error};
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
@@ -11,7 +11,9 @@ use sp_core::H256;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{Asset, OutcomeReport, ScalarPosition},
+    types::{
+        Asset, Market, MarketCreation, MarketEnd, MarketStatus, OutcomeReport, ScalarPosition,
+    },
 };
 
 fn gen_metadata(byte: u8) -> Vec<u8> {
