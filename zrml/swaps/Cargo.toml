@@ -50,4 +50,4 @@ runtime-benchmarks = ["frame-benchmarking"]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zrml-swaps"
-version = "0.1.0"
+version = "0.1.1"

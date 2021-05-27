@@ -62,6 +62,7 @@ macro_rules! pool_join_with_exact_amount {
         let who = ensure_signed($origin)?;
 
         let pool = Self::pool_by_id($pool_id)?;
+        Self::check_if_pool_is_active(&pool)?;
         let pool_shares_id = Self::pool_shares_id($pool_id);
         let pool_account_id = Self::pool_account_id($pool_id);
         let total_issuance = T::Shares::total_issuance(pool_shares_id);
@@ -153,6 +154,7 @@ macro_rules! swap_exact_amount {
         let who = ensure_signed($origin)?;
 
         let pool = Self::pool_by_id($pool_id)?;
+        Self::check_if_pool_is_active(&pool)?;
         ensure!(pool.bound(&$asset_in), Error::<T>::AssetNotBound);
         ensure!(pool.bound(&$asset_out), Error::<T>::AssetNotBound);
         let spot_price_before = Self::get_spot_price($pool_id, $asset_in, $asset_out)?;
