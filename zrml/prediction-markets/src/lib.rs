@@ -92,7 +92,7 @@ mod pallet {
         traits::{Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
-            OutcomeReport, PoolId, Report, ScalarPosition,
+            OutcomeReport, PoolId, PoolStatus, Report, ScalarPosition,
         },
     };
 
@@ -1354,8 +1354,11 @@ mod pallet {
             outcome_report: &OutcomeReport,
         ) -> DispatchResult {
             let pool_id = Self::market_pool_id(market_id)?;
+            let pool = T::Swap::pool(pool_id)?;
 
-            T::Swap::set_pool_as_stale(&market.market_type, pool_id, outcome_report)?;
+            if let PoolStatus::Active = pool.pool_status {
+                T::Swap::set_pool_as_stale(&market.market_type, pool_id, outcome_report)?;
+            }
 
             Ok(())
         }

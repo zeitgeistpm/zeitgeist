@@ -8,7 +8,7 @@ use frame_support::{assert_noop, assert_ok};
 use orml_traits::MultiCurrency;
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{Asset, MarketId},
+    types::{Asset, MarketId, MarketType, OutcomeReport},
 };
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
@@ -180,6 +180,67 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
         assert_eq!(*pool.weights.get(&ASSET_B).unwrap(), _2);
         assert_eq!(*pool.weights.get(&ASSET_C).unwrap(), _2);
         assert_eq!(*pool.weights.get(&ASSET_D).unwrap(), _2);
+    });
+}
+
+#[test]
+fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
+    ExtBuilder::default().build().execute_with(|| {
+        use zeitgeist_primitives::traits::Swaps as _;
+        create_initial_pool_with_funds_for_alice();
+        assert_ok!(Swaps::pool_join(
+            alice_signed(),
+            0,
+            _1,
+            vec!(_1, _1, _1, _1),
+        ));
+
+        assert_ok!(Swaps::set_pool_as_stale(
+            &MarketType::Categorical(0),
+            0,
+            &OutcomeReport::Scalar(0)
+        ));
+
+        assert_ok!(Swaps::pool_exit(
+            alice_signed(),
+            0,
+            _1,
+            vec!(_1, _1, _1, _1)
+        ));
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
+            alice_signed(),
+            0,
+            ASSET_A,
+            _1,
+            _1
+        ));
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+            alice_signed(),
+            0,
+            ASSET_A,
+            _1,
+            _1
+        ));
+        assert_noop!(
+            Swaps::pool_join(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_E, 1, 1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_E, 1, 1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, u128::MAX, ASSET_B, _1, _1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, u128::MAX, ASSET_B, _1, _1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
     });
 }
 

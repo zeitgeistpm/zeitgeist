@@ -7,6 +7,7 @@ pub mod constants;
 mod market;
 mod outcome_report;
 mod pool;
+mod pool_status;
 mod serde_wrapper;
 mod swaps;
 pub mod traits;
