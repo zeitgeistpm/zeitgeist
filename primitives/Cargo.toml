@@ -13,7 +13,6 @@ sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://gi
 [features]
 default = ["std"]
 std = [
-    "arbitrary",
     "frame-support/std",
     "frame-system/std",
     "orml-currencies/std",

@@ -5,7 +5,7 @@ pub use crate::pool::Pool;
 pub use crate::pool_status::PoolStatus;
 pub use crate::serde_wrapper::*;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
 
 use frame_support::dispatch::{Decode, Encode};
@@ -45,7 +45,7 @@ pub enum MultiHash {
 }
 
 // Implementation for the fuzzer
-#[cfg(feature = "std")]
+#[cfg(feature = "arbitrary")]
 impl<'a> Arbitrary<'a> for MultiHash {
     fn arbitrary(_: &mut Unstructured<'a>) -> Result<Self> {
         Ok(MultiHash::Sha3_384([0u8; 50]))
