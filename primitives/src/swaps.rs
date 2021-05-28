@@ -25,8 +25,8 @@ pub trait Swaps<AccountId> {
     /// Returns the pool instance of a corresponding `pool_id`.
     fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError>;
 
-    /// If market is categorical, removes everything that is not ZTG or winning assets
-    /// from the selected pool.
+    /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
+    /// that is not ZTG or winning assets from the selected pool.
     fn set_pool_as_stale(
         market_type: &MarketType,
         pool_id: PoolId,

@@ -102,6 +102,7 @@
   },
   "Pool": {
     "assets": "Vec<Asset>",
+    "pool_status": "PoolStatus",
     "swap_fee": "Balance",
     "total_weight": "u128",
     "weights": "BTreeMap<Asset, u128>"
@@ -117,6 +118,12 @@
     "transferred": "Vec<Balance>"
   },
   "PoolId": "u128",
+  "PoolStatus": {
+    "_enum": {
+      "Active": null,
+      "Stale": null
+    }
+  },
   "Report": {
     "at": "BlockNumber",
     "by": "AccountId",

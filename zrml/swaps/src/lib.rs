@@ -16,6 +16,7 @@ mod consts;
 mod events;
 mod fixed;
 mod math;
+mod migrations;
 pub mod mock;
 mod tests;
 pub mod weights;
@@ -33,6 +34,7 @@ mod pallet {
     use alloc::{collections::btree_map::BTreeMap, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
+        dispatch::Weight,
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Get, Hooks, IsType},
@@ -46,7 +48,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{Swaps, ZeitgeistMultiReservableCurrency},
-        types::{Asset, MarketType, OutcomeReport, Pool, PoolId, SerdeWrapper},
+        types::{Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, SerdeWrapper},
     };
 
     pub(crate) type BalanceOf<T> =
@@ -227,6 +229,7 @@ mod pallet {
             max_assets_in: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             let pool = Self::pool_by_id(pool_id)?;
+            Self::check_if_pool_is_active(&pool)?;
             pool!(
                 initial_params: (max_assets_in, origin, pool_amount, pool, pool_id),
 
@@ -535,7 +538,11 @@ mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_runtime_upgrade() -> Weight {
+            crate::migrations::_0_1_1_add_pool_status::migrate::<T>()
+        }
+    }
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -604,6 +611,14 @@ mod pallet {
             id
         }
 
+        fn check_if_pool_is_active(pool: &Pool<BalanceOf<T>, T::MarketId>) -> DispatchResult {
+            if let PoolStatus::Active = pool.pool_status {
+                Ok(())
+            } else {
+                Err(Error::<T>::PoolIsNotActive.into())
+            }
+        }
+
         fn mint_pool_shares(
             pool_id: PoolId,
             to: &T::AccountId,
@@ -632,6 +647,18 @@ mod pallet {
                 .get(asset)
                 .cloned()
                 .ok_or(Error::<T>::AssetNotBound)
+        }
+
+        fn set_pool_status(pool_id: PoolId, pool_status: PoolStatus) -> DispatchResult {
+            <Pools<T>>::try_mutate(pool_id, |pool| {
+                let pool = if let Some(el) = pool {
+                    el
+                } else {
+                    return Err(Error::<T>::PoolDoesNotExist.into());
+                };
+                pool.pool_status = pool_status;
+                Ok(())
+            })
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<T::MarketId> {
@@ -692,6 +719,7 @@ mod pallet {
                 next_pool_id,
                 Some(Pool {
                     assets,
+                    pool_status: PoolStatus::Active,
                     swap_fee,
                     total_weight,
                     weights: map,
@@ -737,6 +765,8 @@ mod pallet {
                     })?;
                 }
             }
+
+            Self::set_pool_status(pool_id, PoolStatus::Stale)?;
             Ok(())
         }
     }

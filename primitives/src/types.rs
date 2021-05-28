@@ -2,6 +2,7 @@ pub use crate::asset::*;
 pub use crate::market::*;
 pub use crate::outcome_report::OutcomeReport;
 pub use crate::pool::Pool;
+pub use crate::pool_status::PoolStatus;
 pub use crate::serde_wrapper::*;
 use sp_runtime::{
     generic,
