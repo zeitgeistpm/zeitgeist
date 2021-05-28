@@ -1,6 +1,6 @@
 //! # Court
 //!
-//! Manages market disputes
+//! Manages market disputes and resolutions.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -95,8 +95,8 @@ mod pallet {
             CurrencyId = Asset<Self::MarketId>,
         >;
 
-        /// Swap pallet
-        type Swap: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = Self::MarketId>;
+        /// Swaps pallet
+        type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = Self::MarketId>;
 
         /// The base amount of currency that must be bonded for a permissionless market,
         /// guaranteeing that it will resolve as anything but `Invalid`.
@@ -233,21 +233,22 @@ mod pallet {
             // Resolve all regularly reported markets.
             let mut total_weight: Weight = 0;
             let market_ids = Self::market_ids_per_report_block(now - dispute_period);
-            market_ids.iter().for_each(|id| {
-                let market =
-                    Self::markets(id).expect("Market stored in report block does not exist");
+            for id in &market_ids {
+                let market = Self::markets(id).ok_or(DispatchError::Other(
+                    "Market stored in report block does not exist",
+                ))?;
                 if let MarketStatus::Reported = market.status {
-                    let weight = Self::internal_resolve(id).expect("Internal resolve failed");
+                    let weight = Self::internal_resolve(id)?;
                     total_weight = total_weight.saturating_add(weight);
                 }
-            });
+            }
 
             // Resolve any disputed markets.
             let disputed = Self::market_ids_per_dispute_block(now - dispute_period);
-            disputed.iter().for_each(|id| {
-                let weight = Self::internal_resolve(id).expect("Internal resolve failed");
+            for id in &disputed {
+                let weight = Self::internal_resolve(id)?;
                 total_weight = total_weight.saturating_add(weight);
-            });
+            }
 
             Ok(total_weight)
         }
@@ -452,7 +453,7 @@ mod pallet {
         ) -> DispatchResult {
             let pool_id = Self::market_pool_id(market_id)?;
 
-            T::Swap::set_pool_as_stale(&market.market_type, pool_id, outcome_report)?;
+            T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report)?;
 
             Ok(())
         }

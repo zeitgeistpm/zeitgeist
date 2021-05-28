@@ -9,13 +9,20 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{
         ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight,
-        MinLiquidity, MinWeight, BLOCK_HASH_COUNT,
+        MinLiquidity, MinWeight, BASE, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
         MarketId, UncheckedExtrinsicTest,
     },
 };
+
+pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
+pub const DAVE: AccountIdTest = 3;
+pub const EVE: AccountIdTest = 4;
+pub const FRED: AccountIdTest = 5;
 
 pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
@@ -71,7 +78,7 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = CourtPalletId;
     type Shares = Tokens;
-    type Swap = Swaps;
+    type Swaps = Swaps;
     type ValidityBond = ValidityBond;
 }
 
@@ -150,4 +157,39 @@ impl zrml_swaps::Config for Runtime {
     type PalletId = SwapsPalletId;
     type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
+}
+
+pub struct ExtBuilder {
+    balances: Vec<(AccountIdTest, Balance)>,
+}
+
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self {
+            balances: vec![
+                (ALICE, 1_000 * BASE),
+                (BOB, 1_000 * BASE),
+                (CHARLIE, 1_000 * BASE),
+                (DAVE, 1_000 * BASE),
+                (EVE, 1_000 * BASE),
+                (FRED, 1_000 * BASE),
+            ],
+        }
+    }
+}
+
+impl ExtBuilder {
+    pub fn build(self) -> sp_io::TestExternalities {
+        let mut t = frame_system::GenesisConfig::default()
+            .build_storage::<Runtime>()
+            .unwrap();
+
+        pallet_balances::GenesisConfig::<Runtime> {
+            balances: self.balances,
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+        t.into()
+    }
 }
