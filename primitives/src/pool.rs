@@ -1,4 +1,4 @@
-use crate::types::Asset;
+use crate::types::{Asset, PoolStatus};
 use alloc::{collections::BTreeMap, vec::Vec};
 
 #[derive(
@@ -11,6 +11,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 )]
 pub struct Pool<Balance, MarketId> {
     pub assets: Vec<Asset<MarketId>>,
+    pub pool_status: PoolStatus,
     pub swap_fee: Balance,
     pub total_weight: u128,
     pub weights: BTreeMap<Asset<MarketId>, u128>,
