@@ -79,6 +79,11 @@
       "Resolved"
     ]
   },
+  "MultiHash": {
+    "_enum": {
+      "Sha3_384": "[u8; 50]"
+    }
+  },
   "Order": {
     "side": "OrderSide",
     "maker": "AccountId",

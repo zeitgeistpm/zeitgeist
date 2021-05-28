@@ -44,7 +44,7 @@ pub enum MultiHash {
     Sha3_384([u8; 50]),
 }
 
-// Implmenetation for the fuzzer
+// Implementation for the fuzzer
 #[cfg(feature = "std")]
 impl<'a> Arbitrary<'a> for MultiHash {
     fn arbitrary(_: &mut Unstructured<'a>) -> Result<Self> {
