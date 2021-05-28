@@ -11482,6 +11482,7 @@ dependencies = [
 name = "zeitgeist-primitives"
 version = "0.1.0"
 dependencies = [
+ "arbitrary",
  "frame-support",
  "frame-system",
  "orml-currencies",

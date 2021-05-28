@@ -4,9 +4,7 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
-use frame_benchmarking::{
-    account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
-};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin, Get, Hooks},
@@ -17,8 +15,7 @@ use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
     types::{
-        Asset, MarketCreation, MarketEnd, MarketType, MultiHashSha384, OutcomeReport,
-        ScalarPosition
+        Asset, MarketCreation, MarketEnd, MarketType, MultiHash, OutcomeReport, ScalarPosition,
     },
 };
 
@@ -31,7 +28,7 @@ fn create_market_common_parameters<T: Config>(
         T::AccountId,
         T::AccountId,
         MarketEnd<T::BlockNumber>,
-        MultiHashSha384,
+        MultiHash,
         MarketCreation,
     ),
     &'static str,
@@ -44,7 +41,7 @@ fn create_market_common_parameters<T: Config>(
     metadata[0] = 0x15;
     metadata[1] = 0x30;
     let creation = permission;
-    Ok((caller, oracle, end, metadata, creation))
+    Ok((caller, oracle, end, MultiHash::Sha3_384(metadata), creation))
 }
 
 // Create a market based on common parameters

@@ -308,7 +308,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             end: MarketEnd<T::BlockNumber>,
-            metadata: MultiHashSha384,
+            metadata: MultiHash,
             creation: MarketCreation,
             categories: u16,
         ) -> DispatchResult {
@@ -323,9 +323,11 @@ mod pallet {
                 categories <= T::MaxCategories::get(),
                 <Error<T>>::TooManyCategories
             );
+
             // Require sha3-384 as multihash.
+            let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(
-                metadata[0] == 0x15 && metadata[1] == 0x30,
+                multihash[0] == 0x15 && multihash[1] == 0x30,
                 <Error<T>>::InvalidMultihash
             );
 
@@ -350,7 +352,7 @@ mod pallet {
                 creator_fee: 0,
                 oracle,
                 end,
-                metadata: Vec::from(metadata),
+                metadata: Vec::from(multihash),
                 market_type: MarketType::Categorical(categories),
                 status,
                 report: None,
@@ -369,7 +371,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             end: MarketEnd<T::BlockNumber>,
-            metadata: MultiHashSha384,
+            metadata: MultiHash,
             creation: MarketCreation,
             outcome_range: (u128, u128),
         ) -> DispatchResult {
@@ -377,9 +379,11 @@ mod pallet {
             Self::ensure_create_market_end(end)?;
 
             ensure!(outcome_range.0 < outcome_range.1, "Invalid range provided.");
+
             // Require sha3-384 as multihash.
+            let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(
-                metadata[0] == 0x15 && metadata[1] == 0x30,
+                multihash[0] == 0x15 && multihash[1] == 0x30,
                 <Error<T>>::InvalidMultihash
             );
 
@@ -403,7 +407,7 @@ mod pallet {
                 creator_fee: 0,
                 oracle,
                 end,
-                metadata: Vec::from(metadata),
+                metadata: Vec::from(multihash),
                 market_type: MarketType::Scalar(outcome_range),
                 status,
                 report: None,

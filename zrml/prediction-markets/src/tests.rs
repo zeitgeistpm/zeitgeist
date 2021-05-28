@@ -11,16 +11,16 @@ use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::BASE,
     types::{
-        Asset, Market, MarketCreation, MarketEnd, MarketStatus, MultiHashSha384 OutcomeReport,
+        Asset, Market, MarketCreation, MarketEnd, MarketStatus, MultiHash, OutcomeReport,
         ScalarPosition,
     },
 };
 
-fn gen_metadata(byte: u8) -> MultiHashSha384 {
+fn gen_metadata(byte: u8) -> MultiHash {
     let mut metadata = [byte; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;
-    metadata
+    MultiHash::Sha3_384(metadata)
 }
 
 fn simple_create_categorical_market<T: crate::Config>(creation: MarketCreation) {

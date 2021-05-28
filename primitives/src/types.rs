@@ -4,6 +4,11 @@ pub use crate::outcome_report::OutcomeReport;
 pub use crate::pool::Pool;
 pub use crate::pool_status::PoolStatus;
 pub use crate::serde_wrapper::*;
+
+#[cfg(feature = "std")]
+use arbitrary::{Arbitrary, Result, Unstructured};
+
+use frame_support::dispatch::{Decode, Encode};
 use sp_runtime::{
     generic,
     traits::{IdentifyAccount, Verify},
@@ -34,7 +39,27 @@ pub type CategoryIndex = u16;
 /// The multicodec encoding the hash algorithm uses only 1 byte,
 /// effecitvely limiting the number of available hash types.
 /// HashType (1B) + DigestSize (1B) + Hash (48B).
-pub type MultiHashSha384 = [u8; 50];
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+pub enum MultiHash {
+    Sha3_384([u8; 50]),
+}
+
+// Implmenetation for the fuzzer
+#[cfg(feature = "std")]
+impl<'a> Arbitrary<'a> for MultiHash {
+    fn arbitrary(_: &mut Unstructured<'a>) -> Result<Self> {
+        Ok(MultiHash::Sha3_384([0u8; 50]))
+    }
+
+    fn arbitrary_take_rest(mut u: Unstructured<'a>) -> Result<Self> {
+        Self::arbitrary(&mut u)
+    }
+
+    fn size_hint(depth: usize) -> (usize, Option<usize>) {
+        let _ = depth;
+        (0, None)
+    }
+}
 
 pub type CurrencyId = Asset<MarketId>;
 
