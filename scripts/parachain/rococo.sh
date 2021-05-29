@@ -6,7 +6,7 @@ export BOOTNODES=" "
 export DATA_DIR="$HOME/rococo"
 export DOCKER_POLKADOT_BIN=" "
 export PARACHAINS_NUM="2"
-export POLKADOT_IMAGE="parity/rococo:rococo-v1-0.8.30-943038a8-f14fa75f"
+export POLKADOT_IMAGE="parity/polkadot:v0.9.2"
 export VALIDATOR_CHAIN="rococo"
 export VALIDATORS_NUM="0"
 
@@ -22,6 +22,6 @@ export VALIDATOR_WS_PORT="9300"
 
 export PARACHAIN_CHAIN="battery_park"
 export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
-curl -o $RELAY_CHAIN_SPEC_FILE https://raw.githubusercontent.com/paritytech/polkadot/943038a888bfaf736142642e2610b248f7af486c/node/service/res/rococo.json
+curl -o $RELAY_CHAIN_SPEC_FILE https://raw.githubusercontent.com/paritytech/polkadot/release-v0.9.2/node/service/res/rococo.json
 
 . "$(dirname "$0")/testing-network.sh" --source-only

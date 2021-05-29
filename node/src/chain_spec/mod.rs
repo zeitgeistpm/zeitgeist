@@ -14,7 +14,7 @@ use zeitgeist_runtime::TokensConfig;
 
 #[cfg(feature = "parachain")]
 use {
-    sp_runtime::Perbill,
+    sp_runtime::{Perbill, Percent},
     zeitgeist_primitives::constants::{ztg, DefaultBlocksPerRound, MILLISECS_PER_BLOCK},
 };
 
@@ -93,7 +93,7 @@ fn generic_genesis(
         },
         #[cfg(feature = "parachain")]
         pallet_author_slot_filter: zeitgeist_runtime::AuthorFilterConfig {
-            eligible_ratio: sp_runtime::Percent::from_percent(50),
+            eligible_ratio: Percent::from_percent(50),
         },
         pallet_balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts

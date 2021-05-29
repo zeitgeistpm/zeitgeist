@@ -9,12 +9,13 @@ PARACHAIN_ID=9123
 POLKADOT_DIR="target/polkadot"
 
 if ! [ -d $POLKADOT_DIR ]; then
-  git clone --single-branch --branch rococo-v1 https://github.com/paritytech/polkadot $POLKADOT_DIR
+  git clone https://github.com/paritytech/polkadot $POLKADOT_DIR
 fi
 
 cd $POLKADOT_DIR
+git checkout --track origin/release-v0.9.2 &> /dev/null || true
 git fetch origin
-git rebase origin/rococo-v1
+git rebase origin/release-v0.9.2
 
 # Build everything
 
@@ -39,13 +40,13 @@ sed -f sed.txt rococo-local-plain.json > rococo-local-plain-parachain.json
 # Polkadot validators
 
 start_validator() {
-  local actor=$1
+  local author=$1
   local port=$2
   local rpc_port=$3
   local ws_port=$4
 
   ./target/release/polkadot \
-    --$actor \
+    $author \
     --chain=./rococo-local-raw.json \
     --port=$port \
     --rpc-port=$rpc_port \
@@ -56,14 +57,14 @@ start_validator() {
 
 # Feel free to comment, add or remove validators. Just remember that #Validators > #Collators 
 
-start_validator alice 31000 8100 9100 & node_pid=$!
-start_validator bob 31001 8101 9101 &> /dev/null & node_pid=$!
-start_validator charlie 31002 8102 9102 &> /dev/null & node_pid=$!
+start_validator --alice 31000 8100 9100 &> /dev/null & node_pid=$!
+start_validator --bob 31001 8101 9101 &> /dev/null & node_pid=$!
+start_validator --charlie 31002 8102 9102 & node_pid=$!
 
 # Zeitgeist collators
 
 start_collator() {
-  local author_id=$1
+  local author=$1
 
   local collator_port=$2
   local collator_rpc_port=$3
@@ -74,7 +75,7 @@ start_collator() {
   local relay_chain_ws_port=$7
 
   ../release/zeitgeist \
-    $author_id \
+    $author \
     --chain=./zeitgeist-raw.json \
     --collator \
     --parachain-id=$PARACHAIN_ID \
@@ -92,9 +93,11 @@ start_collator() {
     --rpc-port=$relay_chain_rpc_port \
     --tmp \
     --ws-port=$relay_chain_ws_port \
+    -lcumulus_collator=trace \
     -lruntime=trace
 }
 
 # Feel free to comment, add or remove collators. Just remember that #Validators > #Collators
 
-start_collator --author-id=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY 30333 9933 9944 32000 8200 9200
+start_collator --alice 30333 9933 9944 32000 8200 9200 &> /dev/null & node_pid=$!
+start_collator --bob 30334 9934 9945 32001 8201 9201
