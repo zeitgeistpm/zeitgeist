@@ -16,6 +16,7 @@ jobs:
     strategy:
       matrix:
         scripts: [
+          "clippy",
           "misc",
           "parachain",
           "standalone",
