@@ -259,7 +259,7 @@ mod pallet {
         /// function on a categorical market with five different outcomes, five different shares
         /// will be transferred to the callee.
         ///
-        /// The amount of each share will equals the provided `amount` parameter.
+        /// The amount of each share will equal the provided `amount` parameter.
         ///
         /// NOTE: This is the only way to create new shares.
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
