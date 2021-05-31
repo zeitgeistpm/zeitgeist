@@ -1,0 +1,22 @@
+[dependencies]
+frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
+sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-std = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+
+[features]
+default = ["std"]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "parity-scale-codec/std",
+    "sp-runtime/std",
+    "sp-std/std",
+]
+
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2018"
+name = "lsd-lsmr"
+version = "0.1.0"
