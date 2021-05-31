@@ -35,7 +35,7 @@ jobs:
           toolchain: nightly-2021-03-10
 
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@1
+        uses: Swatinem/rust-cache@v1
         
       - name: Tests
         run: ./scripts/tests/${{ matrix.scripts }}.sh
