@@ -255,10 +255,13 @@ mod pallet {
             Ok(())
         }
 
-        /// Generates a complete set of outcome shares for a market.
+        /// Buys the complete set of outcome shares of a market. For example, when calling this
+        /// function on a categorical market with five different outcomes, five different shares
+        /// will be transferred to the callee.
+        ///
+        /// The amount of each share will equal the provided `amount` parameter.
         ///
         /// NOTE: This is the only way to create new shares.
-        ///
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
