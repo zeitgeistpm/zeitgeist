@@ -39,12 +39,7 @@ fn allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice();
 
-        assert_ok!(Swaps::pool_join(
-            alice_signed(),
-            0,
-            _5,
-            vec!(_25, _25, _25, _25),
-        ));
+        assert_ok!(Swaps::pool_join(alice_signed(), 0, _5, vec!(_25, _25, _25, _25),));
 
         let asset_a_bal = Currencies::free_balance(ASSET_A, &ALICE);
         let asset_b_bal = Currencies::free_balance(ASSET_B, &ALICE);
@@ -99,15 +94,7 @@ fn allows_the_full_user_lifecycle() {
 
         assert_eq!(expected_in, 10_290_319_622);
 
-        assert_ok!(Swaps::swap_exact_amount_out(
-            alice_signed(),
-            0,
-            ASSET_A,
-            _2,
-            ASSET_B,
-            _1,
-            _3,
-        ));
+        assert_ok!(Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _2, ASSET_B, _1, _3,));
 
         let asset_a_bal_after_2 = Currencies::free_balance(ASSET_A, &ALICE);
         assert_eq!(asset_a_bal_after_2, asset_a_bal_after - expected_in);
@@ -188,12 +175,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
     ExtBuilder::default().build().execute_with(|| {
         use zeitgeist_primitives::traits::Swaps as _;
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::pool_join(
-            alice_signed(),
-            0,
-            _1,
-            vec!(_1, _1, _1, _1),
-        ));
+        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
         assert_ok!(Swaps::set_pool_as_stale(
             &MarketType::Categorical(0),
@@ -201,26 +183,9 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
             &OutcomeReport::Scalar(0)
         ));
 
-        assert_ok!(Swaps::pool_exit(
-            alice_signed(),
-            0,
-            _1,
-            vec!(_1, _1, _1, _1)
-        ));
-        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
-            alice_signed(),
-            0,
-            ASSET_A,
-            _1,
-            _1
-        ));
-        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
-            alice_signed(),
-            0,
-            ASSET_A,
-            _1,
-            _1
-        ));
+        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1, _1, _1)));
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _1, _1));
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _1));
         assert_noop!(
             Swaps::pool_join(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
             crate::Error::<Runtime>::PoolIsNotActive
@@ -301,19 +266,9 @@ fn pool_exit_decreases_correct_pool_parameters() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
 
-        assert_ok!(Swaps::pool_join(
-            alice_signed(),
-            0,
-            _1,
-            vec!(_1, _1, _1, _1),
-        ));
+        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
-        assert_ok!(Swaps::pool_exit(
-            alice_signed(),
-            0,
-            _1,
-            vec!(_1, _1, _1, _1),
-        ));
+        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
         assert!(event_exists(crate::Event::PoolExit(PoolAssetsEvent {
             bounds: vec!(_1, _1, _1, _1),
@@ -334,13 +289,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
-            alice_signed(),
-            0,
-            ASSET_A,
-            _5,
-            0
-        ));
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _5, 0));
         let pool_shares = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             alice_signed(),
@@ -349,19 +298,12 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
             pool_shares,
             _4
         ));
-        assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(
-            PoolAssetEvent {
-                bound: _4,
-                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: _5 - 335,
-            }
-        )));
-        assert_all_parameters(
-            [_25 - 335, _25, _25, _25],
-            0,
-            [_100 + 335, _100, _100, _100],
-            _100,
-        )
+        assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
+            bound: _4,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: _5 - 335,
+        })));
+        assert_all_parameters([_25 - 335, _25, _25, _25], 0, [_100 + 335, _100, _100, _100], _100)
     });
 }
 
@@ -371,13 +313,7 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
         let asset_before_join = Currencies::free_balance(ASSET_A, &ALICE);
-        assert_ok!(Swaps::pool_join_with_exact_pool_amount(
-            alice_signed(),
-            0,
-            ASSET_A,
-            _1,
-            _5
-        ));
+        assert_ok!(Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _5));
         let asset_after_join = asset_before_join - Currencies::free_balance(ASSET_A, &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
             alice_signed(),
@@ -386,13 +322,11 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             asset_after_join - 1000,
             _1
         ));
-        assert!(event_exists(crate::Event::PoolExitWithExactAssetAmount(
-            PoolAssetEvent {
-                bound: _1,
-                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: asset_after_join - 1000,
-            }
-        )));
+        assert!(event_exists(crate::Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
+            bound: _1,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: asset_after_join - 1000,
+        })));
         assert_eq!(asset_after_join, 40604010000);
         assert_all_parameters(
             [_25 - 1000, _25, _25, _25],
@@ -409,12 +343,7 @@ fn pool_join_increases_correct_pool_parameters() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
 
-        assert_ok!(Swaps::pool_join(
-            alice_signed(),
-            0,
-            _5,
-            vec!(_25, _25, _25, _25),
-        ));
+        assert_ok!(Swaps::pool_join(alice_signed(), 0, _5, vec!(_25, _25, _25, _25),));
         assert!(event_exists(crate::Event::PoolJoin(PoolAssetsEvent {
             bounds: vec!(_25, _25, _25, _25),
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
@@ -437,13 +366,11 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
             alice_sent,
             0
         ));
-        assert!(event_exists(crate::Event::PoolJoinWithExactAssetAmount(
-            PoolAssetEvent {
-                bound: 0,
-                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: alice_sent
-            }
-        )));
+        assert!(event_exists(crate::Event::PoolJoinWithExactAssetAmount(PoolAssetEvent {
+            bound: 0,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: alice_sent
+        })));
         let alice_received = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         assert_all_parameters(
             [_25 - alice_sent, _25, _25, _25],
@@ -469,13 +396,11 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
             _5
         ));
         let asset_amount = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
-        assert!(event_exists(crate::Event::PoolJoinWithExactPoolAmount(
-            PoolAssetEvent {
-                bound: _5,
-                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                transferred: asset_amount,
-            }
-        )));
+        assert!(event_exists(crate::Event::PoolJoinWithExactPoolAmount(PoolAssetEvent {
+            bound: _5,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: asset_amount,
+        })));
         let alice_received = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
         assert_eq!(alice_received, 40604010000);
         assert_all_parameters(
@@ -537,15 +462,7 @@ fn swap_exact_amount_out_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice();
-        assert_ok!(Swaps::swap_exact_amount_out(
-            alice_signed(),
-            0,
-            ASSET_A,
-            _2,
-            ASSET_B,
-            _1,
-            _3,
-        ));
+        assert_ok!(Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _2, ASSET_B, _1, _3,));
         assert!(event_exists(crate::Event::SwapExactAmountOut(SwapEvent {
             asset_amount_in: 10101010100,
             asset_amount_out: _1,
@@ -588,9 +505,7 @@ fn create_initial_pool_with_funds_for_alice() {
 
 fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
     let evt = Event::zrml_swaps(raw_evt);
-    frame_system::Pallet::<Runtime>::events()
-        .iter()
-        .any(|e| e.event == evt)
+    frame_system::Pallet::<Runtime>::events().iter().any(|e| e.event == evt)
 }
 
 fn assert_all_parameters(

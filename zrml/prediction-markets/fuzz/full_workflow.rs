@@ -87,11 +87,7 @@ struct Data {
 
 #[inline]
 fn market_creation(seed: u8) -> MarketCreation {
-    if seed % 2 == 0 {
-        MarketCreation::Advised
-    } else {
-        MarketCreation::Permissionless
-    }
+    if seed % 2 == 0 { MarketCreation::Advised } else { MarketCreation::Permissionless }
 }
 
 #[inline]

@@ -129,10 +129,7 @@ mod pallet {
         /// A market has been disputed [market_id, new_outcome]
         MarketDisputed(<T as Config>::MarketId, OutcomeReport),
         /// A complete set of shares has been sold [market_id, seller]
-        SoldCompleteSet(
-            <T as Config>::MarketId,
-            <T as frame_system::Config>::AccountId,
-        ),
+        SoldCompleteSet(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
     }
 
     #[pallet::hooks]
@@ -234,9 +231,8 @@ mod pallet {
             let mut total_weight: Weight = 0;
             let market_ids = Self::market_ids_per_report_block(now - dispute_period);
             for id in &market_ids {
-                let market = Self::markets(id).ok_or(DispatchError::Other(
-                    "Market stored in report block does not exist",
-                ))?;
+                let market = Self::markets(id)
+                    .ok_or(DispatchError::Other("Market stored in report block does not exist"))?;
                 if let MarketStatus::Reported = market.status {
                     let weight = Self::internal_resolve(id)?;
                     total_weight = total_weight.saturating_add(weight);
@@ -418,11 +414,7 @@ mod pallet {
             // Calculate required weight
             // MUST be updated when new market types are added.
             if let MarketType::Categorical(_) = market.market_type {
-                if let MarketStatus::Reported = market_status {
-                    Ok(0)
-                } else {
-                    Ok(0)
-                }
+                if let MarketStatus::Reported = market_status { Ok(0) } else { Ok(0) }
             } else if let MarketStatus::Reported = market_status {
                 Ok(0)
             } else {

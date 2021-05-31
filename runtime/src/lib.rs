@@ -164,12 +164,12 @@ macro_rules! create_zeitgeist_runtime {
 create_zeitgeist_runtime!(
     ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>} = 20,
     ParachainInfo: parachain_info::{Config, Pallet, Storage} = 21,
-    
+
     CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 51,
     DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 53,
     PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 52,
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 50,
-    
+
     CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
 
     AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 100,
@@ -650,8 +650,5 @@ cumulus_pallet_parachain_system::register_validate_block!(
 
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
-    NativeVersion {
-        runtime_version: VERSION,
-        can_author_with: Default::default(),
-    }
+    NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }

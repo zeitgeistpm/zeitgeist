@@ -72,11 +72,7 @@ fn generic_genesis(
         orml_tokens: TokensConfig::default(),
         #[cfg(not(feature = "parachain"))]
         pallet_aura: zeitgeist_runtime::AuraConfig {
-            authorities: acs
-                .initial_authorities
-                .iter()
-                .map(|x| (x.0.clone()))
-                .collect(),
+            authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
         },
         #[cfg(feature = "parachain")]
         pallet_author_mapping: zeitgeist_runtime::AuthorMappingConfig {
@@ -96,25 +92,15 @@ fn generic_genesis(
             eligible_ratio: Percent::from_percent(50),
         },
         pallet_balances: zeitgeist_runtime::BalancesConfig {
-            balances: endowed_accounts
-                .iter()
-                .cloned()
-                .map(|k| (k, initial_balance))
-                .collect(),
+            balances: endowed_accounts.iter().cloned().map(|k| (k, initial_balance)).collect(),
         },
         #[cfg(not(feature = "parachain"))]
         pallet_grandpa: zeitgeist_runtime::GrandpaConfig {
-            authorities: acs
-                .initial_authorities
-                .iter()
-                .map(|x| (x.1.clone(), 1))
-                .collect(),
+            authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
         },
         pallet_sudo: zeitgeist_runtime::SudoConfig { key: root_key },
         #[cfg(feature = "parachain")]
-        parachain_info: zeitgeist_runtime::ParachainInfoConfig {
-            parachain_id: acs.parachain_id,
-        },
+        parachain_info: zeitgeist_runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
         #[cfg(feature = "parachain")]
         parachain_staking: zeitgeist_runtime::ParachainStakingConfig {
             inflation_config: acs.inflation_info,
@@ -160,10 +146,7 @@ impl Extensions {
 #[cfg(not(feature = "parachain"))]
 fn authority_keys_from_seed(
     s: &str,
-) -> (
-    sp_consensus_aura::sr25519::AuthorityId,
-    sp_finality_grandpa::AuthorityId,
-) {
+) -> (sp_consensus_aura::sr25519::AuthorityId, sp_finality_grandpa::AuthorityId) {
     (
         get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
         get_from_seed::<sp_finality_grandpa::AuthorityId>(s),

@@ -41,10 +41,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         };
     }
 
-    config
-        .network
-        .extra_sets
-        .push(sc_finality_grandpa::grandpa_peers_set_config());
+    config.network.extra_sets.push(sc_finality_grandpa::grandpa_peers_set_config());
 
     let (network, network_status_sinks, system_rpc_tx, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
@@ -78,11 +75,8 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         let pool = transaction_pool.clone();
 
         Box::new(move |deny_unsafe, _| {
-            let deps = crate::rpc::FullDeps {
-                client: client.clone(),
-                pool: pool.clone(),
-                deny_unsafe,
-            };
+            let deps =
+                crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
             crate::rpc::create_full(deps)
         })
     };
@@ -148,18 +142,13 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 
         // the AURA authoring task is considered essential, i.e. if it
         // fails we take down the service with it.
-        task_manager
-            .spawn_essential_handle()
-            .spawn_blocking("aura", aura);
+        task_manager.spawn_essential_handle().spawn_blocking("aura", aura);
     }
 
     // if the node isn't actively participating in consensus then it doesn't
     // need a keystore, regardless of which protocol we use below.
-    let keystore = if role.is_authority() {
-        Some(keystore_container.sync_keystore())
-    } else {
-        None
-    };
+    let keystore =
+        if role.is_authority() { Some(keystore_container.sync_keystore()) } else { None };
 
     let grandpa_config = sc_finality_grandpa::Config {
         // FIXME #1578 make this available through chainspec
@@ -225,10 +214,7 @@ pub fn new_light(mut config: Configuration) -> Result<TaskManager, ServiceError>
         telemetry
     });
 
-    config
-        .network
-        .extra_sets
-        .push(sc_finality_grandpa::grandpa_peers_set_config());
+    config.network.extra_sets.push(sc_finality_grandpa::grandpa_peers_set_config());
 
     let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
@@ -346,9 +332,7 @@ pub fn new_partial(
     ServiceError,
 > {
     if config.keystore_remote.is_some() {
-        return Err(ServiceError::Other(
-            "Remote Keystores are not supported.".into(),
-        ));
+        return Err(ServiceError::Other("Remote Keystores are not supported.".into()));
     }
 
     let telemetry = config

@@ -29,11 +29,7 @@ pub mod _0_1_1_add_pool_status {
         T: Config,
     {
         let mut weight: Weight = 0;
-        let version_0_1_0 = PalletVersion {
-            major: 0,
-            minor: 1,
-            patch: 0,
-        };
+        let version_0_1_0 = PalletVersion { major: 0, minor: 1, patch: 0 };
         let storage_version = <Pallet<T>>::storage_version().unwrap_or(version_0_1_0);
 
         if storage_version == version_0_1_0 {
@@ -86,11 +82,7 @@ pub mod _0_1_1_add_pool_status {
 
                 Swaps::on_runtime_upgrade();
 
-                let pool_opt = Pools::<Runtime>::iter()
-                    .collect::<Vec<_>>()
-                    .pop()
-                    .unwrap()
-                    .1;
+                let pool_opt = Pools::<Runtime>::iter().collect::<Vec<_>>().pop().unwrap().1;
 
                 assert_eq!(
                     pool_opt,
