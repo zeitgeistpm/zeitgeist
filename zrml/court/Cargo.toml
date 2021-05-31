@@ -13,6 +13,7 @@ orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-modul
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 pallet-timestamp = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 zrml-swaps = { default-features = false, path = "../swaps" }
 
 [features]

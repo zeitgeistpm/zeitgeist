@@ -1,6 +1,7 @@
 use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo, Weight};
 use zeitgeist_primitives::types::OutcomeReport;
 
+/// Court - Pallet Api
 pub trait CourtPalletApi {
     type BlockNumber;
     type MarketId;
