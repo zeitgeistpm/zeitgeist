@@ -11591,6 +11591,7 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
+ "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
  "zrml-swaps",
