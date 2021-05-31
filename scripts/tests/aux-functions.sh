@@ -15,5 +15,5 @@ test_package_with_feature() {
     local features=$2
 
     /bin/echo -e "\e[0;33m***** Testing '$package' with features '$features' *****\e[0m\n"
-    cargo test --features $features --manifest-path $package/Cargo.toml --no-default-features
+    cargo test --features $features --manifest-path $package/Cargo.toml --no-default-features --release
 }

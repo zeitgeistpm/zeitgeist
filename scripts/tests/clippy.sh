@@ -2,7 +2,7 @@
 
 # Clippy with custom permissions
 
-cargo clippy --all-features -- \
+cargo clippy --all-features --release -- \
   -Dwarnings \
   -Aclippy::from_over_into \
   -Aclippy::let_and_return \
