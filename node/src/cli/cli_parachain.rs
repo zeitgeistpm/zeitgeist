@@ -3,7 +3,6 @@ use sc_cli::{
     SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_core::crypto::AccountId32;
 use std::{net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
@@ -27,15 +26,8 @@ impl RelayChainCli {
     ) -> Self {
         let extension = crate::chain_spec::Extensions::try_get(&*para_config.chain_spec);
         let chain_id = extension.map(|e| e.relay_chain.clone());
-        let base_path = para_config
-            .base_path
-            .as_ref()
-            .map(|x| x.path().join("polkadot"));
-        Self {
-            base_path,
-            chain_id,
-            base: polkadot_cli::RunCmd::from_iter(relay_chain_args),
-        }
+        let base_path = para_config.base_path.as_ref().map(|x| x.path().join("polkadot"));
+        Self { base_path, chain_id, base: polkadot_cli::RunCmd::from_iter(relay_chain_args) }
     }
 }
 
@@ -45,20 +37,13 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
     }
 
     fn base_path(&self) -> sc_cli::Result<Option<BasePath>> {
-        Ok(self
-            .shared_params()
-            .base_path()
-            .or_else(|| self.base_path.clone().map(Into::into)))
+        Ok(self.shared_params().base_path().or_else(|| self.base_path.clone().map(Into::into)))
     }
 
     fn chain_id(&self, is_dev: bool) -> sc_cli::Result<String> {
         let chain_id = self.base.base.chain_id(is_dev)?;
 
-        Ok(if chain_id.is_empty() {
-            self.chain_id.clone().unwrap_or_default()
-        } else {
-            chain_id
-        })
+        Ok(if chain_id.is_empty() { self.chain_id.clone().unwrap_or_default() } else { chain_id })
     }
 
     fn default_heap_pages(&self) -> sc_cli::Result<Option<u64>> {
@@ -242,10 +227,6 @@ pub struct ExportGenesisWasmCommand {
 
 #[derive(Debug, structopt::StructOpt)]
 pub struct RunCmd {
-    /// Public identity for participating in staking and receiving rewards
-    #[structopt(long, parse(try_from_str = parse_account_id))]
-    pub author_id: Option<AccountId32>,
-
     #[structopt(flatten)]
     pub base: sc_cli::RunCmd,
 
@@ -261,10 +242,4 @@ impl std::ops::Deref for RunCmd {
     fn deref(&self) -> &Self::Target {
         &self.base
     }
-}
-
-fn parse_account_id(input: &str) -> Result<AccountId32, String> {
-    input
-        .parse::<AccountId32>()
-        .map_err(|_| "Failed to parse AccountId32".to_string())
 }

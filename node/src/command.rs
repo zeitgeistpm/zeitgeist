@@ -19,11 +19,9 @@ pub fn run() -> sc_cli::Result<()> {
 
                 runner.sync_run(|config| cmd.run::<Block, crate::service::Executor>(config))
             } else {
-                Err(
-          "Benchmarking wasn't enabled when building the node. You can enable it with `--features \
-           runtime-benchmarks`."
-            .into(),
-        )
+                Err("Benchmarking wasn't enabled when building the node. You can enable it with \
+                     `--features runtime-benchmarks`."
+                    .into())
             }
         }
         Some(Subcommand::BuildSpec(cmd)) => {
@@ -33,31 +31,16 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::CheckBlock(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                let PartialComponents { client, task_manager, import_queue, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
         Some(Subcommand::ExportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                let PartialComponents { client, task_manager, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
@@ -112,31 +95,16 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::ExportState(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                let PartialComponents { client, task_manager, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
         Some(Subcommand::ImportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                let PartialComponents { client, task_manager, import_queue, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -172,16 +140,8 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    backend,
-                    ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                let PartialComponents { client, task_manager, backend, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, backend), task_manager))
             })
         }
@@ -204,8 +164,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&*cli.run)?;
 
     runner.run_node_until_exit(|parachain_config| async move {
-        let author_id = cli.run.author_id.clone();
-
         let key = sp_core::Pair::generate().0;
 
         let parachain_id_extension =
@@ -214,16 +172,11 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 
         let polkadot_cli = crate::cli::RelayChainCli::new(
             &parachain_config,
-            [crate::cli::RelayChainCli::executable_name()]
-                .iter()
-                .chain(cli.relaychain_args.iter()),
+            [crate::cli::RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
         );
 
         let parachain_id = cumulus_primitives_core::ParaId::from(
-            cli.run
-                .parachain_id
-                .or(parachain_id_extension)
-                .unwrap_or(crate::DEFAULT_PARACHAIN_ID),
+            cli.run.parachain_id.or(parachain_id_extension).unwrap_or(crate::DEFAULT_PARACHAIN_ID),
         );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<
@@ -246,17 +199,10 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain genesis state: {}", genesis_state);
         log::info!("Is collating: {}", if collator { "yes" } else { "no" });
 
-        crate::service::new_full(
-            author_id,
-            key,
-            parachain_config,
-            parachain_id,
-            polkadot_config,
-            collator,
-        )
-        .await
-        .map(|r| r.0)
-        .map_err(Into::into)
+        crate::service::new_full(key, parachain_config, parachain_id, polkadot_config, collator)
+            .await
+            .map(|r| r.0)
+            .map_err(Into::into)
     })
 }
 

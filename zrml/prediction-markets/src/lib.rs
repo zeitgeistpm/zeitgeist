@@ -65,8 +65,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{errors::*, weights::*};
-    use alloc::vec;
-    use alloc::vec::Vec;
+    use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{self, DispatchResultWithPostInfo, Weight},
@@ -295,10 +294,7 @@ mod pallet {
             let creator = market.creator;
             let status = market.status;
             ensure!(creator == sender, "Canceller must be market creator.");
-            ensure!(
-                status == MarketStatus::Proposed,
-                "Market must be pending approval."
-            );
+            ensure!(status == MarketStatus::Proposed, "Market must be pending approval.");
             // The market is being cancelled, return the deposit.
             T::Currency::unreserve(&creator, T::AdvisoryBond::get());
             <Markets<T>>::remove(&market_id);
@@ -318,21 +314,12 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::ensure_create_market_end(end)?;
 
-            ensure!(
-                categories >= T::MinCategories::get(),
-                <Error<T>>::NotEnoughCategories
-            );
-            ensure!(
-                categories <= T::MaxCategories::get(),
-                <Error<T>>::TooManyCategories
-            );
+            ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
+            ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
 
             // Require sha3-384 as multihash.
             let MultiHash::Sha3_384(multihash) = metadata;
-            ensure!(
-                multihash[0] == 0x15 && multihash[1] == 0x30,
-                <Error<T>>::InvalidMultihash
-            );
+            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
@@ -385,10 +372,7 @@ mod pallet {
 
             // Require sha3-384 as multihash.
             let MultiHash::Sha3_384(multihash) = metadata;
-            ensure!(
-                multihash[0] == 0x15 && multihash[1] == 0x30,
-                <Error<T>>::InvalidMultihash
-            );
+            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
@@ -446,10 +430,7 @@ mod pallet {
             ensure!(status == MarketStatus::Active, Error::<T>::MarketNotActive);
 
             // ensure a swap pool does not already exist
-            ensure!(
-                Self::market_to_swap_pool(&market_id).is_none(),
-                Error::<T>::SwapPoolExists
-            );
+            ensure!(Self::market_to_swap_pool(&market_id).is_none(), Error::<T>::SwapPoolExists);
 
             let mut assets = Self::outcome_assets(market_id, &market);
             assets.push(Asset::Ztg);
@@ -574,10 +555,7 @@ mod pallet {
             let market = Self::market_by_id(&market_id)?;
             let market_account = Self::market_account(market_id);
 
-            ensure!(
-                market.status == MarketStatus::Resolved,
-                Error::<T>::MarketNotResolved,
-            );
+            ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketNotResolved,);
 
             // Check to see if the sender has any winning shares.
             let resolved_outcome = market.resolved_outcome.ok_or(NOT_RESOLVED)?;
@@ -587,10 +565,7 @@ mod pallet {
                     let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
                     let winning_balance = T::Shares::free_balance(winning_currency_id, &sender);
 
-                    ensure!(
-                        winning_balance > BalanceOf::<T>::zero(),
-                        Error::<T>::NoWinningBalance
-                    );
+                    ensure!(winning_balance > BalanceOf::<T>::zero(), Error::<T>::NoWinningBalance);
 
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
@@ -717,10 +692,7 @@ mod pallet {
             ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
 
             // ensure market is not active
-            ensure!(
-                !Self::is_market_active(market.end),
-                Error::<T>::MarketNotClosed
-            );
+            ensure!(!Self::is_market_active(market.end), Error::<T>::MarketNotClosed);
 
             let current_block = <frame_system::Pallet<T>>::block_number();
 
@@ -742,11 +714,8 @@ mod pallet {
                 }
             }
 
-            market.report = Some(Report {
-                at: current_block,
-                by: sender,
-                outcome: outcome.clone(),
-            });
+            market.report =
+                Some(Report { at: current_block, by: sender, outcome: outcome.clone() });
             market.status = MarketStatus::Reported;
             <Markets<T>>::insert(market_id, Some(market));
 
@@ -771,10 +740,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = Self::market_by_id(&market_id)?;
-            ensure!(
-                Self::is_market_active(market.end),
-                Error::<T>::MarketNotActive
-            );
+            ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
 
             let market_account = Self::market_account(market_id);
             ensure!(
@@ -948,17 +914,11 @@ mod pallet {
         T: Config,
     {
         /// A complete set of shares has been bought [market_id, buyer]
-        BoughtCompleteSet(
-            <T as Config>::MarketId,
-            <T as frame_system::Config>::AccountId,
-        ),
+        BoughtCompleteSet(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
         /// A market has been approved [market_id]
         MarketApproved(<T as Config>::MarketId),
         /// A market has been created [market_id, creator]
-        MarketCreated(
-            <T as Config>::MarketId,
-            <T as frame_system::Config>::AccountId,
-        ),
+        MarketCreated(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
         /// A pending market has been cancelled. [market_id, creator]
         MarketCancelled(<T as Config>::MarketId),
         /// A market has been disputed [market_id, new_outcome]
@@ -971,10 +931,7 @@ mod pallet {
         /// A market has been resolved [market_id, real_outcome]
         MarketResolved(<T as Config>::MarketId, u16),
         /// A complete set of shares has been sold [market_id, seller]
-        SoldCompleteSet(
-            <T as Config>::MarketId,
-            <T as frame_system::Config>::AccountId,
-        ),
+        SoldCompleteSet(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
     }
 
     #[pallet::hooks]
@@ -1127,24 +1084,13 @@ mod pallet {
             market_id: T::MarketId,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            ensure!(
-                T::Currency::free_balance(&who) >= amount,
-                Error::<T>::NotEnoughBalance,
-            );
+            ensure!(T::Currency::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance,);
 
             let market = Self::market_by_id(&market_id)?;
-            ensure!(
-                Self::is_market_active(market.end),
-                Error::<T>::MarketNotActive
-            );
+            ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
 
             let market_account = Self::market_account(market_id);
-            T::Currency::transfer(
-                &who,
-                &market_account,
-                amount,
-                ExistenceRequirement::KeepAlive,
-            )?;
+            T::Currency::transfer(&who, &market_account, amount, ExistenceRequirement::KeepAlive)?;
 
             let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {
@@ -1162,9 +1108,8 @@ mod pallet {
         ///
         fn get_next_market_id() -> Result<T::MarketId, dispatch::DispatchError> {
             let next = Self::market_count();
-            let inc = next
-                .checked_add(&One::one())
-                .ok_or("Overflow when incrementing market count.")?;
+            let inc =
+                next.checked_add(&One::one()).ok_or("Overflow when incrementing market count.")?;
             <MarketCount<T>>::put(inc);
             Ok(next)
         }
@@ -1304,9 +1249,7 @@ mod pallet {
             } else if let MarketStatus::Reported = market_status {
                 Ok(T::WeightInfo::internal_resolve_scalar_reported())
             } else {
-                Ok(T::WeightInfo::internal_resolve_scalar_disputed(
-                    total_disputes,
-                ))
+                Ok(T::WeightInfo::internal_resolve_scalar_disputed(total_disputes))
             }
         }
 
@@ -1409,10 +1352,7 @@ mod pallet {
                 }
                 MarketEnd::Timestamp(timestamp) => {
                     let now = T::Timestamp::now();
-                    ensure!(
-                        now < timestamp.saturated_into(),
-                        Error::<T>::EndTimestampTooSoon
-                    );
+                    ensure!(now < timestamp.saturated_into(), Error::<T>::EndTimestampTooSoon);
                 }
             };
 

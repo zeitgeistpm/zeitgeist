@@ -122,6 +122,7 @@ impl orml_tokens::Config for Runtime {
     type CurrencyId = CurrencyId;
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = ();
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
     type WeightInfo = ();
 }
@@ -180,15 +181,11 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let mut t = frame_system::GenesisConfig::default()
-            .build_storage::<Runtime>()
-            .unwrap();
+        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-        pallet_balances::GenesisConfig::<Runtime> {
-            balances: self.balances,
-        }
-        .assimilate_storage(&mut t)
-        .unwrap();
+        pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
+            .assimilate_storage(&mut t)
+            .unwrap();
 
         t.into()
     }

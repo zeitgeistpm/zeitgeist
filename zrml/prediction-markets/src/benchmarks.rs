@@ -24,13 +24,7 @@ use zeitgeist_primitives::{
 fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
 ) -> Result<
-    (
-        T::AccountId,
-        T::AccountId,
-        MarketEnd<T::BlockNumber>,
-        MultiHash,
-        MarketCreation,
-    ),
+    (T::AccountId, T::AccountId, MarketEnd<T::BlockNumber>, MultiHash, MarketCreation),
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
@@ -59,10 +53,7 @@ fn create_market_common<T: Config>(
         let _ = Call::<T>::create_scalar_market(oracle, end, metadata, creation, range)
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     } else {
-        panic!(
-            "create_market_common: Unsupported market type: {:?}",
-            options
-        );
+        panic!("create_market_common: Unsupported market type: {:?}", options);
     }
 
     let marketid = Pallet::<T>::market_count() - 1u32.into();
@@ -138,10 +129,7 @@ fn setup_redeem_shares_common<T: Config>(
     } else if let MarketType::Scalar(range) = market_type {
         outcome = OutcomeReport::Scalar(range.1);
     } else {
-        panic!(
-            "setup_redeem_shares_common: Unsupported market type: {:?}",
-            market_type
-        );
+        panic!("setup_redeem_shares_common: Unsupported market type: {:?}", market_type);
     }
 
     let _ = Pallet::<T>::do_buy_complete_set(

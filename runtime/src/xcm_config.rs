@@ -1,8 +1,9 @@
 use crate::{
-    Ancestry, Barrier, Call, LocalAssetTransactor, UnitWeightCost, WeightPrice,
-    XcmOriginToTransactDispatchOrigin, XcmRouter,
+    AccountId, Ancestry, Balance, Balances, Barrier, Call, LocalAssetTransactor, RocLocation,
+    UnitWeightCost, XcmOriginToTransactDispatchOrigin, XcmRouter,
 };
-use xcm_builder::{FixedRateOfConcreteFungible, FixedWeightBounds, LocationInverter, NativeAsset};
+use frame_support::weights::IdentityFee;
+use xcm_builder::{FixedWeightBounds, LocationInverter, NativeAsset, UsingComponents};
 use xcm_executor::Config;
 
 pub struct XcmConfig;
@@ -16,7 +17,7 @@ impl Config for XcmConfig {
     type LocationInverter = LocationInverter<Ancestry>;
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
     type ResponseHandler = ();
-    type Trader = FixedRateOfConcreteFungible<WeightPrice>;
+    type Trader = UsingComponents<IdentityFee<Balance>, RocLocation, AccountId, Balances, ()>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
     type XcmSender = XcmRouter;
 }
