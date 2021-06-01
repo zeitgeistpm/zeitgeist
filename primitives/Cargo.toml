@@ -1,4 +1,5 @@
 [dependencies]
+arbitrary = { version = "1.0", default-features = false, optional = true }
 frame-support = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-currencies = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }

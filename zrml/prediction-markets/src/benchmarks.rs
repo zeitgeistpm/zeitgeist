@@ -4,9 +4,7 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
-use frame_benchmarking::{
-    account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
-};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin, Get, Hooks},
@@ -16,7 +14,9 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
-    types::{Asset, MarketCreation, MarketEnd, MarketType, OutcomeReport, ScalarPosition},
+    types::{
+        Asset, MarketCreation, MarketEnd, MarketType, MultiHash, OutcomeReport, ScalarPosition,
+    },
 };
 
 // Get default values for market creation. Also spawns an account with maximum
@@ -28,7 +28,7 @@ fn create_market_common_parameters<T: Config>(
         T::AccountId,
         T::AccountId,
         MarketEnd<T::BlockNumber>,
-        Vec<u8>,
+        MultiHash,
         MarketCreation,
     ),
     &'static str,
@@ -37,9 +37,11 @@ fn create_market_common_parameters<T: Config>(
     let _ = T::Currency::deposit_creating(&caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let end = <MarketEnd<T::BlockNumber>>::Block((u128::MAX).saturated_into());
-    let metadata = <Vec<u8>>::new();
+    let mut metadata = [0u8; 50];
+    metadata[0] = 0x15;
+    metadata[1] = 0x30;
     let creation = permission;
-    Ok((caller, oracle, end, metadata, creation))
+    Ok((caller, oracle, end, MultiHash::Sha3_384(metadata), creation))
 }
 
 // Create a market based on common parameters

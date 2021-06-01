@@ -1,8 +1,9 @@
 #![no_main]
 
+use arbitrary::Arbitrary;
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::types::{MarketCreation, MarketEnd, OutcomeReport};
+use zeitgeist_primitives::types::{MarketCreation, MarketEnd, MultiHash, OutcomeReport};
 use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
 
 fuzz_target!(|data: Data| {
@@ -59,12 +60,12 @@ fuzz_target!(|data: Data| {
     let _ = ext.commit_all();
 });
 
-#[derive(Debug, arbitrary::Arbitrary)]
+#[derive(Debug, Arbitrary)]
 struct Data {
     create_scalar_market_origin: u8,
     create_scalar_market_oracle: u8,
     create_scalar_market_timestamp: u64,
-    create_scalar_market_metadata: Vec<u8>,
+    create_scalar_market_metadata: MultiHash,
     create_scalar_market_creation: u8,
     create_scalar_market_outcome_range: (u128, u128),
 
