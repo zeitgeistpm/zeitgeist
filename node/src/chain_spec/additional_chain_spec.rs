@@ -14,8 +14,6 @@ pub struct AdditionalChainSpec {
 
 #[cfg(not(feature = "parachain"))]
 pub struct AdditionalChainSpec {
-    pub initial_authorities: Vec<(
-        sp_consensus_aura::sr25519::AuthorityId,
-        sp_finality_grandpa::AuthorityId,
-    )>,
+    pub initial_authorities:
+        Vec<(sp_consensus_aura::sr25519::AuthorityId, sp_finality_grandpa::AuthorityId)>,
 }
