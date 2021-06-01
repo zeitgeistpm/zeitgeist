@@ -40,13 +40,6 @@ mod pallet {
         },
     };
 
-    pub const NO_REPORT: DispatchError = DispatchError::Other("Report does not exist");
-    pub const NOT_RESOLVED: DispatchError = DispatchError::Other("Resolved outcome does not exist");
-    pub const OUTCOME_MISMATCH: DispatchError =
-        DispatchError::Other("Submitted outcome does not match market type");
-    pub const UNKNOWN_BLOCK: DispatchError = DispatchError::Other("Unknown block");
-    pub const UNKNOWN_MARKET_ID: DispatchError = DispatchError::Other("Unknown market id");
-
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
@@ -109,6 +102,8 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Block does not exists
+        BlockDoesNotExist,
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
@@ -118,6 +113,10 @@ mod pallet {
         MarketNotReported,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
+        /// Market does not have a report
+        NoReport,
+        /// Submitted outcome does not match market type
+        OutcomeMismatch,
         /// The outcome being reported is out of range.
         OutcomeOutOfRange,
         /// A pool of a market does not exist
@@ -156,7 +155,7 @@ mod pallet {
         fn market(
             market_id: &Self::MarketId,
         ) -> Result<Market<Self::AccountId, Self::BlockNumber>, DispatchError> {
-            <Markets<T>>::try_get(market_id).map_err(|_err| UNKNOWN_MARKET_ID)
+            <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> Result<(), DispatchError>
@@ -168,7 +167,7 @@ mod pallet {
                     cb(market);
                     return Ok(());
                 }
-                Err(UNKNOWN_MARKET_ID)
+                Err(Error::<T>::MarketDoesNotExist.into())
             })
         }
 
@@ -181,7 +180,7 @@ mod pallet {
 
         fn remove_market(market_id: &Self::MarketId) -> Result<(), DispatchError> {
             if !<Markets<T>>::contains_key(market_id) {
-                return Err(UNKNOWN_MARKET_ID);
+                return Err(Error::<T>::MarketDoesNotExist.into());
             }
             <Markets<T>>::remove(market_id);
             Ok(())
@@ -199,7 +198,8 @@ mod pallet {
         fn market_ids_per_dispute_block(
             block: &Self::BlockNumber,
         ) -> Result<Vec<Self::MarketId>, DispatchError> {
-            MarketIdsPerDisputeBlock::<T>::try_get(block).map_err(|_err| UNKNOWN_BLOCK)
+            MarketIdsPerDisputeBlock::<T>::try_get(block)
+                .map_err(|_err| Error::<T>::BlockDoesNotExist.into())
         }
 
         fn mutate_market_ids_per_report_block<F>(
@@ -214,7 +214,7 @@ mod pallet {
                     cb(vec);
                     return Ok(());
                 }
-                Err(UNKNOWN_BLOCK)
+                Err(Error::<T>::BlockDoesNotExist.into())
             })
         }
 
@@ -230,7 +230,8 @@ mod pallet {
         fn market_ids_per_report_block(
             block: &Self::BlockNumber,
         ) -> Result<Vec<Self::MarketId>, DispatchError> {
-            MarketIdsPerReportBlock::<T>::try_get(block).map_err(|_err| UNKNOWN_BLOCK)
+            MarketIdsPerReportBlock::<T>::try_get(block)
+                .map_err(|_err| Error::<T>::BlockDoesNotExist.into())
         }
 
         // Misc
@@ -238,7 +239,7 @@ mod pallet {
         fn disputes(
             market_id: &Self::MarketId,
         ) -> Result<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>, DispatchError> {
-            Disputes::<T>::get(market_id).ok_or(UNKNOWN_MARKET_ID)
+            Disputes::<T>::get(market_id).ok_or_else(|| Error::<T>::MarketDoesNotExist.into())
         }
 
         fn dispute_period() -> Self::BlockNumber {
@@ -264,7 +265,7 @@ mod pallet {
                 if let MarketType::Categorical(categories) = market.market_type {
                     ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
                 } else {
-                    return Err(OUTCOME_MISMATCH.into());
+                    return Err(Error::<T>::OutcomeMismatch.into());
                 }
             }
             if let OutcomeReport::Scalar(inner) = outcome {
@@ -274,7 +275,7 @@ mod pallet {
                         Error::<T>::OutcomeOutOfRange
                     );
                 } else {
-                    return Err(OUTCOME_MISMATCH.into());
+                    return Err(Error::<T>::OutcomeMismatch.into());
                 }
             }
 
@@ -429,7 +430,7 @@ mod pallet {
             market_id: &T::MarketId,
         ) -> Result<ResolutionCounters, DispatchError> {
             let market = Self::market_by_id(market_id)?;
-            let report = market.report.clone().ok_or(NO_REPORT)?;
+            let report = market.report.clone().ok_or(Error::<T>::NoReport)?;
             let mut total_accounts = 0u32;
             let mut total_asset_accounts = 0u32;
             let mut total_categories = 0u32;

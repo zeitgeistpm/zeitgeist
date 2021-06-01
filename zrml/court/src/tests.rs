@@ -1,8 +1,7 @@
 #![cfg(test)]
 
-use crate::{mock::*, CourtPalletApi, MarketIdsPerReportBlock, Markets};
-use frame_support::assert_ok;
-use sp_runtime::DispatchError;
+use crate::{mock::*, CourtPalletApi, Error, MarketIdsPerReportBlock, Markets};
+use frame_support::{assert_noop, assert_ok};
 use zeitgeist_primitives::types::{
     Market, MarketCreation, MarketEnd, MarketStatus, MarketType, OutcomeReport, Report,
 };
@@ -93,10 +92,7 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        assert_eq!(
-            Court::market_ids_per_dispute_block(&0).unwrap_err(),
-            DispatchError::Other("Unknown block")
-        );
+        assert_noop!(Court::market_ids_per_dispute_block(&0), Error::<Runtime>::BlockDoesNotExist);
 
         let market_ids_2 = Court::market_ids_per_dispute_block(&1).unwrap();
         assert_eq!(market_ids_2.len(), 1);
