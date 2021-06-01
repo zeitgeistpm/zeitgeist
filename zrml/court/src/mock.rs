@@ -8,8 +8,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight,
-        MinLiquidity, MinWeight, BASE, BLOCK_HASH_COUNT,
+        CourtPalletId, ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
+        MaxWeight, MinLiquidity, MinWeight, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -38,8 +38,6 @@ parameter_types! {
     pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
     pub const MinimumPeriod: u64 = 0;
     pub const OracleBond: Balance = 100;
-    pub const CourtPalletId: PalletId = PalletId(*b"test/crt");
-    pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
     pub const ValidityBond: Balance = 200;
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
