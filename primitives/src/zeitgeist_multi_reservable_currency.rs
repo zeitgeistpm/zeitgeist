@@ -26,7 +26,11 @@ where
         let accounts = <Accounts<T>>::iter()
             .filter_map(|(k0, k1, v)| {
                 total += 1;
-                if k1 == currency_id { Some((k0, v)) } else { None }
+                if k1 == currency_id {
+                    Some((k0, v))
+                } else {
+                    None
+                }
             })
             .collect();
         (total, accounts)

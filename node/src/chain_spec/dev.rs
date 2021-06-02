@@ -22,8 +22,16 @@ pub fn dev_config(
                 AdditionalChainSpec {
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
                     stakers: vec![
-                        (get_account_id_from_seed::<sr25519::Public>("Alice"), None, STAKE_AMOUNT),
-                        (get_account_id_from_seed::<sr25519::Public>("Bob"), None, STAKE_AMOUNT),
+                        (
+                            get_account_id_from_seed::<sr25519::Public>("Alice"),
+                            None,
+                            STAKE_AMOUNT,
+                        ),
+                        (
+                            get_account_id_from_seed::<sr25519::Public>("Bob"),
+                            None,
+                            STAKE_AMOUNT,
+                        ),
                     ],
                     parachain_id,
                 },
