@@ -18,8 +18,12 @@ pub trait LSMR {
         + Debug;
 
     // TODO: Add parameters and return values
-    /// Return
+    /// Create LSD-LSMR instance for specifc asset pair
+    fn create();
+    /// Return cost for asset pair
     fn cost();
+    /// Destroy LSD-LSMR instance for specific asset pair
+    fn destroy();
     /// Return price for asset pair
     fn price();
     /// Update volume for asset pair
