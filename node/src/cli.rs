@@ -114,7 +114,10 @@ impl SubstrateCli for Cli {
         load_spec(
             id,
             #[cfg(feature = "parachain")]
-            self.run.parachain_id.unwrap_or(crate::DEFAULT_PARACHAIN_ID).into(),
+            self.run
+                .parachain_id
+                .unwrap_or(crate::DEFAULT_PARACHAIN_ID)
+                .into(),
         )
     }
 
@@ -150,8 +153,8 @@ pub fn load_spec(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
-        path => {
-            Box::new(crate::chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?)
-        }
+        path => Box::new(crate::chain_spec::ChainSpec::from_json_file(
+            std::path::PathBuf::from(path),
+        )?),
     })
 }

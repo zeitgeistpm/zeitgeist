@@ -22,7 +22,6 @@
       "Ztg": null
     }
   },
-  "AuthorId": "AccountId",
   "BlockNumber": "u64",
   "CategoryIndex": "u16",
   "CommonPoolEventParams": {
@@ -135,7 +134,6 @@
     "by": "AccountId",
     "outcome": "Outcome"
   },
-  "RoundIndex": "u32",
   "ScalarPosition": {
     "_enum": [
       "Long",

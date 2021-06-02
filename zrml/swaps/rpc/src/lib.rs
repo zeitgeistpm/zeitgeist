@@ -61,7 +61,10 @@ impl<C, B> Swaps<C, B> {
     /// Create a new `PredictionMarkets` with the given reference to
     /// the client.
     pub fn new(client: Arc<C>) -> Self {
-        Swaps { client, _marker: Default::default() }
+        Swaps {
+            client,
+            _marker: Default::default(),
+        }
     }
 }
 
@@ -86,11 +89,13 @@ macro_rules! get_spot_price_rslt {
         $at:expr,
         $pool_id:expr
     ) => {
-        $api_ref.get_spot_price($at, $pool_id, $asset_in, $asset_out).map_err(|e| RpcError {
-            code: ErrorCode::ServerError(Error::RuntimeError.into()),
-            message: "Unable to get spot price.".into(),
-            data: Some(format!("{:?}", e).into()),
-        })
+        $api_ref
+            .get_spot_price($at, $pool_id, $asset_in, $asset_out)
+            .map_err(|e| RpcError {
+                code: ErrorCode::ServerError(Error::RuntimeError.into()),
+                message: "Unable to get spot price.".into(),
+                data: Some(format!("{:?}", e).into()),
+            })
     };
 }
 

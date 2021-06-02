@@ -270,9 +270,15 @@ mod pallet {
         T: Config,
     {
         /// [taker, order_hash]
-        OrderFilled(<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash),
+        OrderFilled(
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::Hash,
+        ),
         /// [maker, order_hash]
-        OrderMade(<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash),
+        OrderMade(
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::Hash,
+        ),
     }
 
     #[pallet::hooks]
@@ -340,6 +346,10 @@ pub struct Order<AccountId, Balance, MarketId> {
 
 impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId> {
     pub fn cost(&self) -> Balance {
-        self.total.checked_sub(&self.filled).unwrap().checked_mul(&self.price).unwrap()
+        self.total
+            .checked_sub(&self.filled)
+            .unwrap()
+            .checked_mul(&self.price)
+            .unwrap()
     }
 }

@@ -17,6 +17,7 @@ pub use xcmp_message::XCMPMessage;
 
 use frame_support::{
     construct_runtime, parameter_types,
+    traits::Randomness,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         DispatchClass, IdentityFee, Weight,
@@ -43,10 +44,8 @@ use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::All,
     nimbus_primitives::{CanAuthor, NimbusId},
     parachain_params::*,
-    xcm::v0::{MultiAsset, MultiLocation, Xcm},
 };
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -94,7 +93,6 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 parameter_types! {
   pub const BlockHashCount: BlockNumber = BLOCK_HASH_COUNT;
   pub const BondDuration: u32 = 1;
-  pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
   pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
@@ -140,7 +138,7 @@ macro_rules! create_zeitgeist_runtime {
         construct_runtime!(
             pub enum Runtime where
                 Block = Block,
-                NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
+                NodeBlock = opaque::Block,
                 UncheckedExtrinsic = UncheckedExtrinsic,
             {
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
@@ -162,20 +160,18 @@ macro_rules! create_zeitgeist_runtime {
 }
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>} = 20,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 21,
-
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 51,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 53,
-    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 52,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 50,
-
     CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
+    CumulusXcm: cumulus_pallet_xcm::{Origin, Pallet},
+    ParachainInfo: parachain_info::{Config, Pallet, Storage},
+    ParachainStaking: parachain_staking::{Pallet, Call, Storage, Event<T>, Config<T>},
+    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>},
+    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet},
+    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage},
 
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 100,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 101,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 102,
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 103,
+    // Order here matters
+    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage},
+    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage},
+    AuthorMapping: pallet_author_mapping::{Pallet, Config<T>, Storage},
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
@@ -184,29 +180,22 @@ create_zeitgeist_runtime!(
 );
 
 #[cfg(feature = "parachain")]
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-}
-
-#[cfg(feature = "parachain")]
 impl cumulus_pallet_parachain_system::Config for Runtime {
-    type DmpMessageHandler = DmpQueue;
+    type DownwardMessageHandlers = cumulus_primitives_utility::UnqueuedDmpAsParent<
+        MaxDownwardMessageWeight,
+        xcm_executor::XcmExecutor<xcm_config::XcmConfig>,
+        Call,
+    >;
     type Event = Event;
     type OnValidationData = ();
     type OutboundXcmpMessageSource = XcmpQueue;
-    type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
-    type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
-    type SelfParaId = parachain_info::Pallet<Runtime>;
+    type ReservedXcmpWeight = ReservedXcmpWeight;
+    type SelfParaId = parachain_info::Module<Runtime>;
     type XcmpMessageHandler = XcmpQueue;
 }
 
 #[cfg(feature = "parachain")]
-impl cumulus_pallet_xcm::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-}
+impl cumulus_pallet_xcm::Config for Runtime {}
 
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
@@ -259,23 +248,21 @@ impl pallet_aura::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_author_inherent::Config for Runtime {
-    type AccountLookup = AuthorMapping;
     type AuthorId = NimbusId;
-    type CanAuthor = AuthorFilter;
-    type EventHandler = ParachainStaking;
+    type EventHandler = pallet_author_mapping::MappedEventHandler<Self, ParachainStaking>;
+    type FullCanAuthor = pallet_author_mapping::MappedCanAuthor<Self, AuthorFilter>;
+    type PreliminaryCanAuthor = pallet_author_mapping::MappedCanAuthor<Self, ParachainStaking>;
     type SlotBeacon = pallet_author_inherent::RelayChainBeacon<Self>;
 }
 
 #[cfg(feature = "parachain")]
 impl pallet_author_mapping::Config for Runtime {
     type AuthorId = NimbusId;
-    type DepositAmount = CollatorDeposit;
-    type DepositCurrency = Balances;
-    type Event = Event;
 }
 
 #[cfg(feature = "parachain")]
 impl pallet_author_slot_filter::Config for Runtime {
+    type AuthorId = AccountId;
     type Event = Event;
     type RandomnessSource = RandomnessCollectiveFlip;
     type PotentialAuthors = ParachainStaking;
@@ -310,12 +297,8 @@ impl pallet_xcm::Config for Runtime {
     type Event = Event;
     type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-    type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call>;
-    type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-    type XcmReserveTransferFilter = ();
     type XcmRouter = XcmRouter;
-    type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
 }
 
 #[cfg(feature = "parachain")]
@@ -350,7 +333,6 @@ impl orml_tokens::Config for Runtime {
     type CurrencyId = CurrencyId;
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = ();
     type OnDust = ();
     type WeightInfo = ();
 }
@@ -439,16 +421,9 @@ impl zrml_swaps::Config for Runtime {
 
 impl_runtime_apis! {
     #[cfg(feature = "parachain")]
-    impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-        fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-            ParachainSystem::collect_collation_info()
-        }
-    }
-
-    #[cfg(feature = "parachain")]
     impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
         fn can_author(author: NimbusId, slot: u32) -> bool {
-            AuthorInherent::can_author(&author, &slot)
+            <Runtime as pallet_author_inherent::Config>::FullCanAuthor::can_author(&author, &slot)
         }
     }
 
@@ -559,6 +534,10 @@ impl_runtime_apis! {
         fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
             data.create_extrinsics()
         }
+
+        fn random_seed() -> <Block as BlockT>::Hash {
+            RandomnessCollectiveFlip::random_seed().0
+        }
     }
 
     #[cfg(not(feature = "parachain"))]
@@ -650,5 +629,8 @@ cumulus_pallet_parachain_system::register_validate_block!(
 
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
-    NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
+    NativeVersion {
+        runtime_version: VERSION,
+        can_author_with: Default::default(),
+    }
 }
