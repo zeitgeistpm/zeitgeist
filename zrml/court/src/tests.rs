@@ -92,7 +92,10 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        assert_noop!(Court::market_ids_per_dispute_block(&0), Error::<Runtime>::BlockDoesNotExist);
+        assert_noop!(
+            Court::market_ids_per_dispute_block(&0),
+            Error::<Runtime>::BlockDoesNotExist
+        );
 
         let market_ids_2 = Court::market_ids_per_dispute_block(&1).unwrap();
         assert_eq!(market_ids_2.len(), 1);
