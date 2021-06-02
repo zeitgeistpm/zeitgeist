@@ -74,7 +74,13 @@ fn it_cancels_orders() {
     ExtBuilder::default().build().execute_with(|| {
         // Make an order from Alice to buy shares.
         let share_id = Asset::CategoricalOutcome(0, 2);
-        assert_ok!(Orderbook::make_order(Origin::signed(ALICE), share_id, OrderSide::Bid, 25, 10,));
+        assert_ok!(Orderbook::make_order(
+            Origin::signed(ALICE),
+            share_id,
+            OrderSide::Bid,
+            25,
+            10,
+        ));
 
         let order_hash = Orderbook::order_hash(&ALICE, share_id, 0);
 
@@ -83,6 +89,10 @@ fn it_cancels_orders() {
             Error::<Runtime>::NotOrderCreator,
         );
 
-        assert_ok!(Orderbook::cancel_order(Origin::signed(ALICE), share_id, order_hash));
+        assert_ok!(Orderbook::cancel_order(
+            Origin::signed(ALICE),
+            share_id,
+            order_hash
+        ));
     });
 }

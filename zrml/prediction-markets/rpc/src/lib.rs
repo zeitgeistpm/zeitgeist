@@ -32,7 +32,10 @@ impl<C, B> PredictionMarkets<C, B> {
     /// Create a new `PredictionMarkets` with the given reference to
     /// the client.
     pub fn new(client: Arc<C>) -> Self {
-        PredictionMarkets { client, _marker: Default::default() }
+        PredictionMarkets {
+            client,
+            _marker: Default::default(),
+        }
     }
 }
 
@@ -70,10 +73,11 @@ where
             // best block.
             self.client.info().best_hash));
 
-        api.market_outcome_share_id(&at, market_id, outcome).map_err(|e| RpcError {
-            code: ErrorCode::ServerError(Error::RuntimeError.into()),
-            message: "Unable to get the market outcome share identifier.".into(),
-            data: Some(format!("{:?}", e).into()),
-        })
+        api.market_outcome_share_id(&at, market_id, outcome)
+            .map_err(|e| RpcError {
+                code: ErrorCode::ServerError(Error::RuntimeError.into()),
+                message: "Unable to get the market outcome share identifier.".into(),
+                data: Some(format!("{:?}", e).into()),
+            })
     }
 }

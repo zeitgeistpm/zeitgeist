@@ -32,7 +32,10 @@ pub fn calc_out_given_in(
     let weight_ratio = bdiv(asset_weight_in, asset_weight_out)?;
     let mut adjusted_in = BASE.check_sub_rslt(&swap_fee)?;
     adjusted_in = bmul(adjusted_in, asset_amount_in)?;
-    let y = bdiv(asset_balance_in, asset_balance_in.check_add_rslt(&adjusted_in)?)?;
+    let y = bdiv(
+        asset_balance_in,
+        asset_balance_in.check_add_rslt(&adjusted_in)?,
+    )?;
     let pow = bpow(y, weight_ratio)?;
     let bar = BASE.check_sub_rslt(&pow)?;
     let asset_amount_out = bmul(asset_balance_out, bar);
@@ -51,7 +54,10 @@ pub fn calc_in_given_out(
     let diff = asset_balance_out.check_sub_rslt(&asset_amount_out)?;
     let y = bdiv(asset_balance_out, diff)?;
     let pow = bpow(y, weight_ratio)?.check_sub_rslt(&BASE)?;
-    let asset_amount_in = bdiv(bmul(asset_balance_in, pow)?, BASE.check_sub_rslt(&swap_fee)?);
+    let asset_amount_in = bdiv(
+        bmul(asset_balance_in, pow)?,
+        BASE.check_sub_rslt(&swap_fee)?,
+    );
     asset_amount_in
 }
 
@@ -147,6 +153,9 @@ pub fn calc_pool_in_given_single_out(
     let new_pool_supply = bmul(pool_ratio, pool_supply)?;
 
     let pool_amount_in_after_exit_fee = pool_supply.check_sub_rslt(&new_pool_supply)?;
-    let pool_amount_in = bdiv(pool_amount_in_after_exit_fee, BASE.check_sub_rslt(&EXIT_FEE)?);
+    let pool_amount_in = bdiv(
+        pool_amount_in_after_exit_fee,
+        BASE.check_sub_rslt(&EXIT_FEE)?,
+    );
     pool_amount_in
 }

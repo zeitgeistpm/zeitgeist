@@ -41,5 +41,6 @@ fn deserialize_from_string<'de, D: Deserializer<'de>, T: std::str::FromStr>(
     deserializer: D,
 ) -> Result<T, D::Error> {
     let s = String::deserialize(deserializer)?;
-    s.parse::<T>().map_err(|_| serde::de::Error::custom("Parse from string failed"))
+    s.parse::<T>()
+        .map_err(|_| serde::de::Error::custom("Parse from string failed"))
 }
