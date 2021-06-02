@@ -7,6 +7,7 @@
 extern crate alloc;
 
 pub mod traits;
+pub mod types;
 pub use pallet::*;
 
 #[frame_support::pallet]
