@@ -3,8 +3,6 @@
 mod chain_spec;
 mod cli;
 mod command;
-#[cfg(feature = "parachain")]
-mod inherents;
 #[cfg(not(feature = "parachain"))]
 mod rpc;
 #[macro_use]

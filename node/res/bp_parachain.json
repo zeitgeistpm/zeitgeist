@@ -46,7 +46,7 @@
         "parachainId": 9123
       },
       "parachainStaking": {
-        "stakers": [],
+        "candidates": [],
         "inflationConfig": {
           "expect": {
             "min": 100000000000000000,
@@ -63,7 +63,8 @@
             "ideal": 570,
             "max": 570
           }
-        }
+        },
+        "nominations": []
       },
       "palletAuthorSlotFilter": {
         "eligibleRatio": 50

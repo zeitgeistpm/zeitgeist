@@ -3,7 +3,6 @@ use sc_cli::{
     SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_core::crypto::AccountId32;
 use std::{net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
@@ -242,10 +241,6 @@ pub struct ExportGenesisWasmCommand {
 
 #[derive(Debug, structopt::StructOpt)]
 pub struct RunCmd {
-    /// Public identity for participating in staking and receiving rewards
-    #[structopt(long, parse(try_from_str = parse_account_id))]
-    pub author_id: Option<AccountId32>,
-
     #[structopt(flatten)]
     pub base: sc_cli::RunCmd,
 
@@ -261,10 +256,4 @@ impl std::ops::Deref for RunCmd {
     fn deref(&self) -> &Self::Target {
         &self.base
     }
-}
-
-fn parse_account_id(input: &str) -> Result<AccountId32, String> {
-    input
-        .parse::<AccountId32>()
-        .map_err(|_| "Failed to parse AccountId32".to_string())
 }
