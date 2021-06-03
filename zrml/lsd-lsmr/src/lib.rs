@@ -6,6 +6,7 @@
 
 extern crate alloc;
 
+pub mod constants;
 pub mod traits;
 pub mod types;
 pub use pallet::*;
@@ -31,7 +32,7 @@ mod pallet {
         type Timestamp: Time;
 
         /// The type of timestamps
-        type Moment: AtLeast32Bit + Parameter + Default + Copy;
+        type Moment: AtLeast32Bit + Copy + Default + Parameter;
 
         /// Short EMA time range (in seconds)
         type EmaShort: Get<Self::Moment>;
