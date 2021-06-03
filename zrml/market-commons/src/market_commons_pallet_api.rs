@@ -13,10 +13,7 @@ pub trait MarketCommonsPalletApi {
     ) -> Result<Market<Self::AccountId, Self::BlockNumber>, DispatchError>;
 
     /// Inserts a market into the storage
-    fn insert_market(
-        market_id: Self::MarketId,
-        market: Market<Self::AccountId, Self::BlockNumber>,
-    );
+    fn insert_market(market_id: Self::MarketId, market: Market<Self::AccountId, Self::BlockNumber>);
 
     /// Mutates a given market storage
     fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> Result<(), DispatchError>

@@ -14,7 +14,10 @@ mod pallet {
     use crate::MarketCommonsPalletApi;
     use core::marker::PhantomData;
     use frame_support::{pallet_prelude::StorageMap, traits::Hooks, Blake2_128Concat, Parameter};
-    use sp_runtime::{DispatchError, traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member}};
+    use sp_runtime::{
+        traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member},
+        DispatchError,
+    };
     use zeitgeist_primitives::types::Market;
 
     #[pallet::call]
