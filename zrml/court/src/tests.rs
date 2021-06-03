@@ -1,10 +1,11 @@
 #![cfg(test)]
 
-use crate::{mock::*, CourtPalletApi, Error, MarketIdsPerReportBlock, Markets};
+use crate::{mock::*, CourtPalletApi, Error, MarketIdsPerReportBlock};
 use frame_support::{assert_noop, assert_ok};
 use zeitgeist_primitives::types::{
     Market, MarketCreation, MarketEnd, MarketStatus, MarketType, OutcomeReport, Report,
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 
 #[test]
 fn it_allows_to_dispute_the_outcome_of_a_market() {
@@ -18,7 +19,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
             OutcomeReport::Categorical(0)
         ));
 
-        let market = Court::market(&0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
         let disputes = Court::disputes(&0).unwrap();
@@ -74,7 +75,7 @@ fn it_resolves_a_disputed_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        let market = Court::market(&0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
         // check everyone's deposits
@@ -104,13 +105,13 @@ fn it_resolves_a_disputed_market() {
 
         assert_ok!(Court::on_resolution(11));
 
-        let market_after = Court::market(&0).unwrap();
+        let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
     });
 }
 
 fn create_reported_permissionless_categorical_market<T: crate::Config>() {
-    Markets::<Runtime>::insert(
+    MarketCommons::insert_market(
         0,
         Market {
             creation: MarketCreation::Permissionless,

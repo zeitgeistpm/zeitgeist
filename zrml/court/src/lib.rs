@@ -39,6 +39,7 @@ mod pallet {
             ScalarPosition,
         },
     };
+    use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -66,6 +67,13 @@ mod pallet {
 
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The identifier of individual markets.
+        type MarketCommons: MarketCommonsPalletApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = Self::MarketId,
+        >;
 
         /// The identifier of individual markets.
         type MarketId: AtLeast32Bit
@@ -150,42 +158,6 @@ mod pallet {
         type MarketId = T::MarketId;
         type Origin = T::Origin;
 
-        // Market
-
-        fn market(
-            market_id: &Self::MarketId,
-        ) -> Result<Market<Self::AccountId, Self::BlockNumber>, DispatchError> {
-            <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
-        }
-
-        fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> Result<(), DispatchError>
-        where
-            F: FnOnce(&mut Market<Self::AccountId, Self::BlockNumber>),
-        {
-            <Markets<T>>::try_mutate(market_id, |opt| {
-                if let Some(market) = opt {
-                    cb(market);
-                    return Ok(());
-                }
-                Err(Error::<T>::MarketDoesNotExist.into())
-            })
-        }
-
-        fn insert_market(
-            market_id: &Self::MarketId,
-            market: Market<Self::AccountId, Self::BlockNumber>,
-        ) {
-            <Markets<T>>::insert(market_id, market);
-        }
-
-        fn remove_market(market_id: &Self::MarketId) -> Result<(), DispatchError> {
-            if !<Markets<T>>::contains_key(market_id) {
-                return Err(Error::<T>::MarketDoesNotExist.into());
-            }
-            <Markets<T>>::remove(market_id);
-            Ok(())
-        }
-
         // MarketIdPerDisputeBlock
 
         fn insert_market_id_per_dispute_block(
@@ -257,7 +229,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
 
             ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
 
@@ -345,9 +317,9 @@ mod pallet {
 
             // if not already in dispute
             if market.status != MarketStatus::Disputed {
-                <Markets<T>>::mutate(market_id, |m| {
-                    m.as_mut().unwrap().status = MarketStatus::Disputed;
-                });
+                T::MarketCommons::mutate_market(&market_id, |m| {
+                    m.status = MarketStatus::Disputed;
+                })?;
             }
 
             Self::deposit_event(Event::MarketDisputed(market_id, outcome));
@@ -365,9 +337,7 @@ mod pallet {
             let report_block = now - dispute_period;
             let market_ids = Self::market_ids_per_report_block(&report_block).unwrap_or_default();
             for id in &market_ids {
-                let market = <Markets<T>>::get(id).ok_or(DispatchError::Other(
-                    "Market stored in report block does not exist",
-                ))?;
+                let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     let local_rc = Self::internal_resolve(id)?;
                     resolution_counters.saturating_add(&local_rc);
@@ -413,12 +383,6 @@ mod pallet {
     #[pallet::storage]
     pub type MarketToSwapPool<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, PoolId>;
 
-    /// For each market, this holds the dispute information for each dispute that's
-    /// been issued.
-    #[pallet::storage]
-    pub type Markets<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::MarketId, Market<T::AccountId, T::BlockNumber>>;
-
     impl<T: Config> Pallet<T> {
         // Performs the logic for resolving a market, including slashing and distributing
         // funds.
@@ -429,7 +393,7 @@ mod pallet {
         pub(crate) fn internal_resolve(
             market_id: &T::MarketId,
         ) -> Result<ResolutionCounters, DispatchError> {
-            let market = Self::market_by_id(market_id)?;
+            let market = T::MarketCommons::market(market_id)?;
             let report = market.report.clone().ok_or(Error::<T>::NoReport)?;
             let mut total_accounts = 0u32;
             let mut total_asset_accounts = 0u32;
@@ -528,10 +492,10 @@ mod pallet {
                 total_categories = local_total_categories.saturated_into();
             }
 
-            <Markets<T>>::mutate(&market_id, |m| {
-                m.as_mut().unwrap().status = MarketStatus::Resolved;
-                m.as_mut().unwrap().resolved_outcome = Some(resolved_outcome);
-            });
+            T::MarketCommons::mutate_market(&market_id, |m| {
+                m.status = MarketStatus::Resolved;
+                m.resolved_outcome = Some(resolved_outcome);
+            })?;
 
             Ok(ResolutionCounters {
                 total_accounts,
@@ -611,15 +575,6 @@ mod pallet {
             }
 
             Ok([total_accounts, total_asset_accounts, total_categories])
-        }
-
-        fn market_by_id(
-            market_id: &T::MarketId,
-        ) -> Result<Market<T::AccountId, T::BlockNumber>, Error<T>>
-        where
-            T: Config,
-        {
-            <Markets<T>>::get(market_id).ok_or(Error::<T>::MarketDoesNotExist)
         }
 
         // Returns the corresponding **stored** pool id of a market id

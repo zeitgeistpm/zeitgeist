@@ -5,6 +5,7 @@ frame-system = { branch = "polkadot-v0.9.3", default-features = false, git = "ht
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-runtime = { branch = "polkadot-v0.9.3", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
@@ -23,6 +24,7 @@ std = [
     "parity-scale-codec/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
+    "zrml-market-commons/std",
 ]
 runtime-benchmarks = ["frame-benchmarking"]
 

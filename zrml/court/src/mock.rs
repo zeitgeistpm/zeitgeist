@@ -58,6 +58,7 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: court::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -71,6 +72,7 @@ impl crate::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
@@ -140,6 +142,10 @@ impl pallet_timestamp::Config for Runtime {
     type Moment = u64;
     type OnTimestampSet = ();
     type WeightInfo = ();
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type MarketId = MarketId;
 }
 
 impl zrml_swaps::Config for Runtime {
