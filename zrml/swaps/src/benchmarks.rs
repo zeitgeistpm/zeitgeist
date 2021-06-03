@@ -5,8 +5,7 @@ use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec};
-use frame_support::dispatch::UnfilteredDispatchable;
-use frame_support::traits::Get;
+use frame_support::{dispatch::UnfilteredDispatchable, traits::Get};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;

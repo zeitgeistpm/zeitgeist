@@ -65,8 +65,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{errors::*, weights::*};
-    use alloc::vec;
-    use alloc::vec::Vec;
+    use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{self, DispatchResultWithPostInfo, Weight},

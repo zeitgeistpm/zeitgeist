@@ -24,8 +24,9 @@ pub fn battery_park_staging_config(
             generic_genesis(
                 #[cfg(feature = "parachain")]
                 AdditionalChainSpec {
+                    candidates: vec![],
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
-                    stakers: vec![],
+                    nominations: vec![],
                     parachain_id,
                 },
                 #[cfg(not(feature = "parachain"))]

@@ -1,3 +1,5 @@
+#[cfg(feature = "parachain")]
+use crate::chain_spec::get_from_seed;
 use crate::chain_spec::{
     generic_genesis, get_account_id_from_seed, AdditionalChainSpec, ChainSpec,
 };
@@ -20,19 +22,20 @@ pub fn local_testnet_config(
             generic_genesis(
                 #[cfg(feature = "parachain")]
                 AdditionalChainSpec {
-                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
-                    stakers: vec![
+                    candidates: vec![
                         (
                             get_account_id_from_seed::<sr25519::Public>("Alice"),
-                            None,
+                            get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
                             STAKE_AMOUNT,
                         ),
                         (
                             get_account_id_from_seed::<sr25519::Public>("Bob"),
-                            None,
+                            get_from_seed::<nimbus_primitives::NimbusId>("Bob"),
                             STAKE_AMOUNT,
                         ),
                     ],
+                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+                    nominations: vec![],
                     parachain_id,
                 },
                 #[cfg(not(feature = "parachain"))]

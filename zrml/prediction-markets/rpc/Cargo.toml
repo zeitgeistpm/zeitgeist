@@ -3,10 +3,9 @@ parity-scale-codec = { default-features = false, features = ["derive"], version 
 jsonrpc-core = { default-features = false, version = "15.0" }
 jsonrpc-core-client = { default-features = false, version = "15.0" }
 jsonrpc-derive = { default-features = false, version = "15.0" }
-serde = { version = "1.0", features = ["derive"] }
-sp-api = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-blockchain = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-api = { branch = "polkadot-v0.9.3", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-blockchain = { branch = "polkadot-v0.9.3", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.3", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
 zrml-prediction-markets-runtime-api = { default-features = false, features = ["std"], path = "../runtime-api" }
 
