@@ -38,11 +38,7 @@ pub fn run() -> sc_cli::Result<()> {
                     task_manager,
                     import_queue,
                     ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                } = crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -53,11 +49,7 @@ pub fn run() -> sc_cli::Result<()> {
                     client,
                     task_manager,
                     ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                } = crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
@@ -116,11 +108,7 @@ pub fn run() -> sc_cli::Result<()> {
                     client,
                     task_manager,
                     ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                } = crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
@@ -132,11 +120,7 @@ pub fn run() -> sc_cli::Result<()> {
                     task_manager,
                     import_queue,
                     ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                } = crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -177,11 +161,7 @@ pub fn run() -> sc_cli::Result<()> {
                     task_manager,
                     backend,
                     ..
-                } = crate::service::new_partial(
-                    #[cfg(feature = "parachain")]
-                    None,
-                    &config,
-                )?;
+                } = crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, backend), task_manager))
             })
         }
@@ -204,8 +184,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&*cli.run)?;
 
     runner.run_node_until_exit(|parachain_config| async move {
-        let author_id = cli.run.author_id.clone();
-
         let key = sp_core::Pair::generate().0;
 
         let parachain_id_extension =
@@ -239,24 +217,15 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         let polkadot_config =
             SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
                 .map_err(|err| format!("Relay chain argument error: {}", err))?;
-        let collator = cli.run.base.validator || cli.collator;
 
         log::info!("Parachain id: {:?}", parachain_id);
         log::info!("Parachain Account: {}", parachain_account);
         log::info!("Parachain genesis state: {}", genesis_state);
-        log::info!("Is collating: {}", if collator { "yes" } else { "no" });
 
-        crate::service::new_full(
-            author_id,
-            key,
-            parachain_config,
-            parachain_id,
-            polkadot_config,
-            collator,
-        )
-        .await
-        .map(|r| r.0)
-        .map_err(Into::into)
+        crate::service::new_full(key, parachain_config, parachain_id, polkadot_config)
+            .await
+            .map(|r| r.0)
+            .map_err(Into::into)
     })
 }
 

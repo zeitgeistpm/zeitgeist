@@ -14,7 +14,7 @@ use zeitgeist_runtime::TokensConfig;
 
 #[cfg(feature = "parachain")]
 use {
-    sp_runtime::Perbill,
+    sp_runtime::{Perbill, Percent},
     zeitgeist_primitives::constants::{ztg, DefaultBlocksPerRound, MILLISECS_PER_BLOCK},
 };
 
@@ -80,20 +80,16 @@ fn generic_genesis(
         },
         #[cfg(feature = "parachain")]
         pallet_author_mapping: zeitgeist_runtime::AuthorMappingConfig {
-            author_ids: acs
-                .stakers
+            mappings: acs
+                .candidates
                 .iter()
-                .take(1)
-                .map(|staker| {
-                    let author_id = get_from_seed::<nimbus_primitives::NimbusId>("Alice");
-                    let account_id = staker.0.clone();
-                    (author_id, account_id)
-                })
+                .cloned()
+                .map(|(account_id, author_id, _)| (author_id, account_id))
                 .collect(),
         },
         #[cfg(feature = "parachain")]
         pallet_author_slot_filter: zeitgeist_runtime::AuthorFilterConfig {
-            eligible_ratio: sp_runtime::Percent::from_percent(50),
+            eligible_ratio: Percent::from_percent(50),
         },
         pallet_balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts
@@ -117,8 +113,14 @@ fn generic_genesis(
         },
         #[cfg(feature = "parachain")]
         parachain_staking: zeitgeist_runtime::ParachainStakingConfig {
+            candidates: acs
+                .candidates
+                .iter()
+                .cloned()
+                .map(|(account, _, bond)| (account, bond))
+                .collect(),
             inflation_config: acs.inflation_info,
-            stakers: acs.stakers,
+            nominations: acs.nominations,
         },
     }
 }
