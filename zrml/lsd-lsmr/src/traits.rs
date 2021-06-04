@@ -1,22 +1,38 @@
+use crate::types::AssetPair;
 use frame_support::{
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     Parameter,
 };
 use parity_scale_codec::Codec;
-use sp_runtime::traits::{AtLeast32Bit, AtLeast32BitUnsigned, Hash};
+use sp_runtime::traits::{AtLeast32BitUnsigned, Hash};
 use sp_std::fmt::Debug;
 
 // TODO: Add parameters, return values and docs
 pub trait Fee {
-    fn calculate();
+    type Balance: Parameter
+        + Member
+        + AtLeast32BitUnsigned
+        + Codec
+        + Default
+        + Copy
+        + MaybeSerializeDeserialize
+        + Debug;
+
+    fn calculate() -> Self::Balance;
 }
 
 // TODO: Add parameters, return values and docs
 pub trait Ema {
-    // timestamp type
-    type Moment: AtLeast32Bit + Parameter + Default + Copy;
+    type Balance: Parameter
+        + Member
+        + AtLeast32BitUnsigned
+        + Codec
+        + Default
+        + Copy
+        + MaybeSerializeDeserialize
+        + Debug;
 
-    fn update();
+    fn update(volume: Self::Balance);
     fn clear();
     fn calculate();
 }
@@ -50,15 +66,15 @@ pub trait LsdLsmrPallet {
         + Copy
         + MaybeSerializeDeserialize
         + Debug;
+    type Fee: Fee;
 
     // TODO: Add parameters and return values
-    // TODO: Move out of trait and into pallet implementation
     /// Create LSD-LSMR instance for specifc asset pair
-    fn create();
+    fn create(assets: AssetPair<Self::Asset>, fees: Self::Fee);
     /// Destroy
-    fn destroy();
+    fn destroy(assets: AssetPair<Self::Asset>);
     /// Update market data
-    fn update();
+    fn update(assets: AssetPair<Self::Asset>, volume: Self::Balance);
     /// Return cost for asset pair
     fn cost();
     /// Return price for asset pair

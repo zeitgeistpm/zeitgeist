@@ -1,5 +1,5 @@
 use crate::constants::*;
-use crate::traits::{Ema, Fee};
+use crate::traits::Fee;
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 #[cfg(feature = "std")]
 use sp_runtime::traits::Hash;
@@ -8,8 +8,6 @@ use substrate_fixed::{
     FixedU32,
 };
 
-// TODO: implement default trait
-// TODO: implement Fee and Ema trait
 // TODO: adjust visibility and implement constructor
 // TODO: docs
 
@@ -18,9 +16,19 @@ pub type MaxBalance = u128;
 pub type TimestampedVolume = (Timestamp, MaxBalance);
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+pub enum Timespan {
+    Minutes(u32),
+    Hours(u32),
+    Days(u16),
+    Weeks(u16),
+    Months(u16),
+    Years(u8),
+}
+
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct AssetPair<A: Eq + Hash + PartialEq> {
-    pub asset1: A,
-    pub asset2: A,
+    asset: A,
+    base_asset: A,
 }
 
 // TODO: docs
@@ -74,7 +82,7 @@ impl Default for FeeSigmoid {
 // TODO: docs
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaVolume {
-    pub ema_period: u32,
+    pub ema_period: Timespan,
     pub smoothing: FixedU32<U24>,
     pub volumes_period: Vec<TimestampedVolume>,
     pub volumes_2period_minus_period: Vec<TimestampedVolume>,
@@ -87,7 +95,7 @@ pub struct EmaVolume {
 impl Default for EmaVolume {
     fn default() -> Self {
         return Self {
-            ema_period: EMA_SHORT.into(),
+            ema_period: EMA_SHORT,
             smoothing: SMOOTHING,
             volumes_period: Vec::new(),
             volumes_2period_minus_period: Vec::new(),
@@ -109,5 +117,3 @@ where
     pub assets: AssetPair<A>,
     pub fees: F,
 }
-
-// TODO: Implment LSMR trait for LsdLsmr

@@ -1,13 +1,14 @@
+use crate::types::Timespan;
 use substrate_fixed::{types::extra::U24, types::extra::U32, FixedU32};
 
 // --- Default configuration for EmaConfig struct ---
 /// Default short EMA period (in seconds)
 /// One hour.
-pub const EMA_SHORT: u32 = 3_600;
+pub const EMA_SHORT: Timespan = Timespan::Hours(1);
 
 /// Default long EMA period (in seconds)
 /// Six hours.
-pub const EMA_LONG: u32 = 3_600 * 6;
+pub const EMA_LONG: Timespan = Timespan::Hours(6);
 
 /// Default smoothing factor for EMA calculation
 /// 2.0
