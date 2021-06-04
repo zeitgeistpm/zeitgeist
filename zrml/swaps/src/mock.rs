@@ -11,7 +11,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{
         ExitFee, MaxAssets, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight, MinLiquidity,
-        MinWeight, BLOCK_HASH_COUNT,
+        MinWeight, SwapsPalletId, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -24,7 +24,6 @@ parameter_types! {
     pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const ExistentialDeposit: u32 = 1;
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 

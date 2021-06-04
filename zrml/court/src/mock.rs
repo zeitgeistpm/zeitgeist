@@ -8,8 +8,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight,
-        MinLiquidity, MinWeight, BASE, BLOCK_HASH_COUNT,
+        CourtPalletId, ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
+        MaxWeight, MinLiquidity, MinWeight, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -38,8 +38,6 @@ parameter_types! {
     pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
     pub const MinimumPeriod: u64 = 0;
     pub const OracleBond: Balance = 100;
-    pub const CourtPalletId: PalletId = PalletId(*b"test/crt");
-    pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
     pub const ValidityBond: Balance = 200;
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
@@ -60,6 +58,7 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: court::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -73,6 +72,7 @@ impl crate::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
@@ -142,6 +142,10 @@ impl pallet_timestamp::Config for Runtime {
     type Moment = u64;
     type OnTimestampSet = ();
     type WeightInfo = ();
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type MarketId = MarketId;
 }
 
 impl zrml_swaps::Config for Runtime {

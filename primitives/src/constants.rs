@@ -18,6 +18,11 @@ pub const DOLLARS: Balance = BASE / 100; // 100_000_000
 pub const CENTS: Balance = DOLLARS / 100; // 1_000_000
 pub const MILLICENTS: Balance = CENTS / 1000; // 1_000
 
+// Court parameters
+parameter_types! {
+    pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
+}
+
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * DOLLARS;
@@ -33,6 +38,11 @@ parameter_types! {
     pub const ValidityBond: Balance = 50 * DOLLARS;
 }
 
+// Staking parameters
+parameter_types! {
+    pub const DefaultBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
+}
+
 // Swaps parameters
 parameter_types! {
     pub const ExitFee: Balance = 0;
@@ -44,9 +54,4 @@ parameter_types! {
     pub const MinLiquidity: Balance = 100 * BASE;
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
-}
-
-// Collator staking
-parameter_types! {
-    pub const DefaultBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
 }
