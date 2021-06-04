@@ -4,6 +4,7 @@ members = [
     "primitives",
     "runtime",
     "zrml/court",
+    "zrml/market-commons",
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
     "zrml/prediction-markets/fuzz",
