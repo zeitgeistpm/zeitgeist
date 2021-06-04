@@ -1,4 +1,4 @@
-use substrate_fixed::{types::extra::U32, types::extra::U24, FixedU32};
+use substrate_fixed::{types::extra::U24, types::extra::U32, FixedU32};
 
 // --- Default configuration for EmaConfig struct ---
 /// Default short EMA period (in seconds)
@@ -12,7 +12,6 @@ pub const EMA_LONG: u32 = 3_600 * 6;
 /// Default smoothing factor for EMA calculation
 /// 2.0
 pub const SMOOTHING: FixedU32<U24> = <FixedU32<U24>>::from_bits(0x0200_0000);
-
 
 // --- Default configuration for FeeSigmoidConfig struct ---
 /// Initial fee f
