@@ -113,7 +113,7 @@ parachain = [
     "polkadot-service",
     "polkadot-test-service",
 ]
-runtime-benchmarks = ["polkadot-service/runtime-benchmarks", "zeitgeist-runtime/runtime-benchmarks"]
+runtime-benchmarks = ["polkadot-service?/runtime-benchmarks", "zeitgeist-runtime/runtime-benchmarks"]
 
 [package]
 authors = ['Zeitgeist PM <contact@zeitgeist.pm>']
