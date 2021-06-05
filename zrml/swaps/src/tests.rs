@@ -4,7 +4,7 @@ use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
 };
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use orml_traits::MultiCurrency;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -258,6 +258,35 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
             Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, u128::MAX, 1),
             crate::Error::<Runtime>::MaxInRatio
         );
+    });
+}
+
+#[test]
+fn only_root_can_call_admin_set_pool_as_stale() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::admin_set_pool_as_stale(
+                alice_signed(),
+                MarketType::Scalar((0, 0)),
+                0,
+                OutcomeReport::Scalar(1)
+            ),
+            BadOrigin
+        );
+
+        create_initial_pool_with_funds_for_alice();
+        assert_ok!(Swaps::pool_join(
+            alice_signed(),
+            0,
+            _1,
+            vec!(_1, _1, _1, _1),
+        ));
+        assert_ok!(Swaps::admin_set_pool_as_stale(
+            Origin::root(),
+            MarketType::Scalar((0, 0)),
+            0,
+            OutcomeReport::Scalar(1)
+        ),);
     });
 }
 
@@ -562,7 +591,6 @@ fn swap_exact_amount_out_exchanges_correct_values() {
     });
 }
 
-#[inline]
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }

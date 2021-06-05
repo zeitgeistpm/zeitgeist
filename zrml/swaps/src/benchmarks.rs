@@ -9,7 +9,10 @@ use frame_support::{dispatch::UnfilteredDispatchable, traits::Get};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
-use zeitgeist_primitives::{constants::BASE, types::Asset};
+use zeitgeist_primitives::{
+    constants::BASE,
+    types::{Asset, MarketType, OutcomeReport},
+};
 
 // Generates ``asset_count`` assets
 fn generate_assets<T: Config>(
@@ -57,13 +60,17 @@ fn bench_create_pool<T: Config>(
 }
 
 benchmarks! {
+    admin_set_pool_as_stale {
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, _) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get()), None);
+    }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
+
     create_pool {
         // Step through every possible amount of assets <= MaxAssets
         let a in 0..T::MaxAssets::get() as u32;
         let caller = whitelisted_caller();
         let assets = generate_assets::<T>(&caller, a as usize, None);
         let weights = vec![T::MinWeight::get(); a as usize];
-
     }: _(RawOrigin::Signed(caller), assets, weights)
 
     pool_exit {

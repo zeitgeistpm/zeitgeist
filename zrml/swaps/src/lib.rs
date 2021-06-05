@@ -40,7 +40,7 @@ mod pallet {
         traits::{Get, Hooks, IsType},
         Blake2_128Concat, PalletId, Parameter,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, AtLeast32Bit, MaybeSerializeDeserialize, Member, Zero},
@@ -56,6 +56,18 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(T::WeightInfo::admin_set_pool_as_stale())]
+        #[frame_support::transactional]
+        pub fn admin_set_pool_as_stale(
+            origin: OriginFor<T>,
+            market_type: MarketType,
+            pool_id: PoolId,
+            outcome_report: OutcomeReport,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            Self::set_pool_as_stale(&market_type, pool_id, &outcome_report)
+        }
+
         /// Temporary probably - The Swap is created per prediction market.
         #[pallet::weight(T::WeightInfo::create_pool(weights.len() as u32))]
         #[frame_support::transactional]
