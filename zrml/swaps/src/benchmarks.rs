@@ -62,7 +62,7 @@ fn bench_create_pool<T: Config>(
 benchmarks! {
     admin_set_pool_as_stale {
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, _) = bench_create_pool::<T>(caller.clone(), Some(T::MaxAssets::get()), None);
+        let (pool_id, _) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get()), None);
     }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
 
     create_pool {
