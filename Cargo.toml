@@ -8,7 +8,6 @@ members = [
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
     "zrml/prediction-markets/fuzz",
-    "zrml/prediction-markets/rpc",
     "zrml/prediction-markets/runtime-api",
     "zrml/swaps",
     "zrml/swaps/fuzz",

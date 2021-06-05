@@ -11937,21 +11937,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zrml-prediction-markets-rpc"
-version = "0.1.0"
-dependencies = [
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
- "zeitgeist-primitives",
- "zrml-prediction-markets-runtime-api",
-]
-
-[[package]]
 name = "zrml-prediction-markets-runtime-api"
 version = "0.1.0"
 dependencies = [
