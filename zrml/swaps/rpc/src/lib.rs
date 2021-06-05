@@ -8,7 +8,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
     generic::BlockId,
-    traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
+    traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
 use std::sync::Arc;
 use zeitgeist_primitives::types::{Asset, SerdeWrapper};
@@ -16,7 +16,7 @@ use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
 #[rpc]
-pub trait SwapsApi<BlockHash, PoolId, AccountId, Balance, MarketId>
+pub trait SwapsApi<BlockHash, BlockNumber, PoolId, AccountId, Balance, MarketId>
 where
     Balance: FromStr + fmt::Display,
     MarketId: FromStr + fmt::Display,
@@ -47,7 +47,7 @@ where
         pool_id: PoolId,
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
-        blocks: Vec<BlockHash>,
+        blocks: Vec<BlockNumber>,
     ) -> Result<Vec<SerdeWrapper<Balance>>>;
 }
 
@@ -100,7 +100,8 @@ macro_rules! get_spot_price_rslt {
 }
 
 impl<C, Block, PoolId, AccountId, Balance, MarketId>
-    SwapsApi<<Block as BlockT>::Hash, PoolId, AccountId, Balance, MarketId> for Swaps<C, Block>
+    SwapsApi<<Block as BlockT>::Hash, NumberFor<Block>, PoolId, AccountId, Balance, MarketId>
+    for Swaps<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
@@ -162,13 +163,13 @@ where
         pool_id: PoolId,
         asset_in: Asset<MarketId>,
         asset_out: Asset<MarketId>,
-        blocks: Vec<<Block as BlockT>::Hash>,
+        blocks: Vec<NumberFor<Block>>,
     ) -> Result<Vec<SerdeWrapper<Balance>>> {
         let api = self.client.runtime_api();
         blocks
             .into_iter()
             .map(|block| {
-                let hash = BlockId::hash(block);
+                let hash = BlockId::number(block);
                 get_spot_price_rslt!(
                     &api,
                     asset_in.clone(),
