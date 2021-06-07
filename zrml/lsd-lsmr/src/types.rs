@@ -1,8 +1,12 @@
+use std::marker::PhantomData;
+
 use crate::constants::*;
 use crate::traits::Fee;
-use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-#[cfg(feature = "std")]
-use sp_runtime::traits::Hash;
+use frame_support::{
+    dispatch::{fmt::Debug, Decode, Encode},
+    storage::IterableStorageMap,
+};
+use parity_scale_codec::EncodeLike;
 use substrate_fixed::{
     types::extra::{U24, U32},
     FixedU32,
@@ -25,20 +29,14 @@ pub enum Timespan {
     Years(u8),
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct AssetPair<A: Eq + Hash + PartialEq> {
-    asset: A,
-    base_asset: A,
-}
-
 // TODO: docs
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig {
-    pub initial_fee: FixedU32<U32>,
-    pub minimal_revenue: FixedU32<U32>,
-    pub m: FixedU32<U24>,
-    pub p: FixedU32<U24>,
-    pub n: FixedU32<U24>,
+    initial_fee: FixedU32<U32>,
+    minimal_revenue: FixedU32<U32>,
+    m: FixedU32<U24>,
+    p: FixedU32<U24>,
+    n: FixedU32<U24>,
 }
 
 impl Default for FeeSigmoidConfig {
@@ -54,12 +52,17 @@ impl Default for FeeSigmoidConfig {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct FeeSigmoid {
-    pub config: FeeSigmoidConfig,
-    pub ema_short: EmaVolume,
-    pub ema_long: EmaVolume,
+pub struct FeeSigmoid<A, S>
+where
+    A: Decode + Encode + EncodeLike + Eq + PartialEq,
+    S: IterableStorageMap<A, Vec<TimestampedVolume>>,
+{
+    config: FeeSigmoidConfig,
+    ema_short: EmaVolume<A, S>,
+    ema_long: EmaVolume<A, S>,
 }
 
+/*
 impl Default for FeeSigmoid {
     fn default() -> Self {
         return Self {
@@ -78,20 +81,32 @@ impl Default for FeeSigmoid {
         };
     }
 }
+*/
+
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+pub struct EmaVolumeConfig {
+    ema_period: Timespan,
+    smoothing: FixedU32<U24>,
+}
 
 // TODO: docs
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaVolume {
-    pub ema_period: Timespan,
-    pub smoothing: FixedU32<U24>,
-    pub volumes_period: Vec<TimestampedVolume>,
-    pub volumes_2period_minus_period: Vec<TimestampedVolume>,
-    pub sma_period: MaxBalance,
-    pub sma_2period_minus_period: MaxBalance,
-    pub first_data_timestamp: Timestamp,
-    pub ema: MaxBalance,
+pub struct EmaVolume<A, S>
+where
+    A: Decode + Encode + EncodeLike + Eq + PartialEq,
+    S: IterableStorageMap<A, Vec<TimestampedVolume>>,
+{
+    config: EmaVolumeConfig,
+    volumes_period: S,
+    volumes_2period_minus_period: S,
+    sma_period: MaxBalance,
+    sma_2period_minus_period: MaxBalance,
+    first_data_timestamp: Timestamp,
+    ema: MaxBalance,
+    _marker: PhantomData<A>,
 }
 
+/*
 impl Default for EmaVolume {
     fn default() -> Self {
         return Self {
@@ -106,14 +121,10 @@ impl Default for EmaVolume {
         };
     }
 }
+*/
 
 // TODO: docs
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct LsdLsmr<A, F>
-where
-    A: Eq + Hash + PartialEq,
-    F: Fee,
-{
-    pub assets: AssetPair<A>,
-    pub fees: F,
+pub struct LsdLmsr<FE: Fee> {
+    fees: FE,
 }

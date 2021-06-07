@@ -1,10 +1,11 @@
-use crate::types::AssetPair;
+use crate::types::{EmaVolumeConfig, FeeSigmoidConfig, Timestamp};
 use frame_support::{
+    dispatch::DispatchResultWithPostInfo,
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     Parameter,
 };
-use parity_scale_codec::Codec;
-use sp_runtime::traits::{AtLeast32BitUnsigned, Hash};
+use parity_scale_codec::{Codec, Decode, Encode, EncodeLike};
+use sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
 
 // TODO: Add parameters, return values and docs
@@ -34,12 +35,12 @@ pub trait Ema {
 
     fn update(volume: Self::Balance);
     fn clear();
-    fn calculate();
+    fn calculate() -> Option<Timestamp>;
 }
 
 // TODO: return types, parameters and docs
-pub trait LSMR {
-    type Asset: Eq + Hash + PartialEq;
+pub trait Lmsr {
+    type Asset: Decode + Encode + EncodeLike + Eq + PartialEq;
     type Balance: Parameter
         + Member
         + AtLeast32BitUnsigned
@@ -49,34 +50,41 @@ pub trait LSMR {
         + MaybeSerializeDeserialize
         + Debug;
 
-    /// Return cost for asset pair
-    fn cost();
-    /// Return price for asset pair
-    fn price();
+    /// Return cost C(q) for all assets in q
+    fn cost(assets: Vec<Self::Balance>);
+    /// Return price P_i(q) for asset q_i in q
+    fn price(asset_in_question: Self::Balance, asset_balances: Vec<Self::Balance>);
 }
 
 // TODO: return types, parameters and docs
-pub trait LsdLsmrPallet {
-    type Asset: Eq + Hash + PartialEq;
-    type Balance: Parameter
-        + Member
-        + AtLeast32BitUnsigned
-        + Codec
-        + Default
-        + Copy
-        + MaybeSerializeDeserialize
-        + Debug;
+pub trait Lsdlmsr: Lmsr {
     type Fee: Fee;
 
     // TODO: Add parameters and return values
-    /// Create LSD-LSMR instance for specifc asset pair
-    fn create(assets: AssetPair<Self::Asset>, fees: Self::Fee);
+    /// Create LSD-LMSR instance for specifc asset pool
+    fn create(assets: Vec<Self::Asset>, fees: Self::Fee);
     /// Destroy
-    fn destroy(assets: AssetPair<Self::Asset>);
+    fn destroy(assets: Vec<Self::Asset>);
     /// Update market data
-    fn update(assets: AssetPair<Self::Asset>, volume: Self::Balance);
-    /// Return cost for asset pair
-    fn cost();
-    /// Return price for asset pair
-    fn price();
+    fn update(asset: Self::Asset, volume: Self::Balance);
+}
+
+pub trait LsdlmsrPallet: Lmsr {
+    // TODO: Add parameters and return values
+    /// Create LSD-LMSR instance for specifc asset pool
+    fn create(
+        poolid: u128,
+        assets: Vec<Self::Asset>,
+        fee_config: FeeSigmoidConfig,
+        ema_config_short: EmaVolumeConfig,
+        ema_config_long: EmaVolumeConfig,
+    ) -> DispatchResultWithPostInfo;
+    /// Destroy Lsdlmsr instance
+    fn destroy(poolid: u128) -> DispatchResultWithPostInfo;
+    /// Update market data
+    fn update(
+        poolid: u128,
+        asset: Self::Asset,
+        volume: Self::Balance,
+    ) -> DispatchResultWithPostInfo;
 }
