@@ -34,7 +34,7 @@ use sp_runtime::{
     create_runtime_str, generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, Perbill, Percent
+    ApplyExtrinsicResult, Perbill, Percent,
 };
 use sp_std::{boxed::Box, vec::Vec};
 #[cfg(feature = "std")]
