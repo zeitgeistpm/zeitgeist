@@ -6,6 +6,12 @@ serde = { features = ["derive"], version = "1.0.102", optional = true }
 sp-runtime = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-std = { branch = "rococo-v1", default-features = false, git = "https://github.com/paritytech/substrate" }
 substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed", package = "substrate-fixed" }
+zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+
+[dev-dependencies]
+pallet-balances = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+pallet-timestamp = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "rococo-v1", git = "https://github.com/paritytech/substrate" }
 
 
 [features]
@@ -17,7 +23,8 @@ std = [
     "serde",
     "sp-runtime/std",
     "sp-std/std",
-    "substrate-fixed/std"
+    "substrate-fixed/std",
+    "zeitgeist-primitives/std",
 ]
 
 [package]

@@ -7,6 +7,8 @@
 extern crate alloc;
 
 pub mod constants;
+mod mock;
+mod tests;
 pub mod traits;
 pub mod types;
 pub use pallet::*;
@@ -16,7 +18,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         pallet_prelude::{MaybeSerializeDeserialize, Member},
-        traits::{Hooks, IsType, Time},
+        traits::{Hooks, Time},
         Parameter,
     };
     use parity_scale_codec::{Codec, Decode, Encode, EncodeLike};
@@ -25,12 +27,6 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Event
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-        /// The type that offers timestamping functionality
-        type Timestamp: Time;
-
         /// Asset type
         type Asset: Decode + Encode + EncodeLike + Eq + PartialEq;
 
@@ -43,16 +39,19 @@ mod pallet {
             + Copy
             + MaybeSerializeDeserialize
             + Debug;
+
+        /// The type that offers timestamping functionality
+        type Timestamp: Time;
     }
 
     #[pallet::error]
     pub enum Error<T> {}
 
-    #[pallet::event]
+    /*#[pallet::event]
     //#[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {}
+        T: Config, {}*/
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
