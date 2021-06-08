@@ -34,7 +34,7 @@ use sp_runtime::{
     create_runtime_str, generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, Perbill,
+    ApplyExtrinsicResult, Perbill, Percent
 };
 use sp_std::{boxed::Box, vec::Vec};
 #[cfg(feature = "std")]
@@ -96,6 +96,7 @@ parameter_types! {
   pub const BondDuration: u32 = 1;
   pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
+  pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
   pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
   pub const MaxCollatorsPerNominator: u32 = 24;
@@ -328,6 +329,7 @@ impl parachain_staking::Config for Runtime {
     type Currency = Balances;
     type DefaultBlocksPerRound = DefaultBlocksPerRound;
     type DefaultCollatorCommission = DefaultCollatorCommission;
+    type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
     type Event = Event;
     type MaxCollatorsPerNominator = MaxCollatorsPerNominator;
     type MaxNominatorsPerCollator = MaxNominatorsPerCollator;
