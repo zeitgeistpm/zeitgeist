@@ -13,9 +13,9 @@ if ! [ -d $POLKADOT_DIR ]; then
 fi
 
 cd $POLKADOT_DIR
-git checkout --track origin/release-v0.9.3 &> /dev/null || true
+git checkout --track origin/release-v0.9.4 &> /dev/null || true
 git fetch origin
-git rebase origin/release-v0.9.3
+git rebase origin/release-v0.9.4
 
 # Build everything
 
