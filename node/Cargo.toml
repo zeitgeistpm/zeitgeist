@@ -49,7 +49,7 @@ log = { optional = true, version = "0.4" }
 nimbus-consensus = { branch = "nimbus-polkadot-v0.9.4", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 nimbus-primitives = { branch = "nimbus-polkadot-v0.9.4", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 pallet-author-inherent = { branch = "nimbus-polkadot-v0.9.4", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-parachain-staking = { branch = "gorka_v0.9.4_dep_update", git = "https://github.com/PureStake/moonbeam", optional = true }
+parachain-staking = { branch = "master", git = "https://github.com/PureStake/moonbeam", optional = true }
 parity-scale-codec = { optional = true, version = "2.0" }
 sc-chain-spec = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate", optional = true }
 sc-tracing = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate", optional = true }

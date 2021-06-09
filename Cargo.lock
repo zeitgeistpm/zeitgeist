@@ -4900,7 +4900,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.1"
-source = "git+https://github.com/PureStake/moonbeam?branch=gorka_v0.9.4_dep_update#6b855fc6fcb2bfdcc00c0ee497ff82fd9b1899bb"
+source = "git+https://github.com/PureStake/moonbeam?branch=master#1dd6d1b3cd8952cb35be3f3b421bb1a98a89d481"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5648,12 +5648,13 @@ dependencies = [
 
 [[package]]
 name = "parachain-staking"
-version = "1.0.0"
-source = "git+https://github.com/PureStake/moonbeam?branch=gorka_v0.9.4_dep_update#6b855fc6fcb2bfdcc00c0ee497ff82fd9b1899bb"
+version = "1.0.1"
+source = "git+https://github.com/PureStake/moonbeam?branch=master#1dd6d1b3cd8952cb35be3f3b421bb1a98a89d481"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "nimbus-primitives",
  "pallet-balances",
  "parity-scale-codec",
