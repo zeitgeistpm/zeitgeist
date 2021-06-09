@@ -20,12 +20,12 @@ pub enum Timespan {
 
 impl Timespan {
     pub fn into_seconds(timespan: Timespan) -> u64 {
-        return match timespan {
+        match timespan {
             Timespan::Minutes(d) => u64::from(d) * 60,
             Timespan::Hours(d) => u64::from(d) * 60 * 60,
             Timespan::Days(d) => u64::from(d) * 60 * 60 * 24,
             Timespan::Weeks(d) => u64::from(d) * 60 * 60 * 24 * 7,
-        };
+        }
     }
 }
 
@@ -73,16 +73,16 @@ impl EmaVolumeConfig {
         };
         let one = FixedU32::<U24>::from_num(1);
         let fduration = FixedU32::<U24>::from_num(duration);
-        return Self {
+        Self {
             ema_period,
             multiplier: smoothing / (one + fduration),
-        };
+        }
     }
 }
 
 impl Default for EmaVolumeConfig {
     fn default() -> Self {
-        return Self::new(EMA_SHORT, SMOOTHING);
+        Self::new(EMA_SHORT, SMOOTHING)
     }
 }
 
@@ -97,13 +97,13 @@ pub struct EmaMarketVolume<FI: FixedUnsigned> {
 
 impl<FI: FixedUnsigned> EmaMarketVolume<FI> {
     pub fn new(config: EmaVolumeConfig) -> Self {
-        return Self {
+        Self {
             config,
             sma_current_period: FI::from_num(0),
             sma_current_element_count: 0,
             sma_current_period_start: None,
             ema: None,
-        };
+        }
     }
 }
 
