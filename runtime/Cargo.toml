@@ -48,9 +48,9 @@ parachain-info = { branch = "nimbus-polkadot-v0.9.4", default-features = false, 
 
 nimbus-primitives = { branch = "nimbus-polkadot-v0.9.4", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 pallet-author-inherent = { branch = "nimbus-polkadot-v0.9.4", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-pallet-author-mapping = { branch = "gorka_v0.9.4_dep_update", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
+pallet-author-mapping = { branch = "master", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "nimbus-polkadot-v0.9.4", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-parachain-staking = { branch = "gorka_v0.9.4_dep_update", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
+parachain-staking = { branch = "master", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
 
 # Polkadot
 
