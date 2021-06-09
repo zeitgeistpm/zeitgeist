@@ -21,15 +21,12 @@ mod pallet {
         traits::{Hooks, Time},
         Parameter,
     };
-    use parity_scale_codec::{Codec, Decode, Encode, EncodeLike};
+    use parity_scale_codec::Codec;
     use sp_runtime::traits::AtLeast32BitUnsigned;
     use sp_std::fmt::Debug;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Asset type
-        type Asset: Decode + Encode + EncodeLike + Eq + PartialEq;
-
         /// Balance type: Defines the type of traded amounts
         type Balance: Parameter
             + Member

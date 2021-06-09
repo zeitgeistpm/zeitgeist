@@ -5,7 +5,7 @@ members = [
     "runtime",
     "zrml/court",
     "zrml/market-commons",
-    "zrml/lsd-lsmr",
+    "zrml/lsd-lmsr",
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
     "zrml/prediction-markets/fuzz",

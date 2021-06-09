@@ -1,16 +1,13 @@
 #![cfg(test)]
 use crate as lsd_lmsr;
-use frame_support::{construct_runtime, parameter_types, PalletId};
+use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::{BASE, BLOCK_HASH_COUNT},
-    types::{
-        AccountIdTest, Asset, Balance, BlockNumber, BlockTest, Hash, Index, MarketId,
-        UncheckedExtrinsicTest,
-    },
+    types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
 };
 
 pub const ALICE: AccountIdTest = 0;
@@ -25,17 +22,8 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
     pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
-    pub const DisputeBond: Balance = 100;
-    pub const DisputeFactor: Balance = 25;
-    pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
-    pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
     pub const MinimumPeriod: u64 = 0;
-    pub const OracleBond: Balance = 100;
-    pub const CourtPalletId: PalletId = PalletId(*b"test/crt");
-    pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
-    pub const ValidityBond: Balance = 200;
-    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 construct_runtime!(
@@ -46,15 +34,14 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet},
         LsdLmsr: lsd_lmsr::{Pallet, Storage},
+        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
     }
 );
 
 impl crate::Config for Runtime {
     type Timestamp = Timestamp;
-    type Asset = Asset<MarketId>;
     type Balance = Balance;
 }
 
