@@ -31,7 +31,7 @@ sp-version = { branch = "polkadot-v0.9.4", default-features = false, git = "http
 
 frame-benchmarking = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.1.0" }
 frame-system-benchmarking = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate", optional = true, version = "3.0" }
-hex-literal = { optional = true, version = "0.3" }
+hex-literal = { default-features = false, optional = true, version = "0.3" }
 
 # Cumulus
 
@@ -123,8 +123,8 @@ runtime-benchmarks = [
 std = [
 	"frame-executive/std",
 	"frame-support/std",
-	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	"frame-system-rpc-runtime-api/std",
 	"orml-currencies/std",
 	"orml-tokens/std",
 	"orml-traits/std",
@@ -132,8 +132,8 @@ std = [
 	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
-	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	"pallet-transaction-payment-rpc-runtime-api/std",
 	"parity-scale-codec/std",
 	"sp-api/std",
 	"sp-block-builder/std",
@@ -145,6 +145,11 @@ std = [
 	"sp-std/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
+
+	# Benchmark
+
+	"frame-benchmarking?/std",
+	"frame-system-benchmarking?/std",
 
 	# Cumulus
 

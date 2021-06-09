@@ -13,6 +13,11 @@ test_package_with_feature primitives std
 
 for package in zrml/*
 do
+  if [[ "$package" == "zrml/market-commons" ]]; then
+    test_package_with_feature "$package" std
+    continue
+  fi
+
   test_package_with_feature "$package" std
-  test_package_with_feature "$package" std,runtime-benchmarks
+  test_package_with_feature "$package" runtime-benchmarks,std
 done

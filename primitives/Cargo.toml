@@ -19,7 +19,7 @@ std = [
     "orml-tokens/std",
     "orml-traits/std",
     "parity-scale-codec/std",
-    "serde/std",
+    "serde",
     "sp-core/std",
     "sp-runtime/std",
 ]

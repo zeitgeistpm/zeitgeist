@@ -1,5 +1,5 @@
 [dependencies]
-frame-benchmarking = { branch = "polkadot-v0.9.4", default-features = false, version = "3.1.0", optional = true, git = "https://github.com/paritytech/substrate" }
+frame-benchmarking = { branch = "polkadot-v0.9.4", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
 frame-support = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-traits = { default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
@@ -35,7 +35,13 @@ mock = [
     "zrml-prediction-markets-runtime-api",
     "zrml-swaps",
 ]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks"
+]
 std = [
+    'frame-benchmarking?/std',
     'frame-support/std',
     'frame-system/std',
     'orml-traits/std',
@@ -44,11 +50,6 @@ std = [
     'sp-runtime/std',
     'sp-std/std',
     'zeitgeist-primitives/std',
-]
-runtime-benchmarks = [
-    "frame-benchmarking",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks"
 ]
 
 [package]

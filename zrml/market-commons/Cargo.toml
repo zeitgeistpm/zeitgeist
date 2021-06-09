@@ -7,7 +7,6 @@ zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
 [features]
 default = ["std"]
-runtime-benchmarks = []
 std = [
     'frame-support/std',
     'frame-system/std',
