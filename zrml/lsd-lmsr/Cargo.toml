@@ -30,5 +30,5 @@ std = [
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
-name = "lsd-lsmr"
+name = "lsd-lmsr"
 version = "0.1.0"
