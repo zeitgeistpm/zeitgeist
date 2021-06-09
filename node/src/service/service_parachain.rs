@@ -4,7 +4,7 @@ use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use nimbus_consensus::{build_filtering_consensus, BuildNimbusConsensusParams};
+use nimbus_consensus::{build_nimbus_consensus, BuildNimbusConsensusParams};
 use nimbus_primitives::NimbusId;
 use polkadot_primitives::v0::CollatorPair;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
@@ -106,7 +106,7 @@ pub fn new_partial(
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn do_new_full<RB>(
-    collator_key: CollatorPair,
+    _collator_key: CollatorPair,
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
@@ -129,15 +129,12 @@ where
 
     let (mut telemetry, telemetry_worker_handle) = params.other;
 
-    let relay_chain_full_node = cumulus_client_service::build_polkadot_full_node(
-        polkadot_config,
-        collator_key.clone(),
-        telemetry_worker_handle,
-    )
-    .map_err(|e| match e {
-        polkadot_service::Error::Sub(x) => x,
-        s => format!("{}", s).into(),
-    })?;
+    let relay_chain_full_node =
+        cumulus_client_service::build_polkadot_full_node(polkadot_config, telemetry_worker_handle)
+            .map_err(|e| match e {
+                polkadot_service::Error::Sub(x) => x,
+                s => format!("{}", s).into(),
+            })?;
 
     let client = params.client.clone();
     let backend = params.backend.clone();
@@ -153,7 +150,7 @@ where
     let transaction_pool = params.transaction_pool.clone();
     let mut task_manager = params.task_manager;
     let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-    let (network, network_status_sinks, system_rpc_tx, start_network) =
+    let (network, system_rpc_tx, start_network) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
             client: client.clone(),
@@ -172,7 +169,6 @@ where
         client: client.clone(),
         config: parachain_config,
         keystore: params.keystore_container.sync_keystore(),
-        network_status_sinks,
         network: network.clone(),
         on_demand: None,
         remote_blockchain: None,
@@ -200,7 +196,7 @@ where
         let relay_chain_backend = relay_chain_full_node.backend.clone();
         let relay_chain_client = relay_chain_full_node.client.clone();
 
-        let parachain_consensus = build_filtering_consensus(BuildNimbusConsensusParams {
+        let parachain_consensus = build_nimbus_consensus(BuildNimbusConsensusParams {
             block_import: client.clone(),
             create_inherent_data_providers: move |_, (relay_parent, validation_data, author_id)| {
                 let parachain_inherent =
@@ -240,7 +236,6 @@ where
             announce_block,
             block_status: client.clone(),
             client: client.clone(),
-            collator_key,
             import_queue,
             para_id: parachain_id,
             parachain_consensus,
