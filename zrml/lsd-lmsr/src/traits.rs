@@ -78,6 +78,9 @@ pub trait LsdlmsrSigmoidMVPallet {
         asset_balances: Vec<Self::Balance>,
     ) -> Self::Balance;
 
+    /// Return price P_i(q) for all assets in q
+    fn all_prices(poolid: u128, asset_balances: Vec<Self::Balance>) -> Vec<Self::Balance>;
+
     /// Update market data
     fn update(poolid: u128, volume: Self::Balance);
 }
