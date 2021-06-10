@@ -57,7 +57,7 @@ pub trait LsdlmsrSigmoidMVPallet {
     fn clear(poolid: u128);
 
     /// Return cost C(q) for all assets in q
-    fn cost(asset_balances: Vec<Self::Balance>) -> Self::Balance;
+    fn cost(poolid: u128, asset_balances: Vec<Self::Balance>) -> Self::Balance;
 
     /// Create LSD-LMSR instance for specifc asset pool
     fn create(
