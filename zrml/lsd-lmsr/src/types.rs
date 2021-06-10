@@ -1,9 +1,9 @@
 use crate::constants::*;
-use crate::traits::Fee;
+use crate::traits::{LsdlmsrFee, MarketAverage};
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::marker::PhantomData;
-use substrate_fixed::traits::FixedUnsigned;
 use substrate_fixed::{
+    traits::FixedUnsigned,
     types::extra::{U24, U32},
     FixedU32,
 };
@@ -51,10 +51,8 @@ impl Default for FeeSigmoidConfig {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct FeeSigmoid<FI: FixedUnsigned> {
+pub struct FeeSigmoid {
     pub config: FeeSigmoidConfig,
-    pub ema_short: EmaMarketVolume<FI>,
-    pub ema_long: EmaMarketVolume<FI>,
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
@@ -71,8 +69,10 @@ impl EmaVolumeConfig {
             Timespan::Days(d) => d.into(),
             Timespan::Weeks(d) => d.into(),
         };
+
         let one = FixedU32::<U24>::from_num(1);
         let fduration = FixedU32::<U24>::from_num(duration);
+
         Self {
             ema_period,
             multiplier: smoothing / (one + fduration),
@@ -108,7 +108,9 @@ impl<FI: FixedUnsigned> EmaMarketVolume<FI> {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-struct LsdLmsr<FI: FixedUnsigned, FE: Fee<FI>> {
-    fees: FE,
-    _marker: PhantomData<FI>,
+pub struct LsdLmsrSigmoidMV<FI: FixedUnsigned, FE: LsdlmsrFee<FI>, MA: MarketAverage<FI>> {
+    pub fees: FE,
+    pub ma_short: MA,
+    pub ma_long: MA,
+    pub _marker: PhantomData<FI>,
 }

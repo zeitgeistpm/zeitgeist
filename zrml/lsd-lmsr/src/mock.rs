@@ -5,6 +5,7 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use substrate_fixed::types::extra::U34;
 use zeitgeist_primitives::{
     constants::{BASE, BLOCK_HASH_COUNT},
     types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
@@ -43,6 +44,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Timestamp = Timestamp;
     type Balance = Balance;
+    type FractionalType = U34;
 }
 
 impl frame_system::Config for Runtime {

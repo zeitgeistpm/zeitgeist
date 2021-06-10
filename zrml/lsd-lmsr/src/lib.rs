@@ -24,6 +24,7 @@ mod pallet {
     use parity_scale_codec::Codec;
     use sp_runtime::traits::AtLeast32BitUnsigned;
     use sp_std::fmt::Debug;
+    use substrate_fixed::types::extra::LeEqU128;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -39,21 +40,33 @@ mod pallet {
 
         /// The type that offers timestamping functionality
         type Timestamp: Time;
+
+        /// The type that will be used for the fractional part of the fixed point numbers
+        type FractionalType: LeEqU128;
     }
 
     #[pallet::error]
     pub enum Error<T> {}
 
-    /*#[pallet::event]
-    //#[pallet::generate_deposit(fn deposit_event)]
-    pub enum Event<T>
-    where
-        T: Config, {}*/
-
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
 
     impl<T: Config> Pallet<T> {}
+
+    // This is the storage containing the LsdLmsr instances per pool.
+    /*
+    #[pallet::storage]
+    pub type LmsrPerPool<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        u128,
+        LsdLmsrSigmoidMV<
+            FixedU128<T::FractionalType>,
+            FeeSigmoid,
+            EmaMarketVolume<FixedU128<T::FractionalType>>,
+        >,
+    >;
+    */
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
