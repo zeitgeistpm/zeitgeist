@@ -657,6 +657,33 @@ mod pallet {
     pub type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
+        pub fn get_spot_price(
+            pool_id: PoolId,
+            asset_in: Asset<T::MarketId>,
+            asset_out: Asset<T::MarketId>,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let pool = Self::pool_by_id(pool_id)?;
+
+            let pool_account = Self::pool_account_id(pool_id);
+            let balance_in = T::Shares::free_balance(asset_in, &pool_account);
+            let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
+            let balance_out = T::Shares::free_balance(asset_out, &pool_account);
+            let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
+
+            Ok(crate::math::calc_spot_price(
+                balance_in.saturated_into(),
+                in_weight,
+                balance_out.saturated_into(),
+                out_weight,
+                0,
+            )?
+            .saturated_into())
+        }
+
+        pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
+            T::PalletId::get().into_sub_account(pool_id)
+        }
+
         pub(crate) fn burn_pool_shares(
             pool_id: PoolId,
             from: &T::AccountId,
@@ -681,35 +708,6 @@ mod pallet {
             Ok(())
         }
 
-        pub fn get_spot_price(
-            pool_id: PoolId,
-            asset_in: Asset<T::MarketId>,
-            asset_out: Asset<T::MarketId>,
-        ) -> Result<BalanceOf<T>, DispatchError> {
-            let pool = Self::pool_by_id(pool_id)?;
-
-            let pool_account = Self::pool_account_id(pool_id);
-            let balance_in = T::Shares::free_balance(asset_in, &pool_account);
-            let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
-            let balance_out = T::Shares::free_balance(asset_out, &pool_account);
-            let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
-
-            Ok(crate::math::calc_spot_price(
-                balance_in.saturated_into(),
-                in_weight,
-                balance_out.saturated_into(),
-                out_weight,
-                0,
-            )?
-            .saturated_into())
-        }
-
-        fn inc_next_pool_id() -> PoolId {
-            let id = <NextPoolId<T>>::get();
-            <NextPoolId<T>>::mutate(|n| *n += 1);
-            id
-        }
-
         pub(crate) fn check_if_pool_is_active(
             pool: &Pool<BalanceOf<T>, T::MarketId>,
         ) -> DispatchResult {
@@ -729,8 +727,8 @@ mod pallet {
             T::Shares::deposit(shares_id, to, amount)
         }
 
-        pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
-            T::PalletId::get().into_sub_account(pool_id)
+        pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<T::MarketId> {
+            Asset::PoolShare(SerdeWrapper(pool_id))
         }
 
         pub(crate) fn pool_by_id(
@@ -740,6 +738,12 @@ mod pallet {
             T: Config,
         {
             Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist)
+        }
+
+        fn inc_next_pool_id() -> PoolId {
+            let id = <NextPoolId<T>>::get();
+            <NextPoolId<T>>::mutate(|n| *n += 1);
+            id
         }
 
         fn pool_weight_rslt(
@@ -762,10 +766,6 @@ mod pallet {
                 pool.pool_status = pool_status;
                 Ok(())
             })
-        }
-
-        pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<T::MarketId> {
-            Asset::PoolShare(SerdeWrapper(pool_id))
         }
     }
 
