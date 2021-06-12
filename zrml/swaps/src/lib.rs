@@ -8,7 +8,7 @@
 extern crate alloc;
 
 #[macro_use]
-mod macros;
+mod utils;
 
 mod benchmarks;
 mod check_arithm_rslt;
@@ -29,7 +29,7 @@ mod pallet {
         check_arithm_rslt::CheckArithmRslt,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
         fixed::bmul,
-        macros::{
+        utils::{
             pool_exit_with_exact_amount, pool_join_with_exact_amount, swap_exact_amount,
             PoolExitWithExactAmountParams, PoolJoinWithExactAmountParams, PoolParams,
             SwapExactAmountParams,
@@ -133,7 +133,7 @@ mod pallet {
                 },
                 who: who.clone(),
             };
-            crate::macros::pool::<_, _, _, T>(params)
+            crate::utils::pool::<_, _, _, T>(params)
         }
 
         /// Pool - Exit with exact pool amount
@@ -295,7 +295,7 @@ mod pallet {
                 transfer_pool: |_| Self::mint_pool_shares(pool_id, &who, pool_amount),
                 who: who.clone(),
             };
-            crate::macros::pool::<_, _, _, T>(params)
+            crate::utils::pool::<_, _, _, T>(params)
         }
 
         /// Pool - Join with exact asset amount
