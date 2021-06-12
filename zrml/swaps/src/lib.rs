@@ -459,10 +459,7 @@ mod pallet {
                         pool.swap_fee.saturated_into(),
                     )?
                     .saturated_into();
-                    ensure!(
-                        asset_amount_out >= min_asset_amount_out,
-                        Error::<T>::LimitOut
-                    );
+                    ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
@@ -750,10 +747,7 @@ mod pallet {
             pool: &Pool<BalanceOf<T>, T::MarketId>,
             asset: &Asset<T::MarketId>,
         ) -> Result<u128, Error<T>> {
-            pool.weights
-                .get(asset)
-                .cloned()
-                .ok_or(Error::<T>::AssetNotBound)
+            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
         }
 
         fn set_pool_status(pool_id: PoolId, pool_status: PoolStatus) -> DispatchResult {
@@ -784,10 +778,7 @@ mod pallet {
         ) -> Result<PoolId, DispatchError> {
             Self::check_provided_values_len_must_equal_assets_len(&assets, &weights)?;
 
-            ensure!(
-                assets.len() <= T::MaxAssets::get(),
-                Error::<T>::TooManyAssets
-            );
+            ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets);
 
             let amount = T::MinLiquidity::get();
 
@@ -799,24 +790,15 @@ mod pallet {
             for (asset, weight) in assets.iter().copied().zip(weights) {
                 let free_balance = T::Shares::free_balance(asset, &who);
                 ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
-                ensure!(
-                    weight >= T::MinWeight::get(),
-                    Error::<T>::BelowMinimumWeight
-                );
-                ensure!(
-                    weight <= T::MaxWeight::get(),
-                    Error::<T>::AboveMaximumWeight
-                );
+                ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
+                ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
 
                 T::Shares::transfer(asset, &who, &pool_account, amount)?;
                 map.insert(asset, weight);
                 total_weight = total_weight.check_add_rslt(&weight)?;
             }
 
-            ensure!(
-                total_weight <= T::MaxTotalWeight::get(),
-                Error::<T>::MaxTotalWeight
-            );
+            ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
 
             <Pools<T>>::insert(
                 next_pool_id,

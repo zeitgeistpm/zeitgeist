@@ -96,10 +96,7 @@ fn it_allows_sudo_to_destroy_markets() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Advised);
 
         // destroy the market
-        assert_ok!(PredictionMarkets::admin_destroy_market(
-            Origin::signed(SUDO),
-            0
-        ));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
 
         assert_eq!(PredictionMarkets::markets(0).is_none(), true);
     });
@@ -154,11 +151,7 @@ fn it_allows_to_buy_a_complete_set() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
         // Allows someone to generate a complete set
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(BOB),
-            0,
-            100,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,));
 
         let market = PredictionMarkets::markets(0).unwrap();
 
@@ -185,11 +178,7 @@ fn it_allows_to_deploy_a_pool() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(BOB),
-            0,
-            100 * BASE,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE,));
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
@@ -212,17 +201,9 @@ fn it_allows_to_sell_a_complete_set() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(BOB),
-            0,
-            100,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,));
 
-        assert_ok!(PredictionMarkets::sell_complete_set(
-            Origin::signed(BOB),
-            0,
-            100,
-        ));
+        assert_ok!(PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 100,));
 
         let market = PredictionMarkets::markets(0).unwrap();
 
@@ -340,11 +321,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(CHARLIE),
-            0,
-            100,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100,));
 
         run_to_block(100);
 
@@ -391,11 +368,7 @@ fn it_resolves_a_disputed_market() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(CHARLIE),
-            0,
-            100,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100,));
 
         run_to_block(100);
 
@@ -498,11 +471,7 @@ fn it_allows_to_redeem_shares() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(CHARLIE),
-            0,
-            100,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100,));
 
         run_to_block(100);
 
@@ -537,11 +506,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         ));
 
         // is ok
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(BOB),
-            0,
-            100,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,));
 
         // set the timestamp
         Timestamp::set_timestamp(123_456_789);
@@ -571,11 +536,7 @@ fn full_scalar_market_lifecycle() {
             (10, 30),
         ));
 
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(CHARLIE),
-            0,
-            100 * BASE,
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
 
         // check balances
         let assets = PredictionMarkets::outcome_assets(0, &PredictionMarkets::markets(0).unwrap());
@@ -589,11 +550,7 @@ fn full_scalar_market_lifecycle() {
         run_to_block(100);
 
         // report
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Scalar(100)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
 
         let market_after_report = PredictionMarkets::markets(0).unwrap();
         assert_eq!(market_after_report.report.is_some(), true);
@@ -603,11 +560,7 @@ fn full_scalar_market_lifecycle() {
         assert_eq!(report.outcome, OutcomeReport::Scalar(100));
 
         // dispute
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(DAVE),
-            0,
-            OutcomeReport::Scalar(20)
-        ));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
         let disputes = PredictionMarkets::disputes(0);
         assert_eq!(disputes.len(), 1);
 
@@ -659,21 +612,9 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
             3,
         ));
         deploy_swap_pool(PredictionMarkets::markets(0).unwrap(), 0).unwrap();
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(ALICE),
-            0,
-            1 * BASE
-        ));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(BOB),
-            0,
-            2 * BASE
-        ));
-        assert_ok!(PredictionMarkets::buy_complete_set(
-            Origin::signed(CHARLIE),
-            0,
-            3 * BASE
-        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 1 * BASE));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * BASE));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
 
         run_to_block(100);
         assert_ok!(PredictionMarkets::report(
@@ -683,22 +624,13 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         ));
 
         run_to_block(150);
-        assert_ok!(Swaps::pool_exit(
-            Origin::signed(BOB),
-            0,
-            BASE * 100,
-            vec![0, 0]
-        ));
+        assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, BASE * 100, vec![0, 0]));
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
     })
 }
 
 fn deploy_swap_pool(market: Market<u128, u64>, market_id: u128) -> DispatchResult {
-    assert_ok!(PredictionMarkets::buy_complete_set(
-        Origin::signed(FRED),
-        0,
-        100 * BASE,
-    ));
+    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE,));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
         <Runtime as crate::Config>::PalletId::get().into_account(),

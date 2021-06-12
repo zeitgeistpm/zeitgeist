@@ -13,11 +13,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         System::set_block_number(1);
         create_reported_permissionless_categorical_market::<Runtime>();
 
-        assert_ok!(Court::on_dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
+        assert_ok!(Court::on_dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(0)));
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -57,23 +53,11 @@ fn it_resolves_a_disputed_market() {
         System::set_block_number(1);
         create_reported_permissionless_categorical_market::<Runtime>();
 
-        assert_ok!(Court::on_dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(Court::on_dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)));
 
-        assert_ok!(Court::on_dispute(
-            Origin::signed(DAVE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
+        assert_ok!(Court::on_dispute(Origin::signed(DAVE), 0, OutcomeReport::Categorical(0)));
 
-        assert_ok!(Court::on_dispute(
-            Origin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(Court::on_dispute(Origin::signed(EVE), 0, OutcomeReport::Categorical(1)));
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -93,10 +77,7 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        assert_noop!(
-            Court::market_ids_per_dispute_block(&0),
-            Error::<Runtime>::BlockDoesNotExist
-        );
+        assert_noop!(Court::market_ids_per_dispute_block(&0), Error::<Runtime>::BlockDoesNotExist);
 
         let market_ids_2 = Court::market_ids_per_dispute_block(&1).unwrap();
         assert_eq!(market_ids_2.len(), 1);
@@ -121,11 +102,7 @@ fn create_reported_permissionless_categorical_market<T: crate::Config>() {
             market_type: MarketType::Categorical(2),
             metadata: Default::default(),
             oracle: ALICE,
-            report: Some(Report {
-                at: 1,
-                by: ALICE,
-                outcome: OutcomeReport::Categorical(0),
-            }),
+            report: Some(Report { at: 1, by: ALICE, outcome: OutcomeReport::Categorical(0) }),
             resolved_outcome: None,
             status: MarketStatus::Reported,
         },

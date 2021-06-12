@@ -51,16 +51,10 @@ fn create_order<T: Config>(
         .dispatch_bypass_filter(RawOrigin::Signed(acc.clone()).into())?;
 
     if order_type == OrderSide::Bid {
-        let hash = Pallet::<T>::bids(asset)
-            .last()
-            .copied()
-            .ok_or("No bids found")?;
+        let hash = Pallet::<T>::bids(asset).last().copied().ok_or("No bids found")?;
         Ok((acc, asset, hash))
     } else {
-        let hash = Pallet::<T>::asks(asset)
-            .last()
-            .copied()
-            .ok_or("No asks found")?;
+        let hash = Pallet::<T>::asks(asset).last().copied().ok_or("No asks found")?;
         Ok((acc, asset, hash))
     }
 }

@@ -656,8 +656,5 @@ cumulus_pallet_parachain_system::register_validate_block!(
 
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
-    NativeVersion {
-        runtime_version: VERSION,
-        can_author_with: Default::default(),
-    }
+    NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }

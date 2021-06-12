@@ -8,8 +8,7 @@ use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get};
 use frame_system::ensure_signed;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::Zero;
-use sp_runtime::{DispatchError, SaturatedConversion};
+use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
 use zeitgeist_primitives::types::{Asset, Pool, PoolId};
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
@@ -37,21 +36,15 @@ where
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
-    let exit_fee = bmul(
-        pool_amount.saturated_into(),
-        T::ExitFee::get().saturated_into(),
-    )?
-    .saturated_into();
+    let exit_fee =
+        bmul(pool_amount.saturated_into(), T::ExitFee::get().saturated_into())?.saturated_into();
     Pallet::<T>::burn_pool_shares(p.pool_id, &who, pool_amount.check_sub_rslt(&exit_fee)?)?;
     // todo do something with exit fee
     T::Shares::transfer(p.asset, &pool_account, &who, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         bound: p.bound,
-        cpep: CommonPoolEventParams {
-            pool_id: p.pool_id,
-            who,
-        },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who },
         transferred: asset_amount,
     });
 
@@ -86,10 +79,7 @@ where
 
     (p.event)(PoolAssetEvent {
         bound: p.bound,
-        cpep: CommonPoolEventParams {
-            pool_id: p.pool_id,
-            who,
-        },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who },
         transferred: asset_amount,
     });
 
@@ -107,23 +97,14 @@ where
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let total_issuance = T::Shares::total_issuance(pool_shares_id);
 
-    let ratio: BalanceOf<T> = bdiv(
-        p.pool_amount.saturated_into(),
-        total_issuance.saturated_into(),
-    )?
-    .saturated_into();
+    let ratio: BalanceOf<T> =
+        bdiv(p.pool_amount.saturated_into(), total_issuance.saturated_into())?.saturated_into();
     Pallet::<T>::check_provided_values_len_must_equal_assets_len(&p.pool.assets, &p.asset_bounds)?;
     ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
 
     let mut transferred = Vec::with_capacity(p.asset_bounds.len());
 
-    for (asset, amount_bound) in p
-        .pool
-        .assets
-        .iter()
-        .cloned()
-        .zip(p.asset_bounds.iter().cloned())
-    {
+    for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
         let balance = T::Shares::free_balance(asset, p.pool_account_id);
         let amount = bmul(ratio.saturated_into(), balance.saturated_into())?.saturated_into();
         transferred.push(amount);
@@ -135,10 +116,7 @@ where
 
     (p.event)(PoolAssetsEvent {
         bounds: p.asset_bounds,
-        cpep: CommonPoolEventParams {
-            pool_id: p.pool_id,
-            who: p.who,
-        },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred,
     });
 
@@ -168,18 +146,12 @@ where
     T::Shares::transfer(p.asset_out, p.pool_account_id, &who, asset_amount_out)?;
 
     let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(
-        spot_price_after >= spot_price_before,
-        Error::<T>::MathApproximation
-    );
+    ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
     ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
     ensure!(
         spot_price_before
-            <= bdiv(
-                asset_amount_in.saturated_into(),
-                asset_amount_out.saturated_into()
-            )?
-            .saturated_into(),
+            <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
+                .saturated_into(),
         Error::<T>::MathApproximation
     );
 
@@ -187,10 +159,7 @@ where
         asset_amount_in,
         asset_amount_out,
         asset_bound: p.asset_bound,
-        cpep: CommonPoolEventParams {
-            pool_id: p.pool_id,
-            who,
-        },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who },
         max_price: p.max_price,
     });
 
