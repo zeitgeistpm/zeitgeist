@@ -17,15 +17,15 @@ pub const SMOOTHING: FixedU32<U24> = <FixedU32<U24>>::from_bits(0x0200_0000);
 // --- Default configuration for FeeSigmoidConfig struct ---
 /// Initial fee f
 /// 0.03
-pub const INITIAL_FEE: FixedU32<U32> = <FixedU32<U32>>::from_bits(0x07AE_1478);
+pub const INITIAL_FEE: FixedU32<U32> = <FixedU32<U32>>::from_bits(0x07AE_147B);
 
 /// Minimal revenue w (proportion of initial fee f)
 /// f * β = 0.03 * 0.07 = 0.021
-pub const MINIMAL_REVENUE: FixedU32<U32> = <FixedU32<U32>>::from_bits(0x0560_4188);
+pub const MINIMAL_REVENUE: FixedU32<U32> = <FixedU32<U32>>::from_bits(0x0560_4189);
 
 /// m value
 /// 0.8
-pub const M: FixedU32<U24> = <FixedU32<U24>>::from_bits(0xCCCC_CD00);
+pub const M: FixedU32<U24> = <FixedU32<U24>>::from_bits(0x00CC_CCCD);
 
 /// p value
 /// 8.0
