@@ -6,8 +6,6 @@ path = './src/main.rs'
 substrate-build-script-utils = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
 
 [dependencies]
-frame-benchmarking = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
-frame-benchmarking-cli = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
 hex-literal = { version = "0.2" }
 jsonrpc-core = { version = "15.0" }
 pallet-transaction-payment-rpc = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
@@ -32,6 +30,11 @@ sp-timestamp = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytec
 sp-transaction-pool = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
 structopt = { version = "0.3" }
 substrate-frame-rpc-system = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
+
+# Benchmark
+
+frame-benchmarking = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate", optional = true }
+frame-benchmarking-cli = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate", optional = true }
 
 # Cumulus
 
@@ -113,7 +116,12 @@ parachain = [
     "polkadot-service",
     "polkadot-test-service",
 ]
-runtime-benchmarks = ["polkadot-service?/runtime-benchmarks", "zeitgeist-runtime/runtime-benchmarks"]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-benchmarking-cli",
+    "polkadot-service?/runtime-benchmarks",
+    "zeitgeist-runtime/runtime-benchmarks"
+]
 
 [package]
 authors = ['Zeitgeist PM <contact@zeitgeist.pm>']

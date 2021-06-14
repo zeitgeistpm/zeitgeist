@@ -1,7 +1,7 @@
 [[bin]]
 doc = false
-name = "full_workflow"
-path = "full_workflow.rs"
+name = "pm_full_workflow"
+path = "pm_full_workflow.rs"
 test = false
 
 [dependencies]
