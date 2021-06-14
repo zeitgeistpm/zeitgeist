@@ -1,4 +1,5 @@
 #![cfg(test)]
+
 use crate as court;
 use frame_support::{construct_runtime, parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;

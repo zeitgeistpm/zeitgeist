@@ -1,7 +1,6 @@
 use crate::cli::{Cli, Subcommand};
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
-use zeitgeist_runtime::Block;
 #[cfg(feature = "parachain")]
 use {
     parity_scale_codec::Encode, sp_core::hexdisplay::HexDisplay,
@@ -12,12 +11,14 @@ pub fn run() -> sc_cli::Result<()> {
     let cli = <Cli as SubstrateCli>::from_args();
 
     match &cli.subcommand {
-        #[cfg(not(feature = "parachain"))]
+        #[cfg(feature = "runtime-benchmark")]
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
                 let runner = cli.create_runner(cmd)?;
 
-                runner.sync_run(|config| cmd.run::<Block, crate::service::Executor>(config))
+                runner.sync_run(|config| {
+                    cmd.run::<zeitgeist_runtime::Block, crate::service::Executor>(config)
+                })
             } else {
                 Err(
           "Benchmarking wasn't enabled when building the node. You can enable it with `--features \
@@ -59,7 +60,7 @@ pub fn run() -> sc_cli::Result<()> {
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
 
-            let block: Block =
+            let block: zeitgeist_runtime::Block =
                 cumulus_client_service::genesis::generate_genesis_block(&crate::cli::load_spec(
                     &params.chain.clone().unwrap_or_default(),
                     params.parachain_id.into(),
@@ -208,7 +209,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             polkadot_primitives::v0::AccountId,
         >::into_account(&parachain_id);
 
-        let block: Block =
+        let block: zeitgeist_runtime::Block =
             cumulus_client_service::genesis::generate_genesis_block(&parachain_config.chain_spec)
                 .map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
