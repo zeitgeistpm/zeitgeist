@@ -10,6 +10,10 @@
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
       0
+    ],
+    [
+      "/dns/telemetry.zeitgeist.pm/tcp/443/x-parity-wss/%2Fsubmit%2F",
+      0
     ]
   ],
   "protocolId": "battery_park",

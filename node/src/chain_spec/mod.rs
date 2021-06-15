@@ -48,7 +48,8 @@ const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance>
         },
     }
 };
-const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
 
 #[cfg(feature = "parachain")]
 pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
