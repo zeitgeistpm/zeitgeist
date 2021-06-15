@@ -1,0 +1,41 @@
+name: Benchmarking
+
+on:
+  push:
+    branches: [ stage-benchmarking ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmarking:
+    name: Benchmarking
+    runs-on: ubuntu-latest # TODO: replace by hosted runner
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          profile: minimal
+          toolchain: nightly-2021-03-10
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Test Runtime Benchmarks
+        run: cargo test --features runtime-benchmarks
+
+      # TODO: Add Benchmark action
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Add weights
+          commit_options: '--no-verify'
+          file_pattern: zrml/*/src/weights*.rs
+          commit_user_name: Substrate Benchmark Bot # defaults to "GitHub Actions"
+          commit_user_email: substrate-benchmark-bot@no-reply.zeitgeist.pm # defaults to "actions@github.com"
+          commit_author: BenchmarkBot <actions@github.com> # defaults to author of the commit that triggered the run
+          status_options: '--untracked-files=no'
