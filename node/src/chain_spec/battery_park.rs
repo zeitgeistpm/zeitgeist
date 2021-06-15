@@ -1,4 +1,7 @@
-use crate::chain_spec::{generic_genesis, AdditionalChainSpec, ChainSpec, TELEMETRY_URL};
+use crate::chain_spec::{
+    generic_genesis, AdditionalChainSpec, ChainSpec, POLKADOT_TELEMETRY_URL,
+    ZEITGEIST_TELEMETRY_URL,
+};
 use hex_literal::hex;
 use jsonrpc_core::serde_json::Map;
 use sc_service::{config::TelemetryEndpoints, ChainType};
@@ -52,7 +55,11 @@ pub fn battery_park_staging_config(
             )
         },
         vec![],
-        TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
+        TelemetryEndpoints::new(vec![
+            (POLKADOT_TELEMETRY_URL.into(), 0),
+            (ZEITGEIST_TELEMETRY_URL.into(), 0),
+        ])
+        .ok(),
         Some("battery_park_staging"),
         Some(properties),
         #[cfg(feature = "parachain")]
