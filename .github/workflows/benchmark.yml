@@ -12,6 +12,9 @@ jobs:
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest # TODO: replace by hosted runner
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -36,9 +39,6 @@ jobs:
         run: cargo build --features runtime-benchmarks
 
       - name: Run benchmarks
-        defaults:
-          run:
-            shell: bash
         run: |
           # define benchmark commands (TODO: Replace step count before PR merge)
           ZG_BENCHMARK_COMMANDS=(
