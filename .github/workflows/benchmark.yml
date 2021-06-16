@@ -1,4 +1,4 @@
-name: Benchmark
+name: Benchmark weights
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
 
 jobs:
   benchmark:
-    name: Benchmark
+    name: Benchmark weights
     runs-on: ubuntu-latest # TODO: replace by hosted runner
     defaults:
       run:
@@ -50,7 +50,7 @@ jobs:
           check_if_new_commits() {
             git fetch
 
-            if [ $? -d 0 ]; then
+            if [ $? -ne 0 ]; then
               echo "ERROR: git fetch failed. Aborting benchmarks."
               exit 1
             fi
