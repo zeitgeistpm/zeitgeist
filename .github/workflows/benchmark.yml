@@ -1,19 +1,31 @@
-name: Benchmarking
+name: Benchmark
 
 on:
   push:
-    branches: [ stage-benchmarking ]
+    # TODO: Change to stage-benchmark after completion of this workflow
+    branches: [ sea212-add-benchmark-workflow ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  benchmarking:
-    name: Benchmarking
+  benchmark:
+    name: Benchmark
     runs-on: ubuntu-latest # TODO: replace by hosted runner
+    strategy:
+      matrix:
+        # TODO: Adjust step count after testing
+        benchmark_commands: [
+          "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic * --steps 0 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs",
+          "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic * --steps 10 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs",
+          "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic * --steps 9 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+        ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Fetch current commit hash
+        run: zg_cmt=`git rev-parse HEAD`
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -22,15 +34,28 @@ jobs:
           profile: minimal
           toolchain: nightly-2021-03-10
 
-      - name: Cache Dependencies
+      - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Test Runtime Benchmarks
+      - name: Test runtime benchmarks
         run: cargo test --features runtime-benchmarks
 
-      # TODO: Add Benchmark action
+      - name: Build Zeitgeist chain with runtime-benchmarks feature
+        run: cargo build --features runtime-benchmarks
 
-      - uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Run benchmarks
+        run: |
+          # Fetch latest commit hash and store in zg_lcmt
+          zg_lcmt=`git rev-parse HEAD`
+          # If not equal: Stop
+          if [ "$zg_cmt" != "$zg_lcmt" ]; then echo "ERROR: Branch contains new commits."; exit 1; fi
+          # Execute benchmark
+          ${{ matrix.benchmark_commands }}
+          zg_lcmt=`git rev-parse HEAD`
+          if [ "$zg_cmt" != "$zg_lcmt" ]; then echo "ERROR: Branch contains new commits."; exit 1; fi
+
+      - name: Commit updated weights
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Add weights
           commit_options: '--no-verify'
