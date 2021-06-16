@@ -19,9 +19,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Fetch current commit hash
-        run: zg_cmt=`git log -n 1 --format="%H"`
-
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -46,6 +43,10 @@ jobs:
             "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic * --steps 10 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
             "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic * --steps 9 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
           )
+
+          echo "Fetching commit hash of HEAD"
+          zg_cmt=`git log -n 1 --format="%H"`
+          echo "Commit hash: ${zg_cmt}"
 
           check_if_new_commits() {
             echo "Fetching latest repository state"
