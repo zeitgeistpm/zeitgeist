@@ -12,14 +12,6 @@ jobs:
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest # TODO: replace by hosted runner
-    strategy:
-      matrix:
-        # TODO: Adjust step count after testing
-        benchmark_commands: [
-          "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic * --steps 0 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs",
-          "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic * --steps 10 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs",
-          "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic * --steps 9 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
-        ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -37,30 +29,55 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Test runtime benchmarks
+      - name: Test runtime-benchmarks
         run: cargo test --features runtime-benchmarks
 
       - name: Build Zeitgeist chain with runtime-benchmarks feature
         run: cargo build --features runtime-benchmarks
 
       - name: Run benchmarks
+        defaults:
+          run:
+            shell: bash
         run: |
-          # Fetch latest commit hash and store in zg_lcmt
-          zg_lcmt=`git rev-parse HEAD`
-          # If not equal: Stop
-          if [ "$zg_cmt" != "$zg_lcmt" ]; then echo "ERROR: Branch contains new commits."; exit 1; fi
-          # Execute benchmark
-          ${{ matrix.benchmark_commands }}
-          zg_lcmt=`git rev-parse HEAD`
-          if [ "$zg_cmt" != "$zg_lcmt" ]; then echo "ERROR: Branch contains new commits."; exit 1; fi
+          # define benchmark commands (TODO: Replace step count before PR merge)
+          ZG_BENCHMARK_COMMANDS=(
+            "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic * --steps 0 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic * --steps 10 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic * --steps 9 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+          )
+
+          check_if_new_commits() {
+            git fetch
+
+            if [ $? -d 0 ]; then
+              echo "ERROR: git fetch failed. Aborting benchmarks."
+              exit 1
+            fi
+            
+            if [ "$zg_cmt" != "$(git rev-parse HEAD)" ]; then
+              echo "ERROR: Branch contains new commits. Aborting benchmarks."
+              exit 1
+            fi
+          }
+
+          check_if_new_commits
+
+          # Execute benchmark. Note: It's not possible to use a matrix here in
+          # combination with GitHub AE hosted runner (one instance per job)
+          for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
+            # Execute benchmark
+            echo "$zg_bench_cmd" | sh
+            check_if_new_commits
+          done
 
       - name: Commit updated weights
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: Add weights
           commit_options: '--no-verify'
-          file_pattern: zrml/*/src/weights*.rs
-          commit_user_name: Substrate Benchmark Bot # defaults to "GitHub Actions"
-          commit_user_email: substrate-benchmark-bot@no-reply.zeitgeist.pm # defaults to "actions@github.com"
-          commit_author: BenchmarkBot <actions@github.com> # defaults to author of the commit that triggered the run
+          file_pattern: zrml/*/src/weights.rs
+          commit_user_name: Zeitgeist Substrate Benchmark Bot
+          commit_user_email: substrate-benchmark-bot@no-reply.zeitgeist.pm
+          commit_author: ZeitgeistBenchmarkBot <actions@github.com>
           status_options: '--untracked-files=no'
