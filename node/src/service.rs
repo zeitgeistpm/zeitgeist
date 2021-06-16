@@ -10,7 +10,7 @@ pub use service_standalone::{new_full, new_light, new_partial};
 
 use sc_executor::native_executor_instance;
 
-#[cfg(feature = "runtime-benchmark")]
+#[cfg(feature = "runtime-benchmarks")]
 native_executor_instance!(
   pub Executor,
   zeitgeist_runtime::api::dispatch,
@@ -18,7 +18,7 @@ native_executor_instance!(
   frame_benchmarking::benchmarking::HostFunctions,
 );
 
-#[cfg(not(feature = "runtime-benchmark"))]
+#[cfg(not(feature = "runtime-benchmarks"))]
 native_executor_instance!(
   pub Executor,
   zeitgeist_runtime::api::dispatch,
