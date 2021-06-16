@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Fetch current commit hash
-        run: zg_cmt=`git rev-parse HEAD`
+        run: zg_cmt=`git log -n 1 --format="%H"`
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -48,14 +48,19 @@ jobs:
           )
 
           check_if_new_commits() {
+            echo "Fetching latest repository state"
             git fetch
 
             if [ $? -ne 0 ]; then
               echo "ERROR: git fetch failed. Aborting benchmarks."
-              exit 30
+              exit $?
             fi
             
-            if [ "$zg_cmt" != "$(git rev-parse HEAD)" ]; then
+            echo "Determining if the branch contains new updates."
+            local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
+
+            if [ "$zg_cmt" != "$zg_cur_cmt" ]; then
+              echo "${zg_cmt} != ${zg_cur_cmt}"
               echo "ERROR: Branch contains new commits. Aborting benchmarks."
               exit 31
             fi
@@ -67,6 +72,7 @@ jobs:
           # combination with GitHub AE hosted runner (one instance per job)
           for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
             # Execute benchmark
+            echo "Executing: ${zg_bench_cmd}"
             echo "$zg_bench_cmd" | sh
             check_if_new_commits
           done
