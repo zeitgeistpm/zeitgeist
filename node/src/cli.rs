@@ -18,7 +18,7 @@ type RunCmd = sc_cli::RunCmd;
 #[derive(Debug, structopt::StructOpt)]
 pub enum Subcommand {
     /// The custom benchmark subcommmand benchmarking runtime pallets.
-    #[cfg(feature = "runtime-benchmark")]
+    #[cfg(feature = "runtime-benchmarks")]
     #[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 

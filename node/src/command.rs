@@ -11,7 +11,7 @@ pub fn run() -> sc_cli::Result<()> {
     let cli = <Cli as SubstrateCli>::from_args();
 
     match &cli.subcommand {
-        #[cfg(feature = "runtime-benchmark")]
+        #[cfg(feature = "runtime-benchmarks")]
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
                 let runner = cli.create_runner(cmd)?;
