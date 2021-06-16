@@ -39,9 +39,9 @@ jobs:
         run: |
           # define benchmark commands (TODO: Replace step count before PR merge)
           ZG_BENCHMARK_COMMANDS=(
-            "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic * --steps 0 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
-            "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic * --steps 10 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
-            "./target/release/zeitgeist benchmark --chain battery_park --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic * --steps 9 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
           )
 
           echo "Fetching commit hash of HEAD"
