@@ -30,10 +30,10 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - name: Test runtime-benchmarks
-        run: cargo test --features runtime-benchmarks
+        run: cargo test --release --features runtime-benchmarks
 
       - name: Build Zeitgeist chain with runtime-benchmarks feature
-        run: cargo build --features runtime-benchmarks
+        run: cargo build --release --features runtime-benchmarks
 
       - name: Run benchmarks
         run: |
