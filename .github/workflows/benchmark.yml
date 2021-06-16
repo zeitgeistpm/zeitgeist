@@ -52,12 +52,12 @@ jobs:
 
             if [ $? -ne 0 ]; then
               echo "ERROR: git fetch failed. Aborting benchmarks."
-              exit 1
+              exit 30
             fi
             
             if [ "$zg_cmt" != "$(git rev-parse HEAD)" ]; then
               echo "ERROR: Branch contains new commits. Aborting benchmarks."
-              exit 1
+              exit 31
             fi
           }
 
