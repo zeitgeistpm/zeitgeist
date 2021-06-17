@@ -39,9 +39,9 @@ jobs:
         run: |
           # define benchmark commands (TODO: Replace step count before PR merge)
           ZG_BENCHMARK_COMMANDS=(
-            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
-            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
-            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 10 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
           )
 
           echo "Fetching commit hash of HEAD"
@@ -81,10 +81,8 @@ jobs:
       - name: Commit updated weights
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: Add weights
+          commit_message: Update weights
           commit_options: '--no-verify'
           file_pattern: zrml/*/src/weights.rs
-          commit_user_name: Zeitgeist Substrate Benchmark Bot
-          commit_user_email: substrate-benchmark-bot@no-reply.zeitgeist.pm
-          commit_author: ZeitgeistBenchmarkBot <actions@github.com>
+          commit_author: zeitgeist-benchmark-bot <zeitgeist-benchmark-bot@no-reply.zeitgeist.pm>
           status_options: '--untracked-files=no'
