@@ -2,8 +2,7 @@ name: Benchmark weights
 
 on:
   push:
-    # TODO: Change to stage-benchmark after completion of this workflow
-    branches: [ sea212-add-benchmark-workflow ]
+    branches: [ stage-benchmark ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -11,14 +10,13 @@ env:
 jobs:
   benchmark:
     name: Benchmark weights
-    runs-on: ubuntu-latest # TODO: replace by hosted runner
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -37,7 +35,7 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          # define benchmark commands (TODO: Replace step count before PR merge)
+          # define benchmark commands
           ZG_BENCHMARK_COMMANDS=(
             "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
             "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
