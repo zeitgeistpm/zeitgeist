@@ -180,7 +180,7 @@ create_zeitgeist_runtime!(
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
-    Aura: pallet_aura::{Config<T>, Pallet},
+    Aura: pallet_aura::{Config<T>, Pallet, Storage},
     Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage},
 );
 
