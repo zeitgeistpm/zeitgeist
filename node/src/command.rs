@@ -20,11 +20,9 @@ pub fn run() -> sc_cli::Result<()> {
                     cmd.run::<zeitgeist_runtime::Block, crate::service::Executor>(config)
                 })
             } else {
-                Err(
-          "Benchmarking wasn't enabled when building the node. You can enable it with `--features \
-           runtime-benchmarks`."
-            .into(),
-        )
+                Err("Benchmarking wasn't enabled when building the node. You can enable it with \
+                     `--features runtime-benchmarks`."
+                    .into())
             }
         }
         Some(Subcommand::BuildSpec(cmd)) => {
@@ -34,23 +32,16 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::CheckBlock(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = crate::service::new_partial(&config)?;
+                let PartialComponents { client, task_manager, import_queue, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
         Some(Subcommand::ExportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = crate::service::new_partial(&config)?;
+                let PartialComponents { client, task_manager, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
@@ -105,23 +96,16 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::ExportState(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    ..
-                } = crate::service::new_partial(&config)?;
+                let PartialComponents { client, task_manager, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
         Some(Subcommand::ImportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    import_queue,
-                    ..
-                } = crate::service::new_partial(&config)?;
+                let PartialComponents { client, task_manager, import_queue, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -157,12 +141,8 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents {
-                    client,
-                    task_manager,
-                    backend,
-                    ..
-                } = crate::service::new_partial(&config)?;
+                let PartialComponents { client, task_manager, backend, .. } =
+                    crate::service::new_partial(&config)?;
                 Ok((cmd.run(client, backend), task_manager))
             })
         }
@@ -193,16 +173,11 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 
         let polkadot_cli = crate::cli::RelayChainCli::new(
             &parachain_config,
-            [crate::cli::RelayChainCli::executable_name()]
-                .iter()
-                .chain(cli.relaychain_args.iter()),
+            [crate::cli::RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
         );
 
         let parachain_id = cumulus_primitives_core::ParaId::from(
-            cli.run
-                .parachain_id
-                .or(parachain_id_extension)
-                .unwrap_or(crate::DEFAULT_PARACHAIN_ID),
+            cli.run.parachain_id.or(parachain_id_extension).unwrap_or(crate::DEFAULT_PARACHAIN_ID),
         );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<

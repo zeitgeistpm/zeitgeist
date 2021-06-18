@@ -140,10 +140,7 @@ mod pallet {
         /// A market has been disputed [market_id, new_outcome]
         MarketDisputed(<T as Config>::MarketId, OutcomeReport),
         /// A complete set of shares has been sold [market_id, seller]
-        SoldCompleteSet(
-            <T as Config>::MarketId,
-            <T as frame_system::Config>::AccountId,
-        ),
+        SoldCompleteSet(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
     }
 
     #[pallet::hooks]
@@ -305,11 +302,7 @@ mod pallet {
             if does_not_exist {
                 <Disputes<T>>::insert(
                     market_id,
-                    vec![MarketDispute {
-                        at: current_block,
-                        by: sender,
-                        outcome: outcome.clone(),
-                    }],
+                    vec![MarketDispute { at: current_block, by: sender, outcome: outcome.clone() }],
                 );
             }
 

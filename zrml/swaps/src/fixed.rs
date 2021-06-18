@@ -11,11 +11,7 @@ pub fn bfloor(a: u128) -> Result<u128, DispatchError> {
 }
 
 pub fn bsub_sign(a: u128, b: u128) -> Result<(u128, bool), DispatchError> {
-    Ok(if a >= b {
-        (a.check_sub_rslt(&b)?, false)
-    } else {
-        (b.check_sub_rslt(&a)?, true)
-    })
+    Ok(if a >= b { (a.check_sub_rslt(&b)?, false) } else { (b.check_sub_rslt(&a)?, true) })
 }
 
 pub fn bmul(a: u128, b: u128) -> Result<u128, DispatchError> {

@@ -50,7 +50,4 @@ pub type XcmOriginToTransactDispatchOrigin = (
     ParentAsSuperuser<Origin>,
     SignedAccountId32AsNative<RococoNetwork, Origin>,
 );
-pub type XcmRouter = (
-    cumulus_primitives_utility::ParentAsUmp<ParachainSystem>,
-    XcmpQueue,
-);
+pub type XcmRouter = (cumulus_primitives_utility::ParentAsUmp<ParachainSystem>, XcmpQueue);
