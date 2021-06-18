@@ -21,13 +21,9 @@ pub async fn new_full(
     parachain_id: ParaId,
     polkadot_config: Configuration,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
-    do_new_full(
-        collator_key,
-        parachain_config,
-        parachain_id,
-        polkadot_config,
-        |_| Default::default(),
-    )
+    do_new_full(collator_key, parachain_config, parachain_id, polkadot_config, |_| {
+        Default::default()
+    })
     .await
 }
 

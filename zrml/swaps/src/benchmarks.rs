@@ -147,8 +147,4 @@ benchmarks! {
             assets[T::MaxAssets::get() as usize - 1], asset_amount_out, max_price)
 }
 
-impl_benchmark_test_suite!(
-    Swaps,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);
+impl_benchmark_test_suite!(Swaps, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
