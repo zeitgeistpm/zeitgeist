@@ -6,25 +6,20 @@ use cumulus_client_service::{
 use cumulus_primitives_core::ParaId;
 use nimbus_consensus::{build_nimbus_consensus, BuildNimbusConsensusParams};
 use nimbus_primitives::NimbusId;
-use polkadot_primitives::v0::CollatorPair;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
-use sp_runtime::traits::BlakeTwo256;
-use sp_trie::PrefixedMemoryDB;
 use std::sync::Arc;
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
+type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
+
 /// Start a parachain node.
 pub async fn new_full(
-    collator_key: CollatorPair,
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
-    do_new_full(collator_key, parachain_config, parachain_id, polkadot_config, |_| {
-        Default::default()
-    })
-    .await
+    do_new_full(parachain_config, parachain_id, polkadot_config, |_| Default::default()).await
 }
 
 pub fn new_partial(
@@ -34,8 +29,8 @@ pub fn new_partial(
         TFullClient<Block, RuntimeApi, Executor>,
         TFullBackend<Block>,
         (),
-        sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-        sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
+        sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+        sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (Option<Telemetry>, Option<TelemetryWorkerHandle>),
     >,
     sc_service::Error,
@@ -100,9 +95,8 @@ pub fn new_partial(
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
-#[sc_tracing::logging::prefix_logs_with("Parachain")]
+#[sc_tracing::logging::prefix_logs_with("🌔 Zeitgeist Parachain")]
 async fn do_new_full<RB>(
-    _collator_key: CollatorPair,
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,

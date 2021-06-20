@@ -1,17 +1,16 @@
 mod additional_chain_spec;
 mod battery_park;
 mod dev;
-mod local_testnet;
 
 pub use additional_chain_spec::AdditionalChainSpec;
 pub use battery_park::battery_park_staging_config;
 pub use dev::dev_config;
-pub use local_testnet::local_testnet_config;
+use jsonrpc_core::serde_json::{Map, Value};
+use sc_telemetry::TelemetryEndpoints;
 use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::types::{AccountId, Balance, Signature};
 use zeitgeist_runtime::TokensConfig;
-
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::{Perbill, Percent},
@@ -48,6 +47,8 @@ const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance>
         },
     }
 };
+#[cfg(feature = "parachain")]
+const DEFAULT_STAKING_AMOUNT: u128 = 2_000 * zeitgeist_primitives::constants::BASE;
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
 
@@ -154,4 +155,23 @@ fn authority_keys_from_seed(
         get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
         get_from_seed::<sp_finality_grandpa::AuthorityId>(s),
     )
+}
+
+fn telemetry_endpoints() -> Option<TelemetryEndpoints> {
+    TelemetryEndpoints::new(vec![
+        (POLKADOT_TELEMETRY_URL.into(), 0),
+        (ZEITGEIST_TELEMETRY_URL.into(), 0),
+    ])
+    .ok()
+}
+
+fn token_properties() -> Map<String, Value> {
+    let mut properties = Map::new();
+    properties.insert("tokenSymbol".into(), "ZBP".into());
+    properties.insert("tokenDecimals".into(), 10.into());
+    properties
+}
+
+fn zeitgeist_wasm() -> Result<&'static [u8], String> {
+    zeitgeist_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }

@@ -4900,7 +4900,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.1"
-source = "git+https://github.com/PureStake/moonbeam?branch=master#1dd6d1b3cd8952cb35be3f3b421bb1a98a89d481"
+source = "git+https://github.com/PureStake/moonbeam?branch=master#52f24c89c79e2a1514e3b7c17dd4b20adcd25545"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5648,8 +5648,8 @@ dependencies = [
 
 [[package]]
 name = "parachain-staking"
-version = "1.0.1"
-source = "git+https://github.com/PureStake/moonbeam?branch=master#1dd6d1b3cd8952cb35be3f3b421bb1a98a89d481"
+version = "1.0.2"
+source = "git+https://github.com/PureStake/moonbeam?branch=master#52f24c89c79e2a1514e3b7c17dd4b20adcd25545"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -10885,7 +10885,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

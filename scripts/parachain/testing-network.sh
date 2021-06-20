@@ -13,7 +13,7 @@ set -euxo pipefail
 # Variables
 
 PARACHAIN_ID="${PARACHAIN_ID:-9123}"
-PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-da2664e}"
+PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-957a23e}"
 PARACHAINS_NUM=$(($PARACHAINS_NUM - 1))
 VALIDATORS_NUM=$(($VALIDATORS_NUM - 1))
 
@@ -65,7 +65,9 @@ launch_validator() {
 sudo apt update
 sudo apt install -y curl docker.io
 sudo docker pull $PARACHAIN_IMAGE
-sudo docker pull $POLKADOT_IMAGE
+if [ $VALIDATORS_NUM -gt 0 ]; then
+    sudo docker pull $POLKADOT_IMAGE
+fi
 
 sudo docker container stop $(sudo docker container ls -aq --filter name=$PARACHAIN*) &> /dev/null || true
 sudo docker container stop $(sudo docker container ls -aq --filter name=$VALIDATOR*) &> /dev/null || true

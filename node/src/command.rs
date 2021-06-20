@@ -109,7 +109,6 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
-        #[cfg(not(feature = "parachain"))]
         Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         #[cfg(feature = "parachain")]
         Some(Subcommand::PurgeChain(cmd)) => {
@@ -162,11 +161,9 @@ fn extract_genesis_wasm(chain_spec: Box<dyn sc_service::ChainSpec>) -> sc_cli::R
 
 #[cfg(feature = "parachain")]
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
-    let runner = cli.create_runner(&*cli.run)?;
+    let runner = cli.create_runner(&cli.run.normalize())?;
 
     runner.run_node_until_exit(|parachain_config| async move {
-        let key = sp_core::Pair::generate().0;
-
         let parachain_id_extension =
             crate::chain_spec::Extensions::try_get(&*parachain_config.chain_spec)
                 .map(|e| e.parachain_id);
@@ -198,7 +195,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain Account: {}", parachain_account);
         log::info!("Parachain genesis state: {}", genesis_state);
 
-        crate::service::new_full(key, parachain_config, parachain_id, polkadot_config)
+        crate::service::new_full(parachain_config, parachain_id, polkadot_config)
             .await
             .map(|r| r.0)
             .map_err(Into::into)
