@@ -93,19 +93,19 @@ pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signatu
 
 parameter_types! {
   pub const BlockHashCount: BlockNumber = BLOCK_HASH_COUNT;
-  pub const BondDuration: u32 = 1;
+  pub const BondDuration: u32 = 7 * BLOCKS_PER_DAY as u32;
   pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
   pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
   pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
-  pub const MaxCollatorsPerNominator: u32 = 24;
+  pub const MaxCollatorsPerNominator: u32 = 16;
   pub const MaxLocks: u32 = 50;
-  pub const MaxNominatorsPerCollator: u32 = 8;
-  pub const MinBlocksPerRound: u32 = BLOCKS_PER_MINUTE as _;
-  pub const MinCollatorStake: u128 = 100 * BASE;
+  pub const MaxNominatorsPerCollator: u32 = 32;
+  pub const MinBlocksPerRound: u32 = BLOCKS_PER_DAY as _;
+  pub const MinCollatorStake: u128 = 64 * BASE;
   pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
-  pub const MinNominatorStake: u128 = 5 * BASE;
+  pub const MinNominatorStake: u128 = 1 * BASE;
   pub const MinSelectedCandidates: u32 = 1;
   pub const SS58Prefix: u8 = 42; // @TODO: Change back to 73 once https://github.com/paritytech/substrate/pull/8509 is merged
   pub const TransactionByteFee: Balance = 10 * MILLICENTS;
