@@ -56,7 +56,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_version: 16,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 2,
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
