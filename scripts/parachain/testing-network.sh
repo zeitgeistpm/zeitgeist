@@ -13,7 +13,7 @@ set -euxo pipefail
 # Variables
 
 PARACHAIN_ID="${PARACHAIN_ID:-9123}"
-PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-957a23e}"
+PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-3348ee5}"
 PARACHAINS_NUM=$(($PARACHAINS_NUM - 1))
 VALIDATORS_NUM=$(($VALIDATORS_NUM - 1))
 
