@@ -1,41 +1,45 @@
 #!/usr/bin/env bash
 
 # Creates a local relay chain for testing and development
+#
+# IMPORTANT: Takes about 1 minute until everything is properly set-up
 
 set -euxo pipefail
 
-CHAIN=local
+PARACHAIN_CHAIN=battery_park_staging
 PARACHAIN_ID=9123
+POLKADOT_BRANCH=release-v0.9.4
 POLKADOT_DIR="target/polkadot"
+RELAYCHAIN_CHAIN=rococo-local
 
 if ! [ -d $POLKADOT_DIR ]; then
   git clone https://github.com/paritytech/polkadot $POLKADOT_DIR
 fi
 
 cd $POLKADOT_DIR
-git checkout --track origin/release-v0.9.4 &> /dev/null || true
+git checkout --track origin/$POLKADOT_BRANCH &> /dev/null || true
 git fetch origin
-git rebase origin/release-v0.9.4
+git rebase origin/$POLKADOT_BRANCH
 
 # Build everything
 
 cargo build --release
-cargo build --features parachain --manifest-path ../../node/Cargo.toml --release
+cargo build --bin zeitgeist --features parachain --manifest-path ../../Cargo.toml --release
 
 # Set-up
 
-../release/zeitgeist export-genesis-state --chain $CHAIN --parachain-id $PARACHAIN_ID > para-genesis
-../release/zeitgeist export-genesis-wasm --chain $CHAIN > para-wasm
+../release/zeitgeist build-spec --chain $PARACHAIN_CHAIN --disable-default-bootnode > zeitgeist-plain.json
+../release/zeitgeist build-spec --chain zeitgeist-plain.json --disable-default-bootnode --raw > zeitgeist-raw.json
 
-./target/release/polkadot build-spec --chain rococo-local --disable-default-bootnode > rococo-local-plain.json
+../release/zeitgeist export-genesis-state --chain zeitgeist-raw.json --parachain-id $PARACHAIN_ID > para-genesis
+../release/zeitgeist export-genesis-wasm --chain zeitgeist-raw.json > para-wasm
+
+./target/release/polkadot build-spec --chain $RELAYCHAIN_CHAIN --disable-default-bootnode > relaychain-plain.json
 set +x
 echo "s/\"paras\": \[\]/\"paras\": [[$PARACHAIN_ID, { \"genesis_head\": \"$(cat para-genesis)\", \"validation_code\": \"$(cat para-wasm)\", \"parachain\": true }]]/" > sed.txt
 set -x
-sed -f sed.txt rococo-local-plain.json > rococo-local-plain-parachain.json
-./target/release/polkadot build-spec --chain rococo-local-plain-parachain.json --disable-default-bootnode --raw > rococo-local-raw.json
-
-../release/zeitgeist build-spec --chain $CHAIN --disable-default-bootnode > zeitgeist-plain.json
-../release/zeitgeist build-spec --chain zeitgeist-plain.json --disable-default-bootnode --raw > zeitgeist-raw.json
+sed -f sed.txt relaychain-plain.json > relaychain-plain-with-parachain.json
+./target/release/polkadot build-spec --chain relaychain-plain-with-parachain.json --disable-default-bootnode --raw > relaychain-raw.json
 
 # Polkadot validators
 
@@ -47,7 +51,7 @@ start_validator() {
 
   ./target/release/polkadot \
     $author \
-    --chain=./rococo-local-raw.json \
+    --chain=./relaychain-raw.json \
     --port=$port \
     --rpc-port=$rpc_port \
     --tmp \
@@ -58,46 +62,58 @@ start_validator() {
 # Feel free to comment, add or remove validators. Just remember that #Validators > #Collators 
 
 start_validator --alice 31000 8100 9100 &> /dev/null & node_pid=$!
-start_validator --bob 31001 8101 9101 &> /dev/null & node_pid=$!
-start_validator --charlie 31002 8102 9102 & node_pid=$!
+start_validator --bob 31001 8101 9101 & node_pid=$!
 
 # Zeitgeist collators
 
 start_collator() {
-  local author=$1
+  local collator_port=$1
+  local collator_rpc_port=$2
+  local collator_ws_port=$3
 
-  local collator_port=$2
-  local collator_rpc_port=$3
-  local collator_ws_port=$4
+  local relay_chain_port=$4
+  local relay_chain_rpc_port=$5
+  local relay_chain_ws_port=$6
 
-  local relay_chain_port=$5
-  local relay_chain_rpc_port=$6
-  local relay_chain_ws_port=$7
+  local seed=$7
+  local public_key=$8
 
-  ../release/zeitgeist \
-    $author \
+  rm -rf /tmp/zeitgeist-parachain-$collator_rpc_port
+  rm -rf /tmp/zeitgeist-relaychain-$relay_chain_rpc_port
+
+  LAUNCH_PARACHAIN_CMD="../release/zeitgeist \
+    --base-path=/tmp/zeitgeist-parachain-$collator_rpc_port \
     --chain=./zeitgeist-raw.json \
     --collator \
     --parachain-id=$PARACHAIN_ID \
     --port=$collator_port \
     --rpc-port $collator_rpc_port \
-    --tmp \
     --ws-port=$collator_ws_port \
-    -lauthor-filter=trace \
-    -lauthor-inherent=trace \
-    -lruntime=trace \
+    -linfo,author_filter=trace,author_inherent=trace,cumulus_collator=trace,executive=trace,filtering_consensus=trace,runtime=trace,staking=trace,txpool=trace \
     -- \
-    --chain=./rococo-local-raw.json \
+    --base-path=/tmp/zeitgeist-relaychain-$relay_chain_rpc_port \
+    --chain=./relaychain-raw.json \
     --execution=wasm \
     --port=$relay_chain_port \
     --rpc-port=$relay_chain_rpc_port \
-    --tmp \
-    --ws-port=$relay_chain_ws_port \
-    -lcumulus_collator=trace \
-    -lruntime=trace
+    --ws-port=$relay_chain_ws_port"
+
+    $LAUNCH_PARACHAIN_CMD & node_pid=$!
+
+    sleep 30
+    DATA='{ "id":1, "jsonrpc":"2.0", "method":"author_insertKey", "params":["nmbs", "'"$seed"'", "'"$public_key"'"] }'
+    curl -H 'Content-Type: application/json' --data "$DATA" localhost:$collator_rpc_port
+
+    sleep 2
+    kill $node_pid
+    sleep 2
+    $LAUNCH_PARACHAIN_CMD
 }
 
 # Feel free to comment, add or remove collators. Just remember that #Validators > #Collators
 
-start_collator --alice 30333 9933 9944 32000 8200 9200 &> /dev/null & node_pid=$!
-start_collator --bob 30334 9934 9945 32001 8201 9201
+# 5EeNXHgaiWZAwZuZdDndJYcRTKuGHkXM2bdGE6LqWCw1bHW7 - Battery park
+start_collator 30333 9933 9944 32000 8200 9200 "upper february enrich inch group ginger loan dutch network empty song source" "0xe6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"
+
+# Alice - Development
+#start_collator 30334 9934 9945 32001 8201 9201 "bottom drive obey lake curtain smoke basket hold race lonely fit walk//Alice" "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"

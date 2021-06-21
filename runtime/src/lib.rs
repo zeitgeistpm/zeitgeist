@@ -56,7 +56,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_version: 16,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 2,
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
@@ -144,17 +144,26 @@ macro_rules! create_zeitgeist_runtime {
                 NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
                 UncheckedExtrinsic = UncheckedExtrinsic,
             {
-                Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
-                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage},
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage},
-                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Call, Pallet, Storage},
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage},
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage},
-                System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-                Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
-                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
-                TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+                // System
+                System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
+                Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
+                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Call, Pallet, Storage} = 2,
+
+                // Money
+                Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
+                TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+
+                // Other Parity pallets
+                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
+
+                // Third-party
+                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
+                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
+
+                // Zeitgeist
+                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 40,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 41,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 42,
 
                 $($additional_pallets)*
             }
@@ -163,25 +172,28 @@ macro_rules! create_zeitgeist_runtime {
 }
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>} = 20,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 21,
+    // System
+    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>} = 50,
+    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 51,
 
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 51,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 53,
-    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 52,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 50,
+    // Consensus
+    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 60,
+    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 61,
+    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 62,
+    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 63,
 
+    // XCM
+    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 70,
+    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
+    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
+    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
     CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
-
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 100,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 101,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 102,
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 103,
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
-    Aura: pallet_aura::{Config<T>, Pallet, Storage},
-    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage},
+    // Consensus
+    Aura: pallet_aura::{Config<T>, Pallet, Storage} = 50,
+    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 51,
 );
 
 #[cfg(feature = "parachain")]

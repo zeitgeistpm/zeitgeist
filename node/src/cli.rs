@@ -11,7 +11,7 @@ const IMPL_NAME: &str = "Zeitgeist Node";
 const SUPPORT_URL: &str = "support.anonymous.an";
 
 #[cfg(feature = "parachain")]
-type RunCmd = cli_parachain::RunCmd;
+type RunCmd = cumulus_client_cli::RunCmd;
 #[cfg(not(feature = "parachain"))]
 type RunCmd = sc_cli::RunCmd;
 
@@ -47,7 +47,6 @@ pub enum Subcommand {
     /// Import blocks.
     ImportBlocks(sc_cli::ImportBlocksCmd),
 
-    #[cfg(not(feature = "parachain"))]
     /// Key management cli utilities
     Key(sc_cli::KeySubcommand),
 
@@ -132,11 +131,7 @@ pub fn load_spec(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
-        "dev" => Box::new(crate::chain_spec::dev_config(
-            #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
-        "" | "local" => Box::new(crate::chain_spec::local_testnet_config(
+        "" | "dev" => Box::new(crate::chain_spec::dev_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
