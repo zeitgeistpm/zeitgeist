@@ -2,11 +2,13 @@
 
 # Not meant to be called directly.
 #
-# Common script used by live testing network (Rococo, Chachacha, etc) scipts. Spin-ups $VALIDATORS_NUM
-# validators and $PARACHAINS_NUM parachains using Docker.
+# Common script used by live testing network (Rococo, Chachacha, etc) scipts. Spin-ups
+# $VALIDATORS_NUM validators and $PARACHAINS_NUM parachains using Docker.
 #
 # Only required variable is "RELAY_CHAIN_SPEC_FILE", everything else defaults to common
 # values if not specified.
+#
+# First parachain will always be a non-validator node while the remaining nodes will be validators
 
 set -euxo pipefail
 
@@ -14,7 +16,9 @@ set -euxo pipefail
 
 PARACHAIN_ID="${PARACHAIN_ID:-9123}"
 PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-3348ee5}"
+# Minus one because `seq` is inclusive
 PARACHAINS_NUM=$(($PARACHAINS_NUM - 1))
+# Minus one because `seq` is inclusive
 VALIDATORS_NUM=$(($VALIDATORS_NUM - 1))
 
 # Functions
@@ -111,12 +115,14 @@ sudo docker run \
     export-genesis-wasm \
     --chain $PARACHAIN_CHAIN > $DATA_DIR/zeitgeist-genesis-wasm
 
-for idx in $(seq 0 $PARACHAINS_NUM)
-do
-    LOCAL_CONTAINER_NAME="$PARACHAIN-$idx"
-    LOCAL_PORT=$(($PARACHAIN_PORT + $idx))
-    LOCAL_RPC_PORT=$(($PARACHAIN_RPC_PORT + $idx))
-    LOCAL_WS_PORT=$(($PARACHAIN_WS_PORT + $idx))
+launch_parachain() {
+    local parachain_idx=$1
+    local parachain_extra_params=$2
+
+    LOCAL_CONTAINER_NAME="$PARACHAIN-$parachain_idx"
+    LOCAL_PORT=$(($PARACHAIN_PORT + $parachain_idx))
+    LOCAL_RPC_PORT=$(($PARACHAIN_RPC_PORT + $parachain_idx))
+    LOCAL_WS_PORT=$(($PARACHAIN_WS_PORT + $parachain_idx))
 
     initial_container_configurations $LOCAL_CONTAINER_NAME
 
@@ -132,12 +138,19 @@ do
         $PARACHAIN_IMAGE \
         --base-path /zeitgeist/data \
         --chain $PARACHAIN_CHAIN \
-        --collator \
         --parachain-id $PARACHAIN_ID \
-        --rpc-cors all \
-        --rpc-external \
-        --ws-external \
+        $parachain_extra_params \
         -- \
         --chain /zeitgeist/relay-chain-spec.json \
         --execution wasm
-done
+}
+
+if [[ "$PARACHAINS_NUM" -ge 0 ]];
+then
+    launch_parachain "0" "--rpc-cors all --rpc-external --ws-external"
+
+    for idx in $(seq 1 $PARACHAINS_NUM)
+    do
+        launch_parachain "$idx" "--collator"
+    done
+fi
