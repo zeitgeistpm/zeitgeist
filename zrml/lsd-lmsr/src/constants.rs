@@ -1,5 +1,8 @@
 use crate::types::Timespan;
-use substrate_fixed::{types::extra::U24, types::extra::U32, FixedU32};
+use substrate_fixed::{
+    types::extra::{U24, U32},
+    FixedU32,
+};
 
 // --- Default configuration for EmaConfig struct ---
 /// Default short EMA period (in seconds)

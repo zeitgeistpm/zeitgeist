@@ -1,5 +1,7 @@
-use crate::constants::*;
-use crate::traits::{LsdlmsrFee, MarketAverage};
+use crate::{
+    constants::*,
+    traits::{LsdlmsrFee, MarketAverage},
+};
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::marker::PhantomData;
 use substrate_fixed::{
@@ -40,13 +42,7 @@ pub struct FeeSigmoidConfig {
 
 impl Default for FeeSigmoidConfig {
     fn default() -> Self {
-        Self {
-            initial_fee: INITIAL_FEE,
-            minimal_revenue: MINIMAL_REVENUE,
-            m: M,
-            p: P,
-            n: N,
-        }
+        Self { initial_fee: INITIAL_FEE, minimal_revenue: MINIMAL_REVENUE, m: M, p: P, n: N }
     }
 }
 
@@ -73,10 +69,7 @@ impl EmaVolumeConfig {
         let one = FixedU32::<U24>::from_num(1);
         let fduration = FixedU32::<U24>::from_num(duration);
 
-        Self {
-            ema_period,
-            multiplier: smoothing / (one + fduration),
-        }
+        Self { ema_period, multiplier: smoothing / (one + fduration) }
     }
 }
 
