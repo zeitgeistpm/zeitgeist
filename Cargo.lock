@@ -11745,7 +11745,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-collator",
@@ -11807,7 +11807,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -11823,7 +11823,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -11905,7 +11905,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11925,7 +11925,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -11936,7 +11936,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook-v1"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11953,7 +11953,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

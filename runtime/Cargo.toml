@@ -198,7 +198,7 @@ std = [
 authors = ['Zeitgeist PM <contact@zeitgeist.pm>']
 edition = "2018"
 name = "zeitgeist-runtime"
-version = "0.1.0"
+version = "0.1.1"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
