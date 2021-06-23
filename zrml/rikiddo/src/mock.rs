@@ -1,5 +1,5 @@
 #![cfg(test)]
-use crate as rikiddo;
+use crate as zrml_rikiddo;
 use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
@@ -35,7 +35,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        LsdLmsr: rikiddo::{Pallet, Storage},
+        LsdLmsr: zrml_rikiddo::{Pallet, Storage},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
     }
