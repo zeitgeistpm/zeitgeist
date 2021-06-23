@@ -126,12 +126,11 @@ runtime-benchmarks = [
 [package]
 authors = ['Zeitgeist PM <contact@zeitgeist.pm>']
 build = 'build.rs'
-description = 'A prediction market blockchain.'
+description = 'An evolving blockchain for prediction markets and futarchy.'
 edition = '2018'
 homepage = 'https://zeitgeist.market'
 name = 'zeitgeist-node'
-version = '0.1.0'
+version = '0.1.1'
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-
