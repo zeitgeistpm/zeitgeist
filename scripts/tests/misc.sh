@@ -11,7 +11,7 @@ cargo fmt --all -- --check
 test_package_with_feature primitives default
 test_package_with_feature primitives std
 
-no_runtime_benchmarks=('lsd-lmsr' 'market-commons')
+no_runtime_benchmarks=('rikiddo' 'market-commons')
 
 for package in zrml/*
 do
