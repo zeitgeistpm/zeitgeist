@@ -1,5 +1,9 @@
 #![cfg(test)]
+<<<<<<< HEAD
 use crate as zrml_rikiddo;
+=======
+use crate as rikiddo;
+>>>>>>> Rename to rikiddo and bump version
 use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
