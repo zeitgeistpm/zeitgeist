@@ -74,7 +74,6 @@ impl crate::Config for Runtime {
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
     type PalletId = CourtPalletId;

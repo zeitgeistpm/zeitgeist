@@ -11877,6 +11877,8 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "zeitgeist-primitives",
+ "zrml-court",
+ "zrml-market-commons",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
  "zrml-swaps",
@@ -11954,7 +11956,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11971,6 +11973,8 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "zeitgeist-primitives",
+ "zrml-court",
+ "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
  "zrml-swaps",
@@ -11984,12 +11988,13 @@ dependencies = [
  "frame-support",
  "libfuzzer-sys",
  "zeitgeist-primitives",
+ "zrml-court",
  "zrml-prediction-markets",
 ]
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -12060,7 +12065,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

@@ -53,10 +53,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 17,
+    spec_version: 18,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 2,
+    transaction_version: 3,
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
@@ -161,9 +161,11 @@ macro_rules! create_zeitgeist_runtime {
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
 
                 // Zeitgeist
-                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 40,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 41,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 42,
+                Court: zrml_court::{Event<T>, Pallet, Storage} = 40,
+                MarketCommons: zrml_market_commons::{Pallet, Storage} = 41,
+                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 42,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 43,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 44,
 
                 $($additional_pallets)*
             }
@@ -408,6 +410,25 @@ impl pallet_transaction_payment::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl parachain_info::Config for Runtime {}
 
+impl zrml_court::Config for Runtime {
+    type Currency = Balances;
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
+    type DisputePeriod = DisputePeriod;
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type MaxDisputes = MaxDisputes;
+    type OracleBond = OracleBond;
+    type PalletId = CourtPalletId;
+    type Shares = Tokens;
+    type Swaps = Swaps;
+    type ValidityBond = ValidityBond;
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type MarketId = MarketId;
+}
+
 impl zrml_orderbook_v1::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
@@ -419,21 +440,18 @@ impl zrml_orderbook_v1::Config for Runtime {
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRoot<AccountId>;
+    type Court = Court;
     type Currency = Balances;
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
-    type MarketId = MarketId;
-    type MinCategories = MinCategories;
+    type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
-    type MaxDisputes = MaxDisputes;
-    type PalletId = PmPalletId;
+    type MinCategories = MinCategories;
     type OracleBond = OracleBond;
+    type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
     type Slash = ();
-    type Swap = Swaps;
+    type Swaps = Swaps;
     type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;

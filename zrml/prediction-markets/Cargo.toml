@@ -8,6 +8,8 @@ sp-arithmetic = { branch = "polkadot-v0.9.4", default-features = false, git = "h
 sp-runtime = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-std = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zrml-court = { default-features = false, path = "../court" }
+zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 # Mock
 
@@ -50,10 +52,12 @@ std = [
     'sp-runtime/std',
     'sp-std/std',
     'zeitgeist-primitives/std',
+    'zrml-court/std',
+    'zrml-market-commons/std',
 ]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zrml-prediction-markets"
-version = "0.1.1"
+version = "0.1.2"

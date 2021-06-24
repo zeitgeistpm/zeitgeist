@@ -9,6 +9,7 @@ arbitrary = { features = ["derive"], version = "1.0" }
 frame-support = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
 libfuzzer-sys = "0.4"
 zeitgeist-primitives = { features = ["arbitrary"], default-features = false, path = "../../../primitives" }
+zrml-court = { path = "../../court" }
 zrml-prediction-markets = { features = ["mock"], path = ".." }
 
 [package]

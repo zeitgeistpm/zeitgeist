@@ -16,8 +16,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
-        MaxWeight, MinCategories, MinLiquidity, MinWeight, BASE, BLOCK_HASH_COUNT,
+        CourtPalletId, ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
+        MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
+        SwapsPalletId, BASE, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -56,10 +57,7 @@ parameter_types! {
     pub const MaxLocks: u32 = 50;
     pub const MinimumPeriod: u64 = 0;
     pub const OracleBond: Balance = 100;
-    pub const PmPalletId: PalletId = PalletId(*b"test/prm");
     pub const ReportingPeriod: BlockNumber = 10;
-    pub const SharesPalletId: PalletId = PalletId(*b"test/sha");
-    pub const SwapsPalletId: PalletId = PalletId(*b"test/swa");
     pub const ValidityBond: Balance = 200;
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
@@ -78,11 +76,13 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        Court: zrml_court::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
     }
 );
@@ -90,21 +90,18 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Court = Court;
     type Currency = Balances;
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
-    type MarketId = MarketId;
-    type MinCategories = MinCategories;
+    type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
-    type MaxDisputes = MaxDisputes;
-    type PalletId = PmPalletId;
+    type MinCategories = MinCategories;
     type OracleBond = OracleBond;
+    type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
     type Slash = ();
-    type Swap = Swaps;
+    type Swaps = Swaps;
     type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -170,6 +167,25 @@ impl pallet_timestamp::Config for Runtime {
     type Moment = u64;
     type OnTimestampSet = ();
     type WeightInfo = ();
+}
+
+impl zrml_court::Config for Runtime {
+    type Currency = Balances;
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
+    type DisputePeriod = DisputePeriod;
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type MaxDisputes = MaxDisputes;
+    type OracleBond = OracleBond;
+    type PalletId = CourtPalletId;
+    type Shares = Tokens;
+    type Swaps = Swaps;
+    type ValidityBond = ValidityBond;
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type MarketId = MarketId;
 }
 
 impl zrml_swaps::Config for Runtime {

@@ -2,9 +2,7 @@
 
 use super::*;
 use crate::Config;
-#[cfg(test)]
-use crate::Pallet as PredictionMarket;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin, Get, Hooks},
@@ -18,6 +16,8 @@ use zeitgeist_primitives::{
         Asset, MarketCreation, MarketEnd, MarketType, MultiHash, OutcomeReport, ScalarPosition,
     },
 };
+use zrml_court::CourtPalletApi;
+use zrml_market_commons::MarketCommonsPalletApi;
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
@@ -42,7 +42,7 @@ fn create_market_common_parameters<T: Config>(
 fn create_market_common<T: Config>(
     permission: MarketCreation,
     options: MarketType,
-) -> Result<(T::AccountId, T::MarketId), &'static str> {
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, oracle, end, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
 
@@ -56,7 +56,7 @@ fn create_market_common<T: Config>(
         panic!("create_market_common: Unsupported market type: {:?}", options);
     }
 
-    let marketid = Pallet::<T>::market_count() - 1u32.into();
+    let marketid = T::MarketCommons::latest_market_id()? - 1u32.into();
     Ok((caller, marketid))
 }
 
@@ -64,7 +64,7 @@ fn create_close_and_report_market<T: Config>(
     permission: MarketCreation,
     options: MarketType,
     outcome: OutcomeReport,
-) -> Result<(T::AccountId, T::MarketId), &'static str> {
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, marketid) = create_market_common::<T>(permission, options)?;
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
         .dispatch_bypass_filter(T::ApprovalOrigin::successful_origin())?;
@@ -77,10 +77,10 @@ fn create_close_and_report_market<T: Config>(
 fn generate_accounts_with_assets<T: Config>(
     acc_total: u32,
     acc_asset: u32,
-    asset: Asset<T::MarketId>,
+    asset: Asset<MarketIdOf<T>>,
 ) -> Result<(), &'static str> {
     let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    let fake_asset = Asset::CategoricalOutcome::<T::MarketId>(u128::MAX.saturated_into(), 0);
+    let fake_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(u128::MAX.saturated_into(), 0);
     let mut mut_acc_asset = acc_asset;
 
     for i in 0..acc_total {
@@ -102,7 +102,7 @@ fn setup_resolve_common_categorical<T: Config>(
     acc_total: u32,
     acc_asset: u32,
     categories: u16,
-) -> Result<(T::AccountId, T::MarketId), &'static str> {
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories),
@@ -119,7 +119,7 @@ fn setup_resolve_common_categorical<T: Config>(
 // Setup a categorical market for fn `internal_resolve`
 fn setup_redeem_shares_common<T: Config>(
     market_type: MarketType,
-) -> Result<(T::AccountId, T::MarketId), &'static str> {
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, marketid) =
         create_market_common::<T>(MarketCreation::Permissionless, market_type.clone())?;
     let outcome: OutcomeReport;
@@ -151,7 +151,7 @@ fn setup_redeem_shares_common<T: Config>(
 fn setup_resolve_common_scalar<T: Config>(
     acc_total: u32,
     acc_asset: u32,
-) -> Result<(T::AccountId, T::MarketId), &'static str> {
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Scalar((0u128, u128::MAX)),
@@ -187,9 +187,9 @@ benchmarks! {
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
-        for i in 0..c.min(T::MaxDisputes::get() as u32) {
-            let _ = Call::<T>::dispute(marketid, OutcomeReport::Categorical(i.saturated_into()))
-                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        for i in 0..c.min(T::Court::max_disputes() as u32) {
+            let origin = RawOrigin::Signed(caller.clone()).into();
+            let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
         }
 
         let approval_origin = T::ApprovalOrigin::successful_origin();
@@ -284,18 +284,16 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
     dispute {
-        let a in 0..(T::MaxDisputes::get() - 1) as u32;
+        let a in 0..(T::Court::max_disputes() - 1) as u32;
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar((0u128, u128::MAX)),
             OutcomeReport::Scalar(42)
         )?;
-
-        for i in 0..a as u128 {
-            let _ = Call::<T>::dispute(marketid, OutcomeReport::Scalar(i))
-                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-        }
-    }: _(RawOrigin::Signed(caller), marketid, OutcomeReport::Scalar((a + 1) as u128))
+    }:  {
+        let origin = RawOrigin::Signed(caller.clone()).into();
+        let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Scalar((a + 1) as u128))?;
+    }
 
     internal_resolve_categorical_reported {
         // a = total accounts
@@ -307,7 +305,7 @@ benchmarks! {
 
         let c_u16 = c.saturated_into();
         let (_, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
-    }: { Pallet::<T>::internal_resolve(&marketid)? }
+    }: {}
 
     internal_resolve_categorical_disputed {
         // a = total accounts
@@ -317,39 +315,39 @@ benchmarks! {
         // c = num. asset types
         let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
         // d = num. disputes
-        let d in 0..T::MaxDisputes::get() as u32;
+        let d in 0..T::Court::max_disputes() as u32;
 
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
         for i in 0..c.min(d) {
-            let _ = Call::<T>::dispute(marketid, OutcomeReport::Categorical(i.saturated_into()))
-                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+            let origin = RawOrigin::Signed(caller.clone()).into();
+            let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
         }
-    }: { Pallet::<T>::internal_resolve(&marketid)? }
+    }: {}
 
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
         let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
-    }: { Pallet::<T>::internal_resolve(&marketid)? }
+    }: {}
 
     internal_resolve_scalar_disputed {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let d in 0..T::MaxDisputes::get() as u32;
+        let d in 0..T::Court::max_disputes();
 
         let (caller, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d.into() {
-            let _ = Call::<T>::dispute(marketid, OutcomeReport::Scalar(i))
-                .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+            let origin = RawOrigin::Signed(caller.clone()).into();
+            let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Scalar(i))?;
         }
-    }: { Pallet::<T>::internal_resolve(&marketid)? }
+    }: {}
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + T::DisputePeriod::get();
+        let starting_block = frame_system::Pallet::<T>::block_number() + T::Court::dispute_period();
     }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
 
     redeem_shares_categorical {
@@ -395,9 +393,3 @@ benchmarks! {
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), marketid, amount)
 }
-
-impl_benchmark_test_suite!(
-    PredictionMarket,
-    crate::mock::ExtBuilder::default().build(),
-    crate::mock::Runtime
-);

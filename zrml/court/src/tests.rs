@@ -92,20 +92,18 @@ fn it_resolves_a_disputed_market() {
 }
 
 fn create_reported_permissionless_categorical_market<T: crate::Config>() {
-    MarketCommons::insert_market(
-        0,
-        Market {
-            creation: MarketCreation::Permissionless,
-            creator_fee: 0,
-            creator: ALICE,
-            end: MarketEnd::Block(100),
-            market_type: MarketType::Categorical(2),
-            metadata: Default::default(),
-            oracle: ALICE,
-            report: Some(Report { at: 1, by: ALICE, outcome: OutcomeReport::Categorical(0) }),
-            resolved_outcome: None,
-            status: MarketStatus::Reported,
-        },
-    );
+    let _ = MarketCommons::push_market(Market {
+        creation: MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: ALICE,
+        end: MarketEnd::Block(100),
+        market_type: MarketType::Categorical(2),
+        metadata: Default::default(),
+        oracle: ALICE,
+        report: Some(Report { at: 1, by: ALICE, outcome: OutcomeReport::Categorical(0) }),
+        resolved_outcome: None,
+        status: MarketStatus::Reported,
+    })
+    .unwrap();
     MarketIdsPerReportBlock::<Runtime>::insert(System::block_number(), vec![0]);
 }

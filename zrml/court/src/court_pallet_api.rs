@@ -63,4 +63,15 @@ pub trait CourtPalletApi {
 
     /// Manages markets resolutions moving all reported markets to resolved.
     fn on_resolution(now: Self::BlockNumber) -> Result<ResolutionCounters, DispatchError>;
+
+    // Migrations (Temporary)
+
+    fn dispute(
+        market_id: &Self::MarketId,
+    ) -> Option<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>>;
+
+    fn insert_dispute(
+        market_id: Self::MarketId,
+        dispute: Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>,
+    );
 }
