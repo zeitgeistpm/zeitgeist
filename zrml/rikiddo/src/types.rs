@@ -1,14 +1,12 @@
+use sp_std::ops::Sub;
+
 use crate::{
     constants::*,
     traits::{LsdlmsrFee, MarketAverage},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::marker::PhantomData;
-use substrate_fixed::{
-    traits::FixedUnsigned,
-    types::extra::{U24, U32},
-    FixedU32,
-};
+use substrate_fixed::{FixedU128, FixedU32, traits::FixedUnsigned, transcendental::sqrt, types::extra::{U24, U32, U64}};
 
 pub type UnixTimestamp = u64;
 
@@ -49,6 +47,16 @@ impl Default for FeeSigmoidConfig {
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoid {
     pub config: FeeSigmoidConfig,
+}
+
+// TODO
+impl<FI> LsdlmsrFee<FI> for FeeSigmoid
+where
+    FI: FixedUnsigned
+{
+    fn calculate(&self, r: FI) -> FI {
+        r
+    }
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
@@ -99,6 +107,8 @@ impl<FI: FixedUnsigned> EmaMarketVolume<FI> {
         }
     }
 }
+
+
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct LsdLmsrSigmoidMV<FI: FixedUnsigned, FE: LsdlmsrFee<FI>, MA: MarketAverage<FI>> {

@@ -10,7 +10,7 @@ use substrate_fixed::traits::FixedUnsigned;
 
 pub trait LsdlmsrFee<F: FixedUnsigned> {
     /// Calculate fee
-    fn calculate(r: F) -> F;
+    fn calculate(&self, r: F) -> F;
 }
 
 pub trait MarketAverage<F: FixedUnsigned> {
