@@ -10131,6 +10131,7 @@ version = "0.5.6"
 source = "git+https://github.com/encointer/substrate-fixed#b33d186888c60f38adafcfc0ec3a21aab263aef1"
 dependencies = [
  "parity-scale-codec",
+ "serde",
  "typenum",
 ]
 
@@ -11992,6 +11993,22 @@ version = "0.1.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
+ "zeitgeist-primitives",
+]
+
+[[package]]
+name = "zrml-rikiddo"
+version = "0.1.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "substrate-fixed",
  "zeitgeist-primitives",
 ]
 
