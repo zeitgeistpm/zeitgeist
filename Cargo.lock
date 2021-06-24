@@ -11877,10 +11877,10 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "zeitgeist-primitives",
- "zrml-court",
  "zrml-market-commons",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
+ "zrml-simple-disputes",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]
@@ -11904,26 +11904,6 @@ dependencies = [
  "quote",
  "syn",
  "synstructure",
-]
-
-[[package]]
-name = "zrml-court"
-version = "0.1.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
- "sp-io",
- "sp-runtime",
- "zeitgeist-primitives",
- "zrml-market-commons",
- "zrml-swaps",
 ]
 
 [[package]]
@@ -11973,10 +11953,10 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "zeitgeist-primitives",
- "zrml-court",
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
+ "zrml-simple-disputes",
  "zrml-swaps",
 ]
 
@@ -11988,8 +11968,8 @@ dependencies = [
  "frame-support",
  "libfuzzer-sys",
  "zeitgeist-primitives",
- "zrml-court",
  "zrml-prediction-markets",
+ "zrml-simple-disputes",
 ]
 
 [[package]]
@@ -12015,6 +11995,26 @@ dependencies = [
  "sp-std",
  "substrate-fixed",
  "zeitgeist-primitives",
+]
+
+[[package]]
+name = "zrml-simple-disputes"
+version = "0.1.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-market-commons",
+ "zrml-swaps",
 ]
 
 [[package]]
@@ -12050,7 +12050,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",

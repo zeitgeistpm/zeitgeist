@@ -1,4 +1,4 @@
-//! # Common market parameters used by `Court` and `Prediction Markets` pallets.
+//! # Common market parameters used by `Simple disputes` and `Prediction markets` pallets.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 

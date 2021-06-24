@@ -16,8 +16,8 @@ use zeitgeist_primitives::{
         Asset, MarketCreation, MarketEnd, MarketType, MultiHash, OutcomeReport, ScalarPosition,
     },
 };
-use zrml_court::CourtPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_simple_disputes::DisputeApi;
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
@@ -187,9 +187,9 @@ benchmarks! {
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
-        for i in 0..c.min(T::Court::max_disputes() as u32) {
+        for i in 0..c.min(T::SimpleDisputes::max_disputes() as u32) {
             let origin = RawOrigin::Signed(caller.clone()).into();
-            let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
+            let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
         }
 
         let approval_origin = T::ApprovalOrigin::successful_origin();
@@ -284,7 +284,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
     dispute {
-        let a in 0..(T::Court::max_disputes() - 1) as u32;
+        let a in 0..(T::SimpleDisputes::max_disputes() - 1) as u32;
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar((0u128, u128::MAX)),
@@ -292,7 +292,7 @@ benchmarks! {
         )?;
     }:  {
         let origin = RawOrigin::Signed(caller.clone()).into();
-        let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Scalar((a + 1) as u128))?;
+        let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Scalar((a + 1) as u128))?;
     }
 
     internal_resolve_categorical_reported {
@@ -315,14 +315,14 @@ benchmarks! {
         // c = num. asset types
         let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
         // d = num. disputes
-        let d in 0..T::Court::max_disputes() as u32;
+        let d in 0..T::SimpleDisputes::max_disputes() as u32;
 
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
         for i in 0..c.min(d) {
             let origin = RawOrigin::Signed(caller.clone()).into();
-            let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
+            let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
         }
     }: {}
 
@@ -335,19 +335,19 @@ benchmarks! {
     internal_resolve_scalar_disputed {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let d in 0..T::Court::max_disputes();
+        let d in 0..T::SimpleDisputes::max_disputes();
 
         let (caller, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d.into() {
             let origin = RawOrigin::Signed(caller.clone()).into();
-            let _ = T::Court::on_dispute(origin, marketid, OutcomeReport::Scalar(i))?;
+            let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Scalar(i))?;
         }
     }: {}
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + T::Court::dispute_period();
+        let starting_block = frame_system::Pallet::<T>::block_number() + T::SimpleDisputes::dispute_period();
     }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
 
     redeem_shares_categorical {

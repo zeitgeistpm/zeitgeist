@@ -161,10 +161,10 @@ macro_rules! create_zeitgeist_runtime {
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
 
                 // Zeitgeist
-                Court: zrml_court::{Event<T>, Pallet, Storage} = 40,
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 41,
                 Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 42,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 43,
+                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 40,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 44,
 
                 $($additional_pallets)*
@@ -410,7 +410,7 @@ impl pallet_transaction_payment::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl parachain_info::Config for Runtime {}
 
-impl zrml_court::Config for Runtime {
+impl zrml_simple_disputes::Config for Runtime {
     type Currency = Balances;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
@@ -419,7 +419,7 @@ impl zrml_court::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
-    type PalletId = CourtPalletId;
+    type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
@@ -440,7 +440,6 @@ impl zrml_orderbook_v1::Config for Runtime {
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRoot<AccountId>;
-    type Court = Court;
     type Currency = Balances;
     type Event = Event;
     type MarketCommons = MarketCommons;
@@ -450,6 +449,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
+    type SimpleDisputes = SimpleDisputes;
     type Slash = ();
     type Swaps = Swaps;
     type Timestamp = Timestamp;

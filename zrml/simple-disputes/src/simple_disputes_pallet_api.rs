@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo};
 use zeitgeist_primitives::types::{MarketDispute, OutcomeReport};
 
-/// Court - Pallet Api
-pub trait CourtPalletApi {
+/// SimpleDisputes - Pallet Api
+pub trait DisputeApi {
     type AccountId;
     type BlockNumber;
     type MarketId;

@@ -1,4 +1,4 @@
-pub mod _0_1_1_move_storage_to_court_and_market_commons {
+pub mod _0_1_1_move_storage_to_simple_disputes_and_market_commons {
     use crate::{Config, MarketIdOf, Pallet};
     use alloc::vec::Vec;
     use frame_support::{
@@ -8,8 +8,8 @@ pub mod _0_1_1_move_storage_to_court_and_market_commons {
         Blake2_128Concat,
     };
     use zeitgeist_primitives::types::{Market, PoolId};
-    use zrml_court::CourtPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
+    use zrml_simple_disputes::DisputeApi;
 
     const DISPUTES: &[u8] = b"Disputes";
     const MARKET_COUNT: &[u8] = b"MarketCount";
@@ -28,13 +28,13 @@ pub mod _0_1_1_move_storage_to_court_and_market_commons {
         let storage_version = <Pallet<T>>::storage_version().unwrap_or(previous_version);
 
         if storage_version == previous_version {
-            // Court
+            // Simple disputes
 
             for (k, v) in
                 migration::storage_key_iter::<MarketIdOf<T>, Vec<_>, Blake2_128Concat>(PM, DISPUTES)
             {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                T::Court::insert_dispute(k, v);
+                T::SimpleDisputes::insert_dispute(k, v);
             }
             migration::remove_storage_prefix(PM, DISPUTES, b"");
 
@@ -45,7 +45,7 @@ pub mod _0_1_1_move_storage_to_court_and_market_commons {
             >(PM, MARKET_IDS_PER_DISPUTE_BLOCK)
             {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                T::Court::insert_market_id_per_dispute_block(k, v);
+                T::SimpleDisputes::insert_market_id_per_dispute_block(k, v);
             }
             migration::remove_storage_prefix(PM, MARKET_IDS_PER_DISPUTE_BLOCK, b"");
 
@@ -56,7 +56,7 @@ pub mod _0_1_1_move_storage_to_court_and_market_commons {
             >(PM, MARKET_IDS_PER_REPORT_BLOCK)
             {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                T::Court::insert_market_id_per_report_block(k, v);
+                T::SimpleDisputes::insert_market_id_per_report_block(k, v);
             }
             migration::remove_storage_prefix(PM, MARKET_IDS_PER_REPORT_BLOCK, b"");
 
@@ -100,7 +100,7 @@ pub mod _0_1_1_move_storage_to_court_and_market_commons {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::mock::{Court, ExtBuilder, MarketCommons, PredictionMarkets};
+        use crate::mock::{ExtBuilder, MarketCommons, PredictionMarkets, SimpleDisputes};
         use frame_support::{traits::OnRuntimeUpgrade, Hashable};
         use zeitgeist_primitives::types::{
             Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
@@ -125,9 +125,9 @@ pub mod _0_1_1_move_storage_to_court_and_market_commons {
                 MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) };
 
             ExtBuilder::default().build().execute_with(|| {
-                assert!(Court::dispute(&0).is_none());
-                assert!(Court::market_ids_per_dispute_block(&0).is_err());
-                assert!(Court::market_ids_per_report_block(&0).is_err());
+                assert!(SimpleDisputes::dispute(&0).is_none());
+                assert!(SimpleDisputes::market_ids_per_dispute_block(&0).is_err());
+                assert!(SimpleDisputes::market_ids_per_report_block(&0).is_err());
 
                 assert!(MarketCommons::latest_market_id().is_err());
                 assert!(MarketCommons::market(&0).is_err());
@@ -211,9 +211,9 @@ pub mod _0_1_1_move_storage_to_court_and_market_commons {
                     .is_none()
                 );
 
-                assert_eq!(Court::dispute(&0).unwrap(), vec![DEFAULT_MARKET_DISPUTE]);
-                assert_eq!(Court::market_ids_per_dispute_block(&0).unwrap(), vec![1]);
-                assert_eq!(Court::market_ids_per_report_block(&0).unwrap(), vec![1]);
+                assert_eq!(SimpleDisputes::dispute(&0).unwrap(), vec![DEFAULT_MARKET_DISPUTE]);
+                assert_eq!(SimpleDisputes::market_ids_per_dispute_block(&0).unwrap(), vec![1]);
+                assert_eq!(SimpleDisputes::market_ids_per_report_block(&0).unwrap(), vec![1]);
 
                 assert_eq!(MarketCommons::latest_market_id().unwrap(), 0);
                 assert_eq!(MarketCommons::market(&0).unwrap(), DEFAULT_MARKET);

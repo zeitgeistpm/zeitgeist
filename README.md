@@ -29,7 +29,7 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   market shares.
 - [shares](./zrml/shares) - Implementation of tradable and transferrable shares of
   prediction market outcomes.
-- [court](./zrml-court)- coming soon
+- [simple-disputes](./zrml-simple-disputes) - Simple disputes
 
 ## How to Build Nodes
 

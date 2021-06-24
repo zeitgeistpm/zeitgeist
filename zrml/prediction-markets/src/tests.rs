@@ -15,8 +15,8 @@ use zeitgeist_primitives::{
         ScalarPosition,
     },
 };
-use zrml_court::CourtPalletApi;
 use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_simple_disputes::DisputeApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
     let mut metadata = [byte; 50];
@@ -271,19 +271,23 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         // Dispute phase is 10 blocks... so only run 5 of them.
         run_to_block(105);
 
-        assert_ok!(Court::on_dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(0)));
+        assert_ok!(SimpleDisputes::on_dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
-        let disputes = Court::disputes(&0).unwrap();
+        let disputes = SimpleDisputes::disputes(&0).unwrap();
         assert_eq!(disputes.len(), 1);
         let dispute = &disputes[0];
         assert_eq!(dispute.at, 105);
         assert_eq!(dispute.by, CHARLIE);
         assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
-        let market_ids = Court::market_ids_per_dispute_block(&105).unwrap();
+        let market_ids = SimpleDisputes::market_ids_per_dispute_block(&105).unwrap();
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
     });
@@ -334,7 +338,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
             OutcomeReport::Categorical(1)
         ));
 
-        let reported_ids = Court::market_ids_per_report_block(&100).unwrap();
+        let reported_ids = SimpleDisputes::market_ids_per_report_block(&100).unwrap();
         assert_eq!(reported_ids.len(), 1);
         let id = reported_ids[0];
         assert_eq!(id, 0);
@@ -383,15 +387,27 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(102);
 
-        assert_ok!(Court::on_dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)));
+        assert_ok!(SimpleDisputes::on_dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
 
         run_to_block(103);
 
-        assert_ok!(Court::on_dispute(Origin::signed(DAVE), 0, OutcomeReport::Categorical(0)));
+        assert_ok!(SimpleDisputes::on_dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
 
         run_to_block(104);
 
-        assert_ok!(Court::on_dispute(Origin::signed(EVE), 0, OutcomeReport::Categorical(1)));
+        assert_ok!(SimpleDisputes::on_dispute(
+            Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -407,17 +423,17 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(eve_reserved, 150);
 
         // check disputes length
-        let disputes = Court::disputes(&0).unwrap();
+        let disputes = SimpleDisputes::disputes(&0).unwrap();
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        let market_ids_1 = Court::market_ids_per_dispute_block(&102).unwrap();
+        let market_ids_1 = SimpleDisputes::market_ids_per_dispute_block(&102).unwrap();
         assert_eq!(market_ids_1.len(), 0);
 
-        let market_ids_2 = Court::market_ids_per_dispute_block(&103).unwrap();
+        let market_ids_2 = SimpleDisputes::market_ids_per_dispute_block(&103).unwrap();
         assert_eq!(market_ids_2.len(), 0);
 
-        let market_ids_3 = Court::market_ids_per_dispute_block(&104).unwrap();
+        let market_ids_3 = SimpleDisputes::market_ids_per_dispute_block(&104).unwrap();
         assert_eq!(market_ids_3.len(), 1);
 
         run_to_block(115);
@@ -551,8 +567,8 @@ fn full_scalar_market_lifecycle() {
         assert_eq!(report.outcome, OutcomeReport::Scalar(100));
 
         // dispute
-        assert_ok!(Court::on_dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
-        let disputes = Court::disputes(&0).unwrap();
+        assert_ok!(SimpleDisputes::on_dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
+        let disputes = SimpleDisputes::disputes(&0).unwrap();
         assert_eq!(disputes.len(), 1);
 
         run_to_block(150);

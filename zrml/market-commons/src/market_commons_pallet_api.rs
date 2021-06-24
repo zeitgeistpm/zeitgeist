@@ -6,7 +6,7 @@ use frame_support::{
 use sp_runtime::traits::AtLeast32Bit;
 use zeitgeist_primitives::types::{Market, PoolId};
 
-/// Court - Pallet Api
+/// Simple disputes - Pallet Api
 pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber;

@@ -16,8 +16,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        CourtPalletId, ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
-        MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
+        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
+        MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId,
         SwapsPalletId, BASE, BLOCK_HASH_COUNT,
     },
     types::{
@@ -76,7 +76,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Court: zrml_court::{Event<T>, Pallet, Storage},
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
@@ -90,7 +90,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type Court = Court;
+    type SimpleDisputes = SimpleDisputes;
     type Currency = Balances;
     type Event = Event;
     type MarketCommons = MarketCommons;
@@ -169,7 +169,7 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
-impl zrml_court::Config for Runtime {
+impl zrml_simple_disputes::Config for Runtime {
     type Currency = Balances;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
@@ -178,7 +178,7 @@ impl zrml_court::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
-    type PalletId = CourtPalletId;
+    type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;

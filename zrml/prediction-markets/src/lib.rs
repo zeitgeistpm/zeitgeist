@@ -90,8 +90,8 @@ mod pallet {
             OutcomeReport, Report, ScalarPosition,
         },
     };
-    use zrml_court::CourtPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
+    use zrml_simple_disputes::DisputeApi;
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -630,11 +630,14 @@ mod pallet {
                 Ok(())
             })?;
 
-            let rslt = T::Court::mutate_market_ids_per_report_block(&current_block, |v| {
+            let rslt = T::SimpleDisputes::mutate_market_ids_per_report_block(&current_block, |v| {
                 v.push(market_id);
             });
             if rslt.is_err() {
-                T::Court::insert_market_id_per_report_block(current_block, vec![market_id]);
+                T::SimpleDisputes::insert_market_id_per_report_block(
+                    current_block,
+                    vec![market_id],
+                );
             }
 
             Self::deposit_event(Event::MarketReported(market_id, outcome));
@@ -701,14 +704,6 @@ mod pallet {
 
         type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
-        /// Responsable for handling disputes
-        type Court: CourtPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Origin = Self::Origin,
-        >;
-
         type Currency: ReservableCurrency<Self::AccountId>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -729,6 +724,14 @@ mod pallet {
             Self::AccountId,
             Balance = BalanceOf<Self>,
             CurrencyId = Asset<MarketIdOf<Self>>,
+        >;
+
+        /// Responsable for handling disputes
+        type SimpleDisputes: DisputeApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Origin = Self::Origin,
         >;
 
         /// The module identifier.
@@ -830,12 +833,13 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let _ = T::Court::on_resolution(now);
+            let _ = T::SimpleDisputes::on_resolution(now);
             0
         }
 
         fn on_runtime_upgrade() -> Weight {
-            crate::migrations::_0_1_1_move_storage_to_court_and_market_commons::migrate::<T>()
+            crate::migrations::_0_1_1_move_storage_to_simple_disputes_and_market_commons::migrate::<T>(
+            )
         }
     }
 
@@ -885,18 +889,23 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             if market.status == MarketStatus::Reported {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                let mut old_reports_per_block = T::Court::market_ids_per_report_block(&report.at)?;
+                let mut old_reports_per_block =
+                    T::SimpleDisputes::market_ids_per_report_block(&report.at)?;
                 remove_item::<MarketIdOf<T>>(&mut old_reports_per_block, *market_id);
-                T::Court::insert_market_id_per_report_block(report.at, old_reports_per_block);
+                T::SimpleDisputes::insert_market_id_per_report_block(
+                    report.at,
+                    old_reports_per_block,
+                );
             }
             if market.status == MarketStatus::Disputed {
-                let disputes = T::Court::disputes(market_id)?;
+                let disputes = T::SimpleDisputes::disputes(market_id)?;
                 let num_disputes = disputes.len();
                 let prev_dispute = disputes[num_disputes - 1].clone();
                 let at = prev_dispute.at;
-                let mut old_disputes_per_block = T::Court::market_ids_per_dispute_block(&at)?;
+                let mut old_disputes_per_block =
+                    T::SimpleDisputes::market_ids_per_dispute_block(&at)?;
                 remove_item::<MarketIdOf<T>>(&mut old_disputes_per_block, *market_id);
-                T::Court::insert_market_id_per_dispute_block(at, old_disputes_per_block);
+                T::SimpleDisputes::insert_market_id_per_dispute_block(at, old_disputes_per_block);
             }
 
             Ok(())

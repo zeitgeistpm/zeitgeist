@@ -1,4 +1,4 @@
-//! # Court
+//! # Simple disputes
 //!
 //! Manages market disputes and resolutions.
 
@@ -6,19 +6,18 @@
 
 extern crate alloc;
 
-mod court_pallet_api;
 mod mock;
 mod resolution_counters;
+mod simple_disputes_pallet_api;
 mod tests;
-pub mod weights;
 
-pub use court_pallet_api::CourtPalletApi;
 pub use pallet::*;
 pub use resolution_counters::ResolutionCounters;
+pub use simple_disputes_pallet_api::DisputeApi;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{CourtPalletApi, ResolutionCounters};
+    use crate::{DisputeApi, ResolutionCounters};
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
@@ -134,7 +133,7 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
-    impl<T> CourtPalletApi for Pallet<T>
+    impl<T> DisputeApi for Pallet<T>
     where
         T: Config,
     {

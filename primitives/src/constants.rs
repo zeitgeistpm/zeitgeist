@@ -18,11 +18,6 @@ pub const DOLLARS: Balance = BASE / 100; // 100_000_000
 pub const CENTS: Balance = DOLLARS / 100; // 1_000_000
 pub const MILLICENTS: Balance = CENTS / 1000; // 1_000
 
-// Court parameters
-parameter_types! {
-    pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
-}
-
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * DOLLARS;
@@ -36,6 +31,11 @@ parameter_types! {
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ReportingPeriod: BlockNumber = BLOCKS_PER_DAY;
     pub const ValidityBond: Balance = 50 * DOLLARS;
+}
+
+// Simple disputes parameters
+parameter_types! {
+    pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
 }
 
 // Staking parameters
