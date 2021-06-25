@@ -3,7 +3,7 @@ name: Docker Hub
 on:
   workflow_dispatch:
   push:
-    branches: [ sea212-docker-push-on-tag ]
+    branches: [ main ]
     tags: [ '*' ]
 
 jobs:
@@ -22,9 +22,9 @@ jobs:
       
       - name: Build and publish
         run: |
-          # ./scripts/docker-hub-publish.sh ${GITHUB_SHA}
-          if [ ${GITHUB_REF#refs/*/} == 'sea212-docker-push-on-tag' ]; then
-            echo "In branch branch. Using commit hash for publication: ${GITHUB_SHA}"
+          # If it is a tag:
+          if [ -z "${GITHUB_REF##refs/tags/*}" ] ; then
+            ./scripts/docker-hub-publish.sh ${GITHUB_REF#refs/tags/}
           else
-            echo "In tag branch. Using tag: ${GITHUB_REF#refs/*/}"
+            ./scripts/docker-hub-publish.sh ${GITHUB_SHA}
           fi

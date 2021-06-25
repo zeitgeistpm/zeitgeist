@@ -11989,7 +11989,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -12045,7 +12045,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -12060,7 +12060,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
