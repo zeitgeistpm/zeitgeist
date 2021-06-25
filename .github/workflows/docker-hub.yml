@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
+    tags: [ '*' ]
 
 jobs:
   publish:
@@ -20,4 +21,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       
       - name: Build and publish
-        run: ./scripts/docker-hub-publish.sh ${GITHUB_SHA}
+        run: |
+          # If it is a tag:
+          if [ -z "${GITHUB_REF##refs/tags/*}" ] ; then
+            ./scripts/docker-hub-publish.sh ${GITHUB_REF#refs/tags/}
+          else
+            ./scripts/docker-hub-publish.sh ${GITHUB_SHA}
+          fi
