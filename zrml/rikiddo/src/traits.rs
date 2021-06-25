@@ -6,11 +6,13 @@ use frame_support::{
 use parity_scale_codec::Codec;
 use sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
-use substrate_fixed::traits::FixedUnsigned;
+use substrate_fixed::traits::{Fixed, FixedUnsigned};
 
-pub trait LsdlmsrFee<F: FixedUnsigned> {
+pub trait LsdlmsrFee<F: Fixed> {
+    type Output: Fixed;
+
     /// Calculate fee
-    fn calculate(&self, r: F) -> F;
+    fn calculate(&self, r: F) -> Result<Self::Output, &'static str>;
 }
 
 pub trait MarketAverage<F: FixedUnsigned> {

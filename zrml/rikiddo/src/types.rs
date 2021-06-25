@@ -1,12 +1,10 @@
-use sp_std::ops::Sub;
-
 use crate::{
     constants::*,
     traits::{LsdlmsrFee, MarketAverage},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::marker::PhantomData;
-use substrate_fixed::{FixedU128, FixedU32, traits::FixedUnsigned, transcendental::sqrt, types::extra::{U24, U32, U64}};
+use substrate_fixed::{FixedI128, FixedU128, FixedU32, traits::{FixedSigned, FixedUnsigned}, transcendental::sqrt, types::extra::{U24, U32, U64}};
 
 pub type UnixTimestamp = u64;
 
@@ -31,31 +29,58 @@ impl Timespan {
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig {
-    pub initial_fee: FixedU32<U32>,
-    pub minimal_revenue: FixedU32<U32>,
-    pub m: FixedU32<U24>,
-    pub p: FixedU32<U24>,
-    pub n: FixedU32<U24>,
+    pub m: FixedI128<U64>,
+    pub p: FixedI128<U64>,
+    pub n: FixedI128<U64>,
 }
 
 impl Default for FeeSigmoidConfig {
     fn default() -> Self {
-        Self { initial_fee: INITIAL_FEE, minimal_revenue: MINIMAL_REVENUE, m: M, p: P, n: N }
+        Self { m: M, p: P, n: N }
     }
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct FeeSigmoid {
     pub config: FeeSigmoidConfig,
 }
 
-// TODO
-impl<FI> LsdlmsrFee<FI> for FeeSigmoid
-where
-    FI: FixedUnsigned
-{
-    fn calculate(&self, r: FI) -> FI {
-        r
+impl<FI: FixedSigned + Into<FixedI128<U64>>> LsdlmsrFee<FI> for FeeSigmoid {
+    type Output = FixedI128<U64>;
+
+    // z(r) in https://files.kyber.network/DMM-Feb21.pdf
+    fn calculate(&self, r: FI) -> Result<Self::Output, &'static str>{
+        let r_minus_n = if let Some(res) = r.into().checked_sub(self.config.n)  {
+            res
+        } else {
+            return Err("[FeeSigmoid] Overflow during calculation: r - n");
+        };
+
+        let numerator = if let Some(res) = r_minus_n.checked_mul(self.config.m)  {
+            res
+        } else {
+            return Err("[FeeSigmoid] Overflow during calculation: m * (r-n)");
+        };
+
+        let r_minus_n_squared =  if let Some(res) = r_minus_n.checked_mul(r_minus_n)  {
+            res
+        } else {
+            return Err("[FeeSigmoid] Overflow during calculation: (r-n)^2");
+        };
+
+        let p_plus_r_minus_n = if let Some(res) = self.config.p.checked_add(r_minus_n_squared)  {
+            res
+        } else {
+            return Err("[FeeSigmoid] Overflow during calculation: p + (r-n)^2");
+        };
+
+        let denominator = sqrt::<FixedI128<U64>,FixedI128<U64>>(p_plus_r_minus_n)?;
+
+        let _ = if let Some(res) = numerator.checked_div(denominator)  {
+            return Ok(res);
+        } else {
+            return Err("[FeeSigmoid] Overflow during calculation: numerator / denumerator");
+        };
     }
 }
 
@@ -107,8 +132,6 @@ impl<FI: FixedUnsigned> EmaMarketVolume<FI> {
         }
     }
 }
-
-
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct LsdLmsrSigmoidMV<FI: FixedUnsigned, FE: LsdlmsrFee<FI>, MA: MarketAverage<FI>> {
