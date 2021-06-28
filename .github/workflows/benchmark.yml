@@ -1,0 +1,86 @@
+name: Benchmark weights
+
+on:
+  push:
+    branches: [ stage-benchmark ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    name: Benchmark weights
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          profile: minimal
+          toolchain: nightly-2021-03-10
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Test runtime-benchmarks
+        run: cargo test --release --features runtime-benchmarks
+
+      - name: Build Zeitgeist chain with runtime-benchmarks feature
+        run: cargo build --release --features runtime-benchmarks
+
+      - name: Run benchmarks
+        run: |
+          # define benchmark commands
+          ZG_BENCHMARK_COMMANDS=(
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+          )
+
+          echo "Fetching commit hash of HEAD"
+          zg_cmt=`git log -n 1 --format="%H"`
+          echo "Commit hash: ${zg_cmt}"
+
+          check_if_new_commits() {
+            echo "Fetching latest repository state"
+            git fetch
+
+            if [ $? -ne 0 ]; then
+              echo "ERROR: git fetch failed. Aborting benchmarks."
+              exit $?
+            fi
+            
+            echo "Determining if the branch contains new updates."
+            local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
+
+            if [ "$zg_cmt" != "$zg_cur_cmt" ]; then
+              echo "${zg_cmt} != ${zg_cur_cmt}"
+              echo "ERROR: Branch contains new commits. Aborting benchmarks."
+              exit 31
+            fi
+          }
+
+          check_if_new_commits
+
+          # Execute benchmark. Note: It's not possible to use a matrix here in
+          # combination with GitHub AE hosted runner (one instance per job)
+          for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
+            # Execute benchmark
+            echo "Executing: ${zg_bench_cmd}"
+            echo "$zg_bench_cmd" | sh
+            check_if_new_commits
+          done
+
+      - name: Commit updated weights
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Update weights
+          commit_options: '--no-verify'
+          file_pattern: zrml/*/src/weights.rs
+          commit_author: zeitgeist-benchmark-bot <zeitgeist-benchmark-bot@no-reply.zeitgeist.pm>
+          status_options: '--untracked-files=no'
