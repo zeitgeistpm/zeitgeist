@@ -80,13 +80,14 @@ impl<FI: FixedSigned + Into<FixedI128<U64>>> LsdlmsrFee<FI> for FeeSigmoid {
             return Err("[FeeSigmoid] Overflow during calculation: (r-n)^2");
         };
 
-        let p_plus_r_minus_n = if let Some(res) = self.config.p.checked_add(r_minus_n_squared) {
-            res
-        } else {
-            return Err("[FeeSigmoid] Overflow during calculation: p + (r-n)^2");
-        };
+        let p_plus_r_minus_n_squared =
+            if let Some(res) = self.config.p.checked_add(r_minus_n_squared) {
+                res
+            } else {
+                return Err("[FeeSigmoid] Overflow during calculation: p + (r-n)^2");
+            };
 
-        let denominator = sqrt::<FixedI128<U64>, FixedI128<U64>>(p_plus_r_minus_n)?;
+        let denominator = sqrt::<FixedI128<U64>, FixedI128<U64>>(p_plus_r_minus_n_squared)?;
 
         let _ = if let Some(res) = numerator.checked_div(denominator) {
             return Ok(res);
@@ -130,7 +131,7 @@ impl Default for EmaVolumeConfig {
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaMarketVolume<FI: FixedUnsigned> {
     pub config: EmaVolumeConfig,
-    sma_current_period: FI,
+    pub sma_current_period: FI,
     sma_current_element_count: u64,
     sma_current_period_start: Option<UnixTimestamp>,
     pub ema: Option<FI>,
