@@ -101,28 +101,28 @@ jobs:
             echo 'Replacing state "s:benchmark_required" by "s:benchmark_done"'
           fi
       - name: Remove label s:benchmark_required
-        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required'))
+        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')
         uses: buildsville/add-remove-label@v1
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-required
           type: remove
       - name: Add label s:benchmark_done
-        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ""
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
         uses: buildsville/add-remove-label@v1
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-done
           type: add
       - name: Add label s:benchmark_aborted
-        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ""
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
         uses: buildsville/add-remove-label@v1
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-aborted
           type: add
       - name: Exit with error message
-        if: steps.run_benchmarks.outputs.ERROR != ""
+        if: steps.run_benchmarks.outputs.ERROR != ''
         run: |
           echo ${{ steps.run_benchmarks.output.error }}
           exit 1
