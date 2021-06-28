@@ -91,7 +91,7 @@ jobs:
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "::set-output name=error::'ERROR: Branch contains new commits. Aborting benchmarks.'"
+          echo "::set-output name=ERROR::ERROR: Branch contains new commits. Aborting benchmarks."
 
           if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
             echo "triggered by dispatch"
@@ -108,21 +108,21 @@ jobs:
           label: s:benchmark-required
           type: remove
       - name: Add label s:benchmark_done
-        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && [ -z ${{ steps.run_benchmarks.output.error }} ]
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ""
         uses: buildsville/add-remove-label@v1
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-done
           type: add
       - name: Add label s:benchmark_aborted
-        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && [ -n ${{ steps.run_benchmarks.output.error }} ]
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ""
         uses: buildsville/add-remove-label@v1
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-aborted
           type: add
       - name: Exit with error message
-        if: "[ -n ${{ steps.run_benchmarks.output.error }} ]"
+        if: steps.run_benchmarks.outputs.ERROR != ""
         run: |
           echo ${{ steps.run_benchmarks.output.error }}
           exit 1
