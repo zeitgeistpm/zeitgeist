@@ -9,7 +9,7 @@ assignees: ''
 
 # Release Checklist
 
-This is the release checklist for Zeitgeist vX.Y.Z. All following checks should be completed before publishing a new release of the Zeitgeist runtime or client.
+This is the release checklist for Zeitgeist {{ env.VERSION }}. All following checks should be completed before publishing a new release of the Zeitgeist runtime or client.
 
 ## Runtime Releases
 
