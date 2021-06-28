@@ -1,5 +1,5 @@
 ---
-name: Release Checlist
+name: Release Checklist
 about: Template issue for creating release checklists.
 title: Checklist for vX.Y.Z release
 labels: ''
