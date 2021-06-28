@@ -1,7 +1,7 @@
 ---
 name: Release Checklist
 about: Template issue for creating release checklists.
-title: Checklist for vX.Y.Z release
+title: Checklist for {{ env.VERSION }} release
 labels: ''
 assignees: ''
 
