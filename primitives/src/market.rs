@@ -1,7 +1,9 @@
 use crate::types::OutcomeReport;
 use alloc::vec::Vec;
 
-#[derive(parity_scale_codec::Decode, parity_scale_codec::Encode, sp_runtime::RuntimeDebug)]
+#[derive(
+    PartialEq, parity_scale_codec::Decode, parity_scale_codec::Encode, sp_runtime::RuntimeDebug,
+)]
 pub struct Market<AccountId, BlockNumber> {
     // Creator of this market.
     pub creator: AccountId,
@@ -55,7 +57,11 @@ pub enum MarketCreation {
 }
 
 #[derive(
-    Clone, parity_scale_codec::Encode, parity_scale_codec::Decode, sp_runtime::RuntimeDebug,
+    Clone,
+    PartialEq,
+    parity_scale_codec::Encode,
+    parity_scale_codec::Decode,
+    sp_runtime::RuntimeDebug,
 )]
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
@@ -125,7 +131,11 @@ pub enum MarketType {
 }
 
 #[derive(
-    Clone, parity_scale_codec::Decode, parity_scale_codec::Encode, sp_runtime::RuntimeDebug,
+    Clone,
+    PartialEq,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    sp_runtime::RuntimeDebug,
 )]
 pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,

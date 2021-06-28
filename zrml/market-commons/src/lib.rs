@@ -1,4 +1,4 @@
-//! # Common market parameters used by `Court` and `Prediction Markets` pallets.
+//! # Common market parameters used by `Simple disputes` and `Prediction markets` pallets.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -13,12 +13,17 @@ pub use pallet::*;
 mod pallet {
     use crate::MarketCommonsPalletApi;
     use core::marker::PhantomData;
-    use frame_support::{pallet_prelude::StorageMap, traits::Hooks, Blake2_128Concat, Parameter};
-    use sp_runtime::{
-        traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member},
-        DispatchError,
+    use frame_support::{
+        dispatch::DispatchResult,
+        pallet_prelude::{StorageMap, StorageValue},
+        traits::Hooks,
+        Blake2_128Concat, Parameter,
     };
-    use zeitgeist_primitives::types::Market;
+    use sp_runtime::{
+        traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member},
+        ArithmeticError, DispatchError,
+    };
+    use zeitgeist_primitives::types::{Market, PoolId};
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
@@ -38,6 +43,11 @@ mod pallet {
     pub enum Error<T> {
         /// A market with the provided ID does not exist.
         MarketDoesNotExist,
+        /// Market does not have an stored associated pool id.
+        MarketPoolDoesNotExist,
+        /// It is not possible to fetch the latest market ID when
+        /// no market has been created.
+        NoMarketHasBeenCreated,
     }
 
     #[pallet::hooks]
@@ -45,6 +55,24 @@ mod pallet {
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
+
+    impl<T> Pallet<T>
+    where
+        T: Config,
+    {
+        // Returns the next market id.
+        //
+        // Retrieval is based on the stored ID plus one, recording the same incremented number
+        // on the storage so next following calls will return yet another incremented number.
+        //
+        // If no market was ever added, returns a zero ID.
+        fn next_market_id() -> Result<T::MarketId, DispatchError> {
+            let next = MarketCounter::<T>::get().unwrap_or_else(|| T::MarketId::from(0u8));
+            let inc = next.checked_add(&T::MarketId::from(1u8)).ok_or(ArithmeticError::Overflow)?;
+            <MarketCounter<T>>::put(inc);
+            Ok(next)
+        }
+    }
 
     impl<T> MarketCommonsPalletApi for Pallet<T>
     where
@@ -54,30 +82,37 @@ mod pallet {
         type BlockNumber = T::BlockNumber;
         type MarketId = T::MarketId;
 
+        // Market
+
+        fn latest_market_id() -> Result<Self::MarketId, DispatchError> {
+            <MarketCounter<T>>::try_get().map_err(|_err| Error::<T>::NoMarketHasBeenCreated.into())
+        }
+
         fn market(
             market_id: &Self::MarketId,
         ) -> Result<Market<Self::AccountId, Self::BlockNumber>, DispatchError> {
             <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
-        fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> Result<(), DispatchError>
+        fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
         where
-            F: FnOnce(&mut Market<Self::AccountId, Self::BlockNumber>),
+            F: FnOnce(&mut Market<Self::AccountId, Self::BlockNumber>) -> DispatchResult,
         {
             <Markets<T>>::try_mutate(market_id, |opt| {
                 if let Some(market) = opt {
-                    cb(market);
+                    cb(market)?;
                     return Ok(());
                 }
                 Err(Error::<T>::MarketDoesNotExist.into())
             })
         }
 
-        fn insert_market(
-            market_id: Self::MarketId,
+        fn push_market(
             market: Market<Self::AccountId, Self::BlockNumber>,
-        ) {
+        ) -> Result<Self::MarketId, DispatchError> {
+            let market_id = Self::next_market_id()?;
             <Markets<T>>::insert(market_id, market);
+            Ok(market_id)
         }
 
         fn remove_market(market_id: &Self::MarketId) -> Result<(), DispatchError> {
@@ -87,11 +122,44 @@ mod pallet {
             <Markets<T>>::remove(market_id);
             Ok(())
         }
+
+        // MarketPool
+
+        fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) {
+            <MarketPool<T>>::insert(market_id, pool_id);
+        }
+
+        fn market_pool(market_id: &Self::MarketId) -> Result<PoolId, DispatchError> {
+            <MarketPool<T>>::try_get(market_id)
+                .map_err(|_err| Error::<T>::MarketPoolDoesNotExist.into())
+        }
+
+        // Migrations (Temporary)
+
+        fn insert_market(
+            market_id: Self::MarketId,
+            market: Market<Self::AccountId, Self::BlockNumber>,
+        ) {
+            <Markets<T>>::insert(market_id, market);
+        }
+
+        fn set_market_counter(market_counter: Self::MarketId) {
+            MarketCounter::<T>::put(market_counter);
+        }
     }
 
     /// Holds all markets
     #[pallet::storage]
-    #[pallet::getter(fn markets)]
     pub type Markets<T: Config> =
         StorageMap<_, Blake2_128Concat, T::MarketId, Market<T::AccountId, T::BlockNumber>>;
+
+    /// The number of markets that have been created (including removed markets) and the next
+    /// identifier for a created market.
+    #[pallet::storage]
+    pub type MarketCounter<T: Config> = StorageValue<_, T::MarketId>;
+
+    /// Maps a market id to a related pool id. It is up to the caller to keep and sync valid
+    /// existent markets with valid existent pools.
+    #[pallet::storage]
+    pub type MarketPool<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, PoolId>;
 }

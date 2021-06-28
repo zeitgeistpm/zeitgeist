@@ -70,8 +70,10 @@ sp-finality-grandpa = { branch = "polkadot-v0.9.4", default-features = false, gi
 # Zeitgeist
 
 zeitgeist-primitives = { default-features = false, path = "../primitives" }
+zrml-market-commons = { default-features = false, path = "../zrml/market-commons" }
 zrml-orderbook-v1 = { default-features = false, path = "../zrml/orderbook-v1" }
 zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
+zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
 
@@ -106,19 +108,20 @@ parachain = [
 	"xcm",
 ]
 runtime-benchmarks = [
-    "frame-benchmarking",
-    "frame-support/runtime-benchmarks",
-    "frame-system-benchmarking",
-    "frame-system/runtime-benchmarks",
-    "hex-literal",
-    "pallet-balances/runtime-benchmarks",
-    "pallet-timestamp/runtime-benchmarks",
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system-benchmarking",
+	"frame-system/runtime-benchmarks",
+	"hex-literal",
+	"pallet-balances/runtime-benchmarks",
+	"pallet-timestamp/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
-    "sp-runtime/runtime-benchmarks",
-	"zrml-swaps/runtime-benchmarks",
-	"zrml-prediction-markets/runtime-benchmarks",
-	"zrml-orderbook-v1/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"zrml-orderbook-v1/runtime-benchmarks",
+	"zrml-prediction-markets/runtime-benchmarks",
+	"zrml-simple-disputes/runtime-benchmarks",
+	"zrml-swaps/runtime-benchmarks",
 ]
 std = [
 	"frame-executive/std",
@@ -188,8 +191,10 @@ std = [
 	# Zeitgeist
 
 	"zeitgeist-primitives/std",
+	"zrml-market-commons/std",
 	"zrml-orderbook-v1/std",
 	"zrml-prediction-markets/std",
+	"zrml-simple-disputes/std",
 	"zrml-swaps-runtime-api/std",
 	"zrml-swaps/std",
 ]

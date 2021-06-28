@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo};
 use zeitgeist_primitives::types::{MarketDispute, OutcomeReport};
 
-/// Court - Pallet Api
-pub trait CourtPalletApi {
+/// SimpleDisputes - Pallet Api
+pub trait DisputeApi {
     type AccountId;
     type BlockNumber;
     type MarketId;
@@ -63,4 +63,15 @@ pub trait CourtPalletApi {
 
     /// Manages markets resolutions moving all reported markets to resolved.
     fn on_resolution(now: Self::BlockNumber) -> Result<ResolutionCounters, DispatchError>;
+
+    // Migrations (Temporary)
+
+    fn dispute(
+        market_id: &Self::MarketId,
+    ) -> Option<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>>;
+
+    fn insert_dispute(
+        market_id: Self::MarketId,
+        dispute: Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>,
+    );
 }

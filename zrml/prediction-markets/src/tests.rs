@@ -15,6 +15,8 @@ use zeitgeist_primitives::{
         ScalarPosition,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_simple_disputes::DisputeApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
     let mut metadata = [byte; 50];
@@ -50,7 +52,7 @@ fn it_creates_binary_markets() {
         assert_eq!(alice_reserved, 450);
 
         // Make sure that the market id has been incrementing
-        let market_id = PredictionMarkets::market_count();
+        let market_id = MarketCommons::latest_market_id().unwrap();
         assert_eq!(market_id, 2);
     });
 }
@@ -98,7 +100,10 @@ fn it_allows_sudo_to_destroy_markets() {
         // destroy the market
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
 
-        assert_eq!(PredictionMarkets::markets(0).is_none(), true);
+        assert_noop!(
+            MarketCommons::market(&0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
     });
 }
 
@@ -109,7 +114,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Advised);
 
         // make sure it's in status proposed
-        let market = PredictionMarkets::markets(0);
+        let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
         // Make sure it fails from the random joe
@@ -121,7 +126,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
 
-        let after_market = PredictionMarkets::markets(0);
+        let after_market = MarketCommons::market(&0);
         assert_eq!(after_market.unwrap().status, MarketStatus::Active);
     });
 }
@@ -133,14 +138,16 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Advised);
 
         // make sure it's in status proposed
-        let market = PredictionMarkets::markets(0);
+        let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
 
-        let after_market = PredictionMarkets::markets(0);
-        assert_eq!(after_market.is_none(), true);
+        assert_noop!(
+            MarketCommons::market(&0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
     });
 }
 
@@ -153,7 +160,7 @@ fn it_allows_to_buy_a_complete_set() {
         // Allows someone to generate a complete set
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,));
 
-        let market = PredictionMarkets::markets(0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
 
         // Check the outcome balances
         let assets = PredictionMarkets::outcome_assets(0, &market);
@@ -205,7 +212,7 @@ fn it_allows_to_sell_a_complete_set() {
 
         assert_ok!(PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 100,));
 
-        let market = PredictionMarkets::markets(0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
 
         // Check the outcome balances
         let assets = PredictionMarkets::outcome_assets(0, &market);
@@ -228,7 +235,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         run_to_block(100);
 
-        let market = PredictionMarkets::markets(0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Active);
         assert_eq!(market.report.is_none(), true);
 
@@ -238,7 +245,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        let market_after = PredictionMarkets::markets(0).unwrap();
+        let market_after = MarketCommons::market(&0).unwrap();
         let report = market_after.report.unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
         assert_eq!(report.outcome, OutcomeReport::Categorical(1));
@@ -264,23 +271,23 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         // Dispute phase is 10 blocks... so only run 5 of them.
         run_to_block(105);
 
-        assert_ok!(PredictionMarkets::dispute(
+        assert_ok!(SimpleDisputes::on_dispute(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(0)
         ));
 
-        let market = PredictionMarkets::markets(0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
-        let disputes = PredictionMarkets::disputes(0);
+        let disputes = SimpleDisputes::disputes(&0).unwrap();
         assert_eq!(disputes.len(), 1);
         let dispute = &disputes[0];
         assert_eq!(dispute.at, 105);
         assert_eq!(dispute.by, CHARLIE);
         assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
-        let market_ids = PredictionMarkets::market_ids_per_dispute_block(105);
+        let market_ids = SimpleDisputes::market_ids_per_dispute_block(&105).unwrap();
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
     });
@@ -301,7 +308,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
             OutcomeReport::Categorical(1),
         ));
 
-        let market = PredictionMarkets::markets(0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Reported);
         assert_eq!(market.report.unwrap().by, ALICE);
         // but oracle was bob
@@ -310,7 +317,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         // make sure it still resolves
         run_to_block(3011);
 
-        let market_after = PredictionMarkets::markets(0).unwrap();
+        let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
     });
 }
@@ -331,14 +338,14 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
             OutcomeReport::Categorical(1)
         ));
 
-        let reported_ids = PredictionMarkets::market_ids_per_report_block(100);
+        let reported_ids = SimpleDisputes::market_ids_per_report_block(&100).unwrap();
         assert_eq!(reported_ids.len(), 1);
         let id = reported_ids[0];
         assert_eq!(id, 0);
 
         run_to_block(111);
 
-        let market = PredictionMarkets::markets(0);
+        let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Resolved);
 
         // check to make sure all but the winning share was deleted
@@ -380,7 +387,7 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(102);
 
-        assert_ok!(PredictionMarkets::dispute(
+        assert_ok!(SimpleDisputes::on_dispute(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
@@ -388,7 +395,7 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(103);
 
-        assert_ok!(PredictionMarkets::dispute(
+        assert_ok!(SimpleDisputes::on_dispute(
             Origin::signed(DAVE),
             0,
             OutcomeReport::Categorical(0)
@@ -396,13 +403,13 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(104);
 
-        assert_ok!(PredictionMarkets::dispute(
+        assert_ok!(SimpleDisputes::on_dispute(
             Origin::signed(EVE),
             0,
             OutcomeReport::Categorical(1)
         ));
 
-        let market = PredictionMarkets::markets(0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
         // check everyone's deposits
@@ -416,22 +423,22 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(eve_reserved, 150);
 
         // check disputes length
-        let disputes = PredictionMarkets::disputes(0);
+        let disputes = SimpleDisputes::disputes(&0).unwrap();
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        let market_ids_1 = PredictionMarkets::market_ids_per_dispute_block(102);
+        let market_ids_1 = SimpleDisputes::market_ids_per_dispute_block(&102).unwrap();
         assert_eq!(market_ids_1.len(), 0);
 
-        let market_ids_2 = PredictionMarkets::market_ids_per_dispute_block(103);
+        let market_ids_2 = SimpleDisputes::market_ids_per_dispute_block(&103).unwrap();
         assert_eq!(market_ids_2.len(), 0);
 
-        let market_ids_3 = PredictionMarkets::market_ids_per_dispute_block(104);
+        let market_ids_3 = SimpleDisputes::market_ids_per_dispute_block(&104).unwrap();
         assert_eq!(market_ids_3.len(), 1);
 
         run_to_block(115);
 
-        let market_after = PredictionMarkets::markets(0).unwrap();
+        let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
@@ -483,7 +490,7 @@ fn it_allows_to_redeem_shares() {
 
         run_to_block(111);
 
-        let market = PredictionMarkets::markets(0).unwrap();
+        let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Resolved);
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
@@ -539,7 +546,7 @@ fn full_scalar_market_lifecycle() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
 
         // check balances
-        let assets = PredictionMarkets::outcome_assets(0, &PredictionMarkets::markets(0).unwrap());
+        let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
         assert_eq!(assets.len(), 2);
         for asset in assets.iter() {
             let bal = Tokens::free_balance(*asset, &CHARLIE);
@@ -552,7 +559,7 @@ fn full_scalar_market_lifecycle() {
         // report
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
 
-        let market_after_report = PredictionMarkets::markets(0).unwrap();
+        let market_after_report = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_report.report.is_some(), true);
         let report = market_after_report.report.unwrap();
         assert_eq!(report.at, 100);
@@ -560,13 +567,13 @@ fn full_scalar_market_lifecycle() {
         assert_eq!(report.outcome, OutcomeReport::Scalar(100));
 
         // dispute
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
-        let disputes = PredictionMarkets::disputes(0);
+        assert_ok!(SimpleDisputes::on_dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
+        let disputes = SimpleDisputes::disputes(&0).unwrap();
         assert_eq!(disputes.len(), 1);
 
         run_to_block(150);
 
-        let market_after_resolve = PredictionMarkets::markets(0).unwrap();
+        let market_after_resolve = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
 
         // give EVE some shares
@@ -611,7 +618,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
             MarketCreation::Permissionless,
             3,
         ));
-        deploy_swap_pool(PredictionMarkets::markets(0).unwrap(), 0).unwrap();
+        deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 1 * BASE));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * BASE));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
