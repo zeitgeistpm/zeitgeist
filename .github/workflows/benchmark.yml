@@ -122,7 +122,7 @@ jobs:
           label: s:benchmark-aborted
           type: add
       - name: Exit with error message
-        if: [ -n ${{ steps.run_benchmarks.output.error }} ]
+        if: "[ -n ${{ steps.run_benchmarks.output.error }} ]"
         run: |
           echo ${{ steps.run_benchmarks.output.error }}
           exit 1
