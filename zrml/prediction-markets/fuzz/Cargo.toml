@@ -10,6 +10,7 @@ frame-support = { branch = "polkadot-v0.9.4", default-features = false, git = "h
 libfuzzer-sys = "0.4"
 zeitgeist-primitives = { features = ["arbitrary"], default-features = false, path = "../../../primitives" }
 zrml-prediction-markets = { features = ["mock"], path = ".." }
+zrml-simple-disputes = { path = "../../simple-disputes" }
 
 [package]
 authors = ["Automatically generated"]

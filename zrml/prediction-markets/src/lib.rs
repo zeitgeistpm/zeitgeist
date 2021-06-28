@@ -55,7 +55,7 @@
 extern crate alloc;
 
 mod benchmarks;
-mod errors;
+mod migrations;
 pub mod mock;
 mod tests;
 pub mod weights;
@@ -64,39 +64,39 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{errors::*, weights::*};
+    use crate::weights::*;
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{self, DispatchResultWithPostInfo, Weight},
         ensure,
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{
-            Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            OnUnbalanced, ReservableCurrency, Time,
+            Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, IsType, OnUnbalanced,
+            ReservableCurrency, Time,
         },
-        transactional, Blake2_128Concat, PalletId, Parameter,
+        transactional, PalletId,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
-        traits::{
-            AccountIdConversion, AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, One,
-            Zero,
-        },
-        DispatchError, DispatchResult, SaturatedConversion,
+        traits::{AccountIdConversion, Zero},
+        DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         traits::{Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
-            MultiHash, OutcomeReport, PoolId, PoolStatus, Report, ScalarPosition,
+            Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
+            OutcomeReport, Report, ScalarPosition,
         },
     };
+    use zrml_market_commons::MarketCommonsPalletApi;
+    use zrml_simple_disputes::DisputeApi;
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type MarketIdOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
@@ -120,18 +120,18 @@ mod pallet {
         )]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
             let mut total_accounts = 0usize;
             let mut share_accounts = 0usize;
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             let market_status = market.status;
             let outcome_assets = Self::outcome_assets(market_id, &market);
             let outcome_assets_amount = outcome_assets.len();
             Self::clear_auto_resolve(&market_id)?;
-            <Markets<T>>::remove(&market_id);
+            T::MarketCommons::remove_market(&market_id)?;
 
             let mut outcome_assets_iter = outcome_assets.into_iter();
 
@@ -171,16 +171,14 @@ mod pallet {
         }
 
         /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
-        ///
-
         #[pallet::weight(T::WeightInfo::admin_move_market_to_closed())]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             let new_end = match market.end {
                 MarketEnd::Block(_) => {
                     let current_block = <frame_system::Pallet<T>>::block_number();
@@ -192,9 +190,10 @@ mod pallet {
                 }
             };
 
-            <Markets<T>>::mutate(&market_id, |m| {
-                m.as_mut().unwrap().end = new_end;
-            });
+            T::MarketCommons::mutate_market(&market_id, |m| {
+                m.end = new_end;
+                Ok(())
+            })?;
             Ok(())
         }
 
@@ -210,23 +209,24 @@ mod pallet {
         ))]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             ensure!(
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 "not reported nor disputed"
             );
             Self::clear_auto_resolve(&market_id)?;
-            let weight = Self::internal_resolve(&market_id)?;
-            Ok(Some(
-                weight
-                    .saturating_add(T::WeightInfo::admin_move_market_to_resolved_overhead())
-                    .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported()),
-            )
-            .into())
+            Ok(Some(0u64).into())
+            //let weight = Self::internal_resolve(&market_id)?;
+            //Ok(Some(
+            //    weight
+            //        .saturating_add(T::WeightInfo::admin_move_market_to_resolved_overhead())
+            //        .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported()),
+            //)
+            //.into())
         }
 
         /// Approves a market that is waiting for approval from the
@@ -238,17 +238,18 @@ mod pallet {
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
         #[pallet::weight(T::WeightInfo::approve_market())]
-        pub fn approve_market(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
+        pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
 
             let creator = market.creator;
 
             T::Currency::unreserve(&creator, T::AdvisoryBond::get());
-            <Markets<T>>::mutate(&market_id, |m| {
-                m.as_mut().unwrap().status = MarketStatus::Active;
-            });
+            T::MarketCommons::mutate_market(&market_id, |m| {
+                m.status = MarketStatus::Active;
+                Ok(())
+            })?;
 
             Self::deposit_event(Event::MarketApproved(market_id));
             Ok(())
@@ -271,7 +272,7 @@ mod pallet {
         #[transactional]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -285,11 +286,11 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::cancel_pending_market())]
         pub fn cancel_pending_market(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
 
             let creator = market.creator;
             let status = market.status;
@@ -297,7 +298,7 @@ mod pallet {
             ensure!(status == MarketStatus::Proposed, "Market must be pending approval.");
             // The market is being cancelled, return the deposit.
             T::Currency::unreserve(&creator, T::AdvisoryBond::get());
-            <Markets<T>>::remove(&market_id);
+            T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketCancelled(market_id));
             Ok(())
         }
@@ -334,8 +335,6 @@ mod pallet {
                 }
             };
 
-            let market_id = Self::get_next_market_id()?;
-
             let market = Market {
                 creator: sender.clone(),
                 creation,
@@ -349,7 +348,7 @@ mod pallet {
                 resolved_outcome: None,
             };
 
-            <Markets<T>>::insert(market_id, Some(market));
+            let market_id = T::MarketCommons::push_market(market)?;
 
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
@@ -387,7 +386,6 @@ mod pallet {
                 }
             };
 
-            let market_id = Self::get_next_market_id()?;
             let market = Market {
                 creator: sender.clone(),
                 creation,
@@ -401,7 +399,7 @@ mod pallet {
                 resolved_outcome: None,
             };
 
-            <Markets<T>>::insert(market_id, Some(market));
+            let market_id = T::MarketCommons::push_market(market)?;
 
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
@@ -419,114 +417,26 @@ mod pallet {
         #[transactional]
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
             weights: Vec<u128>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             // ensure the market is active
             let status = market.status;
             ensure!(status == MarketStatus::Active, Error::<T>::MarketNotActive);
 
             // ensure a swap pool does not already exist
-            ensure!(Self::market_to_swap_pool(&market_id).is_none(), Error::<T>::SwapPoolExists);
+            ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
 
             let mut assets = Self::outcome_assets(market_id, &market);
             assets.push(Asset::Ztg);
 
-            let pool_id = T::Swap::create_pool(sender, assets, Zero::zero(), weights)?;
+            let pool_id = T::Swaps::create_pool(sender, assets, Zero::zero(), weights)?;
 
-            <MarketToSwapPool<T>>::insert(market_id, Some(pool_id));
+            T::MarketCommons::insert_market_pool(market_id, pool_id);
             Ok(())
-        }
-
-        /// Disputes a reported outcome.
-        ///
-        /// NOTE: Requires a `DisputeBond` + `DisputeFactor` * `num_disputes` amount of currency
-        ///  to be reserved.
-        ///
-        #[pallet::weight(T::WeightInfo::dispute(T::MaxDisputes::get() as u32))]
-        pub fn dispute(
-            origin: OriginFor<T>,
-            market_id: T::MarketId,
-            outcome: OutcomeReport,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-
-            let market = Self::market_by_id(&market_id)?;
-
-            ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
-
-            if let OutcomeReport::Categorical(inner) = outcome {
-                if let MarketType::Categorical(categories) = market.market_type {
-                    ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
-                } else {
-                    return Err(OUTCOME_MISMATCH.into());
-                }
-            }
-            if let OutcomeReport::Scalar(inner) = outcome {
-                if let MarketType::Scalar(outcome_range) = market.market_type {
-                    ensure!(
-                        inner >= outcome_range.0 && inner <= outcome_range.1,
-                        Error::<T>::OutcomeOutOfRange
-                    );
-                } else {
-                    return Err(OUTCOME_MISMATCH.into());
-                }
-            }
-
-            let disputes = Self::disputes(market_id);
-            let num_disputes = disputes.len() as u16;
-            let max_disputes = T::MaxDisputes::get();
-            ensure!(num_disputes < max_disputes, Error::<T>::MaxDisputesReached);
-
-            if num_disputes > 0 {
-                ensure!(
-                    disputes[(num_disputes as usize) - 1].outcome != outcome,
-                    Error::<T>::CannotDisputeSameOutcome
-                );
-            }
-
-            let dispute_bond =
-                T::DisputeBond::get() + T::DisputeFactor::get() * num_disputes.into();
-            T::Currency::reserve(&sender, dispute_bond)?;
-
-            let current_block = <frame_system::Pallet<T>>::block_number();
-
-            if num_disputes > 0 {
-                let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
-                let at = prev_dispute.at;
-                let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
-                remove_item::<T::MarketId>(&mut old_disputes_per_block, market_id);
-                <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
-            }
-
-            <MarketIdsPerDisputeBlock<T>>::mutate(current_block, |ids| {
-                ids.push(market_id);
-            });
-
-            <Disputes<T>>::mutate(market_id, |disputes| {
-                disputes.push(MarketDispute {
-                    at: current_block,
-                    by: sender,
-                    outcome: outcome.clone(),
-                })
-            });
-
-            // if not already in dispute
-            if market.status != MarketStatus::Disputed {
-                <Markets<T>>::mutate(market_id, |m| {
-                    m.as_mut().unwrap().status = MarketStatus::Disputed;
-                });
-            }
-
-            Self::deposit_event(Event::MarketDisputed(market_id, outcome));
-            Self::calculate_actual_weight(
-                &T::WeightInfo::dispute,
-                num_disputes as u32,
-                max_disputes as u32,
-            )
         }
 
         /// Starts a global dispute.
@@ -534,9 +444,9 @@ mod pallet {
         /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
         ///
         #[pallet::weight(10_000_000)]
-        pub fn global_dispute(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
+        pub fn global_dispute(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             let _sender = ensure_signed(origin)?;
-            let _market = Self::market_by_id(&market_id)?;
+            let _market = T::MarketCommons::market(&market_id)?;
             // TODO: implement global disputes
             Ok(())
         }
@@ -548,17 +458,18 @@ mod pallet {
         )]
         pub fn redeem_shares(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             let market_account = Self::market_account(market_id);
 
-            ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketNotResolved,);
+            ensure!(market.status == MarketStatus::Resolved, Error::<T>::MarketIsNotResolved);
 
             // Check to see if the sender has any winning shares.
-            let resolved_outcome = market.resolved_outcome.ok_or(NOT_RESOLVED)?;
+            let resolved_outcome =
+                market.resolved_outcome.ok_or(Error::<T>::MarketIsNotResolved)?;
 
             let winning_assets = match resolved_outcome {
                 OutcomeReport::Categorical(category_index) => {
@@ -662,15 +573,15 @@ mod pallet {
         /// NOTE: Will slash the reserved `AdvisoryBond` from the market creator.
         ///
         #[pallet::weight(T::WeightInfo::reject_market())]
-        pub fn reject_market(origin: OriginFor<T>, market_id: T::MarketId) -> DispatchResult {
+        pub fn reject_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             let creator = market.creator;
             let (imbalance, _) = T::Currency::slash_reserved(&creator, T::AdvisoryBond::get());
             // Slashes the imbalance.
             T::Slash::on_unbalanced(imbalance);
-            <Markets<T>>::remove(&market_id);
+            T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketRejected(market_id));
             Ok(())
         }
@@ -680,48 +591,54 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::report())]
         pub fn report(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-
-            let mut market = Self::market_by_id(&market_id)?;
-
-            // TODO make this a conditional check
-            // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
-            ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-
-            // ensure market is not active
-            ensure!(!Self::is_market_active(market.end), Error::<T>::MarketNotClosed);
-
             let current_block = <frame_system::Pallet<T>>::block_number();
 
-            match market.end {
-                MarketEnd::Block(block) => {
-                    // blocks
-                    if current_block <= block + T::ReportingPeriod::get() {
-                        ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
-                    } // otherwise anyone can be the reporter
-                }
-                MarketEnd::Timestamp(timestamp) => {
-                    // unix timestamp
-                    let now = T::Timestamp::now().saturated_into::<u64>();
-                    let reporting_period_in_ms =
-                        T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
-                    if now <= timestamp + reporting_period_in_ms {
-                        ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
-                    } // otherwise anyone can be the reporter
-                }
-            }
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                // TODO make this a conditional check
+                // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
+                ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
 
-            market.report =
-                Some(Report { at: current_block, by: sender, outcome: outcome.clone() });
-            market.status = MarketStatus::Reported;
-            <Markets<T>>::insert(market_id, Some(market));
+                // ensure market is not active
+                ensure!(!Self::is_market_active(market.end), Error::<T>::MarketNotClosed);
 
-            <MarketIdsPerReportBlock<T>>::mutate(current_block, |v| {
+                match market.end {
+                    MarketEnd::Block(block) => {
+                        // blocks
+                        if current_block <= block + T::ReportingPeriod::get() {
+                            ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                        } // otherwise anyone can be the reporter
+                    }
+                    MarketEnd::Timestamp(timestamp) => {
+                        // unix timestamp
+                        let now = T::Timestamp::now().saturated_into::<u64>();
+                        let reporting_period_in_ms =
+                            T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
+                        if now <= timestamp + reporting_period_in_ms {
+                            ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                        } // otherwise anyone can be the reporter
+                    }
+                }
+
+                market.report =
+                    Some(Report { at: current_block, by: sender, outcome: outcome.clone() });
+                market.status = MarketStatus::Reported;
+
+                Ok(())
+            })?;
+
+            let rslt = T::SimpleDisputes::mutate_market_ids_per_report_block(&current_block, |v| {
                 v.push(market_id);
             });
+            if rslt.is_err() {
+                T::SimpleDisputes::insert_market_id_per_report_block(
+                    current_block,
+                    vec![market_id],
+                );
+            }
 
             Self::deposit_event(Event::MarketReported(market_id, outcome));
             Ok(())
@@ -734,12 +651,12 @@ mod pallet {
         )]
         pub fn sell_complete_set(
             origin: OriginFor<T>,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
 
             let market_account = Self::market_account(market_id);
@@ -789,40 +706,33 @@ mod pallet {
 
         type Currency: ReservableCurrency<Self::AccountId>;
 
-        /// The base amount of currency that must be bonded in order to create a dispute.
-        type DisputeBond: Get<BalanceOf<Self>>;
-
-        /// The additional amount of currency that must be bonded when creating a subsequent
-        ///  dispute.
-        type DisputeFactor: Get<BalanceOf<Self>>;
-
-        /// The number of blocks the dispute period remains open.
-        type DisputePeriod: Get<Self::BlockNumber>;
-
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        type Shares: ZeitgeistMultiReservableCurrency<
-            Self::AccountId,
-            Balance = BalanceOf<Self>,
-            CurrencyId = Asset<Self::MarketId>,
+        /// Common market parameters
+        type MarketCommons: MarketCommonsPalletApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
         >;
-
-        /// The identifier of individual markets.
-        type MarketId: AtLeast32Bit
-            + Copy
-            + Default
-            + MaybeSerializeDeserialize
-            + Member
-            + Parameter;
-
-        /// The minimum number of categories available for categorical markets.
-        type MinCategories: Get<u16>;
 
         /// The maximum number of categories available for categorical markets.
         type MaxCategories: Get<u16>;
 
-        /// The maximum number of disputes allowed on any single market.
-        type MaxDisputes: Get<u16>;
+        /// The minimum number of categories available for categorical markets.
+        type MinCategories: Get<u16>;
+
+        type Shares: ZeitgeistMultiReservableCurrency<
+            Self::AccountId,
+            Balance = BalanceOf<Self>,
+            CurrencyId = Asset<MarketIdOf<Self>>,
+        >;
+
+        /// Responsable for handling disputes
+        type SimpleDisputes: DisputeApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Origin = Self::Origin,
+        >;
 
         /// The module identifier.
         type PalletId: Get<PalletId>;
@@ -834,9 +744,11 @@ mod pallet {
         /// The number of blocks the reporting period remains open.
         type ReportingPeriod: Get<Self::BlockNumber>;
 
+        /// Slash
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-        type Swap: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = Self::MarketId>;
+        /// Swaps pallet API
+        type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
         /// The type that offers timestamping functionality
         type Timestamp: Time;
@@ -845,16 +757,12 @@ mod pallet {
         /// guaranteeing that it will resolve as anything but `Invalid`.
         type ValidityBond: Get<BalanceOf<Self>>;
 
+        ///Weights generated by benchmarks
         type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Someone is trying to call `dispute` with the same outcome that is currently
-        ///  registered on-chain.
-        CannotDisputeSameOutcome,
-        /// The sender's balance is too low to take this order.
-        CurrencyBalanceTooLow,
         /// End block is too soon.
         EndBlockTooSoon,
         /// End timestamp is too soon.
@@ -873,38 +781,26 @@ mod pallet {
         MarketNotActive,
         /// Sender does not have enough balance to buy shares.
         NotEnoughBalance,
-        /// The order has already been taken.
-        OrderAlreadyTaken,
-        /// The order hash was not found in the pallet.
-        OrderDoesNotExist,
         /// The outcome being reported is out of range.
         OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
+        /// A reported market was expected
+        MarketIsNotReported,
+        /// A resolved market was expected
+        MarketIsNotResolved,
         /// The market is not closed.
         MarketNotClosed,
-        /// The market is not overdue.
-        MarketNotOverdue,
-        /// The market is not reported on.
-        MarketNotReported,
-        /// The market is not resolved.
-        MarketNotResolved,
-        /// The maximum number of disputes has been reached.
-        MaxDisputesReached,
         /// The number of categories for a categorical market is too low
         NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
-        /// The user has a share balance that is too low.
-        ShareBalanceTooLow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
         /// Too many categories for a categorical market
         TooManyCategories,
-        /// A pool of a market does not exist
-        PoolDoesNotExist,
     }
 
     #[pallet::event]
@@ -914,116 +810,47 @@ mod pallet {
         T: Config,
     {
         /// A complete set of shares has been bought [market_id, buyer]
-        BoughtCompleteSet(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
+        BoughtCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved [market_id]
-        MarketApproved(<T as Config>::MarketId),
+        MarketApproved(MarketIdOf<T>),
         /// A market has been created [market_id, creator]
-        MarketCreated(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
+        MarketCreated(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
         /// A pending market has been cancelled. [market_id, creator]
-        MarketCancelled(<T as Config>::MarketId),
+        MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed [market_id, new_outcome]
-        MarketDisputed(<T as Config>::MarketId, OutcomeReport),
+        MarketDisputed(MarketIdOf<T>, OutcomeReport),
         /// NOTE: Maybe we should only allow rejections.
         /// A pending market has been rejected as invalid. [market_id]
-        MarketRejected(<T as Config>::MarketId),
+        MarketRejected(MarketIdOf<T>),
         /// A market has been reported on [market_id, reported_outcome]
-        MarketReported(<T as Config>::MarketId, OutcomeReport),
+        MarketReported(MarketIdOf<T>, OutcomeReport),
         /// A market has been resolved [market_id, real_outcome]
-        MarketResolved(<T as Config>::MarketId, u16),
+        MarketResolved(MarketIdOf<T>, u16),
         /// A complete set of shares has been sold [market_id, seller]
-        SoldCompleteSet(<T as Config>::MarketId, <T as frame_system::Config>::AccountId),
+        SoldCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        /// The initialize function will move all reported markets to resolved.
-        ///
-        /// Disputed markets need to be resolved manually.
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let dispute_period = T::DisputePeriod::get();
-            if now <= dispute_period {
-                return 1_000_000;
-            }
+            let _ = T::SimpleDisputes::on_resolution(now);
+            0
+        }
 
-            // Resolve all regularly reported markets.
-            let mut total_weight: Weight = 0;
-            let market_ids = Self::market_ids_per_report_block(now - dispute_period);
-            market_ids.iter().for_each(|id| {
-                let market =
-                    Self::markets(id).expect("Market stored in report block does not exist");
-                if let MarketStatus::Reported = market.status {
-                    let weight = Self::internal_resolve(id).expect("Internal resolve failed");
-                    total_weight = total_weight.saturating_add(weight);
-                }
-            });
-
-            // Resolve any disputed markets.
-            let disputed = Self::market_ids_per_dispute_block(now - dispute_period);
-            disputed.iter().for_each(|id| {
-                let weight = Self::internal_resolve(id).expect("Internal resolve failed");
-                total_weight = total_weight.saturating_add(weight);
-            });
-
-            total_weight
+        fn on_runtime_upgrade() -> Weight {
+            crate::migrations::_0_1_1_move_storage_to_simple_disputes_and_market_commons::migrate::<T>(
+            )
         }
     }
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
-    /// For each market, this holds the dispute information for each dispute that's
-    /// been issued.
-    #[pallet::storage]
-    #[pallet::getter(fn disputes)]
-    pub type Disputes<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::MarketId,
-        Vec<MarketDispute<T::AccountId, T::BlockNumber>>,
-        ValueQuery,
-    >;
-
-    /// For each market, this holds the dispute information for each dispute that's
-    /// been issued.
-    #[pallet::storage]
-    #[pallet::getter(fn markets)]
-    pub type Markets<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        T::MarketId,
-        Option<Market<T::AccountId, T::BlockNumber>>,
-        ValueQuery,
-    >;
-
-    /// A mapping of market identifiers to the block they were disputed at.
-    /// A market only ends up here if it was disputed.
-    #[pallet::storage]
-    #[pallet::getter(fn market_ids_per_dispute_block)]
-    pub type MarketIdsPerDisputeBlock<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::BlockNumber, Vec<T::MarketId>, ValueQuery>;
-
-    /// A mapping of market identifiers to the block that they were reported on.
-    #[pallet::storage]
-    #[pallet::getter(fn market_ids_per_report_block)]
-    pub type MarketIdsPerReportBlock<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::BlockNumber, Vec<T::MarketId>, ValueQuery>;
-
-    /// The number of markets that have been created and the next identifier
-    /// for a created market.
-    #[pallet::storage]
-    #[pallet::getter(fn market_count)]
-    pub type MarketCount<T: Config> = StorageValue<_, T::MarketId, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn market_to_swap_pool)]
-    pub type MarketToSwapPool<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::MarketId, Option<PoolId>, ValueQuery>;
-
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber>,
-        ) -> Vec<Asset<T::MarketId>> {
+        ) -> Vec<Asset<MarketIdOf<T>>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
                     let mut assets = Vec::new();
@@ -1041,7 +868,7 @@ mod pallet {
             }
         }
 
-        pub(crate) fn market_account(market_id: T::MarketId) -> T::AccountId {
+        pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
             T::PalletId::get().into_sub_account(market_id)
         }
 
@@ -1058,22 +885,27 @@ mod pallet {
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(market_id: &T::MarketId) -> Result<(), dispatch::DispatchError> {
-            let market = Self::market_by_id(&market_id)?;
+        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(), dispatch::DispatchError> {
+            let market = T::MarketCommons::market(&market_id)?;
             if market.status == MarketStatus::Reported {
-                let report = market.report.ok_or(NO_REPORT)?;
-                let mut old_reports_per_block = Self::market_ids_per_report_block(report.at);
-                remove_item::<T::MarketId>(&mut old_reports_per_block, *market_id);
-                <MarketIdsPerReportBlock<T>>::insert(report.at, old_reports_per_block);
+                let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
+                let mut old_reports_per_block =
+                    T::SimpleDisputes::market_ids_per_report_block(&report.at)?;
+                remove_item::<MarketIdOf<T>>(&mut old_reports_per_block, *market_id);
+                T::SimpleDisputes::insert_market_id_per_report_block(
+                    report.at,
+                    old_reports_per_block,
+                );
             }
             if market.status == MarketStatus::Disputed {
-                let disputes = Self::disputes(market_id);
-                let num_disputes = disputes.len() as u16;
-                let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
+                let disputes = T::SimpleDisputes::disputes(market_id)?;
+                let num_disputes = disputes.len();
+                let prev_dispute = disputes[num_disputes - 1].clone();
                 let at = prev_dispute.at;
-                let mut old_disputes_per_block = Self::market_ids_per_dispute_block(at);
-                remove_item::<T::MarketId>(&mut old_disputes_per_block, *market_id);
-                <MarketIdsPerDisputeBlock<T>>::insert(at, old_disputes_per_block);
+                let mut old_disputes_per_block =
+                    T::SimpleDisputes::market_ids_per_dispute_block(&at)?;
+                remove_item::<MarketIdOf<T>>(&mut old_disputes_per_block, *market_id);
+                T::SimpleDisputes::insert_market_id_per_dispute_block(at, old_disputes_per_block);
             }
 
             Ok(())
@@ -1081,12 +913,12 @@ mod pallet {
 
         pub(crate) fn do_buy_complete_set(
             who: T::AccountId,
-            market_id: T::MarketId,
+            market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure!(T::Currency::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance,);
 
-            let market = Self::market_by_id(&market_id)?;
+            let market = T::MarketCommons::market(&market_id)?;
             ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
 
             let market_account = Self::market_account(market_id);
@@ -1104,155 +936,6 @@ mod pallet {
             Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
         }
 
-        /// DANGEROUS - MUTATES PALLET STORAGE
-        ///
-        fn get_next_market_id() -> Result<T::MarketId, dispatch::DispatchError> {
-            let next = Self::market_count();
-            let inc =
-                next.checked_add(&One::one()).ok_or("Overflow when incrementing market count.")?;
-            <MarketCount<T>>::put(inc);
-            Ok(next)
-        }
-
-        /// Performs the logic for resolving a market, including slashing and distributing
-        /// funds.
-        ///
-        /// NOTE: This function does not perform any checks on the market that is being given.
-        /// In the function calling this you should that the market is already in a reported or
-        /// disputed state.
-        ///
-        pub(crate) fn internal_resolve(market_id: &T::MarketId) -> Result<Weight, DispatchError> {
-            let market = Self::market_by_id(market_id)?;
-            let report = market.report.clone().ok_or(NO_REPORT)?;
-            let mut total_accounts = 0u32;
-            let mut total_asset_accounts = 0u32;
-            let mut total_categories = 0u32;
-            let mut total_disputes = 0u32;
-
-            // if the market was permissionless and not invalid, return `ValidityBond`.
-            // if market.creation == MarketCreation::Permissionless {
-            //     if report.outcome != 0 {
-            //         T::Currency::unreserve(&market.creator, T::ValidityBond::get());
-            //     } else {
-            //         // Give it to the treasury instead.
-            //         let (imbalance, _) =
-            //             T::Currency::slash_reserved(&market.creator, T::ValidityBond::get());
-            //         T::Slash::on_unbalanced(imbalance);
-            //     }
-            // }
-            T::Currency::unreserve(&market.creator, T::ValidityBond::get());
-
-            let resolved_outcome = match market.status {
-                MarketStatus::Reported => report.clone().outcome,
-                MarketStatus::Disputed => {
-                    let disputes = Self::disputes(*market_id);
-                    let num_disputes = disputes.len() as u16;
-                    // count the last dispute's outcome as the winning one
-                    let last_dispute = disputes[(num_disputes as usize) - 1].clone();
-                    last_dispute.outcome
-                }
-                _ => panic!("Cannot happen"),
-            };
-
-            let market_status = market.status;
-            match market.status {
-                MarketStatus::Reported => {
-                    // the oracle bond gets returned if the reporter was the oracle
-                    if report.by == market.oracle {
-                        T::Currency::unreserve(&market.creator, T::OracleBond::get());
-                    } else {
-                        let (imbalance, _) =
-                            T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
-
-                        // give it to the real reporter
-                        T::Currency::resolve_creating(&report.by, imbalance);
-                    }
-                }
-                MarketStatus::Disputed => {
-                    let disputes = Self::disputes(*market_id);
-                    let num_disputes = disputes.len() as u16;
-                    total_disputes = num_disputes.into();
-
-                    let mut correct_reporters: Vec<T::AccountId> = Vec::new();
-
-                    let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
-
-                    // if the reporter reported right, return the OracleBond, otherwise
-                    // slash it to pay the correct reporters
-                    if report.outcome == resolved_outcome {
-                        T::Currency::unreserve(&market.creator, T::OracleBond::get());
-                    } else {
-                        let (imbalance, _) =
-                            T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
-
-                        overall_imbalance.subsume(imbalance);
-                    }
-
-                    for i in 0..num_disputes {
-                        let dispute = &disputes[i as usize];
-                        let dispute_bond =
-                            T::DisputeBond::get() + T::DisputeFactor::get() * i.into();
-                        if dispute.outcome == resolved_outcome {
-                            T::Currency::unreserve(&dispute.by, dispute_bond);
-
-                            correct_reporters.push(dispute.by.clone());
-                        } else {
-                            let (imbalance, _) =
-                                T::Currency::slash_reserved(&dispute.by, dispute_bond);
-                            overall_imbalance.subsume(imbalance);
-                        }
-                    }
-
-                    // fold all the imbalances into one and reward the correct reporters.
-                    let reward_per_each =
-                        overall_imbalance.peek() / (correct_reporters.len() as u32).into();
-                    for correct_reporter in &correct_reporters {
-                        let (amount, leftover) = overall_imbalance.split(reward_per_each);
-                        T::Currency::resolve_creating(correct_reporter, amount);
-                        overall_imbalance = leftover;
-                    }
-                }
-                _ => (),
-            };
-
-            let _ = Self::manage_pool_staleness(&market, market_id, &resolved_outcome);
-            if let Ok([local_total_accounts, local_total_asset_accounts, local_total_categories]) =
-                Self::manage_resolved_categorical_market(&market, market_id, &resolved_outcome)
-            {
-                total_accounts = local_total_accounts.saturated_into();
-                total_asset_accounts = local_total_asset_accounts.saturated_into();
-                total_categories = local_total_categories.saturated_into();
-            }
-
-            <Markets<T>>::mutate(&market_id, |m| {
-                m.as_mut().unwrap().status = MarketStatus::Resolved;
-                m.as_mut().unwrap().resolved_outcome = Some(resolved_outcome);
-            });
-
-            // Calculate required weight
-            // MUST be updated when new market types are added.
-            if let MarketType::Categorical(_) = market.market_type {
-                if let MarketStatus::Reported = market_status {
-                    Ok(T::WeightInfo::internal_resolve_categorical_reported(
-                        total_accounts,
-                        total_asset_accounts,
-                        total_categories,
-                    ))
-                } else {
-                    Ok(T::WeightInfo::internal_resolve_categorical_disputed(
-                        total_accounts,
-                        total_asset_accounts,
-                        total_categories,
-                        total_disputes,
-                    ))
-                }
-            } else if let MarketStatus::Reported = market_status {
-                Ok(T::WeightInfo::internal_resolve_scalar_reported())
-            } else {
-                Ok(T::WeightInfo::internal_resolve_scalar_disputed(total_disputes))
-            }
-        }
-
         fn is_market_active(end: MarketEnd<T::BlockNumber>) -> bool {
             match end {
                 MarketEnd::Block(block) => {
@@ -1263,84 +946,6 @@ mod pallet {
                     let now = T::Timestamp::now();
                     now < timestamp.saturated_into()
                 }
-            }
-        }
-
-        // If a market is categorical, destroys all non-winning assets.
-        fn manage_resolved_categorical_market(
-            market: &Market<T::AccountId, T::BlockNumber>,
-            market_id: &T::MarketId,
-            outcome_report: &OutcomeReport,
-        ) -> Result<[usize; 3], DispatchError> {
-            let mut total_accounts: usize = 0;
-            let mut total_asset_accounts: usize = 0;
-            let mut total_categories: usize = 0;
-
-            if let MarketType::Categorical(_) = market.market_type {
-                if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
-                    let assets = Self::outcome_assets(*market_id, market);
-                    total_categories = assets.len().saturated_into();
-
-                    let mut assets_iter = assets.iter().cloned();
-                    let mut manage_asset = |asset: Asset<_>| {
-                        if let Asset::CategoricalOutcome(_, idx) = asset {
-                            if idx == *winning_asset_idx {
-                                return 0;
-                            }
-                            let (total_accounts, accounts) =
-                                T::Shares::accounts_by_currency_id(asset);
-                            total_asset_accounts =
-                                total_asset_accounts.saturating_add(accounts.len());
-                            T::Shares::destroy_all(asset, accounts.iter().cloned());
-                            total_accounts
-                        } else {
-                            0
-                        }
-                    };
-
-                    if let Some(first_asset) = assets_iter.next() {
-                        total_accounts = manage_asset(first_asset);
-                    }
-                    for asset in assets_iter {
-                        let _ = manage_asset(asset);
-                    }
-                }
-            }
-
-            Ok([total_accounts, total_asset_accounts, total_categories])
-        }
-
-        // If a market has a pool that is `Active`, then changes from `Active` to `Stale`.
-        fn manage_pool_staleness(
-            market: &Market<T::AccountId, T::BlockNumber>,
-            market_id: &T::MarketId,
-            outcome_report: &OutcomeReport,
-        ) -> DispatchResult {
-            let pool_id = Self::market_pool_id(market_id)?;
-            let pool = T::Swap::pool(pool_id)?;
-
-            if let PoolStatus::Active = pool.pool_status {
-                T::Swap::set_pool_as_stale(&market.market_type, pool_id, outcome_report)?;
-            }
-
-            Ok(())
-        }
-
-        fn market_by_id(
-            market_id: &T::MarketId,
-        ) -> Result<Market<T::AccountId, T::BlockNumber>, Error<T>>
-        where
-            T: Config,
-        {
-            Self::markets(market_id).ok_or(Error::<T>::MarketDoesNotExist)
-        }
-
-        // Returns the corresponding **stored** pool id of a market id
-        fn market_pool_id(market_id: &T::MarketId) -> Result<u128, DispatchError> {
-            if let Ok(Some(el)) = <MarketToSwapPool<T>>::try_get(market_id) {
-                Ok(el)
-            } else {
-                Err(Error::<T>::PoolDoesNotExist.into())
             }
         }
 

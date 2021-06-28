@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate as court;
+use crate as zrml_simple_disputes;
 use frame_support::{construct_runtime, parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
@@ -9,8 +9,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        CourtPalletId, ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
-        MaxWeight, MinLiquidity, MinWeight, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
+        ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight,
+        MinLiquidity, MinWeight, SimpleDisputesPalletId, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -57,9 +57,9 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Court: court::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -74,10 +74,9 @@ impl crate::Config for Runtime {
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
-    type PalletId = CourtPalletId;
+    type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
