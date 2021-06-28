@@ -17,13 +17,13 @@ pub trait LsdlmsrFee<F: Fixed> {
 
 pub trait MarketAverage<F: FixedUnsigned> {
     /// Update market volume
-    fn update(volume: F);
+    fn update(&self, volume: F);
 
     /// Clear market data
-    fn clear();
+    fn clear(&self);
 
     /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn calculate() -> Option<F>;
+    fn calculate(&self) -> Option<F>;
 }
 
 pub trait Lmsr<F: FixedUnsigned> {
