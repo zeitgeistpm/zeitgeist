@@ -121,22 +121,22 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-aborted
           type: add
-      - name: Exit with error message
-        if: steps.run_benchmarks.outputs.ERROR != ''
-        run: |
-          echo ${{ steps.run_benchmarks.output.ERROR }}
-          exit 1
       - name: Comment PR (on success)
         uses: thollander/actions-comment-pull-request@master
-        if: steps.run_benchmarks.outputs.ERROR == ''
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
         with:
           message: 'Benchmark completed successfully.
           <details><summary>Results</summary>TBD</details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Comment PR (on failure)
         uses: thollander/actions-comment-pull-request@master
-        if: steps.run_benchmarks.outputs.ERROR != ''
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
         with:
           message: 'Benchmark aborted due to an error.
           <details><summary>Results</summary>TBD</details>'
           GITHUB_TOKEN: ${{ steps.run_benchmarks.outputs.ERROR }}
+      - name: Exit with error message
+        if: steps.run_benchmarks.outputs.ERROR != ''
+        run: |
+          echo ${{ steps.run_benchmarks.output.ERROR }}
+          exit 1
