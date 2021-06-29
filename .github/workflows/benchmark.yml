@@ -98,7 +98,7 @@ jobs:
             check_if_new_commits
           done
 
-          echo "::set-output name=RESULT::$(cat benchmark_log.txt)"
+          echo "::set-output name=RESULT::\"$(cat benchmark_log.txt)\""
           rm benchmark_log.txt
 
       - name: Commit updated weights
@@ -108,7 +108,7 @@ jobs:
           commit_message: Update weights
           commit_options: '--no-verify'
           file_pattern: zrml/*/src/weights.rs
-          commit_user_name: Zeigeist Benchmark Bot
+          commit_user_name: Zeitgeist Benchmark Bot
           commit_user_email: zeitgeist-benchmark-bot@no-reply.zeitgeist.pm
           status_options: '--untracked-files=no'
 
