@@ -4,7 +4,6 @@ about: Template issue for creating release checklists.
 title: Checklist for {{ env.VERSION }} release
 labels: ''
 assignees: ''
-
 ---
 
 # Release Checklist
@@ -33,4 +32,81 @@ The following checks can be performed after we have forked off to the release-ca
 notes.
 - [ ] Check that build artifacts have been added to the draft-release
 
-**Based on Parity's [release checklist for Polkadot](https://github.com/paritytech/polkadot/issues/2961)**
+## Notes
+
+### Build Artifacts
+
+Add any necessary assets to the release. They should include:
+
+- Linux binary
+- GPG signature of the Linux binary
+- SHA256 of the Linux binary
+- Source code
+- Wasm binaries of the runtime
+
+### Release Notes
+
+The release notes should list:
+
+- The priority of the release (i.e. how quickly users should upgrade) - this is based on the max priority of any *client* changes.
+- The version of the native runtime
+- The proposal hashes of the runtime as built with [srtool](https://gitlab.com/chevdor/srtool)
+- Any changes in this release that are still awaiting audit
+
+The release notes may also list:
+
+- Free text at the beginning of the notes mentioning anything important regarding this release.
+- Notable changes separated into sections
+
+### Spec Version
+
+A runtime upgrade must bump the spec version number. This may follow a pattern with the client release (e.g. runtime v12 corresponds to v0.8.12, even if the current runtime is not v11).
+
+### Old Migrations Removed
+
+Any previous `on_runtime_upgrade` functions from the old upgrades must be removed to prevent them from executing a second time. The `on_runtime_upgrade` function can be found in `runtime/<runtime>/src/lib.rs`.
+
+### New Migrations
+
+Ensure that any migrations that are required due to storage or logic changesare included in the `on_runtime_upgrade` function of the appropriate pallets.
+
+### Extrinsic Ordering
+
+Offline signing libraries depend on a consistent ordering of call indices and
+functions. Compare the metadata of the current and new runtimes and ensure that
+the `module index, call index` tuples map to the same set of functions. In case
+of a breaking change, increase `transaction_version`.
+
+To verify the order has not changed:
+
+1. Download the latest release-candidate binary either from the draft-release
+on Github, or
+[AWS](https://releases.parity.io/polkadot/x86_64-debian:stretch/{{ env.VERSION }}-rc1/polkadot)
+(adjust the rc in this URL as necessary).
+2. Run the release-candidate binary using a local chain:
+`./polkadot --chain=polkadot-local` or `./polkadot --chain=kusama.local`
+3. Use [`polkadot-js-tools`](https://github.com/polkadot-js/tools) to compare
+the metadata:
+  - For Polkadot: `docker run --network host jacogr/polkadot-js-tools metadata wss://rpc.polkadot.io ws://localhost:9944`
+  - For Kusama: `docker run --network host jacogr/polkadot-js-tools metadata wss://kusama-rpc.polkadot.io ws://localhost:9944`
+4. Things to look for in the output are lines like:
+  - `[Identity] idx 28 -> 25 (calls 15)` - indicates the index for `Identity` has changed
+  - `[+] Society, Recovery` - indicates the new version includes 2 additional modules/pallets.
+  - If no indices have changed, every modules line should look something like `[Identity] idx 25 (calls 15)`
+
+Note: Adding new functions to the runtime does not constitute a breaking change
+as long as they are added to the end of a pallet (i.e., does not break any
+other call index).
+
+### Proxy Filtering
+
+The runtime contains proxy filters that map proxy types to allowable calls. If
+the new runtime contains any new calls, verify that the proxy filters are up to
+date to include them.
+
+### Benchmarks
+
+Run the benchmarking suite with the new runtime and update any function weights
+if necessary.
+
+**Based on Parity's [release checklist for Polkadot](https://raw.githubusercontent.com/paritytech/polkadot/master/.github/ISSUE_TEMPLATE/release.md)**
