@@ -96,7 +96,7 @@ jobs:
             echo "Executing: ${zg_bench_cmd}"
             # echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
             echo -e "This is some test text\nIt should be displayed as\na multiline string" > benchmark_errors.txt
-            local ERROR=$(<benchmark_errors.txt)
+            ERROR=$(<benchmark_errors.txt)
 
             if [ -n "$ERROR" ]; then
               # Prepare error for github output format
