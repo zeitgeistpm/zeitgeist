@@ -92,6 +92,7 @@ jobs:
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
+          echo "::set-output name=ERROR::ERROR: Branch contains new commits. Aborting benchmarks."
           if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
             echo "triggered by dispatch"
           else
@@ -129,13 +130,13 @@ jobs:
         uses: thollander/actions-comment-pull-request@master
         if: steps.run_benchmarks.outputs.ERROR == ''
         with:
-          message: 'Benchmarks completed successfully.
+          message: 'Benchmark completed successfully.
           <details><summary>Results</summary>TBD</details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Comment PR (on failure)
         uses: thollander/actions-comment-pull-request@master
         if: steps.run_benchmarks.outputs.ERROR != ''
         with:
-          message: 'Benchmarks aborted due to an error.
+          message: 'Benchmark aborted due to an error.
           <details><summary>Results</summary>TBD</details>'
           GITHUB_TOKEN: ${{ steps.run_benchmarks.outputs.ERROR }}
