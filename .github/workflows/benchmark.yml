@@ -17,89 +17,89 @@ jobs:
       run:
         shell: bash
     steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v2
-#      - name: Install Rust toolchain
-#        uses: actions-rs/toolchain@v1
-#        with:
-#          override: true
-#          profile: minimal
-#          toolchain: nightly-2021-03-10
-#
-#      - name: Cache dependencies
-#        uses: Swatinem/rust-cache@v1
-#
-#      - name: Test runtime-benchmarks
-#        run: cargo test --release --features runtime-benchmarks
-#
-#      - name: Build Zeitgeist chain with runtime-benchmarks feature
-#        run: cargo build --release --features runtime-benchmarks
-#
-#      - name: Run benchmarks
-#        run: |
-#          # define benchmark commands
-#          ZG_BENCHMARK_COMMANDS=(
-#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
-#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
-#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
-#          )
-#
-#          echo "Fetching commit hash of HEAD"
-#          zg_cmt=`git log -n 1 --format="%H"`
-#          echo "Commit hash: ${zg_cmt}"
-#
-#          check_if_new_commits() {
-#            echo "Fetching latest repository state"
-#            git fetch
-#
-#            if [ $? -ne 0 ]; then
-#              echo "ERROR: git fetch failed. Aborting benchmarks."
-#              exit $?
-#            fi
-#            
-#            echo "Determining if the branch contains new updates."
-#            local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
-#
-#            if [ "$zg_cmt" != "$zg_cur_cmt" ]; then
-#              echo "${zg_cmt} != ${zg_cur_cmt}"
-#              echo "ERROR: Branch contains new commits. Aborting benchmarks."
-#              exit 31
-#            fi
-#          }
-#
-#          check_if_new_commits
-#
-#          # Execute benchmark. Note: It's not possible to use a matrix here in
-#          # combination with GitHub AE hosted runner (one instance per job)
-#          for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
-#            # Execute benchmark
-#            echo "Executing: ${zg_bench_cmd}"
-#            echo "$zg_bench_cmd" | sh
-#            check_if_new_commits
-#          done
-#
-#      - name: Commit updated weights
-#        uses: stefanzweifel/git-auto-commit-action@v4
-#        with:
-#          commit_message: Update weights
-#          commit_options: '--no-verify'
-#          file_pattern: zrml/*/src/weights.rs
-#          commit_user_name: Zeigeist Benchmark Bot
-#          commit_user_email: zeitgeist-benchmark-bot@no-reply.zeitgeist.pm
-#          status_options: '--untracked-files=no'
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          profile: minimal
+          toolchain: nightly-2021-03-10
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Test runtime-benchmarks
+        run: cargo test --release --features runtime-benchmarks
+
+      - name: Build Zeitgeist chain with runtime-benchmarks feature
+        run: cargo build --release --features runtime-benchmarks
+
+      # Ensure that at most one benchmark runs across workflows
+      - name: Turnstyle
+        uses: softprops/turnstyle@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run benchmarks
         id: run_benchmarks
-        env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "::set-output name=ERROR::ERROR: Branch contains new commits. Aborting benchmarks."
-          if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
-            echo "triggered by dispatch"
-          else
-            echo "triggered by label s:benchmark_required"
-            echo "benchmark done"
-            echo 'Replacing state "s:benchmark_required" by "s:benchmark_done"'
-          fi
+          # define benchmark commands
+          ZG_BENCHMARK_COMMANDS=(
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
+            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+          )
+
+          echo "Fetching commit hash of HEAD"
+          zg_cmt=`git log -n 1 --format="%H"`
+          echo "Commit hash: ${zg_cmt}"
+
+          check_if_new_commits() {
+            echo "Fetching latest repository state"
+            git fetch
+
+            if [ $? -ne 0 ]; then
+              echo "::set-output name=ERROR::ERROR: git fetch failed. Aborting benchmarks."
+              exit 0
+            fi
+            
+            echo "Determining if the branch contains new updates."
+            local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
+
+            if [ "$zg_cmt" != "$zg_cur_cmt" ]; then
+              echo "${zg_cmt} != ${zg_cur_cmt}"
+              echo "::set-output name=ERROR::ERROR: Branch contains new commits. Aborting benchmarks."
+              exit 0
+            fi
+          }
+
+          check_if_new_commits
+
+          # Execute benchmark. Note: It's not possible to use a matrix here in
+          # combination with GitHub AE hosted runner (one instance per job)
+          for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
+            # Execute benchmark
+            echo "Executing: ${zg_bench_cmd}"
+            echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh
+            check_if_new_commits
+          done
+
+          echo "::set-output name=RESULT::$(cat benchmark_log.txt)"
+          rm benchmark_log.txt
+
+      - name: Commit updated weights
+        uses: stefanzweifel/git-auto-commit-action@v4
+        if: steps.run_benchmarks.outputs.ERROR == ''
+        with:
+          commit_message: Update weights
+          commit_options: '--no-verify'
+          file_pattern: zrml/*/src/weights.rs
+          commit_user_name: Zeigeist Benchmark Bot
+          commit_user_email: zeitgeist-benchmark-bot@no-reply.zeitgeist.pm
+          status_options: '--untracked-files=no'
+
       - name: Remove label s:benchmark_required
         if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')
         uses: buildsville/add-remove-label@v1
@@ -107,6 +107,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-required
           type: remove
+
       - name: Add label s:benchmark_done
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
         uses: buildsville/add-remove-label@v1
@@ -114,6 +115,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-done
           type: add
+
       - name: Add label s:benchmark_aborted
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
         uses: buildsville/add-remove-label@v1
@@ -121,6 +123,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           label: s:benchmark-aborted
           type: add
+
       - name: Comment PR (on success)
         uses: thollander/actions-comment-pull-request@master
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
@@ -128,6 +131,7 @@ jobs:
           message: 'Benchmark completed successfully.
           <details><summary>Results</summary>TBD</details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Comment PR (on failure)
         uses: thollander/actions-comment-pull-request@master
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
@@ -135,6 +139,7 @@ jobs:
           message: 'Benchmark aborted due to an error.
           <details><summary>Results</summary>${{ steps.run_benchmarks.outputs.ERROR }}</details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Exit with error message
         if: steps.run_benchmarks.outputs.ERROR != ''
         run: |
