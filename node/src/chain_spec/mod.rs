@@ -1,13 +1,16 @@
 mod additional_chain_spec;
 mod battery_park;
+mod battery_station;
 mod dev;
 
 pub use additional_chain_spec::AdditionalChainSpec;
 pub use battery_park::battery_park_staging_config;
+pub use battery_station::battery_station_staging_config;
 pub use dev::dev_config;
+use hex_literal::hex;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
-use sp_core::{Pair, Public};
+use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::types::{AccountId, Balance, Signature};
 use zeitgeist_runtime::TokensConfig;
@@ -147,6 +150,36 @@ impl Extensions {
     }
 }
 
+#[cfg(feature = "parachain")]
+fn additional_chain_spec_staging(
+    parachain_id: cumulus_primitives_core::ParaId,
+) -> AdditionalChainSpec {
+    AdditionalChainSpec {
+        candidates: vec![(
+            hex!["7225b9e36cc33da17d7f97053c7110559f21967afc09867345367b7de241d03c"].into(),
+            hex!["e6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"]
+                .unchecked_into(),
+            crate::chain_spec::DEFAULT_STAKING_AMOUNT,
+        )],
+        inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+        nominations: vec![],
+        parachain_id,
+    }
+}
+#[cfg(not(feature = "parachain"))]
+fn additional_chain_spec_staging() -> AdditionalChainSpec {
+    AdditionalChainSpec {
+        initial_authorities: vec![(
+            // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
+            hex!["8a9a54bdf73fb4a757f5ab81fabe2f173922fdb92bb8b6e8bedf8b17fa38f500"]
+                .unchecked_into(),
+            // 5HGProUwcyCDMJDxjBBKbv8u7ehr5uoTBS3bckYHPcZMTifW
+            hex!["e61786c6426b55a034f9c4b78dc57d4183927cef8e64b2e496225ed6fca41758"]
+                .unchecked_into(),
+        )],
+    }
+}
+
 #[cfg(not(feature = "parachain"))]
 fn authority_keys_from_seed(
     s: &str,
@@ -155,6 +188,21 @@ fn authority_keys_from_seed(
         get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
         get_from_seed::<sp_finality_grandpa::AuthorityId>(s),
     )
+}
+
+fn endowed_accounts_staging() -> Vec<AccountId> {
+    vec![
+        // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
+        hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
+        // 5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX
+        hex!["725bb6fd13d52b3d6830e5a9faed1f6499ca0f5e8aa285df09490646e71e831b"].into(),
+        // 5EeNXHgaiWZAwZuZdDndJYcRTKuGHkXM2bdGE6LqWCw1bHW7
+        hex!["7225b9e36cc33da17d7f97053c7110559f21967afc09867345367b7de241d03c"].into(),
+    ]
+}
+
+fn root_key_staging() -> AccountId {
+    hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into()
 }
 
 fn telemetry_endpoints() -> Option<TelemetryEndpoints> {
