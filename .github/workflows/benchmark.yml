@@ -39,9 +39,9 @@ jobs:
 #        run: |
 #          # define benchmark commands
 #          ZG_BENCHMARK_COMMANDS=(
-#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
-#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
-#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
+#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
+#            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
 #          )
 #
 #          echo "Fetching commit hash of HEAD"
@@ -84,15 +84,14 @@ jobs:
 #          commit_message: Update weights
 #          commit_options: '--no-verify'
 #          file_pattern: zrml/*/src/weights.rs
-#          commit_author: zeitgeist-benchmark-bot <zeitgeist-benchmark-bot@no-reply.zeitgeist.pm>
+#          commit_user_name: Zeigeist Benchmark Bot
+#          commit_user_email: zeitgeist-benchmark-bot@no-reply.zeitgeist.pm
 #          status_options: '--untracked-files=no'
       - name: Run benchmarks
         id: run_benchmarks
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "::set-output name=ERROR::ERROR: Branch contains new commits. Aborting benchmarks."
-
           if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
             echo "triggered by dispatch"
           else
@@ -124,5 +123,19 @@ jobs:
       - name: Exit with error message
         if: steps.run_benchmarks.outputs.ERROR != ''
         run: |
-          echo ${{ steps.run_benchmarks.output.error }}
+          echo ${{ steps.run_benchmarks.output.ERROR }}
           exit 1
+      - name: Comment PR (on success)
+        uses: thollander/actions-comment-pull-request@master
+        if: steps.run_benchmarks.outputs.ERROR == ''
+        with:
+          message: 'Benchmarks completed successfully.
+          <details><summary>Results</summary>TBD</details>'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Comment PR (on failure)
+        uses: thollander/actions-comment-pull-request@master
+        if: steps.run_benchmarks.outputs.ERROR != ''
+        with:
+          message: 'Benchmarks aborted due to an error.
+          <details><summary>Results</summary>TBD</details>'
+          GITHUB_TOKEN: ${{ steps.run_benchmarks.outputs.ERROR }}
