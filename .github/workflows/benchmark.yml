@@ -110,7 +110,7 @@ jobs:
             check_if_new_commits
           done
 
-          local BENCHMARK_LOG=$(<benchmark_log.txt)
+          BENCHMARK_LOG=$(<benchmark_log.txt)
           # Prepare benchmark log for github output format
           BENCHMARK_LOG="${BENCHMARK_LOG//'%'/'%25'}"
           BENCHMARK_LOG="${BENCHMARK_LOG//$'\n'/'%0A'}"
