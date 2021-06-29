@@ -37,13 +37,13 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-#      - name: Test runtime-benchmarks
-#        run: cargo test --release --features runtime-benchmarks
+      - name: Test runtime-benchmarks
+        run: cargo test --release --features runtime-benchmarks
 
-#      - name: Build Zeitgeist chain with runtime-benchmarks feature
-#        run: cargo build --release --features runtime-benchmarks
+      - name: Build Zeitgeist chain with runtime-benchmarks feature
+        run: cargo build --release --features runtime-benchmarks
 
-      # Ensure that at most one benchmark runs across workflows
+      # Ensure that at most one benchmark worklow runs across all workflows
       - name: Turnstyle
         uses: softprops/turnstyle@v1
         env:
@@ -94,12 +94,12 @@ jobs:
           for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
             # Execute benchmark
             echo "Executing: ${zg_bench_cmd}"
-            # echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh
+            echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh
             check_if_new_commits
           done
 
-          # echo "::set-output name=RESULT::$(cat benchmark_log.txt)"
-          # rm benchmark_log.txt
+          echo "::set-output name=RESULT::$(cat benchmark_log.txt)"
+          rm benchmark_log.txt
 
       - name: Commit updated weights
         uses: stefanzweifel/git-auto-commit-action@v4
