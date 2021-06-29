@@ -5,14 +5,14 @@ use crate::chain_spec::{
 use sc_service::ChainType;
 use zeitgeist_primitives::constants::BASE;
 
-pub fn battery_park_staging_config(
+pub fn battery_station_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {
     let zeitgeist_wasm = zeitgeist_wasm()?;
 
     Ok(ChainSpec::from_genesis(
-        "Zeitgeist - Battery Park Staging",
-        "battery_park_staging",
+        "Zeitgeist - Battery Station Staging",
+        "battery_station_staging",
         ChainType::Live,
         move || {
             generic_genesis(
@@ -28,7 +28,7 @@ pub fn battery_park_staging_config(
         },
         vec![],
         telemetry_endpoints(),
-        Some("battery_park_staging"),
+        Some("battery_station_staging"),
         Some(token_properties()),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
