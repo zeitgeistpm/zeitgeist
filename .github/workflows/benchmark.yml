@@ -17,8 +17,15 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (PR)
         uses: actions/checkout@v2
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required'))
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout repository (branch)
+        uses: actions/checkout@v2
+        if: github.event_name == 'workflow_dispatch'
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -30,11 +37,11 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Test runtime-benchmarks
-        run: cargo test --release --features runtime-benchmarks
+#      - name: Test runtime-benchmarks
+#        run: cargo test --release --features runtime-benchmarks
 
-      - name: Build Zeitgeist chain with runtime-benchmarks feature
-        run: cargo build --release --features runtime-benchmarks
+#      - name: Build Zeitgeist chain with runtime-benchmarks feature
+#        run: cargo build --release --features runtime-benchmarks
 
       # Ensure that at most one benchmark runs across workflows
       - name: Turnstyle
@@ -66,7 +73,12 @@ jobs:
             fi
             
             echo "Determining if the branch contains new updates."
-            local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
+
+            if [ ${{ github.event_name }} == 'pull_request' ]; then
+              local zg_cur_cmt=`git log -n 1 --format="%H" origin/${{ github.event.pull_request.head.ref }}`
+            else
+              local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
+            fi
 
             if [ "$zg_cmt" != "$zg_cur_cmt" ]; then
               echo "${zg_cmt} != ${zg_cur_cmt}"
@@ -82,12 +94,12 @@ jobs:
           for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
             # Execute benchmark
             echo "Executing: ${zg_bench_cmd}"
-            echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh
+            # echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh
             check_if_new_commits
           done
 
-          echo "::set-output name=RESULT::$(cat benchmark_log.txt)"
-          rm benchmark_log.txt
+          # echo "::set-output name=RESULT::$(cat benchmark_log.txt)"
+          # rm benchmark_log.txt
 
       - name: Commit updated weights
         uses: stefanzweifel/git-auto-commit-action@v4
