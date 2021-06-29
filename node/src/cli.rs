@@ -130,21 +130,27 @@ pub fn load_spec(
     id: &str,
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<Box<dyn sc_service::ChainSpec>, String> {
+    #[cfg(feature = "parachain")]
+    const BATTERY_PARK_PC: &str = "Battery park isn't supposed to be used for parachains";
     Ok(match id {
         "" | "dev" => Box::new(crate::chain_spec::dev_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
-        "battery_park" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
+        "battery_park" => {
             #[cfg(feature = "parachain")]
-            &include_bytes!("../res/bp_parachain.json")[..],
+            return Err(BATTERY_PARK_PC.into());
             #[cfg(not(feature = "parachain"))]
-            &include_bytes!("../res/bp.json")[..],
-        )?),
-        "battery_park_staging" => Box::new(crate::chain_spec::battery_park_staging_config(
+            Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
+                &include_bytes!("../res/bp.json")[..],
+            )?)
+        }
+        "battery_park_staging" => {
             #[cfg(feature = "parachain")]
-            parachain_id,
-        )?),
+            return Err(BATTERY_PARK_PC.into());
+            #[cfg(not(feature = "parachain"))]
+            Box::new(crate::chain_spec::battery_park_staging_config()?)
+        }
         "battery_station" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/bs_parachain.json")[..],
