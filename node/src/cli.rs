@@ -145,6 +145,16 @@ pub fn load_spec(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
+        "battery_station" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
+            #[cfg(feature = "parachain")]
+            &include_bytes!("../res/bs_parachain.json")[..],
+            #[cfg(not(feature = "parachain"))]
+            &include_bytes!("../res/bs.json")[..],
+        )?),
+        "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config(
+            #[cfg(feature = "parachain")]
+            parachain_id,
+        )?),
         path => {
             Box::new(crate::chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?)
         }
