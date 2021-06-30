@@ -43,11 +43,11 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-#      - name: Test runtime-benchmarks
-#        run: cargo test --release --features runtime-benchmarks
+      - name: Test runtime-benchmarks
+        run: cargo test --release --features runtime-benchmarks
 
-#      - name: Build Zeitgeist chain with runtime-benchmarks feature
-#        run: cargo build --release --features runtime-benchmarks
+      - name: Build Zeitgeist chain with runtime-benchmarks feature
+        run: cargo build --release --features runtime-benchmarks
 
       - name: Run benchmarks
         id: run_benchmarks
@@ -131,52 +131,7 @@ jobs:
             check_if_new_commits
           done
 
-          BENCHMARK_LOG="Pallet: 'zrml_orderbook_v1', Extrinsic: 'cancel_order_ask', Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
-          Median Slopes Analysis
-          --------
-          -- Extrinsic Time --
-
-          Model:
-          Time ~=     57.5
-                      µs
-
-          Reads = 3
-          Writes = 3
-
-          Min Squares Analysis
-          --------
-          -- Extrinsic Time --
-
-          Model:
-          Time ~=     57.5
-                      µs
-
-          Reads = 3
-          Writes = 3
-
-          Pallet: 'zrml_orderbook_v1', Extrinsic: 'cancel_order_bid', Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
-          Median Slopes Analysis
-          --------
-          -- Extrinsic Time --
-
-          Model:
-          Time ~=     77.7
-                      µs
-
-          Reads = 2
-          Writes = 2
-
-          Min Squares Analysis
-          --------
-          -- Extrinsic Time --
-
-          Model:
-          Time ~=     77.7
-                      µs
-
-          Reads = 2
-          Writes = 2"
-          # BENCHMARK_LOG=$(sed -E "s/(Writes\s=\s[0-9]+)/\1\n/g" benchmark_log.txt | sed "s/========/--------/g")
+          BENCHMARK_LOG=$(sed -E "s/(Writes\s=\s[0-9]+)/\1\n/g" benchmark_log.txt | sed "s/========/--------/g")
           prepare_output BENCHMARK_LOG
           echo "::set-output name=RESULT::$BENCHMARK_LOG"
 
