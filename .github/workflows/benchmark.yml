@@ -19,7 +19,6 @@ jobs:
     steps:
       - name: Comment PR (on failure)
         uses: thollander/actions-comment-pull-request@master
-        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
         with:
           message: 'Benchmark completed successfully.
           <details>
