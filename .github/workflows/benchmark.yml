@@ -119,14 +119,14 @@ jobs:
             # Execute benchmark
             echo "Executing: ${zg_bench_cmd}"
             echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
-            # ERROR=$(<benchmark_errors.txt)
+            ERROR=$(<benchmark_errors.txt)
 
-            # if [ -n "$ERROR" ]; then
+            if [ -n "$ERROR" ]; then
               # Prepare error for github output format
-            #  prepare_output ERROR
-            #  echo "::set-output name=ERROR::$ERROR"
-            #  exit 0
-            # fi
+              prepare_output ERROR
+              echo "::set-output name=ERROR::$ERROR"
+              exit 0
+            fi
 
             check_if_new_commits
           done
