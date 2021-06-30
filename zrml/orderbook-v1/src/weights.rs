@@ -49,32 +49,32 @@ pub trait WeightInfoZeitgeist {
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
 	fn cancel_order_ask() -> Weight {
-		(57_501_000 as Weight)
+		(61_903_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn cancel_order_bid() -> Weight {
-		(77_701_000 as Weight)
+		(77_404_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 	fn fill_order_ask() -> Weight {
-		(180_302_000 as Weight)
+		(179_510_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn fill_order_bid() -> Weight {
-		(181_703_000 as Weight)
+		(195_510_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
 	fn make_order_ask() -> Weight {
-		(102_202_000 as Weight)
+		(109_706_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn make_order_bid() -> Weight {
-		(89_901_000 as Weight)
+		(96_205_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}

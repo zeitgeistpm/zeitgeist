@@ -53,64 +53,64 @@ pub trait WeightInfoZeitgeist {
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
 	fn admin_set_pool_as_stale() -> Weight {
-		(38_600_000 as Weight)
+		(41_202_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	fn create_pool(a: u32, ) -> Weight {
-		(133_399_000 as Weight)
-			// Standard Error: 96_000
-			.saturating_add((85_053_000 as Weight).saturating_mul(a as Weight))
+		(124_645_000 as Weight)
+			// Standard Error: 31_000
+			.saturating_add((91_661_000 as Weight).saturating_mul(a as Weight))
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
 			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
 	}
 	fn pool_exit(a: u32, ) -> Weight {
-		(79_131_000 as Weight)
-			// Standard Error: 85_000
-			.saturating_add((93_354_000 as Weight).saturating_mul(a as Weight))
+		(99_629_000 as Weight)
+			// Standard Error: 12_000
+			.saturating_add((92_163_000 as Weight).saturating_mul(a as Weight))
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
 	}
 	fn pool_exit_with_exact_asset_amount() -> Weight {
-		(180_502_000 as Weight)
+		(176_209_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn pool_exit_with_exact_pool_amount() -> Weight {
-		(168_201_000 as Weight)
+		(176_209_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn pool_join(a: u32, ) -> Weight {
-		(86_996_000 as Weight)
-			// Standard Error: 56_000
-			.saturating_add((86_588_000 as Weight).saturating_mul(a as Weight))
+		(90_878_000 as Weight)
+			// Standard Error: 12_000
+			.saturating_add((86_605_000 as Weight).saturating_mul(a as Weight))
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
 	}
 	fn pool_join_with_exact_asset_amount() -> Weight {
-		(183_501_000 as Weight)
+		(180_910_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn pool_join_with_exact_pool_amount() -> Weight {
-		(184_202_000 as Weight)
+		(180_709_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn swap_exact_amount_in() -> Weight {
-		(258_102_000 as Weight)
+		(253_812_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	fn swap_exact_amount_out() -> Weight {
-		(257_403_000 as Weight)
+		(254_113_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
