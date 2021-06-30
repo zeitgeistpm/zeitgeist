@@ -156,15 +156,29 @@ jobs:
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
         with:
           message: 'Benchmark completed successfully.
-          <details><summary>Results</summary>${{ steps.run_benchmarks.outputs.RESULT }}</details>'
+          <details>
+          <summary>
+          Results
+          </summary>
+          
+          ${{ steps.run_benchmarks.outputs.RESULT }}
+          
+          </details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment PR (on failure)
         uses: thollander/actions-comment-pull-request@master
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
         with:
-          message: 'Benchmark aborted due to an error.
-          <details><summary>Results</summary>${{ steps.run_benchmarks.outputs.ERROR }}</details>'
+          message: 'Benchmark completed successfully.
+          <details>
+          <summary>
+          Results
+          </summary>
+          
+          ${{ steps.run_benchmarks.outputs.ERROR }}
+          
+          </details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Exit with error message
