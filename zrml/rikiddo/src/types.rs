@@ -125,21 +125,22 @@ impl Default for EmaVolumeConfig {
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 enum MarketVolumeState {
-    INITIALIZED,
-    SMA_COLLECTION_STARTED,
-    SMA_COLLECTED,
-    EMA_COLLECTED
+    Initialized,
+    SmaCollectionStarted,
+    SmaCollected,
+    EmaCollected,
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaMarketVolume<FI: Fixed> {
     pub config: EmaVolumeConfig,
     pub sma: FI,
-    pub ema_chains: Option<VecDeque<FI>>,
+    pub ema_chains: Vec<FI>,
     state: MarketVolumeState,
     sma_current_period_start: Option<UnixTimestamp>,
-    volumes: Vec<FI>,
+    volumes: VecDeque<FI>,
     volumes_per_period: u64,
+    total_volumes: u64,
 }
 
 impl<FI: Fixed> EmaMarketVolume<FI> {
@@ -147,31 +148,56 @@ impl<FI: Fixed> EmaMarketVolume<FI> {
         Self {
             config,
             sma: FI::from_num(0),
-            ema_chains: None,
-            state: MarketVolumeState::INITIALIZED,
+            ema_chains: Vec::new(),
+            state: MarketVolumeState::Initialized,
             sma_current_period_start: None,
-            volumes: Vec::new(),
+            volumes: VecDeque::new(),
             volumes_per_period: 0,
+            total_volumes: 0,
         }
     }
 }
 
+impl<FI: Fixed> Default for EmaMarketVolume<FI> {
+    fn default() -> Self {
+        EmaMarketVolume::new(EmaVolumeConfig::default())
+    }
+} 
+
 impl<FI: FixedSigned> MarketAverage<FI> for EmaMarketVolume<FI> {
     /// Update market volume
-    fn update(&self, volume: FI) -> Option<FI> {
+    fn update(&mut self, volume: FI) -> Option<FI> {
         // TODO
         Some(volume)
     }
 
     /// Clear market data
-    fn clear(&self) {
-        // TODO
+    fn clear(&mut self) {
+        self.sma = FI::from_num(0);
+        self.ema_chains = Vec::new();
+        self.state = MarketVolumeState::Initialized;
+        self.sma_current_period_start = None;
+        self.volumes = VecDeque::new();
+        self.volumes_per_period = 0;
+        self.total_volumes = 0;
     }
 
     /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
     fn calculate(&self) -> Option<FI> {
-        // TODO
-        None
+        match &self.state {
+            MarketVolumeState::SmaCollected => Some(self.sma),
+            MarketVolumeState::EmaCollected => {
+                let idx = ((self.total_volumes - 1) % self.volumes_per_period) as usize;
+                
+                if self.ema_chains.len() > idx {
+                    Some(self.ema_chains[idx])
+                } else {
+                    // This should not happen
+                    None
+                }
+            },
+            _ => None,
+        }
     }
 }
 
