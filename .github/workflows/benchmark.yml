@@ -176,7 +176,7 @@ jobs:
 
           Reads = 2
           Writes = 2"
-          BENCHMARK_LOG=$(sed -E "s/(Writes\s=\s[0-9]+)/\1\n/g" benchmark_log.txt | sed "s/========/--------/g")
+          # BENCHMARK_LOG=$(sed -E "s/(Writes\s=\s[0-9]+)/\1\n/g" benchmark_log.txt | sed "s/========/--------/g")
           prepare_output BENCHMARK_LOG
           echo "::set-output name=RESULT::$BENCHMARK_LOG"
 
