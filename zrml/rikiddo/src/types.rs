@@ -3,13 +3,8 @@ use crate::{
     traits::{LsdlmsrFee, MarketAverage},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use sp_std::marker::PhantomData;
-use substrate_fixed::{
-    traits::{FixedSigned, FixedUnsigned},
-    transcendental::sqrt,
-    types::extra::U64,
-    FixedI128,
-};
+use sp_std::{collections::vec_deque::VecDeque, marker::PhantomData};
+use substrate_fixed::{FixedI128, traits::{Fixed, FixedSigned, FixedUnsigned}, transcendental::sqrt, types::extra::U64};
 
 pub type UnixTimestamp = u64;
 
@@ -129,23 +124,54 @@ impl Default for EmaVolumeConfig {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaMarketVolume<FI: FixedUnsigned> {
-    pub config: EmaVolumeConfig,
-    pub sma_current_period: FI,
-    sma_current_element_count: u64,
-    sma_current_period_start: Option<UnixTimestamp>,
-    pub ema: Option<FI>,
+enum MarketVolumeState {
+    INITIALIZED,
+    SMA_COLLECTION_STARTED,
+    SMA_COLLECTED,
+    EMA_COLLECTED
 }
 
-impl<FI: FixedUnsigned> EmaMarketVolume<FI> {
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+pub struct EmaMarketVolume<FI: Fixed> {
+    pub config: EmaVolumeConfig,
+    pub sma: FI,
+    pub ema_chains: Option<VecDeque<FI>>,
+    state: MarketVolumeState,
+    sma_current_period_start: Option<UnixTimestamp>,
+    volumes: Vec<FI>,
+    volumes_per_period: u64,
+}
+
+impl<FI: Fixed> EmaMarketVolume<FI> {
     pub fn new(config: EmaVolumeConfig) -> Self {
         Self {
             config,
-            sma_current_period: FI::from_num(0),
-            sma_current_element_count: 0,
+            sma: FI::from_num(0),
+            ema_chains: None,
+            state: MarketVolumeState::INITIALIZED,
             sma_current_period_start: None,
-            ema: None,
+            volumes: Vec::new(),
+            volumes_per_period: 0,
         }
+    }
+}
+
+impl<FI: FixedSigned> MarketAverage<FI> for EmaMarketVolume<FI> {
+    /// Update market volume
+    fn update(&self, volume: FI) -> Option<FI> {
+        // TODO
+        Some(volume)
+    }
+
+    /// Clear market data
+    fn clear(&self) {
+        // TODO
+    }
+
+    /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
+    fn calculate(&self) -> Option<FI> {
+        // TODO
+        None
     }
 }
 

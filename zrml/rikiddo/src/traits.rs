@@ -15,9 +15,9 @@ pub trait LsdlmsrFee<F: Fixed> {
     fn calculate(&self, r: F) -> Result<Self::Output, &'static str>;
 }
 
-pub trait MarketAverage<F: FixedUnsigned> {
+pub trait MarketAverage<F: Fixed> {
     /// Update market volume
-    fn update(&self, volume: F);
+    fn update(&self, volume: F) -> Option<F>;
 
     /// Clear market data
     fn clear(&self);
