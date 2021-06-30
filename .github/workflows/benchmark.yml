@@ -20,7 +20,12 @@ jobs:
       - name: Prepare output
         id: prepare
         run: |
-          BENCHMARK_LOG="Pallet: 'zrml_orderbook_v1', Extrinsic: 'cancel_order_ask', Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
+          BENCHMARK_LOG="<details>
+          <summary>
+          Results
+          </summary>
+          
+          Pallet: 'zrml_orderbook_v1', Extrinsic: 'cancel_order_ask', Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
           Median Slopes Analysis
           --------
           -- Extrinsic Time --
@@ -64,7 +69,9 @@ jobs:
                         µs
 
           Reads = 2
-          Writes = 2"
+          Writes = 2
+          
+          </details>"
           BENCHMARK_LOG="${BENCHMARK_LOG//'%'/'%25'}"
           BENCHMARK_LOG="${BENCHMARK_LOG//$'\n'/'%0A'}"
           BENCHMARK_LOG="${BENCHMARK_LOG//$'\r'/'%0D'}"
@@ -72,13 +79,5 @@ jobs:
       - name: Comment PR (on success)
         uses: thollander/actions-comment-pull-request@master
         with:
-          message: 'Benchmark completed successfully.
-          <details>
-          <summary>
-          Results
-          </summary>
-          
-          ${{ steps.prepare.outputs.RESULT }}
-          
-          </details>'
+          message: '${{ steps.prepare.outputs.RESULT }}'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
