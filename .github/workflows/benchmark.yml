@@ -21,15 +21,15 @@ jobs:
         uses: thollander/actions-comment-pull-request@master
         with:
           message: 'Benchmark completed successfully.
-          <details>
-          <summary>
-          Results
-          </summary>
-          
-          Some multline
-          text, that should
-          be displayed properly
-          within the result box.
-          
+          <details>\n
+          <summary>\n
+          Results\n
+          </summary>\n
+          \n
+          Some multline\n
+          text, that should\n
+          be displayed properly\n
+          within the result box.\n
+          \n
           </details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
