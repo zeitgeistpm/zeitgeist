@@ -146,7 +146,7 @@ jobs:
           commit_user_email: zeitgeist-benchmark-bot@no-reply.zeitgeist.pm
           status_options: '--untracked-files=no'
 
-      - name: Remove label s:benchmark_required
+      - name: Remove label s:benchmark-required
         if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')
         uses: buildsville/add-remove-label@v1
         with:
@@ -154,7 +154,7 @@ jobs:
           label: s:benchmark-required
           type: remove
 
-      - name: Add label s:benchmark_done
+      - name: Add label s:benchmark-done
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
         uses: buildsville/add-remove-label@v1
         with:
@@ -162,7 +162,7 @@ jobs:
           label: s:benchmark-done
           type: add
 
-      - name: Add label s:benchmark_aborted
+      - name: Add label s:benchmark-aborted
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
         uses: buildsville/add-remove-label@v1
         with:
