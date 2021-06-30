@@ -118,7 +118,7 @@ jobs:
           for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
             # Execute benchmark
             echo "Executing: ${zg_bench_cmd}"
-            # echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
+            echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
             # ERROR=$(<benchmark_errors.txt)
 
             # if [ -n "$ERROR" ]; then
