@@ -17,19 +17,455 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Comment PR (on failure)
+      - name: Prepare output
+        id: prepare
+        run: |
+          read -r -d '' BENCHMARK_LOG << EOM
+          Pallet: "zrml_orderbook_v1", Extrinsic: "cancel_order_ask", Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     57.5
+                        µs
+
+          Reads = 3
+          Writes = 3
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     57.5
+                        µs
+
+          Reads = 3
+          Writes = 3
+
+          Pallet: "zrml_orderbook_v1", Extrinsic: "cancel_order_bid", Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     77.7
+                        µs
+
+          Reads = 2
+          Writes = 2
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     77.7
+                        µs
+
+          Reads = 2
+          Writes = 2
+
+          Pallet: "zrml_orderbook_v1", Extrinsic: "fill_order_ask", Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    180.3
+                        µs
+
+          Reads = 4
+          Writes = 3
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    180.3
+                        µs
+
+          Reads = 4
+          Writes = 3
+
+          Pallet: "zrml_orderbook_v1", Extrinsic: "fill_order_bid", Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    181.7
+                        µs
+
+          Reads = 4
+          Writes = 3
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    181.7
+                        µs
+
+          Reads = 4
+          Writes = 3
+
+          Pallet: "zrml_orderbook_v1", Extrinsic: "make_order_ask", Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    102.2
+                        µs
+
+          Reads = 3
+          Writes = 4
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    102.2
+                        µs
+
+          Reads = 3
+          Writes = 4
+
+          Pallet: "zrml_orderbook_v1", Extrinsic: "make_order_bid", Lowest values: [], Highest values: [], Steps: [0], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     89.9
+                        µs
+
+          Reads = 2
+          Writes = 3
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     89.9
+                        µs
+
+          Reads = 2
+          Writes = 3
+
+          Pallet: "zrml_swaps", Extrinsic: "admin_set_pool_as_stale", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     38.6
+                        µs
+
+          Reads = 1
+          Writes = 1
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     38.6
+                        µs
+
+          Reads = 1
+          Writes = 1
+
+          Pallet: "zrml_swaps", Extrinsic: "create_pool", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    123.7
+              + a    86.49
+                        µs
+
+          Reads = 4 + (2 * a)
+          Writes = 5
+          + (2 * a)
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Data points distribution:
+              a   mean µs  sigma µs       %
+              0     94.49      6.06    6.4%
+              1     218.5     7.625    3.4%
+              2     319.4     1.291    0.4%
+              3     403.1     12.51    3.1%
+              4       481     15.32    3.1%
+              5     577.1     17.56    3.0%
+              6     644.6     21.76    3.3%
+              7     720.3     23.39    3.2%
+              8     825.6     23.39    2.8%
+              9     898.5     23.85    2.6%
+            10     981.2     28.69    2.9%
+            11      1049     34.48    3.2%
+
+          Quality and confidence:
+          param     error
+          a         0.096
+
+          Model:
+          Time ~=    133.3
+              + a    85.05
+                        µs
+
+          Reads = 4 + (2 * a)
+          Writes = 5
+          + (2 * a)
+          Pallet: "zrml_swaps", Extrinsic: "pool_exit", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=       89
+              + a    93.13
+                        µs
+
+          Reads = 4 + (2 * a)
+          Writes = 3
+          + (2 * a)
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Data points distribution:
+              a   mean µs  sigma µs       %
+              0     88.63     4.319    4.8%
+              1     180.6     10.64    5.8%
+              2     253.9      16.4    6.4%
+              3     339.4     24.77    7.2%
+              4     466.3     15.19    3.2%
+              5     564.1     12.02    2.1%
+              6     630.2     17.51    2.7%
+              7     705.2     25.05    3.5%
+              8       832     20.33    2.4%
+              9     914.1     21.99    2.4%
+            10      1032     4.964    0.4%
+            11      1103     23.48    2.1%
+
+          Quality and confidence:
+          param     error
+          a         0.085
+
+          Model:
+          Time ~=    79.13
+              + a    93.35
+                        µs
+
+          Reads = 4 + (2 * a)
+          Writes = 3
+          + (2 * a)
+          Pallet: "zrml_swaps", Extrinsic: "pool_exit_with_exact_asset_amount", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    180.5
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    180.5
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Pallet: "zrml_swaps", Extrinsic: "pool_exit_with_exact_pool_amount", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    168.2
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    168.2
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Pallet: "zrml_swaps", Extrinsic: "pool_join", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=     89.4
+              + a    86.65
+                        µs
+
+          Reads = 3 + (2 * a)
+          Writes = 2
+          + (2 * a)
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Data points distribution:
+              a   mean µs  sigma µs       %
+              0     83.69     2.803    3.3%
+              1     176.5     6.289    3.5%
+              2     259.8     9.049    3.4%
+              3     347.6     11.18    3.2%
+              4     436.7     12.16    2.7%
+              5     518.6     15.38    2.9%
+              6     604.5     17.53    2.8%
+              7     689.2     17.96    2.6%
+              8     776.3        18    2.3%
+              9     879.2     2.674    0.3%
+            10     949.2     20.34    2.1%
+            11      1037     22.49    2.1%
+
+          Quality and confidence:
+          param     error
+          a         0.056
+
+          Model:
+          Time ~=    86.99
+              + a    86.58
+                        µs
+
+          Reads = 3 + (2 * a)
+          Writes = 2
+          + (2 * a)
+          Pallet: "zrml_swaps", Extrinsic: "pool_join_with_exact_asset_amount", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    183.5
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    183.5
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Pallet: "zrml_swaps", Extrinsic: "pool_join_with_exact_pool_amount", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    184.2
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    184.2
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Pallet: "zrml_swaps", Extrinsic: "swap_exact_amount_in", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    258.1
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    258.1
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Pallet: "zrml_swaps", Extrinsic: "swap_exact_amount_out", Lowest values: [], Highest values: [], Steps: [9], Repeat: 1000
+          Median Slopes Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    257.4
+                        µs
+
+          Reads = 5
+          Writes = 4
+
+          Min Squares Analysis
+          --------
+          -- Extrinsic Time --
+
+          Model:
+          Time ~=    257.4
+                        µs
+
+          Reads = 5
+          Writes = 4
+          EOM
+          BENCHMARK_LOG="${BENCHMARK_LOG//'%'/'%25'}"
+          BENCHMARK_LOG="${BENCHMARK_LOG//$'\n'/'%0A'}"
+          BENCHMARK_LOG="${BENCHMARK_LOG//$'\r'/'%0D'}"
+          echo "::set-output name=RESULT::$BENCHMARK_LOG"
+      - name: Comment PR (on success)
         uses: thollander/actions-comment-pull-request@master
         with:
           message: 'Benchmark completed successfully.
-          <details>\n
-          <summary>\n
-          Results\n
-          </summary>\n
-          \n
-          Some multline\n
-          text, that should\n
-          be displayed properly\n
-          within the result box.\n
-          \n
+          <details>
+          <summary>
+          Results
+          </summary>
+          
+          ${{ steps.prepare.outputs.RESULT }}
+          
           </details>'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
