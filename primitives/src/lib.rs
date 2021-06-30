@@ -12,4 +12,7 @@ mod serde_wrapper;
 mod swaps;
 pub mod traits;
 pub mod types;
+mod utils;
 mod zeitgeist_multi_reservable_currency;
+
+pub use utils::calculate_actual_weight;

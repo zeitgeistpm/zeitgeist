@@ -2,7 +2,9 @@
 
 use super::*;
 use crate::Config;
-use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller};
+#[cfg(test)]
+use crate::Pallet as PredictionMarket;
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin, Get, Hooks},
@@ -305,7 +307,10 @@ benchmarks! {
 
         let c_u16 = c.saturated_into();
         let (_, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
-    }: {}
+    }: {
+        let market = T::MarketCommons::market(&marketid)?;
+        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+    }
 
     internal_resolve_categorical_disputed {
         // a = total accounts
@@ -324,13 +329,19 @@ benchmarks! {
             let origin = RawOrigin::Signed(caller.clone()).into();
             let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
         }
-    }: {}
+    }: {
+        let market = T::MarketCommons::market(&marketid)?;
+        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+    }
 
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
         let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
-    }: {}
+    }: {
+        let market = T::MarketCommons::market(&marketid)?;
+        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+    }
 
     internal_resolve_scalar_disputed {
         let total_accounts = 10u32;
@@ -343,7 +354,10 @@ benchmarks! {
             let origin = RawOrigin::Signed(caller.clone()).into();
             let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Scalar(i))?;
         }
-    }: {}
+    }: {
+        let market = T::MarketCommons::market(&marketid)?;
+        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+    }
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
@@ -393,3 +407,9 @@ benchmarks! {
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), marketid, amount)
 }
+
+impl_benchmark_test_suite!(
+    PredictionMarket,
+    crate::mock::ExtBuilder::default().build(),
+    crate::mock::Runtime
+);
