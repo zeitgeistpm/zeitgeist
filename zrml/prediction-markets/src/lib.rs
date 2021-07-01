@@ -69,7 +69,8 @@ mod pallet {
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{self, DispatchResultWithPostInfo, Weight},
-        ensure,
+        ensure, log,
+        storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, IsType, OnUnbalanced,
             ReservableCurrency, Time,
@@ -91,7 +92,7 @@ mod pallet {
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
-    use zrml_simple_disputes::DisputeApi;
+    use zrml_simple_disputes::{DisputeApi, ResolutionCounters};
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -219,14 +220,14 @@ mod pallet {
                 "not reported nor disputed"
             );
             Self::clear_auto_resolve(&market_id)?;
-            Ok(Some(0u64).into())
-            //let weight = Self::internal_resolve(&market_id)?;
-            //Ok(Some(
-            //    weight
-            //        .saturating_add(T::WeightInfo::admin_move_market_to_resolved_overhead())
-            //        .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported()),
-            //)
-            //.into())
+            let market = T::MarketCommons::market(&market_id)?;
+            let rc = T::SimpleDisputes::internal_resolve(&market_id, &market)?;
+            Ok(Some(
+                Self::calculate_internal_resolve_weight(&market, rc)
+                    .saturating_add(T::WeightInfo::admin_move_market_to_resolved_overhead())
+                    .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported()),
+            )
+            .into())
         }
 
         /// Approves a market that is waiting for approval from the
@@ -277,6 +278,16 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::do_buy_complete_set(sender, market_id, amount)
+        }
+
+        #[pallet::weight(T::WeightInfo::dispute(T::SimpleDisputes::max_disputes()))]
+        pub fn dispute(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            outcome: OutcomeReport,
+        ) -> DispatchResultWithPostInfo {
+            let [weight, max_weight] = T::SimpleDisputes::on_dispute(origin, market_id, outcome)?;
+            Self::calculate_actual_weight(&T::WeightInfo::dispute, weight, max_weight)
         }
 
         /// NOTE: Only for PoC probably - should only allow rejections
@@ -833,8 +844,19 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let _ = T::SimpleDisputes::on_resolution(now);
-            0
+            let mut total_weight: Weight = 0;
+            let rslt = T::SimpleDisputes::on_resolution(now, |market, rc| {
+                let weight = Self::calculate_internal_resolve_weight(market, rc);
+                total_weight = total_weight.saturating_add(weight);
+            });
+            with_transaction(|| match rslt {
+                Err(err) => {
+                    log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
+                    TransactionOutcome::Rollback(())
+                }
+                Ok(_) => TransactionOutcome::Commit(()),
+            });
+            total_weight
         }
 
         fn on_runtime_upgrade() -> Weight {
@@ -870,18 +892,6 @@ mod pallet {
 
         pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
             T::PalletId::get().into_sub_account(market_id)
-        }
-
-        fn calculate_actual_weight(
-            func: &dyn Fn(u32) -> Weight,
-            weight_parameter: u32,
-            max_weight_parameter: u32,
-        ) -> DispatchResultWithPostInfo {
-            if weight_parameter == max_weight_parameter {
-                Ok(None.into())
-            } else {
-                Ok(Some(func(weight_parameter)).into())
-            }
         }
 
         /// Clears this market from being stored for automatic resolution.
@@ -934,6 +944,47 @@ mod pallet {
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
             Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
+        }
+
+        fn calculate_actual_weight<F>(
+            func: F,
+            weight_parameter: u32,
+            max_weight_parameter: u32,
+        ) -> DispatchResultWithPostInfo
+        where
+            F: Fn(u32) -> Weight,
+        {
+            if weight_parameter == max_weight_parameter {
+                Ok(None.into())
+            } else {
+                Ok(Some(func(weight_parameter)).into())
+            }
+        }
+
+        fn calculate_internal_resolve_weight(
+            market: &Market<T::AccountId, T::BlockNumber>,
+            rc: ResolutionCounters,
+        ) -> Weight {
+            if let MarketType::Categorical(_) = market.market_type {
+                if let MarketStatus::Reported = market.status {
+                    T::WeightInfo::internal_resolve_categorical_reported(
+                        rc.total_accounts,
+                        rc.total_asset_accounts,
+                        rc.total_categories,
+                    )
+                } else {
+                    T::WeightInfo::internal_resolve_categorical_disputed(
+                        rc.total_accounts,
+                        rc.total_asset_accounts,
+                        rc.total_categories,
+                        rc.total_disputes,
+                    )
+                }
+            } else if let MarketStatus::Reported = market.status {
+                T::WeightInfo::internal_resolve_scalar_reported()
+            } else {
+                T::WeightInfo::internal_resolve_scalar_disputed(rc.total_disputes)
+            }
         }
 
         fn is_market_active(end: MarketEnd<T::BlockNumber>) -> bool {

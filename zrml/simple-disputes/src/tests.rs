@@ -47,7 +47,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         assert_eq!(id, 0);
 
         System::set_block_number(11);
-        SimpleDisputes::on_resolution(11).unwrap();
+        SimpleDisputes::on_resolution(11, |_, _| {}).unwrap();
     });
 }
 
@@ -103,7 +103,7 @@ fn it_resolves_a_disputed_market() {
 
         System::set_block_number(11);
 
-        assert_ok!(SimpleDisputes::on_resolution(11));
+        assert_ok!(SimpleDisputes::on_resolution(11, |_, _| {}));
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -111,7 +111,7 @@ fn it_resolves_a_disputed_market() {
 }
 
 fn create_reported_permissionless_categorical_market<T: crate::Config>() {
-    let _ = MarketCommons::push_market(Market {
+    let market_id = MarketCommons::push_market(Market {
         creation: MarketCreation::Permissionless,
         creator_fee: 0,
         creator: ALICE,
@@ -124,5 +124,5 @@ fn create_reported_permissionless_categorical_market<T: crate::Config>() {
         status: MarketStatus::Reported,
     })
     .unwrap();
-    MarketIdsPerReportBlock::<Runtime>::insert(System::block_number(), vec![0]);
+    MarketIdsPerReportBlock::<Runtime>::insert(System::block_number(), vec![market_id]);
 }
