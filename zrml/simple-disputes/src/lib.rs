@@ -21,7 +21,7 @@ mod pallet {
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
-        dispatch::{DispatchResult, DispatchResultWithPostInfo},
+        dispatch::DispatchResult,
         ensure,
         pallet_prelude::StorageMap,
         traits::{Currency, Get, Hooks, Imbalance, IsType, ReservableCurrency},
@@ -30,7 +30,6 @@ mod pallet {
     use frame_system::ensure_signed;
     use sp_runtime::{DispatchError, SaturatedConversion};
     use zeitgeist_primitives::{
-        calculate_actual_weight,
         traits::{Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketDispute, MarketStatus, MarketType, OutcomeReport, ScalarPosition,
@@ -327,7 +326,7 @@ mod pallet {
             origin: Self::Origin,
             market_id: Self::MarketId,
             outcome: OutcomeReport,
-        ) -> DispatchResultWithPostInfo {
+        ) -> Result<[u32; 2], DispatchError> {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -419,7 +418,7 @@ mod pallet {
             }
 
             Self::deposit_event(Event::MarketDisputed(market_id, outcome));
-            calculate_actual_weight(|_| 0, num_disputes as u32, max_disputes as u32)
+            Ok([num_disputes as u32, max_disputes as u32])
         }
 
         fn on_resolution<F>(now: Self::BlockNumber, mut cb: F) -> DispatchResult

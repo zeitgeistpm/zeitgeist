@@ -85,7 +85,6 @@ mod pallet {
         DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        calculate_actual_weight,
         traits::{Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
@@ -279,6 +278,16 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::do_buy_complete_set(sender, market_id, amount)
+        }
+
+        #[pallet::weight(T::WeightInfo::dispute(T::SimpleDisputes::max_disputes()))]
+        pub fn dispute(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            outcome: OutcomeReport,
+        ) -> DispatchResultWithPostInfo {
+            let [weight, max_weight] = T::SimpleDisputes::on_dispute(origin, market_id, outcome)?;
+            Self::calculate_actual_weight(&T::WeightInfo::dispute, weight, max_weight)
         }
 
         /// NOTE: Only for PoC probably - should only allow rejections
@@ -694,7 +703,7 @@ mod pallet {
             Self::deposit_event(Event::SoldCompleteSet(market_id, sender));
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
-            calculate_actual_weight(&T::WeightInfo::sell_complete_set, assets_len, max_cats)
+            Self::calculate_actual_weight(&T::WeightInfo::sell_complete_set, assets_len, max_cats)
         }
     }
 
@@ -934,7 +943,22 @@ mod pallet {
 
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
-            calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
+            Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
+        }
+
+        fn calculate_actual_weight<F>(
+            func: F,
+            weight_parameter: u32,
+            max_weight_parameter: u32,
+        ) -> DispatchResultWithPostInfo
+        where
+            F: Fn(u32) -> Weight,
+        {
+            if weight_parameter == max_weight_parameter {
+                Ok(None.into())
+            } else {
+                Ok(Some(func(weight_parameter)).into())
+            }
         }
 
         fn calculate_internal_resolve_weight(

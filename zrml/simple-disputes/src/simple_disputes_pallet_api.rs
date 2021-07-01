@@ -1,6 +1,6 @@
 use crate::ResolutionCounters;
 use alloc::vec::Vec;
-use frame_support::dispatch::{DispatchError, DispatchResult, DispatchResultWithPostInfo};
+use frame_support::dispatch::{DispatchError, DispatchResult};
 use zeitgeist_primitives::types::{Market, MarketDispute, OutcomeReport};
 
 /// SimpleDisputes - Pallet Api
@@ -70,7 +70,7 @@ pub trait DisputeApi {
         origin: Self::Origin,
         market_id: Self::MarketId,
         outcome: OutcomeReport,
-    ) -> DispatchResultWithPostInfo;
+    ) -> Result<[u32; 2], DispatchError>;
 
     /// Manages markets resolutions moving all reported markets to resolved.
     fn on_resolution<F>(now: Self::BlockNumber, cb: F) -> DispatchResult
