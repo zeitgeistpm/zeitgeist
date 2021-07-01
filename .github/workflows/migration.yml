@@ -1,0 +1,24 @@
+name: Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      block:
+        description: 'Block number'    
+        required: true
+jobs:
+  migration:
+    name: Test migration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          override: true
+          profile: minimal
+          toolchain: nightly-2021-03-10
+
+      - run: ./scripts/runtime-upgrade/test_runtime_upgrade.sh ${{ github.event.inputs.block }}

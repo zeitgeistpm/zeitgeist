@@ -1,4 +1,4 @@
-pub mod _0_1_1_move_storage_to_simple_disputes_and_market_commons {
+pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
     use crate::{Config, MarketIdOf, Pallet};
     use alloc::vec::Vec;
     use frame_support::{
@@ -7,7 +7,7 @@ pub mod _0_1_1_move_storage_to_simple_disputes_and_market_commons {
         traits::{Get, GetPalletVersion, PalletVersion},
         Blake2_128Concat,
     };
-    use zeitgeist_primitives::types::{Market, PoolId};
+    use zeitgeist_primitives::types::{Market, MarketDispute, PoolId};
     use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_simple_disputes::DisputeApi;
 
@@ -17,7 +17,7 @@ pub mod _0_1_1_move_storage_to_simple_disputes_and_market_commons {
     const MARKET_IDS_PER_REPORT_BLOCK: &[u8] = b"MarketIdsPerReportBlock";
     const MARKET_TO_SWAP_POOL: &[u8] = b"MarketToSwapPool";
     const MARKETS: &[u8] = b"Markets";
-    const PM: &[u8] = b"PredictionMarket";
+    const PM: &[u8] = b"PredictionMarkets";
 
     pub fn migrate<T>() -> Weight
     where
@@ -30,8 +30,11 @@ pub mod _0_1_1_move_storage_to_simple_disputes_and_market_commons {
         if storage_version == previous_version {
             // Simple disputes
 
-            for (k, v) in
-                migration::storage_key_iter::<MarketIdOf<T>, Vec<_>, Blake2_128Concat>(PM, DISPUTES)
+            for (k, v) in migration::storage_key_iter::<
+                MarketIdOf<T>,
+                Vec<MarketDispute<T::AccountId, T::BlockNumber>>,
+                Blake2_128Concat,
+            >(PM, DISPUTES)
             {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 T::SimpleDisputes::insert_dispute(k, v);
