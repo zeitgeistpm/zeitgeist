@@ -1,7 +1,7 @@
 use crate::ResolutionCounters;
 use alloc::vec::Vec;
-use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo};
-use zeitgeist_primitives::types::{MarketDispute, OutcomeReport};
+use frame_support::dispatch::{DispatchError, DispatchResult};
+use zeitgeist_primitives::types::{Market, MarketDispute, OutcomeReport};
 
 /// SimpleDisputes - Pallet Api
 pub trait DisputeApi {
@@ -51,6 +51,17 @@ pub trait DisputeApi {
     /// The stored disputing period
     fn dispute_period() -> Self::BlockNumber;
 
+    /// Performs the logic for resolving a market, including slashing and distributing
+    /// funds.
+    ///
+    /// NOTE: This function does not perform any checks on the market that is being given.
+    /// In the function calling this you should that the market is already in a reported or
+    /// disputed state.
+    fn internal_resolve(
+        market_id: &Self::MarketId,
+        market: &Market<Self::AccountId, Self::BlockNumber>,
+    ) -> Result<ResolutionCounters, DispatchError>;
+
     /// The stored maximum number of disputes
     fn max_disputes() -> u32;
 
@@ -59,10 +70,12 @@ pub trait DisputeApi {
         origin: Self::Origin,
         market_id: Self::MarketId,
         outcome: OutcomeReport,
-    ) -> DispatchResultWithPostInfo;
+    ) -> Result<[u32; 2], DispatchError>;
 
     /// Manages markets resolutions moving all reported markets to resolved.
-    fn on_resolution(now: Self::BlockNumber) -> Result<ResolutionCounters, DispatchError>;
+    fn on_resolution<F>(now: Self::BlockNumber, cb: F) -> DispatchResult
+    where
+        F: FnMut(&Market<Self::AccountId, Self::BlockNumber>, ResolutionCounters);
 
     // Migrations (Temporary)
 
