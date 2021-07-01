@@ -860,7 +860,7 @@ mod pallet {
         }
 
         fn on_runtime_upgrade() -> Weight {
-            crate::migrations::_0_1_1_move_storage_to_simple_disputes_and_market_commons::migrate::<T>(
+            crate::migrations::_0_1_2_move_storage_to_simple_disputes_and_market_commons::migrate::<T>(
             )
         }
     }

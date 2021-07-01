@@ -138,6 +138,10 @@ parameter_type_with_key! {
 
 macro_rules! create_zeitgeist_runtime {
     ($($additional_pallets:tt)*) => {
+        // Pallets are enumerated depending on the dependency graph.
+        //
+        // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
+        // `PredictionMarkets` depends on `SimpleDisputes`.
         construct_runtime!(
             pub enum Runtime where
                 Block = Block,
@@ -161,11 +165,12 @@ macro_rules! create_zeitgeist_runtime {
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
 
                 // Zeitgeist
+                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 40,
+
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 41,
-                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 42,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 43,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 40,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 44,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 42,
+                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 43,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 44,
 
                 $($additional_pallets)*
             }

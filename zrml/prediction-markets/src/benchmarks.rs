@@ -58,7 +58,7 @@ fn create_market_common<T: Config>(
         panic!("create_market_common: Unsupported market type: {:?}", options);
     }
 
-    let marketid = T::MarketCommons::latest_market_id()? - 1u32.into();
+    let marketid = T::MarketCommons::latest_market_id()?;
     Ok((caller, marketid))
 }
 
