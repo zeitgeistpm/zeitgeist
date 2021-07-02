@@ -67,10 +67,7 @@ fn fee_sigmoid_overflow_p_plus_r_minus_n_squared() {
     fee.config.n = <FixedI128<U64>>::from_num(1);
     fee.config.m = <FixedI128<U64>>::from_num(0);
     fee.config.p = <FixedI128<U64>>::from_num(i64::MAX);
-    assert_err!(
-        fee.calculate(r),
-        "[FeeSigmoid] Overflow during calculation: p + (r-n)^2"
-    );
+    assert_err!(fee.calculate(r), "[FeeSigmoid] Overflow during calculation: p + (r-n)^2");
 }
 
 #[test]

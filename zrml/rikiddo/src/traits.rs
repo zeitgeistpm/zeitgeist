@@ -9,10 +9,8 @@ use sp_std::fmt::Debug;
 use substrate_fixed::traits::{Fixed, FixedUnsigned};
 
 pub trait LsdlmsrFee<F: Fixed> {
-    type Output: Fixed;
-
     /// Calculate fee
-    fn calculate(&self, r: F) -> Result<Self::Output, &'static str>;
+    fn calculate(&self, r: F) -> Result<F, &'static str>;
 }
 
 pub trait MarketAverage<F: Fixed> {

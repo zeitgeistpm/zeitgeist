@@ -4,7 +4,12 @@ use crate::{
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::{collections::vec_deque::VecDeque, marker::PhantomData};
-use substrate_fixed::{FixedI128, traits::{Fixed, FixedSigned, FixedUnsigned}, transcendental::sqrt, types::extra::U64};
+use substrate_fixed::{
+    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto},
+    transcendental::sqrt,
+    types::{extra::U64, I9F23},
+    FixedI128,
+};
 
 pub type UnixTimestamp = u64;
 
@@ -36,14 +41,7 @@ pub struct FeeSigmoidConfig {
 
 impl Default for FeeSigmoidConfig {
     fn default() -> Self {
-        // This is a bit hacky: We convert U128 to I128 and reset the MSB.
-        // The config values should never take such enormous values anyways.
-        let bit_mask: u128 = !(1 << 127);
-        Self {
-            m: <FixedI128<U64>>::from_bits((M.to_bits() & bit_mask) as i128),
-            p: <FixedI128<U64>>::from_bits((P.to_bits() & bit_mask) as i128),
-            n: <FixedI128<U64>>::from_bits((N.to_bits() & bit_mask) as i128),
-        }
+        Self { m: M, p: P, n: N }
     }
 }
 
@@ -52,18 +50,19 @@ pub struct FeeSigmoid {
     pub config: FeeSigmoidConfig,
 }
 
-impl<FI: FixedSigned + Into<FixedI128<U64>>> LsdlmsrFee<FI> for FeeSigmoid {
-    type Output = FixedI128<U64>;
-
+impl<F> LsdlmsrFee<F> for FeeSigmoid
+where
+    F: FixedSigned + LossyFrom<FixedI128<U64>> + PartialOrd<I9F23>,
+{
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
-    fn calculate(&self, r: FI) -> Result<Self::Output, &'static str> {
-        let r_minus_n = if let Some(res) = r.into().checked_sub(self.config.n) {
+    fn calculate(&self, r: F) -> Result<F, &'static str> {
+        let r_minus_n = if let Some(res) = r.checked_sub(self.config.n.lossy_into()) {
             res
         } else {
             return Err("[FeeSigmoid] Overflow during calculation: r - n");
         };
 
-        let numerator = if let Some(res) = r_minus_n.checked_mul(self.config.m) {
+        let numerator = if let Some(res) = r_minus_n.checked_mul(self.config.m.lossy_into()) {
             res
         } else {
             return Err("[FeeSigmoid] Overflow during calculation: m * (r-n)");
@@ -76,13 +75,13 @@ impl<FI: FixedSigned + Into<FixedI128<U64>>> LsdlmsrFee<FI> for FeeSigmoid {
         };
 
         let p_plus_r_minus_n_squared =
-            if let Some(res) = self.config.p.checked_add(r_minus_n_squared) {
+            if let Some(res) = F::lossy_from(self.config.p).checked_add(r_minus_n_squared) {
                 res
             } else {
                 return Err("[FeeSigmoid] Overflow during calculation: p + (r-n)^2");
             };
 
-        let denominator = sqrt::<FixedI128<U64>, FixedI128<U64>>(p_plus_r_minus_n_squared)?;
+        let denominator = sqrt::<F, F>(p_plus_r_minus_n_squared)?;
 
         let _ = if let Some(res) = numerator.checked_div(denominator) {
             return Ok(res);
@@ -116,10 +115,7 @@ impl EmaVolumeConfig {
 
 impl Default for EmaVolumeConfig {
     fn default() -> Self {
-        // This is a bit hacky: We convert U128 to I128 and reset the MSB.
-        // The config values should never take such enormous values anyways.
-        let bit_mask: u128 = !(1 << 127);
-        Self::new(EMA_SHORT, <FixedI128<U64>>::from_bits((SMOOTHING.to_bits() & bit_mask) as i128))
+        Self::new(EMA_SHORT, SMOOTHING)
     }
 }
 
@@ -132,25 +128,25 @@ enum MarketVolumeState {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaMarketVolume<FI: Fixed> {
+pub struct EmaMarketVolume<F: Fixed> {
     pub config: EmaVolumeConfig,
-    pub sma: FI,
-    pub ema_chains: Vec<FI>,
+    pub sma: F,
+    pub ema_chains: Vec<F>,
     state: MarketVolumeState,
-    sma_current_period_start: Option<UnixTimestamp>,
-    volumes: VecDeque<FI>,
+    start_time: Option<UnixTimestamp>,
+    volumes: VecDeque<F>,
     volumes_per_period: u64,
     total_volumes: u64,
 }
 
-impl<FI: Fixed> EmaMarketVolume<FI> {
+impl<F: Fixed> EmaMarketVolume<F> {
     pub fn new(config: EmaVolumeConfig) -> Self {
         Self {
             config,
-            sma: FI::from_num(0),
+            sma: F::from_num(0),
             ema_chains: Vec::new(),
             state: MarketVolumeState::Initialized,
-            sma_current_period_start: None,
+            start_time: None,
             volumes: VecDeque::new(),
             volumes_per_period: 0,
             total_volumes: 0,
@@ -158,44 +154,44 @@ impl<FI: Fixed> EmaMarketVolume<FI> {
     }
 }
 
-impl<FI: Fixed> Default for EmaMarketVolume<FI> {
+impl<F: Fixed> Default for EmaMarketVolume<F> {
     fn default() -> Self {
         EmaMarketVolume::new(EmaVolumeConfig::default())
     }
-} 
+}
 
-impl<FI: FixedSigned> MarketAverage<FI> for EmaMarketVolume<FI> {
+impl<F: FixedSigned> MarketAverage<F> for EmaMarketVolume<F> {
     /// Update market volume
-    fn update(&mut self, volume: FI) -> Option<FI> {
+    fn update(&mut self, volume: F) -> Option<F> {
         // TODO
         Some(volume)
     }
 
     /// Clear market data
     fn clear(&mut self) {
-        self.sma = FI::from_num(0);
+        self.sma = F::from_num(0);
         self.ema_chains = Vec::new();
         self.state = MarketVolumeState::Initialized;
-        self.sma_current_period_start = None;
+        self.start_time = None;
         self.volumes = VecDeque::new();
         self.volumes_per_period = 0;
         self.total_volumes = 0;
     }
 
     /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn calculate(&self) -> Option<FI> {
+    fn calculate(&self) -> Option<F> {
         match &self.state {
             MarketVolumeState::SmaCollected => Some(self.sma),
             MarketVolumeState::EmaCollected => {
                 let idx = ((self.total_volumes - 1) % self.volumes_per_period) as usize;
-                
+
                 if self.ema_chains.len() > idx {
                     Some(self.ema_chains[idx])
                 } else {
                     // This should not happen
                     None
                 }
-            },
+            }
             _ => None,
         }
     }
