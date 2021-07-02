@@ -16,3 +16,6 @@
 # Fuzz
 **/corpus/
 **/artifacts/
+
+# NPM
+**/node_modules/

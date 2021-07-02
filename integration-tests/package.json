@@ -1,0 +1,25 @@
+{
+  "author": "Zeitgeist PM <contact@zeitgeist.pm>",
+  "dependencies": {
+    "typescript": "^3.9.6"
+  },
+  "devDependencies": {
+    "@polkadot/api": "^4.12.1",
+    "@polkadot/types": "^4.12.1",
+    "@types/chai": "^4.2.11",
+    "@types/mocha": "^8.2.2",
+    "@zeitgeistpm/sdk": "^0.2.1",
+    "chai": "^4.3.4",
+    "mocha": "^8.3.2",
+    "ts-node": "9.1"
+  },
+  "description": "Integration tests",
+  "license": "GPL-3.0",
+  "repository": "https://github.com/zeitgeistpm/zeitgeist",
+  "main": "index.js",
+  "name": "integration-tests",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha --parallel -r ts-node/register 'tests/*.ts'"
+  },
+  "version": "0.0.0"
+}

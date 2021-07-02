@@ -15,7 +15,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        pallet_prelude::{StorageMap, StorageValue},
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::Hooks,
         Blake2_128Concat, Parameter,
     };
@@ -60,17 +60,20 @@ mod pallet {
     where
         T: Config,
     {
-        // Returns the next market id.
+        // Stored and returns the next market id.
         //
         // Retrieval is based on the stored ID plus one, recording the same incremented number
         // on the storage so next following calls will return yet another incremented number.
         //
-        // If no market was ever added, returns a zero ID.
+        // Returns `Err` if `MarketId` addition overflows.
         fn next_market_id() -> Result<T::MarketId, DispatchError> {
-            let next = MarketCounter::<T>::get().unwrap_or_else(|| T::MarketId::from(0u8));
-            let inc = next.checked_add(&T::MarketId::from(1u8)).ok_or(ArithmeticError::Overflow)?;
-            <MarketCounter<T>>::put(inc);
-            Ok(next)
+            let id = if let Ok(current) = MarketCounter::<T>::try_get() {
+                current.checked_add(&T::MarketId::from(1u8)).ok_or(ArithmeticError::Overflow)?
+            } else {
+                T::MarketId::from(0u8)
+            };
+            <MarketCounter<T>>::put(id);
+            Ok(id)
         }
     }
 
@@ -156,7 +159,7 @@ mod pallet {
     /// The number of markets that have been created (including removed markets) and the next
     /// identifier for a created market.
     #[pallet::storage]
-    pub type MarketCounter<T: Config> = StorageValue<_, T::MarketId>;
+    pub type MarketCounter<T: Config> = StorageValue<_, T::MarketId, ValueQuery>;
 
     /// Maps a market id to a related pool id. It is up to the caller to keep and sync valid
     /// existent markets with valid existent pools.

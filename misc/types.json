@@ -63,6 +63,7 @@
     }
   },
   "MarketId": "u128",
+  "MarketIdOf": "u128",
   "MarketType": {
     "_enum": {
       "Categorical": "u16",

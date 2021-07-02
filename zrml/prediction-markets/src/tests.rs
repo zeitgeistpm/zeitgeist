@@ -53,7 +53,7 @@ fn it_creates_binary_markets() {
 
         // Make sure that the market id has been incrementing
         let market_id = MarketCommons::latest_market_id().unwrap();
-        assert_eq!(market_id, 2);
+        assert_eq!(market_id, 1);
     });
 }
 
