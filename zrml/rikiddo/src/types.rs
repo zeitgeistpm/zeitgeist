@@ -1,11 +1,13 @@
+use std::u32;
+
 use crate::{
     constants::*,
     traits::{LsdlmsrFee, MarketAverage},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use sp_std::{collections::vec_deque::VecDeque, marker::PhantomData};
+use sp_std::marker::PhantomData;
 use substrate_fixed::{
-    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto},
+    traits::{Fixed, FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,
     types::{extra::U64, I9F23},
     FixedI128,
@@ -14,7 +16,14 @@ use substrate_fixed::{
 pub type UnixTimestamp = u64;
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+pub struct TimestampedVolume<F: Fixed> {
+    timestamp: UnixTimestamp,
+    volume: F,
+}
+
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub enum Timespan {
+    Seconds(u32),
     Minutes(u32),
     Hours(u32),
     Days(u16),
@@ -22,12 +31,13 @@ pub enum Timespan {
 }
 
 impl Timespan {
-    pub fn into_seconds(timespan: Timespan) -> u64 {
-        match timespan {
-            Timespan::Minutes(d) => u64::from(d) * 60,
-            Timespan::Hours(d) => u64::from(d) * 60 * 60,
-            Timespan::Days(d) => u64::from(d) * 60 * 60 * 24,
-            Timespan::Weeks(d) => u64::from(d) * 60 * 60 * 24 * 7,
+    pub fn into_seconds(&self) -> u32 {
+        match *self {
+            Timespan::Seconds(d) => d,
+            Timespan::Minutes(d) => d * 60,
+            Timespan::Hours(d) => d * 60 * 60,
+            Timespan::Days(d) => u32::from(d) * 60 * 60 * 24,
+            Timespan::Weeks(d) => u32::from(d) * 60 * 60 * 24 * 7,
         }
     }
 }
@@ -92,113 +102,112 @@ where
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaVolumeConfig {
+pub struct EmaVolumeConfig<F: Fixed> {
     pub ema_period: Timespan,
-    pub multiplier: FixedI128<U64>,
+    pub smoothing: F,
 }
 
-impl EmaVolumeConfig {
-    pub fn new(ema_period: Timespan, smoothing: FixedI128<U64>) -> Self {
-        let duration: u32 = match ema_period {
-            Timespan::Minutes(d) => d,
-            Timespan::Hours(d) => d,
-            Timespan::Days(d) => d.into(),
-            Timespan::Weeks(d) => d.into(),
-        };
-
-        let one = FixedI128::<U64>::from_num(1);
-        let fduration = FixedI128::<U64>::from_num(duration);
-
-        Self { ema_period, multiplier: smoothing / (one + fduration) }
+impl<F: FixedSigned + LossyFrom<FixedI128<U64>>> EmaVolumeConfig<F> {
+    pub fn new(ema_period: Timespan, smoothing: F) -> Self {
+        Self { ema_period, smoothing }
     }
 }
 
-impl Default for EmaVolumeConfig {
+impl<F: FixedSigned + LossyFrom<FixedI128<U64>>> Default for EmaVolumeConfig<F> {
     fn default() -> Self {
-        Self::new(EMA_SHORT, SMOOTHING)
+        Self::new(EMA_SHORT, SMOOTHING.lossy_into())
     }
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 enum MarketVolumeState {
-    Initialized,
-    SmaCollectionStarted,
-    SmaCollected,
-    EmaCollected,
+    Uninitialized,
+    DataCollectionStarted,
+    DataCollected,
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaMarketVolume<F: Fixed> {
-    pub config: EmaVolumeConfig,
-    pub sma: F,
-    pub ema_chains: Vec<F>,
+    pub config: EmaVolumeConfig<F>,
+    pub ema: F,
     state: MarketVolumeState,
-    start_time: Option<UnixTimestamp>,
-    volumes: VecDeque<F>,
-    volumes_per_period: u64,
-    total_volumes: u64,
+    start_time: UnixTimestamp,
+    volumes_per_period: u32,
+    multiplier: F,
 }
 
-impl<F: Fixed> EmaMarketVolume<F> {
-    pub fn new(config: EmaVolumeConfig) -> Self {
+impl<F: FixedSigned> EmaMarketVolume<F> {
+    pub fn new(config: EmaVolumeConfig<F>) -> Self {
         Self {
             config,
-            sma: F::from_num(0),
-            ema_chains: Vec::new(),
-            state: MarketVolumeState::Initialized,
-            start_time: None,
-            volumes: VecDeque::new(),
+            ema: F::from_num(0),
+            state: MarketVolumeState::Uninitialized,
+            start_time: 0,
             volumes_per_period: 0,
-            total_volumes: 0,
+            multiplier: F::from_num(0),
         }
     }
 }
 
-impl<F: Fixed> Default for EmaMarketVolume<F> {
+impl<F: FixedSigned + From<u32> + LossyFrom<FixedI128<U64>>> Default for EmaMarketVolume<F> {
     fn default() -> Self {
         EmaMarketVolume::new(EmaVolumeConfig::default())
     }
 }
 
-impl<F: FixedSigned> MarketAverage<F> for EmaMarketVolume<F> {
-    /// Update market volume
-    fn update(&mut self, volume: F) -> Option<F> {
-        // TODO
-        Some(volume)
+impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
+    /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
+    fn get(&self) -> Option<F> {
+        match &self.state {
+            MarketVolumeState::DataCollected => Some(self.ema),
+            _ => None,
+        }
     }
 
     /// Clear market data
     fn clear(&mut self) {
-        self.sma = F::from_num(0);
-        self.ema_chains = Vec::new();
-        self.state = MarketVolumeState::Initialized;
-        self.start_time = None;
-        self.volumes = VecDeque::new();
+        self.ema = F::from_num(0);
+        self.state = MarketVolumeState::Uninitialized;
+        self.start_time = 0;
         self.volumes_per_period = 0;
-        self.total_volumes = 0;
     }
 
-    /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn calculate(&self) -> Option<F> {
-        match &self.state {
-            MarketVolumeState::SmaCollected => Some(self.sma),
-            MarketVolumeState::EmaCollected => {
-                let idx = ((self.total_volumes - 1) % self.volumes_per_period) as usize;
+    /// Update market volume
+    fn update(&mut self, volume: TimestampedVolume<F>) -> Option<F> {
+        match self.state {
+            MarketVolumeState::Uninitialized => {
+                self.ema = volume.volume;
+                self.start_time = volume.timestamp;
+                self.volumes_per_period = 1;
+                self.state = MarketVolumeState::DataCollectionStarted;
+            }
+            MarketVolumeState::DataCollectionStarted => {
+                // During this phase the ema is still a sma.
+                self.ema = (self.ema * F::from(self.volumes_per_period) + volume.volume)
+                    / F::from(self.volumes_per_period + 1);
+                self.volumes_per_period += 1;
 
-                if self.ema_chains.len() > idx {
-                    Some(self.ema_chains[idx])
-                } else {
-                    // This should not happen
-                    None
+                if volume.timestamp - self.start_time
+                    >= self.config.ema_period.into_seconds() as u64
+                {
+                    self.multiplier =
+                        self.config.smoothing / (F::from(1u32) + F::from(self.volumes_per_period));
+                    self.state = MarketVolumeState::DataCollected;
                 }
             }
-            _ => None,
+            MarketVolumeState::DataCollected => {
+                self.ema =
+                    volume.volume * self.multiplier + self.ema * (F::from(1) - self.multiplier);
+                return Some(self.ema);
+            }
         }
+
+        None
     }
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct LsdLmsrSigmoidMV<FI: FixedUnsigned, FE: LsdlmsrFee<FI>, MA: MarketAverage<FI>> {
+pub struct LsdLmsrSigmoidMV<FI: Fixed, FE: LsdlmsrFee<FI>, MA: MarketAverage<FI>> {
     pub fees: FE,
     pub ma_short: MA,
     pub ma_long: MA,

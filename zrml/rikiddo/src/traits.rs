@@ -1,4 +1,4 @@
-use crate::types::{EmaVolumeConfig, FeeSigmoidConfig};
+use crate::types::{EmaVolumeConfig, FeeSigmoidConfig, TimestampedVolume};
 use frame_support::{
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     Parameter,
@@ -6,7 +6,7 @@ use frame_support::{
 use parity_scale_codec::Codec;
 use sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
-use substrate_fixed::traits::{Fixed, FixedUnsigned};
+use substrate_fixed::traits::Fixed;
 
 pub trait LsdlmsrFee<F: Fixed> {
     /// Calculate fee
@@ -14,28 +14,28 @@ pub trait LsdlmsrFee<F: Fixed> {
 }
 
 pub trait MarketAverage<F: Fixed> {
-    /// Update market volume
-    fn update(&mut self, volume: F) -> Option<F>;
+    /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume
+    fn get(&self) -> Option<F>;
 
     /// Clear market data
     fn clear(&mut self);
 
-    /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn calculate(&self) -> Option<F>;
+    /// Update market volume
+    fn update(&mut self, volume: TimestampedVolume<F>) -> Option<F>;
 }
 
-pub trait Lmsr<F: FixedUnsigned> {
+pub trait Lmsr<F: Fixed> {
+    /// Return price P_i(q) for all assets in q
+    fn all_prices(asset_balances: Vec<F>) -> Vec<F>;
+
     /// Return cost C(q) for all assets in q
     fn cost(asset_balances: Vec<F>) -> F;
 
     /// Return price P_i(q) for asset q_i in q
     fn price(asset_in_question_balance: F, asset_balances: Vec<F>) -> F;
-
-    /// Return price P_i(q) for all assets in q
-    fn all_prices(asset_balances: Vec<F>) -> Vec<F>;
 }
 
-pub trait LsdlmsrMV<F: FixedUnsigned>: Lmsr<F> {
+pub trait LsdlmsrMV<F: Fixed>: Lmsr<F> {
     /// Clear market data
     fn clear();
 
@@ -43,7 +43,7 @@ pub trait LsdlmsrMV<F: FixedUnsigned>: Lmsr<F> {
     fn update(volume: F);
 }
 
-pub trait LsdlmsrSigmoidMVPallet {
+pub trait LsdlmsrSigmoidMVPallet<F: Fixed> {
     type Balance: Parameter
         + Member
         + AtLeast32BitUnsigned
@@ -63,8 +63,8 @@ pub trait LsdlmsrSigmoidMVPallet {
     fn create(
         poolid: u128,
         fee_config: FeeSigmoidConfig,
-        ema_config_short: EmaVolumeConfig,
-        ema_config_long: EmaVolumeConfig,
+        ema_config_short: EmaVolumeConfig<F>,
+        ema_config_long: EmaVolumeConfig<F>,
         balance_one_unit: Self::Balance,
     );
 
