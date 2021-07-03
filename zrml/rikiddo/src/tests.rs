@@ -5,7 +5,7 @@ use substrate_fixed::{types::extra::U64, FixedI128};
 
 use crate::{
     mock::*,
-    traits::LsdlmsrFee,
+    traits::RikiddoFee,
     types::{FeeSigmoid, FeeSigmoidConfig},
 };
 

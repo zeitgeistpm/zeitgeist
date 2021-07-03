@@ -1,6 +1,9 @@
 use std::u32;
 
-use crate::{constants::*, traits::{MarketAverage, RikiddoFee}};
+use crate::{
+    constants::*,
+    traits::{MarketAverage, RikiddoFee},
+};
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::marker::PhantomData;
 use substrate_fixed::{
@@ -129,7 +132,7 @@ pub struct EmaMarketVolume<F: Fixed> {
     pub ema: F,
     state: MarketVolumeState,
     start_time: UnixTimestamp,
-    volumes_per_period: u32,
+    volumes_per_period: F,
     multiplier: F,
 }
 
@@ -140,7 +143,7 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
             ema: F::from_num(0),
             state: MarketVolumeState::Uninitialized,
             start_time: 0,
-            volumes_per_period: 0,
+            volumes_per_period: F::from_num(0),
             multiplier: F::from_num(0),
         }
     }
@@ -166,7 +169,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
         self.ema = F::from_num(0);
         self.state = MarketVolumeState::Uninitialized;
         self.start_time = 0;
-        self.volumes_per_period = 0;
+        self.volumes_per_period = F::from_num(0);
     }
 
     /// Update market volume
@@ -175,26 +178,86 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
             MarketVolumeState::Uninitialized => {
                 self.ema = volume.volume;
                 self.start_time = volume.timestamp;
-                self.volumes_per_period = 1;
+                self.volumes_per_period = 1.into();
                 self.state = MarketVolumeState::DataCollectionStarted;
             }
             MarketVolumeState::DataCollectionStarted => {
                 // During this phase the ema is still a sma.
-                self.ema = (self.ema * F::from(self.volumes_per_period) + volume.volume)
-                    / F::from(self.volumes_per_period + 1);
-                self.volumes_per_period += 1;
+                let ema_times_vpp =
+                    if let Some(res) = self.ema.checked_mul(self.volumes_per_period) {
+                        res
+                    } else {
+                        return Err("[EmaMarketVolume] Overflow during calculation: sma * \
+                                    volumes_per_period");
+                    };
 
-                if volume.timestamp - self.start_time
-                    >= self.config.ema_period.into_seconds() as u64
+                let ema_times_vpp_plus_volume =
+                    if let Some(res) = ema_times_vpp.checked_add(volume.volume) {
+                        res
+                    } else {
+                        return Err("[EmaMarketVolume] Overflow during calculation: sma * \
+                                    volumes_per_period + volume");
+                    };
+
+                self.ema = if let Some(res) = ema_times_vpp_plus_volume
+                    .checked_div(self.volumes_per_period.saturating_add(F::from(1)))
                 {
-                    self.multiplier =
-                        self.config.smoothing / (F::from(1u32) + F::from(self.volumes_per_period));
+                    res
+                } else {
+                    return Err("[EmaMarketVolume] Overflow during calculation: sma = numerator \
+                                / denominator");
+                };
+
+                // In the context of blockchains, overflowing here is irrelevant (not realizable).
+                // In other contexts, ensure that F can represent a number that is equal to the
+                // incoming volumes during one period.
+                self.volumes_per_period.saturating_add(F::from(1));
+
+                let timestamp_sub_start_time =
+                    if let Some(res) = volume.timestamp.checked_sub(self.start_time) {
+                        res
+                    } else {
+                        return Err("[EmaMarketVolume] Incoming volume timestamp is older than \
+                                    first recorded timestamp");
+                    };
+
+                if timestamp_sub_start_time >= self.config.ema_period.into_seconds() as u64 {
+                    // Overflow is impossible here.
+                    self.multiplier = self.config.smoothing
+                        / (self.volumes_per_period.saturating_add(F::from(1u32)));
                     self.state = MarketVolumeState::DataCollected;
                 }
             }
             MarketVolumeState::DataCollected => {
-                self.ema =
-                    volume.volume * self.multiplier + self.ema * (F::from(1) - self.multiplier);
+                let volume_times_multiplier =
+                    if let Some(res) = volume.volume.checked_mul(self.multiplier) {
+                        res
+                    } else {
+                        return Err(
+                            "[EmaMarketVolume] Overflow during calculation: volume * multiplier"
+                        );
+                    };
+
+                // Overflow is impossible here.
+                let one_minus_multiplier = F::from(1) - self.multiplier;
+
+                let ema_times_one_minus_multiplier =
+                    if let Some(res) = self.ema.checked_mul(one_minus_multiplier) {
+                        res
+                    } else {
+                        return Err(
+                            "[EmaMarketVolume] Overflow during calculation: ema * (1 - multiplier)"
+                        );
+                    };
+
+                self.ema = if let Some(res) =
+                    volume_times_multiplier.checked_add(ema_times_one_minus_multiplier)
+                {
+                    res
+                } else {
+                    return Err("[EmaMarketVolume] Overflow during calculation: ema = a + b");
+                };
+
                 return Ok(Some(self.ema));
             }
         }

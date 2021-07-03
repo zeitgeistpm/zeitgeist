@@ -57,7 +57,10 @@ pub trait RikiddoSigmoidMVPallet<F: Fixed> {
     fn clear(poolid: u128);
 
     /// Return cost C(q) for all assets in q
-    fn cost(poolid: u128, asset_balances: Vec<Self::Balance>) -> Result<Self::Balance, &'static str>;
+    fn cost(
+        poolid: u128,
+        asset_balances: Vec<Self::Balance>,
+    ) -> Result<Self::Balance, &'static str>;
 
     /// Create LSD-LMSR instance for specifc asset pool
     fn create(
@@ -79,7 +82,10 @@ pub trait RikiddoSigmoidMVPallet<F: Fixed> {
     ) -> Result<Self::Balance, &'static str>;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(poolid: u128, asset_balances: Vec<Self::Balance>) -> Result<Vec<Self::Balance>, &'static str>;
+    fn all_prices(
+        poolid: u128,
+        asset_balances: Vec<Self::Balance>,
+    ) -> Result<Vec<Self::Balance>, &'static str>;
 
     /// Update market data
     fn update(poolid: u128, volume: Self::Balance) -> Result<Option<Self::Balance>, &'static str>;
