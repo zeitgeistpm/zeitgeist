@@ -1,15 +1,15 @@
 #![cfg(test)]
 
 use frame_support::assert_err;
-use substrate_fixed::{
-    types::extra::{U112, U64},
-    FixedI128,
-};
+use substrate_fixed::{types::extra::U64, FixedI128};
 
 use crate::{
     mock::*,
-    traits::RikiddoFee,
-    types::{FeeSigmoid, FeeSigmoidConfig},
+    traits::{MarketAverage, RikiddoFee},
+    types::{
+        EmaMarketVolume, EmaVolumeConfig, FeeSigmoid, FeeSigmoidConfig, MarketVolumeState,
+        Timespan, TimestampedVolume,
+    },
 };
 
 fn max_allowed_error(fixed_point_bits: u8) -> f64 {
@@ -104,16 +104,19 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
     Ok(())
 }
 
-fn ema_get_returns_correct_ema() {
-    // TODO
-}
+#[test]
+fn ema_state_transitions_work() {
+    let emv_cfg = EmaVolumeConfig::<FixedI128<U64>> {
+        ema_period: Timespan::Seconds(2),
+        smoothing: <FixedI128<U64>>::from_num(2),
+    };
 
-fn ema_clear_ereases_data() {
-    // TODO
-}
-
-fn ema_first_state_transitions_work() {
-    // TODO
+    let mut emv = <EmaMarketVolume<FixedI128<U64>>>::new(emv_cfg);
+    assert_eq!(emv.state(), &MarketVolumeState::Uninitialized);
+    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 1.into() }).unwrap();
+    assert_eq!(emv.state(), &MarketVolumeState::DataCollectionStarted);
+    let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 1.into() }).unwrap();
+    assert_eq!(emv.state(), &MarketVolumeState::DataCollected);
 }
 
 fn ema_returns_none_before_final_state() {
@@ -121,6 +124,14 @@ fn ema_returns_none_before_final_state() {
 }
 
 fn ema_returns_correct_ema() {
+    // TODO
+}
+
+fn ema_get_returns_correct_ema() {
+    // TODO
+}
+
+fn ema_clear_ereases_data() {
     // TODO
 }
 

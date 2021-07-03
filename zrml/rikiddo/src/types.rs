@@ -17,8 +17,8 @@ pub type UnixTimestamp = u64;
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct TimestampedVolume<F: Fixed> {
-    timestamp: UnixTimestamp,
-    volume: F,
+    pub timestamp: UnixTimestamp,
+    pub volume: F,
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
@@ -120,7 +120,7 @@ impl<F: FixedSigned + LossyFrom<FixedI128<U112>>> Default for EmaVolumeConfig<F>
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-enum MarketVolumeState {
+pub enum MarketVolumeState {
     Uninitialized,
     DataCollectionStarted,
     DataCollected,
@@ -146,6 +146,20 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
             volumes_per_period: F::from_num(0),
             multiplier: F::from_num(0),
         }
+    }
+
+    // Following functions are required mainly for testing.
+    pub fn state(&self) -> &MarketVolumeState {
+        &self.state
+    }
+    pub fn start_time(&self) -> &UnixTimestamp {
+        &self.start_time
+    }
+    pub fn volumes_per_period(&self) -> &F {
+        &self.volumes_per_period
+    }
+    pub fn multiplier(&self) -> &F {
+        &self.multiplier
     }
 }
 
