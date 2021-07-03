@@ -1,15 +1,16 @@
 #![cfg(test)]
 
 use frame_support::assert_err;
-use substrate_fixed::{types::extra::U64, FixedI128};
+use substrate_fixed::{
+    types::extra::{U112, U64},
+    FixedI128,
+};
 
 use crate::{
     mock::*,
     traits::RikiddoFee,
     types::{FeeSigmoid, FeeSigmoidConfig},
 };
-
-// TODO: Test fee calculation + different overflow scenarios + default values
 
 fn max_allowed_error(fixed_point_bits: u8) -> f64 {
     1.0 / (2u128 << (fixed_point_bits - 1)) as f64
@@ -19,7 +20,7 @@ fn sigmoid_fee(m: f64, n: f64, p: f64, r: f64) -> f64 {
     (m * (r - n)) / (p + (r - n).powi(2)).sqrt()
 }
 
-fn init_default_sigmoid_fee_struct() -> (FeeSigmoid, f64, f64, f64) {
+fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>>, f64, f64, f64) {
     let m = 0.01f64;
     let n = 0f64;
     let p = 2.0f64;
@@ -60,7 +61,6 @@ fn fee_sigmoid_overflow_r_minus_n_squared() {
 }
 
 #[test]
-/// Some text
 fn fee_sigmoid_overflow_p_plus_r_minus_n_squared() {
     let (mut fee, _, _, _) = init_default_sigmoid_fee_struct();
     let r = <FixedI128<U64>>::from_num(0);

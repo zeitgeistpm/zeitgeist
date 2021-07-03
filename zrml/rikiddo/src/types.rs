@@ -9,7 +9,7 @@ use sp_std::marker::PhantomData;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,
-    types::{extra::U64, I9F23},
+    types::{extra::U112, I9F23},
     FixedI128,
 };
 
@@ -43,36 +43,36 @@ impl Timespan {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct FeeSigmoidConfig {
-    pub m: FixedI128<U64>,
-    pub p: FixedI128<U64>,
-    pub n: FixedI128<U64>,
+pub struct FeeSigmoidConfig<F: Fixed> {
+    pub m: F,
+    pub p: F,
+    pub n: F,
 }
 
-impl Default for FeeSigmoidConfig {
+impl<F: Fixed + LossyFrom<FixedI128<U112>>> Default for FeeSigmoidConfig<F> {
     fn default() -> Self {
-        Self { m: M, p: P, n: N }
+        Self { m: M.lossy_into(), p: P.lossy_into(), n: N.lossy_into() }
     }
 }
 
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
-pub struct FeeSigmoid {
-    pub config: FeeSigmoidConfig,
+pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI128<U112>>> {
+    pub config: FeeSigmoidConfig<FI>,
 }
 
-impl<F> RikiddoFee<F> for FeeSigmoid
+impl<F> RikiddoFee<F> for FeeSigmoid<F>
 where
-    F: FixedSigned + LossyFrom<FixedI128<U64>> + PartialOrd<I9F23>,
+    F: FixedSigned + LossyFrom<FixedI128<U112>> + PartialOrd<I9F23>,
 {
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
     fn calculate(&self, r: F) -> Result<F, &'static str> {
-        let r_minus_n = if let Some(res) = r.checked_sub(self.config.n.lossy_into()) {
+        let r_minus_n = if let Some(res) = r.checked_sub(self.config.n) {
             res
         } else {
             return Err("[FeeSigmoid] Overflow during calculation: r - n");
         };
 
-        let numerator = if let Some(res) = r_minus_n.checked_mul(self.config.m.lossy_into()) {
+        let numerator = if let Some(res) = r_minus_n.checked_mul(self.config.m) {
             res
         } else {
             return Err("[FeeSigmoid] Overflow during calculation: m * (r-n)");
@@ -85,7 +85,7 @@ where
         };
 
         let p_plus_r_minus_n_squared =
-            if let Some(res) = F::lossy_from(self.config.p).checked_add(r_minus_n_squared) {
+            if let Some(res) = self.config.p.checked_add(r_minus_n_squared) {
                 res
             } else {
                 return Err("[FeeSigmoid] Overflow during calculation: p + (r-n)^2");
@@ -107,13 +107,13 @@ pub struct EmaVolumeConfig<F: Fixed> {
     pub smoothing: F,
 }
 
-impl<F: FixedSigned + LossyFrom<FixedI128<U64>>> EmaVolumeConfig<F> {
+impl<F: FixedSigned + LossyFrom<FixedI128<U112>>> EmaVolumeConfig<F> {
     pub fn new(ema_period: Timespan, smoothing: F) -> Self {
         Self { ema_period, smoothing }
     }
 }
 
-impl<F: FixedSigned + LossyFrom<FixedI128<U64>>> Default for EmaVolumeConfig<F> {
+impl<F: FixedSigned + LossyFrom<FixedI128<U112>>> Default for EmaVolumeConfig<F> {
     fn default() -> Self {
         Self::new(EMA_SHORT, SMOOTHING.lossy_into())
     }
@@ -149,7 +149,7 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
     }
 }
 
-impl<F: FixedSigned + From<u32> + LossyFrom<FixedI128<U64>>> Default for EmaMarketVolume<F> {
+impl<F: FixedSigned + From<u32> + LossyFrom<FixedI128<U112>>> Default for EmaMarketVolume<F> {
     fn default() -> Self {
         EmaMarketVolume::new(EmaVolumeConfig::default())
     }

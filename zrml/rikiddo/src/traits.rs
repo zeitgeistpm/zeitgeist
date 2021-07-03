@@ -65,7 +65,7 @@ pub trait RikiddoSigmoidMVPallet<F: Fixed> {
     /// Create LSD-LMSR instance for specifc asset pool
     fn create(
         poolid: u128,
-        fee_config: FeeSigmoidConfig,
+        fee_config: FeeSigmoidConfig<F>,
         ema_config_short: EmaVolumeConfig<F>,
         ema_config_long: EmaVolumeConfig<F>,
         balance_one_unit: Self::Balance,
