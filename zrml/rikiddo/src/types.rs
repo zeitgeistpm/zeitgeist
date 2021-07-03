@@ -1,9 +1,6 @@
 use std::u32;
 
-use crate::{
-    constants::*,
-    traits::{LsdlmsrFee, MarketAverage},
-};
+use crate::{constants::*, traits::{MarketAverage, RikiddoFee}};
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::marker::PhantomData;
 use substrate_fixed::{
@@ -60,7 +57,7 @@ pub struct FeeSigmoid {
     pub config: FeeSigmoidConfig,
 }
 
-impl<F> LsdlmsrFee<F> for FeeSigmoid
+impl<F> RikiddoFee<F> for FeeSigmoid
 where
     F: FixedSigned + LossyFrom<FixedI128<U64>> + PartialOrd<I9F23>,
 {
@@ -207,7 +204,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct LsdLmsrSigmoidMV<FI: Fixed, FE: LsdlmsrFee<FI>, MA: MarketAverage<FI>> {
+pub struct RikiddoSigmoidMV<FI: Fixed, FE: RikiddoFee<FI>, MA: MarketAverage<FI>> {
     pub fees: FE,
     pub ma_short: MA,
     pub ma_long: MA,

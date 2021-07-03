@@ -8,7 +8,7 @@ use sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
 use substrate_fixed::traits::Fixed;
 
-pub trait LsdlmsrFee<F: Fixed> {
+pub trait RikiddoFee<F: Fixed> {
     /// Calculate fee
     fn calculate(&self, r: F) -> Result<F, &'static str>;
 }
@@ -35,7 +35,7 @@ pub trait Lmsr<F: Fixed> {
     fn price(asset_in_question_balance: F, asset_balances: Vec<F>) -> F;
 }
 
-pub trait LsdlmsrMV<F: Fixed>: Lmsr<F> {
+pub trait RikiddoMV<F: Fixed>: Lmsr<F> {
     /// Clear market data
     fn clear();
 
@@ -43,7 +43,7 @@ pub trait LsdlmsrMV<F: Fixed>: Lmsr<F> {
     fn update(volume: F);
 }
 
-pub trait LsdlmsrSigmoidMVPallet<F: Fixed> {
+pub trait RikiddoSigmoidMVPallet<F: Fixed> {
     type Balance: Parameter
         + Member
         + AtLeast32BitUnsigned
