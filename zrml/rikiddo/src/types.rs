@@ -183,7 +183,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
             }
             MarketVolumeState::DataCollectionStarted => {
                 // During this phase the ema is still a sma.
-                let ema_times_vpp =
+                let sma_times_vpp =
                     if let Some(res) = self.ema.checked_mul(self.volumes_per_period) {
                         res
                     } else {
@@ -191,15 +191,15 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                                     volumes_per_period");
                     };
 
-                let ema_times_vpp_plus_volume =
-                    if let Some(res) = ema_times_vpp.checked_add(volume.volume) {
+                let sma_times_vpp_plus_volume =
+                    if let Some(res) = sma_times_vpp.checked_add(volume.volume) {
                         res
                     } else {
                         return Err("[EmaMarketVolume] Overflow during calculation: sma * \
                                     volumes_per_period + volume");
                     };
 
-                self.ema = if let Some(res) = ema_times_vpp_plus_volume
+                self.ema = if let Some(res) = sma_times_vpp_plus_volume
                     .checked_div(self.volumes_per_period.saturating_add(F::from(1)))
                 {
                     res
@@ -255,7 +255,9 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                 {
                     res
                 } else {
-                    return Err("[EmaMarketVolume] Overflow during calculation: ema = a + b");
+                    return Err(
+                        "[EmaMarketVolume] Overflow during calculation: ema = current + previous"
+                    );
                 };
 
                 return Ok(Some(self.ema));

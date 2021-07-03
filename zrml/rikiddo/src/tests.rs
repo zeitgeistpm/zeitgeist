@@ -104,6 +104,50 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
     Ok(())
 }
 
+fn ema_get_returns_correct_ema() {
+    // TODO
+}
+
+fn ema_clear_ereases_data() {
+    // TODO
+}
+
+fn ema_first_state_transitions_work() {
+    // TODO
+}
+
+fn ema_returns_none_before_final_state() {
+    // TODO
+}
+
+fn ema_returns_correct_ema() {
+    // TODO
+}
+
+fn ema_overflow_sma_times_vpp() {
+    // TODO
+}
+
+fn ema_overflow_sma_times_vpp_plus_volume() {
+    // TODO
+}
+
+fn ema_overflow_sma_numerator_div_denominator() {
+    // TODO
+}
+
+fn ema_overflow_volume_times_multiplier() {
+    // TODO
+}
+
+fn ema_overflow_ema_times_one_minus_multiplier() {
+    // TODO
+}
+
+fn ema_overflow_ema_times_current_plus_previous() {
+    // TODO
+}
+
 #[test]
 fn it_is_a_dummy_test() {
     ExtBuilder::default().build().execute_with(|| {
