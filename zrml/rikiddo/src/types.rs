@@ -170,7 +170,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
     }
 
     /// Update market volume
-    fn update(&mut self, volume: TimestampedVolume<F>) -> Option<F> {
+    fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
         match self.state {
             MarketVolumeState::Uninitialized => {
                 self.ema = volume.volume;
@@ -195,11 +195,11 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
             MarketVolumeState::DataCollected => {
                 self.ema =
                     volume.volume * self.multiplier + self.ema * (F::from(1) - self.multiplier);
-                return Some(self.ema);
+                return Ok(Some(self.ema));
             }
         }
 
-        None
+        Ok(None)
     }
 }
 
