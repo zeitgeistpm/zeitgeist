@@ -9,8 +9,11 @@ use sp_std::marker::PhantomData;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,
-    types::{extra::U112, I9F23},
-    FixedI128,
+    types::{
+        extra::{U24, U32},
+        I9F23,
+    },
+    FixedI32,
 };
 
 pub type UnixTimestamp = u64;
@@ -49,20 +52,24 @@ pub struct FeeSigmoidConfig<F: Fixed> {
     pub n: F,
 }
 
-impl<F: Fixed + LossyFrom<FixedI128<U112>>> Default for FeeSigmoidConfig<F> {
+impl<F: Fixed + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> Default
+    for FeeSigmoidConfig<F>
+{
     fn default() -> Self {
+        // To avoid a limitation of the generics, the values are hardcoded
+        // instead of being fetched from constants.
         Self { m: M.lossy_into(), p: P.lossy_into(), n: N.lossy_into() }
     }
 }
 
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
-pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI128<U112>>> {
+pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> {
     pub config: FeeSigmoidConfig<FI>,
 }
 
 impl<F> RikiddoFee<F> for FeeSigmoid<F>
 where
-    F: FixedSigned + LossyFrom<FixedI128<U112>> + PartialOrd<I9F23>,
+    F: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>> + PartialOrd<I9F23>,
 {
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
     fn calculate(&self, r: F) -> Result<F, &'static str> {
@@ -107,13 +114,15 @@ pub struct EmaVolumeConfig<F: Fixed> {
     pub smoothing: F,
 }
 
-impl<F: FixedSigned + LossyFrom<FixedI128<U112>>> EmaVolumeConfig<F> {
+impl<F: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> EmaVolumeConfig<F> {
     pub fn new(ema_period: Timespan, smoothing: F) -> Self {
         Self { ema_period, smoothing }
     }
 }
 
-impl<F: FixedSigned + LossyFrom<FixedI128<U112>>> Default for EmaVolumeConfig<F> {
+impl<F: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> Default
+    for EmaVolumeConfig<F>
+{
     fn default() -> Self {
         Self::new(EMA_SHORT, SMOOTHING.lossy_into())
     }
@@ -223,7 +232,9 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
     }
 }
 
-impl<F: FixedSigned + From<u32> + LossyFrom<FixedI128<U112>>> Default for EmaMarketVolume<F> {
+impl<F: FixedSigned + From<u32> + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> Default
+    for EmaMarketVolume<F>
+{
     fn default() -> Self {
         EmaMarketVolume::new(EmaVolumeConfig::default())
     }

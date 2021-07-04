@@ -1,5 +1,8 @@
 use crate::types::Timespan;
-use substrate_fixed::{types::extra::U112, FixedI128};
+use substrate_fixed::{
+    types::extra::{U24, U32},
+    FixedI32,
+};
 
 // --- Default configuration for EmaConfig struct ---
 /// Default short EMA period (in seconds)
@@ -12,31 +15,25 @@ pub const EMA_LONG: Timespan = Timespan::Hours(6);
 
 /// Default smoothing factor for EMA calculation
 /// 2.0
-pub const SMOOTHING: FixedI128<U112> =
-    <FixedI128<U112>>::from_bits(0x0000_0000_0000_0002_0000_0000_0000_0000);
+pub const SMOOTHING: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0200_0000);
 
 // --- Default configuration for FeeSigmoidConfig struct ---
 /// Initial fee f
 /// 0.005
-pub const INITIAL_FEE: FixedI128<U112> =
-    <FixedI128<U112>>::from_bits(0x0000_0147_AE14_7AE1_47B0_0000_0000_0000);
+pub const INITIAL_FEE: FixedI32<U32> = <FixedI32<U32>>::from_bits(0x0147_AE14);
 
 /// Minimal revenue w (proportion of initial fee f)
 /// f * β = 0.005 * 0.7 = 0.0035
-pub const MINIMAL_REVENUE: FixedI128<U112> =
-    <FixedI128<U112>>::from_bits(0x0000_00E5_6041_8937_4BC8_0000_0000_0000);
+pub const MINIMAL_REVENUE: FixedI32<U32> = <FixedI32<U32>>::from_bits(0x00E5_6042);
 
 /// m value
 /// 0.01
-pub const M: FixedI128<U112> =
-    <FixedI128<U112>>::from_bits(0x0000_028F_5C28_F5C2_8F60_0000_0000_0000);
+pub const M: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0002_8F5C);
 
 /// p value
 /// 2.0
-pub const P: FixedI128<U112> =
-    <FixedI128<U112>>::from_bits(0x0000_0000_0000_0002_0000_0000_0000_0000);
+pub const P: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0200_0000);
 
 /// n value
 /// 0.0
-pub const N: FixedI128<U112> =
-    <FixedI128<U112>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0000);
+pub const N: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0000_0000);

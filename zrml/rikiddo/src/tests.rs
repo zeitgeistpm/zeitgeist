@@ -180,12 +180,13 @@ fn ema_returns_correct_ema() {
     );
 }
 
+#[test]
 fn ema_clear_ereases_data() {
     let mut emv = ema_create_test_struct();
     let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 2.into() }).unwrap();
     let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 6.into() }).unwrap();
     emv.clear();
-    assert_eq!(emv.ema, <FixedI128<U64>>::from_num(1));
+    assert_eq!(emv.ema, <FixedI128<U64>>::from_num(0));
     assert_eq!(emv.state(), &MarketVolumeState::Uninitialized);
     assert_eq!(emv.start_time(), &0);
     assert_eq!(emv.volumes_per_period(), &0);
