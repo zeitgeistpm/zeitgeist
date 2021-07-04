@@ -53,14 +53,14 @@ mod pallet {
 
     impl<T: Config> Pallet<T> {}
 
-    // This is the storage containing the LsdLmsr instances per pool.
+    // This is the storage containing the Rikiddo instances per pool.
     /*
     #[pallet::storage]
     pub type LmsrPerPool<T: Config> = StorageMap<
         _,
         Twox64Concat,
         u128,
-        LsdLmsrSigmoidMV<
+        RikiddoMV<
             FixedU128<T::FractionalType>,
             FeeSigmoid,
             EmaMarketVolume<FixedU128<T::FractionalType>>,
