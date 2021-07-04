@@ -149,13 +149,12 @@ fn ema_returns_correct_ema() {
     let _ = emv.update(TimestampedVolume { timestamp: 2, volume: 4.into() }).unwrap();
     // Currently it's a sma
     let ema = emv.ema.to_num::<f64>();
-    assert_eq!(ema, (2.0 + 6.0) / 2.0);
+    assert_eq!(ema, (2.0 + 6.0 + 4.0) / 3.0);
 
     let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 20.into() }).unwrap();
     // Now it's an ema
     let ema_fixed_f64: f64 = emv.ema.to_num();
-    let multiplier =
-        ema_get_multiplier(emv.volumes_per_period().to_num(), emv.config.smoothing.to_num());
+    let multiplier = ema_get_multiplier(3, emv.config.smoothing.to_num());
     let ema_f64 = ema_calculate(ema, multiplier, 20f64);
     let difference_abs = (ema_fixed_f64 - ema_f64).abs();
     assert!(
@@ -192,12 +191,32 @@ fn ema_clear_ereases_data() {
     assert_eq!(emv.volumes_per_period(), &0);
 }
 
+#[test]
 fn ema_overflow_sma_times_vpp() {
-    // TODO
+    let emv_cfg = EmaVolumeConfig::<FixedI128<U64>> {
+        ema_period: Timespan::Seconds(3),
+        smoothing: <FixedI128<U64>>::from_num(2),
+    };
+
+    let mut emv = <EmaMarketVolume<FixedI128<U64>>>::new(emv_cfg);
+    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 2.into() }).unwrap();
+    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 6.into() }).unwrap();
+    emv.ema = <FixedI128<U64>>::from_num(i64::MAX);
+    assert_err!(
+        emv.update(TimestampedVolume { timestamp: 3, volume: 6.into() }),
+        "[EmaMarketVolume] Overflow during calculation: sma * volumes_per_period"
+    );
 }
 
+#[test]
 fn ema_overflow_sma_times_vpp_plus_volume() {
-    // TODO
+    let mut emv = ema_create_test_struct();
+    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 2.into() }).unwrap();
+    let max_i64_fixed = <FixedI128<U64>>::from_num(u64::MAX >> 1);
+    assert_err!(
+        emv.update(TimestampedVolume { timestamp: 2, volume: max_i64_fixed }),
+        "[EmaMarketVolume] Overflow during calculation: sma * volumes_per_period + volume"
+    );
 }
 
 fn ema_overflow_sma_numerator_div_denominator() {

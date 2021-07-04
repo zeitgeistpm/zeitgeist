@@ -287,11 +287,16 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                     // In the context of blockchains, overflowing here is irrelevant (not realizable).
                     // In other contexts, ensure that F can represent a number that is equal to the
                     // incoming volumes during one period.
-                    self.volumes_per_period.saturating_add(F::from(1));
+                    self.volumes_per_period = self.volumes_per_period.saturating_add(F::from(1));
                     return result;
                 }
             }
             MarketVolumeState::DataCollected => {
+                if let None = volume.timestamp.checked_sub(self.start_time) {
+                    return Err("[EmaMarketVolume] Incoming volume timestamp is older than first \
+                                recorded timestamp");
+                }
+
                 return self.calculate_ema(volume);
             }
         }
