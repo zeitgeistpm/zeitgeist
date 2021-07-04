@@ -13,7 +13,7 @@ use crate::{
 };
 
 fn max_allowed_error(fixed_point_bits: u8) -> f64 {
-    1.0 / (2u128 << (fixed_point_bits - 1)) as f64
+    1.0 / (1u128 << (fixed_point_bits - 1)) as f64
 }
 
 fn sigmoid_fee(m: f64, n: f64, p: f64, r: f64) -> f64 {
@@ -113,11 +113,19 @@ fn ema_create_test_struct() -> EmaMarketVolume<FixedI128<U64>> {
     <EmaMarketVolume<FixedI128<U64>>>::new(emv_cfg)
 }
 
+fn ema_get_multiplier(volumes_per_period: u64, smoothing: f64) -> f64 {
+    smoothing / (1 + volumes_per_period) as f64
+}
+
+fn ema_calculate(old_ema: f64, multiplier: f64, volume: f64) -> f64 {
+    volume * multiplier + old_ema * (1.0 - multiplier)
+}
+
 #[test]
 fn ema_state_transitions_work() {
     let mut emv = ema_create_test_struct();
     assert_eq!(emv.state(), &MarketVolumeState::Uninitialized);
-    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 1.into() }).unwrap();
+    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 1.into() }).unwrap();
     assert_eq!(emv.state(), &MarketVolumeState::DataCollectionStarted);
     let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 1.into() }).unwrap();
     assert_eq!(emv.state(), &MarketVolumeState::DataCollected);
@@ -127,20 +135,60 @@ fn ema_state_transitions_work() {
 fn ema_returns_none_before_final_state() {
     let mut emv = ema_create_test_struct();
     assert_eq!(emv.get(), None);
-    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 1.into() }).unwrap();
+    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 1.into() }).unwrap();
     assert_eq!(emv.get(), None);
     let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 1.into() }).unwrap();
     assert_ne!(emv.get(), None);
 }
 
-fn ema_returns_correct_ema() {}
+#[test]
+fn ema_returns_correct_ema() {
+    let mut emv = ema_create_test_struct();
+    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 2.into() }).unwrap();
+    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 6.into() }).unwrap();
+    let _ = emv.update(TimestampedVolume { timestamp: 2, volume: 4.into() }).unwrap();
+    // Currently it's a sma
+    let ema = emv.ema.to_num::<f64>();
+    assert_eq!(ema, (2.0 + 6.0) / 2.0);
 
-fn ema_get_returns_correct_ema() {
-    // TODO
+    let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 20.into() }).unwrap();
+    // Now it's an ema
+    let ema_fixed_f64: f64 = emv.ema.to_num();
+    let multiplier =
+        ema_get_multiplier(emv.volumes_per_period().to_num(), emv.config.smoothing.to_num());
+    let ema_f64 = ema_calculate(ema, multiplier, 20f64);
+    let difference_abs = (ema_fixed_f64 - ema_f64).abs();
+    assert!(
+        difference_abs <= max_allowed_error(64),
+        "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
+        ema_fixed_f64,
+        ema_f64,
+        difference_abs,
+        max_allowed_error(64)
+    );
+
+    // Repeat check using the get() function
+    let ema_fixed_f64: f64 = emv.get().unwrap().to_num();
+    let difference_abs = (ema_fixed_f64 - ema_f64).abs();
+    assert!(
+        difference_abs <= max_allowed_error(64),
+        "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
+        ema_fixed_f64,
+        ema_f64,
+        difference_abs,
+        max_allowed_error(64)
+    );
 }
 
 fn ema_clear_ereases_data() {
-    // TODO
+    let mut emv = ema_create_test_struct();
+    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 2.into() }).unwrap();
+    let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 6.into() }).unwrap();
+    emv.clear();
+    assert_eq!(emv.ema, <FixedI128<U64>>::from_num(1));
+    assert_eq!(emv.state(), &MarketVolumeState::Uninitialized);
+    assert_eq!(emv.start_time(), &0);
+    assert_eq!(emv.volumes_per_period(), &0);
 }
 
 fn ema_overflow_sma_times_vpp() {

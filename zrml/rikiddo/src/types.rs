@@ -264,7 +264,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                                     first recorded timestamp");
                     };
 
-                if timestamp_sub_start_time >= self.config.ema_period.into_seconds() as u64 {
+                if timestamp_sub_start_time > self.config.ema_period.into_seconds() as u64 {
                     // Overflow is impossible here.
                     self.multiplier = self.config.smoothing
                         / (self.volumes_per_period.saturating_add(F::from(1)));
