@@ -1,5 +1,3 @@
-use super::Timespan;
-
 use crate::{
     constants::{M, N, P},
     traits::RikiddoFee,
@@ -14,18 +12,6 @@ use substrate_fixed::{
     },
     FixedI32,
 };
-
-impl Timespan {
-    pub fn into_seconds(&self) -> u32 {
-        match *self {
-            Timespan::Seconds(d) => d,
-            Timespan::Minutes(d) => d * 60,
-            Timespan::Hours(d) => d * 60 * 60,
-            Timespan::Days(d) => u32::from(d) * 60 * 60 * 24,
-            Timespan::Weeks(d) => u32::from(d) * 60 * 60 * 24 * 7,
-        }
-    }
-}
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<F: Fixed> {

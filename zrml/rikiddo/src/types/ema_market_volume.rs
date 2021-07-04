@@ -205,7 +205,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                 // It should no state transit, if the amount of gathered data is too low.
                 // This would result in a multiplier that is greater than 1, which can lead to
                 // a negative ema. The amount depends on the size of the smoothing factor.
-                if timestamp_sub_start_time > self.config.ema_period.into_seconds() as u64
+                if timestamp_sub_start_time > self.config.ema_period.to_seconds() as u64
                     && (*self.volumes_per_period() + 1.into()) >= self.config.smoothing
                 {
                     // Overflow is impossible here.
