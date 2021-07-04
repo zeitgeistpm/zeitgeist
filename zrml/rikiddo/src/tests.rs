@@ -104,14 +104,18 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
     Ok(())
 }
 
-#[test]
-fn ema_state_transitions_work() {
+fn ema_create_test_struct() -> EmaMarketVolume<FixedI128<U64>> {
     let emv_cfg = EmaVolumeConfig::<FixedI128<U64>> {
         ema_period: Timespan::Seconds(2),
         smoothing: <FixedI128<U64>>::from_num(2),
     };
 
-    let mut emv = <EmaMarketVolume<FixedI128<U64>>>::new(emv_cfg);
+    <EmaMarketVolume<FixedI128<U64>>>::new(emv_cfg)
+}
+
+#[test]
+fn ema_state_transitions_work() {
+    let mut emv = ema_create_test_struct();
     assert_eq!(emv.state(), &MarketVolumeState::Uninitialized);
     let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 1.into() }).unwrap();
     assert_eq!(emv.state(), &MarketVolumeState::DataCollectionStarted);
@@ -119,13 +123,17 @@ fn ema_state_transitions_work() {
     assert_eq!(emv.state(), &MarketVolumeState::DataCollected);
 }
 
+#[test]
 fn ema_returns_none_before_final_state() {
-    // TODO
+    let mut emv = ema_create_test_struct();
+    assert_eq!(emv.get(), None);
+    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 1.into() }).unwrap();
+    assert_eq!(emv.get(), None);
+    let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 1.into() }).unwrap();
+    assert_ne!(emv.get(), None);
 }
 
-fn ema_returns_correct_ema() {
-    // TODO
-}
+fn ema_returns_correct_ema() {}
 
 fn ema_get_returns_correct_ema() {
     // TODO
