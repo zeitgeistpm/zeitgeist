@@ -285,6 +285,9 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                 // against the timestamp of the previous transaction.
                 let timestamp_sub_start_time = volume.timestamp.saturating_sub(self.start_time);
 
+                // TODO: It should no state transit, if the amount of gathered data is too low.
+                // For example, it might not be desired to calculate the ema with a period of 1
+                // transaction, when the selected timespan was 1 hour.
                 if timestamp_sub_start_time > self.config.ema_period.into_seconds() as u64 {
                     // Overflow is impossible here.
                     self.multiplier = self
