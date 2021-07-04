@@ -186,9 +186,21 @@ fn ema_clear_ereases_data() {
     let _ = emv.update(TimestampedVolume { timestamp: 3, volume: 6.into() }).unwrap();
     emv.clear();
     assert_eq!(emv.ema, <FixedI128<U64>>::from_num(0));
+    assert_eq!(emv.multiplier(), &<FixedI128<U64>>::from_num(0));
     assert_eq!(emv.state(), &MarketVolumeState::Uninitialized);
     assert_eq!(emv.start_time(), &0);
+    assert_eq!(emv.last_time(), &0);
     assert_eq!(emv.volumes_per_period(), &0);
+}
+
+#[test]
+fn ema_added_volume_is_older_than_previous() {
+    let mut emv = ema_create_test_struct();
+    let _ = emv.update(TimestampedVolume { timestamp: 2, volume: 2.into() }).unwrap();
+    assert_err!(
+        emv.update(TimestampedVolume { timestamp: 1, volume: 2.into() }),
+        "[EmaMarketVolume] Incoming volume timestamp is older than previous timestamp"
+    );
 }
 
 #[test]
@@ -217,10 +229,6 @@ fn ema_overflow_sma_times_vpp_plus_volume() {
         emv.update(TimestampedVolume { timestamp: 2, volume: max_i64_fixed }),
         "[EmaMarketVolume] Overflow during calculation: sma * volumes_per_period + volume"
     );
-}
-
-fn ema_overflow_sma_numerator_div_denominator() {
-    // TODO
 }
 
 fn ema_overflow_volume_times_multiplier() {

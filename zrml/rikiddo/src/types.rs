@@ -139,10 +139,11 @@ pub enum MarketVolumeState {
 pub struct EmaMarketVolume<F: Fixed> {
     pub config: EmaVolumeConfig<F>,
     pub ema: F,
+    multiplier: F,
+    last_time: UnixTimestamp,
     state: MarketVolumeState,
     start_time: UnixTimestamp,
     volumes_per_period: F,
-    multiplier: F,
 }
 
 impl<F: FixedSigned> EmaMarketVolume<F> {
@@ -152,12 +153,13 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
             ema: F::from_num(0),
             state: MarketVolumeState::Uninitialized,
             start_time: 0,
+            last_time: 0,
             volumes_per_period: F::from_num(0),
             multiplier: F::from_num(0),
         }
     }
 
-    fn calculate_ema(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+    fn calculate_ema(&mut self, volume: &TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
         let volume_times_multiplier = if let Some(res) = volume.volume.checked_mul(self.multiplier)
         {
             res
@@ -186,7 +188,8 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
         Ok(Some(self.ema))
     }
 
-    fn calculate_sma(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+    fn calculate_sma(&mut self, volume: &TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+        // This can only overflow if the ema field is set manually
         let sma_times_vpp = if let Some(res) = self.ema.checked_mul(self.volumes_per_period) {
             res
         } else {
@@ -201,17 +204,19 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
                             volumes_per_period + volume");
             };
 
-        self.ema = if let Some(res) = sma_times_vpp_plus_volume
-            .checked_div(self.volumes_per_period.saturating_add(F::from_num(1)))
-        {
-            res
-        } else {
-            return Err(
-                "[EmaMarketVolume] Overflow during calculation: sma = numerator / denominator"
-            );
-        };
+        // This can't overflow.
+        self.ema = sma_times_vpp_plus_volume
+            .saturating_div(self.volumes_per_period.saturating_add(F::from_num(1)));
 
         Ok(Some(self.ema))
+    }
+
+    pub fn multiplier(&self) -> &F {
+        &self.multiplier
+    }
+
+    pub fn last_time(&self) -> &UnixTimestamp {
+        &self.last_time
     }
 
     // Following functions are required mainly for testing.
@@ -225,10 +230,6 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
 
     pub fn volumes_per_period(&self) -> &F {
         &self.volumes_per_period
-    }
-
-    pub fn multiplier(&self) -> &F {
-        &self.multiplier
     }
 }
 
@@ -252,6 +253,8 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
     /// Clear market data
     fn clear(&mut self) {
         self.ema = F::from_num(0);
+        self.multiplier = F::from_num(0);
+        self.last_time = 0;
         self.state = MarketVolumeState::Uninitialized;
         self.start_time = 0;
         self.volumes_per_period = F::from_num(0);
@@ -259,36 +262,44 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
 
     /// Update market volume
     fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+        let mut result: Option<F> = None;
+
+        if let Some(res) = volume.timestamp.checked_sub(self.last_time) {
+            res
+        } else {
+            return Err(
+                "[EmaMarketVolume] Incoming volume timestamp is older than previous timestamp"
+            );
+        };
+
         match self.state {
             MarketVolumeState::Uninitialized => {
                 self.ema = volume.volume;
                 self.start_time = volume.timestamp;
+                self.last_time = volume.timestamp;
                 self.volumes_per_period = 1.into();
                 self.state = MarketVolumeState::DataCollectionStarted;
             }
             MarketVolumeState::DataCollectionStarted => {
-                let timestamp_sub_start_time =
-                    if let Some(res) = volume.timestamp.checked_sub(self.start_time) {
-                        res
-                    } else {
-                        return Err("[EmaMarketVolume] Incoming volume timestamp is older than \
-                                    first recorded timestamp");
-                    };
+                // This can never overflow, because every transactions timestamp is checked
+                // against the timestamp of the previous transaction.
+                let timestamp_sub_start_time = volume.timestamp.saturating_sub(self.start_time);
 
                 if timestamp_sub_start_time > self.config.ema_period.into_seconds() as u64 {
                     // Overflow is impossible here.
-                    self.multiplier = self.config.smoothing
-                        / (self.volumes_per_period.saturating_add(F::from(1)));
+                    self.multiplier = self
+                        .config
+                        .smoothing
+                        .saturating_div(self.volumes_per_period.saturating_add(F::from(1)));
                     self.state = MarketVolumeState::DataCollected;
-                    return self.calculate_ema(volume);
+                    result = self.calculate_ema(&volume)?;
                 } else {
                     // During this phase the ema is still a sma.
-                    let result = self.calculate_sma(volume);
+                    result = self.calculate_sma(&volume)?;
                     // In the context of blockchains, overflowing here is irrelevant (not realizable).
                     // In other contexts, ensure that F can represent a number that is equal to the
                     // incoming volumes during one period.
                     self.volumes_per_period = self.volumes_per_period.saturating_add(F::from(1));
-                    return result;
                 }
             }
             MarketVolumeState::DataCollected => {
@@ -297,11 +308,12 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                                 recorded timestamp");
                 }
 
-                return self.calculate_ema(volume);
+                return self.calculate_ema(&volume);
             }
         }
 
-        Ok(None)
+        self.last_time = volume.timestamp;
+        Ok(result)
     }
 }
 
