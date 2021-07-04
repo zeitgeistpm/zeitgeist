@@ -62,7 +62,7 @@ pub trait RikiddoSigmoidMVPallet<F: Fixed> {
         asset_balances: Vec<Self::Balance>,
     ) -> Result<Self::Balance, &'static str>;
 
-    /// Create LSD-LMSR instance for specifc asset pool
+    /// Create Rikiddo instance for specifc asset pool
     fn create(
         poolid: u128,
         fee_config: FeeSigmoidConfig<F>,
@@ -71,7 +71,7 @@ pub trait RikiddoSigmoidMVPallet<F: Fixed> {
         balance_one_unit: Self::Balance,
     );
 
-    /// Destroy Lsdlmsr instance
+    /// Destroy Rikiddo instance
     fn destroy(poolid: u128);
 
     /// Return price P_i(q) for asset q_i in q
