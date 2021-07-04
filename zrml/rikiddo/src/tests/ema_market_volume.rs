@@ -132,26 +132,3 @@ fn ema_overflow_sma_times_vpp_plus_volume() {
         "[EmaMarketVolume] Overflow during calculation: sma * volumes_per_period + volume"
     );
 }
-
-#[test]
-fn ema_overflow_volume_times_multiplier() {
-    let mut emv = ema_create_test_struct(2, 4.0);
-    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 2.into() }).unwrap();
-    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 6.into() }).unwrap();
-    assert_err!(
-        emv.update(TimestampedVolume { timestamp: 3, volume: i64::MAX.into() }),
-        "[EmaMarketVolume] Overflow during calculation: volume * multiplier"
-    );
-}
-
-#[test]
-fn ema_overflow_ema_times_one_minus_multiplier() {
-    let mut emv = ema_create_test_struct(2, 8.0);
-    let _ = emv.update(TimestampedVolume { timestamp: 0, volume: 2.into() }).unwrap();
-    let _ = emv.update(TimestampedVolume { timestamp: 1, volume: 6.into() }).unwrap();
-    emv.ema = <FixedI128<U64>>::from_num(i64::MAX);
-    assert_err!(
-        emv.update(TimestampedVolume { timestamp: 3, volume: 2.into() }),
-        "[EmaMarketVolume] Overflow during calculation: ema * (1 - multiplier)"
-    );
-}

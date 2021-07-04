@@ -62,6 +62,7 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
     }
 
     fn calculate_ema(&mut self, volume: &TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+        // Overflow is impossible here (the library ensures that multiplier ∊ [0,1])
         let volume_times_multiplier = if let Some(res) = volume.volume.checked_mul(self.multiplier)
         {
             res
@@ -70,8 +71,13 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
         };
 
         // Overflow is impossible here.
-        let one_minus_multiplier = F::from_num(1) - self.multiplier;
+        let one_minus_multiplier = if let Some(res) = F::from_num(1).checked_sub(self.multiplier) {
+            res
+        } else {
+            return Err("[EmaMarketVolume] Overflow during calculation: 1 - multiplier");
+        };
 
+        // Overflow is impossible here.
         let ema_times_one_minus_multiplier =
             if let Some(res) = self.ema.checked_mul(one_minus_multiplier) {
                 res
@@ -80,7 +86,14 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
             };
 
         // Overflow is impossible here.
-        self.ema = volume_times_multiplier.saturating_add(ema_times_one_minus_multiplier);
+        self.ema = if let Some(res) =
+            volume_times_multiplier.checked_add(ema_times_one_minus_multiplier)
+        {
+            res
+        } else {
+            return Err("[EmaMarketVolume] Overflow during calculation: ema = smoothed_new + \
+                        smoothed_previous");
+        };
 
         Ok(Some(self.ema))
     }
@@ -102,8 +115,15 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
             };
 
         // This can't overflow.
-        self.ema = sma_times_vpp_plus_volume
-            .saturating_div(self.volumes_per_period.saturating_add(F::from_num(1)));
+        self.ema = if let Some(res) = sma_times_vpp_plus_volume
+            .checked_div(self.volumes_per_period.saturating_add(F::from_num(1)))
+        {
+            res
+        } else {
+            return Err(
+                "[EmaMarketVolume] Overflow during calculation: sma = numerator / denominator"
+            );
+        };
 
         Ok(Some(self.ema))
     }
@@ -182,33 +202,36 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                 // against the timestamp of the previous transaction.
                 let timestamp_sub_start_time = volume.timestamp.saturating_sub(self.start_time);
 
-                // TODO: It should no state transit, if the amount of gathered data is too low.
-                // For example, it might not be desired to calculate the ema with a period of 1
-                // transaction, when the selected timespan was 1 hour.
-                if timestamp_sub_start_time > self.config.ema_period.into_seconds() as u64 {
+                // It should no state transit, if the amount of gathered data is too low.
+                // This would result in a multiplier that is greater than 1, which can lead to
+                // a negative ema. The amount depends on the size of the smoothing factor.
+                if timestamp_sub_start_time > self.config.ema_period.into_seconds() as u64
+                    && (*self.volumes_per_period() + 1.into()) >= self.config.smoothing
+                {
                     // Overflow is impossible here.
-                    self.multiplier = self
+                    self.multiplier = if let Some(res) = self
                         .config
                         .smoothing
-                        .saturating_div(self.volumes_per_period.saturating_add(F::from(1)));
+                        .checked_div(self.volumes_per_period.saturating_add(F::from(1)))
+                    {
+                        res
+                    } else {
+                        return Err("[EmaMarketVolume] Overflow during calculation: multiplier = \
+                                    smoothing / (1 + volumes_per_period)");
+                    };
                     self.state = MarketVolumeState::DataCollected;
                     result = self.calculate_ema(&volume)?;
                 } else {
                     // During this phase the ema is still a sma.
                     result = self.calculate_sma(&volume)?;
-                    // In the context of blockchains, overflowing here is irrelevant (not realizable).
-                    // In other contexts, ensure that F can represent a number that is equal to the
-                    // incoming volumes during one period.
+                    // In the context of blockchains, overflowing here is irrelevant (technically
+                    // not realizable). In other contexts, ensure that F can represent a number
+                    // that is equal to the incoming volumes during one period.
                     self.volumes_per_period = self.volumes_per_period.saturating_add(F::from(1));
                 }
             }
             MarketVolumeState::DataCollected => {
-                if let None = volume.timestamp.checked_sub(self.start_time) {
-                    return Err("[EmaMarketVolume] Incoming volume timestamp is older than first \
-                                recorded timestamp");
-                }
-
-                return self.calculate_ema(&volume);
+                result = self.calculate_ema(&volume)?;
             }
         }
 
