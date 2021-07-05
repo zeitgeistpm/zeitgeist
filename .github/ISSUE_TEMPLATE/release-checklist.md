@@ -81,7 +81,7 @@ To verify the order has not changed:
 
 1. Build the Zeitgeist client from source: `git clone https://github.com/zeitgeistpm/zeitgeist.git zeitgeist-release && pushd zeitgeist-release > /dev/null && cargo build`
 2. Run the release-candidate binary using a local chain:
-`./target/release/zeitgeist --chain=dev --tmp`
+`./target/debug/zeitgeist --chain=dev --tmp`
 3. Use [`polkadot-js-tools`](https://github.com/polkadot-js/tools) to compare
 the metadata: `docker run --network host jacogr/polkadot-js-tools metadata wss://bp-rpc.zeitgeist.pm ws://localhost:9944`
 
