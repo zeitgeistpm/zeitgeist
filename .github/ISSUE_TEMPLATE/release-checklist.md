@@ -79,16 +79,13 @@ of a breaking change, increase `transaction_version`.
 
 To verify the order has not changed:
 
-1. Download the latest release-candidate binary either from the draft-release
-on Github, or
-[AWS](https://releases.parity.io/polkadot/x86_64-debian:stretch/{{ env.VERSION }}-rc1/polkadot)
-(adjust the rc in this URL as necessary).
+1. Download the latest release-candidate binary from the draft-release
+on Github.
 2. Run the release-candidate binary using a local chain:
-`./polkadot --chain=polkadot-local` or `./polkadot --chain=kusama.local`
+`./zeitgeist --chain=dev --tmp`
 3. Use [`polkadot-js-tools`](https://github.com/polkadot-js/tools) to compare
-the metadata:
-  - For Polkadot: `docker run --network host jacogr/polkadot-js-tools metadata wss://rpc.polkadot.io ws://localhost:9944`
-  - For Kusama: `docker run --network host jacogr/polkadot-js-tools metadata wss://kusama-rpc.polkadot.io ws://localhost:9944`
+the metadata: `docker run --network host jacogr/polkadot-js-tools metadata wss://bp-rpc.zeitgeist.pm ws://localhost:9944`
+
 4. Things to look for in the output are lines like:
   - `[Identity] idx 28 -> 25 (calls 15)` - indicates the index for `Identity` has changed
   - `[+] Society, Recovery` - indicates the new version includes 2 additional modules/pallets.
