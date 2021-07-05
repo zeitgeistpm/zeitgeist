@@ -64,11 +64,11 @@ A runtime upgrade must bump the spec version number. This may follow a pattern w
 
 ### Old Migrations Removed
 
-Any previous `on_runtime_upgrade` functions from the old upgrades must be removed to prevent them from executing a second time. The `on_runtime_upgrade` function can be found in `runtime/<runtime>/src/lib.rs`.
+Any previous `on_runtime_upgrade` functions from the old upgrades must be removed to prevent them from executing a second time.
 
 ### New Migrations
 
-Ensure that any migrations that are required due to storage or logic changesare included in the `on_runtime_upgrade` function of the appropriate pallets.
+Ensure that any migrations that are required due to storage or logic changes are included in the `on_runtime_upgrade` function of the appropriate pallets.
 
 ### Extrinsic Ordering
 
@@ -79,10 +79,9 @@ of a breaking change, increase `transaction_version`.
 
 To verify the order has not changed:
 
-1. Download the latest release-candidate binary from the draft-release
-on Github.
+1. Build the Zeitgeist client from source: `git clone https://github.com/zeitgeistpm/zeitgeist.git zeitgeist-release && pushd zeitgeist-release > /dev/null && cargo build`
 2. Run the release-candidate binary using a local chain:
-`./zeitgeist --chain=dev --tmp`
+`./target/release/zeitgeist --chain=dev --tmp`
 3. Use [`polkadot-js-tools`](https://github.com/polkadot-js/tools) to compare
 the metadata: `docker run --network host jacogr/polkadot-js-tools metadata wss://bp-rpc.zeitgeist.pm ws://localhost:9944`
 
