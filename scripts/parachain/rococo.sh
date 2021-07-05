@@ -20,7 +20,7 @@ export VALIDATOR_PORT="33000"
 export VALIDATOR_RPC_PORT="8300"
 export VALIDATOR_WS_PORT="9300"
 
-export PARACHAIN_CHAIN="battery_park_staging"
+export PARACHAIN_CHAIN="battery_station_staging"
 export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
 curl -o $RELAY_CHAIN_SPEC_FILE https://raw.githubusercontent.com/paritytech/polkadot/release-v0.9.4/node/service/res/rococo.json
 
