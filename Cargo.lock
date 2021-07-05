@@ -11907,6 +11907,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-court"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
+]
+
+[[package]]
 name = "zrml-market-commons"
 version = "0.1.1"
 dependencies = [

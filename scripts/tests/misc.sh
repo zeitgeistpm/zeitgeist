@@ -11,7 +11,7 @@ cargo fmt --all -- --check
 test_package_with_feature primitives default
 test_package_with_feature primitives std
 
-no_runtime_benchmarks=('rikiddo' 'market-commons')
+no_runtime_benchmarks=('court' 'market-commons' 'rikiddo')
 
 for package in zrml/*
 do
@@ -20,6 +20,6 @@ do
 
   if [[ " ${no_runtime_benchmarks[*]} " != *" ${package##*/} "* ]]; then
     test_package_with_feature "$package" std,runtime-benchmarks
-      echo "TEST $package std,runtime-benchmarks"
+    echo "TEST $package std,runtime-benchmarks"
   fi
 done
