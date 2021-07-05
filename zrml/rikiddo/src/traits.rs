@@ -6,9 +6,9 @@ use frame_support::{
 use parity_scale_codec::Codec;
 use sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
-use substrate_fixed::traits::Fixed;
+use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
 
-pub trait RikiddoFee<F: Fixed> {
+pub trait Sigmoid<F: Fixed> {
     /// Calculate fee
     fn calculate(&self, r: F) -> Result<F, &'static str>;
 }
@@ -43,7 +43,7 @@ pub trait RikiddoMV<F: Fixed>: Lmsr<F> {
     fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str>;
 }
 
-pub trait RikiddoSigmoidMVPallet<F: Fixed> {
+pub trait RikiddoSigmoidMVPallet<FS: FixedSigned, FU: FixedUnsigned> {
     type Balance: Parameter
         + Member
         + AtLeast32BitUnsigned
@@ -65,9 +65,9 @@ pub trait RikiddoSigmoidMVPallet<F: Fixed> {
     /// Create Rikiddo instance for specifc asset pool
     fn create(
         poolid: u128,
-        fee_config: FeeSigmoidConfig<F>,
-        ema_config_short: EmaVolumeConfig<F>,
-        ema_config_long: EmaVolumeConfig<F>,
+        fee_config: FeeSigmoidConfig<FS>,
+        ema_config_short: EmaVolumeConfig<FU>,
+        ema_config_long: EmaVolumeConfig<FU>,
         balance_one_unit: Self::Balance,
     );
 

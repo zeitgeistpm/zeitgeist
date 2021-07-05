@@ -1,9 +1,7 @@
-use std::marker::PhantomData;
-
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::traits::Fixed;
 
-use crate::traits::{MarketAverage, RikiddoFee};
+// use crate::traits::{MarketAverage, Sigmoid};
 
 mod ema_market_volume;
 mod sigmoid_fee;
@@ -40,10 +38,12 @@ impl Timespan {
     }
 }
 
+/*
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct RikiddoSigmoidMV<FI: Fixed, FE: RikiddoFee<FI>, MA: MarketAverage<FI>> {
+pub struct RikiddoSigmoidMV<FI: Fixed, FE: Sigmoid<FI>, MA: MarketAverage<FI>> {
     pub fees: FE,
     pub ma_short: MA,
     pub ma_long: MA,
     pub _marker: PhantomData<FI>,
 }
+*/

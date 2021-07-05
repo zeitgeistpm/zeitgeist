@@ -1,7 +1,7 @@
 use crate::types::Timespan;
 use substrate_fixed::{
     types::extra::{U24, U32},
-    FixedI32,
+    FixedI32, FixedU32,
 };
 
 // --- Default configuration for EmaConfig struct ---
@@ -15,16 +15,16 @@ pub const EMA_LONG: Timespan = Timespan::Hours(6);
 
 /// Default smoothing factor for EMA calculation
 /// 2.0
-pub const SMOOTHING: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0200_0000);
+pub const SMOOTHING: FixedU32<U24> = <FixedU32<U24>>::from_bits(0x0200_0000);
 
 // --- Default configuration for FeeSigmoidConfig struct ---
 /// Initial fee f
 /// 0.005
-pub const INITIAL_FEE: FixedI32<U32> = <FixedI32<U32>>::from_bits(0x0147_AE14);
+pub const INITIAL_FEE: FixedU32<U32> = <FixedU32<U32>>::from_bits(0x0147_AE14);
 
 /// Minimal revenue w (proportion of initial fee f)
 /// f * β = 0.005 * 0.7 = 0.0035
-pub const MINIMAL_REVENUE: FixedI32<U32> = <FixedI32<U32>>::from_bits(0x00E5_6042);
+pub const MINIMAL_REVENUE: FixedU32<U32> = <FixedU32<U32>>::from_bits(0x00E5_6042);
 
 /// m value
 /// 0.01

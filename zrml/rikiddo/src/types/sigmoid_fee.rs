@@ -1,15 +1,12 @@
 use crate::{
     constants::{M, N, P},
-    traits::RikiddoFee,
+    traits::Sigmoid,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,
-    types::{
-        extra::{U24, U32},
-        I9F23,
-    },
+    types::{extra::U24, I9F23},
     FixedI32,
 };
 
@@ -20,9 +17,7 @@ pub struct FeeSigmoidConfig<F: Fixed> {
     pub n: F,
 }
 
-impl<F: Fixed + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> Default
-    for FeeSigmoidConfig<F>
-{
+impl<F: Fixed + LossyFrom<FixedI32<U24>>> Default for FeeSigmoidConfig<F> {
     fn default() -> Self {
         // To avoid a limitation of the generics, the values are hardcoded
         // instead of being fetched from constants.
@@ -31,13 +26,13 @@ impl<F: Fixed + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> Default
 }
 
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
-pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> {
+pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI32<U24>>> {
     pub config: FeeSigmoidConfig<FI>,
 }
 
-impl<F> RikiddoFee<F> for FeeSigmoid<F>
+impl<F> Sigmoid<F> for FeeSigmoid<F>
 where
-    F: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>> + PartialOrd<I9F23>,
+    F: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
 {
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
     fn calculate(&self, r: F) -> Result<F, &'static str> {

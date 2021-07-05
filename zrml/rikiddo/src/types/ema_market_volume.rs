@@ -5,9 +5,9 @@ use crate::{
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
-    traits::{Fixed, FixedSigned, LossyFrom, LossyInto},
-    types::extra::{U24, U32},
-    FixedI32,
+    traits::{Fixed, FixedUnsigned, LossyFrom, LossyInto},
+    types::extra::U24,
+    FixedU32,
 };
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
@@ -16,15 +16,13 @@ pub struct EmaVolumeConfig<F: Fixed> {
     pub smoothing: F,
 }
 
-impl<F: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> EmaVolumeConfig<F> {
+impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaVolumeConfig<F> {
     pub fn new(ema_period: Timespan, smoothing: F) -> Self {
         Self { ema_period, smoothing }
     }
 }
 
-impl<F: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> Default
-    for EmaVolumeConfig<F>
-{
+impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaVolumeConfig<F> {
     fn default() -> Self {
         Self::new(EMA_SHORT, SMOOTHING.lossy_into())
     }
@@ -38,7 +36,7 @@ pub enum MarketVolumeState {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaMarketVolume<F: Fixed> {
+pub struct EmaMarketVolume<F: FixedUnsigned> {
     pub config: EmaVolumeConfig<F>,
     pub ema: F,
     multiplier: F,
@@ -48,7 +46,7 @@ pub struct EmaMarketVolume<F: Fixed> {
     volumes_per_period: F,
 }
 
-impl<F: FixedSigned> EmaMarketVolume<F> {
+impl<F: FixedUnsigned> EmaMarketVolume<F> {
     pub fn new(config: EmaVolumeConfig<F>) -> Self {
         Self {
             config,
@@ -150,15 +148,13 @@ impl<F: FixedSigned> EmaMarketVolume<F> {
     }
 }
 
-impl<F: FixedSigned + From<u32> + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI32<U32>>> Default
-    for EmaMarketVolume<F>
-{
+impl<F: FixedUnsigned + From<u32> + LossyFrom<FixedU32<U24>>> Default for EmaMarketVolume<F> {
     fn default() -> Self {
         EmaMarketVolume::new(EmaVolumeConfig::default())
     }
 }
 
-impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
+impl<F: FixedUnsigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
     /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
     fn get(&self) -> Option<F> {
         match &self.state {
@@ -179,8 +175,6 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
 
     /// Update market volume
     fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
-        let mut result: Option<F> = None;
-
         if let Some(res) = volume.timestamp.checked_sub(self.last_time) {
             res
         } else {
@@ -188,6 +182,8 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                 "[EmaMarketVolume] Incoming volume timestamp is older than previous timestamp"
             );
         };
+
+        let mut result: Option<F> = None;
 
         match self.state {
             MarketVolumeState::Uninitialized => {
@@ -202,7 +198,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                 // against the timestamp of the previous transaction.
                 let timestamp_sub_start_time = volume.timestamp.saturating_sub(self.start_time);
 
-                // It should no state transit, if the amount of gathered data is too low.
+                // It should not state transit, if the amount of gathered data is too low.
                 // This would result in a multiplier that is greater than 1, which can lead to
                 // a negative ema. The amount depends on the size of the smoothing factor.
                 if timestamp_sub_start_time > self.config.ema_period.to_seconds() as u64
@@ -226,7 +222,7 @@ impl<F: FixedSigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                     result = self.calculate_sma(&volume)?;
                     // In the context of blockchains, overflowing here is irrelevant (technically
                     // not realizable). In other contexts, ensure that F can represent a number
-                    // that is equal to the incoming volumes during one period.
+                    // that is equal to the number of incoming volumes during one period.
                     self.volumes_per_period = self.volumes_per_period.saturating_add(F::from(1));
                 }
             }
