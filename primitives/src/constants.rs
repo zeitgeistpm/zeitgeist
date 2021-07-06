@@ -15,8 +15,8 @@ pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60;
 // Definitions for currency
 pub const BASE: u128 = 10_000_000_000;
 pub const CENT: Balance = BASE / 100; // 100_000_000
-pub const MILI: Balance = CENT / 10; //  10_000_000
-pub const MICRO: Balance = MILI / 1000; // 10_000
+pub const MILLI: Balance = CENT / 10; //  10_000_000
+pub const MICRO: Balance = MILLI / 1000; // 10_000
 
 // Balance
 parameter_types! {

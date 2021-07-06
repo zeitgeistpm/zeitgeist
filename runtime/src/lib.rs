@@ -106,7 +106,7 @@ parameter_types! {
   pub const MinNominatorStake: u128 = BASE / 2;
   pub const MinSelectedCandidates: u32 = 1;
   pub const SS58Prefix: u8 = 42; // @TODO: Change back to 73 once https://github.com/paritytech/substrate/pull/8509 is merged
-  pub const TransactionByteFee: Balance = 10 * MILI;
+  pub const TransactionByteFee: Balance = 10 * MILLI;
   pub const Version: RuntimeVersion = VERSION;
   pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
   pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
