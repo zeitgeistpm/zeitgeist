@@ -7,7 +7,7 @@ use sp_runtime::{
 };
 use substrate_fixed::types::extra::U34;
 use zeitgeist_primitives::{
-    constants::{BASE, BLOCK_HASH_COUNT},
+    constants::{ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT},
     types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
 };
 
@@ -23,7 +23,6 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
     pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
-    pub const ExistentialDeposit: u64 = 1;
     pub const MinimumPeriod: u64 = 0;
 }
 
@@ -78,8 +77,10 @@ impl pallet_balances::Config for Runtime {
     type Balance = Balance;
     type DustRemoval = ();
     type Event = Event;
+    type MaxReserves = MaxReserves;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 

@@ -527,7 +527,7 @@ fn create_initial_pool_with_funds_for_alice() {
 }
 
 fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
-    let evt = Event::zrml_swaps(raw_evt);
+    let evt = Event::Swaps(raw_evt);
     frame_system::Pallet::<Runtime>::events().iter().any(|e| e.event == evt)
 }
 

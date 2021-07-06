@@ -1,16 +1,16 @@
 [dependencies]
-frame-support = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-support = { branch = "polkadot-v0.9.6", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.6", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
-sp-runtime = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-std = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.6", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-std = { branch = "polkadot-v0.9.6", default-features = false, git = "https://github.com/paritytech/substrate" }
 substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
 [dev-dependencies]
-pallet-balances = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
-pallet-timestamp = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
+pallet-balances = { branch = "polkadot-v0.9.6", git = "https://github.com/paritytech/substrate" }
+pallet-timestamp = { branch = "polkadot-v0.9.6", git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "polkadot-v0.9.6", git = "https://github.com/paritytech/substrate" }
 
 
 [features]
