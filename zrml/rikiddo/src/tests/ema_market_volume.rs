@@ -1,13 +1,13 @@
 use super::max_allowed_error;
 use crate::{
     traits::MarketAverage,
-    types::{EmaMarketVolume, EmaVolumeConfig, MarketVolumeState, Timespan, TimestampedVolume},
+    types::{EmaMarketVolume, EmaConfig, MarketVolumeState, Timespan, TimestampedVolume},
 };
 use frame_support::assert_err;
 use substrate_fixed::{types::extra::U64, FixedU128};
 
 fn ema_create_test_struct(period: u32, smoothing: f64) -> EmaMarketVolume<FixedU128<U64>> {
-    let emv_cfg = EmaVolumeConfig::<FixedU128<U64>> {
+    let emv_cfg = EmaConfig::<FixedU128<U64>> {
         ema_period: Timespan::Seconds(period),
         smoothing: <FixedU128<U64>>::from_num(smoothing),
     };
@@ -107,7 +107,7 @@ fn ema_added_volume_is_older_than_previous() {
 
 #[test]
 fn ema_overflow_sma_times_vpp() {
-    let emv_cfg = EmaVolumeConfig::<FixedU128<U64>> {
+    let emv_cfg = EmaConfig::<FixedU128<U64>> {
         ema_period: Timespan::Seconds(3),
         smoothing: <FixedU128<U64>>::from_num(2),
     };

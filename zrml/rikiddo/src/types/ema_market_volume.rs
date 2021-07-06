@@ -11,18 +11,18 @@ use substrate_fixed::{
 };
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaVolumeConfig<F: Fixed> {
+pub struct EmaConfig<F: Fixed> {
     pub ema_period: Timespan,
     pub smoothing: F,
 }
 
-impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaVolumeConfig<F> {
+impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaConfig<F> {
     pub fn new(ema_period: Timespan, smoothing: F) -> Self {
         Self { ema_period, smoothing }
     }
 }
 
-impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaVolumeConfig<F> {
+impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<F> {
     fn default() -> Self {
         Self::new(EMA_SHORT, SMOOTHING.lossy_into())
     }
@@ -37,7 +37,7 @@ pub enum MarketVolumeState {
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaMarketVolume<F: FixedUnsigned> {
-    pub config: EmaVolumeConfig<F>,
+    pub config: EmaConfig<F>,
     pub ema: F,
     multiplier: F,
     last_time: UnixTimestamp,
@@ -47,7 +47,7 @@ pub struct EmaMarketVolume<F: FixedUnsigned> {
 }
 
 impl<F: FixedUnsigned> EmaMarketVolume<F> {
-    pub fn new(config: EmaVolumeConfig<F>) -> Self {
+    pub fn new(config: EmaConfig<F>) -> Self {
         Self {
             config,
             ema: F::from_num(0),
@@ -150,7 +150,7 @@ impl<F: FixedUnsigned> EmaMarketVolume<F> {
 
 impl<F: FixedUnsigned + From<u32> + LossyFrom<FixedU32<U24>>> Default for EmaMarketVolume<F> {
     fn default() -> Self {
-        EmaMarketVolume::new(EmaVolumeConfig::default())
+        EmaMarketVolume::new(EmaConfig::default())
     }
 }
 

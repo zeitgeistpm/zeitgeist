@@ -1,4 +1,4 @@
-use crate::types::{EmaVolumeConfig, FeeSigmoidConfig, TimestampedVolume};
+use crate::types::{EmaConfig, FeeSigmoidConfig, TimestampedVolume};
 use frame_support::{
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     Parameter,
@@ -84,8 +84,8 @@ pub trait RikiddoSigmoidMVPallet {
     fn create(
         poolid: u128,
         fee_config: FeeSigmoidConfig<Self::FS>,
-        ema_config_short: EmaVolumeConfig<Self::FU>,
-        ema_config_long: EmaVolumeConfig<Self::FU>,
+        ema_config_short: EmaConfig<Self::FU>,
+        ema_config_long: EmaConfig<Self::FU>,
         balance_one_unit: Self::Balance,
     );
 

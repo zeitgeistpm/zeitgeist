@@ -1,12 +1,12 @@
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::traits::Fixed;
 
-// use crate::traits::{MarketAverage, Sigmoid};
-
 mod ema_market_volume;
+mod rikiddo;
 mod sigmoid_fee;
 
 pub use ema_market_volume::*;
+pub use rikiddo::*;
 pub use sigmoid_fee::*;
 
 pub type UnixTimestamp = u64;
@@ -37,13 +37,3 @@ impl Timespan {
         }
     }
 }
-
-/*
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct RikiddoSigmoidMV<FI: Fixed, FE: Sigmoid<FI>, MA: MarketAverage<FI>> {
-    pub fees: FE,
-    pub ma_short: MA,
-    pub ma_long: MA,
-    pub _marker: PhantomData<FI>,
-}
-*/

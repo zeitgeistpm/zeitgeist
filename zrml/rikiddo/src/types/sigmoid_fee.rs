@@ -30,6 +30,12 @@ pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI32<U24>>> {
     pub config: FeeSigmoidConfig<FI>,
 }
 
+impl<F: FixedSigned + LossyFrom<FixedI32<U24>>> FeeSigmoid<F> {
+    pub fn new(config: FeeSigmoidConfig<F>) -> Self {
+        Self { config }
+    }
+}
+
 impl<F> Sigmoid for FeeSigmoid<F>
 where
     F: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
