@@ -53,14 +53,13 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 18,
+    spec_version: 19,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 3,
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-const EXISTENTIAL_DEPOSIT: Balance = 100 * CENTS;
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
@@ -97,7 +96,6 @@ parameter_types! {
   pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
   pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
-  pub const ExistentialDeposit: u128 = EXISTENTIAL_DEPOSIT;
   pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
   pub const MaxCollatorsPerNominator: u32 = 16;
   pub const MaxLocks: u32 = 50;
@@ -108,7 +106,7 @@ parameter_types! {
   pub const MinNominatorStake: u128 = BASE / 2;
   pub const MinSelectedCandidates: u32 = 1;
   pub const SS58Prefix: u8 = 42; // @TODO: Change back to 73 once https://github.com/paritytech/substrate/pull/8509 is merged
-  pub const TransactionByteFee: Balance = 10 * MILLICENTS;
+  pub const TransactionByteFee: Balance = 10 * MILI;
   pub const Version: RuntimeVersion = VERSION;
   pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
   pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
@@ -375,7 +373,7 @@ impl orml_tokens::Config for Runtime {
     type CurrencyId = CurrencyId;
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
     type OnDust = ();
     type WeightInfo = ();
 }
@@ -387,8 +385,12 @@ impl pallet_balances::Config for Runtime {
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 4];
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
+
+impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
@@ -684,10 +686,37 @@ impl_runtime_apis! {
 }
 
 #[cfg(feature = "parachain")]
-cumulus_pallet_parachain_system::register_validate_block!(
-    Runtime,
-    pallet_author_inherent::BlockExecutor<Runtime, Executive>
-);
+// Check the timestamp and parachain inherents
+struct CheckInherents;
+
+#[cfg(feature = "parachain")]
+impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
+    fn check_inherents(
+        block: &Block,
+        relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
+    ) -> sp_inherents::CheckInherentsResult {
+        let relay_chain_slot = relay_state_proof
+            .read_slot()
+            .expect("Could not read the relay chain slot from the proof");
+
+        let inherent_data =
+            cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+                relay_chain_slot,
+                sp_std::time::Duration::from_secs(6),
+            )
+            .create_inherent_data()
+            .expect("Could not create the timestamp inherent data");
+
+        inherent_data.check_extrinsics(&block)
+    }
+}
+
+#[cfg(feature = "parachain")]
+cumulus_pallet_parachain_system::register_validate_block! {
+    Runtime = Runtime,
+    BlockExecutor = pallet_author_inherent::BlockExecutor::<Runtime, Executive>,
+    CheckInherents = CheckInherents,
+}
 
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {

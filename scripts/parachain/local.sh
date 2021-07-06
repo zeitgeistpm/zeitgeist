@@ -6,9 +6,9 @@
 
 set -euxo pipefail
 
-PARACHAIN_CHAIN=battery_park_staging
+PARACHAIN_CHAIN=battery_station_staging
 PARACHAIN_ID=9123
-POLKADOT_BRANCH=release-v0.9.4
+POLKADOT_BRANCH=release-v0.9.7
 POLKADOT_DIR="target/polkadot"
 RELAYCHAIN_CHAIN=rococo-local
 
@@ -62,7 +62,7 @@ start_validator() {
 # Feel free to comment, add or remove validators. Just remember that #Validators > #Collators 
 
 start_validator --alice 31000 8100 9100 &> /dev/null & node_pid=$!
-start_validator --bob 31001 8101 9101 & node_pid=$!
+start_validator --bob 31001 8101 9101 &> /dev/null & node_pid=$!
 
 # Zeitgeist collators
 
@@ -112,7 +112,7 @@ start_collator() {
 
 # Feel free to comment, add or remove collators. Just remember that #Validators > #Collators
 
-# 5EeNXHgaiWZAwZuZdDndJYcRTKuGHkXM2bdGE6LqWCw1bHW7 - Battery park
+# 5EeNXHgaiWZAwZuZdDndJYcRTKuGHkXM2bdGE6LqWCw1bHW7
 start_collator 30333 9933 9944 32000 8200 9200 "upper february enrich inch group ginger loan dutch network empty song source" "0xe6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"
 
 # Alice - Development

@@ -72,17 +72,16 @@ fn generic_genesis(
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
-        frame_system: zeitgeist_runtime::SystemConfig {
-            code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
-        },
-        orml_tokens: TokensConfig::default(),
         #[cfg(not(feature = "parachain"))]
-        pallet_aura: zeitgeist_runtime::AuraConfig {
+        aura: zeitgeist_runtime::AuraConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
         },
         #[cfg(feature = "parachain")]
-        pallet_author_mapping: zeitgeist_runtime::AuthorMappingConfig {
+        author_filter: zeitgeist_runtime::AuthorFilterConfig {
+            eligible_ratio: Percent::from_percent(50),
+        },
+        #[cfg(feature = "parachain")]
+        author_mapping: zeitgeist_runtime::AuthorMappingConfig {
             mappings: acs
                 .candidates
                 .iter()
@@ -90,18 +89,13 @@ fn generic_genesis(
                 .map(|(account_id, author_id, _)| (author_id, account_id))
                 .collect(),
         },
-        #[cfg(feature = "parachain")]
-        pallet_author_slot_filter: zeitgeist_runtime::AuthorFilterConfig {
-            eligible_ratio: Percent::from_percent(50),
-        },
-        pallet_balances: zeitgeist_runtime::BalancesConfig {
+        balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts.iter().cloned().map(|k| (k, initial_balance)).collect(),
         },
         #[cfg(not(feature = "parachain"))]
-        pallet_grandpa: zeitgeist_runtime::GrandpaConfig {
+        grandpa: zeitgeist_runtime::GrandpaConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
         },
-        pallet_sudo: zeitgeist_runtime::SudoConfig { key: root_key },
         #[cfg(feature = "parachain")]
         parachain_info: zeitgeist_runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
         #[cfg(feature = "parachain")]
@@ -115,6 +109,12 @@ fn generic_genesis(
             inflation_config: acs.inflation_info,
             nominations: acs.nominations,
         },
+        sudo: zeitgeist_runtime::SudoConfig { key: root_key },
+        system: zeitgeist_runtime::SystemConfig {
+            code: wasm_binary.to_vec(),
+            changes_trie_config: Default::default(),
+        },
+        tokens: TokensConfig::default(),
     }
 }
 
