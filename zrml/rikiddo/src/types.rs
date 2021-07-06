@@ -186,6 +186,7 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
         } else {
             let frac_string = &fixed_frac.to_string()[2..];
 
+<<<<<<< HEAD
             match frac_string.len().cmp(&(places as usize)) {
                 Ordering::Less => {
                     fixed_str.retain(|c| c != '.');
@@ -217,6 +218,35 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
         }
 
         let result = if let Ok(res) = fixed_str[..].parse::<u128>() {
+=======
+            if frac_string.len() < places as usize {
+                fixed_str.retain(|c| c != '.');
+                // Padding to the right side up to `places`
+                fixed_str += &"0".repeat(places as usize - frac_string.len());
+            } else if frac_string.len() > places as usize {
+                // Cutting down to `places` + arithmetic rounding of the last digit
+                let frac_plus_one_digit_str = &frac_string[0..places as usize + 1];
+
+                if let Ok(mut res) = u128::from_str_radix(&frac_plus_one_digit_str, 10) {
+                    let last_digit = res % 10;
+                    res /= 10;
+
+                    if last_digit >= 5 {
+                        res += 1;
+                    }
+
+                    fixed_str = fixed.int().to_string() + &res.to_string()
+                } else {
+                    // Impossible unless there is a bug in Fixed's to_string()
+                    return Err("Error parsing the string representation of the fixed point number");
+                };
+            } else {
+                fixed_str.retain(|c| c != '.');
+            }
+        }
+
+        let result = if let Ok(res) = u128::from_str_radix(&fixed_str, 10) {
+>>>>>>> Incorporate Rikiddo pallet implementation
             res
         } else {
             // Impossible unless there is a bug in Fixed's to_string()

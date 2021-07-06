@@ -229,7 +229,11 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                 // It should not state transit, if the amount of gathered data is too low.
                 // This would result in a multiplier that is greater than 1, which can lead to
                 // a negative ema. The amount depends on the size of the smoothing factor.
+<<<<<<< HEAD
                 if timestamp_sub_start_time > Into::<u64>::into(comparison_value)
+=======
+                if timestamp_sub_start_time > comparison_value as u64
+>>>>>>> Incorporate Rikiddo pallet implementation
                     && (*self.volumes_per_period() + 1.into()) >= self.config.smoothing
                 {
                     // We extrapolate the txs per period
@@ -280,7 +284,11 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                     result = self.calculate_ema(volume)?;
                 } else {
                     // During this phase the ema is still a sma.
+<<<<<<< HEAD
                     let _ = self.calculate_sma(volume)?;
+=======
+                    let _ = self.calculate_sma(&volume)?;
+>>>>>>> Incorporate Rikiddo pallet implementation
                     // In the context of blockchains, overflowing here is irrelevant (technically
                     // not realizable). In other contexts, ensure that FU can represent a number
                     // that is equal to the number of incoming volumes during one period.
