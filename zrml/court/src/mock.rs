@@ -7,7 +7,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BASE, BLOCK_HASH_COUNT},
+    constants::{MaxReserves, BASE, BLOCK_HASH_COUNT},
     types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
 };
 
@@ -71,6 +71,8 @@ impl pallet_balances::Config for Runtime {
     type Event = ();
     type ExistentialDeposit = ();
     type MaxLocks = ();
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 4];
     type WeightInfo = ();
 }
 
