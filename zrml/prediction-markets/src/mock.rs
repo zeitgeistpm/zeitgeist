@@ -16,9 +16,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxTotalWeight,
-        MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId,
-        SwapsPalletId, BASE, BLOCK_HASH_COUNT,
+        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves,
+        MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
+        SimpleDisputesPalletId, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -54,7 +54,6 @@ parameter_types! {
     pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const MaximumBlockWeight: Weight = 1024;
-    pub const MaxLocks: u32 = 50;
     pub const MinimumPeriod: u64 = 0;
     pub const OracleBond: Balance = 100;
     pub const ReportingPeriod: BlockNumber = 10;
@@ -159,6 +158,8 @@ impl pallet_balances::Config for Runtime {
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = ();
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 

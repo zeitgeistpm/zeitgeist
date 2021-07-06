@@ -10,8 +10,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxInRatio, MaxOutRatio, MaxTotalWeight, MaxWeight, MinLiquidity,
-        MinWeight, SwapsPalletId, BLOCK_HASH_COUNT,
+        ExitFee, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight,
+        MaxWeight, MinLiquidity, MinWeight, SwapsPalletId, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -114,7 +114,7 @@ impl orml_tokens::Config for Runtime {
     type CurrencyId = CurrencyId;
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
     type WeightInfo = ();
 }
@@ -125,7 +125,9 @@ impl pallet_balances::Config for Runtime {
     type DustRemoval = ();
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
-    type MaxLocks = ();
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 

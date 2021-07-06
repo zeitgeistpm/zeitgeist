@@ -7,7 +7,7 @@ use sp_runtime::{
     Perbill,
 };
 use zeitgeist_primitives::{
-    constants::BLOCK_HASH_COUNT,
+    constants::{MaxLocks, MaxReserves, BLOCK_HASH_COUNT},
     types::{
         AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
         UncheckedExtrinsicTest,
@@ -26,8 +26,6 @@ parameter_types! {
     pub const ExistentialDeposit: Balance = 1;
     pub const SharesPalletId: PalletId = PalletId(*b"test/sha");
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
-
-    pub const MaxLocks: u32 = 50;
 }
 
 parameter_type_with_key! {
@@ -102,6 +100,8 @@ impl pallet_balances::Config for Runtime {
     type Event = ();
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
