@@ -30,12 +30,14 @@ pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI32<U24>>> {
     pub config: FeeSigmoidConfig<FI>,
 }
 
-impl<F> Sigmoid<F> for FeeSigmoid<F>
+impl<F> Sigmoid for FeeSigmoid<F>
 where
     F: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
 {
+    type F = F;
+
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
-    fn calculate(&self, r: F) -> Result<F, &'static str> {
+    fn calculate(&self, r: Self::F) -> Result<F, &'static str> {
         let r_minus_n = if let Some(res) = r.checked_sub(self.config.n) {
             res
         } else {

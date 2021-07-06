@@ -154,9 +154,11 @@ impl<F: FixedUnsigned + From<u32> + LossyFrom<FixedU32<U24>>> Default for EmaMar
     }
 }
 
-impl<F: FixedUnsigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
+impl<F: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<F> {
+    type F = F;
+
     /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn get(&self) -> Option<F> {
+    fn get(&self) -> Option<Self::F> {
         match &self.state {
             MarketVolumeState::DataCollected => Some(self.ema),
             _ => None,
@@ -174,7 +176,10 @@ impl<F: FixedUnsigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
     }
 
     /// Update market volume
-    fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+    fn update(
+        &mut self,
+        volume: TimestampedVolume<Self::F>,
+    ) -> Result<Option<Self::F>, &'static str> {
         if let Some(res) = volume.timestamp.checked_sub(self.last_time) {
             res
         } else {
