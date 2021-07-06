@@ -1,0 +1,26 @@
+[dependencies]
+frame-support = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
+parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
+sp-runtime = { branch = "polkadot-v0.9.4", default-features = false, git = "https://github.com/paritytech/substrate" }
+zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+
+[dev-dependencies]
+pallet-balances = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "polkadot-v0.9.4", git = "https://github.com/paritytech/substrate" }
+
+[features]
+default = ["std"]
+std = [
+    'frame-support/std',
+    'frame-system/std',
+    'parity-scale-codec/std',
+    'sp-runtime/std',
+    'zeitgeist-primitives/std',
+]
+
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2018"
+name = "zrml-court"
+version = "0.1.0"

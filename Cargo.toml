@@ -3,6 +3,7 @@ members = [
     "node",
     "primitives",
     "runtime",
+    "zrml/court",
     "zrml/market-commons",
     "zrml/orderbook-v1",
     "zrml/prediction-markets",
