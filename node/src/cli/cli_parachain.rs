@@ -197,7 +197,7 @@ pub struct ExportGenesisStateCommand {
 
     /// Id of the parachain this state is for.
     // Sync with crate::DEFAULT_PARACHAIN_ID
-    #[structopt(long, default_value = "9123")]
+    #[structopt(long)]
     pub parachain_id: u32,
 
     /// Write output in binary. Default is to write in hex.
@@ -232,7 +232,7 @@ pub struct RunCmd {
 
     /// Id of the parachain this collator collates for.
     #[structopt(long)]
-    pub parachain_id: Option<u32>,
+    pub parachain_id: u32,
 }
 
 impl std::ops::Deref for RunCmd {
