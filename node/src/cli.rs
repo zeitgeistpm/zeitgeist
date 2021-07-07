@@ -75,13 +75,6 @@ pub struct Cli {
     #[structopt(subcommand)]
     pub subcommand: Option<Subcommand>,
 
-    /// Run node as collator.
-    ///
-    /// Note that this is the same as running with `--validator`.
-    #[cfg(feature = "parachain")]
-    #[structopt(long, conflicts_with = "validator")]
-    pub collator: bool,
-
     /// Relaychain arguments
     #[cfg(feature = "parachain")]
     #[structopt(raw = true)]
