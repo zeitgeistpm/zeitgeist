@@ -685,8 +685,8 @@ impl_runtime_apis! {
     }
 }
 
-#[cfg(feature = "parachain")]
 // Check the timestamp and parachain inherents
+#[cfg(feature = "parachain")]
 struct CheckInherents;
 
 #[cfg(feature = "parachain")]
@@ -711,6 +711,7 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
     }
 }
 
+// Nimbus's Executive wrapper allows relay validators to verify the seal digest
 #[cfg(feature = "parachain")]
 cumulus_pallet_parachain_system::register_validate_block! {
     Runtime = Runtime,
