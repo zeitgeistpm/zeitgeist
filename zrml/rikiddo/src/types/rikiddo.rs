@@ -1,5 +1,3 @@
-use sp_std::marker::PhantomData;
-
 use crate::{
     constants::{INITIAL_FEE, MINIMAL_REVENUE},
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
@@ -35,7 +33,7 @@ pub struct RikiddoSigmoidMV<FU: FixedUnsigned, FS: FixedSigned, FE: Sigmoid, MA:
 where
     FU: FixedUnsigned,
     FS: FixedSigned,
-    FE: Sigmoid<F = FS>,
+    FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<F = FU>,
 {
     pub config: RikiddoConfig<FU>,
@@ -48,7 +46,7 @@ impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned,
     FS: FixedSigned,
-    FE: Sigmoid<F = FS>,
+    FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<F = FU>,
 {
     type F = FU;
@@ -76,7 +74,7 @@ impl<FU, FS, FE, MA> RikiddoMV for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned,
     FS: FixedSigned,
-    FE: Sigmoid<F = FS>,
+    FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<F = FU>,
 {
     /// Clear market data

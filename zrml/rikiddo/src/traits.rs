@@ -9,14 +9,15 @@ use sp_std::fmt::Debug;
 use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
 
 pub trait Sigmoid {
-    type F: Fixed;
+    type FIN: Fixed;
+    type FOUT: Fixed;
 
     /// Calculate fee
-    fn calculate(&self, r: Self::F) -> Result<Self::F, &'static str>;
+    fn calculate(&self, r: Self::FIN) -> Result<Self::FOUT, &'static str>;
 }
 
 pub trait MarketAverage {
-    type F: Fixed;
+    type F: FixedUnsigned;
 
     /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume
     fn get(&self) -> Option<Self::F>;
@@ -32,7 +33,7 @@ pub trait MarketAverage {
 }
 
 pub trait Lmsr {
-    type F: Fixed;
+    type F: FixedUnsigned;
 
     /// Return price P_i(q) for all assets in q
     fn all_prices(asset_balances: Vec<Self::F>) -> Result<Vec<Self::F>, &'static str>;
@@ -83,7 +84,7 @@ pub trait RikiddoSigmoidMVPallet {
     /// Create Rikiddo instance for specifc asset pool
     fn create(
         poolid: u128,
-        fee_config: FeeSigmoidConfig<Self::FS>,
+        fee_config: FeeSigmoidConfig<Self::FS, Self::FU>,
         ema_config_short: EmaConfig<Self::FU>,
         ema_config_long: EmaConfig<Self::FU>,
         balance_one_unit: Self::Balance,
