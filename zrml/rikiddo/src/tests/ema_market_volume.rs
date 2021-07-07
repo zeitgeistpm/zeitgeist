@@ -1,7 +1,7 @@
 use super::max_allowed_error;
 use crate::{
     traits::MarketAverage,
-    types::{EmaMarketVolume, EmaConfig, MarketVolumeState, Timespan, TimestampedVolume},
+    types::{EmaConfig, EmaMarketVolume, MarketVolumeState, Timespan, TimestampedVolume},
 };
 use frame_support::assert_err;
 use substrate_fixed::{types::extra::U64, FixedU128};
