@@ -14,7 +14,6 @@ fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>, FixedU128<U6
     let m = 0.01f64;
     let n = 0f64;
     let p = 2.0f64;
-    let initial_fee = 0.005;
     let min_revenue = 0.0035;
 
     let config = FeeSigmoidConfig {
@@ -88,8 +87,8 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
     assert!(
         difference_abs <= max_allowed_error(64),
         "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
-        fee_f64,
         fee_fixed_f64,
+        fee_f64,
         difference_abs,
         max_allowed_error(64)
     );

@@ -5,8 +5,8 @@ use crate::mock::*;
 mod ema_market_volume;
 mod sigmoid_fee;
 
-fn max_allowed_error(fixed_point_bits: u8) -> f64 {
-    1.0 / (1u128 << (fixed_point_bits - 1)) as f64
+fn max_allowed_error(fractional_bits: u8) -> f64 {
+    1.0 / (1u128 << (fractional_bits - 1)) as f64
 }
 
 #[test]

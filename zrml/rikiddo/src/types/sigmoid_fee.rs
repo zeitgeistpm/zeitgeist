@@ -3,7 +3,7 @@ use crate::{
     traits::Sigmoid,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{FixedI32, FixedU128, FixedU32, traits::{FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed}, transcendental::sqrt, types::{
+use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, traits::{FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed}, transcendental::sqrt, types::{
         extra::{U24, U32, U128},
         I9F23,
     }};
@@ -58,7 +58,7 @@ impl<FS, FU> Sigmoid for FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>> + PartialOrd<FS>,
-    i128: From<FS::Bits> + FromFixed,
+    i128: From<FS::Bits>,
 {
     type FIN = FS;
     type FOUT = FU;
@@ -97,7 +97,7 @@ where
         } else {
             return Err("[FeeSigmoid] Overflow during calculation: numerator / denominator");
         };
-        
+
         if self.config.min_revenue >= sigmoid_result {
             return Ok(self.config.min_revenue);
         }
@@ -109,13 +109,12 @@ where
         let integer_part_signed = i128::from_fixed(sigmoid_result.int());
         // We can safely cast because until here we know that the integer part is unsigned.
         let integer_part: Self::FOUT = (integer_part_signed as u128).to_fixed();
-        let fractional_bits: i128 = sigmoid_result.frac().to_bits().into();
-        let fractional_part_fixed128 = <FixedU128<U128>>::from_bits(fractional_bits as u128);
+        let fractional_part: FixedU128<U128> = sigmoid_result.frac().to_fixed();
 
-        // This error should be impossible to reach.
-        if let Some(res) = integer_part.checked_add(Self::FOUT::lossy_from(fractional_part_fixed128)) {
+        if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
             return Ok(res);
         } else {
+            // This error should be impossible to reach.
             return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion.")
         };
     }
