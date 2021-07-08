@@ -418,7 +418,6 @@ impl pallet_transaction_payment::Config for Runtime {
 impl parachain_info::Config for Runtime {}
 
 impl zrml_simple_disputes::Config for Runtime {
-    type Currency = Balances;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -433,6 +432,7 @@ impl zrml_simple_disputes::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
     type MarketId = MarketId;
 }
 
@@ -447,7 +447,6 @@ impl zrml_orderbook_v1::Config for Runtime {
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRoot<AccountId>;
-    type Currency = Balances;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;

@@ -1,6 +1,7 @@
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
+    traits::ReservableCurrency,
     Parameter,
 };
 use sp_runtime::traits::AtLeast32Bit;
@@ -10,6 +11,7 @@ use zeitgeist_primitives::types::{Market, PoolId};
 pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber;
+    type Currency: ReservableCurrency<Self::AccountId>;
     type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + Member + Parameter;
 
     // Market

@@ -30,7 +30,7 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    let _ = T::Currency::deposit_creating(&caller, (u128::MAX).saturated_into());
+    let _ = CurrencyOf::<T>::deposit_creating(&caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let end = <MarketEnd<T::BlockNumber>>::Block((u128::MAX).saturated_into());
     let mut metadata = [0u8; 50];
