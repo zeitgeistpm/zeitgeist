@@ -93,7 +93,7 @@ mod pallet {
     {
         // Retrieves a juror from the storage
         fn juror(account_id: &T::AccountId) -> Result<Juror<BalanceOf<T>>, DispatchError> {
-            Jurors::<T>::get(account_id).ok_or(Error::<T>::JurorDoesNotExists.into())
+            Jurors::<T>::get(account_id).ok_or_else(|| Error::<T>::JurorDoesNotExists.into())
         }
     }
 
