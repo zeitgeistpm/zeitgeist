@@ -21,7 +21,7 @@ export VALIDATOR_PORT="31000"
 export VALIDATOR_RPC_PORT="8100"
 export VALIDATOR_WS_PORT="9100"
 
-export PARACHAIN_CHAIN="battery_station_staging"
+export PARACHAIN_CHAIN="battery_station"
 export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
 curl -o $RELAY_CHAIN_SPEC_FILE https://storage.googleapis.com/centrifuge-artifact-releases/rococo-chachacha.json
 
