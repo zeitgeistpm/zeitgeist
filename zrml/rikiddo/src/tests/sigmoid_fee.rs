@@ -21,7 +21,6 @@ fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>, FixedU128<U6
         m: <FixedI128<U64>>::from_num(m),
         n: <FixedI128<U64>>::from_num(n),
         p: <FixedI128<U64>>::from_num(p),
-        initial_fee: <FixedU128<U64>>::from_num(initial_fee),
         min_revenue: <FixedU128<U64>>::from_num(min_revenue),
     };
 

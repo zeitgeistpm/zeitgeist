@@ -1,24 +1,18 @@
 use crate::{
-    constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
+    constants::{M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{
-    traits::{FixedSigned, FixedUnsigned, LossyFrom, LossyInto},
-    transcendental::sqrt,
-    types::{
-        extra::{U24, U32},
+use substrate_fixed::{FixedI32, FixedU128, FixedU32, traits::{FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed}, transcendental::sqrt, types::{
+        extra::{U24, U32, U128},
         I9F23,
-    },
-    FixedI32, FixedU32,
-};
+    }};
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned, FU: FixedUnsigned> {
     pub m: FS,
     pub p: FS,
     pub n: FS,
-    pub initial_fee: FU,
     pub min_revenue: FU,
 }
 
@@ -26,13 +20,13 @@ impl<FS, FU> Default for FeeSigmoidConfig<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
+    i128: From<FS::Bits>
 {
     fn default() -> Self {
         Self {
             m: M.lossy_into(),
             p: P.lossy_into(),
             n: N.lossy_into(),
-            initial_fee: INITIAL_FEE.lossy_into(),
             min_revenue: MINIMAL_REVENUE.lossy_into(),
         }
     }
@@ -43,6 +37,7 @@ pub struct FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
+    i128: From<FS::Bits>
 {
     pub config: FeeSigmoidConfig<FS, FU>,
 }
@@ -51,6 +46,8 @@ impl<FS, FU> FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
+    i128: From<FS::Bits>,
+    u128: ToFixed
 {
     pub fn new(config: FeeSigmoidConfig<FS, FU>) -> Self {
         Self { config }
@@ -60,7 +57,8 @@ where
 impl<FS, FU> Sigmoid for FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + PartialOrd<FS>
+    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>> + PartialOrd<FS>,
+    i128: From<FS::Bits> + FromFixed,
 {
     type FIN = FS;
     type FOUT = FU;
@@ -99,9 +97,26 @@ where
         } else {
             return Err("[FeeSigmoid] Overflow during calculation: numerator / denominator");
         };
+        
+        if self.config.min_revenue >= sigmoid_result {
+            return Ok(self.config.min_revenue);
+        }
 
-        // TODO: Add min revenue comparison, and proper return max(min_revenue, sigmoid_result);
-        // Also figure out if we want to return intial_fee here if r = 0
-        Err("Unimplemented!")
+        if Self::FOUT::max_value() < sigmoid_result.int() {
+            return Err("[FeeSigmoid] Overflow during conversion: Result does not fit in specified output type");
+        }
+
+        let integer_part_signed = i128::from_fixed(sigmoid_result.int());
+        // We can safely cast because until here we know that the integer part is unsigned.
+        let integer_part: Self::FOUT = (integer_part_signed as u128).to_fixed();
+        let fractional_bits: i128 = sigmoid_result.frac().to_bits().into();
+        let fractional_part_fixed128 = <FixedU128<U128>>::from_bits(fractional_bits as u128);
+
+        // This error should be impossible to reach.
+        if let Some(res) = integer_part.checked_add(Self::FOUT::lossy_from(fractional_part_fixed128)) {
+            return Ok(res);
+        } else {
+            return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion.")
+        };
     }
 }
