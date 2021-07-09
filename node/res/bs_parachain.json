@@ -20,7 +20,7 @@
     "tokenDecimals": 10,
     "tokenSymbol": "ZBP"
   },
-  "parachain_id": 2049,
+  "parachain_id": 2050,
   "relay_chain": "rococo",
   "consensusEngine": null,
   "lightSyncState": null,
