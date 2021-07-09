@@ -14,7 +14,7 @@ set -euxo pipefail
 
 # Variables
 
-PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-f1daa31}"
+PARACHAIN_IMAGE="${PARACHAIN_IMAGE:-zeitgeistpm/zeitgeist-node-parachain:sha-116eba1}"
 # Minus one because `seq` is inclusive
 PARACHAINS_NUM=$(($PARACHAINS_NUM - 1))
 # Minus one because `seq` is inclusive
