@@ -11,7 +11,7 @@ export VALIDATOR_CHAIN="rococo"
 export VALIDATORS_NUM="0"
 
 export PARACHAIN="zeitgeist-rococo-parachain"
-export PARACHAIN_ID="2049"
+export PARACHAIN_ID="2050"
 export PARACHAIN_PORT="32000"
 export PARACHAIN_RPC_PORT="8200"
 export PARACHAIN_WS_PORT="9200"

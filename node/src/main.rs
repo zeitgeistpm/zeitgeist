@@ -9,7 +9,7 @@ mod rpc;
 mod service;
 
 #[cfg(feature = "parachain")]
-const DEFAULT_PARACHAIN_ID: u32 = 2049;
+const DEFAULT_PARACHAIN_ID: u32 = 2050;
 
 fn main() -> sc_cli::Result<()> {
     command::run()

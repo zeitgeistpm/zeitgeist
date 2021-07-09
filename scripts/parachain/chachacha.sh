@@ -11,7 +11,7 @@ export VALIDATOR_CHAIN="rococo-chachacha"
 export VALIDATORS_NUM="2"
 
 export PARACHAIN="zeitgeist-chachacha-parachain"
-export PARACHAIN_ID="2049"
+export PARACHAIN_ID="2050"
 export PARACHAIN_PORT="30000"
 export PARACHAIN_RPC_PORT="8000"
 export PARACHAIN_WS_PORT="9000"
