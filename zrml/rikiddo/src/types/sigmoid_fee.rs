@@ -10,7 +10,7 @@ use substrate_fixed::{
         extra::{U128, U24, U32},
         I9F23,
     },
-    FixedI128, FixedI32, FixedU128, FixedU32,
+    FixedI32, FixedU128, FixedU32,
 };
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
