@@ -107,7 +107,9 @@ where
             return Ok(self.config.min_revenue);
         }
 
-        if Self::FOUT::max_value() < sigmoid_result.int() {
+        // PartialOrd is bugged, therefore the workaround
+        // https://github.com/encointer/substrate-fixed/issues/9
+        if Self::FOUT::max_value().int().to_num::<u128>() < sigmoid_result.int().to_num::<u128>() {
             return Err("[FeeSigmoid] Overflow during conversion: Result does not fit in \
                         specified output type");
         }

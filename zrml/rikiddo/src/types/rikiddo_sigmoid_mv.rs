@@ -3,7 +3,11 @@ use crate::{
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{FixedI128, FixedU32, traits::{Fixed, FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed}, types::extra::{U128, U32}};
+use substrate_fixed::{
+    traits::{Fixed, FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed},
+    types::extra::{U128, U32},
+    FixedI128, FixedU32,
+};
 
 use super::TimestampedVolume;
 
@@ -40,7 +44,7 @@ where
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + PartialOrd<FU> + LossyFrom<FixedI128<U128>>,
+    FS: FixedSigned + LossyFrom<FixedI128<U128>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -63,23 +67,25 @@ where
             return Ok(self.config.initial_fee);
         };
 
-        if mal_unwrapped.to_num::<u128>() == 0u128 {
-            return Err("[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long");
+        if mal_unwrapped == FU::from_num(0u8) {
+            return Err(
+                "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
+            );
         }
 
         let ratio = if let Some(res) = mas_unwrapped.checked_div(mal_unwrapped) {
             res
         } else {
-            // In most cases this is impossible (divisor always >= 1 if not 0)
-            return Err("[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long")
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long");
         };
 
-        if FS::max_value() < ratio.int() {
-            // On most configurations, this does not happen.
-            return Err("[RikiddoSigmoidMV] Overflow during conversion from ratio into type FS")
+        // PartialOrd is bugged, therefore the workaround
+        // https://github.com/encointer/substrate-fixed/issues/9
+        if FS::max_value().int().to_num::<u128>() < FU::max_value().int().to_num::<u128>() {
+            return Err("[RikiddoSigmoidMV] Overflow during conversion from ma. ratio into type FS");
         }
 
-        let integer_part_unsigned = i128::from_fixed(ratio.int());
+        let integer_part_unsigned = u128::from_fixed(ratio.int());
         // We can safely cast because until here we know that the sign bit is not set
         let integer_part: FS = (integer_part_unsigned as i128).to_fixed();
         let fractional_part: FixedI128<U128> = ratio.frac().to_fixed();
@@ -87,7 +93,7 @@ where
         if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
             return self.fees.calculate(res);
         }
-        
+
         // This error should be impossible to reach.
         return Err("[RikiddoSigmoidMV] Something went wrong during ratio to FS type conversion.");
     }
@@ -112,10 +118,10 @@ where
         Err("Unimplemented")
         // get fee (write helper functions) (min(w, (f+n(r))))
         // sum over every element
-            // qi = current
-            // sum over every element to calculate exponents (helper function)
-            // Decide strategy (normal (faster) or overflow-failsafe)
-            // total_result += ln(sum(e^results))
+        // qi = current
+        // sum over every element to calculate exponents (helper function)
+        // Decide strategy (normal (faster) or overflow-failsafe)
+        // total_result += ln(sum(e^results))
         // total_result *= fee
     }
 
