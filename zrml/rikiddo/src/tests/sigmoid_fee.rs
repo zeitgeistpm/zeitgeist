@@ -4,13 +4,14 @@ use crate::{
     types::{FeeSigmoid, FeeSigmoidConfig},
 };
 use frame_support::assert_err;
-use substrate_fixed::{FixedI128, FixedU128, types::extra::U64};
+use substrate_fixed::{types::extra::U64, FixedI128, FixedU128};
 
 fn sigmoid_fee(m: f64, n: f64, p: f64, r: f64) -> f64 {
     (m * (r - n)) / (p + (r - n).powi(2)).sqrt()
 }
 
-fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>, FixedU128<U64>>, f64, f64, f64) {
+fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>, FixedU128<U64>>, f64, f64, f64)
+{
     let m = 0.01f64;
     let n = 0f64;
     let p = 2.0f64;

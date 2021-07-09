@@ -3,7 +3,11 @@ use crate::{
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{FixedU32, traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed}, types::extra::U32};
+use substrate_fixed::{
+    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
+    types::extra::U32,
+    FixedU32,
+};
 
 use super::TimestampedVolume;
 
@@ -98,7 +102,7 @@ where
     ) -> Result<Option<Self::FU>, &'static str> {
         let mas = self.ma_short.update(volume)?;
         let mal = self.ma_long.update(volume)?;
-        
+
         if let Some(mas_unwrapped) = mas {
             if let Some(mal_unwrapped) = mal {
                 if mal_unwrapped != 0u32.to_fixed::<FU>() {

@@ -3,10 +3,15 @@ use crate::{
     traits::Sigmoid,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, traits::{FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed}, transcendental::sqrt, types::{
-        extra::{U24, U32, U128},
+use substrate_fixed::{
+    traits::{FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed},
+    transcendental::sqrt,
+    types::{
+        extra::{U128, U24, U32},
         I9F23,
-    }};
+    },
+    FixedI128, FixedI32, FixedU128, FixedU32,
+};
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned, FU: FixedUnsigned> {
@@ -20,7 +25,7 @@ impl<FS, FU> Default for FeeSigmoidConfig<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    i128: From<FS::Bits>
+    i128: From<FS::Bits>,
 {
     fn default() -> Self {
         Self {
@@ -37,7 +42,7 @@ pub struct FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    i128: From<FS::Bits>
+    i128: From<FS::Bits>,
 {
     pub config: FeeSigmoidConfig<FS, FU>,
 }
@@ -47,7 +52,7 @@ where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
     i128: From<FS::Bits>,
-    u128: ToFixed
+    u128: ToFixed,
 {
     pub fn new(config: FeeSigmoidConfig<FS, FU>) -> Self {
         Self { config }
@@ -103,7 +108,8 @@ where
         }
 
         if Self::FOUT::max_value() < sigmoid_result.int() {
-            return Err("[FeeSigmoid] Overflow during conversion: Result does not fit in specified output type");
+            return Err("[FeeSigmoid] Overflow during conversion: Result does not fit in \
+                        specified output type");
         }
 
         let integer_part_signed = i128::from_fixed(sigmoid_result.int());
@@ -115,7 +121,7 @@ where
             return Ok(res);
         } else {
             // This error should be impossible to reach.
-            return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion.")
+            return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion.");
         };
     }
 }

@@ -3,6 +3,7 @@
 use crate::mock::*;
 
 mod ema_market_volume;
+mod rikiddo_sigmoid_mv;
 mod sigmoid_fee;
 
 fn max_allowed_error(fractional_bits: u8) -> f64 {

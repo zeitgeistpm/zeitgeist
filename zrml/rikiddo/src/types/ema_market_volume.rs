@@ -59,7 +59,10 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
         }
     }
 
-    fn calculate_ema(&mut self, volume: &TimestampedVolume<FU>) -> Result<Option<FU>, &'static str> {
+    fn calculate_ema(
+        &mut self,
+        volume: &TimestampedVolume<FU>,
+    ) -> Result<Option<FU>, &'static str> {
         // Overflow is impossible here (the library ensures that multiplier ∊ [0,1])
         let volume_times_multiplier = if let Some(res) = volume.volume.checked_mul(self.multiplier)
         {
@@ -96,7 +99,10 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
         Ok(Some(self.ema))
     }
 
-    fn calculate_sma(&mut self, volume: &TimestampedVolume<FU>) -> Result<Option<FU>, &'static str> {
+    fn calculate_sma(
+        &mut self,
+        volume: &TimestampedVolume<FU>,
+    ) -> Result<Option<FU>, &'static str> {
         // This can only overflow if the ema field is set manually
         let sma_times_vpp = if let Some(res) = self.ema.checked_mul(self.volumes_per_period) {
             res
@@ -224,7 +230,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                     result = self.calculate_ema(&volume)?;
                 } else {
                     // During this phase the ema is still a sma.
-                    result = self.calculate_sma(&volume)?;
+                    let _ = self.calculate_sma(&volume)?;
                     // In the context of blockchains, overflowing here is irrelevant (technically
                     // not realizable). In other contexts, ensure that FU can represent a number
                     // that is equal to the number of incoming volumes during one period.

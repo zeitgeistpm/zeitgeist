@@ -2,16 +2,16 @@ use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::traits::Fixed;
 
 mod ema_market_volume;
-mod rikiddo;
+mod rikiddo_sigmoid_mv;
 mod sigmoid_fee;
 
 pub use ema_market_volume::*;
-pub use rikiddo::*;
+pub use rikiddo_sigmoid_mv::*;
 pub use sigmoid_fee::*;
 
 pub type UnixTimestamp = u64;
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct TimestampedVolume<F: Fixed> {
     pub timestamp: UnixTimestamp,
     pub volume: F,

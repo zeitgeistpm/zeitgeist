@@ -6,7 +6,10 @@ use crate::{
 use frame_support::assert_err;
 use substrate_fixed::{types::extra::U64, FixedU128};
 
-fn ema_create_test_struct(period: u32, smoothing: f64) -> EmaMarketVolume<FixedU128<U64>> {
+pub(super) fn ema_create_test_struct(
+    period: u32,
+    smoothing: f64,
+) -> EmaMarketVolume<FixedU128<U64>> {
     let emv_cfg = EmaConfig::<FixedU128<U64>> {
         ema_period: Timespan::Seconds(period),
         smoothing: <FixedU128<U64>>::from_num(smoothing),
