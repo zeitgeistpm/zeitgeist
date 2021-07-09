@@ -17,10 +17,10 @@ pub trait Sigmoid {
 }
 
 pub trait MarketAverage {
-    type F: FixedUnsigned;
+    type FU: FixedUnsigned;
 
     /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn get(&self) -> Option<Self::F>;
+    fn get(&self) -> Option<Self::FU>;
 
     /// Clear market data
     fn clear(&mut self);
@@ -28,24 +28,24 @@ pub trait MarketAverage {
     /// Update market volume
     fn update(
         &mut self,
-        volume: TimestampedVolume<Self::F>,
-    ) -> Result<Option<Self::F>, &'static str>;
+        volume: &TimestampedVolume<Self::FU>,
+    ) -> Result<Option<Self::FU>, &'static str>;
 }
 
 pub trait Lmsr {
-    type F: FixedUnsigned;
+    type FU: FixedUnsigned;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(asset_balances: Vec<Self::F>) -> Result<Vec<Self::F>, &'static str>;
+    fn all_prices(asset_balances: Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str>;
 
     /// Return cost C(q) for all assets in q
-    fn cost(asset_balances: Vec<Self::F>) -> Result<Self::F, &'static str>;
+    fn cost(asset_balances: Vec<Self::FU>) -> Result<Self::FU, &'static str>;
 
     /// Return price P_i(q) for asset q_i in q
     fn price(
-        asset_in_question_balance: Self::F,
-        asset_balances: Vec<Self::F>,
-    ) -> Result<Self::F, &'static str>;
+        asset_in_question_balance: Self::FU,
+        asset_balances: Vec<Self::FU>,
+    ) -> Result<Self::FU, &'static str>;
 }
 
 pub trait RikiddoMV: Lmsr {
@@ -55,8 +55,8 @@ pub trait RikiddoMV: Lmsr {
     /// Update market data
     fn update(
         &mut self,
-        volume: TimestampedVolume<Self::F>,
-    ) -> Result<Option<Self::F>, &'static str>;
+        volume: &TimestampedVolume<Self::FU>,
+    ) -> Result<Option<Self::FU>, &'static str>;
 }
 
 pub trait RikiddoSigmoidMVPallet {
