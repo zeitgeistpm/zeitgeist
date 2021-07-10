@@ -1,9 +1,10 @@
 #![cfg(test)]
 
-use crate::{mock::*, DisputeApi, Error, MarketIdsPerReportBlock};
+use crate::{mock::*, Error, MarketIdsPerReportBlock, SimpleDisputesPalletApi};
 use frame_support::{assert_noop, assert_ok};
-use zeitgeist_primitives::types::{
-    Market, MarketCreation, MarketEnd, MarketStatus, MarketType, OutcomeReport, Report,
+use zeitgeist_primitives::{
+    traits::DisputeApi,
+    types::{Market, MarketCreation, MarketEnd, MarketStatus, MarketType, OutcomeReport, Report},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 

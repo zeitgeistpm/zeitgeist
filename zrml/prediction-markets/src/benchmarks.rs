@@ -14,12 +14,13 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
+    traits::DisputeApi,
     types::{
         Asset, MarketCreation, MarketEnd, MarketType, MultiHash, OutcomeReport, ScalarPosition,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
-use zrml_simple_disputes::DisputeApi;
+use zrml_simple_disputes::SimpleDisputesPalletApi;
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
