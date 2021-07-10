@@ -2,10 +2,7 @@ use frame_support::assert_err;
 use substrate_fixed::{types::extra::U64, FixedI128, FixedU128};
 
 use super::ema_market_volume::ema_create_test_struct;
-use crate::{
-    traits::RikiddoMV,
-    types::{EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoSigmoidMV, TimestampedVolume},
-};
+use crate::{traits::{MarketAverage, RikiddoMV}, types::{EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoSigmoidMV, TimestampedVolume}};
 
 type Rikiddo = RikiddoSigmoidMV<
     FixedU128<U64>,
@@ -84,9 +81,26 @@ fn rikiddo_get_fee_ratio_does_not_fit_in_type() {
     );
 }
 
-/*
+
 #[test]
 fn rikiddo_get_fee_returns_the_correct_result() {
-    assert!(false);
+    let emv_short = ema_create_test_struct(1, 2.0);
+    let emv_long = ema_create_test_struct(2, 2.0);
+    let mut rikiddo =
+        Rikiddo::new(RikiddoConfig::default(), FeeSigmoid::default(), emv_short, emv_long);
+    assert_eq!(rikiddo.ma_short.get(), None);
+    assert_eq!(rikiddo.ma_long.get(), None);
+    assert_eq!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
+    let _ = rikiddo.update(&TimestampedVolume { timestamp: 0, volume: 100u32.into() });
+    let _ = rikiddo.update(&TimestampedVolume { timestamp: 2, volume: 100u32.into() });
+    assert_ne!(rikiddo.ma_short.get(), None);
+    assert_eq!(rikiddo.ma_long.get(), None);
+    assert_eq!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
+    let _ = rikiddo.update(&TimestampedVolume { timestamp: 3, volume: 100u32.into() });
+    assert_ne!(rikiddo.ma_short.get(), None);
+    assert_ne!(rikiddo.ma_long.get(), None);
+    // We don't want to test the exactl result (that is the responsibility of the fee module),
+    // but rather if rikiddo toggles properly between initial fee and the calculated fee
+    println!("{}", rikiddo.get_fee().unwrap());
+    assert_ne!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
 }
-*/

@@ -81,7 +81,7 @@ where
 
         // PartialOrd is bugged, therefore the workaround
         // https://github.com/encointer/substrate-fixed/issues/9
-        if FS::max_value().int().to_num::<u128>() < FU::max_value().int().to_num::<u128>() {
+        if FS::max_value().int().to_num::<u128>() < ratio.int().to_num::<u128>() {
             return Err("[RikiddoSigmoidMV] Overflow during conversion from ma. ratio into type FS");
         }
 
