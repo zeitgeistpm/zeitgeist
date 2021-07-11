@@ -44,11 +44,19 @@ impl Timespan {
 
 /// Returns integer part of FROM, if the msb is not set and and num does it into FROM
 fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str> {
-    let msb_num = 1.to_fixed::<FROM>() << (FROM::int_nbits() - 1);
+    let mut num_bits = FROM::int_nbits();
+
+    if num_bits == 0 {
+        num_bits = FROM::frac_nbits();
+    }
+
+    let msb_num = 1.to_fixed::<FROM>() << (num_bits - 1);
 
     // Check if msb is set
     if num & msb_num != 0 {
-        return Err("Fixed conversion failed: MSB is set");
+        return Err(
+            "Signed fixed point to unsigned fixed point number conversion failed: MSB is set"
+        );
     }
 
     // PartialOrd is bugged, therefore the workaround
@@ -60,12 +68,10 @@ fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str>
     Ok(num.int().to_num::<u128>().to_fixed())
 }
 
-/// Converts one Fixed number into another (fallible)
-// TODO: test
+/// Converts an unsigned fixed point number into a signed fixed point number (fallible)
 pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI128<U128>>>(
     num: FROM,
 ) -> Result<TO, &'static str> {
-    // We can safely cast because until here we know that the msb is not set.
     let integer_part: TO = convert_common(num)?;
     let fractional_part: FixedI128<U128> = num.frac().to_fixed();
 
@@ -79,6 +85,7 @@ pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI
     };
 }
 
+/// Converts a signed fixed point number into an unsigned fixed point number (fallible)
 pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<FixedU128<U128>>>(
     num: FROM,
 ) -> Result<TO, &'static str> {

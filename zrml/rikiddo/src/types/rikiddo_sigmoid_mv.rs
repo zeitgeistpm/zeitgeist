@@ -7,10 +7,10 @@ use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed},
     transcendental::ln,
     types::extra::{U119, U128, U32},
-    FixedI128, FixedU32,
+    FixedI128, FixedI32, FixedU32,
 };
 
-use super::TimestampedVolume;
+use super::{convert_to_signed, TimestampedVolume};
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
@@ -18,7 +18,7 @@ pub struct RikiddoConfig<FI: Fixed> {
     max_exponent: FixedI128<U119>,
 }
 
-impl<FS: FixedSigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedI128<U119>>> RikiddoConfig<FS> {
+impl<FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>> RikiddoConfig<FS> {
     pub fn new(initial_fee: FS) -> Result<Self, &'static str> {
         let fu_int_bits = <FixedI128<U119>>::from_num((FS::int_nbits() - 1) as u8);
         // max exponent = ln(2^fu_int_bits) = ln(2) * fu_int_bits
@@ -35,16 +35,21 @@ impl<FS: FixedSigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedI128<U119>>> Ri
     }
 }
 
-impl<FU: FixedSigned + LossyFrom<FixedU32<U32>>> Default for RikiddoConfig<FU> {
+// TODO: test
+impl<FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>> Default
+    for RikiddoConfig<FS>
+{
     fn default() -> Self {
-        Self::new(INITIAL_FEE.lossy_into())
+        let converted = convert_to_signed::<FixedU32<U32>, FixedI32<U32>>(INITIAL_FEE).unwrap();
+        // Potentially dangerous unwrap(), should be impossible to fail (tested).
+        Self::new(converted.lossy_into()).unwrap()
     }
 }
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned,
+    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -57,7 +62,7 @@ where
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI128<U128>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -65,7 +70,7 @@ where
         Self { config, fees, ma_short, ma_long }
     }
 
-    pub fn get_fee(&self) -> Result<FU, &'static str> {
+    pub fn get_fee(&self) -> Result<FS, &'static str> {
         let mas = self.ma_short.get();
         let mas_unwrapped = if let Some(res) = mas {
             res
@@ -103,6 +108,7 @@ where
         let integer_part: FS = (integer_part_unsigned as i128).to_fixed();
         let fractional_part: FixedI128<U128> = ratio.frac().to_fixed();
 
+        // TODO: Think about using FixedSigned -> FixedSigned for fee.
         if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
             return self.fees.calculate(res);
         }
@@ -115,7 +121,7 @@ where
 impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned,
+    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -150,7 +156,7 @@ where
 impl<FU, FS, FE, MA> RikiddoMV for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned,
+    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
