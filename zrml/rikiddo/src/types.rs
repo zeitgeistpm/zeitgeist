@@ -1,5 +1,9 @@
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::traits::{Fixed, ToFixed};
+use substrate_fixed::{
+    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
+    types::extra::U128,
+    FixedI128, FixedU128,
+};
 
 mod ema_market_volume;
 mod rikiddo_sigmoid_mv;
@@ -38,31 +42,56 @@ impl Timespan {
     }
 }
 
+/// Returns integer part of FROM, if the msb is not set and and num does it into FROM
+fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str> {
+    let msb_num = 1.to_fixed::<FROM>() << (FROM::int_nbits() - 1);
+
+    // Check if msb is set
+    if num & msb_num != 0 {
+        return Err("Fixed conversion failed: MSB is set");
+    }
+
+    // PartialOrd is bugged, therefore the workaround
+    // https://github.com/encointer/substrate-fixed/issues/9
+    if TO::max_value().int().to_num::<u128>() < num.int().to_num::<u128>() {
+        return Err("Fixed conversion failed: FROM type does not fit in TO type");
+    }
+
+    Ok(num.int().to_num::<u128>().to_fixed())
+}
+
 /// Converts one Fixed number into another (fallible)
 // TODO: test
-fn convert<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str> {
-        let msb_num = 1.to_fixed::<FROM>() << (FROM::int_nbits() - 1);
+pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI128<U128>>>(
+    num: FROM,
+) -> Result<TO, &'static str> {
+    // We can safely cast because until here we know that the msb is not set.
+    let integer_part: TO = convert_common(num)?;
+    let fractional_part: FixedI128<U128> = num.frac().to_fixed();
 
-        // Check if msb is set
-        if num & msb_num != 0 {
-            return Err("Fixed conversion failed: MSB is set");
-        }
+    if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
+        return Ok(res);
+    } else {
+        // This error should be impossible to reach.
+        return Err(
+            "[FeeSigmoid] Something went wrong during FixedUnsigned to FixedSigned type conversion"
+        );
+    };
+}
 
-        // PartialOrd is bugged, therefore the workaround
-        // https://github.com/encointer/substrate-fixed/issues/9
-        if TO::max_value().int().to_num::<u128>() < num.int().to_num::<u128>() {
-            return Err("Fixed conversion failed: FROM type does not fit in TO type");
-        }
+pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<FixedU128<U128>>>(
+    num: FROM,
+) -> Result<TO, &'static str> {
+    // We can safely cast because until here we know that the msb is not set.
+    let integer_part: TO = convert_common(num)?;
+    let fractional_part: FixedU128<U128> = num.frac().to_fixed();
 
-        let integer_part_signed = i128::from_fixed(sigmoid_result.int());
-        // We can safely cast because until here we know that the integer part is unsigned.
-        let integer_part: Self::FOUT = (integer_part_signed as u128).to_fixed();
-        let fractional_part: FixedU128<U128> = sigmoid_result.frac().to_fixed();
-
-        if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
-            return Ok(res);
-        } else {
-            // This error should be impossible to reach.
-            return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion");
-        };
+    if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
+        return Ok(res);
+    } else {
+        // This error should be impossible to reach.
+        return Err(
+            "[FeeSigmoid] Something went wrong during FixedSigned to FixedUnsigned type conversion"
+        );
+    };
 }
