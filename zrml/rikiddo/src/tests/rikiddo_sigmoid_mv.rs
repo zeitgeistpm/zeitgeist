@@ -2,7 +2,10 @@ use frame_support::assert_err;
 use substrate_fixed::{types::extra::U64, FixedI128, FixedU128};
 
 use super::ema_market_volume::ema_create_test_struct;
-use crate::{traits::{MarketAverage, RikiddoMV}, types::{EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoSigmoidMV, TimestampedVolume}};
+use crate::{
+    traits::{MarketAverage, RikiddoMV},
+    types::{EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoSigmoidMV, TimestampedVolume},
+};
 
 type Rikiddo = RikiddoSigmoidMV<
     FixedU128<U64>,
@@ -80,7 +83,6 @@ fn rikiddo_get_fee_ratio_does_not_fit_in_type() {
         "[RikiddoSigmoidMV] Overflow during conversion from ma. ratio into type FS"
     );
 }
-
 
 #[test]
 fn rikiddo_get_fee_returns_the_correct_result() {

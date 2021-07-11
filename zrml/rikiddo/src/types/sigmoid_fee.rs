@@ -123,7 +123,7 @@ where
             return Ok(res);
         } else {
             // This error should be impossible to reach.
-            return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion.");
+            return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion");
         };
     }
 }

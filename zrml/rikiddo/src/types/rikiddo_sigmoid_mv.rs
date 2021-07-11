@@ -5,7 +5,8 @@ use crate::{
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed},
-    types::extra::{U128, U32},
+    transcendental::ln,
+    types::extra::{U119, U128, U32},
     FixedI128, FixedU32,
 };
 
@@ -14,15 +15,27 @@ use super::TimestampedVolume;
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
     pub initial_fee: FI,
+    max_exponent: FixedI128<U119>,
 }
 
-impl<FU: FixedUnsigned + LossyFrom<FixedU32<U32>>> RikiddoConfig<FU> {
-    pub fn new(initial_fee: FU) -> Self {
-        Self { initial_fee }
+impl<FS: FixedSigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedI128<U119>>> RikiddoConfig<FS> {
+    pub fn new(initial_fee: FS) -> Result<Self, &'static str> {
+        let fu_int_bits = <FixedI128<U119>>::from_num((FS::int_nbits() - 1) as u8);
+        // max exponent = ln(2^fu_int_bits) = ln(2) * fu_int_bits
+        let ln_2 = if let Ok(res) =
+            ln::<FixedI128<U119>, FixedI128<U119>>(<FixedI128<U119>>::from_num(2u8))
+        {
+            res
+        } else {
+            // Should never happen (as long as 128 bits are the maximum width)
+            return Err("[RikiddoConfig] Error during derivation of maximum exponent");
+        };
+        let max_exponent = ln_2 * fu_int_bits;
+        Ok(Self { initial_fee, max_exponent })
     }
 }
 
-impl<FU: FixedUnsigned + LossyFrom<FixedU32<U32>>> Default for RikiddoConfig<FU> {
+impl<FU: FixedSigned + LossyFrom<FixedU32<U32>>> Default for RikiddoConfig<FU> {
     fn default() -> Self {
         Self::new(INITIAL_FEE.lossy_into())
     }
@@ -35,7 +48,7 @@ where
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
-    pub config: RikiddoConfig<FU>,
+    pub config: RikiddoConfig<FS>,
     pub fees: FE,
     pub ma_short: MA,
     pub ma_long: MA,
@@ -48,7 +61,7 @@ where
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
-    pub fn new(config: RikiddoConfig<FU>, fees: FE, ma_short: MA, ma_long: MA) -> Self {
+    pub fn new(config: RikiddoConfig<FS>, fees: FE, ma_short: MA, ma_long: MA) -> Self {
         Self { config, fees, ma_short, ma_long }
     }
 
@@ -95,7 +108,7 @@ where
         }
 
         // This error should be impossible to reach.
-        return Err("[RikiddoSigmoidMV] Something went wrong during ratio to FS type conversion.");
+        return Err("[RikiddoSigmoidMV] Something went wrong during ratio to FS type conversion");
     }
 }
 
