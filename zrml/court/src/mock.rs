@@ -8,7 +8,10 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{MaxReserves, BASE, BLOCK_HASH_COUNT},
-    types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
+    types::{
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId,
+        UncheckedExtrinsicTest,
+    },
 };
 
 pub const ALICE: AccountIdTest = 0;
@@ -29,13 +32,15 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
     }
 );
 
 impl crate::Config for Runtime {
     type Event = ();
+    type MarketCommons = MarketCommons;
 }
 
 impl frame_system::Config for Runtime {
@@ -76,21 +81,26 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+}
+
 pub struct ExtBuilder {
-    _balances: Vec<(AccountIdTest, Balance)>,
+    balances: Vec<(AccountIdTest, Balance)>,
 }
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { _balances: vec![(ALICE, 1_000 * BASE)] }
+        Self { balances: vec![(ALICE, 1_000 * BASE)] }
     }
 }
 
 impl ExtBuilder {
-    pub fn _build(self) -> sp_io::TestExternalities {
+    pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-        pallet_balances::GenesisConfig::<Runtime> { balances: self._balances }
+        pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)
             .unwrap();
 

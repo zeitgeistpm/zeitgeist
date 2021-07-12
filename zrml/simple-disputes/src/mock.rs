@@ -69,7 +69,6 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type Currency = Balances;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -148,6 +147,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
     type MarketId = MarketId;
 }
 
