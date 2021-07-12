@@ -1,22 +1,38 @@
 name: Benchmark weights
 
 on:
-  push:
-    branches: [ stage-benchmark ]
+  workflow_dispatch:
+  pull_request:
+    types: [ labeled ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  benchmark:
+  benchmark: 
     name: Benchmark weights
+    if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
     steps:
-      - name: Checkout repository
+      # Ensure that at most one benchmark worklow runs across all workflows
+      - name: Turnstyle
+        uses: softprops/turnstyle@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout repository (PR)
         uses: actions/checkout@v2
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required'))
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout repository (branch)
+        uses: actions/checkout@v2
+        if: github.event_name == 'workflow_dispatch'
+
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -34,34 +50,64 @@ jobs:
         run: cargo build --release --features runtime-benchmarks
 
       - name: Run benchmarks
+        id: run_benchmarks
         run: |
           # define benchmark commands
           ZG_BENCHMARK_COMMANDS=(
-            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
-            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
-            "./target/release/zeitgeist benchmark --chain local --execution wasm --wasm-execution compiled --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
+            "./target/release/zeitgeist benchmark --dev --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
+            "./target/release/zeitgeist benchmark --dev --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
+            "./target/release/zeitgeist benchmark --dev --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
           )
 
           echo "Fetching commit hash of HEAD"
           zg_cmt=`git log -n 1 --format="%H"`
           echo "Commit hash: ${zg_cmt}"
 
+          # Takes variable name as parameter $1
+          prepare_output() {
+            # Add result box that contains contents of parameter $1
+            local txt_proc="<details>
+            <summary>
+            Results
+            </summary>
+
+            ${!1}
+
+            </details>"
+
+            # Prepare output for github output format
+            txt_proc="${txt_proc//'%'/'%25'}"
+            txt_proc="${txt_proc//$'\n'/'%0A'}"
+            txt_proc="${txt_proc//$'\r'/'%0D'}"
+
+            eval "$1=\"${txt_proc}\""
+          }
+
           check_if_new_commits() {
             echo "Fetching latest repository state"
             git fetch
 
             if [ $? -ne 0 ]; then
-              echo "ERROR: git fetch failed. Aborting benchmarks."
-              exit $?
+              ERROR="ERROR: git fetch failed. Aborting benchmarks."
+              prepare_output ERROR
+              echo "::set-output name=ERROR::$ERROR"
+              exit 0
             fi
             
             echo "Determining if the branch contains new updates."
-            local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
+
+            if [ ${{ github.event_name }} == 'pull_request' ]; then
+              local zg_cur_cmt=`git log -n 1 --format="%H" origin/${{ github.event.pull_request.head.ref }}`
+            else
+              local zg_cur_cmt=`git log -n 1 --format="%H" origin/${GITHUB_REF##*/}`
+            fi
 
             if [ "$zg_cmt" != "$zg_cur_cmt" ]; then
               echo "${zg_cmt} != ${zg_cur_cmt}"
-              echo "ERROR: Branch contains new commits. Aborting benchmarks."
-              exit 31
+              ERROR="ERROR: Branch contains new commits. Aborting benchmarks."
+              prepare_output ERROR
+              echo "::set-output name=ERROR::$ERROR"
+              exit 0
             fi
           }
 
@@ -72,15 +118,78 @@ jobs:
           for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
             # Execute benchmark
             echo "Executing: ${zg_bench_cmd}"
-            echo "$zg_bench_cmd" | sh
+            echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
+            ERROR=$(<benchmark_errors.txt)
+
+            if [ -n "$ERROR" ]; then
+              # Prepare error for github output format
+              prepare_output ERROR
+              echo "::set-output name=ERROR::$ERROR"
+              exit 0
+            fi
+
             check_if_new_commits
           done
 
+          BENCHMARK_LOG=$(sed -E "s/(Writes\s=\s[0-9]+)/\1\n/g" benchmark_log.txt | sed "s/========/--------/g")
+          prepare_output BENCHMARK_LOG
+          echo "::set-output name=RESULT::$BENCHMARK_LOG"
+
       - name: Commit updated weights
         uses: stefanzweifel/git-auto-commit-action@v4
+        if: steps.run_benchmarks.outputs.ERROR == ''
         with:
           commit_message: Update weights
           commit_options: '--no-verify'
           file_pattern: zrml/*/src/weights.rs
-          commit_author: zeitgeist-benchmark-bot <zeitgeist-benchmark-bot@no-reply.zeitgeist.pm>
+          commit_user_name: Zeitgeist Benchmark Bot
+          commit_user_email: zeitgeist-benchmark-bot@no-reply.zeitgeist.pm
           status_options: '--untracked-files=no'
+
+      - name: Remove label s:benchmark-required
+        if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')
+        uses: buildsville/add-remove-label@v1
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          label: s:benchmark-required
+          type: remove
+
+      - name: Add label s:benchmark-done
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
+        uses: buildsville/add-remove-label@v1
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          label: s:benchmark-done
+          type: add
+
+      - name: Add label s:benchmark-aborted
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
+        uses: buildsville/add-remove-label@v1
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          label: s:benchmark-aborted
+          type: add
+
+      - name: Comment PR (on success)
+        uses: thollander/actions-comment-pull-request@master
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
+        with:
+          message: 'Benchmark completed successfully.
+
+          ${{ steps.run_benchmarks.outputs.RESULT }}'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment PR (on failure)
+        uses: thollander/actions-comment-pull-request@master
+        if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
+        with:
+          message: 'Benchmark aborted due to an error.
+          
+          ${{ steps.run_benchmarks.outputs.ERROR }}'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Exit with error message
+        if: steps.run_benchmarks.outputs.ERROR != ''
+        run: |
+          echo "${{ steps.run_benchmarks.outputs.ERROR }}"
+          exit 1
