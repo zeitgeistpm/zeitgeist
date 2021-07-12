@@ -16,7 +16,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
-        traits::Hooks,
+        traits::{Hooks, ReservableCurrency},
         Blake2_128Concat, Parameter,
     };
     use sp_runtime::{
@@ -30,6 +30,9 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+        /// Native token
+        type Currency: ReservableCurrency<Self::AccountId>;
+
         /// The identifier of individual markets.
         type MarketId: AtLeast32Bit
             + Copy
@@ -83,6 +86,7 @@ mod pallet {
     {
         type AccountId = T::AccountId;
         type BlockNumber = T::BlockNumber;
+        type Currency = T::Currency;
         type MarketId = T::MarketId;
 
         // Market

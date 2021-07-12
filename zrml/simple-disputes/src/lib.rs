@@ -37,22 +37,20 @@ mod pallet {
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    type BalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type CurrencyOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::NegativeImbalance;
+    type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Native currency
-        type Currency: ReservableCurrency<Self::AccountId>;
-
         /// The base amount of currency that must be bonded in order to create a dispute.
         type DisputeBond: Get<BalanceOf<Self>>;
 
@@ -219,15 +217,15 @@ mod pallet {
             // if the market was permissionless and not invalid, return `ValidityBond`.
             // if market.creation == MarketCreation::Permissionless {
             //     if report.outcome != 0 {
-            //         T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+            //         CurrencyOf::<T>::unreserve(&market.creator, T::ValidityBond::get());
             //     } else {
             //         // Give it to the treasury instead.
             //         let (imbalance, _) =
-            //             T::Currency::slash_reserved(&market.creator, T::ValidityBond::get());
+            //             CurrencyOf::<T>::slash_reserved(&market.creator, T::ValidityBond::get());
             //         T::Slash::on_unbalanced(imbalance);
             //     }
             // }
-            T::Currency::unreserve(&market.creator, T::ValidityBond::get());
+            CurrencyOf::<T>::unreserve(&market.creator, T::ValidityBond::get());
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => report.clone().outcome,
@@ -245,13 +243,13 @@ mod pallet {
                 MarketStatus::Reported => {
                     // the oracle bond gets returned if the reporter was the oracle
                     if report.by == market.oracle {
-                        T::Currency::unreserve(&market.creator, T::OracleBond::get());
+                        CurrencyOf::<T>::unreserve(&market.creator, T::OracleBond::get());
                     } else {
                         let (imbalance, _) =
-                            T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
+                            CurrencyOf::<T>::slash_reserved(&market.creator, T::OracleBond::get());
 
                         // give it to the real reporter
-                        T::Currency::resolve_creating(&report.by, imbalance);
+                        CurrencyOf::<T>::resolve_creating(&report.by, imbalance);
                     }
                 }
                 MarketStatus::Disputed => {
@@ -265,10 +263,10 @@ mod pallet {
                     // if the reporter reported right, return the OracleBond, otherwise
                     // slash it to pay the correct reporters
                     if report.outcome == resolved_outcome {
-                        T::Currency::unreserve(&market.creator, T::OracleBond::get());
+                        CurrencyOf::<T>::unreserve(&market.creator, T::OracleBond::get());
                     } else {
                         let (imbalance, _) =
-                            T::Currency::slash_reserved(&market.creator, T::OracleBond::get());
+                            CurrencyOf::<T>::slash_reserved(&market.creator, T::OracleBond::get());
 
                         overall_imbalance.subsume(imbalance);
                     }
@@ -277,12 +275,12 @@ mod pallet {
                         let dispute_bond =
                             T::DisputeBond::get() + T::DisputeFactor::get() * (i as u32).into();
                         if dispute.outcome == resolved_outcome {
-                            T::Currency::unreserve(&dispute.by, dispute_bond);
+                            CurrencyOf::<T>::unreserve(&dispute.by, dispute_bond);
 
                             correct_reporters.push(dispute.by.clone());
                         } else {
                             let (imbalance, _) =
-                                T::Currency::slash_reserved(&dispute.by, dispute_bond);
+                                CurrencyOf::<T>::slash_reserved(&dispute.by, dispute_bond);
                             overall_imbalance.subsume(imbalance);
                         }
                     }
@@ -292,7 +290,7 @@ mod pallet {
                         overall_imbalance.peek() / (correct_reporters.len() as u32).into();
                     for correct_reporter in &correct_reporters {
                         let (amount, leftover) = overall_imbalance.split(reward_per_each);
-                        T::Currency::resolve_creating(correct_reporter, amount);
+                        CurrencyOf::<T>::resolve_creating(correct_reporter, amount);
                         overall_imbalance = leftover;
                     }
                 }
@@ -365,7 +363,7 @@ mod pallet {
 
             let dispute_bond =
                 T::DisputeBond::get() + T::DisputeFactor::get() * num_disputes.into();
-            T::Currency::reserve(&sender, dispute_bond)?;
+            CurrencyOf::<T>::reserve(&sender, dispute_bond)?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
 

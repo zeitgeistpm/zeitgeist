@@ -95,12 +95,13 @@ mod pallet {
     use zrml_simple_disputes::{DisputeApi, ResolutionCounters};
 
     pub(crate) type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type CurrencyOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::NegativeImbalance;
+    type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -246,7 +247,7 @@ mod pallet {
 
             let creator = market.creator;
 
-            T::Currency::unreserve(&creator, T::AdvisoryBond::get());
+            CurrencyOf::<T>::unreserve(&creator, T::AdvisoryBond::get());
             T::MarketCommons::mutate_market(&market_id, |m| {
                 m.status = MarketStatus::Active;
                 Ok(())
@@ -308,7 +309,7 @@ mod pallet {
             ensure!(creator == sender, "Canceller must be market creator.");
             ensure!(status == MarketStatus::Proposed, "Market must be pending approval.");
             // The market is being cancelled, return the deposit.
-            T::Currency::unreserve(&creator, T::AdvisoryBond::get());
+            CurrencyOf::<T>::unreserve(&creator, T::AdvisoryBond::get());
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketCancelled(market_id));
             Ok(())
@@ -336,12 +337,12 @@ mod pallet {
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    T::Currency::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
                     MarketStatus::Active
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    T::Currency::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
                     MarketStatus::Proposed
                 }
             };
@@ -387,12 +388,12 @@ mod pallet {
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    T::Currency::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
                     MarketStatus::Active
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    T::Currency::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
                     MarketStatus::Proposed
                 }
             };
@@ -492,7 +493,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::Currency::free_balance(&market_account) >= winning_balance,
+                        CurrencyOf::<T>::free_balance(&market_account) >= winning_balance,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
 
@@ -542,7 +543,8 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::Currency::free_balance(&market_account) >= long_payout + short_payout,
+                        CurrencyOf::<T>::free_balance(&market_account)
+                            >= long_payout + short_payout,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
 
@@ -558,9 +560,9 @@ mod pallet {
                 T::Shares::slash(currency_id, &sender, balance);
 
                 // Pay out the winner.
-                let remaining_bal = T::Currency::free_balance(&market_account);
+                let remaining_bal = CurrencyOf::<T>::free_balance(&market_account);
 
-                T::Currency::transfer(
+                CurrencyOf::<T>::transfer(
                     &market_account,
                     &sender,
                     payout.min(remaining_bal),
@@ -589,7 +591,7 @@ mod pallet {
 
             let market = T::MarketCommons::market(&market_id)?;
             let creator = market.creator;
-            let (imbalance, _) = T::Currency::slash_reserved(&creator, T::AdvisoryBond::get());
+            let (imbalance, _) = CurrencyOf::<T>::slash_reserved(&creator, T::AdvisoryBond::get());
             // Slashes the imbalance.
             T::Slash::on_unbalanced(imbalance);
             T::MarketCommons::remove_market(&market_id)?;
@@ -672,7 +674,7 @@ mod pallet {
 
             let market_account = Self::market_account(market_id);
             ensure!(
-                T::Currency::free_balance(&market_account) >= amount,
+                CurrencyOf::<T>::free_balance(&market_account) >= amount,
                 "Market account does not have sufficient reserves.",
             );
 
@@ -693,7 +695,7 @@ mod pallet {
                 T::Shares::slash(*asset, &sender, amount);
             }
 
-            T::Currency::transfer(
+            CurrencyOf::<T>::transfer(
                 &market_account,
                 &sender,
                 amount,
@@ -714,8 +716,6 @@ mod pallet {
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
         type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
-
-        type Currency: ReservableCurrency<Self::AccountId>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -926,13 +926,18 @@ mod pallet {
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            ensure!(T::Currency::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance,);
+            ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance,);
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
 
             let market_account = Self::market_account(market_id);
-            T::Currency::transfer(&who, &market_account, amount, ExistenceRequirement::KeepAlive)?;
+            CurrencyOf::<T>::transfer(
+                &who,
+                &market_account,
+                amount,
+                ExistenceRequirement::KeepAlive,
+            )?;
 
             let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {

@@ -90,7 +90,6 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SimpleDisputes = SimpleDisputes;
-    type Currency = Balances;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
@@ -171,7 +170,6 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type Currency = Balances;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -186,6 +184,7 @@ impl zrml_simple_disputes::Config for Runtime {
 }
 
 impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
     type MarketId = MarketId;
 }
 
