@@ -60,7 +60,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
@@ -149,7 +149,7 @@ macro_rules! create_zeitgeist_runtime {
                 // System
                 System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
-                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Call, Pallet, Storage} = 2,
+                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -281,7 +281,7 @@ impl pallet_author_inherent::Config for Runtime {
     type AuthorId = NimbusId;
     type CanAuthor = AuthorFilter;
     type EventHandler = ParachainStaking;
-    type SlotBeacon = pallet_author_inherent::RelayChainBeacon<Self>;
+    type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
 }
 
 #[cfg(feature = "parachain")]
@@ -356,6 +356,7 @@ impl parachain_staking::Config for Runtime {
     type MinNomination = MinNominatorStake;
     type MinNominatorStk = MinNominatorStake;
     type MinSelectedCandidates = MinSelectedCandidates;
+    type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
     type WeightInfo = ();
 }
 
@@ -489,7 +490,20 @@ impl_runtime_apis! {
 
     #[cfg(feature = "parachain")]
     impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
-        fn can_author(author: NimbusId, slot: u32) -> bool {
+        fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
+            // The Moonbeam runtimes use an entropy source that needs to do some accounting
+            // work during block initialization. Therefore we initialize it here to match
+            // the state it will be in when the next block is being executed.
+            use frame_support::traits::OnInitialize;
+            System::initialize(
+                &(parent_header.number + 1),
+                &parent_header.hash(),
+                &parent_header.digest,
+                frame_system::InitKind::Inspection
+            );
+            RandomnessCollectiveFlip::on_initialize(System::block_number());
+
+            // And now the actual prediction call
             AuthorInherent::can_author(&author, &slot)
         }
     }
@@ -658,8 +672,9 @@ impl_runtime_apis! {
         fn validate_transaction(
             source: TransactionSource,
             tx: <Block as BlockT>::Extrinsic,
+            block_hash: <Block as BlockT>::Hash,
         ) -> TransactionValidity {
-            Executive::validate_transaction(source, tx)
+            Executive::validate_transaction(source, tx, block_hash)
         }
     }
 
