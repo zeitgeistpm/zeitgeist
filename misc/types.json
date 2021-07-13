@@ -131,6 +131,10 @@
       "Stale": null
     }
   },
+  "RegistrationInfo": {
+    "account": "AccountId",
+    "deposit": "Balance"
+  },
   "Report": {
     "at": "BlockNumber",
     "by": "AccountId",
