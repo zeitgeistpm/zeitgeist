@@ -1,11 +1,11 @@
 use crate::{
     constants::{M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
-    types::{convert_to_signed, convert_to_unsigned},
+    types::{convert_to_unsigned},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
-    traits::{FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed},
+    traits::{FixedSigned, FixedUnsigned, LossyFrom, LossyInto},
     transcendental::sqrt,
     types::{
         extra::{U128, U24, U32},

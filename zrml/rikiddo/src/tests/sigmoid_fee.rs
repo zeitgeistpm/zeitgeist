@@ -79,9 +79,10 @@ fn fee_sigmoid_overflow_numerator_div_denominator() {
 #[test]
 fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
     let r = 1.5f64;
-    let (fee, m, n, p) = init_default_sigmoid_fee_struct();
+    let (mut fee, m, n, p) = init_default_sigmoid_fee_struct();
     let fee_f64 = sigmoid_fee(m, n, p, r);
-    let fee_fixed = fee.calculate(<FixedI128<U64>>::from_num(r))?;
+    let r_fixed = <FixedI128<U64>>::from_num(r);
+    let fee_fixed = fee.calculate(r_fixed)?;
     let fee_fixed_f64: f64 = fee_fixed.to_num();
     let difference_abs = (fee_f64 - fee_fixed_f64).abs();
 
@@ -95,6 +96,7 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
     );
 
     // TODO: Test min_revenue
-
+    fee.config.min_revenue = <FixedU128<U64>>::from_num(1u64 << 63);
+    assert_eq!(fee.calculate(r_fixed)?, fee.config.min_revenue);
     Ok(())
 }
