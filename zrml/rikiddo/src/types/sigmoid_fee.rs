@@ -1,6 +1,7 @@
 use crate::{
     constants::{M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
+    types::{convert_to_signed, convert_to_unsigned},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
@@ -25,7 +26,6 @@ impl<FS, FU> Default for FeeSigmoidConfig<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    i128: From<FS::Bits>,
 {
     fn default() -> Self {
         Self {
@@ -42,7 +42,6 @@ pub struct FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    i128: From<FS::Bits>,
 {
     pub config: FeeSigmoidConfig<FS, FU>,
 }
@@ -51,8 +50,6 @@ impl<FS, FU> FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    i128: From<FS::Bits>,
-    u128: ToFixed,
 {
     pub fn new(config: FeeSigmoidConfig<FS, FU>) -> Self {
         Self { config }
@@ -63,7 +60,6 @@ impl<FS, FU> Sigmoid for FeeSigmoid<FS, FU>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>> + PartialOrd<FS>,
-    i128: From<FS::Bits>,
 {
     type FIN = FS;
     type FOUT = FU;
@@ -107,23 +103,6 @@ where
             return Ok(self.config.min_revenue);
         }
 
-        // PartialOrd is bugged, therefore the workaround
-        // https://github.com/encointer/substrate-fixed/issues/9
-        if Self::FOUT::max_value().int().to_num::<u128>() < sigmoid_result.int().to_num::<u128>() {
-            return Err("[FeeSigmoid] Overflow during conversion: Result does not fit in \
-                        specified output type");
-        }
-
-        let integer_part_signed = i128::from_fixed(sigmoid_result.int());
-        // We can safely cast because until here we know that the integer part is unsigned.
-        let integer_part: Self::FOUT = (integer_part_signed as u128).to_fixed();
-        let fractional_part: FixedU128<U128> = sigmoid_result.frac().to_fixed();
-
-        if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
-            return Ok(res);
-        } else {
-            // This error should be impossible to reach.
-            return Err("[FeeSigmoid] Something went wrong during FIN to FOUT type conversion");
-        };
+        convert_to_unsigned(sigmoid_result)
     }
 }

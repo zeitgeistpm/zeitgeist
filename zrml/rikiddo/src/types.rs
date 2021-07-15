@@ -1,7 +1,7 @@
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
-    types::extra::U128,
+    types::extra::{U127, U128},
     FixedI128, FixedU128,
 };
 
@@ -44,44 +44,33 @@ impl Timespan {
 
 /// Returns integer part of FROM, if the msb is not set and and num does it into FROM
 fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str> {
-    let mut num_bits = FROM::int_nbits();
-
-    if num_bits == 0 {
-        num_bits = FROM::frac_nbits();
-    }
-
-    let msb_num = 1.to_fixed::<FROM>() << (num_bits - 1);
-
-    // Check if msb is set
-    if num & msb_num != 0 {
-        return Err(
-            "Signed fixed point to unsigned fixed point number conversion failed: MSB is set"
-        );
+    // Check if number is negatie
+    if num < FROM::from_num(0u8) {
+        return Err("Cannot convert negative signed number into unsigned number");
     }
 
     // PartialOrd is bugged, therefore the workaround
     // https://github.com/encointer/substrate-fixed/issues/9
-    if TO::max_value().int().to_num::<u128>() < num.int().to_num::<u128>() {
-        return Err("Fixed conversion failed: FROM type does not fit in TO type");
+    let num_u128: u128 = num.int().to_num();
+    if TO::max_value().int().to_num::<u128>() < num_u128 {
+        return Err("Fixed point conversion failed: FROM type does not fit in TO type");
     }
 
-    Ok(num.int().to_num::<u128>().to_fixed())
+    Ok(num_u128.to_fixed())
 }
 
 /// Converts an unsigned fixed point number into a signed fixed point number (fallible)
-pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI128<U128>>>(
+pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI128<U127>>>(
     num: FROM,
 ) -> Result<TO, &'static str> {
     let integer_part: TO = convert_common(num)?;
-    let fractional_part: FixedI128<U128> = num.frac().to_fixed();
+    let fractional_part: FixedI128<U127> = num.frac().to_fixed();
 
     if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
         return Ok(res);
     } else {
         // This error should be impossible to reach.
-        return Err(
-            "[FeeSigmoid] Something went wrong during FixedUnsigned to FixedSigned type conversion"
-        );
+        return Err("Something went wrong during FixedUnsigned to FixedSigned type conversion");
     };
 }
 
@@ -97,8 +86,6 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
         return Ok(res);
     } else {
         // This error should be impossible to reach.
-        return Err(
-            "[FeeSigmoid] Something went wrong during FixedSigned to FixedUnsigned type conversion"
-        );
+        return Err("Something went wrong during FixedSigned to FixedUnsigned type conversion");
     };
 }

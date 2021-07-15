@@ -80,7 +80,7 @@ fn rikiddo_get_fee_ratio_does_not_fit_in_type() {
     rikiddo.ma_long.ema = <FixedU128<U64>>::from_num(1u64);
     assert_err!(
         rikiddo.get_fee(),
-        "[RikiddoSigmoidMV] Overflow during conversion from ma. ratio into type FS"
+        "Fixed point conversion failed: FROM type does not fit in TO type"
     );
 }
 
@@ -101,7 +101,7 @@ fn rikiddo_get_fee_returns_the_correct_result() {
     let _ = rikiddo.update(&TimestampedVolume { timestamp: 3, volume: 100u32.into() });
     assert_ne!(rikiddo.ma_short.get(), None);
     assert_ne!(rikiddo.ma_long.get(), None);
-    // We don't want to test the exactl result (that is the responsibility of the fee module),
+    // We don't want to test the exact result (that is the responsibility of the fee module),
     // but rather if rikiddo toggles properly between initial fee and the calculated fee
     println!("{}", rikiddo.get_fee().unwrap());
     assert_ne!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);

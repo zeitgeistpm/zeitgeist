@@ -94,5 +94,7 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
         max_allowed_error(64)
     );
 
+    // TODO: Test min_revenue
+
     Ok(())
 }

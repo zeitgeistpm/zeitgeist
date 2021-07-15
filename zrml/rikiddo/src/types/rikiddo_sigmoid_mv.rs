@@ -6,8 +6,8 @@ use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed},
     transcendental::ln,
-    types::extra::{U119, U128, U32},
-    FixedI128, FixedI32, FixedU32,
+    types::extra::{U119, U127, U128, U31, U32},
+    FixedI128, FixedI32, FixedU128, FixedU32,
 };
 
 use super::{convert_to_signed, TimestampedVolume};
@@ -18,7 +18,7 @@ pub struct RikiddoConfig<FI: Fixed> {
     max_exponent: FixedI128<U119>,
 }
 
-impl<FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>> RikiddoConfig<FS> {
+impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>> RikiddoConfig<FS> {
     pub fn new(initial_fee: FS) -> Result<Self, &'static str> {
         let fu_int_bits = <FixedI128<U119>>::from_num((FS::int_nbits() - 1) as u8);
         // max exponent = ln(2^fu_int_bits) = ln(2) * fu_int_bits
@@ -36,11 +36,11 @@ impl<FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>> Ri
 }
 
 // TODO: test
-impl<FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>> Default
+impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>> Default
     for RikiddoConfig<FS>
 {
     fn default() -> Self {
-        let converted = convert_to_signed::<FixedU32<U32>, FixedI32<U32>>(INITIAL_FEE).unwrap();
+        let converted = convert_to_signed::<FixedU32<U32>, FixedI32<U31>>(INITIAL_FEE).unwrap();
         // Potentially dangerous unwrap(), should be impossible to fail (tested).
         Self::new(converted.lossy_into()).unwrap()
     }
@@ -49,7 +49,7 @@ impl<FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>> De
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -61,8 +61,11 @@ where
 
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>
 where
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
+    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
+    FS: FixedSigned
+        + LossyFrom<FixedI32<U31>>
+        + LossyFrom<FixedI128<U119>>
+        + LossyFrom<FixedI128<U127>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -71,57 +74,39 @@ where
     }
 
     pub fn get_fee(&self) -> Result<FS, &'static str> {
-        let mas = self.ma_short.get();
-        let mas_unwrapped = if let Some(res) = mas {
+        let mas = if let Some(res) = self.ma_short.get() {
             res
         } else {
             return Ok(self.config.initial_fee);
         };
 
-        let mal = self.ma_long.get();
-        let mal_unwrapped = if let Some(res) = mal {
+        let mal = if let Some(res) = self.ma_long.get() {
             res
         } else {
             return Ok(self.config.initial_fee);
         };
 
-        if mal_unwrapped == FU::from_num(0u8) {
+        if mal == FU::from_num(0u8) {
             return Err(
                 "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
             );
         }
 
-        let ratio = if let Some(res) = mas_unwrapped.checked_div(mal_unwrapped) {
+        let ratio = if let Some(res) = mas.checked_div(mal) {
             res
         } else {
             return Err("[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long");
         };
 
-        // PartialOrd is bugged, therefore the workaround
-        // https://github.com/encointer/substrate-fixed/issues/9
-        if FS::max_value().int().to_num::<u128>() < ratio.int().to_num::<u128>() {
-            return Err("[RikiddoSigmoidMV] Overflow during conversion from ma. ratio into type FS");
-        }
-
-        let integer_part_unsigned = u128::from_fixed(ratio.int());
-        // We can safely cast because until here we know that the sign bit is not set
-        let integer_part: FS = (integer_part_unsigned as i128).to_fixed();
-        let fractional_part: FixedI128<U128> = ratio.frac().to_fixed();
-
-        // TODO: Think about using FixedSigned -> FixedSigned for fee.
-        if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
-            return self.fees.calculate(res);
-        }
-
-        // This error should be impossible to reach.
-        return Err("[RikiddoSigmoidMV] Something went wrong during ratio to FS type conversion");
+        let ratio_signed = convert_to_signed(ratio)?;
+        convert_to_signed(self.fees.calculate(ratio_signed)?)
     }
 }
 
 impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -156,7 +141,7 @@ where
 impl<FU, FS, FE, MA> RikiddoMV for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U32>> + LossyFrom<FixedI128<U119>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -175,10 +160,10 @@ where
         let mas = self.ma_short.update(volume)?;
         let mal = self.ma_long.update(volume)?;
 
-        if let Some(mas_unwrapped) = mas {
-            if let Some(mal_unwrapped) = mal {
-                if mal_unwrapped != 0u32.to_fixed::<FU>() {
-                    return Ok(Some(mas_unwrapped.saturating_div(mal_unwrapped)));
+        if let Some(mas) = mas {
+            if let Some(mal) = mal {
+                if mal != 0u32.to_fixed::<FU>() {
+                    return Ok(Some(mas.saturating_div(mal)));
                 }
             };
         };
