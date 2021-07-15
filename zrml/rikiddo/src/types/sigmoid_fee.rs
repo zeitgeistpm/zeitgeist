@@ -1,7 +1,7 @@
 use crate::{
     constants::{M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
-    types::{convert_to_unsigned},
+    types::convert_to_unsigned,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{

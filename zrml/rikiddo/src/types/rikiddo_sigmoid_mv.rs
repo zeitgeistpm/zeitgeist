@@ -4,13 +4,13 @@ use crate::{
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
-    traits::{Fixed, FixedSigned, FixedUnsigned, FromFixed, LossyFrom, LossyInto, ToFixed},
+    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
     transcendental::ln,
     types::extra::{U119, U127, U128, U31, U32},
     FixedI128, FixedI32, FixedU128, FixedU32,
 };
 
-use super::{convert_to_signed, TimestampedVolume};
+use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
@@ -73,17 +73,17 @@ where
         Self { config, fees, ma_short, ma_long }
     }
 
-    pub fn get_fee(&self) -> Result<FS, &'static str> {
+    pub fn get_fee(&self) -> Result<FU, &'static str> {
         let mas = if let Some(res) = self.ma_short.get() {
             res
         } else {
-            return Ok(self.config.initial_fee);
+            return convert_to_unsigned(self.config.initial_fee);
         };
 
         let mal = if let Some(res) = self.ma_long.get() {
             res
         } else {
-            return Ok(self.config.initial_fee);
+            return convert_to_unsigned(self.config.initial_fee);
         };
 
         if mal == FU::from_num(0u8) {
@@ -99,38 +99,84 @@ where
         };
 
         let ratio_signed = convert_to_signed(ratio)?;
-        convert_to_signed(self.fees.calculate(ratio_signed)?)
+        self.fees.calculate(ratio_signed)
     }
 }
 
 impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>,
+    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
+    FS: FixedSigned
+        + LossyFrom<FixedI32<U31>>
+        + LossyFrom<FixedI128<U119>>
+        + LossyFrom<FixedI128<U127>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
     type FU = FU;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(asset_balances: Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str> {
+    fn all_prices(&self, asset_balances: Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str> {
         Err("Unimplemented")
     }
 
     /// Return cost C(q) for all assets in q
-    fn cost(asset_balances: Vec<Self::FU>) -> Result<Self::FU, &'static str> {
-        Err("Unimplemented")
+    fn cost(&self, asset_balances: Vec<Self::FU>) -> Result<Self::FU, &'static str> {
+        if asset_balances.len() == 0 {
+            return Err("[RikiddoSigmoidMV] No asset balances provided");
+        };
+
         // get fee (write helper functions) (min(w, (f+n(r))))
+        let fee = self.get_fee()?;
+        let mut total_balance = FU::from_num(0u8);
+
+        for elem in &asset_balances {
+            if let Some(res) = total_balance.checked_add(*elem) {
+                total_balance = res;
+            } else {
+                return Err("[RikiddoSigmoidMV] Overflow during summation of asset balances");
+            }
+        }
+
+        let denominator = if let Some(res) = fee.checked_mul(total_balance) {
+            res
+        } else {
+            // Highly unlikely and only possible if fee > 100%
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance");
+        };
+
+        let mut exponents: Vec<FU> = Vec::with_capacity(asset_balances.len());
+        let mut biggest_exponent: FU = FU::from_num(0u8);
+
+        for elem in &asset_balances {
+            let exponent = if let Some(res) = elem.checked_div(denominator) {
+                res
+            } else {
+                // Highly unlikely
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: expontent_i = asset_balance_i / denominator");
+            };
+
+            if biggest_exponent < exponent {
+                biggest_exponent = exponent;
+            }
+
+            // Panic impossible
+            exponents.push(exponent);
+        }
+
+        // Determine which strategy to use.
         // sum over every element
         // qi = current
         // sum over every element to calculate exponents (helper function)
         // Decide strategy (normal (faster) or overflow-failsafe)
         // total_result += ln(sum(e^results))
-        // total_result *= fee
+        // sum end: total_result *= fee
+        Err("Unimplemented")
     }
 
     /// Return price P_i(q) for asset q_i in q
     fn price(
+        &self,
         asset_in_question_balance: Self::FU,
         asset_balances: Vec<Self::FU>,
     ) -> Result<Self::FU, &'static str> {
@@ -140,8 +186,11 @@ where
 
 impl<FU, FS, FE, MA> RikiddoMV for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>,
+    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
+    FS: FixedSigned
+        + LossyFrom<FixedI32<U31>>
+        + LossyFrom<FixedI128<U119>>
+        + LossyFrom<FixedI128<U127>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
