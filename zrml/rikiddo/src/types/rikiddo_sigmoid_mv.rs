@@ -2,9 +2,18 @@ use crate::{
     constants::INITIAL_FEE,
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
-use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use core::ops::{AddAssign, BitOrAssign, ShlAssign};
-use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, consts::LOG2_E, traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed}, transcendental::{ln, log2}, types::{I9F23, U1F127, extra::{U119, U127, U128, U31, U32}}};
+use frame_support::dispatch::{fmt::Debug, Decode, Encode};
+use substrate_fixed::{
+    consts::LOG2_E,
+    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
+    transcendental::{exp, ln, log2},
+    types::{
+        extra::{U119, U127, U128, U31, U32},
+        I9F23, U1F127,
+    },
+    FixedI128, FixedI32, FixedU128, FixedU32,
+};
 
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 
@@ -45,7 +54,13 @@ where
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127> + LossyFrom<FixedI128<U127>>,
+    FS: FixedSigned
+        + From<I9F23>
+        + LossyFrom<FixedI32<U31>>
+        + LossyFrom<U1F127>
+        + LossyFrom<FixedI128<U127>>
+        + PartialOrd<I9F23>,
+    FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -81,13 +96,51 @@ where
         let ratio_signed = convert_to_signed(ratio)?;
         self.fees.calculate(ratio_signed)
     }
+
+    fn optimized_cost_strategy(
+        &self,
+        exponents: &Vec<FS>,
+        biggest_exponents: &FS,
+    ) -> Result<FS, &'static str> {
+        Err("unimplemented!")
+    }
+
+    fn default_cost_strategy(&self, exponents: &Vec<FS>) -> Result<FS, &'static str> {
+        let mut acc: FS = FS::from_num(0u8);
+
+        for elem in exponents {
+            let exp_value: FS = if let Ok(res) = exp::<FS, FS>(*elem) {
+                res
+            } else {
+                return Err("Error during calculation: exp(i) in ln sum_i(exp^i)");
+            };
+
+            if let Some(res) = acc.checked_add(exp_value) {
+                acc = res;
+            } else {
+                // Impossible (this function should only be called when the sum does fit into FS)
+                return Err("Overflow during calculation: sum_i(e^i)");
+            };
+        }
+
+        if let Ok(res) = ln::<FS, FS>(acc) {
+            return Ok(res);
+        } else {
+            return Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0");
+        };
+    }
 }
 
 impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127> + LossyFrom<FixedI128<U127>> + PartialOrd<I9F23>,
-    FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign, 
+    FS: FixedSigned
+        + From<I9F23>
+        + LossyFrom<FixedI32<U31>>
+        + LossyFrom<U1F127>
+        + LossyFrom<FixedI128<U127>>
+        + PartialOrd<I9F23>,
+    FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -105,6 +158,7 @@ where
         };
 
         // get fee (write helper functions) (min(w, (f+n(r))))
+        // TODO: add initial fee to get_fee result (or incorporate it in get_fee)
         let fee = self.get_fee()?;
         let mut total_balance = FU::from_num(0u8);
 
@@ -144,7 +198,9 @@ where
         }
 
         // Determine which strategy to use.
-        let biggest_exp_times_log2e = if let Some(res) = self.config.log2_e.checked_mul(biggest_exponent) {
+        let biggest_exp_times_log2e = if let Some(res) =
+            self.config.log2_e.checked_mul(biggest_exponent)
+        {
             res
         } else {
             // Highly unlikely
@@ -152,16 +208,43 @@ where
         };
 
         if FS::max_value().int().to_num::<u128>() < asset_balances.len() as u128 {
-            return Err("[RikidoSigmoidMV] Number of assets does not fit in FS")
+            return Err("[RikidoSigmoidMV] Number of assets does not fit in FS");
         }
 
-        let log2e_number_of_assets: FS = if let Ok(res) = log2::<FS, FS>(FS::from_num(asset_balances.len())) {
-            res
+        let log2e_number_of_assets: FS =
+            if let Ok(res) = log2::<FS, FS>(FS::from_num(asset_balances.len())) {
+                res
+            } else {
+                // Impossible, since the cost functions checks if elements are present in asset_balances
+                return Err("[RikiddoSigmoidMV] log2(number_of_assets), number_of_assets <= 0");
+            };
+
+        let log2e_times_biggest_exp_plus_log2e_num_assets =
+            if let Some(res) = log2e_number_of_assets.checked_add(biggest_exp_times_log2e) {
+                res
+            } else {
+                // Highly unlikely
+                return Err("Overflow during calculation: biggest_exp * log2(e) + log2(num_assets)");
+            };
+
+        let required_bits: u128 =
+            if let Some(res) = log2e_times_biggest_exp_plus_log2e_num_assets.checked_ceil() {
+                res.to_num()
+            } else {
+                // Highly unlikely
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: ceil(biggest_exp * \
+                            log2(e) + log2(num_assets))");
+            };
+
+        let mut ln_sum_e: FS;
+
+        // Select strategy to calculate ln(sum_i(e^i))
+        if required_bits > FS::int_nbits() as u128 {
+            ln_sum_e = self.optimized_cost_strategy(&exponents, &biggest_exponent)?;
         } else {
-            // Impossible, since the cost functions checks if elements are present in asset_balances
-            return Err("[RikiddoSigmoidMV] log2(number_of_assets), number_of_assets <= 0");
-        };
-        
+            ln_sum_e = self.default_cost_strategy(&exponents)?;
+        }
+
         //let required_bits = if let Some(res) = biggest_exp_times_log2e.checked_add()
         // sum over every element
         // qi = current
@@ -182,11 +265,16 @@ where
     }
 }
 
-/*
 impl<FU, FS, FE, MA> RikiddoMV for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127> + LossyFrom<FixedI128<U127>>,
+    FS: FixedSigned
+        + From<I9F23>
+        + LossyFrom<FixedI32<U31>>
+        + LossyFrom<U1F127>
+        + LossyFrom<FixedI128<U127>>
+        + PartialOrd<I9F23>,
+    FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -216,4 +304,3 @@ where
         Ok(None)
     }
 }
-*/
