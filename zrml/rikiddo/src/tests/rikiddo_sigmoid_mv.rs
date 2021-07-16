@@ -2,10 +2,7 @@ use frame_support::assert_err;
 use substrate_fixed::{types::extra::U64, FixedI128, FixedU128};
 
 use super::ema_market_volume::ema_create_test_struct;
-use crate::{
-    traits::{MarketAverage, RikiddoMV},
-    types::{EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoSigmoidMV, TimestampedVolume},
-};
+use crate::{constants::INITIAL_FEE, traits::{MarketAverage, RikiddoMV}, types::{EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoSigmoidMV, TimestampedVolume, convert_to_signed}};
 
 type Rikiddo = RikiddoSigmoidMV<
     FixedU128<U64>,
@@ -105,4 +102,17 @@ fn rikiddo_get_fee_returns_the_correct_result() {
     // but rather if rikiddo toggles properly between initial fee and the calculated fee
     println!("{}", rikiddo.get_fee().unwrap());
     assert_ne!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
+}
+
+#[test]
+fn rikiddo_default_does_not_panic() -> Result<(), &'static str> {
+    let default_rikiddo = Rikiddo::default();
+    let rikiddo = Rikiddo::new(
+        RikiddoConfig::new(convert_to_signed(INITIAL_FEE)?)?,
+        FeeSigmoid::default(),
+        EmaMarketVolume::default(),
+        EmaMarketVolume::default(),
+    );
+    assert_eq!(default_rikiddo, rikiddo);
+    Ok(())
 }

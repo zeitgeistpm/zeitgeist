@@ -4,7 +4,15 @@ use crate::{
     types::convert_to_unsigned,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, traits::{FixedSigned, FixedUnsigned, LossyFrom, LossyInto}, transcendental::sqrt, types::{I9F23, extra::{U127, U128, U24, U32}}};
+use substrate_fixed::{
+    traits::{FixedSigned, FixedUnsigned, LossyFrom, LossyInto},
+    transcendental::sqrt,
+    types::{
+        extra::{U127, U128, U24, U32},
+        I9F23,
+    },
+    FixedI128, FixedI32, FixedU128, FixedU32,
+};
 
 use super::convert_to_signed;
 

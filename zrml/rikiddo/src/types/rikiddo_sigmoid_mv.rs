@@ -208,7 +208,7 @@ where
         if asset_balances.len() == 0 {
             return Err("[RikiddoSigmoidMV] No asset balances provided");
         };
-        
+
         let fee = self.get_fee()?;
         let mut total_balance = FU::from_num(0u8);
 
