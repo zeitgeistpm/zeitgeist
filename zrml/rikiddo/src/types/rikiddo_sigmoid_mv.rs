@@ -3,42 +3,25 @@ use crate::{
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{
-    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
-    transcendental::ln,
-    types::extra::{U119, U127, U128, U31, U32},
-    FixedI128, FixedI32, FixedU128, FixedU32,
-};
+use core::ops::{AddAssign, BitOrAssign, ShlAssign};
+use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, consts::LOG2_E, traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed}, transcendental::{ln, log2}, types::{I9F23, U1F127, extra::{U119, U127, U128, U31, U32}}};
 
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
     pub initial_fee: FI,
-    max_exponent: FixedI128<U119>,
+    log2_e: FI,
 }
 
-impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>> RikiddoConfig<FS> {
+impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> RikiddoConfig<FS> {
     pub fn new(initial_fee: FS) -> Result<Self, &'static str> {
-        let fu_int_bits = <FixedI128<U119>>::from_num((FS::int_nbits() - 1) as u8);
-        // max exponent = ln(2^fu_int_bits) = ln(2) * fu_int_bits
-        let ln_2 = if let Ok(res) =
-            ln::<FixedI128<U119>, FixedI128<U119>>(<FixedI128<U119>>::from_num(2u8))
-        {
-            res
-        } else {
-            // Should never happen (as long as 128 bits are the maximum width)
-            return Err("[RikiddoConfig] Error during derivation of maximum exponent");
-        };
-        let max_exponent = ln_2 * fu_int_bits;
-        Ok(Self { initial_fee, max_exponent })
+        Ok(Self { initial_fee, log2_e: FS::lossy_from(LOG2_E) })
     }
 }
 
 // TODO: test
-impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>> Default
-    for RikiddoConfig<FS>
-{
+impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> Default for RikiddoConfig<FS> {
     fn default() -> Self {
         let converted = convert_to_signed::<FixedU32<U32>, FixedI32<U31>>(INITIAL_FEE).unwrap();
         // Potentially dangerous unwrap(), should be impossible to fail (tested).
@@ -49,7 +32,7 @@ impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>> De
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<FixedI128<U119>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -62,10 +45,7 @@ where
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
-    FS: FixedSigned
-        + LossyFrom<FixedI32<U31>>
-        + LossyFrom<FixedI128<U119>>
-        + LossyFrom<FixedI128<U127>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127> + LossyFrom<FixedI128<U127>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -106,10 +86,8 @@ where
 impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
-    FS: FixedSigned
-        + LossyFrom<FixedI32<U31>>
-        + LossyFrom<FixedI128<U119>>
-        + LossyFrom<FixedI128<U127>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127> + LossyFrom<FixedI128<U127>> + PartialOrd<I9F23>,
+    FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign, 
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -145,18 +123,19 @@ where
             return Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance");
         };
 
-        let mut exponents: Vec<FU> = Vec::with_capacity(asset_balances.len());
-        let mut biggest_exponent: FU = FU::from_num(0u8);
+        let mut exponents: Vec<FS> = Vec::with_capacity(asset_balances.len());
+        let mut biggest_exponent: FS = FS::from_num(0u8);
 
         for elem in &asset_balances {
             let exponent = if let Some(res) = elem.checked_div(denominator) {
-                res
+                convert_to_signed::<FU, FS>(res)?
             } else {
                 // Highly unlikely
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: expontent_i = asset_balance_i / denominator");
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: expontent_i = \
+                            asset_balance_i / denominator");
             };
 
-            if biggest_exponent < exponent {
+            if exponent > biggest_exponent {
                 biggest_exponent = exponent;
             }
 
@@ -165,6 +144,25 @@ where
         }
 
         // Determine which strategy to use.
+        let biggest_exp_times_log2e = if let Some(res) = self.config.log2_e.checked_mul(biggest_exponent) {
+            res
+        } else {
+            // Highly unlikely
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: log2_e * biggest_exponent");
+        };
+
+        if FS::max_value().int().to_num::<u128>() < asset_balances.len() as u128 {
+            return Err("[RikidoSigmoidMV] Number of assets does not fit in FS")
+        }
+
+        let log2e_number_of_assets: FS = if let Ok(res) = log2::<FS, FS>(FS::from_num(asset_balances.len())) {
+            res
+        } else {
+            // Impossible, since the cost functions checks if elements are present in asset_balances
+            return Err("[RikiddoSigmoidMV] log2(number_of_assets), number_of_assets <= 0");
+        };
+        
+        //let required_bits = if let Some(res) = biggest_exp_times_log2e.checked_add()
         // sum over every element
         // qi = current
         // sum over every element to calculate exponents (helper function)
@@ -184,13 +182,11 @@ where
     }
 }
 
+/*
 impl<FU, FS, FE, MA> RikiddoMV for RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
-    FS: FixedSigned
-        + LossyFrom<FixedI32<U31>>
-        + LossyFrom<FixedI128<U119>>
-        + LossyFrom<FixedI128<U127>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127> + LossyFrom<FixedI128<U127>>,
     FE: Sigmoid<FIN = FS, FOUT = FU>,
     MA: MarketAverage<FU = FU>,
 {
@@ -220,3 +216,4 @@ where
         Ok(None)
     }
 }
+*/
