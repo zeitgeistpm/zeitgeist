@@ -97,7 +97,6 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
         max_allowed_error(64)
     );
 
-    // TODO: Test min_revenue
     fee.config.min_revenue = <FixedU128<U64>>::from_num(1u64 << 63);
     assert_eq!(fee.calculate(r_fixed)?, fee.config.min_revenue);
     Ok(())

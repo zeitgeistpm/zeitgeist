@@ -24,17 +24,16 @@ pub struct RikiddoConfig<FI: Fixed> {
 }
 
 impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> RikiddoConfig<FS> {
-    pub fn new(initial_fee: FS) -> Result<Self, &'static str> {
-        Ok(Self { initial_fee, log2_e: FS::lossy_from(LOG2_E) })
+    pub fn new(initial_fee: FS) -> Self {
+        Self { initial_fee, log2_e: FS::lossy_from(LOG2_E) }
     }
 }
 
-// TODO: test
 impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> Default for RikiddoConfig<FS> {
     fn default() -> Self {
         let converted = convert_to_signed::<FixedU32<U32>, FixedI32<U31>>(INITIAL_FEE).unwrap();
         // Potentially dangerous unwrap(), should be impossible to fail (tested).
-        Self::new(converted.lossy_into()).unwrap()
+        Self::new(converted.lossy_into())
     }
 }
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
@@ -97,7 +96,35 @@ where
         self.fees.calculate(ratio_signed)
     }
 
-    fn optimized_cost_strategy(
+    pub(crate) fn default_cost_strategy(&self, exponents: &Vec<FS>) -> Result<FS, &'static str> {
+        let mut acc: FS = FS::from_num(0u8);
+
+        for elem in exponents {
+            let exp_value: FS = if let Ok(res) = exp::<FS, FS>(*elem) {
+                res
+            } else {
+                return Err(
+                    "[RikiddoSigmoidMV] Error during calculation: exp(i) in ln sum_i(exp^i)"
+                );
+            };
+
+            if let Some(res) = acc.checked_add(exp_value) {
+                acc = res;
+            } else {
+                // Impossible (this function should only be called when the sum does fit into FS)
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_i(e^i)");
+            };
+        }
+
+        if let Ok(res) = ln::<FS, FS>(acc) {
+            return Ok(res);
+        } else {
+            // Impossible to reach, unless the "exponents" vector is empty
+            return Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0");
+        };
+    }
+
+    pub(crate) fn optimized_cost_strategy(
         &self,
         exponents: &Vec<FS>,
         biggest_exponent: &FS,
@@ -154,31 +181,6 @@ where
             // Highly unlikely
             return Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + \
                         ln(exp_sum) (optimized)");
-        };
-    }
-
-    fn default_cost_strategy(&self, exponents: &Vec<FS>) -> Result<FS, &'static str> {
-        let mut acc: FS = FS::from_num(0u8);
-
-        for elem in exponents {
-            let exp_value: FS = if let Ok(res) = exp::<FS, FS>(*elem) {
-                res
-            } else {
-                return Err("Error during calculation: exp(i) in ln sum_i(exp^i)");
-            };
-
-            if let Some(res) = acc.checked_add(exp_value) {
-                acc = res;
-            } else {
-                // Impossible (this function should only be called when the sum does fit into FS)
-                return Err("Overflow during calculation: sum_i(e^i)");
-            };
-        }
-
-        if let Ok(res) = ln::<FS, FS>(acc) {
-            return Ok(res);
-        } else {
-            return Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0");
         };
     }
 }
@@ -278,7 +280,7 @@ where
                 return Err("Overflow during calculation: biggest_exp * log2(e) + log2(num_assets)");
             };
 
-        let required_bits: u128 =
+        let required_bits_minus_one: u128 =
             if let Some(res) = log2e_times_biggest_exp_plus_log2_num_assets.checked_ceil() {
                 res.to_num()
             } else {
@@ -286,6 +288,13 @@ where
                 return Err("[RikiddoSigmoidMV] Overflow during calculation: ceil(biggest_exp * \
                             log2(e) + log2(num_assets))");
             };
+
+        let required_bits = if let Some(res) = required_bits_minus_one.checked_add(1) {
+            res
+        } else {
+            // Highly unlikely
+            return Err("Overflow during calculation: required_bits_minus_one + 1");
+        };
 
         let ln_sum_e: FS;
 
