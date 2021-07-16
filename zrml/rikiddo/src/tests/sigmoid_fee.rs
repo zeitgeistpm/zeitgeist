@@ -15,12 +15,14 @@ fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>, FixedU128<U6
     let m = 0.01f64;
     let n = 0f64;
     let p = 2.0f64;
+    let initial_fee = 0.005;
     let min_revenue = 0.0035;
 
     let config = FeeSigmoidConfig {
         m: <FixedI128<U64>>::from_num(m),
         n: <FixedI128<U64>>::from_num(n),
         p: <FixedI128<U64>>::from_num(p),
+        initial_fee: <FixedI128<U64>>::from_num(initial_fee),
         min_revenue: <FixedU128<U64>>::from_num(min_revenue),
     };
 
@@ -80,7 +82,7 @@ fn fee_sigmoid_overflow_numerator_div_denominator() {
 fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
     let r = 1.5f64;
     let (mut fee, m, n, p) = init_default_sigmoid_fee_struct();
-    let fee_f64 = sigmoid_fee(m, n, p, r);
+    let fee_f64 = fee.config.initial_fee.to_num::<f64>() + sigmoid_fee(m, n, p, r);
     let r_fixed = <FixedI128<U64>>::from_num(r);
     let fee_fixed = fee.calculate(r_fixed)?;
     let fee_fixed_f64: f64 = fee_fixed.to_num();

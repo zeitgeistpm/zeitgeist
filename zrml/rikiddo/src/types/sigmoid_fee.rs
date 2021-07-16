@@ -1,30 +1,25 @@
 use crate::{
-    constants::{M, MINIMAL_REVENUE, N, P},
+    constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
     types::convert_to_unsigned,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{
-    traits::{FixedSigned, FixedUnsigned, LossyFrom, LossyInto},
-    transcendental::sqrt,
-    types::{
-        extra::{U128, U24, U32},
-        I9F23,
-    },
-    FixedI32, FixedU128, FixedU32,
-};
+use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, traits::{FixedSigned, FixedUnsigned, LossyFrom, LossyInto}, transcendental::sqrt, types::{I9F23, extra::{U127, U128, U24, U32}}};
+
+use super::convert_to_signed;
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned, FU: FixedUnsigned> {
     pub m: FS,
     pub p: FS,
     pub n: FS,
+    pub initial_fee: FS,
     pub min_revenue: FU,
 }
 
 impl<FS, FU> Default for FeeSigmoidConfig<FS, FU>
 where
-    FS: FixedSigned + LossyFrom<FixedI32<U24>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
 {
     fn default() -> Self {
@@ -32,6 +27,8 @@ where
             m: M.lossy_into(),
             p: P.lossy_into(),
             n: N.lossy_into(),
+            // Only case this can panic is, when INITIAL_FEE is >= 1.0 and FS integer bits < 2
+            initial_fee: convert_to_signed::<FU, FS>(INITIAL_FEE.lossy_into()).unwrap(),
             min_revenue: MINIMAL_REVENUE.lossy_into(),
         }
     }
@@ -40,7 +37,7 @@ where
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct FeeSigmoid<FS, FU>
 where
-    FS: FixedSigned + LossyFrom<FixedI32<U24>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
 {
     pub config: FeeSigmoidConfig<FS, FU>,
@@ -48,7 +45,7 @@ where
 
 impl<FS, FU> FeeSigmoid<FS, FU>
 where
-    FS: FixedSigned + LossyFrom<FixedI32<U24>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
 {
     pub fn new(config: FeeSigmoidConfig<FS, FU>) -> Self {
@@ -58,7 +55,7 @@ where
 
 impl<FS, FU> Sigmoid for FeeSigmoid<FS, FU>
 where
-    FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>>,
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>> + PartialOrd<FS>,
 {
     type FIN = FS;
@@ -99,10 +96,16 @@ where
             return Err("[FeeSigmoid] Overflow during calculation: numerator / denominator");
         };
 
-        if self.config.min_revenue >= sigmoid_result {
+        let result = if let Some(res) = sigmoid_result.checked_add(self.config.initial_fee) {
+            res
+        } else {
+            return Err("[FeeSigmoid] initial_fee + sigmoid_result");
+        };
+
+        if self.config.min_revenue >= result {
             return Ok(self.config.min_revenue);
         }
 
-        convert_to_unsigned(sigmoid_result)
+        convert_to_unsigned(result)
     }
 }

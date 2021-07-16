@@ -9,7 +9,7 @@ use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
     transcendental::{exp, ln, log2},
     types::{
-        extra::{U119, U127, U128, U31, U32},
+        extra::{U127, U128, U31, U32},
         I9F23, U1F127,
     },
     FixedI128, FixedI32, FixedU128, FixedU32,
@@ -208,9 +208,7 @@ where
         if asset_balances.len() == 0 {
             return Err("[RikiddoSigmoidMV] No asset balances provided");
         };
-
-        // get fee (write helper functions) (min(w, (f+n(r))))
-        // TODO: add initial fee to get_fee result (or incorporate it in get_fee)
+        
         let fee = self.get_fee()?;
         let mut total_balance = FU::from_num(0u8);
 
