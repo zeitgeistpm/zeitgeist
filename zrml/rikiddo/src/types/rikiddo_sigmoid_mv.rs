@@ -100,9 +100,61 @@ where
     fn optimized_cost_strategy(
         &self,
         exponents: &Vec<FS>,
-        biggest_exponents: &FS,
+        biggest_exponent: &FS,
     ) -> Result<FS, &'static str> {
-        Err("unimplemented!")
+        let mut biggest_exponent_used = false;
+
+        if FS::max_value().int().to_num::<u128>() < 1u128 {
+            // Highly unlikely (requires that balances only have fractional bits)
+            return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
+        }
+
+        let mut exp_sum = FS::from_num(1u8);
+        let result = *biggest_exponent;
+
+        for elem in exponents {
+            if !biggest_exponent_used && elem == biggest_exponent {
+                biggest_exponent_used = true;
+                continue;
+            }
+
+            let exponent = if let Some(res) = elem.checked_sub(*biggest_exponent) {
+                res
+            } else {
+                return Err("[RikiddoSigmoidFee] Overflow during calculation: current_exponent - \
+                            biggest_exponent");
+            };
+
+            let e_power_exponent = if let Ok(res) = exp::<FS, FS>(exponent) {
+                res
+            } else {
+                // In this case the result is zero (or is too small to fit) and can be ignored
+                continue;
+            };
+
+            if let Some(res) = exp_sum.checked_add(e_power_exponent) {
+                exp_sum = res;
+            } else {
+                // Highly unlikely
+                return Err("[RikiddoSigmoidFee] Overflow during calculation: sum_i(e^(i - \
+                            biggest_exponent))");
+            };
+        }
+
+        let ln_exp_sum = if let Ok(res) = ln::<FS, FS>(exp_sum) {
+            res
+        } else {
+            // Impossible
+            return Err("[RikiddoSigmoidMV] ln(exp_sum) (optimized), exp_sum <= 0");
+        };
+
+        if let Some(res) = result.checked_add(ln_exp_sum) {
+            return Ok(res);
+        } else {
+            // Highly unlikely
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + \
+                        ln(exp_sum) (optimized)");
+        };
     }
 
     fn default_cost_strategy(&self, exponents: &Vec<FS>) -> Result<FS, &'static str> {
@@ -211,7 +263,8 @@ where
             return Err("[RikidoSigmoidMV] Number of assets does not fit in FS");
         }
 
-        let log2e_number_of_assets: FS =
+        // Panic impossible
+        let log2_number_of_assets: FS =
             if let Ok(res) = log2::<FS, FS>(FS::from_num(asset_balances.len())) {
                 res
             } else {
@@ -219,8 +272,8 @@ where
                 return Err("[RikiddoSigmoidMV] log2(number_of_assets), number_of_assets <= 0");
             };
 
-        let log2e_times_biggest_exp_plus_log2e_num_assets =
-            if let Some(res) = log2e_number_of_assets.checked_add(biggest_exp_times_log2e) {
+        let log2e_times_biggest_exp_plus_log2_num_assets =
+            if let Some(res) = log2_number_of_assets.checked_add(biggest_exp_times_log2e) {
                 res
             } else {
                 // Highly unlikely
@@ -228,7 +281,7 @@ where
             };
 
         let required_bits: u128 =
-            if let Some(res) = log2e_times_biggest_exp_plus_log2e_num_assets.checked_ceil() {
+            if let Some(res) = log2e_times_biggest_exp_plus_log2_num_assets.checked_ceil() {
                 res.to_num()
             } else {
                 // Highly unlikely
@@ -236,7 +289,7 @@ where
                             log2(e) + log2(num_assets))");
             };
 
-        let mut ln_sum_e: FS;
+        let ln_sum_e: FS;
 
         // Select strategy to calculate ln(sum_i(e^i))
         if required_bits > FS::int_nbits() as u128 {
@@ -245,14 +298,12 @@ where
             ln_sum_e = self.default_cost_strategy(&exponents)?;
         }
 
-        //let required_bits = if let Some(res) = biggest_exp_times_log2e.checked_add()
-        // sum over every element
-        // qi = current
-        // sum over every element to calculate exponents (helper function)
-        // Decide strategy (normal (faster) or overflow-failsafe)
-        // total_result += ln(sum(e^results))
-        // sum end: total_result *= fee
-        Err("Unimplemented")
+        if let Some(res) = denominator.checked_mul(convert_to_unsigned(ln_sum_e)?) {
+            return Ok(res);
+        } else {
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: fee * \
+                        total_asset_balance * ln(sum_i(e^i))");
+        }
     }
 
     /// Return price P_i(q) for asset q_i in q
