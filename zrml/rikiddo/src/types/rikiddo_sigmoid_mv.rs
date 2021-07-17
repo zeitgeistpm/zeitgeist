@@ -132,7 +132,7 @@ where
         let mut biggest_exponent_used = false;
 
         if FS::max_value().int().to_num::<u128>() < 1u128 {
-            // Highly unlikely (requires that balances only have fractional bits)
+            // Impossible due to trait bounds (at least 1 sign bit and 8 integer bits)
             return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
         }
 
@@ -148,6 +148,7 @@ where
             let exponent = if let Some(res) = elem.checked_sub(*biggest_exponent) {
                 res
             } else {
+                // Should be impossible
                 return Err("[RikiddoSigmoidFee] Overflow during calculation: current_exponent - \
                             biggest_exponent");
             };
