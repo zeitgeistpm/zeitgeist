@@ -20,9 +20,10 @@ use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
     pub initial_fee: FI,
-    log2_e: FI,
+    pub(crate) log2_e: FI,
 }
 
+// TODO: use initial_fee from fee_sigmoid struct.
 impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> RikiddoConfig<FS> {
     pub fn new(initial_fee: FS) -> Self {
         Self { initial_fee, log2_e: FS::lossy_from(LOG2_E) }
@@ -202,12 +203,12 @@ where
     type FU = FU;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(&self, asset_balances: Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str> {
+    fn all_prices(&self, asset_balances: &Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str> {
         Err("Unimplemented")
     }
 
     /// Return cost C(q) for all assets in q
-    fn cost(&self, asset_balances: Vec<Self::FU>) -> Result<Self::FU, &'static str> {
+    fn cost(&self, asset_balances: &Vec<Self::FU>) -> Result<Self::FU, &'static str> {
         if asset_balances.len() == 0 {
             return Err("[RikiddoSigmoidMV] No asset balances provided");
         };
@@ -215,7 +216,7 @@ where
         let fee = self.get_fee()?;
         let mut total_balance = FU::from_num(0u8);
 
-        for elem in &asset_balances {
+        for elem in asset_balances {
             if let Some(res) = total_balance.checked_add(*elem) {
                 total_balance = res;
             } else {
@@ -233,7 +234,7 @@ where
         let mut exponents: Vec<FS> = Vec::with_capacity(asset_balances.len());
         let mut biggest_exponent: FS = FS::from_num(0u8);
 
-        for elem in &asset_balances {
+        for elem in asset_balances {
             let exponent = if let Some(res) = elem.checked_div(denominator) {
                 convert_to_signed::<FU, FS>(res)?
             } else {
@@ -317,8 +318,8 @@ where
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
-        asset_in_question_balance: Self::FU,
-        asset_balances: Vec<Self::FU>,
+        asset_in_question_balance: &Self::FU,
+        asset_balances: &Vec<Self::FU>,
     ) -> Result<Self::FU, &'static str> {
         Err("Unimplemented")
     }

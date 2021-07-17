@@ -7,7 +7,7 @@ use substrate_fixed::{
 use super::{ema_market_volume::ema_create_test_struct, max_allowed_error};
 use crate::{
     constants::INITIAL_FEE,
-    traits::{MarketAverage, RikiddoMV},
+    traits::{Lmsr, MarketAverage, RikiddoMV},
     types::{
         convert_to_signed, EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoSigmoidMV,
         TimestampedVolume,
@@ -196,37 +196,6 @@ fn rikiddo_optimized_ln_sum_exp_strategy_result_overflow() {
     );
 }
 
-/*
-#[test]
-fn rikiddo_default_ln_sum_exp_strategy_returns_correct_result() -> Result<(), &'static str>{
-    let rikiddo = Rikiddo::default();
-    let exponent0 = 3.5f64;
-    let exponent1 = 4.5f64;
-    let exponent2 = 5.5f64;
-    let param_f64 = vec![exponent0, exponent1, exponent2];
-    let param_fixed = vec![
-        <FixedI128<U64>>::from_num(exponent0),
-        <FixedI128<U64>>::from_num(exponent1),
-        <FixedI128<U64>>::from_num(exponent2),
-    ];
-    let result_fixed = rikiddo.default_cost_strategy(&param_fixed)?;
-    let result_f64: f64 = ln_exp_sum(&param_f64);
-    let result_fixed_f64: f64 = result_fixed.to_num();
-    let difference_abs = (result_f64 - result_fixed_f64).abs();
-    // The fixed calculation seems to be quite errorneous: Difference = 0.00000007886511177446209
-    assert!(
-        difference_abs <= 0.000001f64,
-        "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
-        result_fixed_f64,
-        result_f64,
-        difference_abs,
-        max_allowed_error(64)
-    );
-
-    Ok(())
-}
-*/
-
 #[test]
 fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static str> {
     let rikiddo = Rikiddo::default();
@@ -258,7 +227,6 @@ fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static
     result_fixed = rikiddo.optimized_cost_strategy(&param_fixed, &param_fixed[2])?;
     result_fixed_f64 = result_fixed.to_num();
     difference_abs = (result_f64 - result_fixed_f64).abs();
-    // The fixed calculation seems to be quite errorneous: Difference = 0.00000007886511177446209
     assert!(
         difference_abs <= 0.00000001f64,
         "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
@@ -269,4 +237,87 @@ fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static
     );
 
     Ok(())
+}
+
+#[test]
+fn rikiddo_cost_function_rejects_empty_list() {
+    let rikiddo = Rikiddo::default();
+    assert_err!(rikiddo.cost(&vec![]), "[RikiddoSigmoidMV] No asset balances provided");
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_summation_of_balances() {
+    let rikiddo = Rikiddo::default();
+    let exponent = <FixedU128<U64>>::from_num(u64::MAX);
+    let param = vec![exponent, exponent];
+    assert_err!(
+        rikiddo.cost(&param),
+        "[RikiddoSigmoidMV] Overflow during summation of asset balances"
+    );
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_fee_times_balance_sum() {
+    let mut rikiddo = Rikiddo::default();
+    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(2);
+    let param = <FixedU128<U64>>::from_num(u64::MAX);
+    assert_err!(
+        rikiddo.cost(&vec![param]),
+        "[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance"
+    );
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_calculation_of_exponent() {
+    let mut rikiddo = Rikiddo::default();
+    rikiddo.config.initial_fee = <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0001);
+    let param = <FixedU128<U64>>::from_num(u64::MAX);
+    assert_err!(
+        rikiddo.cost(&vec![param]),
+        "[RikiddoSigmoidMV] Overflow during calculation: expontent_i = \
+        asset_balance_i / denominator"
+    );
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_log2e_times_biggest_exponent() {
+    let mut rikiddo = Rikiddo::default();
+    rikiddo.config.initial_fee = <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0003);
+    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
+    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
+    println!("{} * {}", rikiddo.config.initial_fee, param);
+    assert_err!(
+        rikiddo.cost(&vec![param]),
+        "[RikiddoSigmoidMV] Overflow during calculation: log2_e * biggest_exponent"
+    );
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_calculation_of_required_bits() {
+    let rikiddo = Rikiddo::default();
+    // TODO: implement
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_ceil_required_bits() {
+    let rikiddo = Rikiddo::default();
+    // TODO: implement
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_ceil_required_bits_plus_one() {
+    let rikiddo = Rikiddo::default();
+    // TODO: implement
+}
+
+#[test]
+fn rikiddo_cost_function_overflow_during_calculation_of_result() {
+    let rikiddo = Rikiddo::default();
+    // TODO: implement
+}
+
+#[test]
+fn rikiddo_cost_function_correct_result() {
+    let rikiddo = Rikiddo::default();
+    // TODO: implement
 }

@@ -36,16 +36,16 @@ pub trait Lmsr {
     type FU: FixedUnsigned;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(&self, asset_balances: Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str>;
+    fn all_prices(&self, asset_balances: &Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str>;
 
     /// Return cost C(q) for all assets in q
-    fn cost(&self, asset_balances: Vec<Self::FU>) -> Result<Self::FU, &'static str>;
+    fn cost(&self, asset_balances: &Vec<Self::FU>) -> Result<Self::FU, &'static str>;
 
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
-        asset_in_question_balance: Self::FU,
-        asset_balances: Vec<Self::FU>,
+        asset_in_question_balance: &Self::FU,
+        asset_balances: &Vec<Self::FU>,
     ) -> Result<Self::FU, &'static str>;
 }
 
