@@ -114,7 +114,6 @@ fn rikiddo_get_fee_returns_the_correct_result() {
     assert_ne!(rikiddo.ma_long.get(), None);
     // We don't want to test the exact result (that is the responsibility of the fee module),
     // but rather if rikiddo toggles properly between initial fee and the calculated fee
-    println!("{}", rikiddo.get_fee().unwrap());
     assert_ne!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
 }
 
@@ -285,7 +284,6 @@ fn rikiddo_cost_function_overflow_during_log2e_times_biggest_exponent() {
     rikiddo.config.initial_fee = <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0003);
     rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
     let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
-    println!("{} * {}", rikiddo.config.initial_fee, param);
     assert_err!(
         rikiddo.cost(&vec![param]),
         "[RikiddoSigmoidMV] Overflow during calculation: log2_e * biggest_exponent"
@@ -293,21 +291,29 @@ fn rikiddo_cost_function_overflow_during_log2e_times_biggest_exponent() {
 }
 
 #[test]
-fn rikiddo_cost_function_overflow_during_calculation_of_required_bits() {
-    let rikiddo = Rikiddo::default();
-    // TODO: implement
+fn rikiddo_cost_function_overflow_during_calculation_of_required_bits_minus_one() {
+    let mut rikiddo = Rikiddo::default();
+    rikiddo.config.initial_fee =  <FixedI128<U64>>::from_num(1);
+    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
+    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
+    let zero = <FixedU128<U64>>::from_num(0);
+    assert_err!(
+        rikiddo.cost(&vec![param, zero]),
+        "[RikiddoSigmoidMV] Overflow during calculation: biggest_exp * log2(e) + log2(num_assets)"
+    );
 }
 
 #[test]
-fn rikiddo_cost_function_overflow_during_ceil_required_bits() {
-    let rikiddo = Rikiddo::default();
-    // TODO: implement
-}
-
-#[test]
-fn rikiddo_cost_function_overflow_during_ceil_required_bits_plus_one() {
-    let rikiddo = Rikiddo::default();
-    // TODO: implement
+fn rikiddo_cost_function_overflow_during_ceil_required_bits_minus_one() {
+    let mut rikiddo = Rikiddo::default();
+    rikiddo.config.initial_fee =  <FixedI128<U64>>::from_num(1);
+    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX) + <FixedI128<U64>>::from_num(0.1);
+    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
+    assert_err!(
+        rikiddo.cost(&vec![param]),
+        "[RikiddoSigmoidMV] Overflow during calculation: ceil(biggest_exp * \
+            log2(e) + log2(num_assets))"
+    );
 }
 
 #[test]

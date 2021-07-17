@@ -279,7 +279,7 @@ where
                 res
             } else {
                 // Highly unlikely
-                return Err("Overflow during calculation: biggest_exp * log2(e) + log2(num_assets)");
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exp * log2(e) + log2(num_assets)");
             };
 
         let required_bits_minus_one: u128 =
@@ -294,8 +294,8 @@ where
         let required_bits = if let Some(res) = required_bits_minus_one.checked_add(1) {
             res
         } else {
-            // Highly unlikely
-            return Err("Overflow during calculation: required_bits_minus_one + 1");
+            // Overflow impossible
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: required_bits_minus_one + 1");
         };
 
         let ln_sum_e: FS;
