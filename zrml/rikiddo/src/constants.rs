@@ -1,7 +1,7 @@
 use crate::types::Timespan;
 use substrate_fixed::{
     types::extra::{U24, U32},
-    FixedU32,
+    FixedI32, FixedU32,
 };
 
 // --- Default configuration for EmaConfig struct ---
@@ -28,12 +28,12 @@ pub const MINIMAL_REVENUE: FixedU32<U32> = <FixedU32<U32>>::from_bits(0x00E5_604
 
 /// m value
 /// 0.01
-pub const M: FixedU32<U24> = <FixedU32<U24>>::from_bits(0x0002_8F5C);
+pub const M: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0002_8F5C);
 
 /// p value
 /// 2.0
-pub const P: FixedU32<U24> = <FixedU32<U24>>::from_bits(0x0200_0000);
+pub const P: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0200_0000);
 
 /// n value
 /// 0.0
-pub const N: FixedU32<U24> = <FixedU32<U24>>::from_bits(0x0000_0000);
+pub const N: FixedI32<U24> = <FixedI32<U24>>::from_bits(0x0000_0000);

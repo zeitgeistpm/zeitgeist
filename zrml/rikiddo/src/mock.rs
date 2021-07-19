@@ -34,7 +34,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        LsdLmsr: zrml_rikiddo::{Pallet, Storage},
+        Rikiddo: zrml_rikiddo::{Pallet, Storage},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
     }

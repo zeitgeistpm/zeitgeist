@@ -1,4 +1,4 @@
-use crate::types::{EmaVolumeConfig, FeeSigmoidConfig};
+use crate::types::{EmaVolumeConfig, FeeSigmoidConfig, TimestampedVolume};
 use frame_support::{
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     Parameter,
@@ -6,44 +6,44 @@ use frame_support::{
 use parity_scale_codec::Codec;
 use sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_std::fmt::Debug;
-use substrate_fixed::traits::FixedUnsigned;
+use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
 
-pub trait LsdlmsrFee<F: FixedUnsigned> {
+pub trait Sigmoid<F: Fixed> {
     /// Calculate fee
-    fn calculate(r: F) -> F;
+    fn calculate(&self, r: F) -> Result<F, &'static str>;
 }
 
-pub trait MarketAverage<F: FixedUnsigned> {
-    /// Update market volume
-    fn update(volume: F);
+pub trait MarketAverage<F: Fixed> {
+    /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume
+    fn get(&self) -> Option<F>;
 
     /// Clear market data
-    fn clear();
+    fn clear(&mut self);
 
-    /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn calculate() -> Option<F>;
+    /// Update market volume
+    fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str>;
 }
 
-pub trait Lmsr<F: FixedUnsigned> {
+pub trait Lmsr<F: Fixed> {
+    /// Return price P_i(q) for all assets in q
+    fn all_prices(asset_balances: Vec<F>) -> Result<Vec<F>, &'static str>;
+
     /// Return cost C(q) for all assets in q
-    fn cost(asset_balances: Vec<F>) -> F;
+    fn cost(asset_balances: Vec<F>) -> Result<F, &'static str>;
 
     /// Return price P_i(q) for asset q_i in q
-    fn price(asset_in_question_balance: F, asset_balances: Vec<F>) -> F;
-
-    /// Return price P_i(q) for all assets in q
-    fn all_prices(asset_balances: Vec<F>) -> Vec<F>;
+    fn price(asset_in_question_balance: F, asset_balances: Vec<F>) -> Result<F, &'static str>;
 }
 
-pub trait LsdlmsrMV<F: FixedUnsigned>: Lmsr<F> {
+pub trait RikiddoMV<F: Fixed>: Lmsr<F> {
     /// Clear market data
-    fn clear();
+    fn clear(&mut self);
 
     /// Update market data
-    fn update(volume: F);
+    fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str>;
 }
 
-pub trait LsdlmsrSigmoidMVPallet {
+pub trait RikiddoSigmoidMVPallet<FS: FixedSigned, FU: FixedUnsigned> {
     type Balance: Parameter
         + Member
         + AtLeast32BitUnsigned
@@ -57,18 +57,21 @@ pub trait LsdlmsrSigmoidMVPallet {
     fn clear(poolid: u128);
 
     /// Return cost C(q) for all assets in q
-    fn cost(poolid: u128, asset_balances: Vec<Self::Balance>) -> Self::Balance;
+    fn cost(
+        poolid: u128,
+        asset_balances: Vec<Self::Balance>,
+    ) -> Result<Self::Balance, &'static str>;
 
-    /// Create LSD-LMSR instance for specifc asset pool
+    /// Create Rikiddo instance for specifc asset pool
     fn create(
         poolid: u128,
-        fee_config: FeeSigmoidConfig,
-        ema_config_short: EmaVolumeConfig,
-        ema_config_long: EmaVolumeConfig,
+        fee_config: FeeSigmoidConfig<FS>,
+        ema_config_short: EmaVolumeConfig<FU>,
+        ema_config_long: EmaVolumeConfig<FU>,
         balance_one_unit: Self::Balance,
     );
 
-    /// Destroy Lsdlmsr instance
+    /// Destroy Rikiddo instance
     fn destroy(poolid: u128);
 
     /// Return price P_i(q) for asset q_i in q
@@ -76,11 +79,14 @@ pub trait LsdlmsrSigmoidMVPallet {
         poolid: u128,
         asset_in_question: Self::Balance,
         asset_balances: Vec<Self::Balance>,
-    ) -> Self::Balance;
+    ) -> Result<Self::Balance, &'static str>;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(poolid: u128, asset_balances: Vec<Self::Balance>) -> Vec<Self::Balance>;
+    fn all_prices(
+        poolid: u128,
+        asset_balances: Vec<Self::Balance>,
+    ) -> Result<Vec<Self::Balance>, &'static str>;
 
     /// Update market data
-    fn update(poolid: u128, volume: Self::Balance);
+    fn update(poolid: u128, volume: Self::Balance) -> Result<Option<Self::Balance>, &'static str>;
 }
