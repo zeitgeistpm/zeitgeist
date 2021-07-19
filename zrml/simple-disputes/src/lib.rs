@@ -7,17 +7,15 @@
 extern crate alloc;
 
 mod mock;
-mod resolution_counters;
 mod simple_disputes_pallet_api;
 mod tests;
 
 pub use pallet::*;
-pub use resolution_counters::ResolutionCounters;
-pub use simple_disputes_pallet_api::DisputeApi;
+pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{DisputeApi, ResolutionCounters};
+    use crate::SimpleDisputesPalletApi;
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
@@ -30,9 +28,10 @@ mod pallet {
     use frame_system::ensure_signed;
     use sp_runtime::{DispatchError, SaturatedConversion};
     use zeitgeist_primitives::{
-        traits::{Swaps, ZeitgeistMultiReservableCurrency},
+        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, Market, MarketDispute, MarketStatus, MarketType, OutcomeReport, ScalarPosition,
+            Asset, Market, MarketDispute, MarketStatus, MarketType, OutcomeReport,
+            ResolutionCounters, ScalarPosition,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -131,15 +130,10 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
-    impl<T> DisputeApi for Pallet<T>
+    impl<T> SimpleDisputesPalletApi for Pallet<T>
     where
         T: Config,
     {
-        type AccountId = T::AccountId;
-        type BlockNumber = T::BlockNumber;
-        type Origin = T::Origin;
-        type MarketId = MarketIdOf<T>;
-
         // MarketIdPerDisputeBlock
 
         fn insert_market_id_per_dispute_block(
@@ -320,6 +314,31 @@ mod pallet {
             })
         }
 
+        // Migrations (Temporary)
+
+        fn dispute(
+            market_id: &Self::MarketId,
+        ) -> Option<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>> {
+            Disputes::<T>::get(market_id)
+        }
+
+        fn insert_dispute(
+            market_id: Self::MarketId,
+            dispute: Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>,
+        ) {
+            Disputes::<T>::insert(market_id, dispute);
+        }
+    }
+
+    impl<T> DisputeApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type AccountId = T::AccountId;
+        type BlockNumber = T::BlockNumber;
+        type Origin = T::Origin;
+        type MarketId = MarketIdOf<T>;
+
         fn on_dispute(
             origin: Self::Origin,
             market_id: Self::MarketId,
@@ -449,21 +468,6 @@ mod pallet {
             }
 
             Ok(())
-        }
-
-        // Migrations (Temporary)
-
-        fn dispute(
-            market_id: &Self::MarketId,
-        ) -> Option<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>> {
-            Disputes::<T>::get(market_id)
-        }
-
-        fn insert_dispute(
-            market_id: Self::MarketId,
-            dispute: Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>,
-        ) {
-            Disputes::<T>::insert(market_id, dispute);
         }
     }
 

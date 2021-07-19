@@ -3,11 +3,13 @@
 use arbitrary::Arbitrary;
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::types::{MarketCreation, MarketEnd, MultiHash, OutcomeReport};
+use zeitgeist_primitives::{
+    traits::DisputeApi,
+    types::{MarketCreation, MarketEnd, MultiHash, OutcomeReport},
+};
 use zrml_prediction_markets::mock::{
     ExtBuilder, Origin, PredictionMarkets, SimpleDisputes, System,
 };
-use zrml_simple_disputes::DisputeApi;
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();

@@ -85,14 +85,14 @@ mod pallet {
         DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        traits::{Swaps, ZeitgeistMultiReservableCurrency},
+        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
-            OutcomeReport, Report, ScalarPosition,
+            OutcomeReport, Report, ResolutionCounters, ScalarPosition,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
-    use zrml_simple_disputes::{DisputeApi, ResolutionCounters};
+    use zrml_simple_disputes::SimpleDisputesPalletApi;
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -738,7 +738,7 @@ mod pallet {
         >;
 
         /// Responsable for handling disputes
-        type SimpleDisputes: DisputeApi<
+        type SimpleDisputes: SimpleDisputesPalletApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,

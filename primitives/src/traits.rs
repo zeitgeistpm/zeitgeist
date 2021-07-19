@@ -1,3 +1,4 @@
 pub use crate::{
-    swaps::Swaps, zeitgeist_multi_reservable_currency::ZeitgeistMultiReservableCurrency,
+    dispute_api::DisputeApi, swaps::Swaps,
+    zeitgeist_multi_reservable_currency::ZeitgeistMultiReservableCurrency,
 };
