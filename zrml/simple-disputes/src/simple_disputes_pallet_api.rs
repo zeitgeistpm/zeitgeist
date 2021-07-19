@@ -1,15 +1,12 @@
-use crate::ResolutionCounters;
 use alloc::vec::Vec;
-use frame_support::dispatch::{DispatchError, DispatchResult};
-use zeitgeist_primitives::types::{Market, MarketDispute, OutcomeReport};
+use frame_support::dispatch::DispatchError;
+use zeitgeist_primitives::{
+    traits::DisputeApi,
+    types::{Market, MarketDispute, ResolutionCounters},
+};
 
 /// SimpleDisputes - Pallet Api
-pub trait DisputeApi {
-    type AccountId;
-    type BlockNumber;
-    type MarketId;
-    type Origin;
-
+pub trait SimpleDisputesPalletApi: DisputeApi {
     // MarketIdPerDisputeBlock
 
     /// Inserts a disputed market ids of a block into the storage
@@ -64,18 +61,6 @@ pub trait DisputeApi {
 
     /// The stored maximum number of disputes
     fn max_disputes() -> u32;
-
-    /// Disputes a reported outcome.
-    fn on_dispute(
-        origin: Self::Origin,
-        market_id: Self::MarketId,
-        outcome: OutcomeReport,
-    ) -> Result<[u32; 2], DispatchError>;
-
-    /// Manages markets resolutions moving all reported markets to resolved.
-    fn on_resolution<F>(now: Self::BlockNumber, cb: F) -> DispatchResult
-    where
-        F: FnMut(&Market<Self::AccountId, Self::BlockNumber>, ResolutionCounters);
 
     // Migrations (Temporary)
 

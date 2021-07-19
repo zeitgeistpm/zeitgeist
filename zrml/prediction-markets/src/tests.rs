@@ -10,13 +10,14 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::BASE,
+    traits::DisputeApi,
     types::{
         Asset, Market, MarketCreation, MarketEnd, MarketStatus, MultiHash, OutcomeReport,
         ScalarPosition,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
-use zrml_simple_disputes::DisputeApi;
+use zrml_simple_disputes::SimpleDisputesPalletApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
     let mut metadata = [byte; 50];

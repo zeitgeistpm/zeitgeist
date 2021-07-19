@@ -9,7 +9,7 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
     };
     use zeitgeist_primitives::types::{Market, MarketDispute, PoolId};
     use zrml_market_commons::MarketCommonsPalletApi;
-    use zrml_simple_disputes::DisputeApi;
+    use zrml_simple_disputes::SimpleDisputesPalletApi;
 
     const DISPUTES: &[u8] = b"Disputes";
     const MARKET_COUNT: &[u8] = b"MarketCount";

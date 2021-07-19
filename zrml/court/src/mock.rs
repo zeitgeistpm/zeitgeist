@@ -15,13 +15,15 @@ use zeitgeist_primitives::{
 };
 
 pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
 
 type Block = BlockTest<Runtime>;
 type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
-    pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
     pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
+    pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
+    pub const StakeWeight: u128 = 2 * BASE;
 }
 
 construct_runtime!(
@@ -40,6 +42,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type Event = ();
+    type StakeWeight = StakeWeight;
     type MarketCommons = MarketCommons;
 }
 
@@ -92,7 +95,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, 1_000 * BASE)] }
+        Self { balances: vec![(ALICE, 1_000 * BASE), (BOB, 1_000 * BASE)] }
     }
 }
 
