@@ -1,8 +1,5 @@
 use frame_support::assert_err;
-use substrate_fixed::{
-    types::extra::{U120, U127, U128, U32, U64},
-    FixedI128, FixedU128,
-};
+use substrate_fixed::{FixedI128, FixedU128, traits::ToFixed, types::extra::{U120, U127, U128, U32, U64}};
 
 use super::{ema_market_volume::ema_create_test_struct, max_allowed_error};
 use crate::{
@@ -23,6 +20,12 @@ type Rikiddo = RikiddoSigmoidMV<
 
 fn ln_exp_sum(exponents: &Vec<f64>) -> f64 {
     exponents.iter().fold(0f64, |acc, val| acc + val.exp()).ln()
+}
+
+fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
+    let fee_times_sum = fee * balances.iter().sum::<f64>();
+    let exponents = balances.iter().map(|e| e / fee_times_sum).collect();
+    fee_times_sum * ln_exp_sum(&exponents)
 }
 
 #[test]
@@ -222,7 +225,7 @@ fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static
         max_allowed_error(64)
     );
 
-    // Evaluate teh result of the optimize cost strategy
+    // Evaluate the result of the optimize cost strategy
     result_fixed = rikiddo.optimized_cost_strategy(&param_fixed, &param_fixed[2])?;
     result_fixed_f64 = result_fixed.to_num();
     difference_abs = (result_f64 - result_fixed_f64).abs();
@@ -269,19 +272,21 @@ fn rikiddo_cost_function_overflow_during_fee_times_balance_sum() {
 #[test]
 fn rikiddo_cost_function_overflow_during_calculation_of_exponent() {
     let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee = <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0001);
+    rikiddo.config.initial_fee =
+        <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0001);
     let param = <FixedU128<U64>>::from_num(u64::MAX);
     assert_err!(
         rikiddo.cost(&vec![param]),
-        "[RikiddoSigmoidMV] Overflow during calculation: expontent_i = \
-        asset_balance_i / denominator"
+        "[RikiddoSigmoidMV] Overflow during calculation: expontent_i = asset_balance_i / \
+         denominator"
     );
 }
 
 #[test]
 fn rikiddo_cost_function_overflow_during_log2e_times_biggest_exponent() {
     let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee = <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0003);
+    rikiddo.config.initial_fee =
+        <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0003);
     rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
     let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
     assert_err!(
@@ -293,7 +298,7 @@ fn rikiddo_cost_function_overflow_during_log2e_times_biggest_exponent() {
 #[test]
 fn rikiddo_cost_function_overflow_during_calculation_of_required_bits_minus_one() {
     let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee =  <FixedI128<U64>>::from_num(1);
+    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(1);
     rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
     let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
     let zero = <FixedU128<U64>>::from_num(0);
@@ -306,24 +311,68 @@ fn rikiddo_cost_function_overflow_during_calculation_of_required_bits_minus_one(
 #[test]
 fn rikiddo_cost_function_overflow_during_ceil_required_bits_minus_one() {
     let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee =  <FixedI128<U64>>::from_num(1);
+    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(1);
     rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX) + <FixedI128<U64>>::from_num(0.1);
     let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
     assert_err!(
         rikiddo.cost(&vec![param]),
-        "[RikiddoSigmoidMV] Overflow during calculation: ceil(biggest_exp * \
-            log2(e) + log2(num_assets))"
+        "[RikiddoSigmoidMV] Overflow during calculation: ceil(biggest_exp * log2(e) + \
+         log2(num_assets))"
     );
 }
 
 #[test]
 fn rikiddo_cost_function_overflow_during_calculation_of_result() {
-    let rikiddo = Rikiddo::default();
-    // TODO: implement
+    let mut rikiddo = Rikiddo::default();
+    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(1);
+    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
+    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
+    assert_err!(
+        rikiddo.cost(&vec![param, param]),
+        "[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
+         ln(sum_i(e^i))"
+    );
 }
 
 #[test]
-fn rikiddo_cost_function_correct_result() {
-    let rikiddo = Rikiddo::default();
-    // TODO: implement
+fn rikiddo_cost_function_correct_result() -> Result<(), &'static str> {
+    let mut rikiddo = Rikiddo::default();
+    // Evaluate the cost using the optimized strategy
+    let balance0 = 3.5f64;
+    let balance1 = 3.6f64;
+    let balance2 = 3.7f64;
+    let param_f64 = vec![balance0, balance1, balance2];
+    let param_fixed = vec![
+        <FixedU128<U64>>::from_num(balance0),
+        <FixedU128<U64>>::from_num(balance1),
+        <FixedU128<U64>>::from_num(balance2),
+    ];
+    let mut result_fixed = rikiddo.cost(&param_fixed)?;
+    let mut result_f64: f64 = cost(rikiddo.config.initial_fee.to_num(), &param_f64);
+    let mut result_fixed_f64: f64 = result_fixed.to_num();
+    let mut difference_abs = (result_f64 - result_fixed_f64).abs();
+    assert!(
+        difference_abs <= 0.0000001f64,
+        "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
+        result_fixed_f64,
+        result_f64,
+        difference_abs,
+        max_allowed_error(64)
+    );
+
+    // Evaluate the cost using the default strategy
+    rikiddo.config.initial_fee = 0.1.to_fixed();
+    result_f64 = cost(rikiddo.config.initial_fee.to_num(), &param_f64);
+    result_fixed = rikiddo.cost(&param_fixed)?;
+    result_fixed_f64 = result_fixed.to_num();
+    difference_abs = (result_f64 - result_fixed_f64).abs();
+    assert!(
+        difference_abs <= 0.0000001f64,
+        "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
+        result_fixed_f64,
+        result_f64,
+        difference_abs,
+        max_allowed_error(64)
+    );
+    Ok(())
 }
