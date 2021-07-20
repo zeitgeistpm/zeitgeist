@@ -5,26 +5,35 @@ use crate::{
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
-    traits::{Fixed, FixedUnsigned, LossyFrom, LossyInto},
-    types::extra::U24,
-    FixedU32,
+    traits::{Fixed, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
+    types::extra::{U24, U64},
+    FixedU128, FixedU32,
 };
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaConfig<FI: Fixed> {
     pub ema_period: Timespan,
+    pub ema_period_estimate_after: Option<Timespan>,
     pub smoothing: FI,
 }
 
 impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaConfig<FU> {
-    pub fn new(ema_period: Timespan, smoothing: FU) -> Self {
-        Self { ema_period, smoothing }
+    pub fn new(
+        ema_period: Timespan,
+        mut ema_period_estimate_after: Option<Timespan>,
+        smoothing: FU,
+    ) -> Self {
+        if let Some(res) = ema_period_estimate_after {
+            ema_period_estimate_after = if res >= ema_period { None } else { Some(res) };
+        };
+
+        Self { ema_period, ema_period_estimate_after, smoothing }
     }
 }
 
 impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<FU> {
     fn default() -> Self {
-        Self::new(EMA_SHORT, SMOOTHING.lossy_into())
+        Self::new(EMA_SHORT, None, SMOOTHING.lossy_into())
     }
 }
 
@@ -209,12 +218,51 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                 // against the timestamp of the previous transaction.
                 let timestamp_sub_start_time = volume.timestamp.saturating_sub(self.start_time);
 
+                let mut comparison_value = if let Some(res) = self.config.ema_period_estimate_after
+                {
+                    res.to_seconds()
+                } else {
+                    self.config.ema_period.to_seconds()
+                };
+
                 // It should not state transit, if the amount of gathered data is too low.
                 // This would result in a multiplier that is greater than 1, which can lead to
                 // a negative ema. The amount depends on the size of the smoothing factor.
-                if timestamp_sub_start_time > self.config.ema_period.to_seconds() as u64
+                if timestamp_sub_start_time > comparison_value as u64
                     && (*self.volumes_per_period() + 1.into()) >= self.config.smoothing
                 {
+                    // We extrapolate the txs per period
+                    if let Some(_) = self.config.ema_period_estimate_after {
+                        // Ensure that we don't divide by 0
+                        if comparison_value == 0 {
+                            comparison_value = 1
+                        }
+
+                        let premature_time_fixed = <FixedU128<U64>>::from(comparison_value);
+                        let mature_time_fixed =
+                            <FixedU128<U64>>::from(self.config.ema_period.to_seconds());
+                        // Overflow impossible
+                        let estimate_ratio = mature_time_fixed.saturating_div(premature_time_fixed);
+
+                        if estimate_ratio.int() > FU::max_value().to_num::<u64>() {
+                            // Cannot occur as long as the From<U32> trait is required for FU and
+                            // Timespan::to_seconds() returns u32.
+                            return Err("[EmaMarketVolume] Estimate ratio does not fit in FU");
+                        }
+
+                        // Can't panic due to the previous check
+                        let estimate_ratio_fu: FU = estimate_ratio.to_fixed();
+
+                        self.volumes_per_period = if let Some(res) =
+                            self.volumes_per_period.checked_mul(estimate_ratio_fu)
+                        {
+                            res.saturating_ceil()
+                        } else {
+                            return Err("[EmaMarketVolume] Overflow during estimation of \
+                                        transactions per period");
+                        }
+                    }
+
                     // Overflow is impossible here.
                     self.multiplier = if let Some(res) = self
                         .config
@@ -226,6 +274,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                         return Err("[EmaMarketVolume] Overflow during calculation: multiplier = \
                                     smoothing / (1 + volumes_per_period)");
                     };
+
                     self.state = MarketVolumeState::DataCollected;
                     result = self.calculate_ema(&volume)?;
                 } else {

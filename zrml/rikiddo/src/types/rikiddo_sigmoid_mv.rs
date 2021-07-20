@@ -23,7 +23,6 @@ pub struct RikiddoConfig<FI: Fixed> {
     pub(crate) log2_e: FI,
 }
 
-// TODO: use initial_fee from fee_sigmoid struct.
 impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> RikiddoConfig<FS> {
     pub fn new(initial_fee: FS) -> Self {
         Self { initial_fee, log2_e: FS::lossy_from(LOG2_E) }
@@ -32,8 +31,8 @@ impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> RikiddoConf
 
 impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> Default for RikiddoConfig<FS> {
     fn default() -> Self {
-        let converted = convert_to_signed::<FixedU32<U32>, FixedI32<U31>>(INITIAL_FEE).unwrap();
         // Potentially dangerous unwrap(), should be impossible to fail (tested).
+        let converted = convert_to_signed::<FixedU32<U32>, FixedI32<U31>>(INITIAL_FEE).unwrap();
         Self::new(converted.lossy_into())
     }
 }

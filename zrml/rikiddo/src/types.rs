@@ -21,7 +21,7 @@ pub struct TimestampedVolume<F: Fixed> {
     pub volume: F,
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 pub enum Timespan {
     Seconds(u32),
     Minutes(u32),
@@ -33,11 +33,19 @@ pub enum Timespan {
 impl Timespan {
     pub fn to_seconds(&self) -> u32 {
         match *self {
+            // Any value that leads to a saturation is greater than
+            // 4294967295 seconds, which is about 136 years.
             Timespan::Seconds(d) => d,
-            Timespan::Minutes(d) => d * 60,
-            Timespan::Hours(d) => d * 60 * 60,
-            Timespan::Days(d) => u32::from(d) * 60 * 60 * 24,
-            Timespan::Weeks(d) => u32::from(d) * 60 * 60 * 24 * 7,
+            Timespan::Minutes(d) => d.saturating_mul(60),
+            Timespan::Hours(d) => d.saturating_mul(60).saturating_mul(60),
+            Timespan::Days(d) => {
+                u32::from(d).saturating_mul(60).saturating_mul(60).saturating_mul(24)
+            }
+            Timespan::Weeks(d) => u32::from(d)
+                .saturating_mul(60)
+                .saturating_mul(60)
+                .saturating_mul(24)
+                .saturating_mul(7),
         }
     }
 }

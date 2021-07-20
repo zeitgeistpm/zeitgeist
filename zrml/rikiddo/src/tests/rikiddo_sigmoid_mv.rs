@@ -1,5 +1,5 @@
 use frame_support::assert_err;
-use substrate_fixed::{FixedI128, FixedU128, traits::ToFixed, types::extra::{U120, U127, U128, U32, U64}};
+use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128, FixedU128};
 
 use super::{ema_market_volume::ema_create_test_struct, max_allowed_error};
 use crate::{
