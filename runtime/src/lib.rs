@@ -291,10 +291,7 @@ impl pallet_author_mapping::Config for Runtime {
     type DepositAmount = CollatorDeposit;
     type DepositCurrency = Balances;
     type Event = Event;
-
-    fn can_register(account: &<Self as frame_system::Config>::AccountId) -> bool {
-        ParachainStaking::is_candidate(account)
-    }
+    type WeightInfo = pallet_author_mapping::weights::SubstrateWeight<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
