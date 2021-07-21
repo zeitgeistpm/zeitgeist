@@ -6,6 +6,7 @@ orml-traits = { branch = "0.9.8", default-features = false, git = "https://githu
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
@@ -32,6 +33,7 @@ std = [
     "parity-scale-codec/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
+    "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
 ]
 

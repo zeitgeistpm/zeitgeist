@@ -14,7 +14,10 @@ use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use zeitgeist_primitives::types::{AccountId, Balance, Signature};
+use zeitgeist_primitives::{
+    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+    types::{AccountId, Balance, Signature},
+};
 use zeitgeist_runtime::TokensConfig;
 #[cfg(feature = "parachain")]
 use {
@@ -29,7 +32,7 @@ const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance>
     let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK;
     let rounds_per_year = millisecs_per_year / round_millisecs;
 
-    let annual_inflation = Perbill::from_percent(ztg::STAKING);
+    let annual_inflation = ztg::STAKING_PTD;
     let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
     let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
     let round_inflation = Perbill::from_parts(round_inflation_parts as _);
@@ -95,6 +98,10 @@ fn generic_genesis(
         #[cfg(not(feature = "parachain"))]
         grandpa: zeitgeist_runtime::GrandpaConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+        },
+        liquidity_mining: zeitgeist_runtime::LiquidityMiningConfig {
+            initial_balance: LIQUIDITY_MINING,
+            per_block_distribution: LIQUIDITY_MINING_PTD.mul_ceil(LIQUIDITY_MINING),
         },
         #[cfg(feature = "parachain")]
         parachain_info: zeitgeist_runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },

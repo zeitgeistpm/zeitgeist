@@ -8,6 +8,7 @@ sp-arithmetic = { branch = "polkadot-v0.9.8", default-features = false, git = "h
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-std = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
@@ -52,6 +53,7 @@ std = [
     'sp-runtime/std',
     'sp-std/std',
     'zeitgeist-primitives/std',
+    'zrml-liquidity-mining/std',
     'zrml-market-commons/std',
     'zrml-simple-disputes/std',
 ]

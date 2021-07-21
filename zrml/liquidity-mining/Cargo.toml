@@ -1,0 +1,35 @@
+[dependencies]
+frame-benchmarking = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate", optional = true }
+frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
+serde = { default-features = false, optional = true, version = "1.0" }
+sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+
+[dev-dependencies]
+pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
+
+[features]
+default = ["std"]
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks"
+]
+std = [
+    'frame-benchmarking?/std',
+    'frame-support/std',
+    'frame-system/std',
+    'parity-scale-codec/std',
+    'serde/std',
+    'sp-runtime/std',
+    'zeitgeist-primitives/std',
+]
+
+[package]
+authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
+edition = "2018"
+name = "zrml-liquidity-mining"
+version = "0.1.0"
