@@ -514,6 +514,7 @@ fn create_initial_pool() {
     assert_ok!(Swaps::create_pool(
         Origin::signed(BOB),
         ASSETS.iter().cloned().collect(),
+        0,
         vec!(_2, _2, _2, _2),
     ));
 }

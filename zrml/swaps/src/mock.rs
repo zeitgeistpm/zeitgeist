@@ -10,8 +10,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight,
-        MaxWeight, MinLiquidity, MinWeight, SwapsPalletId, BLOCK_HASH_COUNT,
+        ExitFee, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
+        MaxReserves, MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight, SwapsPalletId,
+        BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -52,6 +53,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currencies: orml_currencies::{Event<T>, Pallet},
+        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
@@ -61,6 +63,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
@@ -129,6 +132,14 @@ impl pallet_balances::Config for Runtime {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+impl zrml_liquidity_mining::Config for Runtime {
+    type Currency = Balances;
+    type Event = Event;
+    type MarketId = MarketId;
+    type PalletId = LiquidityMiningPalletId;
+    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
 }
 
 pub struct ExtBuilder {

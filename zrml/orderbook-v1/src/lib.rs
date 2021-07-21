@@ -43,13 +43,13 @@ mod pallet {
         traits::{
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, WithdrawReasons,
         },
-        Blake2_128Concat, Parameter,
+        Blake2_128Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::Encode;
-    use sp_runtime::traits::{AtLeast32Bit, Hash, MaybeSerializeDeserialize, Member, Zero};
-    use zeitgeist_primitives::types::Asset;
+    use sp_runtime::traits::{Hash, Zero};
+    use zeitgeist_primitives::{traits::MarketId, types::Asset};
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -239,12 +239,7 @@ mod pallet {
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        type MarketId: AtLeast32Bit
-            + Copy
-            + Default
-            + MaybeSerializeDeserialize
-            + Member
-            + Parameter;
+        type MarketId: MarketId;
 
         type Shares: MultiReservableCurrency<
             Self::AccountId,

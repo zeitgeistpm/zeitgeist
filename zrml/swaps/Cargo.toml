@@ -7,6 +7,7 @@ parity-scale-codec = { default-features = false, features = ["derive"], version 
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-std = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 
 # Mock
 
@@ -44,6 +45,7 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "zeitgeist-primitives/std",
+    "zrml-liquidity-mining/std",
 ]
 
 [package]

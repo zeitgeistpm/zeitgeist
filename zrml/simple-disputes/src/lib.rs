@@ -34,6 +34,7 @@ mod pallet {
             ResolutionCounters, ScalarPosition,
         },
     };
+    use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     type BalanceOf<T> =
@@ -64,6 +65,14 @@ mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// Common market parameters
+        type LiquidityMining: LiquidityMiningPalletApi<
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+        >;
+
+        /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
@@ -291,7 +300,8 @@ mod pallet {
                 _ => (),
             };
 
-            let _ = Self::manage_pool_staleness(&market, market_id, &resolved_outcome);
+            Self::set_pool_to_stale(&market, market_id, &resolved_outcome)?;
+            T::LiquidityMining::distribute_market_incentives(market_id)?;
             if let Ok([local_total_accounts, local_total_asset_accounts, local_total_categories]) =
                 Self::manage_resolved_categorical_market(&market, market_id, &resolved_outcome)
             {
@@ -347,7 +357,6 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
-
             ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
 
             if let OutcomeReport::Categorical(inner) = outcome {
@@ -496,19 +505,6 @@ mod pallet {
         StorageMap<_, Blake2_128Concat, T::BlockNumber, Vec<MarketIdOf<T>>>;
 
     impl<T: Config> Pallet<T> {
-        // If a market has a pool that is `Active`, then changes from `Active` to `Stale`.
-        fn manage_pool_staleness(
-            market: &Market<T::AccountId, T::BlockNumber>,
-            market_id: &MarketIdOf<T>,
-            outcome_report: &OutcomeReport,
-        ) -> DispatchResult {
-            let pool_id = T::MarketCommons::market_pool(market_id)?;
-
-            T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report)?;
-
-            Ok(())
-        }
-
         // If a market is categorical, destroys all non-winning assets.
         fn manage_resolved_categorical_market(
             market: &Market<T::AccountId, T::BlockNumber>,
@@ -580,6 +576,22 @@ mod pallet {
         {
             let pos = items.iter().position(|&i| i == item).unwrap();
             items.swap_remove(pos);
+        }
+
+        // If a market has a pool that is `Active`, then changes from `Active` to `Stale`. If
+        // the market does not exist or the market does not have a pool, does nothing.
+        fn set_pool_to_stale(
+            market: &Market<T::AccountId, T::BlockNumber>,
+            market_id: &MarketIdOf<T>,
+            outcome_report: &OutcomeReport,
+        ) -> DispatchResult {
+            let pool_id = if let Ok(el) = T::MarketCommons::market_pool(market_id) {
+                el
+            } else {
+                return Ok(());
+            };
+            let _ = T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report);
+            Ok(())
         }
     }
 }

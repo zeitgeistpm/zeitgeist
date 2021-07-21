@@ -9,9 +9,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxDisputes, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves,
-        MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight, SimpleDisputesPalletId, SwapsPalletId,
-        BASE, BLOCK_HASH_COUNT,
+        ExitFee, LiquidityMiningPalletId, MaxAssets, MaxDisputes, MaxInRatio, MaxLocks,
+        MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight,
+        SimpleDisputesPalletId, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -59,6 +59,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
+        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
@@ -73,6 +74,7 @@ impl crate::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
+    type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
@@ -146,6 +148,14 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl zrml_liquidity_mining::Config for Runtime {
+    type Currency = Balances;
+    type Event = Event;
+    type MarketId = MarketId;
+    type PalletId = LiquidityMiningPalletId;
+    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
+}
+
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
@@ -154,6 +164,7 @@ impl zrml_market_commons::Config for Runtime {
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
