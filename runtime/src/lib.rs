@@ -163,12 +163,13 @@ macro_rules! create_zeitgeist_runtime {
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
 
                 // Zeitgeist
-                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 40,
+                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 40,
+                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 41,
 
-                MarketCommons: zrml_market_commons::{Pallet, Storage} = 41,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 42,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 43,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 44,
+                MarketCommons: zrml_market_commons::{Pallet, Storage} = 42,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 43,
+                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 44,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 45,
 
                 $($additional_pallets)*
             }
@@ -387,7 +388,7 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 4];
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
@@ -418,18 +419,12 @@ impl pallet_transaction_payment::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl parachain_info::Config for Runtime {}
 
-impl zrml_simple_disputes::Config for Runtime {
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
-    type DisputePeriod = DisputePeriod;
+impl zrml_liquidity_mining::Config for Runtime {
+    type Currency = Balances;
     type Event = Event;
-    type MarketCommons = MarketCommons;
-    type MaxDisputes = MaxDisputes;
-    type OracleBond = OracleBond;
-    type PalletId = SimpleDisputesPalletId;
-    type Shares = Tokens;
-    type Swaps = Swaps;
-    type ValidityBond = ValidityBond;
+    type MarketId = MarketId;
+    type PalletId = LiquidityMiningPalletId;
+    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_market_commons::Config for Runtime {
@@ -450,6 +445,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type ApprovalOrigin = EnsureRoot<AccountId>;
     type Event = Event;
     type MarketCommons = MarketCommons;
+    type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
     type MinCategories = MinCategories;
     type OracleBond = OracleBond;
@@ -464,9 +460,25 @@ impl zrml_prediction_markets::Config for Runtime {
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }
 
+impl zrml_simple_disputes::Config for Runtime {
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
+    type DisputePeriod = DisputePeriod;
+    type Event = Event;
+    type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
+    type MaxDisputes = MaxDisputes;
+    type OracleBond = OracleBond;
+    type PalletId = SimpleDisputesPalletId;
+    type Shares = Tokens;
+    type Swaps = Swaps;
+    type ValidityBond = ValidityBond;
+}
+
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
@@ -545,6 +557,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
+            add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
             add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
 
             if batches.is_empty() {

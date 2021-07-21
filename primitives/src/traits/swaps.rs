@@ -18,6 +18,7 @@ pub trait Swaps<AccountId> {
     fn create_pool(
         creator: AccountId,
         assets: Vec<Asset<Self::MarketId>>,
+        market_id: Self::MarketId,
         swap_fee: Self::Balance,
         weights: Vec<u128>,
     ) -> Result<PoolId, DispatchError>;
@@ -27,6 +28,8 @@ pub trait Swaps<AccountId> {
 
     /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
     /// that is not ZTG or winning assets from the selected pool.
+    ///
+    /// Does nothing if pool is already stale. Returns `Err` if `pool_id` does not exist.
     fn set_pool_as_stale(
         market_type: &MarketType,
         pool_id: PoolId,

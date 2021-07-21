@@ -1,13 +1,13 @@
 #![cfg(test)]
 
-use crate as zrml_court;
-use frame_support::{construct_runtime, parameter_types, PalletId};
+use crate as zrml_liquidity_mining;
+use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{MaxReserves, BASE, BLOCK_HASH_COUNT},
+    constants::{ExistentialDeposit, MaxLocks, MaxReserves, BASE, BLOCK_HASH_COUNT},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId,
         UncheckedExtrinsicTest,
@@ -21,9 +21,8 @@ type Block = BlockTest<Runtime>;
 type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
-    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
-    pub const StakeWeight: u128 = 2 * BASE;
+    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
 }
 
 construct_runtime!(
@@ -34,16 +33,17 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Court: zrml_court::{Event<T>, Pallet, Storage},
-        MarketCommons: zrml_market_commons::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
+        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
     }
 );
 
 impl crate::Config for Runtime {
+    type Currency = Balances;
     type Event = ();
-    type StakeWeight = StakeWeight;
-    type MarketCommons = MarketCommons;
+    type MarketId = MarketId;
+    type PalletId = LmPalletId;
+    type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
@@ -76,32 +76,40 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
-    type ExistentialDeposit = ();
-    type MaxLocks = ();
-    type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type Event = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
     type WeightInfo = ();
 }
 
-impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
-    type MarketId = MarketId;
-}
-
 pub struct ExtBuilder {
-    balances: Vec<(AccountIdTest, Balance)>,
+    pub(crate) balances: Vec<(AccountIdTest, Balance)>,
+    pub(crate) initial_balance: Balance,
+    pub(crate) per_block_incentives: Balance,
 }
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, 1_000 * BASE), (BOB, 1_000 * BASE)] }
+        Self {
+            balances: vec![(ALICE, 1_000 * BASE)],
+            initial_balance: 100 * BASE,
+            per_block_incentives: BASE,
+        }
     }
 }
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+        crate::GenesisConfig::<Runtime> {
+            initial_balance: self.initial_balance,
+            per_block_distribution: self.per_block_incentives,
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
 
         pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
             .assimilate_storage(&mut t)

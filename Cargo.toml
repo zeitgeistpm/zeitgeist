@@ -4,6 +4,7 @@ members = [
     "primitives",
     "runtime",
     "zrml/court",
+    "zrml/liquidity-mining",
     "zrml/market-commons",
     "zrml/rikiddo",
     "zrml/orderbook-v1",

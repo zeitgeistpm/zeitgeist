@@ -25,6 +25,11 @@ parameter_types! {
     pub const MaxReserves: u32 = 50;
 }
 
+// Liquidity Mining parameters
+parameter_types! {
+    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zrml/lmg");
+}
+
 // Prediction Market parameters
 parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;

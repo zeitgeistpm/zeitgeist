@@ -22,8 +22,6 @@ where
     F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
-    let who = ensure_signed(p.origin)?;
-
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(p.pool_id);
 
@@ -38,13 +36,13 @@ where
 
     let exit_fee =
         bmul(pool_amount.saturated_into(), T::ExitFee::get().saturated_into())?.saturated_into();
-    Pallet::<T>::burn_pool_shares(p.pool_id, &who, pool_amount.check_sub_rslt(&exit_fee)?)?;
+    Pallet::<T>::burn_pool_shares(p.pool_id, &p.who, pool_amount.check_sub_rslt(&exit_fee)?)?;
     // todo do something with exit fee
-    T::Shares::transfer(p.asset, &pool_account, &who, asset_amount)?;
+    T::Shares::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         bound: p.bound,
-        cpep: CommonPoolEventParams { pool_id: p.pool_id, who },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred: asset_amount,
     });
 
@@ -61,8 +59,6 @@ where
     F3: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
-    let who = ensure_signed(p.origin)?;
-
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(p.pool_id);
@@ -74,12 +70,12 @@ where
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
-    Pallet::<T>::mint_pool_shares(p.pool_id, &who, pool_amount)?;
-    T::Shares::transfer(p.asset, &who, &pool_account_id, asset_amount)?;
+    Pallet::<T>::mint_pool_shares(p.pool_id, &p.who, pool_amount)?;
+    T::Shares::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         bound: p.bound,
-        cpep: CommonPoolEventParams { pool_id: p.pool_id, who },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred: asset_amount,
     });
 
@@ -175,7 +171,7 @@ where
     pub(crate) bound: BalanceOf<T>,
     pub(crate) ensure_balance: F2,
     pub(crate) event: F3,
-    pub(crate) origin: T::Origin,
+    pub(crate) who: T::AccountId,
     pub(crate) pool_amount: F4,
     pub(crate) pool_id: PoolId,
     pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
@@ -189,7 +185,7 @@ where
     pub(crate) asset_amount: F1,
     pub(crate) bound: BalanceOf<T>,
     pub(crate) event: F2,
-    pub(crate) origin: T::Origin,
+    pub(crate) who: T::AccountId,
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_amount: F3,
     pub(crate) pool_id: PoolId,
