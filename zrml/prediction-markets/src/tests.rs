@@ -159,7 +159,7 @@ fn it_allows_to_buy_a_complete_set() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
         // Allows someone to generate a complete set
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100));
 
         let market = MarketCommons::market(&0).unwrap();
 
@@ -480,7 +480,6 @@ fn it_allows_to_redeem_shares() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless);
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100,));
-
         run_to_block(100);
 
         assert_ok!(PredictionMarkets::report(
@@ -488,9 +487,7 @@ fn it_allows_to_redeem_shares() {
             0,
             OutcomeReport::Categorical(1)
         ));
-
         run_to_block(111);
-
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Resolved);
 

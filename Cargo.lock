@@ -11907,6 +11907,7 @@ dependencies = [
  "substrate-frame-rpc-system",
  "zeitgeist-primitives",
  "zeitgeist-runtime",
+ "zrml-liquidity-mining",
  "zrml-swaps-rpc",
 ]
 
@@ -11982,6 +11983,7 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "zeitgeist-primitives",
+ "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
@@ -12023,6 +12025,21 @@ dependencies = [
  "sp-runtime",
  "zeitgeist-primitives",
  "zrml-market-commons",
+]
+
+[[package]]
+name = "zrml-liquidity-mining"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
 ]
 
 [[package]]
@@ -12072,6 +12089,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "zeitgeist-primitives",
+ "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
@@ -12132,6 +12150,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
+ "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-swaps",
 ]
@@ -12153,6 +12172,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "zeitgeist-primitives",
+ "zrml-liquidity-mining",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]

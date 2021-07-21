@@ -52,6 +52,7 @@ parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
     pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
+    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"test/lmp");
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const MaximumBlockWeight: Weight = 1024;
     pub const MinimumPeriod: u64 = 0;
@@ -75,14 +76,15 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
+        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
     }
 );
 
@@ -91,6 +93,7 @@ impl crate::Config for Runtime {
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SimpleDisputes = SimpleDisputes;
     type Event = Event;
+    type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MinCategories = MinCategories;
@@ -169,11 +172,25 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl zrml_liquidity_mining::Config for Runtime {
+    type Currency = Balances;
+    type Event = Event;
+    type MarketId = MarketId;
+    type PalletId = LiquidityMiningPalletId;
+    type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+}
+
 impl zrml_simple_disputes::Config for Runtime {
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
+    type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
@@ -183,14 +200,10 @@ impl zrml_simple_disputes::Config for Runtime {
     type ValidityBond = ValidityBond;
 }
 
-impl zrml_market_commons::Config for Runtime {
-    type Currency = Balances;
-    type MarketId = MarketId;
-}
-
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;

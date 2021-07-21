@@ -91,6 +91,7 @@ mod pallet {
             OutcomeReport, Report, ResolutionCounters, ScalarPosition,
         },
     };
+    use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_simple_disputes::SimpleDisputesPalletApi;
 
@@ -361,6 +362,12 @@ mod pallet {
             };
 
             let market_id = T::MarketCommons::push_market(market)?;
+            if let MarketEnd::Block(block) = end {
+                T::LiquidityMining::add_market_period(
+                    market_id,
+                    [<frame_system::Pallet<T>>::block_number(), block],
+                );
+            }
 
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
@@ -412,6 +419,12 @@ mod pallet {
             };
 
             let market_id = T::MarketCommons::push_market(market)?;
+            if let MarketEnd::Block(block) = end {
+                T::LiquidityMining::add_market_period(
+                    market_id,
+                    [<frame_system::Pallet<T>>::block_number(), block],
+                );
+            }
 
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
@@ -445,7 +458,7 @@ mod pallet {
             let mut assets = Self::outcome_assets(market_id, &market);
             assets.push(Asset::Ztg);
 
-            let pool_id = T::Swaps::create_pool(sender, assets, Zero::zero(), weights)?;
+            let pool_id = T::Swaps::create_pool(sender, assets, market_id, Zero::zero(), weights)?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             Ok(())
@@ -718,6 +731,13 @@ mod pallet {
         type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        type LiquidityMining: LiquidityMiningPalletApi<
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+        >;
 
         /// Common market parameters
         type MarketCommons: MarketCommonsPalletApi<

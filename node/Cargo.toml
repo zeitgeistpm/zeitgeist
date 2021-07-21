@@ -78,6 +78,7 @@ sp-finality-grandpa = { branch = "polkadot-v0.9.8", git = "https://github.com/pa
 
 zeitgeist-primitives = { path = "../primitives" }
 zeitgeist-runtime = { path = "../runtime" }
+zrml-liquidity-mining = { path = "../zrml/liquidity-mining" }
 zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 [features]
