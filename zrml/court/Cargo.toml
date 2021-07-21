@@ -1,4 +1,5 @@
 [dependencies]
+arrayvec = { default-features = false, version = "0.7" }
 frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
@@ -8,6 +9,7 @@ zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
+pallet-randomness-collective-flip = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
 
 [features]

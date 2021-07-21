@@ -91,16 +91,19 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type SimpleDisputes = SimpleDisputes;
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
+    type MaxDisputes = MaxDisputes;
     type MinCategories = MinCategories;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
+    type SimpleDisputes = SimpleDisputes;
     type Slash = ();
     type Swaps = Swaps;
     type Timestamp = Timestamp;
@@ -186,13 +189,10 @@ impl zrml_market_commons::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
     type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;

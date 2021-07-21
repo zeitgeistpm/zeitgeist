@@ -1,10 +1,14 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{Balances, Court, ExtBuilder, Origin, Runtime, ALICE, BOB},
+    mock::{
+        Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
+    },
     Error, Juror, JurorStatus, Jurors,
 };
-use frame_support::{assert_noop, assert_ok};
+use core::ops::Range;
+use frame_support::{assert_noop, assert_ok, traits::Hooks};
+use sp_runtime::traits::Header;
 use zeitgeist_primitives::constants::BASE;
 
 #[test]
@@ -62,4 +66,44 @@ fn join_court_will_not_insert_an_already_stored_juror() {
             Error::<Runtime>::JurorAlreadyExists
         );
     });
+}
+
+#[test]
+fn random_jurors_return_a_subset_of_jurors() {
+    ExtBuilder::default().build().execute_with(|| {
+        const START_BLOCK: u64 = 123;
+        setup_blocks(1..START_BLOCK);
+        let jurors = [
+            (0, Juror { staked: 1, status: JurorStatus::Ok }),
+            (0, Juror { staked: 2, status: JurorStatus::Tardy }),
+            (0, Juror { staked: 3, status: JurorStatus::Ok }),
+            (0, Juror { staked: 4, status: JurorStatus::Tardy }),
+            (0, Juror { staked: 5, status: JurorStatus::Ok }),
+            (0, Juror { staked: 6, status: JurorStatus::Ok }),
+            (0, Juror { staked: 7, status: JurorStatus::Ok }),
+        ];
+        let random_jurors = Court::random_jurors(&jurors, 2);
+        let mut at_least_one_is_different = false;
+        for n in 0..1000 {
+            setup_blocks(START_BLOCK..START_BLOCK + n);
+            if random_jurors != Court::random_jurors(&jurors, 2) {
+                at_least_one_is_different = true;
+                break;
+            }
+        }
+        assert_eq!(at_least_one_is_different, true);
+    });
+}
+
+fn setup_blocks(range: Range<u64>) {
+    let mut parent_hash = System::parent_hash();
+
+    for i in range {
+        System::initialize(&i, &parent_hash, &Default::default(), frame_system::InitKind::Full);
+        RandomnessCollectiveFlip::on_initialize(i);
+
+        let header = System::finalize();
+        parent_hash = header.hash();
+        System::set_block_number(*header.number());
+    }
 }

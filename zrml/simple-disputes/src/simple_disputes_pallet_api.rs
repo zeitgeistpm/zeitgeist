@@ -54,13 +54,13 @@ pub trait SimpleDisputesPalletApi: DisputeApi {
     /// NOTE: This function does not perform any checks on the market that is being given.
     /// In the function calling this you should that the market is already in a reported or
     /// disputed state.
-    fn internal_resolve(
+    fn internal_resolve<D>(
+        dispute_bound: D,
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber>,
-    ) -> Result<ResolutionCounters, DispatchError>;
-
-    /// The stored maximum number of disputes
-    fn max_disputes() -> u32;
+    ) -> Result<ResolutionCounters, DispatchError>
+    where
+        D: Fn(usize) -> Self::Balance;
 
     // Migrations (Temporary)
 

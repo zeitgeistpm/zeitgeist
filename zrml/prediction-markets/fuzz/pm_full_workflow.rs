@@ -8,7 +8,7 @@ use zeitgeist_primitives::{
     types::{MarketCreation, MarketEnd, MultiHash, OutcomeReport},
 };
 use zrml_prediction_markets::mock::{
-    ExtBuilder, Origin, PredictionMarkets, SimpleDisputes, System,
+    ExtBuilder, Origin, PredictionMarkets, Runtime, SimpleDisputes, System,
 };
 
 fuzz_target!(|data: Data| {
@@ -47,9 +47,10 @@ fuzz_target!(|data: Data| {
         System::set_block_number(4);
 
         let _ = SimpleDisputes::on_dispute(
-            Origin::signed(data.dispute_origin.into()),
+            zrml_prediction_markets::default_dispute_bound::<Runtime>,
             data.dispute_market_id.into(),
             outcome(data.report_outcome),
+            data.dispute_origin.into(),
         );
 
         let _ = PredictionMarkets::on_initialize(5);
