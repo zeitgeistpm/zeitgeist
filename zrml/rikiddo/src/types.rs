@@ -75,11 +75,11 @@ pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI
     let fractional_part: FixedI128<U127> = num.frac().to_fixed();
 
     if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
-        return Ok(res);
+        Ok(res)
     } else {
         // This error should be impossible to reach.
-        return Err("Something went wrong during FixedUnsigned to FixedSigned type conversion");
-    };
+        Err("Something went wrong during FixedUnsigned to FixedSigned type conversion")
+    }
 }
 
 /// Converts a signed fixed point number into an unsigned fixed point number (fallible)
@@ -91,9 +91,9 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
     let fractional_part: FixedU128<U128> = num.frac().to_fixed();
 
     if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
-        return Ok(res);
+        Ok(res)
     } else {
         // This error should be impossible to reach.
-        return Err("Something went wrong during FixedSigned to FixedUnsigned type conversion");
-    };
+        Err("Something went wrong during FixedSigned to FixedUnsigned type conversion")
+    }
 }

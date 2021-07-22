@@ -96,7 +96,7 @@ where
         convert_to_unsigned::<FS, FU>(self.fees.calculate(ratio_signed)?)
     }
 
-    pub(crate) fn default_cost_strategy(&self, exponents: &Vec<FS>) -> Result<FS, &'static str> {
+    pub(crate) fn default_cost_strategy(&self, exponents: &[FS]) -> Result<FS, &'static str> {
         let mut acc: FS = FS::from_num(0u8);
 
         for elem in exponents {
@@ -117,16 +117,16 @@ where
         }
 
         if let Ok(res) = ln::<FS, FS>(acc) {
-            return Ok(res);
+            Ok(res)
         } else {
             // Impossible to reach, unless the "exponents" vector is empty
-            return Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0");
-        };
+            Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0")
+        }
     }
 
     pub(crate) fn optimized_cost_strategy(
         &self,
-        exponents: &Vec<FS>,
+        exponents: &[FS],
         biggest_exponent: &FS,
     ) -> Result<FS, &'static str> {
         let mut biggest_exponent_used = false;
@@ -177,12 +177,12 @@ where
         };
 
         if let Some(res) = result.checked_add(ln_exp_sum) {
-            return Ok(res);
+            Ok(res)
         } else {
             // Highly unlikely
-            return Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + \
-                        ln(exp_sum) (optimized)");
-        };
+            Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + ln(exp_sum) \
+                 (optimized)")
+        }
     }
 }
 
@@ -202,13 +202,13 @@ where
     type FU = FU;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(&self, asset_balances: &Vec<Self::FU>) -> Result<Vec<Self::FU>, &'static str> {
+    fn all_prices(&self, _asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str> {
         Err("Unimplemented")
     }
 
     /// Return cost C(q) for all assets in q
-    fn cost(&self, asset_balances: &Vec<Self::FU>) -> Result<Self::FU, &'static str> {
-        if asset_balances.len() == 0 {
+    fn cost(&self, asset_balances: &[Self::FU]) -> Result<Self::FU, &'static str> {
+        if asset_balances.is_empty() {
             return Err("[RikiddoSigmoidMV] No asset balances provided");
         };
 
@@ -310,18 +310,18 @@ where
         }
 
         if let Some(res) = denominator.checked_mul(convert_to_unsigned(ln_sum_e)?) {
-            return Ok(res);
+            Ok(res)
         } else {
-            return Err("[RikiddoSigmoidMV] Overflow during calculation: fee * \
-                        total_asset_balance * ln(sum_i(e^i))");
+            Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
+                 ln(sum_i(e^i))")
         }
     }
 
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
-        asset_in_question_balance: &Self::FU,
-        asset_balances: &Vec<Self::FU>,
+        _asset_in_question_balance: &Self::FU,
+        _asset_balances: &[Self::FU],
     ) -> Result<Self::FU, &'static str> {
         Err("Unimplemented")
     }

@@ -3,7 +3,15 @@ use crate::{
     traits::Sigmoid,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{FixedI128, FixedI32, FixedU32, traits::{FixedSigned, LossyFrom, LossyInto}, transcendental::sqrt, types::{I9F23, extra::{U127, U24, U32}}};
+use substrate_fixed::{
+    traits::{FixedSigned, LossyFrom, LossyInto},
+    transcendental::sqrt,
+    types::{
+        extra::{U127, U24, U32},
+        I9F23,
+    },
+    FixedI128, FixedI32, FixedU32,
+};
 
 use super::convert_to_signed;
 
@@ -28,7 +36,8 @@ where
             // Only case this can panic is, when INITIAL_FEE is >= 1.0 and FS integer bits < 2
             initial_fee: convert_to_signed::<FixedU32<U32>, FS>(INITIAL_FEE.lossy_into()).unwrap(),
             // Only case this can panic is, when MIN_REVENUE is >= 1.0 and FS integer bits < 2
-            min_revenue: convert_to_signed::<FixedU32<U32>, FS>(MINIMAL_REVENUE.lossy_into()).unwrap(),
+            min_revenue: convert_to_signed::<FixedU32<U32>, FS>(MINIMAL_REVENUE.lossy_into())
+                .unwrap(),
         }
     }
 }

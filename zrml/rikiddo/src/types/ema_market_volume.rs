@@ -232,7 +232,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                     && (*self.volumes_per_period() + 1.into()) >= self.config.smoothing
                 {
                     // We extrapolate the txs per period
-                    if let Some(_) = self.config.ema_period_estimate_after {
+                    if self.config.ema_period_estimate_after.is_some() {
                         // Ensure that we don't divide by 0
                         if comparison_value == 0 {
                             comparison_value = 1
