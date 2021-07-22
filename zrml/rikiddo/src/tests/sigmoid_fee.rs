@@ -10,7 +10,7 @@ fn sigmoid_fee(m: f64, n: f64, p: f64, r: f64) -> f64 {
     (m * (r - n)) / (p + (r - n).powi(2)).sqrt()
 }
 
-fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>, FixedU128<U64>>, f64, f64, f64)
+fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>>, f64, f64, f64)
 {
     let m = 0.01f64;
     let n = 0f64;
@@ -23,7 +23,7 @@ fn init_default_sigmoid_fee_struct() -> (FeeSigmoid<FixedI128<U64>, FixedU128<U6
         n: <FixedI128<U64>>::from_num(n),
         p: <FixedI128<U64>>::from_num(p),
         initial_fee: <FixedI128<U64>>::from_num(initial_fee),
-        min_revenue: <FixedU128<U64>>::from_num(min_revenue),
+        min_revenue: <FixedI128<U64>>::from_num(min_revenue),
     };
 
     let fee = FeeSigmoid { config };
@@ -97,7 +97,7 @@ fn fee_sigmoid_correct_result() -> Result<(), &'static str> {
         max_allowed_error(64)
     );
 
-    fee.config.min_revenue = <FixedU128<U64>>::from_num(1u64 << 63);
+    fee.config.min_revenue = <FixedI128<U64>>::from_num(1u64 << 62);
     assert_eq!(fee.calculate(r_fixed)?, fee.config.min_revenue);
     Ok(())
 }

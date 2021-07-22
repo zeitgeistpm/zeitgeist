@@ -41,7 +41,7 @@ pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
     FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
-    FE: Sigmoid<FIN = FS, FOUT = FU>,
+    FE: Sigmoid<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     pub config: RikiddoConfig<FS>,
@@ -60,7 +60,7 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FIN = FS, FOUT = FU>,
+    FE: Sigmoid<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     pub fn new(config: RikiddoConfig<FS>, fees: FE, ma_short: MA, ma_long: MA) -> Self {
@@ -93,7 +93,7 @@ where
         };
 
         let ratio_signed = convert_to_signed(ratio)?;
-        self.fees.calculate(ratio_signed)
+        convert_to_unsigned::<FS, FU>(self.fees.calculate(ratio_signed)?)
     }
 
     pub(crate) fn default_cost_strategy(&self, exponents: &Vec<FS>) -> Result<FS, &'static str> {
@@ -196,7 +196,7 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FIN = FS, FOUT = FU>,
+    FE: Sigmoid<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     type FU = FU;
@@ -337,7 +337,7 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FIN = FS, FOUT = FU>,
+    FE: Sigmoid<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     /// Clear market data

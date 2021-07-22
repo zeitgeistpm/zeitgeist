@@ -1,34 +1,24 @@
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
-    types::convert_to_unsigned,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{
-    traits::{FixedSigned, FixedUnsigned, LossyFrom, LossyInto},
-    transcendental::sqrt,
-    types::{
-        extra::{U127, U128, U24, U32},
-        I9F23,
-    },
-    FixedI128, FixedI32, FixedU128, FixedU32,
-};
+use substrate_fixed::{FixedI128, FixedI32, FixedU32, traits::{FixedSigned, LossyFrom, LossyInto}, transcendental::sqrt, types::{I9F23, extra::{U127, U24, U32}}};
 
 use super::convert_to_signed;
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct FeeSigmoidConfig<FS: FixedSigned, FU: FixedUnsigned> {
+pub struct FeeSigmoidConfig<FS: FixedSigned> {
     pub m: FS,
     pub p: FS,
     pub n: FS,
     pub initial_fee: FS,
-    pub min_revenue: FU,
+    pub min_revenue: FS,
 }
 
-impl<FS, FU> Default for FeeSigmoidConfig<FS, FU>
+impl<FS> Default for FeeSigmoidConfig<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
 {
     fn default() -> Self {
         Self {
@@ -36,41 +26,38 @@ where
             p: P.lossy_into(),
             n: N.lossy_into(),
             // Only case this can panic is, when INITIAL_FEE is >= 1.0 and FS integer bits < 2
-            initial_fee: convert_to_signed::<FU, FS>(INITIAL_FEE.lossy_into()).unwrap(),
-            min_revenue: MINIMAL_REVENUE.lossy_into(),
+            initial_fee: convert_to_signed::<FixedU32<U32>, FS>(INITIAL_FEE.lossy_into()).unwrap(),
+            // Only case this can panic is, when MIN_REVENUE is >= 1.0 and FS integer bits < 2
+            min_revenue: convert_to_signed::<FixedU32<U32>, FS>(MINIMAL_REVENUE.lossy_into()).unwrap(),
         }
     }
 }
 
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
-pub struct FeeSigmoid<FS, FU>
+pub struct FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
 {
-    pub config: FeeSigmoidConfig<FS, FU>,
+    pub config: FeeSigmoidConfig<FS>,
 }
 
-impl<FS, FU> FeeSigmoid<FS, FU>
+impl<FS> FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
 {
-    pub fn new(config: FeeSigmoidConfig<FS, FU>) -> Self {
+    pub fn new(config: FeeSigmoidConfig<FS>) -> Self {
         Self { config }
     }
 }
 
-impl<FS, FU> Sigmoid for FeeSigmoid<FS, FU>
+impl<FS> Sigmoid for FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>>,
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>> + PartialOrd<FS>,
 {
-    type FIN = FS;
-    type FOUT = FU;
+    type FS = FS;
 
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
-    fn calculate(&self, r: Self::FIN) -> Result<Self::FOUT, &'static str> {
+    fn calculate(&self, r: Self::FS) -> Result<Self::FS, &'static str> {
         let r_minus_n = if let Some(res) = r.checked_sub(self.config.n) {
             res
         } else {
@@ -114,6 +101,6 @@ where
             return Ok(self.config.min_revenue);
         }
 
-        convert_to_unsigned(result)
+        Ok(result)
     }
 }

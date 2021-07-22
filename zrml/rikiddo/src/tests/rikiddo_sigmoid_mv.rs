@@ -14,7 +14,7 @@ use crate::{
 type Rikiddo = RikiddoSigmoidMV<
     FixedU128<U64>,
     FixedI128<U64>,
-    FeeSigmoid<FixedI128<U64>, FixedU128<U64>>,
+    FeeSigmoid<FixedI128<U64>>,
     EmaMarketVolume<FixedU128<U64>>,
 >;
 
