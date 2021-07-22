@@ -85,6 +85,7 @@ mod pallet {
         DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
+        constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
@@ -647,7 +648,7 @@ mod pallet {
                         // unix timestamp
                         let now = T::Timestamp::now().saturated_into::<u64>();
                         let reporting_period_in_ms =
-                            T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
+                            T::ReportingPeriod::get().saturated_into::<u64>() * MILLISECS_PER_BLOCK;
                         if now <= timestamp + reporting_period_in_ms {
                             ensure!(
                                 sender == market.oracle
