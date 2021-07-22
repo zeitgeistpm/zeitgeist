@@ -416,9 +416,9 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 impl pallet_utility::Config for Runtime {
-	type Event = Event;
-	type Call = Call;
-	type WeightInfo = ();
+    type Event = Event;
+    type Call = Call;
+    type WeightInfo = ();
 }
 
 #[cfg(feature = "parachain")]
