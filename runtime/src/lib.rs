@@ -53,7 +53,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 19,
+    // major_minor_patch_spec-version
+    spec_version: 20,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 3,
@@ -157,6 +158,7 @@ macro_rules! create_zeitgeist_runtime {
 
                 // Other Parity pallets
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
+                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 21,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
@@ -413,6 +415,12 @@ impl pallet_transaction_payment::Config for Runtime {
     type WeightToFee = IdentityFee<Balance>;
 }
 
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type WeightInfo = ();
+}
+
 #[cfg(feature = "parachain")]
 impl parachain_info::Config for Runtime {}
 
@@ -552,6 +560,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+            add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
             add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
