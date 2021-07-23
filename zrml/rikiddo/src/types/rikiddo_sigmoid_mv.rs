@@ -36,6 +36,7 @@ impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> Default for
         Self::new(converted.lossy_into())
     }
 }
+
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
@@ -48,6 +49,30 @@ where
     pub fees: FE,
     pub ma_short: MA,
     pub ma_long: MA,
+}
+
+// The RikiddoFormulaComponents contain all necessary duplicate information
+// thorughout multiple calculations.
+pub(crate) struct RikiddoFormulaComponents<FS>
+where
+    FS: FixedSigned + From<I9F23> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
+{
+    one: FS,
+    fee: FS,
+    sum_balances: FS,
+    sum_times_fee: FS,
+    emax: FS,
+    sum_exp: FS,
+}
+
+impl<FS> Default for RikiddoFormulaComponents<FS>
+where
+    FS: FixedSigned + From<I9F23> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
+{
+    fn default() -> Self {
+        let zero = 0.to_fixed();
+        Self { one: 1i32.to_fixed(), fee: zero, sum_balances: zero, sum_times_fee: zero, emax: zero, sum_exp: zero}
+    }
 }
 
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>
@@ -96,123 +121,24 @@ where
         convert_to_unsigned::<FS, FU>(self.fees.calculate(ratio_signed)?)
     }
 
-    pub(crate) fn default_cost_strategy(&self, exponents: &[FS]) -> Result<FS, &'static str> {
-        let mut acc: FS = FS::from_num(0u8);
-
-        for elem in exponents {
-            let exp_value: FS = if let Ok(res) = exp::<FS, FS>(*elem) {
-                res
-            } else {
-                return Err(
-                    "[RikiddoSigmoidMV] Error during calculation: exp(i) in ln sum_i(exp^i)"
-                );
-            };
-
-            if let Some(res) = acc.checked_add(exp_value) {
-                acc = res;
-            } else {
-                // Impossible (this function should only be called when the sum does fit into FS)
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_i(e^i)");
-            };
-        }
-
-        if let Ok(res) = ln::<FS, FS>(acc) {
-            Ok(res)
-        } else {
-            // Impossible to reach, unless the "exponents" vector is empty
-            Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0")
-        }
-    }
-
-    pub(crate) fn optimized_cost_strategy(
+    // Cost function that returns the cost and parts of the formula that can be reused for the
+    // price calculation.
+    // Setting `for_price = true` returns the cost minus the sum of quantities.
+    // Setting `enforce_optimized = true` enforces the optimized strategy, which additionally sets
+    // a field (sum_exp) that is reusable within the price function.
+    fn cost_with_forumla(
         &self,
-        exponents: &[FS],
-        biggest_exponent: &FS,
+        asset_balances: &[FU],
+        formula_components: &mut RikiddoFormulaComponents<FS>,
+        for_price: bool,
+        enforce_optimized: bool,
     ) -> Result<FS, &'static str> {
-        let mut biggest_exponent_used = false;
-
-        if FS::max_value().int().to_num::<u128>() < 1u128 {
-            // Impossible due to trait bounds (at least 1 sign bit and 8 integer bits)
-            return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
-        }
-
-        let mut exp_sum = FS::from_num(1u8);
-        let result = *biggest_exponent;
-
-        for elem in exponents {
-            if !biggest_exponent_used && elem == biggest_exponent {
-                biggest_exponent_used = true;
-                continue;
-            }
-
-            let exponent = if let Some(res) = elem.checked_sub(*biggest_exponent) {
-                res
-            } else {
-                // Should be impossible
-                return Err("[RikiddoSigmoidFee] Overflow during calculation: current_exponent - \
-                            biggest_exponent");
-            };
-
-            let e_power_exponent = if let Ok(res) = exp::<FS, FS>(exponent) {
-                res
-            } else {
-                // In this case the result is zero (or is too small to fit) and can be ignored
-                continue;
-            };
-
-            if let Some(res) = exp_sum.checked_add(e_power_exponent) {
-                exp_sum = res;
-            } else {
-                // Highly unlikely
-                return Err("[RikiddoSigmoidFee] Overflow during calculation: sum_i(e^(i - \
-                            biggest_exponent))");
-            };
-        }
-
-        let ln_exp_sum = if let Ok(res) = ln::<FS, FS>(exp_sum) {
-            res
-        } else {
-            // Impossible
-            return Err("[RikiddoSigmoidMV] ln(exp_sum) (optimized), exp_sum <= 0");
-        };
-
-        if let Some(res) = result.checked_add(ln_exp_sum) {
-            Ok(res)
-        } else {
-            // Highly unlikely
-            Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + ln(exp_sum) \
-                 (optimized)")
-        }
-    }
-}
-
-impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
-where
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
-    FS: FixedSigned
-        + From<I9F23>
-        + LossyFrom<FixedI32<U31>>
-        + LossyFrom<U1F127>
-        + LossyFrom<FixedI128<U127>>
-        + PartialOrd<I9F23>,
-    FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FS = FS>,
-    MA: MarketAverage<FU = FU>,
-{
-    type FU = FU;
-
-    /// Return price P_i(q) for all assets in q
-    fn all_prices(&self, _asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str> {
-        Err("Unimplemented")
-    }
-
-    /// Return cost C(q) for all assets in q
-    fn cost(&self, asset_balances: &[Self::FU]) -> Result<Self::FU, &'static str> {
         if asset_balances.is_empty() {
             return Err("[RikiddoSigmoidMV] No asset balances provided");
         };
 
         let fee = self.get_fee()?;
+        formula_components.fee = convert_to_signed(fee)?;
         let mut total_balance = FU::from_num(0u8);
 
         for elem in asset_balances {
@@ -223,12 +149,16 @@ where
             }
         }
 
+        formula_components.sum_balances = convert_to_signed(total_balance)?;
+
         let denominator = if let Some(res) = fee.checked_mul(total_balance) {
             res
         } else {
             // Highly unlikely and only possible if fee > 100%
             return Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance");
         };
+
+        formula_components.sum_times_fee = convert_to_signed(denominator)?;
 
         let mut exponents: Vec<FS> = Vec::with_capacity(asset_balances.len());
         let mut biggest_exponent: FS = FS::from_num(0u8);
@@ -249,6 +179,8 @@ where
             // Panic impossible
             exponents.push(exponent);
         }
+
+        formula_components.emax = biggest_exponent;
 
         // Determine which strategy to use.
         let biggest_exp_times_log2e = if let Some(res) =
@@ -303,18 +235,153 @@ where
         let ln_sum_e: FS;
 
         // Select strategy to calculate ln(sum_i(e^i))
-        if required_bits > FS::int_nbits() as u128 {
-            ln_sum_e = self.optimized_cost_strategy(&exponents, &biggest_exponent)?;
+        if required_bits > FS::int_nbits() as u128 || enforce_optimized {
+            ln_sum_e = self.optimized_cost_strategy(
+                &exponents,
+                &biggest_exponent,
+                formula_components,
+            )?;
         } else {
             ln_sum_e = self.default_cost_strategy(&exponents)?;
         }
 
-        if let Some(res) = denominator.checked_mul(convert_to_unsigned(ln_sum_e)?) {
+        if for_price {
+            if let Some(res) = formula_components.fee.checked_mul(ln_sum_e) {
+                Ok(res)
+            } else {
+                Err("[RikiddoSigmoidMV] Overflow during calculation: fee * ln(sum_i(e^i))")
+            }
+        } else {
+            if let Some(res) = formula_components.sum_times_fee.checked_mul(ln_sum_e) {
+                Ok(res)
+            } else {
+                Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
+                     ln(sum_i(e^i))")
+            }
+        }
+    }
+
+    pub(crate) fn default_cost_strategy(&self, exponents: &[FS]) -> Result<FS, &'static str> {
+        let mut acc: FS = FS::from_num(0u8);
+
+        for elem in exponents {
+            let exp_value: FS = if let Ok(res) = exp::<FS, FS>(*elem) {
+                res
+            } else {
+                return Err(
+                    "[RikiddoSigmoidMV] Error during calculation: exp(i) in ln sum_i(exp^i)"
+                );
+            };
+
+            if let Some(res) = acc.checked_add(exp_value) {
+                acc = res;
+            } else {
+                // Impossible (this function should only be called when the sum does fit into FS)
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_i(e^i)");
+            };
+        }
+
+        if let Ok(res) = ln::<FS, FS>(acc) {
             Ok(res)
         } else {
-            Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
-                 ln(sum_i(e^i))")
+            // Impossible to reach, unless the "exponents" vector is empty
+            Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0")
         }
+    }
+
+    pub(crate) fn optimized_cost_strategy(
+        &self,
+        exponents: &[FS],
+        biggest_exponent: &FS,
+        formula_components: &mut RikiddoFormulaComponents<FS>,
+    ) -> Result<FS, &'static str> {
+        let mut biggest_exponent_used = false;
+
+        if FS::max_value().int().to_num::<u128>() < 1u128 {
+            // Impossible due to trait bounds (at least 1 sign bit and 8 integer bits)
+            return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
+        }
+
+        let mut exp_sum = FS::from_num(1u8);
+        let result = *biggest_exponent;
+
+        for elem in exponents {
+            if !biggest_exponent_used && elem == biggest_exponent {
+                biggest_exponent_used = true;
+                continue;
+            }
+
+            let exponent = if let Some(res) = elem.checked_sub(*biggest_exponent) {
+                res
+            } else {
+                // Should be impossible
+                return Err("[RikiddoSigmoidFee] Overflow during calculation: current_exponent - \
+                            biggest_exponent");
+            };
+
+            let e_power_exponent = if let Ok(res) = exp::<FS, FS>(exponent) {
+                res
+            } else {
+                // In this case the result is zero (or is too small to fit) and can be ignored
+                continue;
+            };
+
+            if let Some(res) = exp_sum.checked_add(e_power_exponent) {
+                exp_sum = res;
+            } else {
+                // Highly unlikely
+                return Err("[RikiddoSigmoidFee] Overflow during calculation: sum_i(e^(i - \
+                            biggest_exponent))");
+            };
+        }
+
+        formula_components.sum_exp = exp_sum;
+
+        let ln_exp_sum = if let Ok(res) = ln::<FS, FS>(exp_sum) {
+            res
+        } else {
+            // Impossible
+            return Err("[RikiddoSigmoidMV] ln(exp_sum) (optimized), exp_sum <= 0");
+        };
+
+        if let Some(res) = result.checked_add(ln_exp_sum) {
+            Ok(res)
+        } else {
+            // Highly unlikely
+            Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + ln(exp_sum) \
+                 (optimized)")
+        }
+    }
+}
+
+impl<FU, FS, FE, MA> Lmsr for RikiddoSigmoidMV<FU, FS, FE, MA>
+where
+    FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
+    FS: FixedSigned
+        + From<I9F23>
+        + LossyFrom<FixedI32<U31>>
+        + LossyFrom<U1F127>
+        + LossyFrom<FixedI128<U127>>
+        + PartialOrd<I9F23>,
+    FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
+    FE: Sigmoid<FS = FS>,
+    MA: MarketAverage<FU = FU>,
+{
+    type FU = FU;
+
+    /// Return price P_i(q) for all assets in q
+    fn all_prices(&self, _asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str> {
+        Err("Unimplemented")
+    }
+
+    /// Return cost C(q) for all assets in q
+    fn cost(&self, asset_balances: &[Self::FU]) -> Result<Self::FU, &'static str> {
+        convert_to_unsigned(self.cost_with_forumla(
+            asset_balances,
+            &mut Default::default(),
+            false,
+            false,
+        )?)
     }
 
     /// Return price P_i(q) for asset q_i in q

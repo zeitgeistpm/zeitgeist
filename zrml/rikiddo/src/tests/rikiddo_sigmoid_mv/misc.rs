@@ -4,7 +4,9 @@ use substrate_fixed::{types::extra::U64, FixedI128};
 use super::{ln_exp_sum, max_allowed_error, Rikiddo};
 use crate::{
     constants::INITIAL_FEE,
-    types::{convert_to_signed, EmaMarketVolume, FeeSigmoid, RikiddoConfig},
+    types::{
+        convert_to_signed, EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoFormulaComponents,
+    },
 };
 
 #[test]
@@ -56,7 +58,11 @@ fn rikiddo_optimized_ln_sum_exp_strategy_exponent_subtract_overflow() {
     let rikiddo = Rikiddo::default();
     let param = vec![<FixedI128<U64>>::from_num(1i64 << 63)];
     assert_err!(
-        rikiddo.optimized_cost_strategy(&param, &<FixedI128<U64>>::from_num(1i64 << 62)),
+        rikiddo.optimized_cost_strategy(
+            &param,
+            &<FixedI128<U64>>::from_num(1i64 << 62),
+            &mut RikiddoFormulaComponents::default()
+        ),
         "[RikiddoSigmoidFee] Overflow during calculation: current_exponent - biggest_exponent"
     );
 }
@@ -67,7 +73,11 @@ fn rikiddo_optimized_ln_sum_exp_strategy_sum_exp_i_overflow() {
     let exponent = <FixedI128<U64>>::from_num(42.7f64);
     let param = vec![exponent, exponent, exponent];
     assert_err!(
-        rikiddo.optimized_cost_strategy(&param, &<FixedI128<U64>>::from_num(0)),
+        rikiddo.optimized_cost_strategy(
+            &param,
+            &<FixedI128<U64>>::from_num(0),
+            &mut RikiddoFormulaComponents::default()
+        ),
         "[RikiddoSigmoidFee] Overflow during calculation: sum_i(e^(i - biggest_exponent))"
     );
 }
@@ -79,7 +89,11 @@ fn rikiddo_optimized_ln_sum_exp_strategy_result_overflow() {
     let exponent = biggest_exponent - <FixedI128<U64>>::from_num(0.0000001f64);
     let param = vec![exponent, exponent, exponent];
     assert_err!(
-        rikiddo.optimized_cost_strategy(&param, &biggest_exponent),
+        rikiddo.optimized_cost_strategy(
+            &param,
+            &biggest_exponent,
+            &mut RikiddoFormulaComponents::default()
+        ),
         "[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + ln(exp_sum) \
          (optimized)"
     );
@@ -113,7 +127,11 @@ fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static
     );
 
     // Evaluate the result of the optimize cost strategy
-    result_fixed = rikiddo.optimized_cost_strategy(&param_fixed, &param_fixed[2])?;
+    result_fixed = rikiddo.optimized_cost_strategy(
+        &param_fixed,
+        &param_fixed[2],
+        &mut RikiddoFormulaComponents::default(),
+    )?;
     result_fixed_f64 = result_fixed.to_num();
     difference_abs = (result_f64 - result_fixed_f64).abs();
     assert!(
