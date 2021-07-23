@@ -20,6 +20,18 @@ fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
     fee_times_sum * ln_exp_sum(&exponents)
 }
 
+fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
+    let balance_sum = balances.iter().sum::<f64>();
+    let fee_times_sum = fee * balance_sum;
+    let balance_exponential_results: Vec<f64> = balances.iter().map(|qj| (qj / fee_times_sum).exp()).collect();
+    let left_from_addition = cost(fee, balances) / balance_sum;
+    let numerator_left_from_minus = (balance_in_question / fee_times_sum).exp() * balance_sum;
+    let numerator_right_from_minus: f64 = balance_exponential_results.iter().enumerate().map(|(idx, val)| balances[idx] * val).sum();
+    let numerator = numerator_left_from_minus - numerator_right_from_minus;
+    let denominator: f64 = balance_exponential_results.iter().sum::<f64>() * balance_sum;
+    left_from_addition + (numerator / denominator)
+}
+
 mod cost;
 mod fee;
 mod market_volume;
