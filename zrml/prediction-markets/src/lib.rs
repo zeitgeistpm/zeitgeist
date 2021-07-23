@@ -224,7 +224,7 @@ mod pallet {
             Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
             let rc = T::SimpleDisputes::internal_resolve(
-                default_dispute_bound::<T>,
+                &default_dispute_bound::<T>,
                 &market_id,
                 &market,
             )?;
@@ -901,7 +901,7 @@ mod pallet {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = 0;
             let rslt =
-                T::SimpleDisputes::on_resolution(default_dispute_bound::<T>, now, |market, rc| {
+                T::SimpleDisputes::on_resolution(&default_dispute_bound::<T>, now, |market, rc| {
                     let weight = Self::calculate_internal_resolve_weight(market, rc);
                     total_weight = total_weight.saturating_add(weight);
                 });

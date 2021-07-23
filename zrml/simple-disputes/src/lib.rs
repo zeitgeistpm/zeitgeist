@@ -176,7 +176,7 @@ mod pallet {
         }
 
         fn internal_resolve<D>(
-            dispute_bound: D,
+            dispute_bound: &D,
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber>,
         ) -> Result<ResolutionCounters, DispatchError>
@@ -382,12 +382,12 @@ mod pallet {
         }
 
         fn on_resolution<D, F>(
-            dispute_bound: D,
+            dispute_bound: &D,
             now: Self::BlockNumber,
             mut cb: F,
         ) -> DispatchResult
         where
-            D: Clone + Fn(usize) -> Self::Balance,
+            D: Fn(usize) -> Self::Balance,
             F: FnMut(&Market<Self::AccountId, Self::BlockNumber>, ResolutionCounters),
         {
             let dispute_period = T::DisputePeriod::get();
@@ -401,7 +401,7 @@ mod pallet {
             for id in &market_ids {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
-                    let rc = Self::internal_resolve(dispute_bound.clone(), id, &market)?;
+                    let rc = Self::internal_resolve(dispute_bound, id, &market)?;
                     cb(&market, rc);
                 }
             }
@@ -411,7 +411,7 @@ mod pallet {
             let disputed = Self::market_ids_per_dispute_block(&dispute_block).unwrap_or_default();
             for id in &disputed {
                 let market = T::MarketCommons::market(id)?;
-                let rc = Self::internal_resolve(dispute_bound.clone(), id, &market)?;
+                let rc = Self::internal_resolve(dispute_bound, id, &market)?;
                 cb(&market, rc);
             }
 

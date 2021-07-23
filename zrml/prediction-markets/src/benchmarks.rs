@@ -310,7 +310,7 @@ benchmarks! {
         let (_, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(default_dispute_bound::<T>, &marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     internal_resolve_categorical_disputed {
@@ -332,7 +332,7 @@ benchmarks! {
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(default_dispute_bound::<T>, &marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     internal_resolve_scalar_reported {
@@ -341,7 +341,7 @@ benchmarks! {
         let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(default_dispute_bound::<T>, &marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     internal_resolve_scalar_disputed {
@@ -357,7 +357,7 @@ benchmarks! {
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(default_dispute_bound::<T>, &marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.

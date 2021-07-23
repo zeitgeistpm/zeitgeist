@@ -55,7 +55,7 @@ pub trait SimpleDisputesPalletApi: DisputeApi {
     /// In the function calling this you should that the market is already in a reported or
     /// disputed state.
     fn internal_resolve<D>(
-        dispute_bound: D,
+        dispute_bound: &D,
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber>,
     ) -> Result<ResolutionCounters, DispatchError>

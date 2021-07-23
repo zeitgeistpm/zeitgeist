@@ -184,7 +184,7 @@ mod pallet {
             Ok(())
         }
 
-        fn on_resolution<D, F>(_dispute_bond: D, _now: Self::BlockNumber, _cb: F) -> DispatchResult
+        fn on_resolution<D, F>(_dispute_bond: &D, _now: Self::BlockNumber, _cb: F) -> DispatchResult
         where
             D: Fn(usize) -> Self::Balance,
             F: FnMut(&Market<Self::AccountId, Self::BlockNumber>, ResolutionCounters),
