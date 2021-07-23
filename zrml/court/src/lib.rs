@@ -189,7 +189,7 @@ mod pallet {
             D: Fn(usize) -> Self::Balance,
             F: FnMut(&Market<Self::AccountId, Self::BlockNumber>, ResolutionCounters),
         {
-            todo!()
+            Ok(())
         }
     }
 

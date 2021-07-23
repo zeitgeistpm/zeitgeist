@@ -1062,6 +1062,7 @@ mod pallet {
             Ok(())
         }
 
+        #[inline]
         fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
             ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
             Ok(())
