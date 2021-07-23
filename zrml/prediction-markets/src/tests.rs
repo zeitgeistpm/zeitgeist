@@ -251,6 +251,31 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         assert_eq!(market_after.status, MarketStatus::Reported);
         assert_eq!(report.outcome, OutcomeReport::Categorical(1));
         assert_eq!(report.by, market_after.oracle);
+
+        // Reset and report again as approval origin
+        let _ = MarketCommons::mutate_market(&0, |market| {
+            market.status = MarketStatus::Closed;
+            market.report = None;
+            Ok(())
+        });
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(SUDO),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        // Reset and report again as unauthorized origin
+        let _ = MarketCommons::mutate_market(&0, |market| {
+            market.status = MarketStatus::Closed;
+            market.report = None;
+            Ok(())
+        });
+
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::ReporterNotOracle
+        );
     });
 }
 

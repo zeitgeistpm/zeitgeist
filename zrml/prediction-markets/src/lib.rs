@@ -85,6 +85,7 @@ mod pallet {
         DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
+        constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
@@ -620,7 +621,8 @@ mod pallet {
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
-            let sender = ensure_signed(origin)?;
+            let sender = ensure_signed(origin.clone())?;
+
             let current_block = <frame_system::Pallet<T>>::block_number();
 
             T::MarketCommons::mutate_market(&market_id, |market| {
@@ -635,16 +637,24 @@ mod pallet {
                     MarketEnd::Block(block) => {
                         // blocks
                         if current_block <= block + T::ReportingPeriod::get() {
-                            ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                            ensure!(
+                                sender == market.oracle
+                                    || T::ApprovalOrigin::ensure_origin(origin).is_ok(),
+                                Error::<T>::ReporterNotOracle
+                            );
                         } // otherwise anyone can be the reporter
                     }
                     MarketEnd::Timestamp(timestamp) => {
                         // unix timestamp
                         let now = T::Timestamp::now().saturated_into::<u64>();
                         let reporting_period_in_ms =
-                            T::ReportingPeriod::get().saturated_into::<u64>() * 6000;
+                            T::ReportingPeriod::get().saturated_into::<u64>() * MILLISECS_PER_BLOCK;
                         if now <= timestamp + reporting_period_in_ms {
-                            ensure!(sender == market.oracle, Error::<T>::ReporterNotOracle);
+                            ensure!(
+                                sender == market.oracle
+                                    || T::ApprovalOrigin::ensure_origin(origin).is_ok(),
+                                Error::<T>::ReporterNotOracle
+                            );
                         } // otherwise anyone can be the reporter
                     }
                 }
