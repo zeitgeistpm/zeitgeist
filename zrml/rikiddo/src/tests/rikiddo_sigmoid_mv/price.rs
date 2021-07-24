@@ -24,25 +24,12 @@ fn price_helper_first_quotient_exponent_not_found() -> Result<(), &'static str> 
 }
 
 #[test]
-fn price_helper_first_quotient_overflow_qj_div_fee_times_sum_j() -> Result<(), &'static str> {
-    let rikiddo = Rikiddo::default();
-    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
-    let param = vec![<FixedI128<U64>>::from(i64::MAX), <FixedI128<U64>>::from(i64::MAX - 1)];
-    formula_components.exponents.insert(param[0], 10.to_fixed());
-    formula_components.sum_times_fee = 0.1.to_fixed();
-    assert_err!(
-        rikiddo.price_helper_first_quotient(&param, param[0], &formula_components),
-        "[RikiddoSigmoidMV] Overflow during calculation: qj / fee * sum_j(qj)"
-    );
-    Ok(())
-}
-
-#[test]
 fn price_helper_first_quotient_overflow_exponent_sub_exp_qj() -> Result<(), &'static str> {
     let rikiddo = Rikiddo::default();
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
     let param = vec![<FixedI128<U64>>::from(i64::MAX), <FixedI128<U64>>::from(-i64::MAX >> 5)];
     formula_components.exponents.insert(param[0], i64::MAX.to_fixed());
+    formula_components.exponents.insert(param[1], <FixedI128<U64>>::from(-i64::MAX >> 5));
     formula_components.sum_times_fee = 0.1.to_fixed();
     assert_err!(
         rikiddo.price_helper_first_quotient(&param, param[0], &formula_components),

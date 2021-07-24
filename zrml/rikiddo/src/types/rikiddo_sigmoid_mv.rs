@@ -297,12 +297,12 @@ where
                 continue;
             }
 
-            let elem_div_sum_fee = if let Some(res) =
-                elem.checked_div(formula_components.sum_times_fee)
-            {
-                res
+            let elem_div_sum_fee =
+            if let Some(res) = formula_components.exponents.get(elem) {
+                *res
             } else {
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: qj / fee * sum_j(qj)");
+                return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
+                            question RikiddoFormulaComponents HashMap");
             };
 
             let exponent =
