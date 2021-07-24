@@ -6,10 +6,7 @@ use substrate_fixed::{
     FixedI8, FixedU8,
 };
 
-use crate::{
-    mock::*,
-    types::{convert_to_signed, convert_to_unsigned},
-};
+use crate::types::{convert_to_signed, convert_to_unsigned};
 
 mod ema_market_volume;
 mod rikiddo_sigmoid_mv;
@@ -61,11 +58,4 @@ fn convert_signed_to_unsigned_returns_correct_result() -> Result<(), &'static st
     let num2_converted: FixedU8<U1> = convert_to_unsigned(num2)?;
     assert_eq!(num2_converted.to_num::<f32>(), 4.5f32);
     Ok(())
-}
-
-#[test]
-fn it_is_a_dummy_test() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert!(true);
-    });
 }

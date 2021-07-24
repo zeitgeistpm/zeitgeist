@@ -38,20 +38,6 @@ impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> Default for
     }
 }
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
-pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
-where
-    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
-    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
-    FE: Sigmoid<FS = FS>,
-    MA: MarketAverage<FU = FU>,
-{
-    pub config: RikiddoConfig<FS>,
-    pub fees: FE,
-    pub ma_short: MA,
-    pub ma_long: MA,
-}
-
 // The RikiddoFormulaComponents contain all necessary duplicate information
 // thorughout multiple calculations.
 pub(crate) struct RikiddoFormulaComponents<FS>
@@ -85,6 +71,20 @@ where
             exponents: HashMap::new(),
         }
     }
+}
+
+#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
+pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
+where
+    FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
+    FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
+    FE: Sigmoid<FS = FS>,
+    MA: MarketAverage<FU = FU>,
+{
+    pub config: RikiddoConfig<FS>,
+    pub fees: FE,
+    pub ma_short: MA,
+    pub ma_long: MA,
 }
 
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>
@@ -274,7 +274,8 @@ where
     }
 
     // Calculates the first quotient in the price formula after the cost / sum_balances
-    fn price_helper_first_quotient(
+    pub(crate) fn price_helper_first_quotient(
+        &self,
         asset_balances: &[FS],
         asset_in_question_balance: FS,
         formula_components: &RikiddoFormulaComponents<FS>,
@@ -288,25 +289,32 @@ where
             };
 
         let mut sum: FS = 0.to_fixed();
+        let mut skipped = false;
 
         for elem in asset_balances {
-            if *elem == asset_in_question_balance {
+            if *elem == asset_in_question_balance && !skipped {
+                skipped = true;
                 continue;
             }
 
-            let elem_div_sum_fee = if let Some(res) = elem.checked_div(formula_components.sum_times_fee) {
+            let elem_div_sum_fee = if let Some(res) =
+                elem.checked_div(formula_components.sum_times_fee)
+            {
                 res
             } else {
                 return Err("[RikiddoSigmoidMV] Overflow during calculation: qj / fee * sum_j(qj)");
             };
 
-            let exponent = if let Some(res) = elem_div_sum_fee.checked_sub(exponent_of_balance_in_question) {
-                res
-            } else {
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: qj / fee * sum_j(qj)");
-            };
+            let exponent =
+                if let Some(res) = elem_div_sum_fee.checked_sub(exponent_of_balance_in_question) {
+                    res
+                } else {
+                    // Should be impossible (negative exponent not possible unless manually entered)
+                    return Err("[RikiddoSigmoidMV] Overflow during calculation: exponent - \
+                                exponent_balance_in_question");
+                };
 
-            let exponential_result: FS = if let Ok(res) = exp::<FS,FS>(exponent) {
+            let exponential_result: FS = if let Ok(res) = exp::<FS, FS>(exponent) {
                 res
             } else {
                 // In that case the final result will not fit into the fractional bits
@@ -469,7 +477,7 @@ where
         asset_in_question_balance: &Self::FU,
         asset_balances: &[Self::FU],
     ) -> Result<Self::FU, &'static str> {
-        let mut formula_components = Default::default();
+        let mut formula_components = RikiddoFormulaComponents::default();
 
         let cost_part =
             self.cost_with_forumla(asset_balances, &mut formula_components, true, true)?;

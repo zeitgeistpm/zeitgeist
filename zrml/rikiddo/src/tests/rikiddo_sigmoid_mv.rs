@@ -20,6 +20,29 @@ fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
     fee_times_sum * ln_exp_sum(&exponents)
 }
 
+fn price_first_quotient(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
+    let balance_sum = balances.iter().sum::<f64>();
+    let fee_times_sum = fee * balance_sum;
+    let balance_exponential_results: Vec<f64> =
+        balances.iter().map(|qj| (qj / fee_times_sum).exp()).collect();
+    let denominator: f64 = balance_exponential_results.iter().sum::<f64>() * balance_sum;
+    ((balance_in_question / fee_times_sum).exp() * balance_sum) / denominator
+}
+
+fn price_second_quotient(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
+    let balance_sum = balances.iter().sum::<f64>();
+    let fee_times_sum = fee * balance_sum;
+    let balance_exponential_results: Vec<f64> =
+        balances.iter().map(|qj| (qj / fee_times_sum).exp()).collect();
+    let denominator: f64 = balance_exponential_results.iter().sum::<f64>() * balance_sum;
+    balance_exponential_results
+        .iter()
+        .enumerate()
+        .map(|(idx, val)| balances[idx] * val)
+        .sum::<f64>()
+        / denominator
+}
+
 fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
     let balance_sum = balances.iter().sum::<f64>();
     let fee_times_sum = fee * balance_sum;
