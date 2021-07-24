@@ -281,19 +281,61 @@ where
     ) -> Result<FS, &'static str> {
         let exponent_of_balance_in_question =
             if let Some(res) = formula_components.exponents.get(&asset_in_question_balance) {
-                res
+                *res
             } else {
                 return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
                             question RikiddoFormulaComponents HashMap");
             };
 
+        let mut sum: FS = 0.to_fixed();
+
         for elem in asset_balances {
             if *elem == asset_in_question_balance {
                 continue;
             }
+
+            let elem_div_sum_fee = if let Some(res) = elem.checked_div(formula_components.sum_times_fee) {
+                res
+            } else {
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: qj / fee * sum_j(qj)");
+            };
+
+            let exponent = if let Some(res) = elem_div_sum_fee.checked_sub(exponent_of_balance_in_question) {
+                res
+            } else {
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: qj / fee * sum_j(qj)");
+            };
+
+            let exponential_result: FS = if let Ok(res) = exp::<FS,FS>(exponent) {
+                res
+            } else {
+                // In that case the final result will not fit into the fractional bits
+                // and therefore is approximated to zero. Cannot panic.
+                return Ok(0.to_fixed());
+            };
+
+            sum = if let Some(res) = sum.checked_add(exponential_result) {
+                res
+            } else {
+                // In that case the final result will not fit into the fractional bits
+                // and therefore is approximated to zero. Cannot panic.
+                return Ok(0.to_fixed());
+            };
         }
 
-        Err("Unimplemented!")
+        sum = if let Some(res) = sum.checked_add(formula_components.one) {
+            res
+        } else {
+            // In that case the final result will not fit into the fractional bits
+            // and therefore is approximated to zero. Cannot panic.
+            return Ok(0.to_fixed());
+        };
+
+        if let Some(res) = formula_components.one.checked_div(sum) {
+            Ok(res)
+        } else {
+            Ok(0.to_fixed())
+        }
     }
     //fn price_helper_second_quotient(asset_balances, &formula_components)?;
     //fn price_helper_combine_all_parts()?;
