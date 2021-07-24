@@ -13,7 +13,7 @@ fn rikiddo_cost_function_rejects_empty_list() {
 #[test]
 fn rikiddo_cost_function_overflow_during_summation_of_balances() {
     let rikiddo = Rikiddo::default();
-    let exponent = <FixedU128<U64>>::from_num(i64::MAX);
+    let exponent = <FixedU128<U64>>::from_num(u64::MAX);
     let param = vec![exponent, exponent];
     assert_err!(
         rikiddo.cost(&param),
@@ -24,7 +24,7 @@ fn rikiddo_cost_function_overflow_during_summation_of_balances() {
 #[test]
 fn rikiddo_cost_function_overflow_during_fee_times_balance_sum() {
     let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(2);
+    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(i64::MAX);
     let param = <FixedU128<U64>>::from_num(i64::MAX);
     assert_err!(
         rikiddo.cost(&vec![param]),
@@ -88,8 +88,8 @@ fn rikiddo_cost_function_overflow_during_ceil_required_bits_minus_one() {
 fn rikiddo_cost_function_overflow_during_calculation_of_result() {
     let mut rikiddo = Rikiddo::default();
     rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(1);
-    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
-    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
+    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX >> 1);
+    let param = <FixedU128<U64>>::from_num(i64::MAX as u64 >> 1);
     assert_err!(
         rikiddo.cost(&vec![param, param]),
         "[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
