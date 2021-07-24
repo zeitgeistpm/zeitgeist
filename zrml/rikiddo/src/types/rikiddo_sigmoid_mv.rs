@@ -57,12 +57,12 @@ pub(crate) struct RikiddoFormulaComponents<FS>
 where
     FS: FixedSigned + From<I9F23> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
 {
-    one: FS,
-    fee: FS,
-    sum_balances: FS,
-    sum_times_fee: FS,
-    emax: FS,
-    sum_exp: FS,
+    pub(crate) one: FS,
+    pub(crate) fee: FS,
+    pub(crate) sum_balances: FS,
+    pub(crate) sum_times_fee: FS,
+    pub(crate) emax: FS,
+    pub(crate) sum_exp: FS,
 }
 
 impl<FS> Default for RikiddoFormulaComponents<FS>
@@ -126,7 +126,7 @@ where
     // Setting `for_price = true` returns the cost minus the sum of quantities.
     // Setting `enforce_optimized = true` enforces the optimized strategy, which additionally sets
     // a field (sum_exp) that is reusable within the price function.
-    fn cost_with_forumla(
+    pub(crate) fn cost_with_forumla(
         &self,
         asset_balances: &[FU],
         formula_components: &mut RikiddoFormulaComponents<FS>,
@@ -302,7 +302,7 @@ where
             return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
         }
 
-        let mut exp_sum = FS::from_num(1u8);
+        let mut exp_sum = formula_components.one;
         let result = *biggest_exponent;
 
         for elem in exponents {
@@ -387,10 +387,19 @@ where
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
-        _asset_in_question_balance: &Self::FU,
-        _asset_balances: &[Self::FU],
+        asset_in_question_balance: &Self::FU,
+        asset_balances: &[Self::FU],
     ) -> Result<Self::FU, &'static str> {
-        Err("Unimplemented")
+        let mut formula_components = Default::default();
+
+        let cost_part = self.cost_with_forumla(
+            asset_balances,
+            &mut formula_components,
+            true,
+            true,
+        )?;
+
+        Err("Unimplemented!")
     }
 }
 
