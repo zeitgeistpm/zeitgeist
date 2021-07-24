@@ -65,3 +65,45 @@ fn price_helper_first_quotient_returns_correct_result() -> Result<(), &'static s
     );
     Ok(())
 }
+
+
+#[test]
+fn price_helper_second_quotient_reduced_exp_not_found() -> Result<(), &'static str> {
+    // Err("[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
+    Err("Unimplemented!")
+}
+
+#[test]
+fn price_helper_second_quotient_overflow_elem_times_reduced_exp() -> Result<(), &'static str> {
+    // Err("[RikiddoSigmoidMV] Overflow during calculation: element * reduced_exponential_result");
+    Err("Unimplemented!")
+}
+
+#[test]
+fn price_helper_second_quotient_overflow_elem_times_reduced_exp() -> Result<(), &'static str> {
+    // Err("[RikiddoSigmoidMV] Overflow during calculation: element * reduced_exponential_result");
+    Err("Unimplemented!")
+}
+
+#[test]
+fn price_helper_second_quotient_overflow_sum_j_plus_elem_time_reduced_exp() -> Result<(), &'static str> {
+    // Err("[RikiddoSigmoidMV] Overflow during calculation: sum_j += elem_times_reduced_exponential_result");
+    Err("Unimplemented!")
+}
+
+#[test]
+fn price_helper_second_quotient_overflow_sum_balances_times_sum_exp() -> Result<(), &'static str> {
+    // Err("[RikiddoSigmoidMV] Overflow during calculation: sum_balances * sum_exp");
+    Err("Unimplemented!")
+}
+
+#[test]
+fn price_helper_second_quotient_overflow_numerator_denominator() -> Result<(), &'static str> {
+    // Err("[RikiddoSigmoidMV] Overflow during calculation (price helper 2): numerator / denominator")
+    Err("Unimplemented!")
+}
+
+#[test]
+fn price_helper_second_quotient_returns_correct_result() -> Result<(), &'static str> {
+    Err("Unimplemented!")
+}

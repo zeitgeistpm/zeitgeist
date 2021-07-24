@@ -390,8 +390,6 @@ where
                 if let Some(res) = numerator.checked_add(elem_times_reduced_exponential_result) {
                     res
                 } else {
-                    // In that case the final result will not fit into the fractional bits
-                    // and therefore is approximated to zero. Cannot panic.
                     return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_j += \
                                 elem_times_reduced_exponential_result");
                 };
@@ -402,16 +400,12 @@ where
         {
             res
         } else {
-            // In that case the final result will not fit into the fractional bits
-            // and therefore is approximated to zero. Cannot panic.
             return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_balances * sum_exp");
         };
 
         if let Some(res) = numerator.checked_div(denominator) {
             Ok(res)
         } else {
-            // In that case the final result will not fit into the fractional bits
-            // and therefore is approximated to zero. Cannot panic.
             Err("[RikiddoSigmoidMV] Overflow during calculation (price helper 2): numerator / \
                  denominator")
         }
