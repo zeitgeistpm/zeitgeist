@@ -20,11 +20,12 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        pallet_prelude::StorageMap,
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Currency, Get, Hooks, IsType, Randomness, ReservableCurrency},
         Blake2_128Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use rand::{rngs::StdRng, seq::SliceRandom, RngCore, SeedableRng};
     use sp_runtime::{traits::Saturating, ArithmeticError, DispatchError, SaturatedConversion};
     use zeitgeist_primitives::{
         traits::DisputeApi,
@@ -115,35 +116,34 @@ mod pallet {
         // Returns an unique random subset of `jurors` with length `len`.
         //
         // If `len` is greater than the length of `jurors`, then `len` will be capped.
-        pub(crate) fn random_jurors<'a, 'b>(
+        pub(crate) fn random_jurors<'a, 'b, R>(
             jurors: &'a [(T::AccountId, Juror<BalanceOf<T>>)],
             len: usize,
-        ) -> ArrayVec<&'b Juror<BalanceOf<T>>, MAX_RANDOM_JURORS>
+            rng: &mut R,
+        ) -> ArrayVec<&'b (T::AccountId, Juror<BalanceOf<T>>), MAX_RANDOM_JURORS>
         where
+            R: RngCore,
             'a: 'b,
         {
             let actual_len = jurors.len().min(len);
-            let mut subset = ArrayVec::new();
-            if actual_len == 0 {
-                return subset;
-            }
+            jurors.choose_multiple(rng, actual_len).collect()
+        }
+
+        // Returns a pseudo random number generator implementation based on the seed
+        // provided by the `Config::Random` type and the `JurorsSelectionNonce` storage.
+        pub(crate) fn rng() -> impl RngCore {
+            let nonce = <JurorsSelectionNonce<T>>::mutate(|n| {
+                let rslt = *n;
+                *n = n.wrapping_add(1);
+                rslt
+            });
+            let mut rslt: u64 = nonce;
             // https://github.com/paritytech/substrate/issues/8312
             let (random_hash, _) = T::Random::random(b"zrml-court");
             for byte in random_hash.as_ref().iter().copied() {
-                if subset.len() == MAX_RANDOM_JURORS {
-                    break;
-                }
-                // `actual_len` will never be 0
-                let idx = Into::<usize>::into(byte) % actual_len;
-                // `idx` will always be within the length of `jurors`
-                let (_, juror) = jurors.get(idx).unwrap();
-                let juror_is_not_included = subset.iter().all(|&el| el != juror);
-                if juror_is_not_included {
-                    // `push` will never overflow the internal capacity of `MAX_RANDOM_JURORS` jurors
-                    subset.push(juror);
-                }
+                rslt = rslt.wrapping_add(byte.into());
             }
-            subset
+            StdRng::seed_from_u64(rslt)
         }
 
         // No-one can stake more than BalanceOf::<T>::max(), therefore, this function saturates
@@ -180,7 +180,8 @@ mod pallet {
         {
             CurrencyOf::<T>::reserve(&who, dispute_bond(1))?;
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
-            let _ = Self::random_jurors(&jurors, 3);
+            let mut rng = Self::rng();
+            let _ = Self::random_jurors(&jurors, 3, &mut rng);
             Ok(())
         }
 
@@ -196,4 +197,8 @@ mod pallet {
     /// Accounts that stake funds to decide outcomes.
     #[pallet::storage]
     pub type Jurors<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Juror<BalanceOf<T>>>;
+
+    /// An extra layer of pseudo randomness.
+    #[pallet::storage]
+    pub type JurorsSelectionNonce<T: Config> = StorageValue<_, u64, ValueQuery>;
 }

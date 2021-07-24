@@ -12023,6 +12023,7 @@ dependencies = [
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "parity-scale-codec",
+ "rand 0.8.4",
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
