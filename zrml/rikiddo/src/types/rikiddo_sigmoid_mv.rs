@@ -144,6 +144,7 @@ where
         formula_components: &mut RikiddoFormulaComponents<FS>,
         for_price: bool,
         enforce_optimized: bool,
+        add_exponents: bool,
     ) -> Result<FS, &'static str> {
         if asset_balances.is_empty() {
             return Err("[RikiddoSigmoidMV] No asset balances provided");
@@ -190,7 +191,7 @@ where
 
             // Panic impossible
             exponents.push(exponent);
-            formula_components.exponents.insert(convert_to_signed(*elem)?, exponent);
+            if add_exponents { formula_components.exponents.insert(convert_to_signed(*elem)?, exponent); }
         }
 
         formula_components.emax = biggest_exponent;
@@ -273,6 +274,37 @@ where
         }
     }
 
+    fn price_helper_qj_div_sum_fee(
+        &self,
+        qj: &FS,
+        exponent_of_balance_in_question: FS,
+        formula_components: &RikiddoFormulaComponents<FS>,
+    ) -> Result<FS, &'static str> {
+        let elem_div_sum_fee = if let Some(res) = formula_components.exponents.get(&qj) {
+            *res
+        } else {
+            return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in question \
+                        RikiddoFormulaComponents HashMap");
+        };
+
+        let exponent =
+            if let Some(res) = elem_div_sum_fee.checked_sub(exponent_of_balance_in_question) {
+                res
+            } else {
+                // Should be impossible (negative exponent not possible unless manually entered)
+                return Err("[RikiddoSigmoidMV] Overflow during calculation: exponent - \
+                            exponent_balance_in_question");
+            };
+
+        if let Ok(res) = exp::<FS, FS>(exponent) {
+            Ok(res)
+        } else {
+            // In that case the final result will not fit into the fractional bits
+            // and therefore is approximated to zero. Cannot panic.
+            Ok(0.to_fixed())
+        }
+    }
+
     // Calculates the first quotient in the price formula after the cost / sum_balances
     pub(crate) fn price_helper_first_quotient(
         &self,
@@ -297,30 +329,7 @@ where
                 continue;
             }
 
-            let elem_div_sum_fee =
-            if let Some(res) = formula_components.exponents.get(elem) {
-                *res
-            } else {
-                return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
-                            question RikiddoFormulaComponents HashMap");
-            };
-
-            let exponent =
-                if let Some(res) = elem_div_sum_fee.checked_sub(exponent_of_balance_in_question) {
-                    res
-                } else {
-                    // Should be impossible (negative exponent not possible unless manually entered)
-                    return Err("[RikiddoSigmoidMV] Overflow during calculation: exponent - \
-                                exponent_balance_in_question");
-                };
-
-            let exponential_result: FS = if let Ok(res) = exp::<FS, FS>(exponent) {
-                res
-            } else {
-                // In that case the final result will not fit into the fractional bits
-                // and therefore is approximated to zero. Cannot panic.
-                return Ok(0.to_fixed());
-            };
+           let exponential_result = self.price_helper_qj_div_sum_fee(elem, exponent_of_balance_in_question, &formula_components)?;
 
             sum = if let Some(res) = sum.checked_add(exponential_result) {
                 res
@@ -345,6 +354,7 @@ where
             Ok(0.to_fixed())
         }
     }
+    
     //fn price_helper_second_quotient(asset_balances, &formula_components)?;
     //fn price_helper_combine_all_parts()?;
 
@@ -468,6 +478,7 @@ where
             &mut Default::default(),
             false,
             false,
+            false,
         )?)
     }
 
@@ -480,7 +491,7 @@ where
         let mut formula_components = RikiddoFormulaComponents::default();
 
         let cost_part =
-            self.cost_with_forumla(asset_balances, &mut formula_components, true, true)?;
+            self.cost_with_forumla(asset_balances, &mut formula_components, true, true, true)?;
 
         //let first_quotient = self.price_helper_first_quotient(asset_balances, asset_in_question_balance, &formula_components)?;
         //let second_quotient = self.price_helper_second_quotient(asset_balances, &formula_components)?;

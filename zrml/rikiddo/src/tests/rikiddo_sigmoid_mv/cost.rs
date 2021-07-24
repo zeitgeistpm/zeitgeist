@@ -149,7 +149,7 @@ fn rikiddo_cost_helper_does_set_all_values() -> Result<(), &'static str> {
     let rikiddo = Rikiddo::default();
     let param = <FixedU128<U64>>::from_num(1);
     let mut formula_components = RikiddoFormulaComponents::default();
-    let _ = rikiddo.cost_with_forumla(&vec![param, param], &mut formula_components, true, true)?;
+    let _ = rikiddo.cost_with_forumla(&vec![param, param], &mut formula_components, true, true, true)?;
     let zero: FixedI128<U64> = 0.to_fixed();
     assert_ne!(formula_components.one, zero);
     assert_ne!(formula_components.fee, zero);
@@ -169,7 +169,7 @@ fn rikiddo_cost_helper_does_return_cost_minus_sum_quantities() -> Result<(), &'s
     let mut formula_components = RikiddoFormulaComponents::default();
     let quantities = &vec![param, param];
     let cost_without_sum_quantities =
-        rikiddo.cost_with_forumla(&quantities, &mut formula_components, true, true)?;
+        rikiddo.cost_with_forumla(&quantities, &mut formula_components, true, false, false)?;
     let cost_from_price_formula_times_sum_quantities =
         cost_without_sum_quantities * formula_components.sum_balances;
     let cost: FixedI128<U64> = convert_to_signed(rikiddo.cost(&quantities)?)?;

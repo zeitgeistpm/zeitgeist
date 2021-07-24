@@ -48,7 +48,7 @@ fn price_helper_first_quotient_returns_correct_result() -> Result<(), &'static s
     let param_u =
         vec![<FixedU128<U64>>::from_num(param_f64[0]), <FixedU128<U64>>::from_num(param_f64[1])];
     // This fills the formula_components with the correct values
-    let _ = rikiddo.cost_with_forumla(&param_u, formula_components, true, true);
+    let _ = rikiddo.cost_with_forumla(&param_u, formula_components, true, true, true);
     let rikiddo_price =
         rikiddo.price_helper_first_quotient(&param, param[0], &formula_components)?;
     let rikiddo_price_f64 =
