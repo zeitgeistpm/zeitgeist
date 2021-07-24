@@ -1,8 +1,12 @@
 use frame_support::assert_err;
+use hashbrown::HashMap;
 use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128, FixedU128};
 
 use super::{cost, max_allowed_error, Rikiddo};
-use crate::{traits::Lmsr, types::{convert_to_signed, RikiddoFormulaComponents}};
+use crate::{
+    traits::Lmsr,
+    types::{convert_to_signed, RikiddoFormulaComponents},
+};
 
 #[test]
 fn rikiddo_cost_function_rejects_empty_list() {
@@ -141,16 +145,11 @@ fn rikiddo_cost_function_correct_result() -> Result<(), &'static str> {
 }
 
 #[test]
-fn rikiddo_cost_helper_does_set_all_values() -> Result<(), &'static str>  {
+fn rikiddo_cost_helper_does_set_all_values() -> Result<(), &'static str> {
     let rikiddo = Rikiddo::default();
     let param = <FixedU128<U64>>::from_num(1);
     let mut formula_components = RikiddoFormulaComponents::default();
-    let _ = rikiddo.cost_with_forumla(
-        &vec![param, param],
-        &mut formula_components,
-        true,
-        true,
-    )?;
+    let _ = rikiddo.cost_with_forumla(&vec![param, param], &mut formula_components, true, true)?;
     let zero: FixedI128<U64> = 0.to_fixed();
     assert_ne!(formula_components.one, zero);
     assert_ne!(formula_components.fee, zero);
@@ -158,27 +157,27 @@ fn rikiddo_cost_helper_does_set_all_values() -> Result<(), &'static str>  {
     assert_ne!(formula_components.sum_times_fee, zero);
     assert_ne!(formula_components.emax, zero);
     assert_ne!(formula_components.sum_exp, zero);
+    assert_ne!(formula_components.ln_sum_exp, zero);
+    assert_ne!(formula_components.exponents, HashMap::new());
     Ok(())
 }
 
 #[test]
-fn rikiddo_cost_helper_does_return_cost_minus_sum_quantities() -> Result<(), &'static str>  {
+fn rikiddo_cost_helper_does_return_cost_minus_sum_quantities() -> Result<(), &'static str> {
     let rikiddo = Rikiddo::default();
     let param = <FixedU128<U64>>::from_num(1);
     let mut formula_components = RikiddoFormulaComponents::default();
     let quantities = &vec![param, param];
-    let cost_without_sum_quantities = rikiddo.cost_with_forumla(
-        &quantities,
-        &mut formula_components,
-        true,
-        true,
-    )?;
-    let cost_from_price_formula_times_sum_quantities = cost_without_sum_quantities * formula_components.sum_balances;
+    let cost_without_sum_quantities =
+        rikiddo.cost_with_forumla(&quantities, &mut formula_components, true, true)?;
+    let cost_from_price_formula_times_sum_quantities =
+        cost_without_sum_quantities * formula_components.sum_balances;
     let cost: FixedI128<U64> = convert_to_signed(rikiddo.cost(&quantities)?)?;
     let difference_abs = (cost - cost_from_price_formula_times_sum_quantities).abs();
     assert!(
         difference_abs <= max_allowed_error(64),
-        "\nDirect cost result: {}\nReconstructed cost result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
+        "\nDirect cost result: {}\nReconstructed cost result: {}\nDifference: \
+         {}\nMax_Allowed_Difference: {}",
         cost,
         cost_from_price_formula_times_sum_quantities,
         difference_abs,

@@ -4,6 +4,7 @@ use crate::{
 };
 use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
+use hashbrown::HashMap;
 use substrate_fixed::{
     consts::LOG2_E,
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
@@ -63,6 +64,8 @@ where
     pub(crate) sum_times_fee: FS,
     pub(crate) emax: FS,
     pub(crate) sum_exp: FS,
+    pub(crate) ln_sum_exp: FS,
+    pub(crate) exponents: HashMap<FS, FS>,
 }
 
 impl<FS> Default for RikiddoFormulaComponents<FS>
@@ -71,7 +74,16 @@ where
 {
     fn default() -> Self {
         let zero = 0.to_fixed();
-        Self { one: 1i32.to_fixed(), fee: zero, sum_balances: zero, sum_times_fee: zero, emax: zero, sum_exp: zero}
+        Self {
+            one: 1i32.to_fixed(),
+            fee: zero,
+            sum_balances: zero,
+            sum_times_fee: zero,
+            emax: zero,
+            sum_exp: zero,
+            ln_sum_exp: zero,
+            exponents: HashMap::new(),
+        }
     }
 }
 
@@ -178,6 +190,7 @@ where
 
             // Panic impossible
             exponents.push(exponent);
+            formula_components.exponents.insert(convert_to_signed(*elem)?, exponent);
         }
 
         formula_components.emax = biggest_exponent;
@@ -236,14 +249,13 @@ where
 
         // Select strategy to calculate ln(sum_i(e^i))
         if required_bits > FS::int_nbits() as u128 || enforce_optimized {
-            ln_sum_e = self.optimized_cost_strategy(
-                &exponents,
-                &biggest_exponent,
-                formula_components,
-            )?;
+            ln_sum_e =
+                self.optimized_cost_strategy(&exponents, &biggest_exponent, formula_components)?;
         } else {
             ln_sum_e = self.default_cost_strategy(&exponents)?;
         }
+
+        formula_components.ln_sum_exp = ln_sum_e;
 
         if for_price {
             if let Some(res) = formula_components.fee.checked_mul(ln_sum_e) {
@@ -260,6 +272,31 @@ where
             }
         }
     }
+
+    // Calculates the first quotient in the price formula after the cost / sum_balances
+    fn price_helper_first_quotient(
+        asset_balances: &[FS],
+        asset_in_question_balance: FS,
+        formula_components: &RikiddoFormulaComponents<FS>,
+    ) -> Result<FS, &'static str> {
+        let exponent_of_balance_in_question =
+            if let Some(res) = formula_components.exponents.get(&asset_in_question_balance) {
+                res
+            } else {
+                return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
+                            question RikiddoFormulaComponents HashMap");
+            };
+
+        for elem in asset_balances {
+            if *elem == asset_in_question_balance {
+                continue;
+            }
+        }
+
+        Err("Unimplemented!")
+    }
+    //fn price_helper_second_quotient(asset_balances, &formula_components)?;
+    //fn price_helper_combine_all_parts()?;
 
     pub(crate) fn default_cost_strategy(&self, exponents: &[FS]) -> Result<FS, &'static str> {
         let mut acc: FS = FS::from_num(0u8);
@@ -392,12 +429,11 @@ where
     ) -> Result<Self::FU, &'static str> {
         let mut formula_components = Default::default();
 
-        let cost_part = self.cost_with_forumla(
-            asset_balances,
-            &mut formula_components,
-            true,
-            true,
-        )?;
+        let cost_part =
+            self.cost_with_forumla(asset_balances, &mut formula_components, true, true)?;
+
+        //let first_quotient = self.price_helper_first_quotient(asset_balances, asset_in_question_balance, &formula_components)?;
+        //let second_quotient = self.price_helper_second_quotient(asset_balances, &formula_components)?;
 
         Err("Unimplemented!")
     }
