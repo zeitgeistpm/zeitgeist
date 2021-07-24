@@ -52,6 +52,7 @@ where
     pub(crate) sum_exp: FS,
     pub(crate) ln_sum_exp: FS,
     pub(crate) exponents: HashMap<FS, FS>,
+    pub(crate) reduced_exponential_results: HashMap<FS, FS>,
 }
 
 impl<FS> Default for RikiddoFormulaComponents<FS>
@@ -69,6 +70,7 @@ where
             sum_exp: zero,
             ln_sum_exp: zero,
             exponents: HashMap::new(),
+            reduced_exponential_results: HashMap::new(),
         }
     }
 }
@@ -191,7 +193,9 @@ where
 
             // Panic impossible
             exponents.push(exponent);
-            if add_exponents { formula_components.exponents.insert(convert_to_signed(*elem)?, exponent); }
+            if add_exponents {
+                formula_components.exponents.insert(convert_to_signed(*elem)?, exponent);
+            }
         }
 
         formula_components.emax = biggest_exponent;
@@ -250,8 +254,12 @@ where
 
         // Select strategy to calculate ln(sum_i(e^i))
         if required_bits > FS::int_nbits() as u128 || enforce_optimized {
-            ln_sum_e =
-                self.optimized_cost_strategy(&exponents, &biggest_exponent, formula_components)?;
+            ln_sum_e = self.optimized_cost_strategy(
+                &exponents,
+                &biggest_exponent,
+                formula_components,
+                add_exponents,
+            )?;
         } else {
             ln_sum_e = self.default_cost_strategy(&exponents)?;
         }
@@ -271,37 +279,6 @@ where
                 Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
                      ln(sum_i(e^i))")
             }
-        }
-    }
-
-    fn price_helper_qj_div_sum_fee(
-        &self,
-        qj: &FS,
-        exponent_of_balance_in_question: FS,
-        formula_components: &RikiddoFormulaComponents<FS>,
-    ) -> Result<FS, &'static str> {
-        let elem_div_sum_fee = if let Some(res) = formula_components.exponents.get(&qj) {
-            *res
-        } else {
-            return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in question \
-                        RikiddoFormulaComponents HashMap");
-        };
-
-        let exponent =
-            if let Some(res) = elem_div_sum_fee.checked_sub(exponent_of_balance_in_question) {
-                res
-            } else {
-                // Should be impossible (negative exponent not possible unless manually entered)
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: exponent - \
-                            exponent_balance_in_question");
-            };
-
-        if let Ok(res) = exp::<FS, FS>(exponent) {
-            Ok(res)
-        } else {
-            // In that case the final result will not fit into the fractional bits
-            // and therefore is approximated to zero. Cannot panic.
-            Ok(0.to_fixed())
         }
     }
 
@@ -329,7 +306,29 @@ where
                 continue;
             }
 
-           let exponential_result = self.price_helper_qj_div_sum_fee(elem, exponent_of_balance_in_question, &formula_components)?;
+            let elem_div_sum_fee = if let Some(res) = formula_components.exponents.get(&elem) {
+                *res
+            } else {
+                return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
+                            question RikiddoFormulaComponents HashMap");
+            };
+
+            let exponent =
+                if let Some(res) = elem_div_sum_fee.checked_sub(exponent_of_balance_in_question) {
+                    res
+                } else {
+                    // Should be impossible (negative exponent not possible unless manually entered)
+                    return Err("[RikiddoSigmoidMV] Overflow during calculation: exponent - \
+                                exponent_balance_in_question");
+                };
+
+            let exponential_result = if let Ok(res) = exp::<FS, FS>(exponent) {
+                res
+            } else {
+                // In that case the final result will not fit into the fractional bits
+                // and therefore is approximated to zero. Cannot panic.
+                0.to_fixed()
+            };
 
             sum = if let Some(res) = sum.checked_add(exponential_result) {
                 res
@@ -354,8 +353,70 @@ where
             Ok(0.to_fixed())
         }
     }
-    
-    //fn price_helper_second_quotient(asset_balances, &formula_components)?;
+
+    // Calculates the second quotient in the price formula after the cost / sum_balances
+    pub(crate) fn price_helper_second_quotient(
+        &self,
+        asset_balances: &[FS],
+        asset_in_question_balance: FS,
+        formula_components: &RikiddoFormulaComponents<FS>,
+    ) -> Result<FS, &'static str> {
+        let mut numerator: FS = 0.to_fixed();
+        let mut skipped = false;
+
+        for elem in asset_balances {
+            if *elem == formula_components.emax && !skipped {
+                skipped = true;
+                continue;
+            }
+
+            let exponential_result = if let Some(res) = formula_components.exponents.get(elem) {
+                *res
+            } else {
+                return Err(
+                    "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
+                );
+            };
+
+            let elem_times_reduced_exponential_result =
+                if let Some(res) = elem.checked_mul(exponential_result) {
+                    res
+                } else {
+                    return Err("[RikiddoSigmoidMV] Overflow during calculation: element * \
+                                reduced_exponential_result");
+                };
+
+            numerator =
+                if let Some(res) = numerator.checked_add(elem_times_reduced_exponential_result) {
+                    res
+                } else {
+                    // In that case the final result will not fit into the fractional bits
+                    // and therefore is approximated to zero. Cannot panic.
+                    return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_j += \
+                                elem_times_reduced_exponential_result");
+                };
+        }
+
+        let denominator = if let Some(res) =
+            formula_components.sum_balances.checked_mul(formula_components.sum_exp)
+        {
+            res
+        } else {
+            // In that case the final result will not fit into the fractional bits
+            // and therefore is approximated to zero. Cannot panic.
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_balances * sum_exp");
+        };
+
+        if let Some(res) = numerator.checked_div(denominator) {
+            Ok(res)
+        } else {
+            // In that case the final result will not fit into the fractional bits
+            // and therefore is approximated to zero. Cannot panic.
+            Err("[RikiddoSigmoidMV] Overflow during calculation (price helper 2): numerator / \
+                 denominator")
+        }
+    }
+
     //fn price_helper_combine_all_parts()?;
 
     pub(crate) fn default_cost_strategy(&self, exponents: &[FS]) -> Result<FS, &'static str> {
@@ -391,6 +452,7 @@ where
         exponents: &[FS],
         biggest_exponent: &FS,
         formula_components: &mut RikiddoFormulaComponents<FS>,
+        add_reduced_exponential_results: bool,
     ) -> Result<FS, &'static str> {
         let mut biggest_exponent_used = false;
 
@@ -422,6 +484,10 @@ where
                 // In this case the result is zero (or is too small to fit) and can be ignored
                 continue;
             };
+
+            if add_reduced_exponential_results {
+                formula_components.reduced_exponential_results.insert(*elem, e_power_exponent);
+            }
 
             if let Some(res) = exp_sum.checked_add(e_power_exponent) {
                 exp_sum = res;

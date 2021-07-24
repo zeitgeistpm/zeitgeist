@@ -61,7 +61,8 @@ fn rikiddo_optimized_ln_sum_exp_strategy_exponent_subtract_overflow() {
         rikiddo.optimized_cost_strategy(
             &param,
             &<FixedI128<U64>>::from_num(1i64 << 62),
-            &mut RikiddoFormulaComponents::default()
+            &mut RikiddoFormulaComponents::default(),
+            false
         ),
         "[RikiddoSigmoidFee] Overflow during calculation: current_exponent - biggest_exponent"
     );
@@ -76,7 +77,8 @@ fn rikiddo_optimized_ln_sum_exp_strategy_sum_exp_i_overflow() {
         rikiddo.optimized_cost_strategy(
             &param,
             &<FixedI128<U64>>::from_num(0),
-            &mut RikiddoFormulaComponents::default()
+            &mut RikiddoFormulaComponents::default(),
+            false
         ),
         "[RikiddoSigmoidFee] Overflow during calculation: sum_i(e^(i - biggest_exponent))"
     );
@@ -92,7 +94,8 @@ fn rikiddo_optimized_ln_sum_exp_strategy_result_overflow() {
         rikiddo.optimized_cost_strategy(
             &param,
             &biggest_exponent,
-            &mut RikiddoFormulaComponents::default()
+            &mut RikiddoFormulaComponents::default(),
+            false
         ),
         "[RikiddoSigmoidMV] Overflow during calculation: biggest_exponent + ln(exp_sum) \
          (optimized)"
@@ -131,6 +134,7 @@ fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static
         &param_fixed,
         &param_fixed[2],
         &mut RikiddoFormulaComponents::default(),
+        false,
     )?;
     result_fixed_f64 = result_fixed.to_num();
     difference_abs = (result_f64 - result_fixed_f64).abs();
