@@ -288,7 +288,7 @@ where
     pub(crate) fn price_helper_first_quotient(
         &self,
         asset_balances: &[FS],
-        asset_in_question_balance: FS,
+        asset_in_question_balance: &FS,
         formula_components: &RikiddoFormulaComponents<FS>,
     ) -> Result<FS, &'static str> {
         let exponent_of_balance_in_question =
@@ -303,7 +303,7 @@ where
         let mut skipped = false;
 
         for elem in asset_balances {
-            if *elem == asset_in_question_balance && !skipped {
+            if elem == asset_in_question_balance && !skipped {
                 skipped = true;
                 continue;
             }
@@ -564,11 +564,40 @@ where
 
         let cost_part =
             self.cost_with_forumla(asset_balances, &mut formula_components, true, true, true)?;
+        let mut asset_balances_signed = Vec::with_capacity(asset_balances.len());
+        let mut asset_in_question_balance_signed = 0.to_fixed();
+        let mut asset_in_question_found = false;
+        
+        for asset_balance in asset_balances {
+            let signed_balance = convert_to_signed(*asset_balance)?;
+            asset_balances_signed.push(signed_balance);
 
-        //let first_quotient = self.price_helper_first_quotient(asset_balances, asset_in_question_balance, &formula_components)?;
-        //let second_quotient = self.price_helper_second_quotient(asset_balances, &formula_components)?;
+            if asset_balance == asset_in_question_balance {
+                asset_in_question_balance_signed = signed_balance;
+                asset_in_question_found = true;
+            }
+        }
 
-        Err("Unimplemented!")
+        if !asset_in_question_found {
+            return Err("[RikiddoSigmoidMV] asset_in_question_balance not found in asset_balances")
+        }
+
+        let first_quotient = self.price_helper_first_quotient(&asset_balances_signed, &asset_in_question_balance_signed, &formula_components)?;
+        let second_quotient = self.price_helper_second_quotient(&asset_balances_signed, &formula_components)?;
+
+        let quotient_sub = if let Some(res) = first_quotient.checked_sub(second_quotient) {
+            res
+        } else {
+            // Highly unlikely
+            return Err("[RikiddoSigmoidMV] Overflow during calculation of price: first_quotient - second_quotient")
+        };
+
+        if let Some(res) = cost_part.checked_add(quotient_sub) {
+            convert_to_unsigned(res)
+        } else {
+            // Highly unlikely
+            Err("[RikiddoSigmoidMV] Overflow during calculation of price: first_quotient - second_quotient")
+        }
     }
 }
 
