@@ -43,8 +43,8 @@ pub trait Lmsr {
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
-        asset_in_question_balance: &Self::FU,
         asset_balances: &[Self::FU],
+        asset_in_question_balance: &Self::FU,
     ) -> Result<Self::FU, &'static str>;
 }
 

@@ -163,7 +163,6 @@ fn rikiddo_cost_helper_does_set_all_values() -> Result<(), &'static str> {
     assert_ne!(formula_components.sum_times_fee, zero);
     assert_ne!(formula_components.emax, zero);
     assert_ne!(formula_components.sum_exp, zero);
-    assert_ne!(formula_components.ln_sum_exp, zero);
     assert_ne!(formula_components.exponents, HashMap::new());
     assert_ne!(formula_components.reduced_exponential_results, HashMap::new());
     Ok(())

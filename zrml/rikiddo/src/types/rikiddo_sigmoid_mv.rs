@@ -50,7 +50,6 @@ where
     pub(crate) sum_times_fee: FS,
     pub(crate) emax: FS,
     pub(crate) sum_exp: FS,
-    pub(crate) ln_sum_exp: FS,
     pub(crate) exponents: HashMap<FS, FS>,
     pub(crate) reduced_exponential_results: HashMap<FS, FS>,
 }
@@ -68,7 +67,6 @@ where
             sum_times_fee: zero,
             emax: zero,
             sum_exp: zero,
-            ln_sum_exp: zero,
             exponents: HashMap::new(),
             reduced_exponential_results: HashMap::new(),
         }
@@ -266,8 +264,6 @@ where
             ln_sum_e = self.default_cost_strategy(&exponents)?;
         }
 
-        formula_components.ln_sum_exp = ln_sum_e;
-
         if for_price {
             if let Some(res) = formula_components.fee.checked_mul(ln_sum_e) {
                 Ok(res)
@@ -367,12 +363,12 @@ where
 
         for elem in asset_balances {
             let exponent_of_balance_in_question =
-            if let Some(res) = formula_components.exponents.get(elem) {
-                *res
-            } else {
-                return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
-                            question in RikiddoFormulaComponents HashMap");
-            };
+                if let Some(res) = formula_components.exponents.get(elem) {
+                    *res
+                } else {
+                    return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
+                                question in RikiddoFormulaComponents HashMap");
+                };
 
             let elem_times_reduced_exponential_result;
 
@@ -380,12 +376,14 @@ where
                 elem_times_reduced_exponential_result = *elem;
                 skipped = true;
             } else {
-                let exponential_result = if let Some(res) = formula_components.reduced_exponential_results.get(&exponent_of_balance_in_question) {
+                let exponential_result = if let Some(res) = formula_components
+                    .reduced_exponential_results
+                    .get(&exponent_of_balance_in_question)
+                {
                     *res
                 } else {
-                    return Err(
-                        "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
-                    );
+                    return Err("[RikiddoSigmoidMV] Cannot find reduced exponential result of \
+                                current element");
                 };
 
                 elem_times_reduced_exponential_result =
@@ -557,8 +555,8 @@ where
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
-        asset_in_question_balance: &Self::FU,
         asset_balances: &[Self::FU],
+        asset_in_question_balance: &Self::FU,
     ) -> Result<Self::FU, &'static str> {
         let mut formula_components = RikiddoFormulaComponents::default();
 
@@ -567,7 +565,7 @@ where
         let mut asset_balances_signed = Vec::with_capacity(asset_balances.len());
         let mut asset_in_question_balance_signed = 0.to_fixed();
         let mut asset_in_question_found = false;
-        
+
         for asset_balance in asset_balances {
             let signed_balance = convert_to_signed(*asset_balance)?;
             asset_balances_signed.push(signed_balance);
@@ -579,24 +577,30 @@ where
         }
 
         if !asset_in_question_found {
-            return Err("[RikiddoSigmoidMV] asset_in_question_balance not found in asset_balances")
+            return Err("[RikiddoSigmoidMV] asset_in_question_balance not found in asset_balances");
         }
 
-        let first_quotient = self.price_helper_first_quotient(&asset_balances_signed, &asset_in_question_balance_signed, &formula_components)?;
-        let second_quotient = self.price_helper_second_quotient(&asset_balances_signed, &formula_components)?;
+        let first_quotient = self.price_helper_first_quotient(
+            &asset_balances_signed,
+            &asset_in_question_balance_signed,
+            &formula_components,
+        )?;
+        let second_quotient =
+            self.price_helper_second_quotient(&asset_balances_signed, &formula_components)?;
 
         let quotient_sub = if let Some(res) = first_quotient.checked_sub(second_quotient) {
             res
         } else {
-            // Highly unlikely
-            return Err("[RikiddoSigmoidMV] Overflow during calculation of price: first_quotient - second_quotient")
+            // Should be impossible
+            return Err("[RikiddoSigmoidMV] Overflow during calculation of price: first_quotient \
+                        - second_quotient");
         };
 
         if let Some(res) = cost_part.checked_add(quotient_sub) {
             convert_to_unsigned(res)
         } else {
-            // Highly unlikely
-            Err("[RikiddoSigmoidMV] Overflow during calculation of price: first_quotient - second_quotient")
+            // Should be impossible
+            Err("[RikiddoSigmoidMV] Overflow during calculation of price: cost_part + quotient_sub")
         }
     }
 }
