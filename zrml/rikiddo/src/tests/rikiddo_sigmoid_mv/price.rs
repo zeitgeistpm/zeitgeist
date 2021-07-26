@@ -2,14 +2,10 @@ use frame_support::{assert_err, weights::constants::WEIGHT_PER_MICROS};
 use substrate_fixed::{FixedI128, FixedI32, FixedU128, traits::{FixedSigned, LossyFrom, ToFixed}, types::{I9F23, U1F127, extra::{U127, U31, U64}}};
 
 use super::{ema_create_test_struct, max_allowed_error, price_first_quotient, Rikiddo};
-use crate::{
-    constants::INITIAL_FEE,
-    traits::{Lmsr, MarketAverage, RikiddoMV},
-    types::{
+use crate::{constants::INITIAL_FEE, tests::rikiddo_sigmoid_mv::price_second_quotient, traits::{Lmsr, MarketAverage, RikiddoMV}, types::{
         convert_to_signed, EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoFormulaComponents,
         RikiddoSigmoidMV, TimestampedVolume,
-    },
-};
+    }};
 
 fn check_if_exponent_in_formula_components(helper: u8) {
     let rikiddo = Rikiddo::default();
@@ -18,7 +14,7 @@ fn check_if_exponent_in_formula_components(helper: u8) {
         if helper == 1 {
             rikiddo.price_helper_first_quotient(&param, param[0], &RikiddoFormulaComponents::default())
         } else {
-            rikiddo.price_helper_second_quotient(&param, param[0], &RikiddoFormulaComponents::default())
+            rikiddo.price_helper_second_quotient(&param, &RikiddoFormulaComponents::default())
         }
     };
     assert_err!(
@@ -26,6 +22,48 @@ fn check_if_exponent_in_formula_components(helper: u8) {
         "[RikiddoSigmoidMV] Cannot find exponent of asset balance in question \
             in RikiddoFormulaComponents HashMap"
     );
+}
+
+fn check_price_helper_result(helper: u8) -> Result<(), &'static str> {
+    let rikiddo = Rikiddo::default();
+    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
+    let param_f64 = vec![520.19, 480.81];
+    let param =
+        vec![<FixedI128<U64>>::from_num(param_f64[0]), <FixedI128<U64>>::from_num(param_f64[1])];
+    let param_u =
+        vec![<FixedU128<U64>>::from_num(param_f64[0]), <FixedU128<U64>>::from_num(param_f64[1])];
+    // This fills the formula_components with the correct values
+    let _ = rikiddo.cost_with_forumla(&param_u, formula_components, true, true, true);
+    let rikiddo_price;
+    let rikiddo_price_f64;
+    let error_msg_function;
+
+    if helper == 1 {
+        rikiddo_price =
+        rikiddo.price_helper_first_quotient(&param, param[0], &formula_components)?;
+        rikiddo_price_f64 =
+        price_first_quotient(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[0]);
+        error_msg_function = "price_helper_first_quotient"
+    } else {
+        rikiddo_price =
+        rikiddo.price_helper_second_quotient(&param, &formula_components)?;
+        rikiddo_price_f64 =
+        price_second_quotient(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[0]);
+        error_msg_function = "price_helper_second_quotient"
+    }
+    let difference_abs = (rikiddo_price.to_num::<f64>() - rikiddo_price_f64).abs();
+    assert!(
+        difference_abs <= max_allowed_error(63),
+        "\n{} result (fixed): {}\n{} result (f64): \
+         {}\nDifference: {}\nMax_Allowed_Difference: {}",
+        error_msg_function,
+        rikiddo_price,
+        error_msg_function,
+        rikiddo_price_f64,
+        difference_abs,
+        max_allowed_error(64)
+    );
+    Ok(())
 }
 
 // --- Tests for price_helper_first_quotient ---
@@ -51,30 +89,7 @@ fn price_helper_first_quotient_overflow_exponent_sub_exp_qj() {
 
 #[test]
 fn price_helper_first_quotient_returns_correct_result() -> Result<(), &'static str> {
-    let rikiddo = Rikiddo::default();
-    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
-    let param_f64 = vec![520.19, 480.81];
-    let param =
-        vec![<FixedI128<U64>>::from_num(param_f64[0]), <FixedI128<U64>>::from_num(param_f64[1])];
-    let param_u =
-        vec![<FixedU128<U64>>::from_num(param_f64[0]), <FixedU128<U64>>::from_num(param_f64[1])];
-    // This fills the formula_components with the correct values
-    let _ = rikiddo.cost_with_forumla(&param_u, formula_components, true, true, true);
-    let rikiddo_price =
-        rikiddo.price_helper_first_quotient(&param, param[0], &formula_components)?;
-    let rikiddo_price_f64 =
-        price_first_quotient(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[0]);
-    let difference_abs = (rikiddo_price.to_num::<f64>() - rikiddo_price_f64).abs();
-    assert!(
-        difference_abs <= max_allowed_error(63),
-        "\nprice first quotient result (fixed): {}\nprice first quotient result (f64): \
-         {}\nDifference: {}\nMax_Allowed_Difference: {}",
-        rikiddo_price,
-        rikiddo_price_f64,
-        difference_abs,
-        max_allowed_error(64)
-    );
-    Ok(())
+    check_price_helper_result(1)
 }
 
 // --- Tests for price_helper_second_quotient ---
@@ -91,7 +106,7 @@ fn price_helper_second_quotient_reduced_exp_not_found() {
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
     formula_components.exponents.insert(param[0], 1.to_fixed());
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        rikiddo.price_helper_second_quotient(&param, &formula_components),
         "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
     );
 }
@@ -102,9 +117,9 @@ fn price_helper_second_quotient_overflow_elem_times_reduced_exp() {
     let param = vec![<FixedI128<U64>>::from_num(i64::MAX)];
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
     formula_components.exponents.insert(param[0], 1.to_fixed());
-    formula_components.reduced_exponential_results.insert(param[0], 2.to_fixed());
+    formula_components.reduced_exponential_results.insert(1.to_fixed(), 2.to_fixed());
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        rikiddo.price_helper_second_quotient(&param, &formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: element * reduced_exponential_result"
     );
 }
@@ -115,11 +130,10 @@ fn price_helper_second_quotient_overflow_sum_j_plus_elem_time_reduced_exp() {
     let param = vec![<FixedI128<U64>>::from_num(i64::MAX), <FixedI128<U64>>::from_num(1)];
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
     formula_components.exponents.insert(param[0], 1.to_fixed());
-    formula_components.reduced_exponential_results.insert(param[0], 1.to_fixed());
-    formula_components.exponents.insert(param[0], 1.to_fixed());
-    formula_components.reduced_exponential_results.insert(param[1], 1.to_fixed());
+    formula_components.exponents.insert(param[1], 1.to_fixed());
+    formula_components.reduced_exponential_results.insert(1.to_fixed(), 1.to_fixed());
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        rikiddo.price_helper_second_quotient(&param, &formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: sum_j += elem_times_reduced_exponential_result"
     );
 }
@@ -134,7 +148,7 @@ fn price_helper_second_quotient_overflow_sum_balances_times_sum_exp() {
     formula_components.sum_exp = 2.to_fixed();
     formula_components.sum_balances = <FixedI128<U64>>::from_num(i64::MAX);
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        rikiddo.price_helper_second_quotient(&param, &formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: sum_balances * sum_exp"
     );
 }
@@ -148,15 +162,15 @@ fn price_helper_second_quotient_overflow_numerator_div_denominator() {
     formula_components.exponents.insert(param[0], 1.to_fixed());
     formula_components.reduced_exponential_results.insert(param[0], 1.to_fixed());
     formula_components.sum_balances = 1.to_fixed();
-    // The following paramter will lead to a zero division error
+    // The following parameter will lead to a zero division error
     formula_components.sum_exp = 0.to_fixed();
     assert_err!(
-        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        rikiddo.price_helper_second_quotient(&param, &formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation (price helper 2): numerator / denominator"
     );
 }
 
 #[test]
 fn price_helper_second_quotient_returns_correct_result() -> Result<(), &'static str> {
-    Err("Unimplemented!")
+    check_price_helper_result(2)
 }

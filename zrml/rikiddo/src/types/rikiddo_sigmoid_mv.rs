@@ -193,8 +193,10 @@ where
 
             // Panic impossible
             exponents.push(exponent);
+
             if add_exponents {
-                formula_components.exponents.insert(convert_to_signed(*elem)?, exponent);
+                let elem_fs = convert_to_signed(*elem)?;
+                formula_components.exponents.insert(elem_fs, exponent);
             }
         }
 
@@ -358,7 +360,6 @@ where
     pub(crate) fn price_helper_second_quotient(
         &self,
         asset_balances: &[FS],
-        asset_in_question_balance: FS,
         formula_components: &RikiddoFormulaComponents<FS>,
     ) -> Result<FS, &'static str> {
         let mut numerator: FS = 0.to_fixed();
@@ -366,34 +367,36 @@ where
 
         for elem in asset_balances {
             let exponent_of_balance_in_question =
-            if let Some(res) = formula_components.exponents.get(&asset_in_question_balance) {
+            if let Some(res) = formula_components.exponents.get(elem) {
                 *res
             } else {
                 return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
                             question in RikiddoFormulaComponents HashMap");
             };
 
+            let elem_times_reduced_exponential_result;
+
             if exponent_of_balance_in_question == formula_components.emax && !skipped {
+                elem_times_reduced_exponential_result = *elem;
                 skipped = true;
-                continue;
-            }
-
-            let exponential_result = if let Some(res) = formula_components.reduced_exponential_results.get(elem) {
-                *res
             } else {
-                return Err(
-                    "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
-                );
-            };
-
-            let elem_times_reduced_exponential_result =
-                if let Some(res) = elem.checked_mul(exponential_result) {
-                    res
+                let exponential_result = if let Some(res) = formula_components.reduced_exponential_results.get(&exponent_of_balance_in_question) {
+                    *res
                 } else {
-                    // Should be impossible, since reduced_exponential_result ∈ ]0, 1]
-                    return Err("[RikiddoSigmoidMV] Overflow during calculation: element * \
-                                reduced_exponential_result");
+                    return Err(
+                        "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
+                    );
                 };
+
+                elem_times_reduced_exponential_result =
+                    if let Some(res) = elem.checked_mul(exponential_result) {
+                        res
+                    } else {
+                        // Should be impossible, since reduced_exponential_result ∈ ]0, 1]
+                        return Err("[RikiddoSigmoidMV] Overflow during calculation: element * \
+                                    reduced_exponential_result");
+                    };
+            }
 
             numerator =
                 if let Some(res) = numerator.checked_add(elem_times_reduced_exponential_result) {
