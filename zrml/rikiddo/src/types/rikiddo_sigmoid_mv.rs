@@ -294,7 +294,7 @@ where
                 *res
             } else {
                 return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
-                            question RikiddoFormulaComponents HashMap");
+                            question in RikiddoFormulaComponents HashMap");
             };
 
         let mut sum: FS = 0.to_fixed();
@@ -365,12 +365,20 @@ where
         let mut skipped = false;
 
         for elem in asset_balances {
-            if *elem == formula_components.emax && !skipped {
+            let exponent_of_balance_in_question =
+            if let Some(res) = formula_components.exponents.get(&asset_in_question_balance) {
+                *res
+            } else {
+                return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
+                            question in RikiddoFormulaComponents HashMap");
+            };
+
+            if exponent_of_balance_in_question == formula_components.emax && !skipped {
                 skipped = true;
                 continue;
             }
 
-            let exponential_result = if let Some(res) = formula_components.exponents.get(elem) {
+            let exponential_result = if let Some(res) = formula_components.reduced_exponential_results.get(elem) {
                 *res
             } else {
                 return Err(
@@ -382,6 +390,7 @@ where
                 if let Some(res) = elem.checked_mul(exponential_result) {
                     res
                 } else {
+                    // Should be impossible, since reduced_exponential_result ∈ ]0, 1]
                     return Err("[RikiddoSigmoidMV] Overflow during calculation: element * \
                                 reduced_exponential_result");
                 };

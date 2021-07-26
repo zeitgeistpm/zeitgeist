@@ -1,5 +1,5 @@
-use frame_support::assert_err;
-use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128, FixedU128};
+use frame_support::{assert_err, weights::constants::WEIGHT_PER_MICROS};
+use substrate_fixed::{FixedI128, FixedI32, FixedU128, traits::{FixedSigned, LossyFrom, ToFixed}, types::{I9F23, U1F127, extra::{U127, U31, U64}}};
 
 use super::{ema_create_test_struct, max_allowed_error, price_first_quotient, Rikiddo};
 use crate::{
@@ -11,16 +11,28 @@ use crate::{
     },
 };
 
-#[test]
-fn price_helper_first_quotient_exponent_not_found() -> Result<(), &'static str> {
+fn check_if_exponent_in_formula_components(helper: u8) {
     let rikiddo = Rikiddo::default();
     let param = vec![<FixedI128<U64>>::from_num(100u64)];
+    let result = {
+        if helper == 1 {
+            rikiddo.price_helper_first_quotient(&param, param[0], &RikiddoFormulaComponents::default())
+        } else {
+            rikiddo.price_helper_second_quotient(&param, param[0], &RikiddoFormulaComponents::default())
+        }
+    };
     assert_err!(
-        rikiddo.price_helper_first_quotient(&param, param[0], &RikiddoFormulaComponents::default()),
+        result,
         "[RikiddoSigmoidMV] Cannot find exponent of asset balance in question \
-         RikiddoFormulaComponents HashMap"
+            in RikiddoFormulaComponents HashMap"
     );
-    Ok(())
+}
+
+// --- Tests for price_helper_first_quotient ---
+
+#[test]
+fn price_helper_first_quotient_exponent_not_found() {
+    check_if_exponent_in_formula_components(1)
 }
 
 #[test]
@@ -66,25 +78,24 @@ fn price_helper_first_quotient_returns_correct_result() -> Result<(), &'static s
     Ok(())
 }
 
+// --- Tests for price_helper_second_quotient ---
+
+#[test]
+fn price_helper_second_quotient_exponent_not_found() {
+    check_if_exponent_in_formula_components(2)
+}
 
 #[test]
 fn price_helper_second_quotient_reduced_exp_not_found() -> Result<(), &'static str> {
     let rikiddo = Rikiddo::default();
-    let param = vec![<FixedI128<U64>>::from(100u64), <FixedI128<U64>>::from_num(100u64)];
+    let param = vec![<FixedI128<U64>>::from_num(100u64)];
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
-    formula_components.exponents.insert(param[0], i64::MAX.to_fixed());
+    formula_components.exponents.insert(param[0], 1.to_fixed());
     assert_err!(
-        rikiddo.price_helper_first_quotient(&param, param[0], &formula_components),
-        "[RikiddoSigmoidMV] Cannot find exponent of asset balance in question \
-         RikiddoFormulaComponents HashMap"
+        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
     );
     Ok(())
-}
-
-#[test]
-fn price_helper_second_quotient_overflow_elem_times_reduced_exp() -> Result<(), &'static str> {
-    // Err("[RikiddoSigmoidMV] Overflow during calculation: element * reduced_exponential_result");
-    Err("Unimplemented!")
 }
 
 #[test]
