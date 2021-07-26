@@ -69,8 +69,16 @@ fn price_helper_first_quotient_returns_correct_result() -> Result<(), &'static s
 
 #[test]
 fn price_helper_second_quotient_reduced_exp_not_found() -> Result<(), &'static str> {
-    // Err("[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
-    Err("Unimplemented!")
+    let rikiddo = Rikiddo::default();
+    let param = vec![<FixedI128<U64>>::from(100u64), <FixedI128<U64>>::from_num(100u64)];
+    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
+    formula_components.exponents.insert(param[0], i64::MAX.to_fixed());
+    assert_err!(
+        rikiddo.price_helper_first_quotient(&param, param[0], &formula_components),
+        "[RikiddoSigmoidMV] Cannot find exponent of asset balance in question \
+         RikiddoFormulaComponents HashMap"
+    );
+    Ok(())
 }
 
 #[test]
