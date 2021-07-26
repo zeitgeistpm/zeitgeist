@@ -13,7 +13,7 @@ use crate::{
 
 fn check_if_exponent_in_formula_components(helper: u8) {
     let rikiddo = Rikiddo::default();
-    let param = vec![<FixedI128<U64>>::from_num(100u64)];
+    let param = vec![<FixedI128<U64>>::from_num(100)];
     let result = {
         if helper == 1 {
             rikiddo.price_helper_first_quotient(&param, param[0], &RikiddoFormulaComponents::default())
@@ -36,7 +36,7 @@ fn price_helper_first_quotient_exponent_not_found() {
 }
 
 #[test]
-fn price_helper_first_quotient_overflow_exponent_sub_exp_qj() -> Result<(), &'static str> {
+fn price_helper_first_quotient_overflow_exponent_sub_exp_qj() {
     let rikiddo = Rikiddo::default();
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
     let param = vec![<FixedI128<U64>>::from(i64::MAX), <FixedI128<U64>>::from(-i64::MAX >> 5)];
@@ -47,7 +47,6 @@ fn price_helper_first_quotient_overflow_exponent_sub_exp_qj() -> Result<(), &'st
         rikiddo.price_helper_first_quotient(&param, param[0], &formula_components),
         "[RikiddoSigmoidMV] Overflow during calculation: exponent - exponent_balance_in_question"
     );
-    Ok(())
 }
 
 #[test]
@@ -86,40 +85,75 @@ fn price_helper_second_quotient_exponent_not_found() {
 }
 
 #[test]
-fn price_helper_second_quotient_reduced_exp_not_found() -> Result<(), &'static str> {
+fn price_helper_second_quotient_reduced_exp_not_found() {
     let rikiddo = Rikiddo::default();
-    let param = vec![<FixedI128<U64>>::from_num(100u64)];
+    let param = vec![<FixedI128<U64>>::from_num(100)];
     let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
     formula_components.exponents.insert(param[0], 1.to_fixed());
     assert_err!(
         rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
         "[RikiddoSigmoidMV] Cannot find reduced exponential result of current element"
     );
-    Ok(())
 }
 
 #[test]
-fn price_helper_second_quotient_overflow_elem_times_reduced_exp() -> Result<(), &'static str> {
-    // Err("[RikiddoSigmoidMV] Overflow during calculation: element * reduced_exponential_result");
-    Err("Unimplemented!")
+fn price_helper_second_quotient_overflow_elem_times_reduced_exp() {
+    let rikiddo = Rikiddo::default();
+    let param = vec![<FixedI128<U64>>::from_num(i64::MAX)];
+    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
+    formula_components.exponents.insert(param[0], 1.to_fixed());
+    formula_components.reduced_exponential_results.insert(param[0], 2.to_fixed());
+    assert_err!(
+        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        "[RikiddoSigmoidMV] Overflow during calculation: element * reduced_exponential_result"
+    );
 }
 
 #[test]
-fn price_helper_second_quotient_overflow_sum_j_plus_elem_time_reduced_exp() -> Result<(), &'static str> {
-    // Err("[RikiddoSigmoidMV] Overflow during calculation: sum_j += elem_times_reduced_exponential_result");
-    Err("Unimplemented!")
+fn price_helper_second_quotient_overflow_sum_j_plus_elem_time_reduced_exp() {
+    let rikiddo = Rikiddo::default();
+    let param = vec![<FixedI128<U64>>::from_num(i64::MAX), <FixedI128<U64>>::from_num(1)];
+    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
+    formula_components.exponents.insert(param[0], 1.to_fixed());
+    formula_components.reduced_exponential_results.insert(param[0], 1.to_fixed());
+    formula_components.exponents.insert(param[0], 1.to_fixed());
+    formula_components.reduced_exponential_results.insert(param[1], 1.to_fixed());
+    assert_err!(
+        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        "[RikiddoSigmoidMV] Overflow during calculation: sum_j += elem_times_reduced_exponential_result"
+    );
 }
 
 #[test]
-fn price_helper_second_quotient_overflow_sum_balances_times_sum_exp() -> Result<(), &'static str> {
-    // Err("[RikiddoSigmoidMV] Overflow during calculation: sum_balances * sum_exp");
-    Err("Unimplemented!")
+fn price_helper_second_quotient_overflow_sum_balances_times_sum_exp() {
+    let rikiddo = Rikiddo::default();
+    let param = vec![<FixedI128<U64>>::from_num(1)];
+    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
+    formula_components.exponents.insert(param[0], 1.to_fixed());
+    formula_components.reduced_exponential_results.insert(param[0], 1.to_fixed());
+    formula_components.sum_exp = 2.to_fixed();
+    formula_components.sum_balances = <FixedI128<U64>>::from_num(i64::MAX);
+    assert_err!(
+        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        "[RikiddoSigmoidMV] Overflow during calculation: sum_balances * sum_exp"
+    );
 }
 
 #[test]
-fn price_helper_second_quotient_overflow_numerator_denominator() -> Result<(), &'static str> {
-    // Err("[RikiddoSigmoidMV] Overflow during calculation (price helper 2): numerator / denominator")
-    Err("Unimplemented!")
+fn price_helper_second_quotient_overflow_numerator_div_denominator() {
+    //HERE
+    let rikiddo = Rikiddo::default();
+    let param = vec![<FixedI128<U64>>::from_num(1)];
+    let formula_components = &mut <RikiddoFormulaComponents<FixedI128<U64>>>::default();
+    formula_components.exponents.insert(param[0], 1.to_fixed());
+    formula_components.reduced_exponential_results.insert(param[0], 1.to_fixed());
+    formula_components.sum_balances = 1.to_fixed();
+    // The following paramter will lead to a zero division error
+    formula_components.sum_exp = 0.to_fixed();
+    assert_err!(
+        rikiddo.price_helper_second_quotient(&param, param[0], &formula_components),
+        "[RikiddoSigmoidMV] Overflow during calculation (price helper 2): numerator / denominator"
+    );
 }
 
 #[test]
