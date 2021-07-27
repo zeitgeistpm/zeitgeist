@@ -137,13 +137,12 @@ mod pallet {
                 *n = n.wrapping_add(1);
                 rslt
             });
-            let mut rslt: u64 = nonce;
-            // https://github.com/paritytech/substrate/issues/8312
-            let (random_hash, _) = T::Random::random(b"zrml-court");
-            for byte in random_hash.as_ref().iter().copied() {
-                rslt = rslt.wrapping_add(byte.into());
+            let mut seed = [0; 32];
+            let (random_hash, _) = T::Random::random(&nonce.to_le_bytes());
+            for (byte, el) in random_hash.as_ref().iter().copied().zip(seed.iter_mut()) {
+                *el = byte
             }
-            StdRng::seed_from_u64(rslt)
+            StdRng::from_seed(seed)
         }
 
         // No-one can stake more than BalanceOf::<T>::max(), therefore, this function saturates
