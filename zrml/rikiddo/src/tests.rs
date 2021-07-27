@@ -6,7 +6,10 @@ use substrate_fixed::{
     FixedI8, FixedU8,
 };
 
-use crate::{mock::ExtBuilder, types::{convert_to_signed, convert_to_unsigned}};
+use crate::{
+    mock::ExtBuilder,
+    types::{convert_to_signed, convert_to_unsigned},
+};
 
 mod ema_market_volume;
 mod rikiddo_sigmoid_mv;

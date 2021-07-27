@@ -268,15 +268,15 @@ where
             if let Some(res) = formula_components.fee.checked_mul(ln_sum_e) {
                 return Ok(res);
             }
-            
+
             Err("[RikiddoSigmoidMV] Overflow during calculation: fee * ln(sum_i(e^i))")
         } else {
             if let Some(res) = formula_components.sum_times_fee.checked_mul(ln_sum_e) {
                 return Ok(res);
             }
-            
+
             Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
-                     ln(sum_i(e^i))")
+                 ln(sum_i(e^i))")
         }
     }
 
