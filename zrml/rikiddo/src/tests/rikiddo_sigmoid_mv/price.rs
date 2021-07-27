@@ -208,4 +208,31 @@ fn rikiddo_price_returns_correct_result() -> Result<(), &'static str> {
     );
     Ok(())
 }
-// Correct price result
+
+#[test]
+fn rikiddo_all_prices_returns_correct_result() -> Result<(), &'static str> {
+    let rikiddo = Rikiddo::default();
+    let param_f64 = vec![520.19, 500.00, 480.81];
+    let param: Vec<FixedU128<U64>> =
+        vec![param_f64[0].to_fixed(), param_f64[1].to_fixed(), param_f64[2].to_fixed()];
+    let rikiddo_prices = rikiddo.all_prices(&param)?;
+    let rikiddo_prices_f64 = vec![
+        price(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[0]),
+        price(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[1]),
+        price(rikiddo.config.initial_fee.to_num(), &param_f64, param_f64[2]),
+    ];
+    for (idx, price) in rikiddo_prices.iter().enumerate() {
+        let difference_abs = (price.to_num::<f64>() - rikiddo_prices_f64[idx]).abs();
+        assert!(
+            difference_abs <= max_allowed_error(34),
+            "\nRikiddo price result (fixed): {}\nRikiddo price result (f64): {}\nDifference: \
+             {}\nMax_Allowed_Difference: {}",
+            price,
+            rikiddo_prices_f64[idx],
+            difference_abs,
+            max_allowed_error(64)
+        );
+    }
+
+    Ok(())
+}

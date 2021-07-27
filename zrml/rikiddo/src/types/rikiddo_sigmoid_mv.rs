@@ -266,17 +266,17 @@ where
 
         if for_price {
             if let Some(res) = formula_components.fee.checked_mul(ln_sum_e) {
-                Ok(res)
-            } else {
-                Err("[RikiddoSigmoidMV] Overflow during calculation: fee * ln(sum_i(e^i))")
+                return Ok(res);
             }
+            
+            Err("[RikiddoSigmoidMV] Overflow during calculation: fee * ln(sum_i(e^i))")
         } else {
             if let Some(res) = formula_components.sum_times_fee.checked_mul(ln_sum_e) {
-                Ok(res)
-            } else {
-                Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
-                     ln(sum_i(e^i))")
+                return Ok(res);
             }
+            
+            Err("[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
+                     ln(sum_i(e^i))")
         }
     }
 
@@ -421,7 +421,27 @@ where
         }
     }
 
-    //fn price_helper_combine_all_parts()?;
+    pub fn price_helper_combine_all_parts(
+        &self,
+        cost_part: FS,
+        first_quotient: FS,
+        second_quotient: FS,
+    ) -> Result<FU, &'static str> {
+        let quotient_sub = if let Some(res) = first_quotient.checked_sub(second_quotient) {
+            res
+        } else {
+            // Should be impossible
+            return Err("[RikiddoSigmoidMV] Overflow during calculation of price: first_quotient \
+                        - second_quotient");
+        };
+
+        if let Some(res) = cost_part.checked_add(quotient_sub) {
+            convert_to_unsigned(res)
+        } else {
+            // Should be impossible
+            Err("[RikiddoSigmoidMV] Overflow during calculation of price: cost_part + quotient_sub")
+        }
+    }
 
     pub(crate) fn default_cost_strategy(&self, exponents: &[FS]) -> Result<FS, &'static str> {
         let mut acc: FS = FS::from_num(0u8);
@@ -537,8 +557,36 @@ where
     type FU = FU;
 
     /// Return price P_i(q) for all assets in q
-    fn all_prices(&self, _asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str> {
-        Err("Unimplemented")
+    fn all_prices(&self, asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str> {
+        let mut formula_components = RikiddoFormulaComponents::default();
+        let mut asset_balances_signed = Vec::with_capacity(asset_balances.len());
+
+        for asset_balance in asset_balances {
+            let signed_balance = convert_to_signed(*asset_balance)?;
+            asset_balances_signed.push(signed_balance);
+        }
+
+        let cost_part =
+            self.cost_with_forumla(asset_balances, &mut formula_components, true, true, true)?;
+
+        let mut result = Vec::with_capacity(asset_balances.len());
+
+        for asset_balance in &asset_balances_signed {
+            let first_quotient = self.price_helper_first_quotient(
+                &asset_balances_signed,
+                asset_balance,
+                &formula_components,
+            )?;
+            let second_quotient =
+                self.price_helper_second_quotient(&asset_balances_signed, &formula_components)?;
+            result.push(self.price_helper_combine_all_parts(
+                cost_part,
+                first_quotient,
+                second_quotient,
+            )?);
+        }
+
+        Ok(result)
     }
 
     /// Return cost C(q) for all assets in q
@@ -559,9 +607,6 @@ where
         asset_in_question_balance: &Self::FU,
     ) -> Result<Self::FU, &'static str> {
         let mut formula_components = RikiddoFormulaComponents::default();
-
-        let cost_part =
-            self.cost_with_forumla(asset_balances, &mut formula_components, true, true, true)?;
         let mut asset_balances_signed = Vec::with_capacity(asset_balances.len());
         let mut asset_in_question_balance_signed = 0.to_fixed();
         let mut asset_in_question_found = false;
@@ -580,6 +625,8 @@ where
             return Err("[RikiddoSigmoidMV] asset_in_question_balance not found in asset_balances");
         }
 
+        let cost_part =
+            self.cost_with_forumla(asset_balances, &mut formula_components, true, true, true)?;
         let first_quotient = self.price_helper_first_quotient(
             &asset_balances_signed,
             &asset_in_question_balance_signed,
@@ -587,21 +634,7 @@ where
         )?;
         let second_quotient =
             self.price_helper_second_quotient(&asset_balances_signed, &formula_components)?;
-
-        let quotient_sub = if let Some(res) = first_quotient.checked_sub(second_quotient) {
-            res
-        } else {
-            // Should be impossible
-            return Err("[RikiddoSigmoidMV] Overflow during calculation of price: first_quotient \
-                        - second_quotient");
-        };
-
-        if let Some(res) = cost_part.checked_add(quotient_sub) {
-            convert_to_unsigned(res)
-        } else {
-            // Should be impossible
-            Err("[RikiddoSigmoidMV] Overflow during calculation of price: cost_part + quotient_sub")
-        }
+        self.price_helper_combine_all_parts(cost_part, first_quotient, second_quotient)
     }
 }
 
