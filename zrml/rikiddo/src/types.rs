@@ -98,7 +98,6 @@ pub trait FromFixedDecimal<F: Fixed, N: Into<u128>> {
     fn from_fixed_decimal(decimal: N, places: u8) -> Result<F, ParseFixedError>;
 }
 
-
 impl<F: Fixed, N: Into<u128>> FromFixedDecimal<F, N> for F {
     fn from_fixed_decimal(decimal: N, places: u8) -> Result<F, ParseFixedError> {
         let decimal_u128 = decimal.into();
@@ -111,5 +110,19 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<F, N> for F {
 		}
 		
 		F::from_str(&decimal_string)
+    }
+}
+
+pub trait IntoFixedAsDecimal<F: Fixed> {
+    fn to_fixed_as_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
+}
+
+impl<F, U> IntoFixedAsDecimal<F> for U
+where
+    F: Fixed + FromFixedDecimal<F, U>,
+    U: Into<u128>,
+{
+    fn to_fixed_as_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError> {
+        F::from_fixed_decimal(self, places)
     }
 }
