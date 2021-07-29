@@ -140,9 +140,9 @@ where
 }
 
 // Converts a type into fixed point decimal number
-pub trait FromFixedToDecimal<F> 
-    where 
-    Self: Sized + TryFrom<u128>
+pub trait FromFixedToDecimal<F>
+where
+    Self: Sized + TryFrom<u128>,
 {
     fn from_fixed_as_fixed_decimal(fixed: F) -> Result<Self, &'static str>;
 }
@@ -152,14 +152,14 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
     fn from_fixed_as_fixed_decimal(fixed: F) -> Result<N, &'static str> {
         let mut fixed_str = fixed.to_string();
         fixed_str.retain(|c| c != '.');
-        
+
         let result = if let Ok(res) = u128::from_str_radix(&fixed_str, 10) {
             res
         } else {
             // Impossible unless there is a bug in Fixed's to_string()
             return Err("Error parsing the string representation of the fixed point number");
         };
-        
+
         if let Ok(res) = N::try_from(result) {
             Ok(res)
         } else {
