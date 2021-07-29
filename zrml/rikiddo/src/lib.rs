@@ -48,6 +48,8 @@ mod pallet {
         type Timestamp: Time;
 
         /// Will be used for the fractional part of the fixed point numbers
+        /// Calculation: Select FixedTYPE, such that TYPE = the type of Balance (i.e. FixedU128)
+        /// Select the generic UWIDTH, such that WIDTH = floor(log2(fractional_decimals))
         type FixedTypeU: Decode
             + Encode
             + FixedUnsigned
@@ -55,6 +57,10 @@ mod pallet {
             + LossyFrom<FixedU128<U128>>;
 
         /// Will be used for the fractional part of the fixed point numbers
+        /// Calculation: Select FixedTYPE, such that it is the signed variant of FixedTypeU
+        /// It is possible to reduce the fractional bit count by one, effectively eliminating
+        /// conversion overflows when the MSB of the unsigned fixed type is set, but in exchange
+        /// Reducing the fractional precision by one bit.
         type FixedTypeS: Decode
             + Encode
             + FixedSigned
@@ -63,6 +69,9 @@ mod pallet {
             + LossyFrom<U1F127>
             + LossyFrom<FixedI128<U127>>
             + PartialOrd<I9F23>;
+
+        // Number of fractional decimal places for one unit of currency
+        type BalanceFractionalDecimals: Into<u8>;
 
         /// Type that's used as an id for pools
         type PoolId: Decode + FullEncode;
