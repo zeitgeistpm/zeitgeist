@@ -1,9 +1,5 @@
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{
-    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
-    types::extra::{U127, U128},
-    FixedI128, FixedU128,
-};
+use substrate_fixed::{FixedI128, FixedU128, ParseFixedError, traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed}, types::extra::{U127, U128}};
 
 mod ema_market_volume;
 mod rikiddo_sigmoid_mv;
@@ -98,47 +94,22 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
     }
 }
 
-pub trait DecimalConversion<F> {
-	fn from_decimal(decimal: u128, places: u8) -> F;
-	fn to_decimal(other: F, places: u8) -> u128;
+pub trait FromFixedDecimal<F: Fixed, N: Into<u128>> {
+    fn from_fixed_decimal(decimal: N, places: u8) -> Result<F, ParseFixedError>;
 }
 
-impl<F: Fixed> DecimalConversion<F> for F {
-	// can panic
-    fn from_decimal(decimal: u128, places: u8) -> F {
-		let decimal_string = decimal.to_string();
-		// Can panic (check index)
-		let parsed_integer = &decimal_string[..decimal_string.len() - places as usize];
-		let parsed_fraction = &decimal_string[decimal_string.len() - places as usize..];
-		// Panic impossible, it must contain a base 10 string, since it is the repr. of one
-		let integer = u128::from_str_radix(parsed_integer, 10).unwrap();
-		let fraction = u128::from_str_radix(parsed_fraction, 10).unwrap();
-	    
-		let base = 10u128.pow(places as u32);
-		// Can panic (needs checked variant)
-		let converted = F::from_num(integer);
-		let mut bits = String::from("0.");
-		let mut cmp_num = 0u128;
-		
-		for shift in 0..F::frac_nbits() {
-		    let shiftval = 2 << shift;
-		    //let addnum = base / (2 << shift);
-		    let addnum = base / shiftval + u128::from(base % shiftval == 0);
-		    cmp_num += addnum;
-		    
-		    if cmp_num > fraction {
-		        cmp_num -= addnum;
-		        bits.push('0');
-		    } else {
-		        bits.push('1');
-		    }
-        }
-		
-		// Can panic
-		converted + F::from_str_binary(&bits).unwrap()
-	}
 
-	fn to_decimal(other: F, places: u8) -> u128 {
-		42
-	}
+impl<F: Fixed, N: Into<u128>> FromFixedDecimal<F, N> for F {
+    fn from_fixed_decimal(decimal: N, places: u8) -> Result<F, ParseFixedError> {
+        let decimal_u128 = decimal.into();
+		let mut decimal_string = decimal_u128.to_string();
+		// Can panic (check index)
+		if decimal_string.len() <= places as usize {
+		    decimal_string = "0.".to_owned() + &decimal_string;
+		} else {
+    		decimal_string.insert(decimal_string.len() - places as usize, '.');
+		}
+		
+		F::from_str(&decimal_string)
+    }
 }
