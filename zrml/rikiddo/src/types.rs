@@ -1,5 +1,10 @@
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
-use substrate_fixed::{FixedI128, FixedU128, ParseFixedError, traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed}, types::extra::{U127, U128}};
+use sp_std::convert::TryFrom;
+use substrate_fixed::{
+    traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
+    types::extra::{U127, U128},
+    FixedI128, FixedU128, ParseFixedError,
+};
 
 mod ema_market_volume;
 mod rikiddo_sigmoid_mv;
@@ -94,35 +99,87 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
     }
 }
 
-pub trait FromFixedDecimal<F: Fixed, N: Into<u128>> {
-    fn from_fixed_decimal(decimal: N, places: u8) -> Result<F, ParseFixedError>;
+/// Converts a fixed point decimal number into another type
+pub trait FromFixedDecimal<N: Into<u128>>
+where
+    Self: Sized,
+{
+    fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError>;
 }
 
-impl<F: Fixed, N: Into<u128>> FromFixedDecimal<F, N> for F {
-    fn from_fixed_decimal(decimal: N, places: u8) -> Result<F, ParseFixedError> {
+/// Converts a fixed point decimal number into Fixed type
+impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
+    fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError> {
         let decimal_u128 = decimal.into();
-		let mut decimal_string = decimal_u128.to_string();
-		// Can panic (check index)
-		if decimal_string.len() <= places as usize {
-		    decimal_string = "0.".to_owned() + &decimal_string;
-		} else {
-    		decimal_string.insert(decimal_string.len() - places as usize, '.');
-		}
-		
-		F::from_str(&decimal_string)
+        let mut decimal_string = decimal_u128.to_string();
+        // Can panic (check index)
+        if decimal_string.len() <= places as usize {
+            decimal_string = "0.".to_owned() + &decimal_string;
+        } else {
+            decimal_string.insert(decimal_string.len() - places as usize, '.');
+        }
+
+        F::from_str(&decimal_string)
     }
 }
 
+/// Converts a fixed point decimal number into Fixed type
 pub trait IntoFixedAsDecimal<F: Fixed> {
     fn to_fixed_as_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
 }
 
-impl<F, U> IntoFixedAsDecimal<F> for U
+/// Converts a fixed point decimal number into Fixed type
+impl<F, N> IntoFixedAsDecimal<F> for N
 where
-    F: Fixed + FromFixedDecimal<F, U>,
-    U: Into<u128>,
+    F: Fixed + FromFixedDecimal<Self>,
+    N: Into<u128>,
 {
     fn to_fixed_as_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError> {
         F::from_fixed_decimal(self, places)
+    }
+}
+
+// Converts a type into fixed point decimal number
+pub trait FromFixedToDecimal<F> 
+    where 
+    Self: Sized + TryFrom<u128>
+{
+    fn from_fixed_as_fixed_decimal(fixed: F) -> Result<Self, &'static str>;
+}
+
+// Converts a Fixed type into a fixed point decimal number
+impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
+    fn from_fixed_as_fixed_decimal(fixed: F) -> Result<N, &'static str> {
+        let mut fixed_str = fixed.to_string();
+        fixed_str.retain(|c| c != '.');
+        
+        let result = if let Ok(res) = u128::from_str_radix(&fixed_str, 10) {
+            res
+        } else {
+            // Impossible unless there is a bug in Fixed's to_string()
+            return Err("Error parsing the string representation of the fixed point number");
+        };
+        
+        if let Ok(res) = N::try_from(result) {
+            Ok(res)
+        } else {
+            Err("The parsed fixed decimal representation does not fit into the target type")
+        }
+    }
+}
+
+/// Converts a fixed point decimal number into Fixed type
+pub trait IntoFixedDecimal<N: TryFrom<u128>> {
+    fn to_fixed_decimal(self) -> Result<N, &'static str>;
+}
+
+/// Converts a fixed point decimal number into Fixed type
+impl<F, N> IntoFixedDecimal<N> for F
+where
+    F: Fixed,
+    N: TryFrom<u128> + FromFixedToDecimal<Self>,
+{
+    fn to_fixed_decimal(self) -> Result<N, &'static str> {
+        N::from_fixed_as_fixed_decimal(self)
     }
 }
