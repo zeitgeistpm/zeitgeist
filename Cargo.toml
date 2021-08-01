@@ -8,6 +8,7 @@ members = [
     "zrml/market-commons",
     "zrml/rikiddo",
     "zrml/orderbook-v1",
+    "zrml/orderbook-v1/fuzz",
     "zrml/prediction-markets",
     "zrml/prediction-markets/fuzz",
     "zrml/prediction-markets/runtime-api",

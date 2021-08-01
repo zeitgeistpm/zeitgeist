@@ -12066,10 +12066,23 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
+ "sp-api",
  "sp-io",
  "sp-runtime",
  "sp-std",
  "zeitgeist-primitives",
+ "zrml-orderbook-v1",
+]
+
+[[package]]
+name = "zrml-orderbook-v1-fuzz"
+version = "0.0.0"
+dependencies = [
+ "arbitrary",
+ "frame-system",
+ "libfuzzer-sys",
+ "zeitgeist-primitives",
+ "zrml-orderbook-v1",
 ]
 
 [[package]]

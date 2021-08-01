@@ -10,12 +10,20 @@ sp-std = { branch = "polkadot-v0.9.8", default-features = false, git = "https://
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
 [dev-dependencies]
-orml-tokens = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
+orml-tokens = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+zrml-orderbook-v1 = { features = ["mock"], path = "." }
 
 [features]
 default = ["std"]
+mock = [
+    "orml-tokens",
+    "pallet-balances",
+    "sp-api",
+    "sp-io",
+]
 runtime-benchmarks = [
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
