@@ -9,11 +9,13 @@ sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "http
 sp-std = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
-[dev-dependencies]
+# Mock
 orml-tokens = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+
+[dev-dependencies]
 zrml-orderbook-v1 = { features = ["mock"], path = "." }
 
 [features]
