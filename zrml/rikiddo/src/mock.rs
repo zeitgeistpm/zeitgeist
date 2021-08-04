@@ -1,15 +1,21 @@
 #![cfg(test)]
-use crate as zrml_rikiddo;
-use frame_support::construct_runtime;
+use crate::{
+    self as zrml_rikiddo,
+    types::{EmaMarketVolume, FeeSigmoid},
+};
+use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use substrate_fixed::types::extra::U34;
+use substrate_fixed::{
+    types::extra::{U33, U34},
+    FixedI128, FixedU128,
+};
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, MinimumPeriod, BASE},
+    constants::{ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT},
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, PoolId, UncheckedExtrinsicTest,
     },
 };
 
@@ -22,6 +28,12 @@ pub const FRED: AccountIdTest = 5;
 
 pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
+
+parameter_types! {
+    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
+    pub const MinimumPeriod: u64 = 0;
+    pub const FractionalDecimalPlaces: u8 = 10;
+}
 
 construct_runtime!(
     pub enum Runtime
@@ -40,7 +52,12 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Timestamp = Timestamp;
     type Balance = Balance;
-    type FractionalType = U34;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = FractionalDecimalPlaces;
+    type PoolId = PoolId;
+    type MarketData = EmaMarketVolume<Self::FixedTypeU>;
+    type Fees = FeeSigmoid<Self::FixedTypeS>;
 }
 
 impl frame_system::Config for Runtime {
