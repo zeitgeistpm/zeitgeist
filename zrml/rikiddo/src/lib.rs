@@ -1,6 +1,6 @@
-//! # Court
+//! # Rikiddo
 //!
-//! Manages market disputes and resolutions.
+//! Manages prices of event assets within a pool
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -15,13 +15,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use core::{fmt::Debug, marker::PhantomData};
-    use frame_support::{
-        pallet_prelude::StorageMap,
-        traits::{Get, Hooks, Time},
-        Twox64Concat,
-    };
+    use core::marker::PhantomData;
+    use frame_support::{Twox64Concat, dispatch::DispatchResult, fail, pallet_prelude::StorageMap, traits::{Get, Hooks, Time}};
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
+    use sp_runtime::DispatchError;
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
         types::{
@@ -32,7 +29,7 @@ mod pallet {
     };
 
     use crate::{
-        traits::{MarketAverage, RikiddoSigmoidMVPallet, Sigmoid},
+        traits::{MarketAverage, RikiddoMV, RikiddoSigmoidMVPallet, Sigmoid},
         types::{EmaConfig, FeeSigmoidConfig, RikiddoSigmoidMV},
     };
     use parity_scale_codec::Codec;
@@ -87,6 +84,7 @@ mod pallet {
     pub enum Error<T> {
         ArithmeticOverflow,
         FixedConversionImpossible,
+        PoolNotFound,
     }
 
     // This is the storage containing the Rikiddo instances per pool.
@@ -114,17 +112,22 @@ mod pallet {
         type FU = T::FixedTypeU;
 
         /// Clear market data for specific asset pool
-        fn clear(poolid: Self::PoolId) {
-            // TODO
+        fn clear(poolid: Self::PoolId) -> Result<(), DispatchError> {
+            if let Ok(lmsr) = <LmsrPerPool<T>>::try_get(poolid) {
+                lmsr.clear();
+                Ok(())
+            } else {
+                Err(Error::<T>::PoolNotFound.into())
+            }
         }
 
         /// Return cost C(q) for all assets in q
         fn cost(
             poolid: Self::PoolId,
             asset_balances: Vec<Self::Balance>,
-        ) -> Result<Self::Balance, &'static str> {
+        ) -> Result<Self::Balance, DispatchError> {
             // TODO
-            Err("Unimplemented!")
+            Err("Unimplemented!".into())
         }
 
         /// Create Rikiddo instance for specifc asset pool
@@ -134,13 +137,15 @@ mod pallet {
             ema_config_short: EmaConfig<Self::FU>,
             ema_config_long: EmaConfig<Self::FU>,
             balance_one_unit: Self::Balance,
-        ) {
+        ) -> DispatchResult {
             // TODO
+            Err("Unimplemented!".into())
         }
 
         /// Destroy Rikiddo instance
-        fn destroy(poolid: Self::PoolId) {
+        fn destroy(poolid: Self::PoolId) -> DispatchResult {
             // TODO
+            Err("Unimplemented!".into())
         }
 
         /// Return price P_i(q) for asset q_i in q
@@ -148,27 +153,27 @@ mod pallet {
             poolid: Self::PoolId,
             asset_in_question: Self::Balance,
             asset_balances: Vec<Self::Balance>,
-        ) -> Result<Self::Balance, &'static str> {
+        ) -> Result<Self::Balance, DispatchError> {
             // TODO
-            Err("Unimplemented!")
+            Err("Unimplemented!".into())
         }
 
         /// Return price P_i(q) for all assets in q
         fn all_prices(
             poolid: Self::PoolId,
             asset_balances: Vec<Self::Balance>,
-        ) -> Result<Vec<Self::Balance>, &'static str> {
+        ) -> Result<Vec<Self::Balance>, DispatchError> {
             // TODO
-            Err("Unimplemented!")
+            Err("Unimplemented!".into())
         }
 
         /// Update market data
         fn update(
             poolid: Self::PoolId,
             volume: Self::Balance,
-        ) -> Result<Option<Self::Balance>, &'static str> {
+        ) -> Result<Option<Self::Balance>, DispatchError> {
             // TODO
-            Err("Unimplemented!")
+            Err("Unimplemented!".into())
         }
     }
 }

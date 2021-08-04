@@ -1,11 +1,6 @@
 use crate::types::{EmaConfig, FeeSigmoidConfig, TimestampedVolume};
-use core::fmt::Debug;
-use frame_support::{
-    pallet_prelude::{MaybeSerializeDeserialize, Member},
-    Parameter,
-};
-use parity_scale_codec::Codec;
-use sp_runtime::traits::AtLeast32BitUnsigned;
+use frame_support::dispatch::DispatchResult;
+use sp_runtime::DispatchError;
 use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
 
 pub trait Sigmoid {
@@ -66,13 +61,13 @@ pub trait RikiddoSigmoidMVPallet {
     type FU: FixedUnsigned;
 
     /// Clear market data for specific asset pool
-    fn clear(poolid: Self::PoolId);
+    fn clear(poolid: Self::PoolId) -> DispatchResult;
 
     /// Return cost C(q) for all assets in q
     fn cost(
         poolid: Self::PoolId,
         asset_balances: Vec<Self::Balance>,
-    ) -> Result<Self::Balance, &'static str>;
+    ) -> Result<Self::Balance, DispatchError>;
 
     /// Create Rikiddo instance for specifc asset pool
     fn create(
@@ -81,27 +76,27 @@ pub trait RikiddoSigmoidMVPallet {
         ema_config_short: EmaConfig<Self::FU>,
         ema_config_long: EmaConfig<Self::FU>,
         balance_one_unit: Self::Balance,
-    );
+    ) -> DispatchResult;
 
     /// Destroy Rikiddo instance
-    fn destroy(poolid: Self::PoolId);
+    fn destroy(poolid: Self::PoolId) -> DispatchResult;
 
     /// Return price P_i(q) for asset q_i in q
     fn price(
         poolid: Self::PoolId,
         asset_in_question: Self::Balance,
         asset_balances: Vec<Self::Balance>,
-    ) -> Result<Self::Balance, &'static str>;
+    ) -> Result<Self::Balance, DispatchError>;
 
     /// Return price P_i(q) for all assets in q
     fn all_prices(
         poolid: Self::PoolId,
         asset_balances: Vec<Self::Balance>,
-    ) -> Result<Vec<Self::Balance>, &'static str>;
+    ) -> Result<Vec<Self::Balance>, DispatchError>;
 
     /// Update market data
     fn update(
         poolid: Self::PoolId,
         volume: Self::Balance,
-    ) -> Result<Option<Self::Balance>, &'static str>;
+    ) -> Result<Option<Self::Balance>, DispatchError>;
 }

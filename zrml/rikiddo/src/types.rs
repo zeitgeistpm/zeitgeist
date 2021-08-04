@@ -2,8 +2,8 @@ use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::convert::TryFrom;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
-    types::extra::{U127, U128, U8},
-    FixedI128, FixedU128, FixedU8, ParseFixedError,
+    types::extra::{U127, U128},
+    FixedI128, FixedU128, ParseFixedError,
 };
 
 mod ema_market_volume;
