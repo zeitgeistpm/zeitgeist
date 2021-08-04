@@ -2,8 +2,8 @@ use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use sp_std::convert::TryFrom;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
-    types::extra::{U127, U128},
-    FixedI128, FixedU128, ParseFixedError,
+    types::extra::{U127, U128, U8},
+    FixedI128, FixedU128, FixedU8, ParseFixedError,
 };
 
 mod ema_market_volume;
@@ -112,7 +112,7 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
     fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError> {
         let decimal_u128 = decimal.into();
         let mut decimal_string = decimal_u128.to_string();
-        // Can panic (check index)
+
         if decimal_string.len() <= places as usize {
             decimal_string = "0.".to_owned()
                 + &"0".repeat(places as usize - decimal_string.len())
@@ -146,14 +146,68 @@ pub trait FromFixedToDecimal<F>
 where
     Self: Sized + TryFrom<u128>,
 {
-    fn from_fixed_as_fixed_decimal(fixed: F) -> Result<Self, &'static str>;
+    fn from_fixed_as_fixed_decimal(fixed: F, places: u8) -> Result<Self, &'static str>;
 }
 
 // Converts a Fixed type into a fixed point decimal number (Fixed -> Balance)
 impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
-    fn from_fixed_as_fixed_decimal(fixed: F) -> Result<N, &'static str> {
+    fn from_fixed_as_fixed_decimal(fixed: F, places: u8) -> Result<N, &'static str> {
+        if places == 0 {
+            let mut result = fixed.to_num::<u128>();
+
+            // Arithmetic rounding (+1 if >= 0.5)
+            if F::frac_nbits() > 0 {
+                if let Some(two) = F::checked_from_num(2) {
+                    // `from_num(1)` cannot panic if `from_num(2)` succeeded
+                    if let Some(res) = F::from_num(1).checked_div(two) {
+                        if fixed.frac() >= res {
+                            result += 1;
+                        }
+                    }
+                }
+            }
+
+            if let Ok(res) = N::try_from(result) {
+                return Ok(res);
+            } else {
+                return Err(
+                    "The parsed fixed decimal representation does not fit into the target type"
+                );
+            }
+        }
+
         let mut fixed_str = fixed.to_string();
-        fixed_str.retain(|c| c != '.');
+        let fixed_frac = fixed.frac();
+
+        if fixed_frac == 0 {
+            // Add `places` times 0 to pad all remaining fractional decimal places
+            fixed_str += &"0".repeat(places as usize);
+        } else {
+            let frac_string = &fixed_frac.to_string()[2..];
+
+            if frac_string.len() < places as usize {
+                fixed_str.retain(|c| c != '.');
+                // Padding to the right side up to `places`
+                fixed_str += &"0".repeat(places as usize - frac_string.len());
+            } else if frac_string.len() > places as usize {
+                // Cutting down to `places` + arithmetic rounding of the last digit
+                let frac_plus_one_digit_str = &frac_string[0..places as usize + 1];
+
+                if let Ok(mut res) = u128::from_str_radix(&frac_plus_one_digit_str, 10) {
+                    let last_digit = res % 10;
+                    res /= 10;
+
+                    if last_digit >= 5 {
+                        res += 1;
+                    }
+
+                    fixed_str = fixed.int().to_string() + &res.to_string()
+                } else {
+                    // Impossible unless there is a bug in Fixed's to_string()
+                    return Err("Error parsing the string representation of the fixed point number");
+                };
+            } // The other case requires no changes
+        }
 
         let result = if let Ok(res) = u128::from_str_radix(&fixed_str, 10) {
             res
@@ -172,7 +226,7 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
 
 /// Converts a fixed point decimal number into Fixed type
 pub trait IntoFixedDecimal<N: TryFrom<u128>> {
-    fn to_fixed_decimal(self) -> Result<N, &'static str>;
+    fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str>;
 }
 
 /// Converts a fixed point decimal number into Fixed type
@@ -181,7 +235,7 @@ where
     F: Fixed,
     N: TryFrom<u128> + FromFixedToDecimal<Self>,
 {
-    fn to_fixed_decimal(self) -> Result<N, &'static str> {
-        N::from_fixed_as_fixed_decimal(self)
+    fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str> {
+        N::from_fixed_as_fixed_decimal(self, places)
     }
 }

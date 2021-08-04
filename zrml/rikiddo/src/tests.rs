@@ -2,6 +2,7 @@
 
 use frame_support::assert_err;
 use substrate_fixed::{
+    traits::ToFixed,
     types::extra::{U1, U2, U3, U33, U7, U8},
     FixedI8, FixedU128, FixedU8,
 };
@@ -85,23 +86,44 @@ fn fixed_point_decimal_to_fixed_type_returns_correct_result() {
     }
 }
 
-/*
 #[test]
 fn fixed_point_decimal_from_fixed_type_returns_correct_result() {
-    // This vector contains tuples of (fixed_point_decimal, fractional_decimal_places)
-    let test_vector: Vec<u64> = vec![(0, 10_000_000_000, 5, 123_456_789, 9_999, 736_101, 133_733_333_333];
-    let test_vector_correct_number = vec![(0, 10_000_000_000, 5, 123_456_789, 9_999, 736_101, 133_733_333_333];
+    // This vector contains tuples of (Fixed type, places)
+    // The tuples tests every logical path
+    let test_vector: Vec<(FixedU128<U33>, u8)> = vec![
+        (32.5f64.to_fixed(), 0),
+        (32.25f64.to_fixed(), 0),
+        (200.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 2),
+        (200.1254f64.to_fixed(), 2),
+    ];
+    let test_vector_correct_number: Vec<u128> = vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
-        let converted = <FixedU128<U33>>::from_fixed_decimal(tv.0, tv.1).unwrap();
-        assert_eq!(converted, <FixedU128<U33>>::from_num(tvc));
+        let converted: u128 = u128::from_fixed_as_fixed_decimal(tv.0, tv.1).unwrap();
+        assert_eq!(converted, tvc);
     }
 }
-*/
 
 #[test]
 fn fixed_type_to_fixed_point_decimal_returns_correct_result() {
-    assert!(false, "Unimplemented!");
+        // This vector contains tuples of (Fixed type, places)
+    // The tuples tests every logical path
+    let test_vector: Vec<(FixedU128<U33>, u8)> = vec![
+        (32.5f64.to_fixed(), 0),
+        (32.25f64.to_fixed(), 0),
+        (200.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 2),
+        (200.1254f64.to_fixed(), 2),
+    ];
+    let test_vector_correct_number: Vec<u128> = vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013];
+
+    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
+        let converted: u128 = tv.0.to_fixed_decimal(tv.1).unwrap();
+        assert_eq!(converted, tvc);
+    }
 }
 
 #[test]
