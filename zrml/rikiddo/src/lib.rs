@@ -18,7 +18,7 @@ mod pallet {
     use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
         pallet_prelude::StorageMap,
-        traits::{Hooks, Time},
+        traits::{Get, Hooks, Time},
         Twox64Concat,
     };
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
@@ -48,8 +48,8 @@ mod pallet {
         type Timestamp: Time;
 
         /// Will be used for the fractional part of the fixed point numbers
-        /// Calculation: Select FixedTYPE, such that TYPE = the type of Balance (i.e. FixedU128)
-        /// Select the generic UWIDTH, such that WIDTH = floor(log2(fractional_decimals))
+        /// Calculation: Select FixedTYPE<UWIDTH>, such that TYPE = the type of Balance (i.e. FixedU128)
+        /// Select the generic UWIDTH = floor(log2(fractional_decimals))
         type FixedTypeU: Decode
             + Encode
             + FixedUnsigned
@@ -71,7 +71,7 @@ mod pallet {
             + PartialOrd<I9F23>;
 
         // Number of fractional decimal places for one unit of currency
-        type BalanceFractionalDecimals: Into<u8>;
+        type BalanceFractionalDecimals: Get<u8>;
 
         /// Type that's used as an id for pools
         type PoolId: Decode + FullEncode;

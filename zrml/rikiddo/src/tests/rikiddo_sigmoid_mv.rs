@@ -3,6 +3,12 @@ use substrate_fixed::{types::extra::U64, FixedI128, FixedU128};
 use super::{ema_market_volume::ema_create_test_struct, max_allowed_error};
 use crate::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
+mod cost;
+mod fee;
+mod market_volume;
+mod misc;
+mod price;
+
 type Rikiddo = RikiddoSigmoidMV<
     FixedU128<U64>,
     FixedI128<U64>,
@@ -56,9 +62,3 @@ fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
     let denominator: f64 = balance_exponential_results.iter().sum::<f64>() * balance_sum;
     left_from_addition + (numerator / denominator)
 }
-
-mod cost;
-mod fee;
-mod market_volume;
-mod misc;
-mod price;

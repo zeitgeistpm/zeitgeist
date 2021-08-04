@@ -114,7 +114,9 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
         let mut decimal_string = decimal_u128.to_string();
         // Can panic (check index)
         if decimal_string.len() <= places as usize {
-            decimal_string = "0.".to_owned() + &decimal_string;
+            decimal_string = "0.".to_owned()
+                + &"0".repeat(places as usize - decimal_string.len())
+                + &decimal_string;
         } else {
             decimal_string.insert(decimal_string.len() - places as usize, '.');
         }
@@ -123,7 +125,7 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
     }
 }
 
-/// Converts a fixed point decimal number into Fixed type
+/// Converts a fixed point decimal number into Fixed type (Balance -> Fixed)
 pub trait IntoFixedAsDecimal<F: Fixed> {
     fn to_fixed_as_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
 }
@@ -139,7 +141,7 @@ where
     }
 }
 
-// Converts a type into fixed point decimal number
+// Converts a Fixed type into fixed point decimal number
 pub trait FromFixedToDecimal<F>
 where
     Self: Sized + TryFrom<u128>,
@@ -147,7 +149,7 @@ where
     fn from_fixed_as_fixed_decimal(fixed: F) -> Result<Self, &'static str>;
 }
 
-// Converts a Fixed type into a fixed point decimal number
+// Converts a Fixed type into a fixed point decimal number (Fixed -> Balance)
 impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
     fn from_fixed_as_fixed_decimal(fixed: F) -> Result<N, &'static str> {
         let mut fixed_str = fixed.to_string();
