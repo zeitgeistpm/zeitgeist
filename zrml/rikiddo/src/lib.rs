@@ -154,8 +154,9 @@ mod pallet {
 
         /// Destroy Rikiddo instance
         fn destroy(poolid: Self::PoolId) -> DispatchResult {
-            // TODO
-            Err("Unimplemented!".into())
+            let _ = Self::get_lmsr(poolid)?;
+            <RikiddoPerPool<T>>::remove(poolid);
+            Ok(())
         }
 
         /// Return price P_i(q) for asset q_i in q
