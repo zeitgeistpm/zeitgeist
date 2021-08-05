@@ -25,6 +25,7 @@ mod pallet {
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
     use sp_runtime::DispatchError;
     use sp_std::{
+        convert::TryFrom,
         marker::PhantomData,
         ops::{AddAssign, BitOrAssign, ShlAssign},
     };
@@ -39,7 +40,10 @@ mod pallet {
 
     use crate::{
         traits::{MarketAverage, RikiddoMV, RikiddoSigmoidMVPallet, Sigmoid},
-        types::{EmaConfig, FeeSigmoidConfig, RikiddoConfig, RikiddoSigmoidMV},
+        types::{
+            EmaConfig, FeeSigmoidConfig, IntoFixedDecimal, IntoFixedFromDecimal, RikiddoConfig, RikiddoSigmoidMV,
+            TimestampedVolume, UnixTimestamp,
+        },
     };
     use parity_scale_codec::Codec;
     use sp_runtime::traits::AtLeast32BitUnsigned;
@@ -48,7 +52,7 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Defines the type of traded amounts
-        type Balance;
+        type Balance: Into<u128> + TryFrom<u128>;
 
         /// Offers timestamping functionality
         type Timestamp: Time;
@@ -92,6 +96,7 @@ mod pallet {
         FixedConversionImpossible,
         RikiddoNotFoundForPool,
         RikiddoAlreadyExistsForPool,
+        TransactionIsOlderThanPrevious,
     }
 
     // This is the storage containing the Rikiddo instances per pool.
@@ -108,9 +113,9 @@ mod pallet {
     impl<T: Config> Pallet<T> {}
 
     impl<T: Config> Pallet<T> {
-        fn get_lmsr(poolid: T::PoolId) -> Result<T::Rikiddo, DispatchError> {
-            if let Ok(lmsr) = <RikiddoPerPool<T>>::try_get(poolid) {
-                Ok(lmsr)
+        fn get_rikiddo(poolid: T::PoolId) -> Result<T::Rikiddo, DispatchError> {
+            if let Ok(rikiddo) = <RikiddoPerPool<T>>::try_get(poolid) {
+                Ok(rikiddo)
             } else {
                 Err(Error::<T>::RikiddoNotFoundForPool.into())
             }
@@ -120,6 +125,7 @@ mod pallet {
     impl<T: Config> RikiddoSigmoidMVPallet for Pallet<T>
     where
         <T::FixedTypeS as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
+        <T::Timestamp as Time>::Moment: Into<UnixTimestamp>,
     {
         type Balance = T::Balance;
         type PoolId = T::PoolId;
@@ -128,8 +134,8 @@ mod pallet {
 
         /// Clear market data for specific asset pool
         fn clear(poolid: Self::PoolId) -> Result<(), DispatchError> {
-            let mut lmsr = Self::get_lmsr(poolid)?;
-            lmsr.clear();
+            let mut rikiddo = Self::get_rikiddo(poolid)?;
+            rikiddo.clear();
             Ok(())
         }
 
@@ -144,7 +150,7 @@ mod pallet {
 
         /// Create Rikiddo instance for specifc asset pool
         fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult {
-            if Self::get_lmsr(poolid).is_ok() {
+            if Self::get_rikiddo(poolid).is_ok() {
                 return Err(Error::<T>::RikiddoAlreadyExistsForPool.into());
             }
 
@@ -154,7 +160,7 @@ mod pallet {
 
         /// Destroy Rikiddo instance
         fn destroy(poolid: Self::PoolId) -> DispatchResult {
-            let _ = Self::get_lmsr(poolid)?;
+            let _ = Self::get_rikiddo(poolid)?;
             <RikiddoPerPool<T>>::remove(poolid);
             Ok(())
         }
@@ -183,8 +189,54 @@ mod pallet {
             poolid: Self::PoolId,
             volume: Self::Balance,
         ) -> Result<Option<Self::Balance>, DispatchError> {
-            // TODO
-            Err("Unimplemented!".into())
+            // Convert to Fixed type
+            let timestamp: UnixTimestamp = T::Timestamp::now().into();
+            let volume_fixed: Self::FU;
+
+            match volume.to_fixed_from_fixed_decimal(T::BalanceFractionalDecimals::get()) {
+                Ok(res) => volume_fixed = res,
+                Err(err) => {
+                    debug(&err);
+                    return Err(Error::<T>::FixedConversionImpossible.into());
+                }
+            };
+
+            let timestamped_volume =
+                TimestampedVolume { timestamp: timestamp.into(), volume: volume_fixed };
+            let mut rikiddo = Self::get_rikiddo(poolid)?;
+
+            // Update rikiddo market data by adding the TimestampedVolume
+            let balance_fixed = match rikiddo.update(&timestamped_volume) {
+                Ok(res) => {
+                    if let Some(inner) = res {
+                        inner
+                    } else  {
+                        return Ok(None);
+                    }
+                }
+                Err(err) => {
+                    debug(&err);
+
+                    if err == "[EmaMarketVolume] Incoming volume timestamp is older than previous timestamp" {
+                        return Err(Error::<T>::TransactionIsOlderThanPrevious.into());
+                    } else {
+                        return Err(Error::<T>::ArithmeticOverflow.into());
+                    }
+                }
+            };
+
+            // Convert result back into Balance type
+            let converted: Result<T::Balance, &'static str> = balance_fixed.to_fixed_decimal(T::BalanceFractionalDecimals::get());
+            
+            match converted {
+                Ok(res) => {
+                    return Ok(Some(res));
+                },
+                Err(err) => {
+                    debug(&err);
+                    return Err(Error::<T>::FixedConversionImpossible.into());
+                }
+            }
         }
     }
 }

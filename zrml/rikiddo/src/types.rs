@@ -127,12 +127,12 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
 }
 
 /// Converts a fixed point decimal number into Fixed type (Balance -> Fixed)
-pub trait IntoFixedAsDecimal<F: Fixed> {
+pub trait IntoFixedFromDecimal<F: Fixed> {
     fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
 }
 
 /// Converts a fixed point decimal number into Fixed type
-impl<F, N> IntoFixedAsDecimal<F> for N
+impl<F, N> IntoFixedFromDecimal<F> for N
 where
     F: Fixed + FromFixedDecimal<Self>,
     N: Into<u128>,
@@ -234,7 +234,7 @@ pub trait IntoFixedDecimal<N: TryFrom<u128>> {
 impl<F, N> IntoFixedDecimal<N> for F
 where
     F: Fixed,
-    N: TryFrom<u128> + FromFixedToDecimal<Self>,
+    N: FromFixedToDecimal<Self>,
 {
     fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str> {
         N::from_fixed_to_fixed_decimal(self, places)

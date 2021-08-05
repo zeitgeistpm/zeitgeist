@@ -19,10 +19,7 @@ fn rikiddo_pallet_can_create_one_instance_per_pool() {
 fn rikiddo_pallet_can_only_clear_existing_rikiddo_instances() {
     ExtBuilder::default().build().execute_with(|| {
         let rikiddo = <Runtime as Config>::Rikiddo::default();
-        assert_noop!(
-            Rikiddo::clear(0),
-            crate::Error::<Runtime>::RikiddoNotFoundForPool
-        );
+        assert_noop!(Rikiddo::clear(0), crate::Error::<Runtime>::RikiddoNotFoundForPool);
         assert_ok!(Rikiddo::create(0, rikiddo));
         assert_ok!(Rikiddo::clear(0));
     });
@@ -32,15 +29,9 @@ fn rikiddo_pallet_can_only_clear_existing_rikiddo_instances() {
 fn rikiddo_pallet_can_only_destroy_existing_rikiddo_instances() {
     ExtBuilder::default().build().execute_with(|| {
         let rikiddo = <Runtime as Config>::Rikiddo::default();
-        assert_noop!(
-            Rikiddo::destroy(0),
-            crate::Error::<Runtime>::RikiddoNotFoundForPool
-        );
+        assert_noop!(Rikiddo::destroy(0), crate::Error::<Runtime>::RikiddoNotFoundForPool);
         assert_ok!(Rikiddo::create(0, rikiddo));
         assert_ok!(Rikiddo::destroy(0));
-        assert_noop!(
-            Rikiddo::clear(0),
-            crate::Error::<Runtime>::RikiddoNotFoundForPool
-        );
+        assert_noop!(Rikiddo::clear(0), crate::Error::<Runtime>::RikiddoNotFoundForPool);
     });
 }

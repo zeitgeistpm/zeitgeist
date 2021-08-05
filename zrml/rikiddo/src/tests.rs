@@ -8,8 +8,8 @@ use substrate_fixed::{
 };
 
 use crate::types::{
-    convert_to_signed, convert_to_unsigned, FromFixedDecimal, FromFixedToDecimal,
-    IntoFixedAsDecimal, IntoFixedDecimal,
+    convert_to_signed, convert_to_unsigned, FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal,
+    IntoFixedFromDecimal,
 };
 
 mod ema_market_volume;
