@@ -3,8 +3,8 @@ use crate::{
     constants::{EMA_SHORT, SMOOTHING},
     traits::MarketAverage,
 };
-use sp_core::RuntimeDebug;
 use frame_support::dispatch::{Decode, Encode};
+use sp_core::RuntimeDebug;
 use substrate_fixed::{
     traits::{Fixed, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
     types::extra::{U24, U64},

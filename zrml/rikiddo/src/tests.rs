@@ -98,7 +98,8 @@ fn fixed_point_decimal_from_fixed_type_returns_correct_result() {
         (200.1234f64.to_fixed(), 2),
         (200.1254f64.to_fixed(), 2),
     ];
-    let test_vector_correct_number: Vec<u128> = vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013];
+    let test_vector_correct_number: Vec<u128> =
+        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
         let converted: u128 = u128::from_fixed_to_fixed_decimal(tv.0, tv.1).unwrap();
@@ -108,7 +109,7 @@ fn fixed_point_decimal_from_fixed_type_returns_correct_result() {
 
 #[test]
 fn fixed_type_to_fixed_point_decimal_returns_correct_result() {
-        // This vector contains tuples of (Fixed type, places)
+    // This vector contains tuples of (Fixed type, places)
     // The tuples tests every logical path
     let test_vector: Vec<(FixedU128<U33>, u8)> = vec![
         (32.5f64.to_fixed(), 0),
@@ -118,7 +119,8 @@ fn fixed_type_to_fixed_point_decimal_returns_correct_result() {
         (200.1234f64.to_fixed(), 2),
         (200.1254f64.to_fixed(), 2),
     ];
-    let test_vector_correct_number: Vec<u128> = vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013];
+    let test_vector_correct_number: Vec<u128> =
+        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
         let converted: u128 = tv.0.to_fixed_decimal(tv.1).unwrap();

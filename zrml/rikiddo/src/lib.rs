@@ -15,18 +15,31 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use frame_support::{debug, Twox64Concat, dispatch::DispatchResult, pallet_prelude::StorageMap, traits::{Get, Hooks, Time}};
+    use frame_support::{
+        debug,
+        dispatch::DispatchResult,
+        pallet_prelude::StorageMap,
+        traits::{Get, Hooks, Time},
+        Twox64Concat,
+    };
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
-    use sp_std::{ops::{AddAssign, BitOrAssign, ShlAssign}, marker::PhantomData};
     use sp_runtime::DispatchError;
-    use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, ToFixed}, types::{
+    use sp_std::{
+        marker::PhantomData,
+        ops::{AddAssign, BitOrAssign, ShlAssign},
+    };
+    use substrate_fixed::{
+        traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, ToFixed},
+        types::{
             extra::{U127, U128, U31, U32},
             I9F23, U1F127,
-        }};
+        },
+        FixedI128, FixedI32, FixedU128, FixedU32,
+    };
 
     use crate::{
         traits::{MarketAverage, RikiddoMV, RikiddoSigmoidMVPallet, Sigmoid},
-        types::{EmaConfig, FeeSigmoidConfig, RikiddoSigmoidMV},
+        types::{EmaConfig, FeeSigmoidConfig, RikiddoConfig, RikiddoSigmoidMV},
     };
     use parity_scale_codec::Codec;
     use sp_runtime::traits::AtLeast32BitUnsigned;
@@ -62,36 +75,28 @@ mod pallet {
             + LossyFrom<U1F127>
             + LossyFrom<FixedI128<U127>>
             + PartialOrd<I9F23>;
-            //+ Self::Bits::Copy;
 
         // Number of fractional decimal places for one unit of currency
         type BalanceFractionalDecimals: Get<u8>;
 
         /// Type that's used as an id for pools
-        type PoolId: Decode + FullEncode;
+        type PoolId: Copy + Decode + FullEncode;
 
-        /// Type that's used to gather market data
-        type MarketData: MarketAverage<FU = Self::FixedTypeU> + Decode + Encode;
-
-        /// Type that's used to calculate fees
-        type Fees: Sigmoid<FS = Self::FixedTypeS> + Decode + FullCodec;
+        /// Rikiddo variant
+        type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec;
     }
 
     #[pallet::error]
     pub enum Error<T> {
         ArithmeticOverflow,
         FixedConversionImpossible,
-        PoolNotFound,
+        RikiddoNotFoundForPool,
+        RikiddoAlreadyExistsForPool,
     }
 
     // This is the storage containing the Rikiddo instances per pool.
     #[pallet::storage]
-    pub type LmsrPerPool<T: Config> = StorageMap<
-        _,
-        Twox64Concat,
-        T::PoolId,
-        RikiddoSigmoidMV<T::FixedTypeU, T::FixedTypeS, T::Fees, T::MarketData>,
-    >;
+    pub type RikiddoPerPool<T: Config> = StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
@@ -102,23 +107,30 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
 
-    impl<T: Config> RikiddoSigmoidMVPallet for Pallet<T> where
-        <T::FixedTypeS as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign {
-            
+    impl<T: Config> Pallet<T> {
+        fn get_lmsr(poolid: T::PoolId) -> Result<T::Rikiddo, DispatchError> {
+            if let Ok(lmsr) = <RikiddoPerPool<T>>::try_get(poolid) {
+                Ok(lmsr)
+            } else {
+                Err(Error::<T>::RikiddoNotFoundForPool.into())
+            }
+        }
+    }
+
+    impl<T: Config> RikiddoSigmoidMVPallet for Pallet<T>
+    where
+        <T::FixedTypeS as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
+    {
         type Balance = T::Balance;
         type PoolId = T::PoolId;
-        type FS = T::FixedTypeS;
         type FU = T::FixedTypeU;
+        type Rikiddo = T::Rikiddo;
 
         /// Clear market data for specific asset pool
         fn clear(poolid: Self::PoolId) -> Result<(), DispatchError> {
-            if let Ok(mut lmsr) = <LmsrPerPool<T>>::try_get(poolid) {
-                lmsr.clear();
-                Ok(())
-            }
-            else {
-                Err(Error::<T>::PoolNotFound.into())
-            }
+            let mut lmsr = Self::get_lmsr(poolid)?;
+            lmsr.clear();
+            Ok(())
         }
 
         /// Return cost C(q) for all assets in q
@@ -133,13 +145,14 @@ mod pallet {
         /// Create Rikiddo instance for specifc asset pool
         fn create(
             poolid: Self::PoolId,
-            fee_config: FeeSigmoidConfig<Self::FS>,
-            ema_config_short: EmaConfig<Self::FU>,
-            ema_config_long: EmaConfig<Self::FU>,
-            balance_one_unit: Self::Balance,
+            rikiddo: Self::Rikiddo,
         ) -> DispatchResult {
-            // TODO
-            Err("Unimplemented!".into())
+            if Self::get_lmsr(poolid).is_ok() {
+                return Err(Error::<T>::RikiddoAlreadyExistsForPool.into());
+            }
+
+            <RikiddoPerPool<T>>::insert(poolid, rikiddo);
+            Ok(())
         }
 
         /// Destroy Rikiddo instance

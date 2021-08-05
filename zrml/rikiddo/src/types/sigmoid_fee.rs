@@ -2,8 +2,8 @@ use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
 };
-use sp_core::RuntimeDebug;
 use frame_support::dispatch::{Decode, Encode};
+use sp_core::RuntimeDebug;
 use substrate_fixed::{
     traits::{FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,

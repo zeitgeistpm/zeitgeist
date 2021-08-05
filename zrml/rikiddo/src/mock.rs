@@ -1,8 +1,5 @@
 #![cfg(test)]
-use crate::{
-    self as zrml_rikiddo,
-    types::{EmaMarketVolume, FeeSigmoid},
-};
+use crate::{self as zrml_rikiddo, traits::RikiddoMV, types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV}};
 use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
@@ -56,8 +53,9 @@ impl crate::Config for Runtime {
     type FixedTypeS = FixedI128<U33>;
     type BalanceFractionalDecimals = FractionalDecimalPlaces;
     type PoolId = PoolId;
-    type MarketData = EmaMarketVolume<Self::FixedTypeU>;
-    type Fees = FeeSigmoid<Self::FixedTypeS>;
+    // type MarketData = EmaMarketVolume<Self::FixedTypeU>;
+    // type Fees = FeeSigmoid<Self::FixedTypeS>;
+    type Rikiddo = RikiddoSigmoidMV<Self::FixedTypeU, Self::FixedTypeS, FeeSigmoid<Self::FixedTypeS>, EmaMarketVolume<Self::FixedTypeU>>; 
 }
 
 impl frame_system::Config for Runtime {

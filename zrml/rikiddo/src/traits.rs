@@ -1,4 +1,4 @@
-use crate::types::{EmaConfig, FeeSigmoidConfig, TimestampedVolume};
+use crate::types::{EmaConfig, FeeSigmoidConfig, RikiddoConfig, TimestampedVolume};
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
 use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
@@ -56,9 +56,9 @@ pub trait RikiddoMV: Lmsr {
 
 pub trait RikiddoSigmoidMVPallet {
     type Balance;
-    type PoolId;
-    type FS: FixedSigned;
+    type PoolId: Copy;
     type FU: FixedUnsigned;
+    type Rikiddo: RikiddoMV;
 
     /// Clear market data for specific asset pool
     fn clear(poolid: Self::PoolId) -> DispatchResult;
@@ -72,10 +72,12 @@ pub trait RikiddoSigmoidMVPallet {
     /// Create Rikiddo instance for specifc asset pool
     fn create(
         poolid: Self::PoolId,
+        /*rikiddo_config: RikiddoConfig<Self::FS>,
         fee_config: FeeSigmoidConfig<Self::FS>,
         ema_config_short: EmaConfig<Self::FU>,
         ema_config_long: EmaConfig<Self::FU>,
-        balance_one_unit: Self::Balance,
+        */
+        rikiddo: Self::Rikiddo
     ) -> DispatchResult;
 
     /// Destroy Rikiddo instance
