@@ -1,6 +1,22 @@
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::{OnFinalize, OnInitialize}};
+use frame_system::RawOrigin;
+use zeitgeist_primitives::constants::BALANCE_FRACTIONAL_DECIMAL_PLACES;
 
-use crate::{mock::*, traits::RikiddoSigmoidMVPallet, Config};
+use crate::{Config, mock::*, traits::RikiddoSigmoidMVPallet, types::Timespan};
+
+fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        Timestamp::on_finalize(System::block_number());
+        Balances::on_finalize(System::block_number());
+        Rikiddo::on_finalize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Timestamp::on_initialize(System::block_number());
+        Balances::on_initialize(System::block_number());
+        Rikiddo::on_initialize(System::block_number());
+    }
+  }
 
 #[test]
 fn rikiddo_pallet_can_create_one_instance_per_pool() {
@@ -33,5 +49,22 @@ fn rikiddo_pallet_can_only_destroy_existing_rikiddo_instances() {
         assert_ok!(Rikiddo::create(0, rikiddo));
         assert_ok!(Rikiddo::destroy(0));
         assert_noop!(Rikiddo::clear(0), crate::Error::<Runtime>::RikiddoNotFoundForPool);
+    });
+}
+
+#[test]
+fn rikiddo_pallet_update_market_data_returns_correct_result() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut rikiddo = <Runtime as Config>::Rikiddo::default();
+        rikiddo.ma_short.config.ema_period = Timespan::Seconds(1);
+        rikiddo.ma_long.config.ema_period = Timespan::Seconds(1);
+        assert_noop!(Rikiddo::update(0, 100), crate::Error::<Runtime>::RikiddoNotFoundForPool);
+        assert_ok!(Rikiddo::create(0, rikiddo));
+        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
+        assert_ok!(Rikiddo::update(0, 100));
+        run_to_block(1);
+        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
+        assert_eq!(Rikiddo::update(0, 100).unwrap(), Some(10u128.pow(BALANCE_FRACTIONAL_DECIMAL_PLACES as u32)));
+        // TODO: Figure out why the previous assertion fails
     });
 }

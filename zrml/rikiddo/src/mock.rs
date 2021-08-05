@@ -1,7 +1,5 @@
 #![cfg(test)]
 use crate::{
-    self as zrml_rikiddo,
-    traits::RikiddoMV,
     types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
 };
 use frame_support::{construct_runtime, parameter_types};
@@ -10,11 +8,11 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use substrate_fixed::{
-    types::extra::{U33, U34},
+    types::extra::{U33},
     FixedI128, FixedU128,
 };
 use zeitgeist_primitives::{
-    constants::{ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT},
+    constants::{ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT, BALANCE_FRACTIONAL_DECIMAL_PLACES},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, PoolId, UncheckedExtrinsicTest,
     },
@@ -33,7 +31,7 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 parameter_types! {
     pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const MinimumPeriod: u64 = 0;
-    pub const FractionalDecimalPlaces: u8 = 10;
+    pub const FractionalDecimalPlaces: u8 = BALANCE_FRACTIONAL_DECIMAL_PLACES;
 }
 
 construct_runtime!(

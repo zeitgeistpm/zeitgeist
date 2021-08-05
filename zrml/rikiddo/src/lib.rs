@@ -218,6 +218,7 @@ mod pallet {
                     debug(&err);
 
                     if err == "[EmaMarketVolume] Incoming volume timestamp is older than previous timestamp" {
+                        // Using the default Timestamp pallet makes this branch unreachable
                         return Err(Error::<T>::TransactionIsOlderThanPrevious.into());
                     } else {
                         return Err(Error::<T>::ArithmeticOverflow.into());
