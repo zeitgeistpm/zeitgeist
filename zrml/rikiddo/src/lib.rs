@@ -143,10 +143,7 @@ mod pallet {
         }
 
         /// Create Rikiddo instance for specifc asset pool
-        fn create(
-            poolid: Self::PoolId,
-            rikiddo: Self::Rikiddo,
-        ) -> DispatchResult {
+        fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult {
             if Self::get_lmsr(poolid).is_ok() {
                 return Err(Error::<T>::RikiddoAlreadyExistsForPool.into());
             }

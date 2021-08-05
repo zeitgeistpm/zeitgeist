@@ -1,5 +1,9 @@
 #![cfg(test)]
-use crate::{self as zrml_rikiddo, traits::RikiddoMV, types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV}};
+use crate::{
+    self as zrml_rikiddo,
+    traits::RikiddoMV,
+    types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
+};
 use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
@@ -40,7 +44,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Rikiddo: zrml_rikiddo::{Pallet, Storage},
+        Rikiddo: crate::{Pallet, Storage},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
     }
@@ -55,7 +59,12 @@ impl crate::Config for Runtime {
     type PoolId = PoolId;
     // type MarketData = EmaMarketVolume<Self::FixedTypeU>;
     // type Fees = FeeSigmoid<Self::FixedTypeS>;
-    type Rikiddo = RikiddoSigmoidMV<Self::FixedTypeU, Self::FixedTypeS, FeeSigmoid<Self::FixedTypeS>, EmaMarketVolume<Self::FixedTypeU>>; 
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
 }
 
 impl frame_system::Config for Runtime {

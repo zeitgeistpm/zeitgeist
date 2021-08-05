@@ -77,7 +77,7 @@ pub trait RikiddoSigmoidMVPallet {
         ema_config_short: EmaConfig<Self::FU>,
         ema_config_long: EmaConfig<Self::FU>,
         */
-        rikiddo: Self::Rikiddo
+        rikiddo: Self::Rikiddo,
     ) -> DispatchResult;
 
     /// Destroy Rikiddo instance
