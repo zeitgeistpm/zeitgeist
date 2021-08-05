@@ -3,14 +3,15 @@ use crate::{
     constants::{EMA_SHORT, SMOOTHING},
     traits::MarketAverage,
 };
-use frame_support::dispatch::{fmt::Debug, Decode, Encode};
+use sp_core::RuntimeDebug;
+use frame_support::dispatch::{Decode, Encode};
 use substrate_fixed::{
     traits::{Fixed, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
     types::extra::{U24, U64},
     FixedU128, FixedU32,
 };
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaConfig<FI: Fixed> {
     pub ema_period: Timespan,
     pub ema_period_estimate_after: Option<Timespan>,
@@ -37,14 +38,14 @@ impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<FU> {
     }
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub enum MarketVolumeState {
     Uninitialized,
     DataCollectionStarted,
     DataCollected,
 }
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaMarketVolume<FU: FixedUnsigned> {
     pub config: EmaConfig<FU>,
     pub ema: FU,

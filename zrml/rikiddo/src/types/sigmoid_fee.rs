@@ -2,7 +2,8 @@ use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
 };
-use frame_support::dispatch::{fmt::Debug, Decode, Encode};
+use sp_core::RuntimeDebug;
+use frame_support::dispatch::{Decode, Encode};
 use substrate_fixed::{
     traits::{FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,
@@ -15,7 +16,7 @@ use substrate_fixed::{
 
 use super::convert_to_signed;
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned> {
     pub m: FS,
     pub p: FS,
@@ -42,7 +43,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,

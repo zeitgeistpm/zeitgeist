@@ -81,7 +81,7 @@ fn fixed_point_decimal_to_fixed_type_returns_correct_result() {
         vec![0.0, 1.0, 0.0_000_000_001, 0.0_123_456_789, 99.99, 7_361.01, 1_337.33_333_333];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
-        let converted: FixedU128<U33> = tv.0.to_fixed_as_fixed_decimal(tv.1).unwrap();
+        let converted: FixedU128<U33> = tv.0.to_fixed_from_fixed_decimal(tv.1).unwrap();
         assert_eq!(converted, <FixedU128<U33>>::from_num(tvc));
     }
 }
@@ -101,7 +101,7 @@ fn fixed_point_decimal_from_fixed_type_returns_correct_result() {
     let test_vector_correct_number: Vec<u128> = vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
-        let converted: u128 = u128::from_fixed_as_fixed_decimal(tv.0, tv.1).unwrap();
+        let converted: u128 = u128::from_fixed_to_fixed_decimal(tv.0, tv.1).unwrap();
         assert_eq!(converted, tvc);
     }
 }

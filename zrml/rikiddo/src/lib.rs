@@ -15,18 +15,14 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use core::marker::PhantomData;
-    use frame_support::{Twox64Concat, dispatch::DispatchResult, fail, pallet_prelude::StorageMap, traits::{Get, Hooks, Time}};
+    use frame_support::{debug, Twox64Concat, dispatch::DispatchResult, pallet_prelude::StorageMap, traits::{Get, Hooks, Time}};
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
+    use sp_std::{ops::{AddAssign, BitOrAssign, ShlAssign}, marker::PhantomData};
     use sp_runtime::DispatchError;
-    use substrate_fixed::{
-        traits::{FixedSigned, FixedUnsigned, LossyFrom},
-        types::{
+    use substrate_fixed::{FixedI128, FixedI32, FixedU128, FixedU32, traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, ToFixed}, types::{
             extra::{U127, U128, U31, U32},
             I9F23, U1F127,
-        },
-        FixedI128, FixedI32, FixedU128, FixedU32,
-    };
+        }};
 
     use crate::{
         traits::{MarketAverage, RikiddoMV, RikiddoSigmoidMVPallet, Sigmoid},
@@ -66,6 +62,7 @@ mod pallet {
             + LossyFrom<U1F127>
             + LossyFrom<FixedI128<U127>>
             + PartialOrd<I9F23>;
+            //+ Self::Bits::Copy;
 
         // Number of fractional decimal places for one unit of currency
         type BalanceFractionalDecimals: Get<u8>;
@@ -105,7 +102,9 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
 
-    impl<T: Config> RikiddoSigmoidMVPallet for Pallet<T> {
+    impl<T: Config> RikiddoSigmoidMVPallet for Pallet<T> where
+        <T::FixedTypeS as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign {
+            
         type Balance = T::Balance;
         type PoolId = T::PoolId;
         type FS = T::FixedTypeS;
@@ -113,10 +112,11 @@ mod pallet {
 
         /// Clear market data for specific asset pool
         fn clear(poolid: Self::PoolId) -> Result<(), DispatchError> {
-            if let Ok(lmsr) = <LmsrPerPool<T>>::try_get(poolid) {
+            if let Ok(mut lmsr) = <LmsrPerPool<T>>::try_get(poolid) {
                 lmsr.clear();
                 Ok(())
-            } else {
+            }
+            else {
                 Err(Error::<T>::PoolNotFound.into())
             }
         }

@@ -2,8 +2,9 @@ use crate::{
     constants::INITIAL_FEE,
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
-use core::ops::{AddAssign, BitOrAssign, ShlAssign};
-use frame_support::dispatch::{fmt::Debug, Decode, Encode};
+use sp_core::RuntimeDebug;
+use sp_std::ops::{AddAssign, BitOrAssign, ShlAssign};
+use frame_support::dispatch::{Decode, Encode};
 use hashbrown::HashMap;
 use substrate_fixed::{
     consts::LOG2_E,
@@ -18,7 +19,7 @@ use substrate_fixed::{
 
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
     pub initial_fee: FI,
     pub(crate) log2_e: FI,
@@ -73,7 +74,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,

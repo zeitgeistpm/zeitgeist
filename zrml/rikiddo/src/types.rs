@@ -1,4 +1,5 @@
-use frame_support::dispatch::{fmt::Debug, Decode, Encode};
+use frame_support::dispatch::{Decode, Encode};
+use sp_core::RuntimeDebug;
 use sp_std::convert::TryFrom;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
@@ -16,13 +17,13 @@ pub use sigmoid_fee::*;
 
 pub type UnixTimestamp = u64;
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct TimestampedVolume<F: Fixed> {
     pub timestamp: UnixTimestamp,
     pub volume: F,
 }
 
-#[derive(Copy, Clone, Debug, Decode, Encode, Eq, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 pub enum Timespan {
     Seconds(u32),
     Minutes(u32),
@@ -127,7 +128,7 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
 
 /// Converts a fixed point decimal number into Fixed type (Balance -> Fixed)
 pub trait IntoFixedAsDecimal<F: Fixed> {
-    fn to_fixed_as_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
+    fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
 }
 
 /// Converts a fixed point decimal number into Fixed type
@@ -136,22 +137,22 @@ where
     F: Fixed + FromFixedDecimal<Self>,
     N: Into<u128>,
 {
-    fn to_fixed_as_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError> {
+    fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError> {
         F::from_fixed_decimal(self, places)
     }
 }
 
-// Converts a Fixed type into fixed point decimal number
+/// Converts a Fixed type into fixed point decimal number
 pub trait FromFixedToDecimal<F>
 where
     Self: Sized + TryFrom<u128>,
 {
-    fn from_fixed_as_fixed_decimal(fixed: F, places: u8) -> Result<Self, &'static str>;
+    fn from_fixed_to_fixed_decimal(fixed: F, places: u8) -> Result<Self, &'static str>;
 }
 
-// Converts a Fixed type into a fixed point decimal number (Fixed -> Balance)
+/// Converts a Fixed type into a fixed point decimal number (Fixed -> Balance)
 impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
-    fn from_fixed_as_fixed_decimal(fixed: F, places: u8) -> Result<N, &'static str> {
+    fn from_fixed_to_fixed_decimal(fixed: F, places: u8) -> Result<N, &'static str> {
         if places == 0 {
             let mut result = fixed.to_num::<u128>();
 
@@ -236,6 +237,6 @@ where
     N: TryFrom<u128> + FromFixedToDecimal<Self>,
 {
     fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str> {
-        N::from_fixed_as_fixed_decimal(self, places)
+        N::from_fixed_to_fixed_decimal(self, places)
     }
 }
