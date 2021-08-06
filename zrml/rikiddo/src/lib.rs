@@ -211,6 +211,7 @@ mod pallet {
                     if let Some(inner) = res {
                         inner
                     } else  {
+                        <RikiddoPerPool<T>>::insert(poolid, rikiddo);
                         return Ok(None);
                     }
                 }
@@ -231,6 +232,7 @@ mod pallet {
             
             match converted {
                 Ok(res) => {
+                    <RikiddoPerPool<T>>::insert(poolid, rikiddo);
                     return Ok(Some(res));
                 },
                 Err(err) => {
