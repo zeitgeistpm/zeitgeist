@@ -14,25 +14,50 @@ use arbitrary::{Arbitrary, Result, Unstructured};
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
-        let order_asset = asset(data.make_order_asset);
+        // Make arbitrary order and attempt to fill
+        let order_asset = asset(data.make_fill_order_asset);
         let order_hash = Orderbook::order_hash(
             &ensure_signed(
-                Origin::signed(data.make_order_origin.into())
+                Origin::signed(data.make_fill_order_origin.into())
             ).unwrap(),
             order_asset,
             Orderbook::nonce(),
         );
 
         let _ = Orderbook::make_order(
-            Origin::signed(data.make_order_origin.into()),
+            Origin::signed(data.make_fill_order_origin.into()),
             order_asset,
-            orderside(data.make_order_side),
-            data.make_order_amount,
-            data.make_order_price,
+            orderside(data.make_fill_order_side),
+            data.make_fill_order_amount,
+            data.make_fill_order_price,
         );
 
         let _ = Orderbook::fill_order(
             Origin::signed(data.fill_order_origin.into()),
+            order_hash,
+        );
+  
+        // Make arbitrary order and attempt to cancel
+        let order_asset = asset(data.make_cancel_order_asset);
+        let order_hash = Orderbook::order_hash(
+            &ensure_signed(
+                Origin::signed(data.make_cancel_order_origin.into())
+            ).unwrap(),
+            order_asset,
+            Orderbook::nonce(),
+        );
+
+        let _ = Orderbook::make_order(
+            Origin::signed(data.make_cancel_order_origin.into()),
+            order_asset,
+            orderside(data.make_cancel_order_side),
+            data.make_cancel_order_amount,
+            data.make_cancel_order_price,
+        );
+
+        let _ = Orderbook::cancel_order(
+            Origin::signed(data.make_cancel_order_origin.into()),
+            order_asset,
             order_hash,
         );
     });
@@ -41,14 +66,19 @@ fuzz_target!(|data: Data| {
 
 #[derive(Debug, arbitrary::Arbitrary)]
 struct Data {
-    make_order_amount: u128,
-    make_order_asset: (u128, u16),
-    make_order_price: u128,
-    make_order_origin: u8,
-    make_order_side: u8,
+    make_fill_order_amount: u128,
+    make_fill_order_asset: (u128, u16),
+    make_fill_order_price: u128,
+    make_fill_order_origin: u8,
+    make_fill_order_side: u8,
 
-    fill_order_hash: u8,
     fill_order_origin: u8,
+
+    make_cancel_order_amount: u128,
+    make_cancel_order_asset: (u128, u16),
+    make_cancel_order_price: u128,
+    make_cancel_order_origin: u8,
+    make_cancel_order_side: u8,
 }
 
 fn asset(seed: (u128, u16)) -> Asset<u128> {
