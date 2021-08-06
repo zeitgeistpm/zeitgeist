@@ -1,7 +1,7 @@
-use crate::types::{EmaConfig, FeeSigmoidConfig, RikiddoConfig, TimestampedVolume};
+use crate::types::TimestampedVolume;
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
-use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
+use substrate_fixed::traits::{Fixed, FixedUnsigned};
 
 pub trait Sigmoid {
     type FS: Fixed;
@@ -66,7 +66,7 @@ pub trait RikiddoSigmoidMVPallet {
     /// Return cost C(q) for all assets in q
     fn cost(
         poolid: Self::PoolId,
-        asset_balances: Vec<Self::Balance>,
+        asset_balances: &[Self::Balance],
     ) -> Result<Self::Balance, DispatchError>;
 
     /// Create Rikiddo instance for specifc asset pool
@@ -87,13 +87,13 @@ pub trait RikiddoSigmoidMVPallet {
     fn price(
         poolid: Self::PoolId,
         asset_in_question: Self::Balance,
-        asset_balances: Vec<Self::Balance>,
+        asset_balances: &[Self::Balance],
     ) -> Result<Self::Balance, DispatchError>;
 
     /// Return price P_i(q) for all assets in q
     fn all_prices(
         poolid: Self::PoolId,
-        asset_balances: Vec<Self::Balance>,
+        asset_balances: &[Self::Balance],
     ) -> Result<Vec<Self::Balance>, DispatchError>;
 
     /// Update market data

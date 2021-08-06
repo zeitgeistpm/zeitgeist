@@ -1,18 +1,15 @@
 #![cfg(test)]
-use crate::{
-    types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
-};
+use crate::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use substrate_fixed::{
-    types::extra::{U33},
-    FixedI128, FixedU128,
-};
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT, BALANCE_FRACTIONAL_DECIMAL_PLACES},
+    constants::{
+        ExistentialDeposit, MaxReserves, BALANCE_FRACTIONAL_DECIMAL_PLACES, BASE, BLOCK_HASH_COUNT,
+    },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, PoolId, UncheckedExtrinsicTest,
     },

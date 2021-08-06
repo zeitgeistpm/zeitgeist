@@ -36,7 +36,7 @@ fn ema_state_transitions_work() {
     assert_eq!(emv.state(), &MarketVolumeState::Uninitialized);
     let _ = emv.update(&TimestampedVolume { timestamp: 0, volume: 1u32.into() }).unwrap();
     assert_eq!(emv.state(), &MarketVolumeState::DataCollectionStarted);
-    let abc = emv.update(&TimestampedVolume { timestamp: 3, volume: 1u32.into() }).unwrap();
+    let _ = emv.update(&TimestampedVolume { timestamp: 3, volume: 1u32.into() }).unwrap();
     assert_eq!(emv.state(), &MarketVolumeState::DataCollected);
 }
 
