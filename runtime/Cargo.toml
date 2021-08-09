@@ -6,9 +6,9 @@ frame-executive = { branch = "polkadot-v0.9.8", default-features = false, git = 
 frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system-rpc-runtime-api = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-currencies = { branch = "0.9.8", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-tokens = { branch = "0.9.8", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-traits = { branch = "0.9.8", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-currencies = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-tokens = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+orml-traits = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-randomness-collective-flip = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-sudo = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
