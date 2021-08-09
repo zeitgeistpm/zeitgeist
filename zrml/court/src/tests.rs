@@ -1,11 +1,25 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{Balances, Court, ExtBuilder, Origin, Runtime, ALICE, BOB},
+    mock::{
+        Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
+    },
     Error, Juror, JurorStatus, Jurors,
 };
-use frame_support::{assert_noop, assert_ok};
+use core::ops::Range;
+use frame_support::{assert_noop, assert_ok, traits::Hooks};
+use sp_runtime::traits::Header;
 use zeitgeist_primitives::constants::BASE;
+
+const DEFAULT_SET_OF_JURORS: &[(u128, Juror<u128>)] = &[
+    (7, Juror { staked: 1, status: JurorStatus::Ok }),
+    (6, Juror { staked: 2, status: JurorStatus::Tardy }),
+    (5, Juror { staked: 3, status: JurorStatus::Ok }),
+    (4, Juror { staked: 4, status: JurorStatus::Tardy }),
+    (3, Juror { staked: 5, status: JurorStatus::Ok }),
+    (2, Juror { staked: 6, status: JurorStatus::Ok }),
+    (1, Juror { staked: 7, status: JurorStatus::Ok }),
+];
 
 #[test]
 fn exit_court_successfully_removes_a_juror() {
@@ -62,4 +76,66 @@ fn join_court_will_not_insert_an_already_stored_juror() {
             Error::<Runtime>::JurorAlreadyExists
         );
     });
+}
+
+#[test]
+fn random_jurors_returns_an_unique_different_subset_of_jurors() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut block: u64 = 123;
+        setup_blocks(1..block);
+
+        let mut rng = Court::rng();
+        let random_jurors = Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        let mut at_least_one_set_is_different = false;
+
+        for _ in 0..100 {
+            let next_block = block + 1;
+            setup_blocks(block..next_block);
+            block = next_block;
+
+            let another_set_of_random_jurors =
+                Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
+            let mut iter = another_set_of_random_jurors.iter();
+
+            if let Some(juror) = iter.next() {
+                at_least_one_set_is_different = random_jurors.iter().all(|el| el != juror);
+            } else {
+                at_least_one_set_is_different = false;
+                continue;
+            }
+            for juror in iter {
+                at_least_one_set_is_different &= random_jurors.iter().all(|el| el != juror);
+            }
+
+            if at_least_one_set_is_different {
+                break;
+            }
+        }
+        assert_eq!(at_least_one_set_is_different, true);
+    });
+}
+
+#[test]
+fn random_jurors_returns_a_subset_of_jurors() {
+    ExtBuilder::default().build().execute_with(|| {
+        setup_blocks(1..123);
+        let mut rng = Court::rng();
+        let random_jurors = Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        for (_, juror) in random_jurors {
+            assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| &el.1 == juror));
+        }
+    });
+}
+
+fn setup_blocks(range: Range<u64>) {
+    let mut parent_hash = System::parent_hash();
+
+    for i in range {
+        System::initialize(&i, &parent_hash, &Default::default(), frame_system::InitKind::Full);
+        RandomnessCollectiveFlip::on_initialize(i);
+
+        let header = System::finalize();
+        parent_hash = header.hash();
+        System::set_block_number(*header.number());
+    }
 }

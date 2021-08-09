@@ -12019,10 +12019,13 @@ dependencies = [
 name = "zrml-court"
 version = "0.1.0"
 dependencies = [
+ "arrayvec 0.7.1",
  "frame-support",
  "frame-system",
  "pallet-balances",
+ "pallet-randomness-collective-flip",
  "parity-scale-codec",
+ "rand 0.8.4",
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
@@ -12143,18 +12146,12 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "orml-currencies",
- "orml-tokens",
  "orml-traits",
- "pallet-balances",
- "pallet-timestamp",
  "parity-scale-codec",
- "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
- "zrml-swaps",
 ]
 
 [[package]]

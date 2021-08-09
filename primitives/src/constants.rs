@@ -25,6 +25,12 @@ parameter_types! {
     pub const MaxReserves: u32 = 50;
 }
 
+// Court
+parameter_types! {
+    pub const CourtCaseDuration: u64 = 2 * BLOCKS_PER_DAY;
+    pub const StakeWeight: u128 = 2 * BASE;
+}
+
 // Liquidity Mining parameters
 parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zrml/lmg");
