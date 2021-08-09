@@ -68,7 +68,7 @@ mod pallet {
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
     use frame_support::{
-        dispatch::{self, DispatchResultWithPostInfo, Weight},
+        dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
         storage::{with_transaction, TransactionOutcome},
         traits::{
@@ -81,7 +81,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
-        traits::{AccountIdConversion, Zero},
+        traits::{AccountIdConversion, Saturating, Zero},
         DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -224,7 +224,11 @@ mod pallet {
             );
             Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
-            let rc = T::SimpleDisputes::internal_resolve(&market_id, &market)?;
+            let rc = T::SimpleDisputes::internal_resolve(
+                &default_dispute_bound::<T>,
+                &market_id,
+                &market,
+            )?;
             Ok(Some(
                 Self::calculate_internal_resolve_weight(&market, rc)
                     .saturating_add(T::WeightInfo::admin_move_market_to_resolved_overhead())
@@ -283,14 +287,28 @@ mod pallet {
             Self::do_buy_complete_set(sender, market_id, amount)
         }
 
-        #[pallet::weight(T::WeightInfo::dispute(T::SimpleDisputes::max_disputes()))]
+        #[pallet::weight(T::WeightInfo::dispute(T::MaxDisputes::get()))]
         pub fn dispute(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
-            let [weight, max_weight] = T::SimpleDisputes::on_dispute(origin, market_id, outcome)?;
-            Self::calculate_actual_weight(&T::WeightInfo::dispute, weight, max_weight)
+            let who = ensure_signed(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
+            Self::ensure_outcome_matches_market_type(&market, &outcome)?;
+            let disputes = T::SimpleDisputes::disputes(&market_id).unwrap_or_default();
+            let num_disputes: u32 = disputes.len().saturated_into();
+            Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
+            let outcome_clone = outcome.clone();
+            T::SimpleDisputes::on_dispute(default_dispute_bound::<T>, market_id, outcome, who)?;
+            Self::set_market_as_disputed(&market, &market_id)?;
+            Self::deposit_event(Event::MarketDisputed(market_id, outcome_clone));
+            Self::calculate_actual_weight(
+                &T::WeightInfo::dispute,
+                num_disputes,
+                T::MaxDisputes::get(),
+            )
         }
 
         /// NOTE: Only for PoC probably - should only allow rejections
@@ -740,6 +758,14 @@ mod pallet {
 
         type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
+        /// The base amount of currency that must be bonded in order to create a dispute.
+        type DisputeBond: Get<BalanceOf<Self>>;
+
+        /// The additional amount of currency that must be bonded when creating a subsequent
+        /// dispute.
+        type DisputeFactor: Get<BalanceOf<Self>>;
+
+        /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         type LiquidityMining: LiquidityMiningPalletApi<
@@ -761,15 +787,20 @@ mod pallet {
         /// The minimum number of categories available for categorical markets.
         type MinCategories: Get<u16>;
 
+        /// The maximum number of disputes allowed on any single market.
+        type MaxDisputes: Get<u32>;
+
+        /// Shares
         type Shares: ZeitgeistMultiReservableCurrency<
             Self::AccountId,
             Balance = BalanceOf<Self>,
             CurrencyId = Asset<MarketIdOf<Self>>,
         >;
 
-        /// Responsable for handling disputes
+        /// Responsible for handling disputes
         type SimpleDisputes: SimpleDisputesPalletApi<
             AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
             Origin = Self::Origin,
@@ -816,8 +847,6 @@ mod pallet {
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
-        /// A market with the provided ID does not exist.
-        MarketDoesNotExist,
         /// The market status is something other than active.
         MarketNotActive,
         /// Sender does not have enough balance to buy shares.
@@ -832,10 +861,16 @@ mod pallet {
         MarketIsNotResolved,
         /// The market is not closed.
         MarketNotClosed,
+        /// The market is not reported on.
+        MarketNotReported,
+        /// The maximum number of disputes has been reached.
+        MaxDisputesReached,
         /// The number of categories for a categorical market is too low
         NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
+        /// Submitted outcome does not match market type
+        OutcomeMismatch,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
         /// A swap pool already exists for this market.
@@ -875,10 +910,11 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = 0;
-            let rslt = T::SimpleDisputes::on_resolution(now, |market, rc| {
-                let weight = Self::calculate_internal_resolve_weight(market, rc);
-                total_weight = total_weight.saturating_add(weight);
-            });
+            let rslt =
+                T::SimpleDisputes::on_resolution(&default_dispute_bound::<T>, now, |market, rc| {
+                    let weight = Self::calculate_internal_resolve_weight(market, rc);
+                    total_weight = total_weight.saturating_add(weight);
+                });
             with_transaction(|| match rslt {
                 Err(err) => {
                     log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
@@ -925,7 +961,7 @@ mod pallet {
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(), dispatch::DispatchError> {
+        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             if market.status == MarketStatus::Reported {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
@@ -1022,6 +1058,50 @@ mod pallet {
             }
         }
 
+        fn ensure_create_market_end(end: MarketEnd<T::BlockNumber>) -> DispatchResult {
+            match end {
+                MarketEnd::Block(block) => {
+                    let current_block = <frame_system::Pallet<T>>::block_number();
+                    ensure!(current_block < block, Error::<T>::EndBlockTooSoon);
+                }
+                MarketEnd::Timestamp(timestamp) => {
+                    let now = T::Timestamp::now();
+                    ensure!(now < timestamp.saturated_into(), Error::<T>::EndTimestampTooSoon);
+                }
+            };
+            Ok(())
+        }
+
+        #[inline]
+        fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
+            ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
+            Ok(())
+        }
+
+        fn ensure_outcome_matches_market_type(
+            market: &Market<T::AccountId, T::BlockNumber>,
+            outcome: &OutcomeReport,
+        ) -> DispatchResult {
+            if let OutcomeReport::Categorical(ref inner) = outcome {
+                if let MarketType::Categorical(ref categories) = market.market_type {
+                    ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
+                } else {
+                    return Err(Error::<T>::OutcomeMismatch.into());
+                }
+            }
+            if let OutcomeReport::Scalar(ref inner) = outcome {
+                if let MarketType::Scalar(ref outcome_range) = market.market_type {
+                    ensure!(
+                        inner >= &outcome_range.0 && inner <= &outcome_range.1,
+                        Error::<T>::OutcomeOutOfRange
+                    );
+                } else {
+                    return Err(Error::<T>::OutcomeMismatch.into());
+                }
+            }
+            Ok(())
+        }
+
         fn is_market_active(end: MarketEnd<T::BlockNumber>) -> bool {
             match end {
                 MarketEnd::Block(block) => {
@@ -1035,20 +1115,29 @@ mod pallet {
             }
         }
 
-        fn ensure_create_market_end(end: MarketEnd<T::BlockNumber>) -> DispatchResult {
-            match end {
-                MarketEnd::Block(block) => {
-                    let current_block = <frame_system::Pallet<T>>::block_number();
-                    ensure!(current_block < block, Error::<T>::EndBlockTooSoon);
-                }
-                MarketEnd::Timestamp(timestamp) => {
-                    let now = T::Timestamp::now();
-                    ensure!(now < timestamp.saturated_into(), Error::<T>::EndTimestampTooSoon);
-                }
-            };
-
+        // If the market is already disputed, does nothing.
+        fn set_market_as_disputed(
+            market: &Market<T::AccountId, T::BlockNumber>,
+            market_id: &MarketIdOf<T>,
+        ) -> DispatchResult {
+            if market.status != MarketStatus::Disputed {
+                T::MarketCommons::mutate_market(market_id, |m| {
+                    m.status = MarketStatus::Disputed;
+                    Ok(())
+                })?;
+            }
             Ok(())
         }
+    }
+
+    // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
+    pub fn default_dispute_bound<T>(disputes_num: usize) -> BalanceOf<T>
+    where
+        T: Config,
+    {
+        T::DisputeBond::get().saturating_add(
+            T::DisputeFactor::get().saturating_mul(disputes_num.saturated_into::<u32>().into()),
+        )
     }
 
     fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {

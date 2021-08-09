@@ -9,15 +9,6 @@ zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
-[dev-dependencies]
-orml-currencies = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-tokens = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-traits = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-zrml-swaps = { path = "../swaps" }
-
 [features]
 default = ["std"]
 runtime-benchmarks = [

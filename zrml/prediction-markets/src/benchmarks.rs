@@ -190,9 +190,9 @@ benchmarks! {
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
-        for i in 0..c.min(T::SimpleDisputes::max_disputes() as u32) {
-            let origin = RawOrigin::Signed(caller.clone()).into();
-            let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
+        for i in 0..c.min(T::MaxDisputes::get() as u32) {
+            let origin = caller.clone();
+            let _ = T::SimpleDisputes::on_dispute(default_dispute_bound::<T>, marketid, OutcomeReport::Categorical(i.saturated_into()), origin)?;
         }
 
         let approval_origin = T::ApprovalOrigin::successful_origin();
@@ -287,15 +287,15 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
     dispute {
-        let a in 0..(T::SimpleDisputes::max_disputes() - 1) as u32;
+        let a in 0..(T::MaxDisputes::get() - 1) as u32;
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar((0u128, u128::MAX)),
             OutcomeReport::Scalar(42)
         )?;
     }:  {
-        let origin = RawOrigin::Signed(caller.clone()).into();
-        let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Scalar((a + 1) as u128))?;
+        let origin = caller.clone();
+        let _ = T::SimpleDisputes::on_dispute(default_dispute_bound::<T>, marketid, OutcomeReport::Scalar((a + 1) as u128), origin)?;
     }
 
     internal_resolve_categorical_reported {
@@ -310,7 +310,7 @@ benchmarks! {
         let (_, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     internal_resolve_categorical_disputed {
@@ -321,18 +321,18 @@ benchmarks! {
         // c = num. asset types
         let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
         // d = num. disputes
-        let d in 0..T::SimpleDisputes::max_disputes() as u32;
+        let d in 0..T::MaxDisputes::get() as u32;
 
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
         for i in 0..c.min(d) {
-            let origin = RawOrigin::Signed(caller.clone()).into();
-            let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Categorical(i.saturated_into()))?;
+            let origin = caller.clone();
+            let _ = T::SimpleDisputes::on_dispute(default_dispute_bound::<T>, marketid, OutcomeReport::Categorical(i.saturated_into()), origin)?;
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     internal_resolve_scalar_reported {
@@ -341,23 +341,23 @@ benchmarks! {
         let (_, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     internal_resolve_scalar_disputed {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let d in 0..T::SimpleDisputes::max_disputes();
+        let d in 0..T::MaxDisputes::get();
 
         let (caller, marketid) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d.into() {
-            let origin = RawOrigin::Signed(caller.clone()).into();
-            let _ = T::SimpleDisputes::on_dispute(origin, marketid, OutcomeReport::Scalar(i))?;
+            let origin = caller.clone();
+            let _ = T::SimpleDisputes::on_dispute(default_dispute_bound::<T>, marketid, OutcomeReport::Scalar(i), origin)?;
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;
-        T::SimpleDisputes::internal_resolve(&marketid, &market)?
+        T::SimpleDisputes::internal_resolve(&default_dispute_bound::<T>, &marketid, &market)?
     }
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.

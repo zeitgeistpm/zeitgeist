@@ -448,10 +448,13 @@ impl zrml_orderbook_v1::Config for Runtime {
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRoot<AccountId>;
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
+    type MaxDisputes = MaxDisputes;
     type MinCategories = MinCategories;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
@@ -466,13 +469,10 @@ impl zrml_prediction_markets::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
     type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;
