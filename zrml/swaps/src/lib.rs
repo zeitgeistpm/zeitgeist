@@ -192,7 +192,7 @@ mod pallet {
                 pool_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_in_given_single_out(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(&pool_ref, &asset)?,
+                        Self::pool_weight_rslt(pool_ref, &asset)?,
                         total_supply.saturated_into(),
                         pool_ref.total_weight,
                         asset_amount.saturated_into(),
@@ -359,7 +359,7 @@ mod pallet {
                     ensure!(asset_amount <= mul, Error::<T>::MaxInRatio);
                     let pool_amount: BalanceOf<T> = crate::math::calc_pool_out_given_single_in(
                         asset_balance.saturated_into(),
-                        Self::pool_weight_rslt(&pool_ref, &asset_in)?,
+                        Self::pool_weight_rslt(pool_ref, &asset_in)?,
                         total_supply.saturated_into(),
                         pool_ref.total_weight.saturated_into(),
                         asset_amount.saturated_into(),
@@ -374,7 +374,7 @@ mod pallet {
                 who: who_clone,
                 pool_account_id: &pool_account_id,
                 pool_id,
-                pool: &pool_ref,
+                pool: pool_ref,
             };
             pool_join_with_exact_amount::<_, _, _, T>(params)
         }

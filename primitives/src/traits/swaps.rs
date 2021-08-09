@@ -1,6 +1,6 @@
 use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId};
 use alloc::vec::Vec;
-use frame_support::dispatch::DispatchError;
+use frame_support::dispatch::{DispatchError, DispatchResult};
 
 pub trait Swaps<AccountId> {
     type Balance;
@@ -34,5 +34,5 @@ pub trait Swaps<AccountId> {
         market_type: &MarketType,
         pool_id: PoolId,
         outcome_report: &OutcomeReport,
-    ) -> Result<(), DispatchError>;
+    ) -> DispatchResult;
 }

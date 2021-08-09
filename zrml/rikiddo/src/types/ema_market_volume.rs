@@ -276,10 +276,10 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                     };
 
                     self.state = MarketVolumeState::DataCollected;
-                    result = self.calculate_ema(&volume)?;
+                    result = self.calculate_ema(volume)?;
                 } else {
                     // During this phase the ema is still a sma.
-                    let _ = self.calculate_sma(&volume)?;
+                    let _ = self.calculate_sma(volume)?;
                     // In the context of blockchains, overflowing here is irrelevant (technically
                     // not realizable). In other contexts, ensure that FU can represent a number
                     // that is equal to the number of incoming volumes during one period.
@@ -287,7 +287,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                 }
             }
             MarketVolumeState::DataCollected => {
-                result = self.calculate_ema(&volume)?;
+                result = self.calculate_ema(volume)?;
             }
         }
 

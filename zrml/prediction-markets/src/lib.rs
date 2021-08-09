@@ -70,12 +70,13 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
+        pallet_prelude::{StorageMap, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, IsType, OnUnbalanced,
             ReservableCurrency, Time,
         },
-        transactional, PalletId,
+        transactional, Blake2_128Concat, PalletId,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -88,8 +89,8 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
-            OutcomeReport, Report, ResolutionCounters, ScalarPosition,
+            Asset, Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
+            MultiHash, OutcomeReport, Report, ResolutionCounters, ScalarPosition,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -224,8 +225,10 @@ mod pallet {
             );
             Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
+            let disputes = Disputes::<T>::get(market_id);
             let rc = T::SimpleDisputes::internal_resolve(
                 &default_dispute_bound::<T>,
+                &disputes,
                 &market_id,
                 &market,
             )?;
@@ -297,12 +300,22 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
             Self::ensure_outcome_matches_market_type(&market, &outcome)?;
-            let disputes = T::SimpleDisputes::disputes(&market_id).unwrap_or_default();
+            let disputes = Disputes::<T>::get(market_id);
+            Self::ensure_can_not_dispute_the_same_outcome(&disputes, &outcome)?;
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
-            let outcome_clone = outcome.clone();
-            T::SimpleDisputes::on_dispute(default_dispute_bound::<T>, market_id, outcome, who)?;
+            T::SimpleDisputes::on_dispute(
+                default_dispute_bound::<T>,
+                &disputes,
+                market_id,
+                who.clone(),
+            )?;
             Self::set_market_as_disputed(&market, &market_id)?;
+            let curr_block_num = <frame_system::Pallet<T>>::block_number();
+            let outcome_clone = outcome.clone();
+            <Disputes<T>>::mutate(market_id, |disputes| {
+                disputes.push(MarketDispute { at: curr_block_num, by: who, outcome });
+            });
             Self::deposit_event(Event::MarketDisputed(market_id, outcome_clone));
             Self::calculate_actual_weight(
                 &T::WeightInfo::dispute,
@@ -835,6 +848,9 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Someone is trying to call `dispute` with the same outcome that is currently
+        /// registered on-chain.
+        CannotDisputeSameOutcome,
         /// End block is too soon.
         EndBlockTooSoon,
         /// End timestamp is too soon.
@@ -855,6 +871,8 @@ mod pallet {
         OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
+        /// A market with the provided ID does not exist.
+        MarketDoesNotExist,
         /// A reported market was expected
         MarketIsNotReported,
         /// A resolved market was expected
@@ -910,11 +928,18 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = 0;
-            let rslt =
-                T::SimpleDisputes::on_resolution(&default_dispute_bound::<T>, now, |market, rc| {
-                    let weight = Self::calculate_internal_resolve_weight(market, rc);
-                    total_weight = total_weight.saturating_add(weight);
-                });
+            let rslt = T::SimpleDisputes::on_resolution(now, |market_id, market| {
+                let disputes = Disputes::<T>::get(market_id);
+                let rc = T::SimpleDisputes::internal_resolve(
+                    &default_dispute_bound::<T>,
+                    &disputes,
+                    market_id,
+                    market,
+                )?;
+                let weight = Self::calculate_internal_resolve_weight(market, rc);
+                total_weight = total_weight.saturating_add(weight);
+                Ok(())
+            });
             with_transaction(|| match rslt {
                 Err(err) => {
                     log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
@@ -933,6 +958,17 @@ mod pallet {
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
+
+    /// For each market, this holds the dispute information for each dispute that's
+    /// been issued.
+    #[pallet::storage]
+    pub type Disputes<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        Vec<MarketDispute<T::AccountId, T::BlockNumber>>,
+        ValueQuery,
+    >;
 
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
@@ -962,7 +998,7 @@ mod pallet {
 
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = T::MarketCommons::market(market_id)?;
             if market.status == MarketStatus::Reported {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
                 let mut old_reports_per_block =
@@ -974,7 +1010,7 @@ mod pallet {
                 );
             }
             if market.status == MarketStatus::Disputed {
-                let disputes = T::SimpleDisputes::disputes(market_id)?;
+                let disputes = Disputes::<T>::get(market_id);
                 let num_disputes = disputes.len();
                 let prev_dispute = disputes[num_disputes - 1].clone();
                 let at = prev_dispute.at;
@@ -1058,6 +1094,16 @@ mod pallet {
             }
         }
 
+        fn ensure_can_not_dispute_the_same_outcome(
+            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            outcome: &OutcomeReport,
+        ) -> DispatchResult {
+            if let Some(last_dispute) = disputes.last() {
+                ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
+            }
+            Ok(())
+        }
+
         fn ensure_create_market_end(end: MarketEnd<T::BlockNumber>) -> DispatchResult {
             match end {
                 MarketEnd::Block(block) => {
@@ -1131,12 +1177,12 @@ mod pallet {
     }
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub fn default_dispute_bound<T>(disputes_num: usize) -> BalanceOf<T>
+    pub fn default_dispute_bound<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {
         T::DisputeBond::get().saturating_add(
-            T::DisputeFactor::get().saturating_mul(disputes_num.saturated_into::<u32>().into()),
+            T::DisputeFactor::get().saturating_mul(n.saturated_into::<u32>().into()),
         )
     }
 

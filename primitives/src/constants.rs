@@ -3,9 +3,6 @@ pub mod ztg;
 use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
-// General
-pub const BLOCK_HASH_COUNT: BlockNumber = 250;
-
 // Definitions for time
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
@@ -27,8 +24,13 @@ parameter_types! {
 
 // Court
 parameter_types! {
-    pub const CourtCaseDuration: u64 = 2 * BLOCKS_PER_DAY;
+    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     pub const StakeWeight: u128 = 2 * BASE;
+}
+
+// General
+parameter_types! {
+    pub const BlockHashCount: u64 = 250;
 }
 
 // Liquidity Mining parameters
