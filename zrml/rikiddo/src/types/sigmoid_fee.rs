@@ -1,41 +1,72 @@
 use crate::{
-    constants::{M, N, P},
+    constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
-    traits::{Fixed, FixedSigned, LossyFrom, LossyInto},
+    traits::{FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,
-    types::{extra::U24, I9F23},
-    FixedI32,
+    types::{
+        extra::{U127, U24, U32},
+        I9F23,
+    },
+    FixedI128, FixedI32, FixedU32,
 };
 
+use super::convert_to_signed;
+
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct FeeSigmoidConfig<F: Fixed> {
-    pub m: F,
-    pub p: F,
-    pub n: F,
+pub struct FeeSigmoidConfig<FS: FixedSigned> {
+    pub m: FS,
+    pub p: FS,
+    pub n: FS,
+    pub initial_fee: FS,
+    pub min_revenue: FS,
 }
 
-impl<F: Fixed + LossyFrom<FixedI32<U24>>> Default for FeeSigmoidConfig<F> {
+impl<FS> Default for FeeSigmoidConfig<FS>
+where
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
+{
     fn default() -> Self {
-        // To avoid a limitation of the generics, the values are hardcoded
-        // instead of being fetched from constants.
-        Self { m: M.lossy_into(), p: P.lossy_into(), n: N.lossy_into() }
+        Self {
+            m: M.lossy_into(),
+            p: P.lossy_into(),
+            n: N.lossy_into(),
+            // Only case this can panic is, when INITIAL_FEE is >= 1.0 and FS integer bits < 2
+            initial_fee: convert_to_signed::<FixedU32<U32>, FS>(INITIAL_FEE.lossy_into()).unwrap(),
+            // Only case this can panic is, when MIN_REVENUE is >= 1.0 and FS integer bits < 2
+            min_revenue: convert_to_signed::<FixedU32<U32>, FS>(MINIMAL_REVENUE.lossy_into())
+                .unwrap(),
+        }
     }
 }
 
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
-pub struct FeeSigmoid<FI: Fixed + LossyFrom<FixedI32<U24>>> {
-    pub config: FeeSigmoidConfig<FI>,
+pub struct FeeSigmoid<FS>
+where
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
+{
+    pub config: FeeSigmoidConfig<FS>,
 }
 
-impl<F> Sigmoid<F> for FeeSigmoid<F>
+impl<FS> FeeSigmoid<FS>
 where
-    F: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>,
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
 {
+    pub fn new(config: FeeSigmoidConfig<FS>) -> Self {
+        Self { config }
+    }
+}
+
+impl<FS> Sigmoid for FeeSigmoid<FS>
+where
+    FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>>,
+{
+    type FS = FS;
+
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
-    fn calculate(&self, r: F) -> Result<F, &'static str> {
+    fn calculate(&self, r: Self::FS) -> Result<Self::FS, &'static str> {
         let r_minus_n = if let Some(res) = r.checked_sub(self.config.n) {
             res
         } else {
@@ -61,12 +92,24 @@ where
                 return Err("[FeeSigmoid] Overflow during calculation: p + (r-n)^2");
             };
 
-        let denominator = sqrt::<F, F>(p_plus_r_minus_n_squared)?;
+        let denominator = sqrt::<FS, FS>(p_plus_r_minus_n_squared)?;
 
-        let _ = if let Some(res) = numerator.checked_div(denominator) {
-            return Ok(res);
+        let sigmoid_result = if let Some(res) = numerator.checked_div(denominator) {
+            res
         } else {
             return Err("[FeeSigmoid] Overflow during calculation: numerator / denominator");
         };
+
+        let result = if let Some(res) = sigmoid_result.checked_add(self.config.initial_fee) {
+            res
+        } else {
+            return Err("[FeeSigmoid] initial_fee + sigmoid_result");
+        };
+
+        if self.config.min_revenue >= result {
+            return Ok(self.config.min_revenue);
+        }
+
+        Ok(result)
     }
 }
