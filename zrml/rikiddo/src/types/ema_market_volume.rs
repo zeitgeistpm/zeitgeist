@@ -5,26 +5,35 @@ use crate::{
 };
 use frame_support::dispatch::{fmt::Debug, Decode, Encode};
 use substrate_fixed::{
-    traits::{Fixed, FixedUnsigned, LossyFrom, LossyInto},
-    types::extra::U24,
-    FixedU32,
+    traits::{Fixed, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
+    types::extra::{U24, U64},
+    FixedU128, FixedU32,
 };
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaVolumeConfig<F: Fixed> {
+pub struct EmaConfig<FI: Fixed> {
     pub ema_period: Timespan,
-    pub smoothing: F,
+    pub ema_period_estimate_after: Option<Timespan>,
+    pub smoothing: FI,
 }
 
-impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaVolumeConfig<F> {
-    pub fn new(ema_period: Timespan, smoothing: F) -> Self {
-        Self { ema_period, smoothing }
+impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaConfig<FU> {
+    pub fn new(
+        ema_period: Timespan,
+        mut ema_period_estimate_after: Option<Timespan>,
+        smoothing: FU,
+    ) -> Self {
+        if let Some(res) = ema_period_estimate_after {
+            ema_period_estimate_after = if res >= ema_period { None } else { Some(res) };
+        };
+
+        Self { ema_period, ema_period_estimate_after, smoothing }
     }
 }
 
-impl<F: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaVolumeConfig<F> {
+impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<FU> {
     fn default() -> Self {
-        Self::new(EMA_SHORT, SMOOTHING.lossy_into())
+        Self::new(EMA_SHORT, None, SMOOTHING.lossy_into())
     }
 }
 
@@ -36,30 +45,33 @@ pub enum MarketVolumeState {
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct EmaMarketVolume<F: FixedUnsigned> {
-    pub config: EmaVolumeConfig<F>,
-    pub ema: F,
-    multiplier: F,
+pub struct EmaMarketVolume<FU: FixedUnsigned> {
+    pub config: EmaConfig<FU>,
+    pub ema: FU,
+    multiplier: FU,
     last_time: UnixTimestamp,
     state: MarketVolumeState,
     start_time: UnixTimestamp,
-    volumes_per_period: F,
+    volumes_per_period: FU,
 }
 
-impl<F: FixedUnsigned> EmaMarketVolume<F> {
-    pub fn new(config: EmaVolumeConfig<F>) -> Self {
+impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
+    pub fn new(config: EmaConfig<FU>) -> Self {
         Self {
             config,
-            ema: F::from_num(0),
+            ema: FU::from_num(0),
             state: MarketVolumeState::Uninitialized,
             start_time: 0,
             last_time: 0,
-            volumes_per_period: F::from_num(0),
-            multiplier: F::from_num(0),
+            volumes_per_period: FU::from_num(0),
+            multiplier: FU::from_num(0),
         }
     }
 
-    fn calculate_ema(&mut self, volume: &TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+    fn calculate_ema(
+        &mut self,
+        volume: &TimestampedVolume<FU>,
+    ) -> Result<Option<FU>, &'static str> {
         // Overflow is impossible here (the library ensures that multiplier ∊ [0,1])
         let volume_times_multiplier = if let Some(res) = volume.volume.checked_mul(self.multiplier)
         {
@@ -69,7 +81,7 @@ impl<F: FixedUnsigned> EmaMarketVolume<F> {
         };
 
         // Overflow is impossible here.
-        let one_minus_multiplier = if let Some(res) = F::from_num(1).checked_sub(self.multiplier) {
+        let one_minus_multiplier = if let Some(res) = FU::from_num(1).checked_sub(self.multiplier) {
             res
         } else {
             return Err("[EmaMarketVolume] Overflow during calculation: 1 - multiplier");
@@ -96,7 +108,10 @@ impl<F: FixedUnsigned> EmaMarketVolume<F> {
         Ok(Some(self.ema))
     }
 
-    fn calculate_sma(&mut self, volume: &TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+    fn calculate_sma(
+        &mut self,
+        volume: &TimestampedVolume<FU>,
+    ) -> Result<Option<FU>, &'static str> {
         // This can only overflow if the ema field is set manually
         let sma_times_vpp = if let Some(res) = self.ema.checked_mul(self.volumes_per_period) {
             res
@@ -114,7 +129,7 @@ impl<F: FixedUnsigned> EmaMarketVolume<F> {
 
         // This can't overflow.
         self.ema = if let Some(res) = sma_times_vpp_plus_volume
-            .checked_div(self.volumes_per_period.saturating_add(F::from_num(1)))
+            .checked_div(self.volumes_per_period.saturating_add(FU::from_num(1)))
         {
             res
         } else {
@@ -126,7 +141,7 @@ impl<F: FixedUnsigned> EmaMarketVolume<F> {
         Ok(Some(self.ema))
     }
 
-    pub fn multiplier(&self) -> &F {
+    pub fn multiplier(&self) -> &FU {
         &self.multiplier
     }
 
@@ -143,20 +158,22 @@ impl<F: FixedUnsigned> EmaMarketVolume<F> {
         &self.start_time
     }
 
-    pub fn volumes_per_period(&self) -> &F {
+    pub fn volumes_per_period(&self) -> &FU {
         &self.volumes_per_period
     }
 }
 
-impl<F: FixedUnsigned + From<u32> + LossyFrom<FixedU32<U24>>> Default for EmaMarketVolume<F> {
+impl<FU: FixedUnsigned + From<u32> + LossyFrom<FixedU32<U24>>> Default for EmaMarketVolume<FU> {
     fn default() -> Self {
-        EmaMarketVolume::new(EmaVolumeConfig::default())
+        EmaMarketVolume::new(EmaConfig::default())
     }
 }
 
-impl<F: FixedUnsigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
+impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
+    type FU = FU;
+
     /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
-    fn get(&self) -> Option<F> {
+    fn get(&self) -> Option<Self::FU> {
         match &self.state {
             MarketVolumeState::DataCollected => Some(self.ema),
             _ => None,
@@ -165,16 +182,19 @@ impl<F: FixedUnsigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
 
     /// Clear market data
     fn clear(&mut self) {
-        self.ema = F::from_num(0);
-        self.multiplier = F::from_num(0);
+        self.ema = FU::from_num(0);
+        self.multiplier = FU::from_num(0);
         self.last_time = 0;
         self.state = MarketVolumeState::Uninitialized;
         self.start_time = 0;
-        self.volumes_per_period = F::from_num(0);
+        self.volumes_per_period = FU::from_num(0);
     }
 
     /// Update market volume
-    fn update(&mut self, volume: TimestampedVolume<F>) -> Result<Option<F>, &'static str> {
+    fn update(
+        &mut self,
+        volume: &TimestampedVolume<Self::FU>,
+    ) -> Result<Option<Self::FU>, &'static str> {
         if let Some(res) = volume.timestamp.checked_sub(self.last_time) {
             res
         } else {
@@ -183,7 +203,7 @@ impl<F: FixedUnsigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
             );
         };
 
-        let mut result: Option<F> = None;
+        let mut result: Option<FU> = None;
 
         match self.state {
             MarketVolumeState::Uninitialized => {
@@ -198,32 +218,72 @@ impl<F: FixedUnsigned + From<u32>> MarketAverage<F> for EmaMarketVolume<F> {
                 // against the timestamp of the previous transaction.
                 let timestamp_sub_start_time = volume.timestamp.saturating_sub(self.start_time);
 
+                let mut comparison_value = if let Some(res) = self.config.ema_period_estimate_after
+                {
+                    res.to_seconds()
+                } else {
+                    self.config.ema_period.to_seconds()
+                };
+
                 // It should not state transit, if the amount of gathered data is too low.
                 // This would result in a multiplier that is greater than 1, which can lead to
                 // a negative ema. The amount depends on the size of the smoothing factor.
-                if timestamp_sub_start_time > self.config.ema_period.to_seconds() as u64
+                if timestamp_sub_start_time > comparison_value as u64
                     && (*self.volumes_per_period() + 1.into()) >= self.config.smoothing
                 {
+                    // We extrapolate the txs per period
+                    if self.config.ema_period_estimate_after.is_some() {
+                        // Ensure that we don't divide by 0
+                        if comparison_value == 0 {
+                            comparison_value = 1
+                        }
+
+                        let premature_time_fixed = <FixedU128<U64>>::from(comparison_value);
+                        let mature_time_fixed =
+                            <FixedU128<U64>>::from(self.config.ema_period.to_seconds());
+                        // Overflow impossible
+                        let estimate_ratio = mature_time_fixed.saturating_div(premature_time_fixed);
+
+                        if estimate_ratio.int() > FU::max_value().to_num::<u64>() {
+                            // Cannot occur as long as the From<U32> trait is required for FU and
+                            // Timespan::to_seconds() returns u32.
+                            return Err("[EmaMarketVolume] Estimate ratio does not fit in FU");
+                        }
+
+                        // Can't panic due to the previous check
+                        let estimate_ratio_fu: FU = estimate_ratio.to_fixed();
+
+                        self.volumes_per_period = if let Some(res) =
+                            self.volumes_per_period.checked_mul(estimate_ratio_fu)
+                        {
+                            res.saturating_ceil()
+                        } else {
+                            return Err("[EmaMarketVolume] Overflow during estimation of \
+                                        transactions per period");
+                        }
+                    }
+
                     // Overflow is impossible here.
                     self.multiplier = if let Some(res) = self
                         .config
                         .smoothing
-                        .checked_div(self.volumes_per_period.saturating_add(F::from(1)))
+                        .checked_div(self.volumes_per_period.saturating_add(FU::from(1)))
                     {
                         res
                     } else {
                         return Err("[EmaMarketVolume] Overflow during calculation: multiplier = \
                                     smoothing / (1 + volumes_per_period)");
                     };
+
                     self.state = MarketVolumeState::DataCollected;
                     result = self.calculate_ema(&volume)?;
                 } else {
                     // During this phase the ema is still a sma.
-                    result = self.calculate_sma(&volume)?;
+                    let _ = self.calculate_sma(&volume)?;
                     // In the context of blockchains, overflowing here is irrelevant (technically
-                    // not realizable). In other contexts, ensure that F can represent a number
+                    // not realizable). In other contexts, ensure that FU can represent a number
                     // that is equal to the number of incoming volumes during one period.
-                    self.volumes_per_period = self.volumes_per_period.saturating_add(F::from(1));
+                    self.volumes_per_period = self.volumes_per_period.saturating_add(FU::from(1));
                 }
             }
             MarketVolumeState::DataCollected => {
