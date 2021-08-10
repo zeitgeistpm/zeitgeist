@@ -74,7 +74,11 @@ mod pallet {
 
                 match order_data.side {
                     OrderSide::Bid => {
-                        T::Currency::unreserve(&maker, order_data.cost());
+                        let cost = match order_data.cost() {
+                            Some(cost) => cost,
+                            None => return Err(Error::<T>::ArithmaticOverflow.into()),
+                        };
+                        T::Currency::unreserve(&maker, cost);
                         let mut bids = Self::bids(asset);
                         remove_item::<T::Hash>(&mut bids, order_hash);
                         <Bids<T>>::insert(asset, bids);
@@ -110,7 +114,11 @@ mod pallet {
             if let Some(order_data) = Self::order_data(order_hash) {
                 ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
 
-                let cost = order_data.cost();
+                let cost = match order_data.cost() {
+                    Some(cost) => cost,
+                    None => return Err(Error::<T>::ArithmaticOverflow.into()),
+                };
+                
                 let maker = order_data.maker;
 
                 match order_data.side {
@@ -192,7 +200,10 @@ mod pallet {
                 filled: Zero::zero(),
             };
 
-            let cost = order.cost();
+            let cost = match order.cost() {
+                Some(cost) => cost,
+                None => return Err(Error::<T>::ArithmaticOverflow.into()),
+            };
 
             match side {
                 OrderSide::Bid => {
@@ -253,6 +264,7 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        ArithmaticOverflow,
         InsufficientBalance,
         NotOrderCreator,
         OrderAlreadyTaken,
@@ -335,7 +347,14 @@ pub struct Order<AccountId, Balance, MarketId> {
 }
 
 impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId> {
-    pub fn cost(&self) -> Balance {
-        self.total.checked_sub(&self.filled).unwrap().checked_mul(&self.price).unwrap()
+    pub fn cost(&self) -> Option<Balance> {
+        let total = self.total.checked_sub(&self.filled);
+        match total {
+            Some(total) => match total.checked_mul(&self.price) {
+                Some(cost) => Some(cost),
+                _ => None,
+            }
+            _ => None,
+        }
     }
 }
