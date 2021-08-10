@@ -48,10 +48,8 @@ fuzz_target!(|data: Data| {
 
         let dispute_market_id = data.dispute_market_id.into();
         let _ = SimpleDisputes::on_dispute(
-            zrml_prediction_markets::default_dispute_bound::<Runtime>,
             &zrml_prediction_markets::Disputes::<Runtime>::get(&dispute_market_id),
             dispute_market_id,
-            data.dispute_origin.into(),
         );
 
         let _ = PredictionMarkets::on_initialize(5);

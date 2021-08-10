@@ -449,6 +449,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type ApprovalOrigin = EnsureRoot<AccountId>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
+    type DisputePeriod = DisputePeriod;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type LiquidityMining = LiquidityMining;
@@ -468,7 +469,6 @@ impl zrml_prediction_markets::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
