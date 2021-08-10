@@ -1,3 +1,5 @@
+#![cfg(feature = "mock")]
+
 use crate as orderbook_v1;
 use frame_support::{construct_runtime, parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;

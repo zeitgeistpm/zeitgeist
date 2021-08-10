@@ -1,11 +1,11 @@
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
 use frame_system::ensure_signed;
-use zeitgeist_primitives::types::{Asset, ScalarPosition,SerdeWrapper};
+use libfuzzer_sys::fuzz_target;
+use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
 use zrml_orderbook_v1::{
+    mock::{ExtBuilder, Orderbook, Origin},
     OrderSide,
-    mock::{ExtBuilder, Origin, Orderbook},
 };
 
 #[cfg(feature = "arbitrary")]
@@ -17,9 +17,7 @@ fuzz_target!(|data: Data| {
         // Make arbitrary order and attempt to fill
         let order_asset = asset(data.make_fill_order_asset);
         let order_hash = Orderbook::order_hash(
-            &ensure_signed(
-                Origin::signed(data.make_fill_order_origin.into())
-            ).unwrap(),
+            &ensure_signed(Origin::signed(data.make_fill_order_origin.into())).unwrap(),
             order_asset,
             Orderbook::nonce(),
         );
@@ -32,17 +30,12 @@ fuzz_target!(|data: Data| {
             data.make_fill_order_price,
         );
 
-        let _ = Orderbook::fill_order(
-            Origin::signed(data.fill_order_origin.into()),
-            order_hash,
-        );
-  
+        let _ = Orderbook::fill_order(Origin::signed(data.fill_order_origin.into()), order_hash);
+
         // Make arbitrary order and attempt to cancel
         let order_asset = asset(data.make_cancel_order_asset);
         let order_hash = Orderbook::order_hash(
-            &ensure_signed(
-                Origin::signed(data.make_cancel_order_origin.into())
-            ).unwrap(),
+            &ensure_signed(Origin::signed(data.make_cancel_order_origin.into())).unwrap(),
             order_asset,
             Orderbook::nonce(),
         );

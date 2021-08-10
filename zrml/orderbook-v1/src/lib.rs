@@ -25,11 +25,9 @@ use zeitgeist_primitives::types::Asset;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
-#[cfg(test)]
-mod mock;
+pub mod mock;
 #[cfg(test)]
 mod tests;
-pub mod mock;
 pub mod weights;
 
 #[frame_support::pallet]
@@ -118,7 +116,7 @@ mod pallet {
                     Some(cost) => cost,
                     None => return Err(Error::<T>::ArithmaticOverflow.into()),
                 };
-                
+
                 let maker = order_data.maker;
 
                 match order_data.side {
@@ -350,10 +348,12 @@ impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Bal
     pub fn cost(&self) -> Option<Balance> {
         let total = self.total.checked_sub(&self.filled);
         match total {
+            // See <https://github.com/rust-lang/rust-clippy/issues/6797>
+            #[allow(clippy::manual_map)]
             Some(total) => match total.checked_mul(&self.price) {
                 Some(cost) => Some(cost),
                 _ => None,
-            }
+            },
             _ => None,
         }
     }
