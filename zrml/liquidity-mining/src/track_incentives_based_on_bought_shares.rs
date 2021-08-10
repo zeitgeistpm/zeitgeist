@@ -63,10 +63,14 @@ where
         incentive: &BalanceOf<T>,
         total_bought_shares: &BalanceOf<T>,
     ) -> Option<BalanceOf<T>> {
-        incentive.checked_div(&total_bought_shares)
+        incentive.checked_div(total_bought_shares)
     }
 
     // How much incentive each market will receive
+    #[allow(
+        // `normalized_total` variable needs to be evaluated first
+        clippy::needless_collect
+    )]
     fn markets_incentives(
         per_block_incentives: BalanceOf<T>,
         curr_block: T::BlockNumber,

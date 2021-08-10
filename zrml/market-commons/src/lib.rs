@@ -122,7 +122,7 @@ mod pallet {
             Ok(market_id)
         }
 
-        fn remove_market(market_id: &Self::MarketId) -> Result<(), DispatchError> {
+        fn remove_market(market_id: &Self::MarketId) -> DispatchResult {
             if !<Markets<T>>::contains_key(market_id) {
                 return Err(Error::<T>::MarketDoesNotExist.into());
             }

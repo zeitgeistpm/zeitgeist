@@ -305,7 +305,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
-        let disputes = SimpleDisputes::disputes(&0).unwrap();
+        let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 1);
         let dispute = &disputes[0];
         assert_eq!(dispute.at, 105);
@@ -448,7 +448,7 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(eve_reserved, 150);
 
         // check disputes length
-        let disputes = SimpleDisputes::disputes(&0).unwrap();
+        let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
@@ -590,7 +590,7 @@ fn full_scalar_market_lifecycle() {
 
         // dispute
         assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
-        let disputes = SimpleDisputes::disputes(&0).unwrap();
+        let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 1);
 
         run_to_block(150);

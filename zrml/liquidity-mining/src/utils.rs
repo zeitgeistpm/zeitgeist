@@ -10,7 +10,7 @@ where
     T: CheckedDiv + From<u16> + Saturating,
 {
     let _1000_balance = T::from(1000u16);
-    value.saturating_mul(_1000_balance).checked_div(&total_value)
+    value.saturating_mul(_1000_balance).checked_div(total_value)
 }
 
 // The value compared to `total_value` and a given `perthousand`. For example, 3% of 200 is 6.

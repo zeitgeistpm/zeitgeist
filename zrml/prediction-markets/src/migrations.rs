@@ -7,11 +7,10 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
         traits::{Get, GetPalletVersion, PalletVersion},
         Blake2_128Concat,
     };
-    use zeitgeist_primitives::types::{Market, MarketDispute, PoolId};
+    use zeitgeist_primitives::types::{Market, PoolId};
     use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_simple_disputes::SimpleDisputesPalletApi;
 
-    const DISPUTES: &[u8] = b"Disputes";
     const MARKET_COUNT: &[u8] = b"MarketCount";
     const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
     const MARKET_IDS_PER_REPORT_BLOCK: &[u8] = b"MarketIdsPerReportBlock";
@@ -29,17 +28,6 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
 
         if storage_version == previous_version {
             // Simple disputes
-
-            for (k, v) in migration::storage_key_iter::<
-                MarketIdOf<T>,
-                Vec<MarketDispute<T::AccountId, T::BlockNumber>>,
-                Blake2_128Concat,
-            >(PM, DISPUTES)
-            {
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                T::SimpleDisputes::insert_dispute(k, v);
-            }
-            migration::remove_storage_prefix(PM, DISPUTES, b"");
 
             for (k, v) in migration::storage_key_iter::<
                 T::BlockNumber,
@@ -106,8 +94,7 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
         use crate::mock::{ExtBuilder, MarketCommons, PredictionMarkets, SimpleDisputes};
         use frame_support::{traits::OnRuntimeUpgrade, Hashable};
         use zeitgeist_primitives::types::{
-            Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
-            OutcomeReport,
+            Market, MarketCreation, MarketEnd, MarketStatus, MarketType,
         };
 
         #[test]
@@ -124,11 +111,8 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
                 resolved_outcome: None,
                 status: MarketStatus::Closed,
             };
-            const DEFAULT_MARKET_DISPUTE: MarketDispute<u128, u64> =
-                MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) };
 
             ExtBuilder::default().build().execute_with(|| {
-                assert!(SimpleDisputes::dispute(&0).is_none());
                 assert!(SimpleDisputes::market_ids_per_dispute_block(&0).is_err());
                 assert!(SimpleDisputes::market_ids_per_report_block(&0).is_err());
 
@@ -136,12 +120,6 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
                 assert!(MarketCommons::market(&0).is_err());
                 assert!(MarketCommons::market_pool(&0).is_err());
 
-                migration::put_storage_value(
-                    PM,
-                    DISPUTES,
-                    &0u128.blake2_128_concat(),
-                    vec![DEFAULT_MARKET_DISPUTE],
-                );
                 migration::put_storage_value(
                     PM,
                     MARKET_IDS_PER_DISPUTE_BLOCK,
@@ -171,14 +149,6 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
 
                 PredictionMarkets::on_runtime_upgrade();
 
-                assert!(
-                    migration::get_storage_value::<Vec<MarketDispute<u128, u64>>>(
-                        PM,
-                        DISPUTES,
-                        &0u128.blake2_128_concat()
-                    )
-                    .is_none()
-                );
                 assert!(
                     migration::get_storage_value::<Vec<u128>>(
                         PM,
@@ -214,7 +184,6 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
                     .is_none()
                 );
 
-                assert_eq!(SimpleDisputes::dispute(&0).unwrap(), vec![DEFAULT_MARKET_DISPUTE]);
                 assert_eq!(SimpleDisputes::market_ids_per_dispute_block(&0).unwrap(), vec![1]);
                 assert_eq!(SimpleDisputes::market_ids_per_report_block(&0).unwrap(), vec![1]);
 

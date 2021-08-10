@@ -7,7 +7,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{CourtCaseDuration, MaxReserves, BASE, BLOCK_HASH_COUNT},
+    constants::{BlockHashCount, CourtCaseDuration, MaxReserves, StakeWeight, BASE},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId,
         UncheckedExtrinsicTest,
@@ -21,9 +21,7 @@ type Block = BlockTest<Runtime>;
 type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
-    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
-    pub const StakeWeight: u128 = 2 * BASE;
 }
 
 construct_runtime!(

@@ -1,5 +1,5 @@
-use crate::types::{Market, OutcomeReport, ResolutionCounters};
-use frame_support::dispatch::{DispatchError, DispatchResult};
+use crate::{market::MarketDispute, types::Market};
+use frame_support::dispatch::DispatchResult;
 
 /// Dispute Api
 pub trait DisputeApi {
@@ -12,16 +12,15 @@ pub trait DisputeApi {
     /// Disputes a reported outcome.
     fn on_dispute<D>(
         dispute_bond: D,
+        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: Self::MarketId,
-        outcome: OutcomeReport,
         who: Self::AccountId,
-    ) -> Result<(), DispatchError>
+    ) -> DispatchResult
     where
         D: Fn(usize) -> Self::Balance;
 
     /// Manages markets resolutions moving all reported markets to resolved.
-    fn on_resolution<D, F>(dispute_bound: &D, now: Self::BlockNumber, cb: F) -> DispatchResult
+    fn on_resolution<F>(now: Self::BlockNumber, cb: F) -> DispatchResult
     where
-        D: Fn(usize) -> Self::Balance,
-        F: FnMut(&Market<Self::AccountId, Self::BlockNumber>, ResolutionCounters);
+        F: FnMut(&Self::MarketId, &Market<Self::AccountId, Self::BlockNumber>) -> DispatchResult;
 }
