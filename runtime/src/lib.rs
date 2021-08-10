@@ -92,7 +92,6 @@ pub type SignedExtra = (
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 parameter_types! {
-  pub const BlockHashCount: BlockNumber = BLOCK_HASH_COUNT;
   pub const BondDuration: u32 = BLOCKS_PER_DAY as u32;
   pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
@@ -740,7 +739,7 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
             .create_inherent_data()
             .expect("Could not create the timestamp inherent data");
 
-        inherent_data.check_extrinsics(&block)
+        inherent_data.check_extrinsics(block)
     }
 }
 

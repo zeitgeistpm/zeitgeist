@@ -16,9 +16,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves,
-        MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
-        SimpleDisputesPalletId, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
+        BlockHashCount, ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
+        MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
+        SimpleDisputesPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -46,7 +46,6 @@ ord_parameter_types! {
 parameter_types! {
     pub const AdvisoryBond: Balance = 50;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const DisputeBond: Balance = 100;
     pub const DisputeFactor: Balance = 25;
     pub const DisputePeriod: BlockNumber = 10;
