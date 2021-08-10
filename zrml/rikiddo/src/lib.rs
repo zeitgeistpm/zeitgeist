@@ -52,14 +52,14 @@ mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Defines the type of traded amounts
-        type Balance: Into<u128> + TryFrom<u128>;
+        type Balance: Copy + Into<u128> + TryFrom<u128> + sp_std::fmt::Debug;
 
         /// Offers timestamping functionality
         type Timestamp: Time;
 
         /// Will be used for the fractional part of the fixed point numbers
         /// Calculation: Select FixedTYPE<UWIDTH>, such that TYPE = the type of Balance (i.e. FixedU128)
-        /// Select the generic UWIDTH = floor(log2(fractional_decimals))
+        /// Select the generic UWIDTH = floor(log2(10.pow(fractional_decimals)))
         type FixedTypeU: Decode
             + Encode
             + FixedUnsigned
@@ -81,6 +81,7 @@ mod pallet {
             + PartialOrd<I9F23>;
 
         // Number of fractional decimal places for one unit of currency
+        #[pallet::constant]
         type BalanceFractionalDecimals: Get<u8>;
 
         /// Type that's used as an id for pools
@@ -92,12 +93,9 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        ArithmeticOverflow,
         FixedConversionImpossible,
-        NoBalancesProvided,
         RikiddoNotFoundForPool,
         RikiddoAlreadyExistsForPool,
-        TransactionIsOlderThanPrevious,
     }
 
     // This is the storage containing the Rikiddo instances per pool.
@@ -126,7 +124,7 @@ mod pallet {
             balance: &T::Balance,
         ) -> Result<T::FixedTypeU, DispatchError> {
             match T::FixedTypeU::from_fixed_decimal(
-                T::BalanceFractionalDecimals::get(),
+                *balance,
                 T::BalanceFractionalDecimals::get(),
             ) {
                 Ok(res) => return Ok(res),
@@ -140,9 +138,6 @@ mod pallet {
         fn convert_fixed_to_balance(
             fixed: &T::FixedTypeU,
         ) -> Result<T::Balance, DispatchError> {
-            let converted: Result<T::Balance, &'static str> =
-            fixed.to_fixed_decimal(T::BalanceFractionalDecimals::get());
-
             match T::Balance::from_fixed_to_fixed_decimal(*fixed, T::BalanceFractionalDecimals::get()) {
                 Ok(res) => return Ok(res),
                 Err(err) => {
@@ -163,6 +158,15 @@ mod pallet {
         type FU = T::FixedTypeU;
         type Rikiddo = T::Rikiddo;
 
+        /// Return price P_i(q) for all assets in q
+        fn all_prices(
+            poolid: Self::PoolId,
+            asset_balances: &[Self::Balance],
+        ) -> Result<Vec<Self::Balance>, DispatchError> {
+            // TODO
+            Err("Unimplemented!".into())
+        }
+
         /// Clear market data for specific asset pool
         fn clear(poolid: Self::PoolId) -> Result<(), DispatchError> {
             let mut rikiddo = Self::get_rikiddo(&poolid)?;
@@ -182,16 +186,10 @@ mod pallet {
                 .collect::<Result<Vec<Self::FU>, DispatchError>>()?;
 
             match rikiddo.cost(&balances_fixed) {
-                Ok(cost) => {
-                    return Ok(Self::convert_fixed_to_balance(&cost)?);
-                }
-                Err(err_str) => {
-                    debug(&err_str);
-                    if err_str.contains("balances") {
-                        return Err(Error::<T>::NoBalancesProvided.into());
-                    } else {
-                        return Err(Error::<T>::ArithmeticOverflow.into());
-                    }
+                Ok(cost) => return Ok(Self::convert_fixed_to_balance(&cost)?),
+                Err(err) => {
+                    debug(&err);
+                    return Err(err.into());
                 }
             }
         }
@@ -213,21 +211,27 @@ mod pallet {
             Ok(())
         }
 
+        /// Fetch the current fee
+        fn fee(
+            poolid: Self::PoolId
+        ) -> Result<Self::Balance, DispatchError> {
+            let rikiddo = Self::get_rikiddo(&poolid)?;
+            
+            match rikiddo.fee() {
+                Ok(fee) => return Ok(Self::convert_fixed_to_balance(&fee)?),
+                Err(err) => {
+                    debug(&err);
+                    return Err(err.into());
+                }
+            }
+        }
+
         /// Return price P_i(q) for asset q_i in q
         fn price(
             poolid: Self::PoolId,
             asset_in_question: Self::Balance,
             asset_balances: &[Self::Balance],
         ) -> Result<Self::Balance, DispatchError> {
-            // TODO
-            Err("Unimplemented!".into())
-        }
-
-        /// Return price P_i(q) for all assets in q
-        fn all_prices(
-            poolid: Self::PoolId,
-            asset_balances: &[Self::Balance],
-        ) -> Result<Vec<Self::Balance>, DispatchError> {
             // TODO
             Err("Unimplemented!".into())
         }
@@ -257,13 +261,7 @@ mod pallet {
                 }
                 Err(err) => {
                     debug(&err);
-
-                    if err.contains("timestamp") {
-                        // Using the default Timestamp pallet makes this branch unreachable
-                        return Err(Error::<T>::TransactionIsOlderThanPrevious.into());
-                    } else {
-                        return Err(Error::<T>::ArithmeticOverflow.into());
-                    }
+                    return Err(err.into());
                 }
             };
 

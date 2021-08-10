@@ -15,7 +15,7 @@ fn rikiddo_get_fee_catches_zero_divison() {
     let _ = rikiddo.update(&TimestampedVolume { timestamp: 0, volume: 0u32.into() });
     let _ = rikiddo.update(&TimestampedVolume { timestamp: 2, volume: 0u32.into() });
     assert_err!(
-        rikiddo.get_fee(),
+        rikiddo.fee(),
         "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
     );
 }
@@ -30,7 +30,7 @@ fn rikiddo_get_fee_overflows_during_ratio_calculation() {
     rikiddo.ma_short.ema = <FixedU128<U64>>::from_num(u64::MAX);
     rikiddo.ma_long.ema = <FixedU128<U64>>::from_num(0.1f64);
     assert_err!(
-        rikiddo.get_fee(),
+        rikiddo.fee(),
         "[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long"
     );
 }
@@ -45,7 +45,7 @@ fn rikiddo_get_fee_ratio_does_not_fit_in_type() {
     rikiddo.ma_short.ema = <FixedU128<U64>>::from_num(u64::MAX);
     rikiddo.ma_long.ema = <FixedU128<U64>>::from_num(1u64);
     assert_err!(
-        rikiddo.get_fee(),
+        rikiddo.fee(),
         "Fixed point conversion failed: FROM type does not fit in TO type"
     );
 }
@@ -58,16 +58,16 @@ fn rikiddo_get_fee_returns_the_correct_result() {
         Rikiddo::new(RikiddoConfig::default(), FeeSigmoid::default(), emv_short, emv_long);
     assert_eq!(rikiddo.ma_short.get(), None);
     assert_eq!(rikiddo.ma_long.get(), None);
-    assert_eq!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
+    assert_eq!(rikiddo.fee().unwrap(), rikiddo.config.initial_fee);
     let _ = rikiddo.update(&TimestampedVolume { timestamp: 0, volume: 100u32.into() });
     let _ = rikiddo.update(&TimestampedVolume { timestamp: 2, volume: 100u32.into() });
     assert_ne!(rikiddo.ma_short.get(), None);
     assert_eq!(rikiddo.ma_long.get(), None);
-    assert_eq!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
+    assert_eq!(rikiddo.fee().unwrap(), rikiddo.config.initial_fee);
     let _ = rikiddo.update(&TimestampedVolume { timestamp: 3, volume: 100u32.into() });
     assert_ne!(rikiddo.ma_short.get(), None);
     assert_ne!(rikiddo.ma_long.get(), None);
     // We don't want to test the exact result (that is the responsibility of the fee module),
     // but rather if rikiddo toggles properly between initial fee and the calculated fee
-    assert_ne!(rikiddo.get_fee().unwrap(), rikiddo.config.initial_fee);
+    assert_ne!(rikiddo.fee().unwrap(), rikiddo.config.initial_fee);
 }

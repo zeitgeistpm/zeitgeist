@@ -105,35 +105,6 @@ where
         Self { config, fees, ma_short, ma_long }
     }
 
-    pub fn get_fee(&self) -> Result<FU, &'static str> {
-        let mas = if let Some(res) = self.ma_short.get() {
-            res
-        } else {
-            return convert_to_unsigned(self.config.initial_fee);
-        };
-
-        let mal = if let Some(res) = self.ma_long.get() {
-            res
-        } else {
-            return convert_to_unsigned(self.config.initial_fee);
-        };
-
-        if mal == FU::from_num(0u8) {
-            return Err(
-                "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
-            );
-        }
-
-        let ratio = if let Some(res) = mas.checked_div(mal) {
-            res
-        } else {
-            return Err("[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long");
-        };
-
-        let ratio_signed = convert_to_signed(ratio)?;
-        convert_to_unsigned::<FS, FU>(self.fees.calculate(ratio_signed)?)
-    }
-
     // Cost function that returns the cost and parts of the formula that can be reused for the
     // price calculation.
     // Setting `for_price = true` returns the cost minus the sum of quantities.
@@ -151,7 +122,7 @@ where
             return Err("[RikiddoSigmoidMV] No asset balances provided");
         };
 
-        let fee = self.get_fee()?;
+        let fee = self.fee()?;
         formula_components.fee = convert_to_signed(fee)?;
         let mut total_balance = FU::from_num(0u8);
 
@@ -676,5 +647,34 @@ where
         };
 
         Ok(None)
+    }
+
+    fn fee(&self) -> Result<Self::FU, &'static str> {
+        let mas = if let Some(res) = self.ma_short.get() {
+            res
+        } else {
+            return convert_to_unsigned(self.config.initial_fee);
+        };
+
+        let mal = if let Some(res) = self.ma_long.get() {
+            res
+        } else {
+            return convert_to_unsigned(self.config.initial_fee);
+        };
+
+        if mal == FU::from_num(0u8) {
+            return Err(
+                "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
+            );
+        }
+
+        let ratio = if let Some(res) = mas.checked_div(mal) {
+            res
+        } else {
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long");
+        };
+
+        let ratio_signed = convert_to_signed(ratio)?;
+        convert_to_unsigned::<FS, FU>(self.fees.calculate(ratio_signed)?)
     }
 }

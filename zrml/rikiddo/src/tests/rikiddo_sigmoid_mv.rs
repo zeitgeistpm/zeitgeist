@@ -20,7 +20,7 @@ fn ln_exp_sum(exponents: &Vec<f64>) -> f64 {
     exponents.iter().fold(0f64, |acc, val| acc + val.exp()).ln()
 }
 
-fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
+pub(super) fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
     let fee_times_sum = fee * balances.iter().sum::<f64>();
     let exponents = balances.iter().map(|e| e / fee_times_sum).collect();
     fee_times_sum * ln_exp_sum(&exponents)

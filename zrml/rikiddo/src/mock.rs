@@ -28,7 +28,7 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 parameter_types! {
     pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const MinimumPeriod: u64 = 0;
-    pub const FractionalDecimalPlaces: u8 = BALANCE_FRACTIONAL_DECIMAL_PLACES;
+    pub const FractionalDecimalPlaces: u8 = 10;
 }
 
 construct_runtime!(
@@ -52,8 +52,6 @@ impl crate::Config for Runtime {
     type FixedTypeS = FixedI128<U33>;
     type BalanceFractionalDecimals = FractionalDecimalPlaces;
     type PoolId = PoolId;
-    // type MarketData = EmaMarketVolume<Self::FixedTypeU>;
-    // type Fees = FeeSigmoid<Self::FixedTypeS>;
     type Rikiddo = RikiddoSigmoidMV<
         Self::FixedTypeU,
         Self::FixedTypeS,

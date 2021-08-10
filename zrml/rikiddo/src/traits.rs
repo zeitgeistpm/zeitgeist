@@ -52,6 +52,9 @@ pub trait RikiddoMV: Lmsr {
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str>;
+
+    /// Fetch current fee
+    fn fee(&self) -> Result<Self::FU, &'static str>;
 }
 
 pub trait RikiddoSigmoidMVPallet {
@@ -59,6 +62,18 @@ pub trait RikiddoSigmoidMVPallet {
     type PoolId: Copy;
     type FU: FixedUnsigned;
     type Rikiddo: RikiddoMV;
+
+    /// Return price P_i(q) for all assets in q
+    fn all_prices(
+        poolid: Self::PoolId,
+        asset_balances: &[Self::Balance],
+    ) -> Result<Vec<Self::Balance>, DispatchError>;
+
+    /// Create Rikiddo instance for specifc asset pool
+    fn create(
+        poolid: Self::PoolId,
+        rikiddo: Self::Rikiddo,
+    ) -> DispatchResult;
 
     /// Clear market data for specific asset pool
     fn clear(poolid: Self::PoolId) -> DispatchResult;
@@ -69,19 +84,13 @@ pub trait RikiddoSigmoidMVPallet {
         asset_balances: &[Self::Balance],
     ) -> Result<Self::Balance, DispatchError>;
 
-    /// Create Rikiddo instance for specifc asset pool
-    fn create(
-        poolid: Self::PoolId,
-        /*rikiddo_config: RikiddoConfig<Self::FS>,
-        fee_config: FeeSigmoidConfig<Self::FS>,
-        ema_config_short: EmaConfig<Self::FU>,
-        ema_config_long: EmaConfig<Self::FU>,
-        */
-        rikiddo: Self::Rikiddo,
-    ) -> DispatchResult;
-
     /// Destroy Rikiddo instance
     fn destroy(poolid: Self::PoolId) -> DispatchResult;
+
+    /// Fetch the current fee
+    fn fee(
+        poolid: Self::PoolId
+    ) -> Result<Self::Balance, DispatchError>;
 
     /// Return price P_i(q) for asset q_i in q
     fn price(
@@ -89,12 +98,6 @@ pub trait RikiddoSigmoidMVPallet {
         asset_in_question: Self::Balance,
         asset_balances: &[Self::Balance],
     ) -> Result<Self::Balance, DispatchError>;
-
-    /// Return price P_i(q) for all assets in q
-    fn all_prices(
-        poolid: Self::PoolId,
-        asset_balances: &[Self::Balance],
-    ) -> Result<Vec<Self::Balance>, DispatchError>;
 
     /// Update market data
     fn update(
