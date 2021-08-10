@@ -192,3 +192,5 @@ fn rikiddo_pallet_cost_returns_correct_result() {
         );
     });
 }
+
+// TODO: Tests for price and all_prices

@@ -145,6 +145,24 @@ mod pallet {
                 }
             }
         }
+
+        fn convert_balance_to_fixed_vector(
+            balance: &[T::Balance],
+        ) -> Result<Vec<T::FixedTypeU>, DispatchError> {
+            balance
+            .iter()
+            .map(|e| Self::convert_balance_to_fixed(e))
+            .collect::<Result<Vec<T::FixedTypeU>, DispatchError>>()
+        }
+
+        fn convert_fixed_to_balance_vector(
+            fixed: &[T::FixedTypeU],
+        ) -> Result<Vec<T::Balance>, DispatchError> {
+            fixed
+            .iter()
+            .map(|e| Self::convert_fixed_to_balance(e))
+            .collect::<Result<Vec<T::Balance>, DispatchError>>()
+        }
     }
 
     impl<T: Config> RikiddoSigmoidMVPallet for Pallet<T>
@@ -162,8 +180,16 @@ mod pallet {
             poolid: Self::PoolId,
             asset_balances: &[Self::Balance],
         ) -> Result<Vec<Self::Balance>, DispatchError> {
-            // TODO
-            Err("Unimplemented!".into())
+            let rikiddo = Self::get_rikiddo(&poolid)?;
+            let balances_fixed = Self::convert_balance_to_fixed_vector(asset_balances)?;
+
+            match rikiddo.all_prices(&balances_fixed) {
+                Ok(prices) => return Ok(Self::convert_fixed_to_balance_vector(&prices)?),
+                Err(err) => {
+                    debug(&err);
+                    return Err(err.into());
+                }
+            }
         }
 
         /// Clear market data for specific asset pool
@@ -179,10 +205,7 @@ mod pallet {
             asset_balances: &[Self::Balance],
         ) -> Result<Self::Balance, DispatchError> {
             let rikiddo = Self::get_rikiddo(&poolid)?;
-            let balances_fixed: Vec<Self::FU> = asset_balances
-                .iter()
-                .map(|e| Self::convert_balance_to_fixed(e))
-                .collect::<Result<Vec<Self::FU>, DispatchError>>()?;
+            let balances_fixed = Self::convert_balance_to_fixed_vector(asset_balances)?;
 
             match rikiddo.cost(&balances_fixed) {
                 Ok(cost) => return Ok(Self::convert_fixed_to_balance(&cost)?),
@@ -231,8 +254,17 @@ mod pallet {
             asset_in_question: Self::Balance,
             asset_balances: &[Self::Balance],
         ) -> Result<Self::Balance, DispatchError> {
-            // TODO
-            Err("Unimplemented!".into())
+            let rikiddo = Self::get_rikiddo(&poolid)?;
+            let balances_fixed = Self::convert_balance_to_fixed_vector(asset_balances)?;
+            let balance_in_question = Self::convert_balance_to_fixed(&asset_in_question)?;
+
+            match rikiddo.price(&balances_fixed, &balance_in_question) {
+                Ok(price) => return Ok(Self::convert_fixed_to_balance(&price)?),
+                Err(err) => {
+                    debug(&err);
+                    return Err(err.into());
+                }
+            }
         }
 
         /// Update market data
