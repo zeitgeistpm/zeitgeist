@@ -207,7 +207,9 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
                     // Impossible unless there is a bug in Fixed's to_string()
                     return Err("Error parsing the string representation of the fixed point number");
                 };
-            } // The other case requires no changes
+            } else {
+                fixed_str.retain(|c| c != '.');
+            }
         }
 
         let result = if let Ok(res) = u128::from_str_radix(&fixed_str, 10) {
