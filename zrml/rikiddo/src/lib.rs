@@ -39,10 +39,9 @@ mod pallet {
     };
 
     use crate::{
-        traits::{Lmsr, MarketAverage, RikiddoMV, RikiddoSigmoidMVPallet, Sigmoid},
+        traits::{Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
         types::{
-            EmaConfig, FeeSigmoidConfig, FromFixedToDecimal, FromFixedDecimal, IntoFixedDecimal, IntoFixedFromDecimal,
-            RikiddoConfig, RikiddoSigmoidMV, TimestampedVolume, UnixTimestamp,
+            FromFixedToDecimal, FromFixedDecimal, TimestampedVolume, UnixTimestamp,
         },
     };
     use parity_scale_codec::Codec;

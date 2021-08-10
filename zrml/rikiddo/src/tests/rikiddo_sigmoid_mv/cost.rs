@@ -50,45 +50,6 @@ fn rikiddo_cost_function_overflow_during_calculation_of_exponent() {
 }
 
 #[test]
-fn rikiddo_cost_function_overflow_during_log2e_times_biggest_exponent() {
-    let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee =
-        <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0003);
-    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
-    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
-    assert_err!(
-        rikiddo.cost(&vec![param]),
-        "[RikiddoSigmoidMV] Overflow during calculation: log2_e * biggest_exponent"
-    );
-}
-
-#[test]
-fn rikiddo_cost_function_overflow_during_calculation_of_required_bits_minus_one() {
-    let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(1);
-    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX);
-    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
-    let zero = <FixedU128<U64>>::from_num(0);
-    assert_err!(
-        rikiddo.cost(&vec![param, zero]),
-        "[RikiddoSigmoidMV] Overflow during calculation: biggest_exp * log2(e) + log2(num_assets)"
-    );
-}
-
-#[test]
-fn rikiddo_cost_function_overflow_during_ceil_required_bits_minus_one() {
-    let mut rikiddo = Rikiddo::default();
-    rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(1);
-    rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX) + <FixedI128<U64>>::from_num(0.1);
-    let param = <FixedU128<U64>>::from_num(i64::MAX as u64);
-    assert_err!(
-        rikiddo.cost(&vec![param]),
-        "[RikiddoSigmoidMV] Overflow during calculation: ceil(biggest_exp * log2(e) + \
-         log2(num_assets))"
-    );
-}
-
-#[test]
 fn rikiddo_cost_function_overflow_during_calculation_of_result() {
     let mut rikiddo = Rikiddo::default();
     rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(1);
@@ -154,7 +115,6 @@ fn rikiddo_cost_helper_does_set_all_values() -> Result<(), &'static str> {
         &mut formula_components,
         true,
         true,
-        true,
     )?;
     let zero: FixedI128<U64> = 0.to_fixed();
     assert_ne!(formula_components.one, zero);
@@ -175,7 +135,7 @@ fn rikiddo_cost_helper_does_return_cost_minus_sum_quantities() -> Result<(), &'s
     let mut formula_components = RikiddoFormulaComponents::default();
     let quantities = &vec![param, param];
     let cost_without_sum_quantities =
-        rikiddo.cost_with_forumla(&quantities, &mut formula_components, true, false, false)?;
+        rikiddo.cost_with_forumla(&quantities, &mut formula_components, true, false)?;
     let cost_from_price_formula_times_sum_quantities =
         cost_without_sum_quantities * formula_components.sum_balances;
     let cost: FixedI128<U64> = convert_to_signed(rikiddo.cost(&quantities)?)?;

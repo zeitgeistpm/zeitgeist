@@ -44,10 +44,7 @@ fn rikiddo_get_fee_ratio_does_not_fit_in_type() {
     let _ = rikiddo.update(&TimestampedVolume { timestamp: 2, volume: 0u32.into() });
     rikiddo.ma_short.ema = <FixedU128<U64>>::from_num(u64::MAX);
     rikiddo.ma_long.ema = <FixedU128<U64>>::from_num(1u64);
-    assert_err!(
-        rikiddo.fee(),
-        "Fixed point conversion failed: FROM type does not fit in TO type"
-    );
+    assert_err!(rikiddo.fee(), "Fixed point conversion failed: FROM type does not fit in TO type");
 }
 
 #[test]

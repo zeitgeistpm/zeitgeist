@@ -9,7 +9,7 @@ use sp_std::ops::{AddAssign, BitOrAssign, ShlAssign};
 use substrate_fixed::{
     consts::LOG2_E,
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
-    transcendental::{exp, ln, log2},
+    transcendental::{exp, ln},
     types::{
         extra::{U127, U128, U31, U32},
         I9F23, U1F127,
@@ -108,14 +108,13 @@ where
     // Cost function that returns the cost and parts of the formula that can be reused for the
     // price calculation.
     // Setting `for_price = true` returns the cost minus the sum of quantities.
-    // Setting `enforce_optimized = true` enforces the optimized strategy, which additionally sets
-    // a field (sum_exp) that is reusable within the price function.
+    // Setting `add_exponents = true` leads to saving the exponents and the reduced exponential
+    // results into the `formula_components` struct.
     pub(crate) fn cost_with_forumla(
         &self,
         asset_balances: &[FU],
         formula_components: &mut RikiddoFormulaComponents<FS>,
         for_price: bool,
-        enforce_optimized: bool,
         add_exponents: bool,
     ) -> Result<FS, &'static str> {
         if asset_balances.is_empty() {
@@ -172,75 +171,21 @@ where
 
         formula_components.emax = biggest_exponent;
 
-        // Determine which strategy to use.
-        let biggest_exp_times_log2e = if let Some(res) =
-            self.config.log2_e.checked_mul(biggest_exponent)
-        {
-            res
-        } else {
-            // Highly unlikely
-            return Err("[RikiddoSigmoidMV] Overflow during calculation: log2_e * biggest_exponent");
-        };
-
         if FS::max_value().int().to_num::<u128>() < asset_balances.len() as u128 {
             return Err("[RikidoSigmoidMV] Number of assets does not fit in FS");
         }
 
-        // Panic impossible
-        let log2_number_of_assets: FS =
-            if let Ok(res) = log2::<FS, FS>(FS::from_num(asset_balances.len())) {
-                res
-            } else {
-                // Impossible, since the cost functions checks if elements are present in asset_balances
-                return Err("[RikiddoSigmoidMV] log2(number_of_assets), number_of_assets <= 0");
-            };
-
-        let log2e_times_biggest_exp_plus_log2_num_assets =
-            if let Some(res) = log2_number_of_assets.checked_add(biggest_exp_times_log2e) {
-                res
-            } else {
-                // Highly unlikely
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: biggest_exp * \
-                            log2(e) + log2(num_assets)");
-            };
-
-        let required_bits_minus_one: u128 =
-            if let Some(res) = log2e_times_biggest_exp_plus_log2_num_assets.checked_ceil() {
-                res.to_num()
-            } else {
-                // Highly unlikely
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: ceil(biggest_exp * \
-                            log2(e) + log2(num_assets))");
-            };
-
-        let required_bits = if let Some(res) = required_bits_minus_one.checked_add(1) {
-            res
-        } else {
-            // Overflow impossible
-            return Err(
-                "[RikiddoSigmoidMV] Overflow during calculation: required_bits_minus_one + 1"
-            );
-        };
-
-        let ln_sum_e: FS;
-
-        // Select strategy to calculate ln(sum_i(e^i))
-        if required_bits > FS::int_nbits() as u128 || enforce_optimized {
-            ln_sum_e = self.optimized_cost_strategy(
-                &exponents,
-                &biggest_exponent,
-                formula_components,
-                add_exponents,
-            )?;
-        } else {
-            ln_sum_e = self.default_cost_strategy(&exponents)?;
-        }
+        let ln_sum_e = self.optimized_cost_strategy(
+            &exponents,
+            &biggest_exponent,
+            formula_components,
+            add_exponents,
+        )?;
 
         if for_price {
             if let Some(res) = formula_components.fee.checked_mul(ln_sum_e) {
                 return Ok(res);
             }
-
             Err("[RikiddoSigmoidMV] Overflow during calculation: fee * ln(sum_i(e^i))")
         } else {
             if let Some(res) = formula_components.sum_times_fee.checked_mul(ln_sum_e) {
@@ -415,34 +360,6 @@ where
         }
     }
 
-    pub(crate) fn default_cost_strategy(&self, exponents: &[FS]) -> Result<FS, &'static str> {
-        let mut acc: FS = FS::from_num(0u8);
-
-        for elem in exponents {
-            let exp_value: FS = if let Ok(res) = exp::<FS, FS>(*elem) {
-                res
-            } else {
-                return Err(
-                    "[RikiddoSigmoidMV] Error during calculation: exp(i) in ln sum_i(exp^i)"
-                );
-            };
-
-            if let Some(res) = acc.checked_add(exp_value) {
-                acc = res;
-            } else {
-                // Impossible (this function should only be called when the sum does fit into FS)
-                return Err("[RikiddoSigmoidMV] Overflow during calculation: sum_i(e^i)");
-            };
-        }
-
-        if let Ok(res) = ln::<FS, FS>(acc) {
-            Ok(res)
-        } else {
-            // Impossible to reach, unless the "exponents" vector is empty
-            Err("[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0")
-        }
-    }
-
     pub(crate) fn optimized_cost_strategy(
         &self,
         exponents: &[FS],
@@ -539,7 +456,7 @@ where
         }
 
         let cost_part =
-            self.cost_with_forumla(asset_balances, &mut formula_components, true, true, true)?;
+            self.cost_with_forumla(asset_balances, &mut formula_components, true, true)?;
 
         let mut result = Vec::with_capacity(asset_balances.len());
 
@@ -566,7 +483,6 @@ where
         convert_to_unsigned(self.cost_with_forumla(
             asset_balances,
             &mut Default::default(),
-            false,
             false,
             false,
         )?)
@@ -598,7 +514,7 @@ where
         }
 
         let cost_part =
-            self.cost_with_forumla(asset_balances, &mut formula_components, true, true, true)?;
+            self.cost_with_forumla(asset_balances, &mut formula_components, true, true)?;
         let first_quotient = self.price_helper_first_quotient(
             &asset_balances_signed,
             &asset_in_question_balance_signed,
@@ -629,26 +545,7 @@ where
         self.ma_long.clear();
     }
 
-    /// Update market data
-    /// Returns volume ratio short / long or None
-    fn update(
-        &mut self,
-        volume: &TimestampedVolume<Self::FU>,
-    ) -> Result<Option<Self::FU>, &'static str> {
-        let mas = self.ma_short.update(volume)?;
-        let mal = self.ma_long.update(volume)?;
-
-        if let Some(mas) = mas {
-            if let Some(mal) = mal {
-                if mal != 0u32.to_fixed::<FU>() {
-                    return Ok(Some(mas.saturating_div(mal)));
-                }
-            };
-        };
-
-        Ok(None)
-    }
-
+    /// Fetch the current fee
     fn fee(&self) -> Result<Self::FU, &'static str> {
         let mas = if let Some(res) = self.ma_short.get() {
             res
@@ -676,5 +573,25 @@ where
 
         let ratio_signed = convert_to_signed(ratio)?;
         convert_to_unsigned::<FS, FU>(self.fees.calculate(ratio_signed)?)
+    }
+
+    /// Update market data
+    /// Returns volume ratio short / long or None
+    fn update(
+        &mut self,
+        volume: &TimestampedVolume<Self::FU>,
+    ) -> Result<Option<Self::FU>, &'static str> {
+        let mas = self.ma_short.update(volume)?;
+        let mal = self.ma_long.update(volume)?;
+
+        if let Some(mas) = mas {
+            if let Some(mal) = mal {
+                if mal != 0u32.to_fixed::<FU>() {
+                    return Ok(Some(mas.saturating_div(mal)));
+                }
+            };
+        };
+
+        Ok(None)
     }
 }

@@ -7,11 +7,17 @@ use frame_support::{
 use frame_system::RawOrigin;
 use zeitgeist_primitives::constants::BALANCE_FRACTIONAL_DECIMAL_PLACES;
 
-use crate::{Config, mock::*, tests::rikiddo_sigmoid_mv::cost, traits::RikiddoSigmoidMVPallet, types::{FromFixedDecimal, IntoFixedDecimal, Timespan}};
+use crate::{
+    mock::*,
+    tests::rikiddo_sigmoid_mv::cost,
+    traits::RikiddoSigmoidMVPallet,
+    types::{FromFixedDecimal, IntoFixedDecimal, Timespan},
+    Config,
+};
 
 #[inline]
 fn max_balance_difference(frac_dec_places: u8, max_percent_places_wrong: f64) -> u128 {
-    10u128.pow((frac_dec_places as f64 * max_percent_places_wrong).floor() as u32)
+    10u128.pow((frac_dec_places as f64 * max_percent_places_wrong).ceil() as u32)
 }
 
 fn run_to_block(n: u64) {
@@ -95,21 +101,20 @@ fn rikiddo_pallet_fee_return_correct_result() {
         let initial_fee: f64 = rikiddo.config.initial_fee.to_num();
         rikiddo.ma_short.config.ema_period = Timespan::Seconds(1);
         rikiddo.ma_long.config.ema_period = Timespan::Seconds(1);
-        assert_noop!(
-            Rikiddo::fee(0),
-            crate::Error::<Runtime>::RikiddoNotFoundForPool
-        );
+        assert_noop!(Rikiddo::fee(0), crate::Error::<Runtime>::RikiddoNotFoundForPool);
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
         assert_ok!(Rikiddo::create(0, rikiddo));
-        let fee_reference_balance: Balance = FixedS::from_num(initial_fee).to_fixed_decimal(frac_dec_places).unwrap();
+        let fee_reference_balance: Balance =
+            FixedS::from_num(initial_fee).to_fixed_decimal(frac_dec_places).unwrap();
         let fee_pallet_balance = Rikiddo::fee(0).unwrap();
-        let difference_abs = (fee_pallet_balance as i128 - fee_reference_balance as i128).abs() as u128;
+        let difference_abs =
+            (fee_pallet_balance as i128 - fee_reference_balance as i128).abs() as u128;
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
-            "\nReference fee result (Balance): {}\nRikiddo pallet fee result (Balance): {}\nDifference: \
-             {}\nMax_Allowed_Difference: {}",
-             fee_reference_balance,
+            "\nReference fee result (Balance): {}\nRikiddo pallet fee result (Balance): \
+             {}\nDifference: {}\nMax_Allowed_Difference: {}",
+            fee_reference_balance,
             fee_pallet_balance,
             difference_abs,
             max_difference,
@@ -120,10 +125,7 @@ fn rikiddo_pallet_fee_return_correct_result() {
         run_to_block(1);
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
         assert_ok!(Rikiddo::update(0, 10000000000));
-        assert_ne!(
-            Rikiddo::fee(0).unwrap(),
-            fee_pallet_balance
-        );
+        assert_ne!(Rikiddo::fee(0).unwrap(), fee_pallet_balance);
     });
 }
 
@@ -140,16 +142,19 @@ fn rikiddo_pallet_cost_returns_correct_result() {
         rikiddo.ma_short.config.ema_period = Timespan::Seconds(1);
         rikiddo.ma_long.config.ema_period = Timespan::Seconds(1);
         assert_ok!(Rikiddo::create(0, rikiddo));
-        let asset_balance: <Runtime as Config>::Balance = (500u128 * 10u128.pow(frac_dec_places as u32)).try_into().unwrap();
+        let asset_balance: <Runtime as Config>::Balance =
+            (500u128 * 10u128.pow(frac_dec_places as u32)).try_into().unwrap();
         let cost_pallet_balance = Rikiddo::cost(0, &[asset_balance, asset_balance]).unwrap();
         let cost_reference = cost(initial_fee, &vec![500.0f64, 500.0f64]);
-        let cost_reference_balance: Balance = FixedS::from_num(cost_reference).to_fixed_decimal(frac_dec_places).unwrap();
-        let difference_abs = (cost_pallet_balance as i128 - cost_reference_balance as i128).abs() as u128;
+        let cost_reference_balance: Balance =
+            FixedS::from_num(cost_reference).to_fixed_decimal(frac_dec_places).unwrap();
+        let difference_abs =
+            (cost_pallet_balance as i128 - cost_reference_balance as i128).abs() as u128;
         let max_difference = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs <= max_difference,
-            "\nReference cost result (Balance): {}\nRikiddo pallet cost result (Balance): {}\nDifference: \
-             {}\nMax_Allowed_Difference: {}",
+            "\nReference cost result (Balance): {}\nRikiddo pallet cost result (Balance): \
+             {}\nDifference: {}\nMax_Allowed_Difference: {}",
             cost_reference_balance,
             cost_pallet_balance,
             difference_abs,
@@ -158,22 +163,28 @@ fn rikiddo_pallet_cost_returns_correct_result() {
 
         // The second part also compares the cost results, but uses the sigmoid fee.
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
-        //let fee = Rikiddo::fee
         assert_ok!(Rikiddo::update(0, 10000000000));
         run_to_block(1);
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
-        assert_eq!(Rikiddo::update(0, 10000000000).unwrap(), Some(10u128.pow(BALANCE_FRACTIONAL_DECIMAL_PLACES as u32)));
-        let cost_pallet_balance_with_fee = Rikiddo::cost(0, &[asset_balance, asset_balance]).unwrap();
+        assert_eq!(
+            Rikiddo::update(0, 10000000000).unwrap(),
+            Some(10u128.pow(BALANCE_FRACTIONAL_DECIMAL_PLACES as u32))
+        );
+        let cost_pallet_balance_with_fee =
+            Rikiddo::cost(0, &[asset_balance, asset_balance]).unwrap();
         let fee = Rikiddo::fee(0).unwrap();
         let fee_f64: f64 = FixedS::from_fixed_decimal(fee, frac_dec_places).unwrap().to_num();
         let cost_reference_with_fee = cost(fee_f64, &vec![500.0f64, 500.0f64]);
-        let cost_reference_balance_with_fee: Balance = FixedS::from_num(cost_reference_with_fee).to_fixed_decimal(frac_dec_places).unwrap();
-        let difference_abs_with_fee = (cost_pallet_balance_with_fee as i128 - cost_reference_balance_with_fee as i128).abs() as u128;
+        let cost_reference_balance_with_fee: Balance =
+            FixedS::from_num(cost_reference_with_fee).to_fixed_decimal(frac_dec_places).unwrap();
+        let difference_abs_with_fee = (cost_pallet_balance_with_fee as i128
+            - cost_reference_balance_with_fee as i128)
+            .abs() as u128;
         let max_difference_with_fee = max_balance_difference(frac_dec_places, 0.3);
         assert!(
             difference_abs_with_fee <= max_difference_with_fee,
-            "\nReference cost result (Balance): {}\nRikiddo pallet cost result (Balance): {}\nDifference: \
-             {}\nMax_Allowed_Difference: {}",
+            "\nReference cost result (Balance): {}\nRikiddo pallet cost result (Balance): \
+             {}\nDifference: {}\nMax_Allowed_Difference: {}",
             cost_reference_balance_with_fee,
             cost_pallet_balance_with_fee,
             difference_abs_with_fee,

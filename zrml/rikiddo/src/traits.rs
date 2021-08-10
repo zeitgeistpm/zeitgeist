@@ -53,7 +53,7 @@ pub trait RikiddoMV: Lmsr {
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str>;
 
-    /// Fetch current fee
+    /// Fetch the current fee
     fn fee(&self) -> Result<Self::FU, &'static str>;
 }
 
@@ -70,10 +70,7 @@ pub trait RikiddoSigmoidMVPallet {
     ) -> Result<Vec<Self::Balance>, DispatchError>;
 
     /// Create Rikiddo instance for specifc asset pool
-    fn create(
-        poolid: Self::PoolId,
-        rikiddo: Self::Rikiddo,
-    ) -> DispatchResult;
+    fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult;
 
     /// Clear market data for specific asset pool
     fn clear(poolid: Self::PoolId) -> DispatchResult;
@@ -88,9 +85,7 @@ pub trait RikiddoSigmoidMVPallet {
     fn destroy(poolid: Self::PoolId) -> DispatchResult;
 
     /// Fetch the current fee
-    fn fee(
-        poolid: Self::PoolId
-    ) -> Result<Self::Balance, DispatchError>;
+    fn fee(poolid: Self::PoolId) -> Result<Self::Balance, DispatchError>;
 
     /// Return price P_i(q) for asset q_i in q
     fn price(
