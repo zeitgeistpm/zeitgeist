@@ -4815,7 +4815,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=0.9.8#2ac4f350da005781a3192efaa4ea7c094782abd4"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#33d9ac0927ba61e15763ee438721ef92d408271a"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4831,7 +4831,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=0.9.8#2ac4f350da005781a3192efaa4ea7c094782abd4"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#33d9ac0927ba61e15763ee438721ef92d408271a"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4846,7 +4846,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=0.9.8#2ac4f350da005781a3192efaa4ea7c094782abd4"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#33d9ac0927ba61e15763ee438721ef92d408271a"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4863,7 +4863,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=0.9.8#2ac4f350da005781a3192efaa4ea7c094782abd4"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#33d9ac0927ba61e15763ee438721ef92d408271a"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -10996,11 +10996,11 @@ dependencies = [
 
 [[package]]
 name = "twox-hash"
-version = "1.6.0"
+version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
+checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "rand 0.7.3",
  "static_assertions",
 ]
