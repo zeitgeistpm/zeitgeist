@@ -40,9 +40,7 @@ mod pallet {
 
     use crate::{
         traits::{Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
-        types::{
-            FromFixedToDecimal, FromFixedDecimal, TimestampedVolume, UnixTimestamp,
-        },
+        types::{FromFixedDecimal, FromFixedToDecimal, TimestampedVolume, UnixTimestamp},
     };
     use parity_scale_codec::Codec;
     use sp_runtime::traits::AtLeast32BitUnsigned;
@@ -119,13 +117,8 @@ mod pallet {
             }
         }
 
-        fn convert_balance_to_fixed(
-            balance: &T::Balance,
-        ) -> Result<T::FixedTypeU, DispatchError> {
-            match T::FixedTypeU::from_fixed_decimal(
-                *balance,
-                T::BalanceFractionalDecimals::get(),
-            ) {
+        fn convert_balance_to_fixed(balance: &T::Balance) -> Result<T::FixedTypeU, DispatchError> {
+            match T::FixedTypeU::from_fixed_decimal(*balance, T::BalanceFractionalDecimals::get()) {
                 Ok(res) => return Ok(res),
                 Err(err) => {
                     debug(&err);
@@ -134,10 +127,11 @@ mod pallet {
             };
         }
 
-        fn convert_fixed_to_balance(
-            fixed: &T::FixedTypeU,
-        ) -> Result<T::Balance, DispatchError> {
-            match T::Balance::from_fixed_to_fixed_decimal(*fixed, T::BalanceFractionalDecimals::get()) {
+        fn convert_fixed_to_balance(fixed: &T::FixedTypeU) -> Result<T::Balance, DispatchError> {
+            match T::Balance::from_fixed_to_fixed_decimal(
+                *fixed,
+                T::BalanceFractionalDecimals::get(),
+            ) {
                 Ok(res) => return Ok(res),
                 Err(err) => {
                     debug(&err);
@@ -150,18 +144,18 @@ mod pallet {
             balance: &[T::Balance],
         ) -> Result<Vec<T::FixedTypeU>, DispatchError> {
             balance
-            .iter()
-            .map(|e| Self::convert_balance_to_fixed(e))
-            .collect::<Result<Vec<T::FixedTypeU>, DispatchError>>()
+                .iter()
+                .map(|e| Self::convert_balance_to_fixed(e))
+                .collect::<Result<Vec<T::FixedTypeU>, DispatchError>>()
         }
 
         fn convert_fixed_to_balance_vector(
             fixed: &[T::FixedTypeU],
         ) -> Result<Vec<T::Balance>, DispatchError> {
             fixed
-            .iter()
-            .map(|e| Self::convert_fixed_to_balance(e))
-            .collect::<Result<Vec<T::Balance>, DispatchError>>()
+                .iter()
+                .map(|e| Self::convert_fixed_to_balance(e))
+                .collect::<Result<Vec<T::Balance>, DispatchError>>()
         }
     }
 
@@ -234,11 +228,9 @@ mod pallet {
         }
 
         /// Fetch the current fee
-        fn fee(
-            poolid: Self::PoolId
-        ) -> Result<Self::Balance, DispatchError> {
+        fn fee(poolid: Self::PoolId) -> Result<Self::Balance, DispatchError> {
             let rikiddo = Self::get_rikiddo(&poolid)?;
-            
+
             match rikiddo.fee() {
                 Ok(fee) => return Ok(Self::convert_fixed_to_balance(&fee)?),
                 Err(err) => {

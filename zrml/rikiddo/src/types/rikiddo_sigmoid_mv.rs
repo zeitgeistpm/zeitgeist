@@ -488,6 +488,36 @@ where
         )?)
     }
 
+    /// Fetch the current fee
+    fn fee(&self) -> Result<Self::FU, &'static str> {
+        let mas = if let Some(res) = self.ma_short.get() {
+            res
+        } else {
+            return convert_to_unsigned(self.config.initial_fee);
+        };
+
+        let mal = if let Some(res) = self.ma_long.get() {
+            res
+        } else {
+            return convert_to_unsigned(self.config.initial_fee);
+        };
+
+        if mal == FU::from_num(0u8) {
+            return Err(
+                "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
+            );
+        }
+
+        let ratio = if let Some(res) = mas.checked_div(mal) {
+            res
+        } else {
+            return Err("[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long");
+        };
+
+        let ratio_signed = convert_to_signed(ratio)?;
+        convert_to_unsigned::<FS, FU>(self.fees.calculate_fee(ratio_signed)?)
+    }
+
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
@@ -543,36 +573,6 @@ where
     fn clear(&mut self) {
         self.ma_short.clear();
         self.ma_long.clear();
-    }
-
-    /// Fetch the current fee
-    fn fee(&self) -> Result<Self::FU, &'static str> {
-        let mas = if let Some(res) = self.ma_short.get() {
-            res
-        } else {
-            return convert_to_unsigned(self.config.initial_fee);
-        };
-
-        let mal = if let Some(res) = self.ma_long.get() {
-            res
-        } else {
-            return convert_to_unsigned(self.config.initial_fee);
-        };
-
-        if mal == FU::from_num(0u8) {
-            return Err(
-                "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
-            );
-        }
-
-        let ratio = if let Some(res) = mas.checked_div(mal) {
-            res
-        } else {
-            return Err("[RikiddoSigmoidMV] Overflow during calculation: ma_short / ma_long");
-        };
-
-        let ratio_signed = convert_to_signed(ratio)?;
-        convert_to_unsigned::<FS, FU>(self.fees.calculate_fee(ratio_signed)?)
     }
 
     /// Update market data

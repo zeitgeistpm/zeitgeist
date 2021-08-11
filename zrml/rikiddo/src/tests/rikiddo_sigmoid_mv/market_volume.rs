@@ -12,7 +12,8 @@ fn rikiddo_updates_mv_and_returns_some() {
     let mut rikiddo =
         Rikiddo::new(RikiddoConfig::default(), FeeSigmoid::default(), emv.clone(), emv);
     rikiddo.update_volume(&TimestampedVolume { timestamp: 0, volume: 1u32.into() }).unwrap();
-    let res = rikiddo.update_volume(&TimestampedVolume { timestamp: 2, volume: 2u32.into() }).unwrap();
+    let res =
+        rikiddo.update_volume(&TimestampedVolume { timestamp: 2, volume: 2u32.into() }).unwrap();
     assert_eq!(res, Some(1u32.into()));
 }
 

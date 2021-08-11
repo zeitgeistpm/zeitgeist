@@ -49,7 +49,7 @@ fn price_second_quotient(fee: f64, balances: &Vec<f64>) -> f64 {
         / denominator
 }
 
-fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
+pub(super) fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
     let balance_sum = balances.iter().sum::<f64>();
     let fee_times_sum = fee * balance_sum;
     let balance_exponential_results: Vec<f64> =

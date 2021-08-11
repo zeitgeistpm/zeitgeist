@@ -3,7 +3,7 @@ use substrate_fixed::{types::extra::U64, FixedU128};
 
 use super::{ema_create_test_struct, Rikiddo};
 use crate::{
-    traits::{MarketAverage, RikiddoMV},
+    traits::{Lmsr, MarketAverage, RikiddoMV},
     types::{FeeSigmoid, RikiddoConfig, TimestampedVolume},
 };
 

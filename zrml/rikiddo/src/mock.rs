@@ -7,9 +7,7 @@ use sp_runtime::{
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{
-        ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT,
-    },
+    constants::{ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, PoolId, UncheckedExtrinsicTest,
     },
