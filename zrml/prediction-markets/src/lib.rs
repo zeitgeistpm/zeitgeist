@@ -67,17 +67,10 @@ mod pallet {
     use crate::weights::*;
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
-    use frame_support::{
-        dispatch::{DispatchResultWithPostInfo, Weight},
-        ensure, log,
-        pallet_prelude::{StorageMap, ValueQuery},
-        storage::{with_transaction, TransactionOutcome},
-        traits::{
+    use frame_support::{Blake2_128Concat, PalletId, Twox64Concat, dispatch::{DispatchResultWithPostInfo, Weight}, ensure, log, pallet_prelude::{StorageMap, ValueQuery}, storage::{with_transaction, TransactionOutcome}, traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, IsType, OnUnbalanced,
             ReservableCurrency, Time,
-        },
-        transactional, Blake2_128Concat, PalletId,
-    };
+        }, transactional};
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
@@ -949,12 +942,12 @@ mod pallet {
     /// A market only ends up here if it was disputed.
     #[pallet::storage]
     pub type MarketIdsPerDisputeBlock<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::BlockNumber, Vec<MarketIdOf<T>>, ValueQuery>;
+        StorageMap<_, Twox64Concat, T::BlockNumber, Vec<MarketIdOf<T>>, ValueQuery>;
 
     /// A mapping of market identifiers to the block that they were reported on.
     #[pallet::storage]
     pub type MarketIdsPerReportBlock<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::BlockNumber, Vec<MarketIdOf<T>>, ValueQuery>;
+        StorageMap<_, Twox64Concat, T::BlockNumber, Vec<MarketIdOf<T>>, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
