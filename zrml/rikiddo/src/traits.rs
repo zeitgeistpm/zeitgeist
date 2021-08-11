@@ -7,7 +7,7 @@ pub trait Sigmoid {
     type FS: Fixed;
 
     /// Calculate fee
-    fn calculate(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
+    fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
 }
 
 pub trait MarketAverage {
@@ -20,7 +20,7 @@ pub trait MarketAverage {
     fn clear(&mut self);
 
     /// Update market volume
-    fn update(
+    fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str>;
@@ -48,7 +48,7 @@ pub trait RikiddoMV: Lmsr {
     fn clear(&mut self);
 
     /// Update market data
-    fn update(
+    fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str>;
@@ -95,7 +95,7 @@ pub trait RikiddoSigmoidMVPallet {
     ) -> Result<Self::Balance, DispatchError>;
 
     /// Update market data
-    fn update(
+    fn update_volume(
         poolid: Self::PoolId,
         volume: Self::Balance,
     ) -> Result<Option<Self::Balance>, DispatchError>;

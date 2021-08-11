@@ -67,7 +67,7 @@ where
     type FS = FS;
 
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
-    fn calculate(&self, r: Self::FS) -> Result<Self::FS, &'static str> {
+    fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str> {
         let r_minus_n = if let Some(res) = r.checked_sub(self.config.n) {
             res
         } else {

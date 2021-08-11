@@ -192,7 +192,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
     }
 
     /// Update market volume
-    fn update(
+    fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str> {

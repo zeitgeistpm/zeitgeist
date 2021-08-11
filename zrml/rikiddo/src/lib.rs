@@ -268,7 +268,7 @@ mod pallet {
         }
 
         /// Update market data
-        fn update(
+        fn update_volume(
             poolid: Self::PoolId,
             volume: Self::Balance,
         ) -> Result<Option<Self::Balance>, DispatchError> {
@@ -281,7 +281,7 @@ mod pallet {
             let mut rikiddo = Self::get_rikiddo(&poolid)?;
 
             // Update rikiddo market data by adding the TimestampedVolume
-            let balance_fixed = match rikiddo.update(&timestamped_volume) {
+            let balance_fixed = match rikiddo.update_volume(&timestamped_volume) {
                 Ok(res) => {
                     if let Some(inner) = res {
                         inner

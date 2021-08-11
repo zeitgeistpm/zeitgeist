@@ -572,17 +572,17 @@ where
         };
 
         let ratio_signed = convert_to_signed(ratio)?;
-        convert_to_unsigned::<FS, FU>(self.fees.calculate(ratio_signed)?)
+        convert_to_unsigned::<FS, FU>(self.fees.calculate_fee(ratio_signed)?)
     }
 
     /// Update market data
     /// Returns volume ratio short / long or None
-    fn update(
+    fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str> {
-        let mas = self.ma_short.update(volume)?;
-        let mal = self.ma_long.update(volume)?;
+        let mas = self.ma_short.update_volume(volume)?;
+        let mal = self.ma_long.update_volume(volume)?;
 
         if let Some(mas) = mas {
             if let Some(mal) = mal {

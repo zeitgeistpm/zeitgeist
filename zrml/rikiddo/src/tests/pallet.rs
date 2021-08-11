@@ -75,16 +75,16 @@ fn rikiddo_pallet_update_market_data_returns_correct_result() {
         rikiddo.ma_short.config.ema_period = Timespan::Seconds(1);
         rikiddo.ma_long.config.ema_period = Timespan::Seconds(1);
         assert_noop!(
-            Rikiddo::update(0, 10000000000),
+            Rikiddo::update_volume(0, 10000000000),
             crate::Error::<Runtime>::RikiddoNotFoundForPool
         );
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
         assert_ok!(Rikiddo::create(0, rikiddo));
-        assert_ok!(Rikiddo::update(0, 10000000000));
+        assert_ok!(Rikiddo::update_volume(0, 10000000000));
         run_to_block(1);
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
         assert_eq!(
-            Rikiddo::update(0, 10000000000).unwrap(),
+            Rikiddo::update_volume(0, 10000000000).unwrap(),
             Some(10u128.pow(BALANCE_FRACTIONAL_DECIMAL_PLACES as u32))
         );
     });
@@ -121,10 +121,10 @@ fn rikiddo_pallet_fee_return_correct_result() {
         );
 
         // Now we check if the fee has changed, since enough volume data was collected
-        assert_ok!(Rikiddo::update(0, 10000000000));
+        assert_ok!(Rikiddo::update_volume(0, 10000000000));
         run_to_block(1);
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
-        assert_ok!(Rikiddo::update(0, 10000000000));
+        assert_ok!(Rikiddo::update_volume(0, 10000000000));
         assert_ne!(Rikiddo::fee(0).unwrap(), fee_pallet_balance);
     });
 }
@@ -163,11 +163,11 @@ fn rikiddo_pallet_cost_returns_correct_result() {
 
         // The second part also compares the cost results, but uses the sigmoid fee.
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
-        assert_ok!(Rikiddo::update(0, 10000000000));
+        assert_ok!(Rikiddo::update_volume(0, 10000000000));
         run_to_block(1);
         let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
         assert_eq!(
-            Rikiddo::update(0, 10000000000).unwrap(),
+            Rikiddo::update_volume(0, 10000000000).unwrap(),
             Some(10u128.pow(BALANCE_FRACTIONAL_DECIMAL_PLACES as u32))
         );
         let cost_pallet_balance_with_fee =
