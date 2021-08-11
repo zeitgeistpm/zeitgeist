@@ -32,12 +32,8 @@ fn default_prepare_calculation() -> (u8, f64, Vec<f64>, Vec<<Runtime as Config>:
     rikiddo.ma_long.config.ema_period = Timespan::Seconds(1);
     let asset_balances_f64 = vec![490f64, 510f64];
     let asset_balances: Vec<<Runtime as Config>::Balance> = vec![
-        (asset_balances_f64[0] as u128 * 10u128.pow(frac_dec_places as u32))
-            .try_into()
-            .unwrap(),
-        (asset_balances_f64[1] as u128 * 10u128.pow(frac_dec_places as u32))
-            .try_into()
-            .unwrap(),
+        (asset_balances_f64[0] as u128 * 10u128.pow(frac_dec_places as u32)).try_into().unwrap(),
+        (asset_balances_f64[1] as u128 * 10u128.pow(frac_dec_places as u32)).try_into().unwrap(),
     ];
     assert_ok!(Rikiddo::create(0, rikiddo));
     (frac_dec_places, initial_fee, asset_balances_f64, asset_balances)
@@ -50,10 +46,7 @@ fn default_fill_market_volume() -> f64 {
     assert_ok!(Rikiddo::update_volume(0, 1000));
     run_to_block(1);
     let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
-    assert_eq!(
-        Rikiddo::update_volume(0, 1000).unwrap(),
-        Some(10u128.pow(frac_dec_places as u32))
-    );
+    assert_eq!(Rikiddo::update_volume(0, 1000).unwrap(), Some(10u128.pow(frac_dec_places as u32)));
 
     let fee = Rikiddo::fee(0).unwrap();
     FixedS::from_fixed_decimal(fee, frac_dec_places).unwrap().to_num()
@@ -173,7 +166,8 @@ fn rikiddo_pallet_cost_returns_correct_result() {
     ExtBuilder::default().build().execute_with(|| {
         // The first part compares the result from the f64 reference cost function with
         // what the pallet returns. It uses the initial fee.
-        let (frac_dec_places, initial_fee, asset_balances_f64, asset_balances) = default_prepare_calculation();
+        let (frac_dec_places, initial_fee, asset_balances_f64, asset_balances) =
+            default_prepare_calculation();
 
         let cost_pallet_balance = Rikiddo::cost(0, &asset_balances).unwrap();
         let cost_reference = cost(initial_fee, &asset_balances_f64);
@@ -219,7 +213,8 @@ fn rikiddo_pallet_price_returns_correct_result() {
     ExtBuilder::default().build().execute_with(|| {
         // The first part compares the result from the f64 reference price function with
         // what the pallet returns. It uses the initial fee.
-        let (frac_dec_places, initial_fee, asset_balances_f64, asset_balances) = default_prepare_calculation();
+        let (frac_dec_places, initial_fee, asset_balances_f64, asset_balances) =
+            default_prepare_calculation();
 
         let price_pallet_balance = Rikiddo::price(0, asset_balances[0], &asset_balances).unwrap();
         let price_reference = price(initial_fee, &asset_balances_f64, asset_balances_f64[0]);
@@ -232,15 +227,16 @@ fn rikiddo_pallet_price_returns_correct_result() {
             difference_abs <= max_difference,
             "\nReference price result (Balance): {}\nRikiddo pallet price result (Balance): \
              {}\nDifference: {}\nMax_Allowed_Difference: {}",
-             price_reference_balance,
-             price_pallet_balance,
+            price_reference_balance,
+            price_pallet_balance,
             difference_abs,
             max_difference,
         );
 
         // The second part also compares the price results, but uses the sigmoid fee.
         let fee = default_fill_market_volume();
-        let price_pallet_balance_fee = Rikiddo::price(0, asset_balances[0], &asset_balances).unwrap();
+        let price_pallet_balance_fee =
+            Rikiddo::price(0, asset_balances[0], &asset_balances).unwrap();
         let price_reference_fee = price(fee, &asset_balances_f64, asset_balances_f64[0]);
         let price_reference_balance_fee: Balance =
             FixedS::from_num(price_reference_fee).to_fixed_decimal(frac_dec_places).unwrap();
@@ -251,13 +247,74 @@ fn rikiddo_pallet_price_returns_correct_result() {
             difference_abs_fee <= max_difference_fee,
             "\nReference price result (Balance): {}\nRikiddo pallet price result (Balance): \
              {}\nDifference: {}\nMax_Allowed_Difference: {}",
-             price_reference_balance_fee,
-             price_pallet_balance_fee,
+            price_reference_balance_fee,
+            price_pallet_balance_fee,
             difference_abs_fee,
             max_difference_fee,
         );
     });
 }
 
+#[test]
+fn rikiddo_pallet_all_prices_returns_correct_result() {
+    ExtBuilder::default().build().execute_with(|| {
+        // The first part compares the result from the f64 reference price function used
+        // on every asset, with what the pallet returns. It uses the initial fee.
+        let (frac_dec_places, initial_fee, asset_balances_f64, asset_balances) =
+            default_prepare_calculation();
 
-// TODO: Tests for price and all_prices
+        let all_prices_pallet_balance = Rikiddo::all_prices(0, &asset_balances).unwrap();
+        let all_prices_reference_balance: Vec<Balance> = asset_balances_f64
+            .iter()
+            .map(|e| {
+                let price_reference = price(initial_fee, &asset_balances_f64, *e);
+                FixedS::from_num(price_reference).to_fixed_decimal(frac_dec_places).unwrap()
+            })
+            .collect();
+        let difference_abs = all_prices_reference_balance
+            .iter()
+            .zip(all_prices_pallet_balance.iter())
+            .fold(0u128, |acc, elems| acc + (*elems.0 as i128 - *elems.1 as i128).abs() as u128);
+
+        let max_difference =
+            asset_balances.len() as u128 * max_balance_difference(frac_dec_places, 0.3);
+        assert!(
+            difference_abs <= max_difference,
+            "\nReference all_prices result (Balance): {:?}\nRikiddo all_prices result (Balance): \
+             {:?}\nDifference: {}\nMax_Allowed_Difference: {}",
+            all_prices_reference_balance,
+            all_prices_pallet_balance,
+            difference_abs,
+            max_difference,
+        );
+
+        // The second part also compares the price results for all prices, but uses
+        // the sigmoid fee.
+        let fee = default_fill_market_volume();
+
+        let all_prices_pallet_balance_fee = Rikiddo::all_prices(0, &asset_balances).unwrap();
+        let all_prices_reference_balance_fee: Vec<Balance> = asset_balances_f64
+            .iter()
+            .map(|e| {
+                let price_reference = price(fee, &asset_balances_f64, *e);
+                FixedS::from_num(price_reference).to_fixed_decimal(frac_dec_places).unwrap()
+            })
+            .collect();
+        let difference_abs_fee = all_prices_reference_balance_fee
+            .iter()
+            .zip(all_prices_pallet_balance_fee.iter())
+            .fold(0u128, |acc, elems| acc + (*elems.0 as i128 - *elems.1 as i128).abs() as u128);
+
+        let max_difference_fee =
+            asset_balances.len() as u128 * max_balance_difference(frac_dec_places, 0.3);
+        assert!(
+            difference_abs_fee <= max_difference_fee,
+            "\nReference all_prices result (Balance): {:?}\nRikiddo pallet all_prices result \
+             (Balance): {:?}\nDifference: {}\nMax_Allowed_Difference: {}",
+            all_prices_reference_balance_fee,
+            all_prices_pallet_balance_fee,
+            difference_abs_fee,
+            max_difference_fee,
+        );
+    });
+}
