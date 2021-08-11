@@ -67,10 +67,17 @@ mod pallet {
     use crate::weights::*;
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData};
-    use frame_support::{Blake2_128Concat, PalletId, Twox64Concat, dispatch::{DispatchResultWithPostInfo, Weight}, ensure, log, pallet_prelude::{StorageMap, ValueQuery}, storage::{with_transaction, TransactionOutcome}, traits::{
+    use frame_support::{
+        dispatch::{DispatchResultWithPostInfo, Weight},
+        ensure, log,
+        pallet_prelude::{StorageMap, ValueQuery},
+        storage::{with_transaction, TransactionOutcome},
+        traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, IsType, OnUnbalanced,
             ReservableCurrency, Time,
-        }, transactional};
+        },
+        transactional, Blake2_128Concat, PalletId, Twox64Concat,
+    };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
