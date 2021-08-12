@@ -12066,7 +12066,6 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
- "sp-api",
  "sp-io",
  "sp-runtime",
  "sp-std",

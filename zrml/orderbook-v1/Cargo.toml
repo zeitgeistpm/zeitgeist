@@ -12,7 +12,6 @@ zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 # Mock
 orml-tokens = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
-sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 
 [dev-dependencies]
@@ -23,7 +22,6 @@ default = ["std"]
 mock = [
     "orml-tokens",
     "pallet-balances",
-    "sp-api",
     "sp-io",
 ]
 runtime-benchmarks = [

@@ -76,7 +76,7 @@ struct Data {
 
 fn asset(seed: (u128, u16)) -> Asset<u128> {
     let (seed0, seed1) = seed;
-    let module = seed0 % 4;
+    let module = seed0 % 5;
     match module {
         0 => Asset::CategoricalOutcome(seed0, seed1),
         1 => {
