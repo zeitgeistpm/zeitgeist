@@ -1,11 +1,11 @@
 use crate::types::{EmaConfig, FeeSigmoidConfig, TimestampedVolume};
+use core::fmt::Debug;
 use frame_support::{
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     Parameter,
 };
 use parity_scale_codec::Codec;
 use sp_runtime::traits::AtLeast32BitUnsigned;
-use sp_std::fmt::Debug;
 use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
 
 pub trait Sigmoid {

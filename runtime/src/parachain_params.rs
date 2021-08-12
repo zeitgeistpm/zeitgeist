@@ -1,13 +1,13 @@
 use crate::{
     AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue, MAXIMUM_BLOCK_WEIGHT,
 };
+use alloc::{vec, vec::Vec};
 use frame_support::{
     parameter_types,
     traits::{All, IsInVec},
     weights::Weight,
 };
 use polkadot_parachain::primitives::Sibling;
-use sp_std::{vec, vec::Vec};
 use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
     AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
