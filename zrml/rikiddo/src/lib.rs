@@ -15,7 +15,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use core::marker::PhantomData;
+    use core::{fmt::Debug, marker::PhantomData};
     use frame_support::{
         pallet_prelude::{MaybeSerializeDeserialize, Member},
         traits::{Hooks, Time},
@@ -23,7 +23,6 @@ mod pallet {
     };
     use parity_scale_codec::Codec;
     use sp_runtime::traits::AtLeast32BitUnsigned;
-    use sp_std::fmt::Debug;
     use substrate_fixed::types::extra::LeEqU128;
 
     #[pallet::config]

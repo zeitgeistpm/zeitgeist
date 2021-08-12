@@ -6,8 +6,8 @@
 pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
 use crate::Header;
+use alloc::vec::Vec;
 use sp_runtime::{generic, impl_opaque_keys};
-use sp_std::vec::Vec;
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type SessionHandlers = ();

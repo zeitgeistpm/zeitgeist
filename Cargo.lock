@@ -11977,7 +11977,6 @@ dependencies = [
  "sp-offchain",
  "sp-runtime",
  "sp-session",
- "sp-std",
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder",
@@ -12071,7 +12070,6 @@ dependencies = [
  "parity-scale-codec",
  "sp-io",
  "sp-runtime",
- "sp-std",
  "zeitgeist-primitives",
 ]
 
@@ -12092,7 +12090,6 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "sp-std",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
@@ -12134,7 +12131,6 @@ dependencies = [
  "parity-scale-codec",
  "sp-io",
  "sp-runtime",
- "sp-std",
  "substrate-fixed",
  "zeitgeist-primitives",
 ]
@@ -12169,7 +12165,6 @@ dependencies = [
  "sp-api",
  "sp-io",
  "sp-runtime",
- "sp-std",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-swaps",
