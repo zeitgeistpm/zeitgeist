@@ -6,7 +6,6 @@ orml-traits = { branch = "master", default-features = false, git = "https://gith
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-arithmetic = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-std = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
@@ -51,7 +50,6 @@ std = [
     'parity-scale-codec/std',
     'sp-arithmetic/std',
     'sp-runtime/std',
-    'sp-std/std',
     'zeitgeist-primitives/std',
     'zrml-liquidity-mining/std',
     'zrml-market-commons/std',

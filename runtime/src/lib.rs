@@ -1,6 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
 
+extern crate alloc;
+
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
@@ -15,6 +17,7 @@ mod xcmp_message;
 #[cfg(feature = "parachain")]
 pub use xcmp_message::XCMPMessage;
 
+use alloc::{boxed::Box, vec::Vec};
 use frame_support::{
     construct_runtime, parameter_types,
     weights::{
@@ -36,7 +39,6 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill, Percent,
 };
-use sp_std::{boxed::Box, vec::Vec};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -734,7 +736,7 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
         let inherent_data =
             cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
                 relay_chain_slot,
-                sp_std::time::Duration::from_secs(6),
+                core::time::Duration::from_secs(6),
             )
             .create_inherent_data()
             .expect("Could not create the timestamp inherent data");

@@ -29,8 +29,8 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
+use core::marker::PhantomData;
 use frame_support::{traits::Get, weights::Weight};
-use sp_std::marker::PhantomData;
 
 ///  Trait containing the required functions for weight retrival within
 /// zrml_orderbook_v1 (automatically generated)
