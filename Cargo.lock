@@ -12151,6 +12151,16 @@ dependencies = [
  "sp-runtime",
  "substrate-fixed",
  "zeitgeist-primitives",
+ "zrml-rikiddo",
+]
+
+[[package]]
+name = "zrml-rikiddo-fuzz"
+version = "0.0.0"
+dependencies = [
+ "arbitrary",
+ "libfuzzer-sys",
+ "zrml-rikiddo",
 ]
 
 [[package]]

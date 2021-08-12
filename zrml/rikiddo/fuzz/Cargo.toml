@@ -1,0 +1,20 @@
+[[bin]]
+doc = false
+name = "rikiddo_full_workflow"
+path = "rikiddo_full_workflow.rs"
+test = false
+
+[dependencies]
+arbitrary = { features = ["derive"], version = "1.0" }
+libfuzzer-sys = "0.4"
+zrml-rikiddo = { features = ["mock"], path = ".." }
+
+[package]
+authors = ["Automatically generated"]
+edition = "2018"
+name = "zrml-rikiddo-fuzz"
+publish = false
+version = "0.0.0"
+
+[package.metadata]
+cargo-fuzz = true

@@ -7,14 +7,20 @@ sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "http
 substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 hashbrown = { default-features = false, version = "0.11"}
+pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 
 [dev-dependencies]
-pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
+zrml-rikiddo = { features = ["mock"], path = "." }
 
 [features]
 default = ["std"]
+mock = [
+    "pallet-balances",
+    "pallet-timestamp",
+    "sp-io",
+]
 std = [
     "frame-support/std",
     "frame-system/std",

@@ -7,7 +7,8 @@
 extern crate alloc;
 
 pub mod constants;
-mod mock;
+
+pub mod mock;
 mod tests;
 pub mod traits;
 pub mod types;

@@ -1,4 +1,4 @@
-#![cfg(test)]
+#![cfg(all(feature = "mock", test))]
 
 use frame_support::assert_err;
 use substrate_fixed::{

@@ -1,4 +1,5 @@
-#![cfg(test)]
+#![cfg(feature = "mock")]
+
 use crate::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
