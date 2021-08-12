@@ -24,7 +24,6 @@ sp-inherents = { branch = "polkadot-v0.9.8", default-features = false, git = "ht
 sp-offchain = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-session = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-std = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-transaction-pool = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-version = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 
@@ -152,7 +151,6 @@ std = [
 	"sp-offchain/std",
 	"sp-runtime/std",
 	"sp-session/std",
-	"sp-std/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
 
