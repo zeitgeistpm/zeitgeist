@@ -2,7 +2,7 @@
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use substrate_fixed::{types::extra::U33, FixedI128};
+use substrate_fixed::{FixedI128, types::extra::U33};
 use zrml_rikiddo::{traits::Sigmoid, types::{FeeSigmoid, FeeSigmoidConfig}};
 
 /*
@@ -29,24 +29,29 @@ use zrml_rikiddo::{traits::Sigmoid, types::{FeeSigmoid, FeeSigmoidConfig}};
    -> create, force fee by multiple update_volume, cost, price, all_prices, clear, destroy
 */
 
+#[inline(always)]
+fn fixed_from_i128(from: i128) -> FixedI128<U33> {
+  FixedI128::<U33>::from_le_bytes(from.to_le_bytes())
+}
+
 fuzz_target!(|data: Data| {
     let sigmoid_fee_config = FeeSigmoidConfig {
-        m: data.sigmoid_fee_m,
-        p: data.sigmoid_fee_p,
-        n: data.sigmoid_fee_n,
-        initial_fee: data.sigmoid_fee_initial_fee,
-        min_revenue: data.sigmoid_fee_min_revenue,
+        m: fixed_from_i128(data.sigmoid_fee_m),
+        p: fixed_from_i128(data.sigmoid_fee_p),
+        n: fixed_from_i128(data.sigmoid_fee_n),
+        initial_fee: fixed_from_i128(data.sigmoid_fee_initial_fee),
+        min_revenue: fixed_from_i128(data.sigmoid_fee_min_revenue),
     };
     let sigmoid_fee = FeeSigmoid::new(sigmoid_fee_config);
-    let _ = sigmoid_fee.calculate_fee(data.sigmoid_fee_calculate_r);
+    let _ = sigmoid_fee.calculate_fee(fixed_from_i128(data.sigmoid_fee_calculate_r));
 });
 
 #[derive(Debug, Arbitrary)]
 struct Data {
-    sigmoid_fee_calculate_r: FixedI128<U33>,
-    sigmoid_fee_m: FixedI128<U33>,
-    sigmoid_fee_p: FixedI128<U33>,
-    sigmoid_fee_n: FixedI128<U33>,
-    sigmoid_fee_initial_fee: FixedI128<U33>,
-    sigmoid_fee_min_revenue: FixedI128<U33>,
+    sigmoid_fee_calculate_r: i128,
+    sigmoid_fee_m: i128,
+    sigmoid_fee_p: i128,
+    sigmoid_fee_n: i128,
+    sigmoid_fee_initial_fee: i128,
+    sigmoid_fee_min_revenue: i128,
 }
