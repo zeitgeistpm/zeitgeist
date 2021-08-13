@@ -12160,6 +12160,7 @@ version = "0.0.0"
 dependencies = [
  "arbitrary",
  "libfuzzer-sys",
+ "substrate-fixed",
  "zrml-rikiddo",
 ]
 
