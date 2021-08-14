@@ -56,7 +56,7 @@ pub fn dev_config(
         None,
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
-            relay_chain: "rococo-local".into(),
+            relay_chain: "rococo-dev".into(),
             parachain_id: parachain_id.into(),
         },
         #[cfg(not(feature = "parachain"))]

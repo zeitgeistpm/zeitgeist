@@ -11,7 +11,7 @@ pub fn battery_park_staging_config(
     let zeitgeist_wasm = zeitgeist_wasm()?;
 
     Ok(ChainSpec::from_genesis(
-        "Zeitgeist - Battery Park Staging",
+        "Battery Park Staging",
         "battery_park_staging",
         ChainType::Live,
         move || {

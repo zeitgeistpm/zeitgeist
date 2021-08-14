@@ -11,7 +11,7 @@ pub fn battery_station_staging_config(
     let zeitgeist_wasm = zeitgeist_wasm()?;
 
     Ok(ChainSpec::from_genesis(
-        "Zeitgeist - Battery Station Staging",
+        "Battery Station Staging",
         "battery_station_staging",
         ChainType::Live,
         move || {
@@ -28,7 +28,7 @@ pub fn battery_station_staging_config(
         },
         vec![],
         telemetry_endpoints(),
-        Some("battery_station_staging"),
+        Some("battery_station"),
         Some(token_properties()),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
