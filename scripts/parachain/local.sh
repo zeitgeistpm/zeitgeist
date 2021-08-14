@@ -2,12 +2,12 @@
 
 # Creates a local relay chain for testing and development
 #
-# IMPORTANT: Takes about 1 minute until everything is properly set-up
+# IMPORTANT: After initialization, the parachain starts producing blocks in ~1 minute
 
 set -euxo pipefail
 
 PARACHAIN_CHAIN=battery_station_staging
-PARACHAIN_ID=9123
+PARACHAIN_ID=2050
 POLKADOT_BRANCH=release-v0.9.8
 POLKADOT_DIR="target/polkadot"
 RELAYCHAIN_CHAIN=rococo-local
@@ -100,13 +100,11 @@ start_collator() {
 
     $LAUNCH_PARACHAIN_CMD & node_pid=$!
 
-    sleep 30
+    sleep 10
     DATA='{ "id":1, "jsonrpc":"2.0", "method":"author_insertKey", "params":["nmbs", "'"$seed"'", "'"$public_key"'"] }'
     curl -H 'Content-Type: application/json' --data "$DATA" localhost:$collator_rpc_port
 
-    sleep 2
     kill $node_pid
-    sleep 2
     $LAUNCH_PARACHAIN_CMD
 }
 
