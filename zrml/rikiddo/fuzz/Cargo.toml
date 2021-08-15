@@ -1,14 +1,14 @@
 [[bin]]
 doc = false
-name = "rikiddo_full_workflow"
-path = "rikiddo_full_workflow.rs"
+name = "fee_sigmoid"
+path = "fee_sigmoid.rs"
 test = false
 
 [dependencies]
 arbitrary = { features = ["derive"], version = "1.0" }
 libfuzzer-sys = "0.4"
 substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
-zrml-rikiddo = { features = ["mock"], path = ".." }
+zrml-rikiddo = { features = ["arbitrary", "mock"], path = ".." }
 
 [package]
 authors = ["Automatically generated"]

@@ -1,4 +1,5 @@
 [dependencies]
+arbitrary = { version = "1.0.1", optional = true }
 frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }

@@ -1,18 +1,16 @@
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Unstructured, Result as ArbiraryResult};
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
 };
 use frame_support::dispatch::{Decode, Encode};
 use sp_core::RuntimeDebug;
-use substrate_fixed::{
-    traits::{FixedSigned, LossyFrom, LossyInto},
-    transcendental::sqrt,
-    types::{
-        extra::{U127, U24, U32},
-        I9F23,
-    },
-    FixedI128, FixedI32, FixedU32,
-};
+use substrate_fixed::{FixedI128, FixedI32, FixedU32, traits::{FixedSigned, LossyFrom, LossyInto}, transcendental::sqrt, types::{I9F23, extra::{U127, U24, U32, Unsigned}}};
+#[cfg(feature = "arbitrary")]
+use substrate_fixed::FixedI64;
+#[cfg(feature = "arbitrary")]
+use core::mem;
 
 use super::convert_to_signed;
 
@@ -114,3 +112,34 @@ where
         Ok(result)
     }
 }
+
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_different_fixed_types {
+    ( $($t:ident, $p:ty),* ) => {
+    $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where 
+        Frac: Unsigned,
+        $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>> {
+
+        fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+            let fsc = FeeSigmoidConfig::<$t<Frac>> {
+                m: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                p: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                n: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                initial_fee: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                min_revenue: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?)
+            };
+            Ok(FeeSigmoid::new(fsc))
+        }
+
+        #[inline]
+        fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+            let bytecount = mem::size_of::<$t<Frac>>();
+            (bytecount*5, Some(bytecount*5))
+        }
+        
+    }) *
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl_arbitrary_for_different_fixed_types! {FixedI128, i128, FixedI64, i64, FixedI32, i32}
