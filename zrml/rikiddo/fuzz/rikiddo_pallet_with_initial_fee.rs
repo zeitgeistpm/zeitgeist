@@ -1,5 +1,6 @@
 #![no_main]
-//! Fuzz test: Conversion FixedU -> FixedI
+//! Fuzz test: Rikiddo pallet is called with initial fee
+//! -> create, fee, cost, price, all_prices, clear, destroy
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;

@@ -1,5 +1,6 @@
 #![no_main]
-//! Fuzz test: Conversion FixedU -> FixedI
+//! Fuzz test: Rikiddo is called with calculated fee
+//! -> create, force EmaMarketVolume, cost, price, all_prices
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;

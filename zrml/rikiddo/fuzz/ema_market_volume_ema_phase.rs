@@ -1,5 +1,6 @@
 #![no_main]
-//! Fuzz test: Conversion FixedU -> FixedI
+//! Fuzz test: EmaMarketVolume is called, update multiple times 
+//! -> create, set ema period 1 second, update multiple times, get ema, clear
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
