@@ -1,19 +1,12 @@
 #![no_main]
 //! Fuzz test: Conversion Balance -> FixedU
 
-use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use zrml_rikiddo::{
-    traits::Sigmoid,
-    types::{FeeSigmoid, FeeSigmoidConfig},
-};
+use substrate_fixed::{FixedU128, types::extra::U33};
+use zrml_rikiddo::traits::FromFixedDecimal;
 
-mod shared;
-use shared::fixed_from_u128;
-
-fuzz_target!(|data: Data| {
+fuzz_target!(|balance: u128| {
+    for i in 0..12u8 {
+        let _ = <FixedU128<U33>>::from_fixed_decimal(balance, i);
+    }
 });
-
-#[derive(Debug, Arbitrary)]
-struct Data {
-}

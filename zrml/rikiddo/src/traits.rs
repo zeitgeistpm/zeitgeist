@@ -1,7 +1,11 @@
+use core::convert::TryFrom;
 use crate::types::TimestampedVolume;
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
-use substrate_fixed::traits::{Fixed, FixedUnsigned};
+use substrate_fixed::{
+    traits::{Fixed, FixedUnsigned},
+    ParseFixedError,
+};
 
 pub trait Sigmoid {
     type FS: Fixed;
@@ -99,4 +103,30 @@ pub trait RikiddoSigmoidMVPallet {
         poolid: Self::PoolId,
         volume: Self::Balance,
     ) -> Result<Option<Self::Balance>, DispatchError>;
+}
+
+/// Converts a fixed point decimal number into another type
+pub trait FromFixedDecimal<N: Into<u128>>
+where
+    Self: Sized,
+{
+    fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError>;
+}
+
+/// Converts a fixed point decimal number into Fixed type (Balance -> Fixed)
+pub trait IntoFixedFromDecimal<F: Fixed> {
+    fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
+}
+
+/// Converts a Fixed type into fixed point decimal number
+pub trait FromFixedToDecimal<F>
+where
+    Self: Sized + TryFrom<u128>,
+{
+    fn from_fixed_to_fixed_decimal(fixed: F, places: u8) -> Result<Self, &'static str>;
+}
+
+/// Converts a fixed point decimal number into Fixed type
+pub trait IntoFixedDecimal<N: TryFrom<u128>> {
+    fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str>;
 }

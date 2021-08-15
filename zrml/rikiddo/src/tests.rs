@@ -7,9 +7,9 @@ use substrate_fixed::{
     FixedI8, FixedU128, FixedU8,
 };
 
-use crate::types::{
-    convert_to_signed, convert_to_unsigned, FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal,
-    IntoFixedFromDecimal,
+use crate::{
+    traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal},
+    types::{convert_to_signed, convert_to_unsigned},
 };
 
 mod ema_market_volume;

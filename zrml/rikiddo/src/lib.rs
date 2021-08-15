@@ -41,8 +41,8 @@ mod pallet {
     };
 
     use crate::{
-        traits::{Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
-        types::{FromFixedDecimal, FromFixedToDecimal, TimestampedVolume, UnixTimestamp},
+        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
+        types::{TimestampedVolume, UnixTimestamp},
     };
 
     #[pallet::config]

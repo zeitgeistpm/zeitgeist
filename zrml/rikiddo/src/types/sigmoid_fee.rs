@@ -1,18 +1,25 @@
-#[cfg(feature = "arbitrary")]
-use arbitrary::{Arbitrary, Unstructured, Result as ArbiraryResult};
+use super::convert_to_signed;
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
 };
-use frame_support::dispatch::{Decode, Encode};
-use sp_core::RuntimeDebug;
-use substrate_fixed::{FixedI128, FixedI32, FixedU32, traits::{FixedSigned, LossyFrom, LossyInto}, transcendental::sqrt, types::{I9F23, extra::{U127, U24, U32, Unsigned}}};
 #[cfg(feature = "arbitrary")]
-use substrate_fixed::FixedI64;
+use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 #[cfg(feature = "arbitrary")]
 use core::mem;
-
-use super::convert_to_signed;
+use frame_support::dispatch::{Decode, Encode};
+use sp_core::RuntimeDebug;
+use substrate_fixed::{
+    traits::{FixedSigned, LossyFrom, LossyInto},
+    transcendental::sqrt,
+    types::{
+        extra::{U127, U24, U32},
+        I9F23,
+    },
+    FixedI128, FixedI32, FixedU32,
+};
+#[cfg(feature = "arbitrary")]
+use substrate_fixed::{types::extra::Unsigned, FixedI64};
 
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned> {
@@ -116,7 +123,7 @@ where
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_different_fixed_types {
     ( $($t:ident, $p:ty),* ) => {
-    $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where 
+    $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where
         Frac: Unsigned,
         $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>> {
 
@@ -136,7 +143,7 @@ macro_rules! impl_arbitrary_for_different_fixed_types {
             let bytecount = mem::size_of::<$t<Frac>>();
             (bytecount*5, Some(bytecount*5))
         }
-        
+
     }) *
     }
 }
