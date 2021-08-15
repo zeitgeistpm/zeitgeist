@@ -12140,6 +12140,7 @@ dependencies = [
 name = "zrml-rikiddo"
 version = "0.1.2"
 dependencies = [
+ "arbitrary",
  "frame-support",
  "frame-system",
  "hashbrown 0.11.2",
