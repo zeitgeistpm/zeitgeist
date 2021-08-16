@@ -53,9 +53,9 @@ mod pallet {
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
     use sp_runtime::{
         traits::{AccountIdConversion, Saturating, Zero},
-        TransactionOutcome,
+        SaturatedConversion, TransactionOutcome,
     };
-    use zeitgeist_primitives::traits::MarketId;
+    use zeitgeist_primitives::{traits::MarketId, types::MaxUsize};
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -83,12 +83,22 @@ mod pallet {
     }
 
     #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {}
+        T: Config,
+    {
+        /// The number of markets that received incentives in a block
+        AddedIncentives(MaxUsize),
+        /// The number of markets that subtracted incentives in a block
+        SubtractedIncentives(MaxUsize),
+    }
 
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        /// Pallet account does not have enough funds
+        FundAccountDoesNotEnoughBalance,
+    }
 
     #[cfg(feature = "std")]
     #[pallet::genesis_build]
@@ -123,11 +133,13 @@ mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        /// Manages incentives on each block finalization.
+        // Manages incentives on each block finalization.
         fn on_finalize(block: T::BlockNumber) {
             let fun = || {
-                TrackIncentivesBasedOnBoughtShares::<T>::exec(block)?;
-                TrackIncentivesBasedOnSoldShares::<T>::exec();
+                let added_len = TrackIncentivesBasedOnBoughtShares::<T>::exec(block)?;
+                Self::deposit_event(Event::AddedIncentives(added_len.saturated_into()));
+                let subtracted_len = TrackIncentivesBasedOnSoldShares::<T>::exec();
+                Self::deposit_event(Event::SubtractedIncentives(subtracted_len.saturated_into()));
                 Some(())
             };
             with_transaction(|| match fun() {
@@ -206,17 +218,14 @@ mod pallet {
                 )
                 .collect();
 
-            let fund_does_not_have_enough_balance = T::Currency::ensure_can_withdraw(
+            T::Currency::ensure_can_withdraw(
                 &pallet_account_id,
                 final_total_incentives,
                 WithdrawReasons::all(),
                 T::Currency::free_balance(&pallet_account_id)
                     .saturating_sub(final_total_incentives),
             )
-            .is_err();
-            if fund_does_not_have_enough_balance {
-                return Ok(());
-            }
+            .map_err(|_err| Error::<T>::FundAccountDoesNotEnoughBalance)?;
 
             for (account_id, incentives) in values {
                 T::Currency::transfer(
@@ -224,7 +233,8 @@ mod pallet {
                     &account_id,
                     incentives,
                     ExistenceRequirement::AllowDeath,
-                )?;
+                )
+                .map_err(|_err| Error::<T>::FundAccountDoesNotEnoughBalance)?;
             }
             <Markets<T>>::remove(&market_id);
             Ok(())

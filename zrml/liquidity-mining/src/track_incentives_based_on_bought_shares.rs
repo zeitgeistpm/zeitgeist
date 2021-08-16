@@ -17,10 +17,11 @@ impl<T> TrackIncentivesBasedOnBoughtShares<T>
 where
     T: crate::Config,
 {
-    pub(crate) fn exec(curr_block: T::BlockNumber) -> Option<()> {
+    pub(crate) fn exec(curr_block: T::BlockNumber) -> Option<usize> {
         let per_block_incentives = <PerBlockIncentive<T>>::get();
         let ppb = BalanceOf::<T>::from(PERPETUAL_PTD);
         let market_incentives = Self::markets_incentives(per_block_incentives, curr_block)?;
+        let market_incentives_len = market_incentives.len();
 
         for (market_id, incentive) in market_incentives {
             let mut total_bought_shares = BalanceOf::<T>::from(0u8);
@@ -50,7 +51,7 @@ where
         }
 
         <BlockBoughtShares<T>>::remove_all(None);
-        Some(())
+        Some(market_incentives_len)
     }
 
     // ZTG value of one bought share for the current block being produced. Or in other words:
