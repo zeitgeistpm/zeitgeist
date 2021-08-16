@@ -35,8 +35,9 @@ macro_rules! impl_arbitrary_for_fee_sigmoid_config {
     ( $($t:ident, $p:ty),* ) => {
         $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoidConfig<$t<Frac>> where
             Frac: Unsigned,
-            $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>> {
-
+            $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>
+                + LossyFrom<FixedI128<U127>>
+        {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
                 Ok(FeeSigmoidConfig::<$t<Frac>> {
                     m: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
@@ -90,8 +91,9 @@ macro_rules! impl_arbitrary_for_fee_sigmoid {
     ( $($t:ident),* ) => {
         $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where
             Frac: Unsigned,
-            $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>> {
-
+            $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>
+                + LossyFrom<FixedI128<U127>>
+        {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
                 Ok(FeeSigmoid::new(<FeeSigmoidConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?))
             }

@@ -43,17 +43,15 @@ pub enum MultiHash {
 // Implementation for the fuzzer
 #[cfg(feature = "arbitrary")]
 impl<'a> Arbitrary<'a> for MultiHash {
-    fn arbitrary(_: &mut Unstructured<'a>) -> Result<Self> {
-        Ok(MultiHash::Sha3_384([0u8; 50]))
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        let mut rand_bytes = <[u8;50] as Arbitrary<'a>>::arbitrary(u)?;
+        rand_bytes[0] = 0x15;
+        rand_bytes[1] = 0x30;
+        Ok(MultiHash::Sha3_384(rand_bytes))
     }
 
-    fn arbitrary_take_rest(mut u: Unstructured<'a>) -> Result<Self> {
-        Self::arbitrary(&mut u)
-    }
-
-    fn size_hint(depth: usize) -> (usize, Option<usize>) {
-        let _ = depth;
-        (0, None)
+    fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+        (50, Some(50))
     }
 }
 

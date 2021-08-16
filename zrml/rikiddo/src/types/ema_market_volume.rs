@@ -1,13 +1,13 @@
 use super::{Timespan, TimestampedVolume, UnixTimestamp};
 #[cfg(feature = "arbitrary")]
-use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
-#[cfg(feature = "arbitrary")]
-use core::mem;
-#[cfg(feature = "arbitrary")]
 use crate::{
     constants::{EMA_SHORT, SMOOTHING},
     traits::MarketAverage,
 };
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+#[cfg(feature = "arbitrary")]
+use core::mem;
 use frame_support::dispatch::{Decode, Encode};
 use sp_core::RuntimeDebug;
 use substrate_fixed::{
@@ -17,7 +17,7 @@ use substrate_fixed::{
 };
 #[cfg(feature = "arbitrary")]
 use substrate_fixed::{
-    types::extra::Unsigned, FixedI16, FixedI32, FixedI64, FixedI128, FixedI8, FixedU16, FixedU64,
+    types::extra::Unsigned, FixedI128, FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU64,
     FixedU8,
 };
 
@@ -47,12 +47,14 @@ macro_rules! impl_arbitrary_for_ema_config {
             fn size_hint(depth: usize) -> (usize, Option<usize>) {
                 let (min, max) = <Timespan as Arbitrary<'a>>::size_hint(depth);
                 let fsc_size = <$p as Arbitrary<'a>>::size_hint(depth);
-                let max_accumulated = max.unwrap_or(0) * 2 + fsc_size.1.unwrap_or(0);
+                let max_accumulated = max.unwrap_or(min).saturating_mul(2)
+                    .saturating_add(fsc_size.1.unwrap_or(fsc_size.0));
+                let min_accumulated = min.saturating_mul(2).saturating_add(fsc_size.0);
 
-                if max_accumulated == 0 {
-                    (min * 2 + fsc_size.0, None)
+                if max_accumulated == usize::MAX {
+                    (min_accumulated, None)
                 } else {
-                    (min * 2 + fsc_size.0, Some(max_accumulated))
+                    (min_accumulated, Some(max_accumulated))
                 }
             }
         }) *
@@ -61,7 +63,7 @@ macro_rules! impl_arbitrary_for_ema_config {
 
 #[cfg(feature = "arbitrary")]
 impl_arbitrary_for_ema_config! {FixedI8, i8, FixedI16, i16, FixedI32, i32, FixedI64, i64,
-    FixedI128, i128, FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64, FixedU128, u128}
+FixedI128, i128, FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64, FixedU128, u128}
 
 impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaConfig<FU> {
     pub fn new(
@@ -110,7 +112,9 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
             $t<Frac>: FixedUnsigned {
 
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
-                Ok(EmaMarketVolume::<$t<Frac>>::new(<EmaConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?))
+                Ok(EmaMarketVolume::<$t<Frac>>::new(
+                    <EmaConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?)
+                )
             }
 
             #[inline]
@@ -124,11 +128,10 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
                 let start_time_size = <UnixTimestamp as Arbitrary<'a>>::size_hint(depth);
                 let volumes_per_period = (fixed_size, fixed_size);
 
-                let max_accumulated = max.unwrap_or(0) * 2 + ema_size.1 + multiplier_size.1 + last_time_size.1.unwrap_or(0)
-                    + state_size.1.unwrap_or(0) + start_time_size.1.unwrap_or(0) + volumes_per_period.1;
-                let min_accumulated = min + ema_size.0 + multiplier_size.0 + last_time_size.0 + state_size.0 + start_time_size.0 + volumes_per_period.0;
+                let max_accumulated = max.unwrap_or(0).saturating_mul(2).saturating_add(ema_size.1).saturating_add(multiplier_size.1).saturating_add(last_time_size.1.unwrap_or(0)).saturating_add(state_size.1.unwrap_or(0)).saturating_add(start_time_size.1.unwrap_or(0)).saturating_add(volumes_per_period.0);
+                let min_accumulated = min.saturating_add(ema_size.0).saturating_add(multiplier_size.0).saturating_add(last_time_size.0).saturating_add(state_size.0).saturating_add(start_time_size.0).saturating_add(volumes_per_period.0);
 
-                if max_accumulated == 0 {
+                if max_accumulated == usize::MAX {
                     (min_accumulated, None)
                 } else {
                     (min_accumulated, Some(max_accumulated))
@@ -140,7 +143,7 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
 
 #[cfg(feature = "arbitrary")]
 impl_arbitrary_for_ema_market_volume! {FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64,
-    FixedU128, u128}
+FixedU128, u128}
 
 impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
     pub fn new(config: EmaConfig<FU>) -> Self {
