@@ -2,7 +2,7 @@
 //! Fuzz test: Conversion Balance -> FixedU
 
 use libfuzzer_sys::fuzz_target;
-use substrate_fixed::{FixedU128, types::extra::U33};
+use substrate_fixed::{types::extra::U33, FixedU128};
 use zrml_rikiddo::traits::FromFixedDecimal;
 
 fuzz_target!(|balance: u128| {

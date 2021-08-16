@@ -1,11 +1,20 @@
 use core::{cmp::Ordering, convert::TryFrom};
 use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal};
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+#[cfg(feature = "arbitrary")]
+use core::mem;
 use frame_support::dispatch::{Decode, Encode};
 use sp_core::RuntimeDebug;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
     types::extra::{U127, U128},
     FixedI128, FixedU128, ParseFixedError,
+};
+#[cfg(feature = "arbitrary")]
+use substrate_fixed::{
+    types::extra::Unsigned, FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU32, FixedU64,
+    FixedU8,
 };
 
 mod ema_market_volume;
@@ -24,7 +33,37 @@ pub struct TimestampedVolume<F: Fixed> {
     pub volume: F,
 }
 
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_timestamped_volume {
+    ( $($t:ident, $p:ty),* ) => {
+        $( impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>> where
+            Frac: Unsigned,
+            $t<Frac>: Fixed
+        {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+                return Ok(TimestampedVolume {
+                    timestamp: <UnixTimestamp as Arbitrary<'a>>::arbitrary(u)?,
+                    volume: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?)
+                })
+            }
+
+            #[inline]
+            fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+                let bytecount_fixed = mem::size_of::<$t<Frac>>();
+                let bytecount_timestamp = mem::size_of::<UnixTimestamp>();
+                let required_bytes = bytecount_fixed + bytecount_timestamp;
+                (required_bytes, Some(required_bytes))
+            }
+        }) *
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl_arbitrary_for_timestamped_volume! {FixedI8, i8, FixedI16, i16, FixedI32, i32, FixedI64, i64,
+    FixedI128, i128, FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64, FixedU128, u128}
+
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Timespan {
     Seconds(u32),
     Minutes(u32),

@@ -30,6 +30,35 @@ pub struct FeeSigmoidConfig<FS: FixedSigned> {
     pub min_revenue: FS,
 }
 
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_fee_sigmoid_config {
+    ( $($t:ident, $p:ty),* ) => {
+        $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoidConfig<$t<Frac>> where
+            Frac: Unsigned,
+            $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>> {
+
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+                Ok(FeeSigmoidConfig::<$t<Frac>> {
+                    m: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                    p: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                    n: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                    initial_fee: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                    min_revenue: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?)
+                })
+            }
+
+            #[inline]
+            fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+                let bytecount = mem::size_of::<$t<Frac>>();
+                (bytecount*5, Some(bytecount*5))
+            }
+        }) *
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl_arbitrary_for_fee_sigmoid_config! {FixedI32, i32, FixedI64, i64, FixedI128, i128}
+
 impl<FS> Default for FeeSigmoidConfig<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
@@ -55,6 +84,28 @@ where
 {
     pub config: FeeSigmoidConfig<FS>,
 }
+
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_fee_sigmoid {
+    ( $($t:ident),* ) => {
+        $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where
+            Frac: Unsigned,
+            $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>> {
+
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+                Ok(FeeSigmoid::new(<FeeSigmoidConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?))
+            }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                <FeeSigmoidConfig<$t<Frac>> as Arbitrary<'a>>::size_hint(depth)
+            }
+        }) *
+    }
+}
+
+#[cfg(feature = "arbitrary")]
+impl_arbitrary_for_fee_sigmoid! {FixedI32, FixedI64, FixedI128}
 
 impl<FS> FeeSigmoid<FS>
 where
@@ -119,34 +170,3 @@ where
         Ok(result)
     }
 }
-
-#[cfg(feature = "arbitrary")]
-macro_rules! impl_arbitrary_for_different_fixed_types {
-    ( $($t:ident, $p:ty),* ) => {
-    $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where
-        Frac: Unsigned,
-        $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>> {
-
-        fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
-            let fsc = FeeSigmoidConfig::<$t<Frac>> {
-                m: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
-                p: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
-                n: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
-                initial_fee: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
-                min_revenue: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?)
-            };
-            Ok(FeeSigmoid::new(fsc))
-        }
-
-        #[inline]
-        fn size_hint(_depth: usize) -> (usize, Option<usize>) {
-            let bytecount = mem::size_of::<$t<Frac>>();
-            (bytecount*5, Some(bytecount*5))
-        }
-
-    }) *
-    }
-}
-
-#[cfg(feature = "arbitrary")]
-impl_arbitrary_for_different_fixed_types! {FixedI128, i128, FixedI64, i64, FixedI32, i32}
