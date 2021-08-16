@@ -16,9 +16,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves,
-        MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
-        SimpleDisputesPalletId, SwapsPalletId, BASE, BLOCK_HASH_COUNT,
+        BlockHashCount, ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
+        MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
+        SimpleDisputesPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -46,7 +46,6 @@ ord_parameter_types! {
 parameter_types! {
     pub const AdvisoryBond: Balance = 50;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const DisputeBond: Balance = 100;
     pub const DisputeFactor: Balance = 25;
     pub const DisputePeriod: BlockNumber = 10;
@@ -91,16 +90,19 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type SimpleDisputes = SimpleDisputes;
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
+    type MaxDisputes = MaxDisputes;
     type MinCategories = MinCategories;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
+    type SimpleDisputes = SimpleDisputes;
     type Slash = ();
     type Swaps = Swaps;
     type Timestamp = Timestamp;
@@ -186,13 +188,10 @@ impl zrml_market_commons::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
     type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;

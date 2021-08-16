@@ -1,6 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
 
+extern crate alloc;
+
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
@@ -15,6 +17,7 @@ mod xcmp_message;
 #[cfg(feature = "parachain")]
 pub use xcmp_message::XCMPMessage;
 
+use alloc::{boxed::Box, vec::Vec};
 use frame_support::{
     construct_runtime, parameter_types,
     weights::{
@@ -36,7 +39,6 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, Perbill, Percent,
 };
-use sp_std::{boxed::Box, vec::Vec};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -92,7 +94,6 @@ pub type SignedExtra = (
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 parameter_types! {
-  pub const BlockHashCount: BlockNumber = BLOCK_HASH_COUNT;
   pub const BondDuration: u32 = BLOCKS_PER_DAY as u32;
   pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
@@ -448,10 +449,13 @@ impl zrml_orderbook_v1::Config for Runtime {
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRoot<AccountId>;
+    type DisputeBond = DisputeBond;
+    type DisputeFactor = DisputeFactor;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type LiquidityMining = LiquidityMining;
     type MaxCategories = MaxCategories;
+    type MaxDisputes = MaxDisputes;
     type MinCategories = MinCategories;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
@@ -466,13 +470,10 @@ impl zrml_prediction_markets::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type DisputeBond = DisputeBond;
-    type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MaxDisputes = MaxDisputes;
     type OracleBond = OracleBond;
     type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;
@@ -735,12 +736,12 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
         let inherent_data =
             cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
                 relay_chain_slot,
-                sp_std::time::Duration::from_secs(6),
+                core::time::Duration::from_secs(6),
             )
             .create_inherent_data()
             .expect("Could not create the timestamp inherent data");
 
-        inherent_data.check_extrinsics(&block)
+        inherent_data.check_extrinsics(block)
     }
 }
 

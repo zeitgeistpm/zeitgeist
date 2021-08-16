@@ -65,7 +65,7 @@ where
     let total_issuance = T::Shares::total_issuance(pool_shares_id);
 
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
-    let asset_balance = T::Shares::free_balance(p.asset, &p.pool_account_id);
+    let asset_balance = T::Shares::free_balance(p.asset, p.pool_account_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;

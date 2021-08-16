@@ -9,7 +9,7 @@ use sp_runtime::{
     Perbill,
 };
 use zeitgeist_primitives::{
-    constants::{MaxLocks, MaxReserves, BLOCK_HASH_COUNT},
+    constants::{BlockHashCount, MaxLocks, MaxReserves},
     types::{
         AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
         UncheckedExtrinsicTest,
@@ -24,7 +24,6 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const ExistentialDeposit: Balance = 1;
     pub const SharesPalletId: PalletId = PalletId(*b"test/sha");
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
