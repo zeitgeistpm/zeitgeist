@@ -19,14 +19,13 @@ pub use pallet::*;
 use parity_scale_codec::{Decode, Encode};
 use sp_runtime::{
     traits::{CheckedMul, CheckedSub},
-    RuntimeDebug,
+    ArithmeticError, DispatchError, RuntimeDebug,
 };
 use zeitgeist_primitives::types::Asset;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
-#[cfg(test)]
-mod mock;
+pub mod mock;
 #[cfg(test)]
 mod tests;
 pub mod weights;
@@ -73,7 +72,8 @@ mod pallet {
 
                 match order_data.side {
                     OrderSide::Bid => {
-                        T::Currency::unreserve(&maker, order_data.cost());
+                        let cost = order_data.cost()?;
+                        T::Currency::unreserve(&maker, cost);
                         let mut bids = Self::bids(asset);
                         remove_item::<T::Hash>(&mut bids, order_hash);
                         <Bids<T>>::insert(asset, bids);
@@ -109,7 +109,8 @@ mod pallet {
             if let Some(order_data) = Self::order_data(order_hash) {
                 ensure!(order_data.taker.is_none(), Error::<T>::OrderAlreadyTaken);
 
-                let cost = order_data.cost();
+                let cost = order_data.cost()?;
+
                 let maker = order_data.maker;
 
                 match order_data.side {
@@ -191,7 +192,7 @@ mod pallet {
                 filled: Zero::zero(),
             };
 
-            let cost = order.cost();
+            let cost = order.cost()?;
 
             match side {
                 OrderSide::Bid => {
@@ -334,7 +335,13 @@ pub struct Order<AccountId, Balance, MarketId> {
 }
 
 impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId> {
-    pub fn cost(&self) -> Balance {
-        self.total.checked_sub(&self.filled).unwrap().checked_mul(&self.price).unwrap()
+    pub fn cost(&self) -> Result<Balance, DispatchError> {
+        match self.total.checked_sub(&self.filled) {
+            Some(subtotal) => match subtotal.checked_mul(&self.price) {
+                Some(cost) => Ok(cost),
+                _ => Err(DispatchError::Arithmetic(ArithmeticError::Overflow)),
+            },
+            _ => Err(DispatchError::Arithmetic(ArithmeticError::Overflow)),
+        }
     }
 }

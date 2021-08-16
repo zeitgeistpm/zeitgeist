@@ -1,0 +1,22 @@
+[[bin]]
+doc = false
+name = "orderbook_v1_full_workflow"
+path = "orderbook_v1_full_workflow.rs"
+test = false
+
+[dependencies]
+arbitrary = { features = ["derive"], version = "1.0" }
+frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+libfuzzer-sys = "0.4"
+zrml-orderbook-v1 = { features = ["mock"], path = ".." }
+zeitgeist-primitives = { path = "../../../primitives" }
+
+[package]
+authors = ["Automatically generated"]
+edition = "2018"
+name = "zrml-orderbook-v1-fuzz"
+publish = false
+version = "0.0.0"
+
+[package.metadata]
+cargo-fuzz = true

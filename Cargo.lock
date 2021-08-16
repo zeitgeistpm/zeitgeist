@@ -12071,6 +12071,18 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
+ "zrml-orderbook-v1",
+]
+
+[[package]]
+name = "zrml-orderbook-v1-fuzz"
+version = "0.0.0"
+dependencies = [
+ "arbitrary",
+ "frame-system",
+ "libfuzzer-sys",
+ "zeitgeist-primitives",
+ "zrml-orderbook-v1",
 ]
 
 [[package]]
