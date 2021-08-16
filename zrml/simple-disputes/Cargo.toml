@@ -2,21 +2,12 @@
 frame-benchmarking = { branch = "polkadot-v0.9.8", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
 frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-traits = { branch = "0.9.8", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-traits = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
-
-[dev-dependencies]
-orml-currencies = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-tokens = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-traits = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-zrml-swaps = { path = "../swaps" }
 
 [features]
 default = ["std"]

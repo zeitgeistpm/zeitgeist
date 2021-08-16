@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use frame_support::dispatch::DispatchError;
+use frame_support::dispatch::{DispatchError, DispatchResult};
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{Market, MarketDispute, ResolutionCounters},
@@ -31,19 +31,11 @@ pub trait SimpleDisputesPalletApi: DisputeApi {
     ) -> Result<Vec<Self::MarketId>, DispatchError>;
 
     /// Mutates a given set of reported market ids
-    fn mutate_market_ids_per_report_block<F>(
-        block: &Self::BlockNumber,
-        cb: F,
-    ) -> Result<(), DispatchError>
+    fn mutate_market_ids_per_report_block<F>(block: &Self::BlockNumber, cb: F) -> DispatchResult
     where
         F: FnOnce(&mut Vec<Self::MarketId>);
 
     // Misc
-
-    /// The number of stored disputes
-    fn disputes(
-        market_id: &Self::MarketId,
-    ) -> Result<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>, DispatchError>;
 
     /// The stored disputing period
     fn dispute_period() -> Self::BlockNumber;
@@ -54,22 +46,12 @@ pub trait SimpleDisputesPalletApi: DisputeApi {
     /// NOTE: This function does not perform any checks on the market that is being given.
     /// In the function calling this you should that the market is already in a reported or
     /// disputed state.
-    fn internal_resolve(
+    fn internal_resolve<D>(
+        dispute_bound: &D,
+        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber>,
-    ) -> Result<ResolutionCounters, DispatchError>;
-
-    /// The stored maximum number of disputes
-    fn max_disputes() -> u32;
-
-    // Migrations (Temporary)
-
-    fn dispute(
-        market_id: &Self::MarketId,
-    ) -> Option<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>>;
-
-    fn insert_dispute(
-        market_id: Self::MarketId,
-        dispute: Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>,
-    );
+    ) -> Result<ResolutionCounters, DispatchError>
+    where
+        D: Fn(usize) -> Self::Balance;
 }

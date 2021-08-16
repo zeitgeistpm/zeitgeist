@@ -2,11 +2,10 @@
 frame-benchmarking = { branch = "polkadot-v0.9.8", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
 frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-traits = { branch = "0.9.8", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-traits = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-arithmetic = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-std = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
@@ -14,8 +13,8 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 # Mock
 
-orml-currencies = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-tokens = { branch = "0.9.8", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-currencies = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-tokens = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
@@ -51,7 +50,6 @@ std = [
     'parity-scale-codec/std',
     'sp-arithmetic/std',
     'sp-runtime/std',
-    'sp-std/std',
     'zeitgeist-primitives/std',
     'zrml-liquidity-mining/std',
     'zrml-market-commons/std',

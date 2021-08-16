@@ -6,9 +6,7 @@
 
 extern crate alloc;
 
-mod mock;
 mod simple_disputes_pallet_api;
-mod tests;
 
 pub use pallet::*;
 pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
@@ -20,13 +18,11 @@ mod pallet {
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::DispatchResult,
-        ensure,
         pallet_prelude::StorageMap,
         traits::{Currency, Get, Hooks, Imbalance, IsType, ReservableCurrency},
         Blake2_128Concat, PalletId,
     };
-    use frame_system::ensure_signed;
-    use sp_runtime::{DispatchError, SaturatedConversion};
+    use sp_runtime::{traits::Saturating, DispatchError, SaturatedConversion};
     use zeitgeist_primitives::{
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
@@ -51,13 +47,6 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The base amount of currency that must be bonded in order to create a dispute.
-        type DisputeBond: Get<BalanceOf<Self>>;
-
-        /// The additional amount of currency that must be bonded when creating a subsequent
-        ///  dispute.
-        type DisputeFactor: Get<BalanceOf<Self>>;
-
         /// The number of blocks the dispute period remains open.
         type DisputePeriod: Get<Self::BlockNumber>;
 
@@ -77,9 +66,6 @@ mod pallet {
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
         >;
-
-        /// The maximum number of disputes allowed on any single market.
-        type MaxDisputes: Get<u32>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports
         ///  in a timely manner.
@@ -107,34 +93,14 @@ mod pallet {
     pub enum Error<T> {
         /// Block does not exists
         BlockDoesNotExist,
-        /// Someone is trying to call `dispute` with the same outcome that is currently
-        /// registered on-chain.
-        CannotDisputeSameOutcome,
-        /// A market with the provided ID does not exist.
-        MarketDoesNotExist,
-        /// The market is not reported on.
-        MarketNotReported,
-        /// The maximum number of disputes has been reached.
-        MaxDisputesReached,
         /// Market does not have a report
         NoReport,
-        /// Submitted outcome does not match market type
-        OutcomeMismatch,
-        /// The outcome being reported is out of range.
-        OutcomeOutOfRange,
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config,
-    {
-        /// A market has been disputed [market_id, new_outcome]
-        MarketDisputed(MarketIdOf<T>, OutcomeReport),
-        /// A complete set of shares has been sold [market_id, seller]
-        SoldCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
-    }
+        T: Config, {}
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
@@ -159,10 +125,7 @@ mod pallet {
                 .map_err(|_err| Error::<T>::BlockDoesNotExist.into())
         }
 
-        fn mutate_market_ids_per_report_block<F>(
-            block: &Self::BlockNumber,
-            cb: F,
-        ) -> Result<(), DispatchError>
+        fn mutate_market_ids_per_report_block<F>(block: &Self::BlockNumber, cb: F) -> DispatchResult
         where
             F: FnOnce(&mut Vec<Self::MarketId>),
         {
@@ -193,24 +156,19 @@ mod pallet {
 
         // Misc
 
-        fn disputes(
-            market_id: &Self::MarketId,
-        ) -> Result<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>, DispatchError> {
-            Disputes::<T>::get(market_id).ok_or_else(|| Error::<T>::MarketDoesNotExist.into())
-        }
-
         fn dispute_period() -> Self::BlockNumber {
             T::DisputePeriod::get()
         }
 
-        fn max_disputes() -> u32 {
-            T::MaxDisputes::get()
-        }
-
-        fn internal_resolve(
+        fn internal_resolve<D>(
+            dispute_bound: &D,
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber>,
-        ) -> Result<ResolutionCounters, DispatchError> {
+        ) -> Result<ResolutionCounters, DispatchError>
+        where
+            D: Fn(usize) -> Self::Balance,
+        {
             let report = market.report.clone().ok_or(Error::<T>::NoReport)?;
             let mut total_accounts = 0u32;
             let mut total_asset_accounts = 0u32;
@@ -233,7 +191,6 @@ mod pallet {
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => report.clone().outcome,
                 MarketStatus::Disputed => {
-                    let disputes = <Disputes<T>>::get(market_id).unwrap_or_default();
                     let num_disputes = disputes.len() as u32;
                     // count the last dispute's outcome as the winning one
                     let last_dispute = disputes[(num_disputes as usize) - 1].clone();
@@ -256,7 +213,6 @@ mod pallet {
                     }
                 }
                 MarketStatus::Disputed => {
-                    let disputes = <Disputes<T>>::get(market_id).unwrap_or_default();
                     total_disputes = disputes.len() as _;
 
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
@@ -275,15 +231,14 @@ mod pallet {
                     }
 
                     for (i, dispute) in disputes.iter().enumerate() {
-                        let dispute_bond =
-                            T::DisputeBond::get() + T::DisputeFactor::get() * (i as u32).into();
+                        let actual_dispute_bond = dispute_bound(i);
                         if dispute.outcome == resolved_outcome {
-                            CurrencyOf::<T>::unreserve(&dispute.by, dispute_bond);
+                            CurrencyOf::<T>::unreserve(&dispute.by, actual_dispute_bond);
 
                             correct_reporters.push(dispute.by.clone());
                         } else {
                             let (imbalance, _) =
-                                CurrencyOf::<T>::slash_reserved(&dispute.by, dispute_bond);
+                                CurrencyOf::<T>::slash_reserved(&dispute.by, actual_dispute_bond);
                             overall_imbalance.subsume(imbalance);
                         }
                     }
@@ -300,17 +255,17 @@ mod pallet {
                 _ => (),
             };
 
-            Self::set_pool_to_stale(&market, market_id, &resolved_outcome)?;
+            Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
             T::LiquidityMining::distribute_market_incentives(market_id)?;
             if let Ok([local_total_accounts, local_total_asset_accounts, local_total_categories]) =
-                Self::manage_resolved_categorical_market(&market, market_id, &resolved_outcome)
+                Self::manage_resolved_categorical_market(market, market_id, &resolved_outcome)
             {
                 total_accounts = local_total_accounts.saturated_into();
                 total_asset_accounts = local_total_asset_accounts.saturated_into();
                 total_categories = local_total_categories.saturated_into();
             }
 
-            T::MarketCommons::mutate_market(&market_id, |m| {
+            T::MarketCommons::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome);
                 Ok(())
@@ -323,21 +278,6 @@ mod pallet {
                 total_disputes,
             })
         }
-
-        // Migrations (Temporary)
-
-        fn dispute(
-            market_id: &Self::MarketId,
-        ) -> Option<Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>> {
-            Disputes::<T>::get(market_id)
-        }
-
-        fn insert_dispute(
-            market_id: Self::MarketId,
-            dispute: Vec<MarketDispute<Self::AccountId, Self::BlockNumber>>,
-        ) {
-            Disputes::<T>::insert(market_id, dispute);
-        }
     }
 
     impl<T> DisputeApi for Pallet<T>
@@ -345,59 +285,27 @@ mod pallet {
         T: Config,
     {
         type AccountId = T::AccountId;
+        type Balance = BalanceOf<T>;
         type BlockNumber = T::BlockNumber;
         type Origin = T::Origin;
         type MarketId = MarketIdOf<T>;
 
-        fn on_dispute(
-            origin: Self::Origin,
+        fn on_dispute<D>(
+            dispute_bond: D,
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: Self::MarketId,
-            outcome: OutcomeReport,
-        ) -> Result<[u32; 2], DispatchError> {
-            let sender = ensure_signed(origin)?;
-
-            let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
-
-            if let OutcomeReport::Categorical(inner) = outcome {
-                if let MarketType::Categorical(categories) = market.market_type {
-                    ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
-            }
-            if let OutcomeReport::Scalar(inner) = outcome {
-                if let MarketType::Scalar(outcome_range) = market.market_type {
-                    ensure!(
-                        inner >= outcome_range.0 && inner <= outcome_range.1,
-                        Error::<T>::OutcomeOutOfRange
-                    );
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
-            }
-
-            let disputes = <Disputes<T>>::get(market_id).unwrap_or_default();
-            let num_disputes = disputes.len() as u32;
-            let max_disputes = T::MaxDisputes::get();
-            ensure!(num_disputes < max_disputes, Error::<T>::MaxDisputesReached);
-
-            if num_disputes > 0 {
-                ensure!(
-                    disputes[(num_disputes as usize) - 1].outcome != outcome,
-                    Error::<T>::CannotDisputeSameOutcome
-                );
-            }
-
-            let dispute_bond =
-                T::DisputeBond::get() + T::DisputeFactor::get() * num_disputes.into();
-            CurrencyOf::<T>::reserve(&sender, dispute_bond)?;
+            who: T::AccountId,
+        ) -> DispatchResult
+        where
+            D: Fn(usize) -> Self::Balance,
+        {
+            let actual_dispute_bond = dispute_bond(disputes.len());
+            CurrencyOf::<T>::reserve(&who, actual_dispute_bond)?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
 
-            if num_disputes > 0 {
-                let prev_dispute = disputes[(num_disputes as usize) - 1].clone();
-                let at = prev_dispute.at;
+            if let Some(last_dispute) = disputes.last() {
+                let at = last_dispute.at;
                 let mut old_disputes_per_block =
                     Self::market_ids_per_dispute_block(&at).unwrap_or_default();
                 Self::remove_item::<MarketIdOf<T>>(&mut old_disputes_per_block, market_id);
@@ -416,64 +324,37 @@ mod pallet {
                 <MarketIdsPerDisputeBlock<T>>::insert(current_block, vec![market_id]);
             }
 
-            let does_not_exist = <Disputes<T>>::mutate(market_id, |disputes_opt| {
-                if let Some(disputes) = disputes_opt {
-                    disputes.push(MarketDispute {
-                        at: current_block,
-                        by: sender.clone(),
-                        outcome: outcome.clone(),
-                    });
-                    false
-                } else {
-                    true
-                }
-            });
-            if does_not_exist {
-                <Disputes<T>>::insert(
-                    market_id,
-                    vec![MarketDispute { at: current_block, by: sender, outcome: outcome.clone() }],
-                );
-            }
-
-            // if not already in dispute
-            if market.status != MarketStatus::Disputed {
-                T::MarketCommons::mutate_market(&market_id, |m| {
-                    m.status = MarketStatus::Disputed;
-                    Ok(())
-                })?;
-            }
-
-            Self::deposit_event(Event::MarketDisputed(market_id, outcome));
-            Ok([num_disputes as u32, max_disputes as u32])
+            Ok(())
         }
 
         fn on_resolution<F>(now: Self::BlockNumber, mut cb: F) -> DispatchResult
         where
-            F: FnMut(&Market<Self::AccountId, Self::BlockNumber>, ResolutionCounters),
+            F: FnMut(
+                &Self::MarketId,
+                &Market<Self::AccountId, Self::BlockNumber>,
+            ) -> DispatchResult,
         {
             let dispute_period = T::DisputePeriod::get();
             if now <= dispute_period {
                 return Ok(());
             }
 
+            let block = now.saturating_sub(dispute_period);
+
             // Resolve all regularly reported markets.
-            let report_block = now - dispute_period;
-            let market_ids = Self::market_ids_per_report_block(&report_block).unwrap_or_default();
-            for id in &market_ids {
+            let reported_ids = Self::market_ids_per_report_block(&block).unwrap_or_default();
+            for id in &reported_ids {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
-                    let rc = Self::internal_resolve(id, &market)?;
-                    cb(&market, rc);
+                    cb(id, &market)?;
                 }
             }
 
             // Resolve any disputed markets.
-            let dispute_block = now - dispute_period;
-            let disputed = Self::market_ids_per_dispute_block(&dispute_block).unwrap_or_default();
-            for id in &disputed {
+            let disputed_ids = Self::market_ids_per_dispute_block(&block).unwrap_or_default();
+            for id in &disputed_ids {
                 let market = T::MarketCommons::market(id)?;
-                let rc = Self::internal_resolve(id, &market)?;
-                cb(&market, rc);
+                cb(id, &market)?;
             }
 
             Ok(())
@@ -482,16 +363,6 @@ mod pallet {
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
-
-    /// For each market, this holds the dispute information for each dispute that's
-    /// been issued.
-    #[pallet::storage]
-    pub type Disputes<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        Vec<MarketDispute<T::AccountId, T::BlockNumber>>,
-    >;
 
     /// A mapping of market identifiers to the block they were disputed at.
     /// A market only ends up here if it was disputed.

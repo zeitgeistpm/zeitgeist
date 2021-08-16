@@ -7,7 +7,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{MaxReserves, BASE, BLOCK_HASH_COUNT},
+    constants::{BlockHashCount, CourtCaseDuration, MaxReserves, StakeWeight, BASE},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId,
         UncheckedExtrinsicTest,
@@ -21,9 +21,7 @@ type Block = BlockTest<Runtime>;
 type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
-    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
-    pub const StakeWeight: u128 = 2 * BASE;
 }
 
 construct_runtime!(
@@ -36,14 +34,17 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
     }
 );
 
 impl crate::Config for Runtime {
+    type CourtCaseDuration = CourtCaseDuration;
     type Event = ();
-    type StakeWeight = StakeWeight;
     type MarketCommons = MarketCommons;
+    type Random = RandomnessCollectiveFlip;
+    type StakeWeight = StakeWeight;
 }
 
 impl frame_system::Config for Runtime {
@@ -83,6 +84,8 @@ impl pallet_balances::Config for Runtime {
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
+
+impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
