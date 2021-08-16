@@ -8,13 +8,21 @@ parity-scale-codec = { default-features = false, features = ["derive"], version 
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
+# Mock
+orml-tokens = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+
 [dev-dependencies]
-orml-tokens = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
+zrml-orderbook-v1 = { features = ["mock"], path = "." }
 
 [features]
 default = ["std"]
+mock = [
+    "orml-tokens",
+    "pallet-balances",
+    "sp-io",
+]
 runtime-benchmarks = [
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
