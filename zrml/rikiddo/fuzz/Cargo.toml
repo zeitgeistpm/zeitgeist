@@ -6,14 +6,26 @@ test = false
 
 [[bin]]
 doc = false
-name = "ema_market_volume_ema_phase"
-path = "ema_market_volume_ema_phase.rs"
+name = "ema_market_volume_first_state"
+path = "ema_market_volume_first_state.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "ema_market_volume_sma_phase"
-path = "ema_market_volume_sma_phase.rs"
+name = "ema_market_volume_second_state"
+path = "ema_market_volume_second_state.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "ema_market_volume_third_state"
+path = "ema_market_volume_third_state.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "ema_market_volume_estimate_ema"
+path = "ema_market_volume_estimate_ema.rs"
 test = false
 
 [[bin]]

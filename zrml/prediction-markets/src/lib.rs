@@ -360,7 +360,7 @@ mod pallet {
             // Require sha3-384 as multihash.
             let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
-
+            
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();

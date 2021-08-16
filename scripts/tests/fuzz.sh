@@ -13,6 +13,10 @@ FIXEDI_TO_FIXEDU_FACT=100000
 FIXEDU_TO_FIXEDI_FACT=100000
 BALANCE_TO_FIXEDU_FACT=8000
 FIXEDU_TO_BALANCE_FACT=4000
+EMA_MARKET_VOLUME_FIRST_STATE=5000
+EMA_MARKET_VOLUME_SECOND_STATE=7000
+EMA_MARKET_VOLUME_THIRD_STATE=7000
+EMA_MARKET_VOLUME_ESTIMATE_EMA=7000
 
 # --- Prediction Market Pallet fuzz tests ---
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/prediction-markets/fuzz pm_full_workflow -- -runs=$RUNS
@@ -31,3 +35,7 @@ RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedi_to
 RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedu_to_fixedi_conversion -- -runs=$(($(($RUNS * $FIXEDU_TO_FIXEDI_FACT)) / $BASE))
 RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz balance_to_fixedu_conversion -- -runs=$(($(($RUNS * $BALANCE_TO_FIXEDU_FACT)) / $BASE))
 RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz fixedu_to_balance_conversion -- -runs=$(($(($RUNS * $FIXEDU_TO_BALANCE_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_first_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_FIRST_STATE)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_second_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_SECOND_STATE)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_third_state -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_THIRD_STATE)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_estimate_ema -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_ESTIMATE_EMA)) / $BASE))

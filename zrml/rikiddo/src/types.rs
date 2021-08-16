@@ -60,7 +60,7 @@ macro_rules! impl_arbitrary_for_timestamped_volume {
 
 #[cfg(feature = "arbitrary")]
 impl_arbitrary_for_timestamped_volume! {FixedI8, i8, FixedI16, i16, FixedI32, i32, FixedI64, i64,
-    FixedI128, i128, FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64, FixedU128, u128}
+FixedI128, i128, FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64, FixedU128, u128}
 
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
@@ -131,7 +131,6 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
     // We can safely cast because until here we know that the msb is not set.
     let integer_part: TO = convert_common(num)?;
     let fractional_part: FixedU128<U128> = num.frac().to_fixed();
-
     if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
         Ok(res)
     } else {

@@ -1,21 +1,22 @@
 #![no_main]
-//! Fuzz test: EmaMarketVolume is called with estimation mode activated
-//! -> Configure the struct in a way that it estimates the ema at the second update, update
+//! Fuzz test: EmaMarketVolume is called during third and last state.
+//! -> change state (two updates with specific configuration), update
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
+use substrate_fixed::{traits::LossyInto, types::extra::{U33, U127}, FixedU128};
+use zrml_rikiddo::{traits::MarketAverage, types::{EmaMarketVolume, Timespan, TimestampedVolume}};
 
 mod shared;
 use shared::fixed_from_u128;
-use substrate_fixed::{FixedU128, traits::LossyInto, types::extra::{U33, U127}};
-use zrml_rikiddo::{traits::MarketAverage, types::{EmaMarketVolume, Timespan, TimestampedVolume}};
 
 fuzz_target!(|data: Data| {
     let mut emv = data.ema_market_volume;
     // We need smoothing-1 volumes to get into the third state
     let between_zero_and_two = <FixedU128<U127>>::from_ne_bytes(data.smoothing.to_ne_bytes());
     emv.config.smoothing = between_zero_and_two.lossy_into();
-    emv.config.ema_period_estimate_after = Some(Timespan::Seconds(0));
+    emv.config.ema_period = Timespan::Seconds(0);
+    emv.config.ema_period_estimate_after = None;
     let first_timestamped_volume = TimestampedVolume {
         timestamp: 0,
         volume: fixed_from_u128(data.first_update_volume)
