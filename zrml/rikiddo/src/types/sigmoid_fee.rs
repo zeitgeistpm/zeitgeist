@@ -19,7 +19,7 @@ use substrate_fixed::{
     FixedI128, FixedI32, FixedU32,
 };
 #[cfg(feature = "arbitrary")]
-use substrate_fixed::{types::extra::Unsigned, FixedI64};
+use substrate_fixed::{types::extra::{LeEqU32, LeEqU64, LeEqU128}, FixedI64};
 
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned> {
@@ -32,9 +32,9 @@ pub struct FeeSigmoidConfig<FS: FixedSigned> {
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_fee_sigmoid_config {
-    ( $($t:ident, $p:ty),* ) => {
-        $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoidConfig<$t<Frac>> where
-            Frac: Unsigned,
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {  
+        impl<'a, Frac> Arbitrary<'a> for FeeSigmoidConfig<$t<Frac>> where
+            Frac: $LeEqU,
             $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>
                 + LossyFrom<FixedI128<U127>>
         {
@@ -53,12 +53,17 @@ macro_rules! impl_arbitrary_for_fee_sigmoid_config {
                 let bytecount = mem::size_of::<$t<Frac>>();
                 (bytecount*5, Some(bytecount*5))
             }
-        }) *
+        }
     }
 }
 
-#[cfg(feature = "arbitrary")]
-impl_arbitrary_for_fee_sigmoid_config! {FixedI32, i32, FixedI64, i64, FixedI128, i128}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_fee_sigmoid_config! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_fee_sigmoid_config! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_fee_sigmoid_config! {FixedI128, LeEqU128, i128}
+    }
+}
 
 impl<FS> Default for FeeSigmoidConfig<FS>
 where
@@ -88,9 +93,9 @@ where
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_fee_sigmoid {
-    ( $($t:ident),* ) => {
-        $( impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where
-            Frac: Unsigned,
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {  
+        impl<'a, Frac> Arbitrary<'a> for FeeSigmoid<$t<Frac>> where
+            Frac: $LeEqU,
             $t<Frac>: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23>
                 + LossyFrom<FixedI128<U127>>
         {
@@ -102,12 +107,18 @@ macro_rules! impl_arbitrary_for_fee_sigmoid {
             fn size_hint(depth: usize) -> (usize, Option<usize>) {
                 <FeeSigmoidConfig<$t<Frac>> as Arbitrary<'a>>::size_hint(depth)
             }
-        }) *
+        }
     }
 }
 
 #[cfg(feature = "arbitrary")]
-impl_arbitrary_for_fee_sigmoid! {FixedI32, FixedI64, FixedI128}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_fee_sigmoid! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_fee_sigmoid! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_fee_sigmoid! {FixedI128, LeEqU128, i128}
+    }
+}
 
 impl<FS> FeeSigmoid<FS>
 where

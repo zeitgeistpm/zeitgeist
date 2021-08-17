@@ -1,5 +1,6 @@
 [dependencies]
 arbitrary = { version = "1.0.1", optional = true }
+cfg-if = { version = "1.0.0", default-features = false }
 frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
@@ -26,6 +27,7 @@ std = [
     "frame-support/std",
     "frame-system/std",
     "parity-scale-codec/std",
+    "sp-core/std",
     "sp-runtime/std",
     "substrate-fixed/std",
     "zeitgeist-primitives/std",

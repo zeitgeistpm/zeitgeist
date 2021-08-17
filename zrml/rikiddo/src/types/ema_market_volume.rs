@@ -17,7 +17,8 @@ use substrate_fixed::{
 };
 #[cfg(feature = "arbitrary")]
 use substrate_fixed::{
-    types::extra::Unsigned, FixedI128, FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU64,
+    types::extra::{LeEqU128, LeEqU16, LeEqU32, LeEqU64, LeEqU8},
+    FixedI16, FixedI32, FixedI64, FixedI128, FixedI8, FixedU16, FixedU64,
     FixedU8,
 };
 
@@ -30,9 +31,9 @@ pub struct EmaConfig<FI: Fixed> {
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_ema_config {
-    ( $($t:ident, $p:ty),* ) => {
-        $( impl<'a, Frac> Arbitrary<'a> for EmaConfig<$t<Frac>> where
-            Frac: Unsigned,
+    ( $t:ident, $LeEqU:ident, $p:ty ) => { 
+        impl<'a, Frac> Arbitrary<'a> for EmaConfig<$t<Frac>> where
+            Frac: $LeEqU,
             $t<Frac>: Fixed {
 
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
@@ -57,13 +58,24 @@ macro_rules! impl_arbitrary_for_ema_config {
                     (min_accumulated, Some(max_accumulated))
                 }
             }
-        }) *
+        }
     }
 }
 
-#[cfg(feature = "arbitrary")]
-impl_arbitrary_for_ema_config! {FixedI8, i8, FixedI16, i16, FixedI32, i32, FixedI64, i64,
-FixedI128, i128, FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64, FixedU128, u128}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_ema_config! {FixedI8, LeEqU8, i8}
+        impl_arbitrary_for_ema_config! {FixedI16, LeEqU16, i16}
+        impl_arbitrary_for_ema_config! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_ema_config! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_ema_config! {FixedI128, LeEqU128, i128}
+        impl_arbitrary_for_ema_config! {FixedU8, LeEqU8, u8}
+        impl_arbitrary_for_ema_config! {FixedU16, LeEqU16, u16}
+        impl_arbitrary_for_ema_config! {FixedU32, LeEqU32, u32}
+        impl_arbitrary_for_ema_config! {FixedU64, LeEqU64, u64}
+        impl_arbitrary_for_ema_config! {FixedU128, LeEqU128, u128}
+    }
+}
 
 impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaConfig<FU> {
     pub fn new(
@@ -106,9 +118,9 @@ pub struct EmaMarketVolume<FU: FixedUnsigned> {
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_ema_market_volume {
-    ( $($t:ident, $p:ty),* ) => {
-        $( impl<'a, Frac> Arbitrary<'a> for EmaMarketVolume<$t<Frac>> where
-            Frac: Unsigned,
+    ( $t:ident, $LeEqU:ident, $p:ty ) => { 
+        impl<'a, Frac> Arbitrary<'a> for EmaMarketVolume<$t<Frac>> where
+            Frac: $LeEqU,
             $t<Frac>: FixedUnsigned {
 
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
@@ -137,13 +149,24 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
                     (min_accumulated, Some(max_accumulated))
                 }
             }
-        }) *
+        }
     }
 }
 
-#[cfg(feature = "arbitrary")]
-impl_arbitrary_for_ema_market_volume! {FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64,
-FixedU128, u128}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_ema_market_volume! {FixedI8, LeEqU8, i8}
+        impl_arbitrary_for_ema_market_volume! {FixedI16, LeEqU16, i16}
+        impl_arbitrary_for_ema_market_volume! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_ema_market_volume! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_ema_market_volume! {FixedI128, LeEqU128, i128}
+        impl_arbitrary_for_ema_market_volume! {FixedU8, LeEqU8, u8}
+        impl_arbitrary_for_ema_market_volume! {FixedU16, LeEqU16, u16}
+        impl_arbitrary_for_ema_market_volume! {FixedU32, LeEqU32, u32}
+        impl_arbitrary_for_ema_market_volume! {FixedU64, LeEqU64, u64}
+        impl_arbitrary_for_ema_market_volume! {FixedU128, LeEqU128, u128}
+    }
+}
 
 impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
     pub fn new(config: EmaConfig<FU>) -> Self {

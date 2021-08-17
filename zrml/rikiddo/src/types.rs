@@ -13,7 +13,8 @@ use substrate_fixed::{
 };
 #[cfg(feature = "arbitrary")]
 use substrate_fixed::{
-    types::extra::Unsigned, FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU32, FixedU64,
+    types::extra::{LeEqU128, LeEqU16, LeEqU32, LeEqU64, LeEqU8},
+    FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU32, FixedU64,
     FixedU8,
 };
 
@@ -35,9 +36,9 @@ pub struct TimestampedVolume<F: Fixed> {
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_timestamped_volume {
-    ( $($t:ident, $p:ty),* ) => {
-        $( impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>> where
-            Frac: Unsigned,
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {   
+        impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>> where
+            Frac: $LeEqU,
             $t<Frac>: Fixed
         {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
@@ -54,13 +55,24 @@ macro_rules! impl_arbitrary_for_timestamped_volume {
                 let required_bytes = bytecount_fixed + bytecount_timestamp;
                 (required_bytes, Some(required_bytes))
             }
-        }) *
+        }
     }
 }
 
-#[cfg(feature = "arbitrary")]
-impl_arbitrary_for_timestamped_volume! {FixedI8, i8, FixedI16, i16, FixedI32, i32, FixedI64, i64,
-FixedI128, i128, FixedU8, u8, FixedU16, u16, FixedU32, u32, FixedU64, u64, FixedU128, u128}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_timestamped_volume! {FixedI8, LeEqU8, i8}
+        impl_arbitrary_for_timestamped_volume! {FixedI16, LeEqU16, i16}
+        impl_arbitrary_for_timestamped_volume! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_timestamped_volume! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_timestamped_volume! {FixedI128, LeEqU128, i128}
+        impl_arbitrary_for_timestamped_volume! {FixedU8, LeEqU8, u8}
+        impl_arbitrary_for_timestamped_volume! {FixedU16, LeEqU16, u16}
+        impl_arbitrary_for_timestamped_volume! {FixedU32, LeEqU32, u32}
+        impl_arbitrary_for_timestamped_volume! {FixedU64, LeEqU64, u64}
+        impl_arbitrary_for_timestamped_volume! {FixedU128, LeEqU128, u128}
+    }
+}
 
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
