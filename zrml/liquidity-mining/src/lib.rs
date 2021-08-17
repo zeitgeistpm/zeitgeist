@@ -90,6 +90,9 @@ mod pallet {
     {
         /// The number of markets that received incentives in a block
         AddedIncentives(MaxUsize),
+        /// The total amount of incentives distributed to accounts along side the number
+        /// of accounts that received these incentives.
+        DistributedIncentives(BalanceOf<T>, MaxUsize),
         /// The number of markets that subtracted incentives in a block
         SubtractedIncentives(MaxUsize),
     }
@@ -227,6 +230,7 @@ mod pallet {
             )
             .map_err(|_err| Error::<T>::FundAccountDoesNotEnoughBalance)?;
 
+            let accounts_len = values.len().saturated_into();
             for (account_id, incentives) in values {
                 T::Currency::transfer(
                     &pallet_account_id,
@@ -237,6 +241,7 @@ mod pallet {
                 .map_err(|_err| Error::<T>::FundAccountDoesNotEnoughBalance)?;
             }
             <Markets<T>>::remove(&market_id);
+            Self::deposit_event(Event::DistributedIncentives(final_total_incentives, accounts_len));
             Ok(())
         }
 
