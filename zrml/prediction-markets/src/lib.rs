@@ -391,6 +391,49 @@ mod pallet {
             Ok(())
         }
 
+                // TODO: Adjust weight
+        // TODO: Proper docstring
+        #[pallet::weight(T::WeightInfo::create_scalar_market())]
+        pub fn create_market_and_deploy_assets(
+            origin: OriginFor<T>,
+            oracle: T::AccountId,
+            end: MarketEnd<T::BlockNumber>,
+            metadata: MultiHash,
+            creation: MarketCreation,
+            assets: MarketType,
+            amount: BalanceOf<T>,
+            weights: Vec<u128>,
+            pool_join_additional_assets: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>)>,
+        ) -> DispatchResultWithPostInfo {
+            let _ = match assets {
+                MarketType::Categorical(category_count) => Self::create_categorical_market(
+                    origin.clone(),
+                    oracle,
+                    end,
+                    metadata,
+                    creation,
+                    category_count,
+                )?,
+                MarketType::Scalar(range) => {
+                    Self::create_scalar_market(origin.clone(), oracle, end, metadata, creation, range)?
+                }
+            };
+
+            let market_id = T::MarketCommons::latest_market_id()?; 
+            let weight_bcs =
+                Self::buy_complete_set(origin.clone(), market_id, amount)?;
+            let _ = Self::deploy_swap_pool_for_market(origin.clone(), market_id, weights)?;
+            let pool_id = T::MarketCommons::market_pool(&market_id)?;
+
+            for (asset_in, asset_amount, min_pool_amount) in pool_join_additional_assets {
+                // TODO: Figure out how to join assets
+                //T::Swaps::pool_join_with_exact_asset_amount(asset_in, asset_amount, min_pool_amount);
+            }
+            
+            // TODO: Calculate actual weight
+            Ok(None.into())
+        }
+
         #[pallet::weight(T::WeightInfo::create_scalar_market())]
         pub fn create_scalar_market(
             origin: OriginFor<T>,

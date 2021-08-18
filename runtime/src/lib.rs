@@ -56,10 +56,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
     // major_minor_patch_spec-version
-    spec_version: 20,
+    spec_version: 21,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 3,
+    transaction_version: 4,
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
