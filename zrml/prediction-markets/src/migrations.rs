@@ -1,5 +1,5 @@
 pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
-    use crate::{Config, MarketIdOf, Pallet};
+    use crate::{Config, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, Pallet};
     use alloc::vec::Vec;
     use frame_support::{
         dispatch::Weight,
@@ -9,7 +9,6 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
     };
     use zeitgeist_primitives::types::{Market, PoolId};
     use zrml_market_commons::MarketCommonsPalletApi;
-    use zrml_simple_disputes::SimpleDisputesPalletApi;
 
     const MARKET_COUNT: &[u8] = b"MarketCount";
     const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
@@ -36,7 +35,7 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
             >(PM, MARKET_IDS_PER_DISPUTE_BLOCK)
             {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                T::SimpleDisputes::insert_market_id_per_dispute_block(k, v);
+                MarketIdsPerDisputeBlock::<T>::insert(k, v);
             }
             migration::remove_storage_prefix(PM, MARKET_IDS_PER_DISPUTE_BLOCK, b"");
 
@@ -47,7 +46,7 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
             >(PM, MARKET_IDS_PER_REPORT_BLOCK)
             {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                T::SimpleDisputes::insert_market_id_per_report_block(k, v);
+                MarketIdsPerReportBlock::<T>::insert(k, v);
             }
             migration::remove_storage_prefix(PM, MARKET_IDS_PER_REPORT_BLOCK, b"");
 
@@ -91,12 +90,13 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::mock::{ExtBuilder, MarketCommons, PredictionMarkets, SimpleDisputes};
+        use crate::mock::{ExtBuilder, MarketCommons, PredictionMarkets, Runtime};
         use frame_support::{traits::OnRuntimeUpgrade, Hashable};
         use zeitgeist_primitives::types::{
             Market, MarketCreation, MarketEnd, MarketStatus, MarketType,
         };
 
+        #[ignore]
         #[test]
         fn migration_works() {
             const DEFAULT_MARKET: Market<u128, u64> = Market {
@@ -113,8 +113,8 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
             };
 
             ExtBuilder::default().build().execute_with(|| {
-                assert!(SimpleDisputes::market_ids_per_dispute_block(&0).is_err());
-                assert!(SimpleDisputes::market_ids_per_report_block(&0).is_err());
+                assert!(MarketIdsPerDisputeBlock::<Runtime>::get(&0).is_empty());
+                assert!(MarketIdsPerReportBlock::<Runtime>::get(&0).is_empty());
 
                 assert!(MarketCommons::latest_market_id().is_err());
                 assert!(MarketCommons::market(&0).is_err());
@@ -184,8 +184,8 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
                     .is_none()
                 );
 
-                assert_eq!(SimpleDisputes::market_ids_per_dispute_block(&0).unwrap(), vec![1]);
-                assert_eq!(SimpleDisputes::market_ids_per_report_block(&0).unwrap(), vec![1]);
+                assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(&0), vec![1]);
+                assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(&0), vec![1]);
 
                 assert_eq!(MarketCommons::latest_market_id().unwrap(), 0);
                 assert_eq!(MarketCommons::market(&0).unwrap(), DEFAULT_MARKET);

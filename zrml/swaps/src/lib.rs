@@ -865,7 +865,7 @@ mod pallet {
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
-        ) -> Result<(), DispatchError> {
+        ) -> DispatchResult {
             Self::mutate_pool(pool_id, |pool| {
                 if let PoolStatus::Stale = pool.pool_status {
                     return Ok(());

@@ -92,6 +92,7 @@ impl crate::Config for Runtime {
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
+    type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
@@ -188,7 +189,6 @@ impl zrml_market_commons::Config for Runtime {
 }
 
 impl zrml_simple_disputes::Config for Runtime {
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
