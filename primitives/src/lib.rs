@@ -8,7 +8,6 @@ mod market;
 mod outcome_report;
 mod pool;
 mod pool_status;
-mod resolution_counters;
 mod serde_wrapper;
 pub mod traits;
 pub mod types;

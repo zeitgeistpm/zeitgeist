@@ -84,7 +84,7 @@ fn on_dispute_stores_jurors_that_should_vote() {
         setup_blocks(1..123);
         let _ = Court::join_court(Origin::signed(ALICE));
         let _ = Court::join_court(Origin::signed(BOB));
-        let _ = Court::on_dispute(|_| 0, &[], 0, ALICE);
+        let _ = Court::on_dispute(&[], 0);
         assert_noop!(
             Court::join_court(Origin::signed(ALICE)),
             Error::<Runtime>::JurorAlreadyExists

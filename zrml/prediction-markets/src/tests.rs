@@ -1,6 +1,6 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{mock::*, Config, Error};
+use crate::{mock::*, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
@@ -16,7 +16,6 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
-use zrml_simple_disputes::SimpleDisputesPalletApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
     let mut metadata = [byte; 50];
@@ -312,7 +311,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         assert_eq!(dispute.by, CHARLIE);
         assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
-        let market_ids = SimpleDisputes::market_ids_per_dispute_block(&105).unwrap();
+        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(&105);
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
     });
@@ -363,7 +362,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
             OutcomeReport::Categorical(1)
         ));
 
-        let reported_ids = SimpleDisputes::market_ids_per_report_block(&100).unwrap();
+        let reported_ids = MarketIdsPerReportBlock::<Runtime>::get(&100);
         assert_eq!(reported_ids.len(), 1);
         let id = reported_ids[0];
         assert_eq!(id, 0);
@@ -452,13 +451,13 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        let market_ids_1 = SimpleDisputes::market_ids_per_dispute_block(&102).unwrap();
+        let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(&102);
         assert_eq!(market_ids_1.len(), 0);
 
-        let market_ids_2 = SimpleDisputes::market_ids_per_dispute_block(&103).unwrap();
+        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(&103);
         assert_eq!(market_ids_2.len(), 0);
 
-        let market_ids_3 = SimpleDisputes::market_ids_per_dispute_block(&104).unwrap();
+        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(&104);
         assert_eq!(market_ids_3.len(), 1);
 
         run_to_block(115);
