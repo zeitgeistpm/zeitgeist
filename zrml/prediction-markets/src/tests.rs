@@ -1,20 +1,16 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{mock::*, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
+use crate::{mock::*, BalanceOf, MarketIdOf, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
+    storage_root,
     traits::Get,
 };
+
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::{
-    constants::BASE,
-    types::{
-        Asset, Market, MarketCreation, MarketEnd, MarketStatus, MultiHash, OutcomeReport,
-        ScalarPosition,
-    },
-};
+use zeitgeist_primitives::{constants::BASE, types::{Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash, OutcomeReport, ScalarPosition}};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
@@ -518,6 +514,60 @@ fn it_allows_to_redeem_shares() {
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
     });
+}
+
+#[test]
+fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
+    let oracle = ALICE;
+    let end = <MarketEnd<<Runtime as frame_system::Config>::BlockNumber>>::Block(42);
+    let metadata = gen_metadata(42);
+    let creation = MarketCreation::Permissionless;
+    let category_count = 4;
+    let assets = MarketType::Categorical(category_count);
+    let extra_amount = 50 * BASE;
+    let amount = <Runtime as zrml_swaps::Config>::MinLiquidity::get() + extra_amount;
+    let weights = vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 5];
+    let add_additional: Vec<(Asset<MarketIdOf<Runtime>>, BalanceOf<Runtime>, BalanceOf<Runtime>)> = vec![
+        (Asset::CategoricalOutcome(0, 0), extra_amount, 0),
+        (Asset::CategoricalOutcome(0, 1), extra_amount, 0),
+        (Asset::CategoricalOutcome(0, 3), extra_amount, 0)
+    ];
+
+    let first_state = std::cell::RefCell::new(vec![]);
+    let second_state = std::cell::RefCell::new(vec![]); 
+
+    // Execute the combined convenience function
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            oracle,
+            end,
+            metadata.clone(),
+            creation.clone(),
+            assets,
+            amount,
+            weights.clone(),
+            add_additional.clone()
+        ));
+
+        *first_state.borrow_mut() = storage_root();
+    });
+
+    // Execute every command included in the convencience function one-by-one
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(Origin::signed(ALICE), oracle, end, metadata, creation, category_count));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, amount));
+        assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(Origin::signed(ALICE), 0, weights));
+
+        for (asset_in, asset_amount, min_pool_amount) in add_additional {
+            assert_ok!(Swaps::pool_join_with_exact_asset_amount(Origin::signed(ALICE), 0, asset_in, asset_amount, min_pool_amount));
+        }
+
+        *second_state.borrow_mut() = storage_root();
+    });
+
+    // Compare resulting state
+    assert_eq!(*first_state.borrow(), *second_state.borrow());
 }
 
 #[test]

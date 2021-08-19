@@ -391,7 +391,6 @@ mod pallet {
             Ok(())
         }
 
-        // TODO: Adjust weight
         // TODO: Proper docstring
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
@@ -409,7 +408,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             assets: MarketType,
-            amount: BalanceOf<T>,
+            #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
             pool_join_additional_assets: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>)>,
         ) -> DispatchResultWithPostInfo {
@@ -449,7 +448,12 @@ mod pallet {
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins = 0;
 
-            for (asset_in, asset_amount, min_pool_amount) in pool_join_additional_assets {
+            for (mut asset_in, asset_amount, min_pool_amount) in pool_join_additional_assets {
+                asset_in = match asset_in {
+                    Asset::CategoricalOutcome(_, cat_idx) => Asset::CategoricalOutcome(market_id, cat_idx),
+                    Asset::ScalarOutcome(_, position) => Asset::ScalarOutcome(market_id, position),
+                    _ => asset_in
+                };
                 weight_pool_joins += T::Swaps::pool_join_with_exact_asset_amount(
                     who.clone(),
                     pool_id,
@@ -459,7 +463,6 @@ mod pallet {
                 )?;
             }
 
-            // TODO: Calculate actual weight
             Ok(Some(
                 weight_market_creation
                     .saturating_add(weight_bcs)
