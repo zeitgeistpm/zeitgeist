@@ -160,7 +160,6 @@ mod pallet {
         /// * `max_pool_amount`: The calculated amount of assets for the pool must the equal or
         /// greater than the given value.
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
-        #[frame_support::transactional]
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
             pool_id: PoolId,
@@ -299,7 +298,6 @@ mod pallet {
         /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
         /// than the given value.
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
-        #[frame_support::transactional]
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
             pool_id: PoolId,
@@ -796,6 +794,7 @@ mod pallet {
             Ok(next_pool_id)
         }
 
+        #[frame_support::transactional]
         fn pool_exit_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,
@@ -847,6 +846,7 @@ mod pallet {
             pool_exit_with_exact_amount::<_, _, _, _, T>(params).map(|_| weight)
         }
 
+        #[frame_support::transactional]
         fn pool_join_with_exact_asset_amount(
             who: T::AccountId,
             pool_id: PoolId,

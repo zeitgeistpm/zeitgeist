@@ -1,6 +1,7 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{mock::*, BalanceOf, MarketIdOf, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
+use core::cell::RefCell;
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
@@ -10,7 +11,13 @@ use frame_support::{
 
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::{constants::BASE, types::{Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash, OutcomeReport, ScalarPosition}};
+use zeitgeist_primitives::{
+    constants::BASE,
+    types::{
+        Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
+        OutcomeReport, ScalarPosition,
+    },
+};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
@@ -530,11 +537,11 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
     let add_additional: Vec<(Asset<MarketIdOf<Runtime>>, BalanceOf<Runtime>, BalanceOf<Runtime>)> = vec![
         (Asset::CategoricalOutcome(0, 0), extra_amount, 0),
         (Asset::CategoricalOutcome(0, 1), extra_amount, 0),
-        (Asset::CategoricalOutcome(0, 3), extra_amount, 0)
+        (Asset::CategoricalOutcome(0, 3), extra_amount, 0),
     ];
 
-    let first_state = std::cell::RefCell::new(vec![]);
-    let second_state = std::cell::RefCell::new(vec![]); 
+    let first_state = RefCell::new(vec![]);
+    let second_state = RefCell::new(vec![]);
 
     // Execute the combined convenience function
     ExtBuilder::default().build().execute_with(|| {
@@ -555,12 +562,29 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
 
     // Execute every command included in the convencience function one-by-one
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(Origin::signed(ALICE), oracle, end, metadata, creation, category_count));
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            oracle,
+            end,
+            metadata,
+            creation,
+            category_count
+        ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, amount));
-        assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(Origin::signed(ALICE), 0, weights));
+        assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
+            Origin::signed(ALICE),
+            0,
+            weights
+        ));
 
         for (asset_in, asset_amount, min_pool_amount) in add_additional {
-            assert_ok!(Swaps::pool_join_with_exact_asset_amount(Origin::signed(ALICE), 0, asset_in, asset_amount, min_pool_amount));
+            assert_ok!(Swaps::pool_join_with_exact_asset_amount(
+                Origin::signed(ALICE),
+                0,
+                asset_in,
+                asset_amount,
+                min_pool_amount
+            ));
         }
 
         *second_state.borrow_mut() = storage_root();
