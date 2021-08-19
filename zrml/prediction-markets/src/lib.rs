@@ -391,9 +391,17 @@ mod pallet {
             Ok(())
         }
 
-                // TODO: Adjust weight
+        // TODO: Adjust weight
         // TODO: Proper docstring
-        #[pallet::weight(T::WeightInfo::create_scalar_market())]
+        #[pallet::weight(
+            T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
+            .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32))
+            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32))
+            // Overly generous estimation, since we have no access to Swaps WeightInfo
+            // (it is loosely coupled to this pallet using a trait). Will be adjusted later
+            .saturating_add(5_000_000_000.saturating_mul(pool_join_additional_assets.len() as u64))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+        )]
         pub fn create_market_and_deploy_assets(
             origin: OriginFor<T>,
             oracle: T::AccountId,
@@ -405,33 +413,61 @@ mod pallet {
             weights: Vec<u128>,
             pool_join_additional_assets: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>)>,
         ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin.clone())?;
+            let weight_market_creation;
             let _ = match assets {
-                MarketType::Categorical(category_count) => Self::create_categorical_market(
-                    origin.clone(),
-                    oracle,
-                    end,
-                    metadata,
-                    creation,
-                    category_count,
-                )?,
+                MarketType::Categorical(category_count) => {
+                    weight_market_creation = T::WeightInfo::create_categorical_market();
+                    Self::create_categorical_market(
+                        origin.clone(),
+                        oracle,
+                        end,
+                        metadata,
+                        creation,
+                        category_count,
+                    )?
+                }
                 MarketType::Scalar(range) => {
-                    Self::create_scalar_market(origin.clone(), oracle, end, metadata, creation, range)?
+                    weight_market_creation = T::WeightInfo::create_scalar_market();
+                    Self::create_scalar_market(
+                        origin.clone(),
+                        oracle,
+                        end,
+                        metadata,
+                        creation,
+                        range,
+                    )?
                 }
             };
 
-            let market_id = T::MarketCommons::latest_market_id()?; 
-            let weight_bcs =
-                Self::buy_complete_set(origin.clone(), market_id, amount)?;
+            let market_id = T::MarketCommons::latest_market_id()?;
+            let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
+                .actual_weight
+                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32));
+            let weight_len = weights.len() as u32;
             let _ = Self::deploy_swap_pool_for_market(origin.clone(), market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
+            let mut weight_pool_joins = 0;
 
             for (asset_in, asset_amount, min_pool_amount) in pool_join_additional_assets {
-                // TODO: Figure out how to join assets
-                //T::Swaps::pool_join_with_exact_asset_amount(asset_in, asset_amount, min_pool_amount);
+                weight_pool_joins += T::Swaps::pool_join_with_exact_asset_amount(
+                    who.clone(),
+                    pool_id,
+                    asset_in,
+                    asset_amount,
+                    min_pool_amount,
+                )?;
             }
-            
+
             // TODO: Calculate actual weight
-            Ok(None.into())
+            Ok(Some(
+                weight_market_creation
+                    .saturating_add(weight_bcs)
+                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weight_len))
+                    .saturating_add(weight_pool_joins)
+                    .saturating_add(T::DbWeight::get().reads(2 as Weight)),
+            )
+            .into())
         }
 
         #[pallet::weight(T::WeightInfo::create_scalar_market())]
