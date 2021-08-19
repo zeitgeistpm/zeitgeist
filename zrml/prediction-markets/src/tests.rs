@@ -1,6 +1,9 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{mock::*, BalanceOf, MarketIdOf, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
+use crate::{
+    mock::*, BalanceOf, Config, Error, MarketIdOf, MarketIdsPerDisputeBlock,
+    MarketIdsPerReportBlock,
+};
 use core::cell::RefCell;
 use frame_support::{
     assert_noop, assert_ok,
