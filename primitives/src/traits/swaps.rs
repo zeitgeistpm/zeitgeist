@@ -1,6 +1,6 @@
 use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId};
 use alloc::vec::Vec;
-use frame_support::dispatch::{DispatchError, DispatchResult};
+use frame_support::dispatch::{DispatchError, DispatchResult, Weight};
 
 pub trait Swaps<AccountId> {
     type Balance;
@@ -22,6 +22,22 @@ pub trait Swaps<AccountId> {
         swap_fee: Self::Balance,
         weights: Vec<u128>,
     ) -> Result<PoolId, DispatchError>;
+
+    fn pool_exit_with_exact_asset_amount(
+        who: AccountId,
+        pool_id: PoolId,
+        asset: Asset<Self::MarketId>,
+        asset_amount: Self::Balance,
+        max_pool_amount: Self::Balance,
+    ) -> Result<Weight, DispatchError>;
+
+    fn pool_join_with_exact_asset_amount(
+        who: AccountId,
+        pool_id: PoolId,
+        asset_in: Asset<Self::MarketId>,
+        asset_amount: Self::Balance,
+        min_pool_amount: Self::Balance,
+    ) -> Result<Weight, DispatchError>;
 
     /// Returns the pool instance of a corresponding `pool_id`.
     fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError>;
