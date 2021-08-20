@@ -18,7 +18,7 @@ use zeitgeist_primitives::{
     constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
     types::{AccountId, Balance, Signature},
 };
-use zeitgeist_runtime::TokensConfig;
+use zeitgeist_runtime::{SS58Prefix, TokensConfig};
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::{Perbill, Percent},
@@ -224,6 +224,7 @@ fn telemetry_endpoints() -> Option<TelemetryEndpoints> {
 
 fn token_properties() -> Map<String, Value> {
     let mut properties = Map::new();
+    properties.insert("ss58Format".into(), SS58Prefix::get().into());
     properties.insert("tokenSymbol".into(), "ZBP".into());
     properties.insert("tokenDecimals".into(), 10.into());
     properties

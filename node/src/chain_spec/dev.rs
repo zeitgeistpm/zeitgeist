@@ -1,8 +1,6 @@
 #[cfg(feature = "parachain")]
 use crate::chain_spec::get_from_seed;
-use crate::chain_spec::{
-    generic_genesis, get_account_id_from_seed, zeitgeist_wasm, AdditionalChainSpec, ChainSpec,
-};
+use crate::chain_spec::{AdditionalChainSpec, ChainSpec, generic_genesis, get_account_id_from_seed, token_properties, zeitgeist_wasm};
 use sc_service::ChainType;
 use sp_core::sr25519;
 
@@ -53,7 +51,7 @@ pub fn dev_config(
         vec![],
         None,
         None,
-        None,
+        Some(token_properties()),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo-dev".into(),
