@@ -1,6 +1,9 @@
 #[cfg(feature = "parachain")]
 use crate::chain_spec::get_from_seed;
-use crate::chain_spec::{AdditionalChainSpec, ChainSpec, generic_genesis, get_account_id_from_seed, token_properties, zeitgeist_wasm};
+use crate::chain_spec::{
+    generic_genesis, get_account_id_from_seed, token_properties, zeitgeist_wasm,
+    AdditionalChainSpec, ChainSpec,
+};
 use sc_service::ChainType;
 use sp_core::sr25519;
 
