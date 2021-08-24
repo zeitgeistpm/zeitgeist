@@ -7,8 +7,15 @@ use libfuzzer_sys::fuzz_target;
 
 mod shared;
 use shared::fixed_from_u128;
-use substrate_fixed::{FixedU128, traits::LossyInto, types::extra::{U33, U127}};
-use zrml_rikiddo::{traits::MarketAverage, types::{EmaMarketVolume, Timespan, TimestampedVolume}};
+use substrate_fixed::{
+    traits::LossyInto,
+    types::extra::{U127, U33},
+    FixedU128,
+};
+use zrml_rikiddo::{
+    traits::MarketAverage,
+    types::{EmaMarketVolume, Timespan, TimestampedVolume},
+};
 
 fuzz_target!(|data: Data| {
     let mut emv = data.ema_market_volume;
@@ -16,14 +23,10 @@ fuzz_target!(|data: Data| {
     let between_zero_and_two = <FixedU128<U127>>::from_ne_bytes(data.smoothing.to_ne_bytes());
     emv.config.smoothing = between_zero_and_two.lossy_into();
     emv.config.ema_period_estimate_after = Some(Timespan::Seconds(0));
-    let first_timestamped_volume = TimestampedVolume {
-        timestamp: 0,
-        volume: fixed_from_u128(data.first_update_volume)
-    };
-    let second_timestamped_volume = TimestampedVolume {
-        timestamp: 1,
-        volume: fixed_from_u128(data.first_update_volume)
-    };
+    let first_timestamped_volume =
+        TimestampedVolume { timestamp: 0, volume: fixed_from_u128(data.first_update_volume) };
+    let second_timestamped_volume =
+        TimestampedVolume { timestamp: 1, volume: fixed_from_u128(data.first_update_volume) };
     let _ = emv.update_volume(&first_timestamped_volume);
     let _ = emv.update_volume(&second_timestamped_volume);
     let _ = emv.update_volume(&data.third_update_volume);
@@ -35,5 +38,5 @@ struct Data {
     second_update_volume: u128,
     smoothing: u128,
     third_update_volume: TimestampedVolume<FixedU128<U33>>,
-    ema_market_volume: EmaMarketVolume<FixedU128<U33>>
+    ema_market_volume: EmaMarketVolume<FixedU128<U33>>,
 }

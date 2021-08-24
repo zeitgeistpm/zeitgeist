@@ -44,7 +44,7 @@ pub enum MultiHash {
 #[cfg(feature = "arbitrary")]
 impl<'a> Arbitrary<'a> for MultiHash {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
-        let mut rand_bytes = <[u8;50] as Arbitrary<'a>>::arbitrary(u)?;
+        let mut rand_bytes = <[u8; 50] as Arbitrary<'a>>::arbitrary(u)?;
         rand_bytes[0] = 0x15;
         rand_bytes[1] = 0x30;
         Ok(MultiHash::Sha3_384(rand_bytes))

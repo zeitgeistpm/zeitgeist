@@ -4,8 +4,11 @@
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use substrate_fixed::{FixedU128, types::extra::U33};
-use zrml_rikiddo::{traits::MarketAverage, types::{EmaMarketVolume, TimestampedVolume}};
+use substrate_fixed::{types::extra::U33, FixedU128};
+use zrml_rikiddo::{
+    traits::MarketAverage,
+    types::{EmaMarketVolume, TimestampedVolume},
+};
 
 fuzz_target!(|data: Data| {
     let mut emv = data.ema_market_volume;
@@ -15,5 +18,5 @@ fuzz_target!(|data: Data| {
 #[derive(Debug, Arbitrary)]
 struct Data {
     update_volume: TimestampedVolume<FixedU128<U33>>,
-    ema_market_volume: EmaMarketVolume<FixedU128<U33>>
+    ema_market_volume: EmaMarketVolume<FixedU128<U33>>,
 }

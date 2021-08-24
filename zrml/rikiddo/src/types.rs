@@ -14,8 +14,7 @@ use substrate_fixed::{
 #[cfg(feature = "arbitrary")]
 use substrate_fixed::{
     types::extra::{LeEqU128, LeEqU16, LeEqU32, LeEqU64, LeEqU8},
-    FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU32, FixedU64,
-    FixedU8,
+    FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU32, FixedU64, FixedU8,
 };
 
 mod ema_market_volume;
@@ -36,16 +35,17 @@ pub struct TimestampedVolume<F: Fixed> {
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_timestamped_volume {
-    ( $t:ident, $LeEqU:ident, $p:ty ) => {   
-        impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>> where
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>>
+        where
             Frac: $LeEqU,
-            $t<Frac>: Fixed
+            $t<Frac>: Fixed,
         {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
                 return Ok(TimestampedVolume {
                     timestamp: <UnixTimestamp as Arbitrary<'a>>::arbitrary(u)?,
-                    volume: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?)
-                })
+                    volume: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                });
             }
 
             #[inline]
@@ -56,7 +56,7 @@ macro_rules! impl_arbitrary_for_timestamped_volume {
                 (required_bytes, Some(required_bytes))
             }
         }
-    }
+    };
 }
 
 cfg_if::cfg_if! {

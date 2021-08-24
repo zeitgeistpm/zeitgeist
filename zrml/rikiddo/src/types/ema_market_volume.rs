@@ -18,8 +18,7 @@ use substrate_fixed::{
 #[cfg(feature = "arbitrary")]
 use substrate_fixed::{
     types::extra::{LeEqU128, LeEqU16, LeEqU32, LeEqU64, LeEqU8},
-    FixedI16, FixedI32, FixedI64, FixedI128, FixedI8, FixedU16, FixedU64,
-    FixedU8,
+    FixedI128, FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU64, FixedU8,
 };
 
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
@@ -31,16 +30,17 @@ pub struct EmaConfig<FI: Fixed> {
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_ema_config {
-    ( $t:ident, $LeEqU:ident, $p:ty ) => { 
-        impl<'a, Frac> Arbitrary<'a> for EmaConfig<$t<Frac>> where
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        impl<'a, Frac> Arbitrary<'a> for EmaConfig<$t<Frac>>
+        where
             Frac: $LeEqU,
-            $t<Frac>: Fixed {
-
+            $t<Frac>: Fixed,
+        {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
                 Ok(EmaConfig::<$t<Frac>> {
                     ema_period: <Timespan as Arbitrary<'a>>::arbitrary(u)?,
                     ema_period_estimate_after: Some(<Timespan as Arbitrary<'a>>::arbitrary(u)?),
-                    smoothing: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?)
+                    smoothing: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
                 })
             }
 
@@ -48,7 +48,9 @@ macro_rules! impl_arbitrary_for_ema_config {
             fn size_hint(depth: usize) -> (usize, Option<usize>) {
                 let (min, max) = <Timespan as Arbitrary<'a>>::size_hint(depth);
                 let fsc_size = <$p as Arbitrary<'a>>::size_hint(depth);
-                let max_accumulated = max.unwrap_or(min).saturating_mul(2)
+                let max_accumulated = max
+                    .unwrap_or(min)
+                    .saturating_mul(2)
                     .saturating_add(fsc_size.1.unwrap_or(fsc_size.0));
                 let min_accumulated = min.saturating_mul(2).saturating_add(fsc_size.0);
 
@@ -59,7 +61,7 @@ macro_rules! impl_arbitrary_for_ema_config {
                 }
             }
         }
-    }
+    };
 }
 
 cfg_if::cfg_if! {
@@ -118,15 +120,16 @@ pub struct EmaMarketVolume<FU: FixedUnsigned> {
 
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_ema_market_volume {
-    ( $t:ident, $LeEqU:ident, $p:ty ) => { 
-        impl<'a, Frac> Arbitrary<'a> for EmaMarketVolume<$t<Frac>> where
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        impl<'a, Frac> Arbitrary<'a> for EmaMarketVolume<$t<Frac>>
+        where
             Frac: $LeEqU,
-            $t<Frac>: FixedUnsigned {
-
+            $t<Frac>: FixedUnsigned,
+        {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
                 Ok(EmaMarketVolume::<$t<Frac>>::new(
-                    <EmaConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?)
-                )
+                    <EmaConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?,
+                ))
             }
 
             #[inline]
@@ -140,8 +143,22 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
                 let start_time_size = <UnixTimestamp as Arbitrary<'a>>::size_hint(depth);
                 let volumes_per_period = (fixed_size, fixed_size);
 
-                let max_accumulated = max.unwrap_or(0).saturating_mul(2).saturating_add(ema_size.1).saturating_add(multiplier_size.1).saturating_add(last_time_size.1.unwrap_or(0)).saturating_add(state_size.1.unwrap_or(0)).saturating_add(start_time_size.1.unwrap_or(0)).saturating_add(volumes_per_period.0);
-                let min_accumulated = min.saturating_add(ema_size.0).saturating_add(multiplier_size.0).saturating_add(last_time_size.0).saturating_add(state_size.0).saturating_add(start_time_size.0).saturating_add(volumes_per_period.0);
+                let max_accumulated = max
+                    .unwrap_or(0)
+                    .saturating_mul(2)
+                    .saturating_add(ema_size.1)
+                    .saturating_add(multiplier_size.1)
+                    .saturating_add(last_time_size.1.unwrap_or(0))
+                    .saturating_add(state_size.1.unwrap_or(0))
+                    .saturating_add(start_time_size.1.unwrap_or(0))
+                    .saturating_add(volumes_per_period.0);
+                let min_accumulated = min
+                    .saturating_add(ema_size.0)
+                    .saturating_add(multiplier_size.0)
+                    .saturating_add(last_time_size.0)
+                    .saturating_add(state_size.0)
+                    .saturating_add(start_time_size.0)
+                    .saturating_add(volumes_per_period.0);
 
                 if max_accumulated == usize::MAX {
                     (min_accumulated, None)
@@ -150,7 +167,7 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
                 }
             }
         }
-    }
+    };
 }
 
 cfg_if::cfg_if! {
