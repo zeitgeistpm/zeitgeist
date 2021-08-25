@@ -1,11 +1,10 @@
 use super::{Timespan, TimestampedVolume, UnixTimestamp};
-#[cfg(feature = "arbitrary")]
 use crate::{
     constants::{EMA_SHORT, SMOOTHING},
     traits::MarketAverage,
 };
 #[cfg(feature = "arbitrary")]
-use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
 #[cfg(feature = "arbitrary")]
 use core::mem;
 use frame_support::dispatch::{Decode, Encode};
@@ -36,7 +35,7 @@ macro_rules! impl_arbitrary_for_ema_config {
             Frac: $LeEqU,
             $t<Frac>: Fixed,
         {
-            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
                 Ok(EmaConfig::<$t<Frac>> {
                     ema_period: <Timespan as Arbitrary<'a>>::arbitrary(u)?,
                     ema_period_estimate_after: Some(<Timespan as Arbitrary<'a>>::arbitrary(u)?),
@@ -126,7 +125,7 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
             Frac: $LeEqU,
             $t<Frac>: FixedUnsigned,
         {
-            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
                 Ok(EmaMarketVolume::<$t<Frac>>::new(
                     <EmaConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?,
                 ))
@@ -148,9 +147,9 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
                     .saturating_mul(2)
                     .saturating_add(ema_size.1)
                     .saturating_add(multiplier_size.1)
-                    .saturating_add(last_time_size.1.unwrap_or(0))
-                    .saturating_add(state_size.1.unwrap_or(0))
-                    .saturating_add(start_time_size.1.unwrap_or(0))
+                    .saturating_add(last_time_size.1.unwrap_or(last_time_size.0))
+                    .saturating_add(state_size.1.unwrap_or(state_size.0))
+                    .saturating_add(start_time_size.1.unwrap_or(start_time_size.0))
                     .saturating_add(volumes_per_period.0);
                 let min_accumulated = min
                     .saturating_add(ema_size.0)

@@ -21,7 +21,7 @@ use substrate_fixed::{
 #[cfg(feature = "arbitrary")]
 use substrate_fixed::{
     types::extra::{LeEqU128, LeEqU32, LeEqU64},
-    FixedI64,
+    FixedI64, FixedU64
 };
 
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
@@ -125,8 +125,6 @@ where
     pub ma_long: MA,
 }
 
-/* Self { config, fees, ma_short, ma_long } */
-
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
     ( $ts:ident, $LeEqUs:ident, $tu:ident, $LeEqUu:ident ) => {
@@ -156,8 +154,24 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
 
             #[inline]
             fn size_hint(depth: usize) -> (usize, Option<usize>) {
-                // TODO
-                (0, None)
+                let (min, max) = <RikiddoConfig<$ts<FracS>> as Arbitrary<'a>>::size_hint(depth);
+
+                let fe_size = <FE as Arbitrary<'a>>::size_hint(depth);
+                let ma_size = <MA as Arbitrary<'a>>::size_hint(depth);
+
+                let max_accumulated = max
+                    .unwrap_or(0)
+                    .saturating_add(fe_size.1.unwrap_or(fe_size.0))
+                    .saturating_add(ma_size.1.unwrap_or(ma_size.0).saturating_mul(2));
+                let min_accumulated = min
+                    .saturating_add(fe_size.0)
+                    .saturating_add(ma_size.0);
+
+                if max_accumulated == usize::MAX {
+                    (min_accumulated, None)
+                } else {
+                    (min_accumulated, Some(max_accumulated))
+                }
             }
         }
     };
@@ -166,6 +180,8 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
 cfg_if::cfg_if! {
     if #[cfg(feature = "arbitrary")] {
         impl_arbitrary_for_rikiddo_sigmoid_mv! {FixedI32, LeEqU32, FixedU32, LeEqU32}
+        impl_arbitrary_for_rikiddo_sigmoid_mv! {FixedI64, LeEqU64, FixedU64, LeEqU64}
+        impl_arbitrary_for_rikiddo_sigmoid_mv! {FixedI128, LeEqU128, FixedU128, LeEqU128}
     }
 }
 
