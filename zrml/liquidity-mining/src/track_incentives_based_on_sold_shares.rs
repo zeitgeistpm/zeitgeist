@@ -12,7 +12,8 @@ impl<T> TrackIncentivesBasedOnSoldShares<T>
 where
     T: crate::Config,
 {
-    pub(crate) fn exec() {
+    pub(crate) fn exec() -> usize {
+        let mut counter = 0;
         for (market_id, account_id, sold_shares) in <BlockSoldShares<T>>::iter() {
             let values = if let Ok(e) = <OwnedValues<T>>::try_get(market_id, account_id.clone()) {
                 e
@@ -37,7 +38,9 @@ where
                     values.total_incentives.saturating_sub(balance_to_subtract);
                 values.total_shares = values.total_shares.saturating_sub(sold_shares);
             });
+            counter = counter.saturating_add(1);
         }
         <BlockSoldShares<T>>::remove_all(None);
+        counter
     }
 }
