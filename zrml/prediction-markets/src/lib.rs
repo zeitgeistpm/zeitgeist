@@ -989,6 +989,8 @@ mod pallet {
     where
         T: Config,
     {
+        /// Custom addition block initialization logic wasn't successful
+        BadOnInitialize,
         /// A complete set of shares has been bought [market_id, buyer]
         BoughtCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved [market_id]
@@ -1021,6 +1023,7 @@ mod pallet {
             });
             with_transaction(|| match rslt {
                 Err(err) => {
+                    Self::deposit_event(Event::BadOnInitialize);
                     log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
                     TransactionOutcome::Rollback(())
                 }
