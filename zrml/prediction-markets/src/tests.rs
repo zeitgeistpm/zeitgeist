@@ -17,8 +17,8 @@ use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::BASE,
     types::{
-        Asset, Market, MarketCreation, MarketEnd, MarketStatus, MarketType, MultiHash,
-        OutcomeReport, ScalarPosition,
+        Asset, Market, MarketCreation, MarketDisputeMechanism, MarketEnd, MarketStatus, MarketType,
+        MultiHash, OutcomeReport, ScalarPosition,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -38,6 +38,7 @@ fn simple_create_categorical_market<T: crate::Config>(creation: MarketCreation) 
         gen_metadata(2),
         creation,
         T::MinCategories::get(),
+        MarketDisputeMechanism::SimpleDisputes
     ));
 }
 
@@ -72,7 +73,8 @@ fn it_does_not_create_market_with_too_few_categories() {
                 MarketEnd::Block(100),
                 gen_metadata(2),
                 MarketCreation::Advised,
-                <Runtime as Config>::MinCategories::get() - 1
+                <Runtime as Config>::MinCategories::get() - 1,
+                MarketDisputeMechanism::SimpleDisputes
             ),
             Error::<Runtime>::NotEnoughCategories
         );
@@ -89,7 +91,8 @@ fn it_does_not_create_market_with_too_many_categories() {
                 MarketEnd::Block(100),
                 gen_metadata(2),
                 MarketCreation::Advised,
-                <Runtime as Config>::MaxCategories::get() + 1
+                <Runtime as Config>::MaxCategories::get() + 1,
+                MarketDisputeMechanism::SimpleDisputes
             ),
             Error::<Runtime>::TooManyCategories
         );
@@ -557,7 +560,8 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             assets,
             amount,
             weights.clone(),
-            add_additional.clone()
+            add_additional.clone(),
+            MarketDisputeMechanism::SimpleDisputes
         ));
 
         *first_state.borrow_mut() = storage_root();
@@ -571,7 +575,8 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             end,
             metadata,
             creation,
-            category_count
+            category_count,
+            MarketDisputeMechanism::SimpleDisputes
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, amount));
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
@@ -608,6 +613,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             2,
+            MarketDisputeMechanism::SimpleDisputes
         ));
 
         // is ok
@@ -639,6 +645,7 @@ fn full_scalar_market_lifecycle() {
             gen_metadata(3),
             MarketCreation::Permissionless,
             (10, 30),
+            MarketDisputeMechanism::SimpleDisputes
         ));
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
@@ -715,6 +722,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             3,
+            MarketDisputeMechanism::SimpleDisputes
         ));
         deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 1 * BASE));

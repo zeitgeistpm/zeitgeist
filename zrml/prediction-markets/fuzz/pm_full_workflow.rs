@@ -5,7 +5,7 @@ use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::{
     traits::DisputeApi,
-    types::{MarketCreation, MarketEnd, MultiHash, OutcomeReport},
+    types::{MarketCreation, MarketDisputeMechanism, MarketEnd, MultiHash, OutcomeReport},
 };
 use zrml_prediction_markets::mock::{
     ExtBuilder, Origin, PredictionMarkets, Runtime, SimpleDisputes, System,
@@ -24,6 +24,7 @@ fuzz_target!(|data: Data| {
             data.create_scalar_market_metadata,
             market_creation(data.create_scalar_market_creation),
             data.create_scalar_market_outcome_range,
+            market_dispute_mechanism(data.create_scalar_market_mdm),
         );
 
         let _ = PredictionMarkets::on_initialize(2);
@@ -73,6 +74,7 @@ struct Data {
     create_scalar_market_metadata: MultiHash,
     create_scalar_market_creation: u8,
     create_scalar_market_outcome_range: (u128, u128),
+    create_scalar_market_mdm: u8,
 
     buy_complete_set_origin: u8,
     buy_complete_set_market_id: u8,
@@ -93,6 +95,15 @@ struct Data {
 #[inline]
 fn market_creation(seed: u8) -> MarketCreation {
     if seed % 2 == 0 { MarketCreation::Advised } else { MarketCreation::Permissionless }
+}
+
+#[inline]
+fn market_dispute_mechanism(seed: u8) -> MarketDisputeMechanism<u128> {
+    match seed % 3 {
+        0 => MarketDisputeMechanism::Authorized(seed.into()),
+        1 => MarketDisputeMechanism::Court,
+        _ => MarketDisputeMechanism::SimpleDisputes,
+    }
 }
 
 #[inline]
