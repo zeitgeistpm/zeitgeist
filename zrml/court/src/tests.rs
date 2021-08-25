@@ -9,7 +9,14 @@ use crate::{
 use core::ops::Range;
 use frame_support::{assert_noop, assert_ok, traits::Hooks};
 use sp_runtime::traits::Header;
-use zeitgeist_primitives::{constants::BASE, traits::DisputeApi, types::OutcomeReport};
+use zeitgeist_primitives::{
+    constants::BASE,
+    traits::DisputeApi,
+    types::{
+        Market, MarketCreation, MarketDisputeMechanism, MarketEnd, MarketStatus, MarketType,
+        OutcomeReport,
+    },
+};
 
 const DEFAULT_SET_OF_JURORS: &[(u128, Juror<u128>)] = &[
     (7, Juror { staked: 1, status: JurorStatus::Ok }),

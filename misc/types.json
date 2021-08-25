@@ -43,7 +43,8 @@
     "market_type": "MarketType",
     "market_status": "MarketStatus",
     "report": "Option<Report>",
-    "resolved_outcome": "Option<Outcome>"
+    "resolved_outcome": "Option<Outcome>",
+    "mdm": "MarketDisputeMechanism"
   },
   "MarketCreation": {
     "_enum": [
@@ -55,6 +56,13 @@
     "at": "BlockNumber",
     "by": "AccountId",
     "outcome": "Outcome"
+  },
+  "MarketDisputeMechanism": {
+    "_enum": {
+      "Authorized": "BlockNumber",
+      "Court": null,
+      "SimpleDisputes": null
+    }
   },
   "MarketEnd": {
     "_enum": {
