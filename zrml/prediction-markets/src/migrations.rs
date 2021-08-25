@@ -93,7 +93,7 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
         use crate::mock::{ExtBuilder, MarketCommons, PredictionMarkets, Runtime};
         use frame_support::{traits::OnRuntimeUpgrade, Hashable};
         use zeitgeist_primitives::types::{
-            Market, MarketCreation, MarketEnd, MarketStatus, MarketType,
+            Market, MarketCreation, MarketDisputeMechanism, MarketEnd, MarketStatus, MarketType,
         };
 
         #[ignore]
@@ -105,6 +105,7 @@ pub mod _0_1_2_move_storage_to_simple_disputes_and_market_commons {
                 creator: 0,
                 end: MarketEnd::Block(0),
                 market_type: MarketType::Categorical(0),
+                mdm: MarketDisputeMechanism::SimpleDisputes,
                 metadata: vec![],
                 oracle: 0,
                 report: None,
