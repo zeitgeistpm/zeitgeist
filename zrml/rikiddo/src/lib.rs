@@ -7,7 +7,6 @@
 extern crate alloc;
 
 pub mod constants;
-
 pub mod mock;
 mod tests;
 pub mod traits;
@@ -21,6 +20,9 @@ mod pallet {
         fmt::Debug,
         marker::PhantomData,
         ops::{AddAssign, BitOrAssign, ShlAssign},
+    use crate::{
+        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
+        types::{TimestampedVolume, UnixTimestamp},
     };
     use frame_support::{
         debug,
@@ -39,12 +41,6 @@ mod pallet {
         },
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
-
-    use crate::{
-        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
-        types::{TimestampedVolume, UnixTimestamp},
-    };
-
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
         /// Defines the type of traded amounts

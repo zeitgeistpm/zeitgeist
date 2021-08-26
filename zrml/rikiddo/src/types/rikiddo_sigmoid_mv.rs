@@ -21,7 +21,7 @@ use substrate_fixed::{
 #[cfg(feature = "arbitrary")]
 use substrate_fixed::{
     types::extra::{LeEqU128, LeEqU32, LeEqU64},
-    FixedI64, FixedU64
+    FixedI64, FixedU64,
 };
 
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
@@ -128,7 +128,8 @@ where
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
     ( $ts:ident, $LeEqUs:ident, $tu:ident, $LeEqUu:ident ) => {
-        impl<'a, FracU, FracS, FE, MA> Arbitrary<'a> for RikiddoSigmoidMV<$tu<FracU>, $ts<FracS>, FE, MA>
+        impl<'a, FracU, FracS, FE, MA> Arbitrary<'a>
+            for RikiddoSigmoidMV<$tu<FracU>, $ts<FracS>, FE, MA>
         where
             FracU: $LeEqUu,
             FracS: $LeEqUs,
@@ -144,12 +145,12 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
             MA: MarketAverage<FU = $tu<FracU>> + Arbitrary<'a>,
         {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
-                 Ok(RikiddoSigmoidMV::new(
+                Ok(RikiddoSigmoidMV::new(
                     <RikiddoConfig<$ts<FracS>> as Arbitrary<'a>>::arbitrary(u)?,
                     <FE as Arbitrary<'a>>::arbitrary(u)?,
                     <MA as Arbitrary<'a>>::arbitrary(u)?,
                     <MA as Arbitrary<'a>>::arbitrary(u)?,
-                 ))
+                ))
             }
 
             #[inline]
@@ -163,9 +164,7 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
                     .unwrap_or(0)
                     .saturating_add(fe_size.1.unwrap_or(fe_size.0))
                     .saturating_add(ma_size.1.unwrap_or(ma_size.0).saturating_mul(2));
-                let min_accumulated = min
-                    .saturating_add(fe_size.0)
-                    .saturating_add(ma_size.0);
+                let min_accumulated = min.saturating_add(fe_size.0).saturating_add(ma_size.0);
 
                 if max_accumulated == usize::MAX {
                     (min_accumulated, None)

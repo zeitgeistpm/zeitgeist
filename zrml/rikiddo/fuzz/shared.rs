@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 
 #[inline(always)]
