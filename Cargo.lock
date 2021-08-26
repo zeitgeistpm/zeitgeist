@@ -12161,6 +12161,8 @@ name = "zrml-rikiddo-fuzz"
 version = "0.0.0"
 dependencies = [
  "arbitrary",
+ "frame-support",
+ "frame-system",
  "libfuzzer-sys",
  "substrate-fixed",
  "zrml-rikiddo",

@@ -19,6 +19,7 @@ EMA_MARKET_VOLUME_THIRD_STATE_FACT=7000
 EMA_MARKET_VOLUME_ESTIMATE_EMA_FACT=7000
 RIKIDDO_WITH_INITIAL_FEE_FACT=2300
 RIKIDDO_WITH_CALCULATED_FEE_FACT=1750
+RIKIDDO_PALLET_FACT=1000
 
 # --- Prediction Market Pallet fuzz tests ---
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/prediction-markets/fuzz pm_full_workflow -- -runs=$RUNS
@@ -43,3 +44,5 @@ RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_marke
 RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz ema_market_volume_estimate_ema -- -runs=$(($(($RUNS * $EMA_MARKET_VOLUME_ESTIMATE_EMA_FACT)) / $BASE))
 RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_with_initial_fee -- -runs=$(($(($RUNS * $RIKIDDO_WITH_INITIAL_FEE_FACT)) / $BASE))
 RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_with_calculated_fee -- -runs=$(($(($RUNS * $RIKIDDO_WITH_CALCULATED_FEE_FACT)) / $BASE))
+# This actually needs approx. 107 seconds. Need to find a way to optimize fuzzing on-chain
+RUST_BACKTRACE=1 cargo fuzz run --release --fuzz-dir zrml/rikiddo/fuzz rikiddo_pallet -- -runs=$(($(($RUNS * $RIKIDDO_PALLET_FACT)) / $BASE))
