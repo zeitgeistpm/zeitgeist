@@ -1038,11 +1038,6 @@ mod pallet {
             });
             total_weight
         }
-
-        fn on_runtime_upgrade() -> Weight {
-            crate::migrations::_0_1_2_move_storage_to_simple_disputes_and_market_commons::migrate::<T>(
-            )
-        }
     }
 
     #[pallet::pallet]
