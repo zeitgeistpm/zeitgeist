@@ -15,11 +15,6 @@ fuzz_target!(|data: Data| {
     let _ = data.rikiddo.cost(&asset_balances_fixed[..]);
     let _ = data.rikiddo.price(&asset_balances_fixed[..], &price_for_fixed);
     let _ = data.rikiddo.all_prices(&asset_balances_fixed[..]);
-    
-    // Now use reasonable parameters
-    // let mut rikiddo = data.rikiddo;
-    // rikiddo.fees = Default::default();
-    // let _ = rikiddo.cost(&asset_balances_fixed[..]);
 });
 
 
