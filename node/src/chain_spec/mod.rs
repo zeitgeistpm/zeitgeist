@@ -121,6 +121,7 @@ fn generic_genesis(
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         },
+        treasury: zeitgeist_runtime::TreasuryConfig::default(),
         tokens: TokensConfig::default(),
     }
 }
