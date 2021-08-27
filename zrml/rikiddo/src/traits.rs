@@ -61,44 +61,92 @@ pub trait RikiddoMV: Lmsr {
     ) -> Result<Option<Self::FU>, &'static str>;
 }
 
+/// Functions required for a pallet that offers Rikiddo functionality
 pub trait RikiddoSigmoidMVPallet {
+    /// The type that represents on-chain balances.
     type Balance;
+    /// The id of the pool of assets that's associated to one Rikiddo instance.
     type PoolId: Copy;
+    /// An unsigned fixed point type.
     type FU: FixedUnsigned;
+    /// A type that implements the RikiddoMV trait (LMSR + Rikiddo based on MarketVolume).
     type Rikiddo: RikiddoMV;
 
     /// Return price P_i(q) for all assets in q
+    /// Pool - Exit
+    ///
+    /// Retrieves all prices for a given set of assets.
+    /// Returns a vector of prices (same order as `asset_balances`).
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+    /// * `asset_balances`: The balance vector of the assets.
     fn all_prices(
         poolid: Self::PoolId,
         asset_balances: &[Self::Balance],
     ) -> Result<Vec<Self::Balance>, DispatchError>;
 
-    /// Clear market data for specific asset pool
+    /// Clear market data for a specific asset pool.
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
     fn clear(poolid: Self::PoolId) -> DispatchResult;
 
-    /// Create Rikiddo instance for specifc asset pool
-    fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult;
-
-    /// Return cost C(q) for all assets in q
+    /// Returns the total cost for a specific vector of assets (see <a href="https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf">LS-LMSR paper</a>).
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+    /// * `asset_balances`: The balance vector of the assets.
     fn cost(
         poolid: Self::PoolId,
         asset_balances: &[Self::Balance],
     ) -> Result<Self::Balance, DispatchError>;
 
-    /// Destroy Rikiddo instance
+    /// Create Rikiddo instance for specifc asset pool.
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+    /// * `rikiddo`: A specific type of Rikiddo as specified in the pallet's configuration.
+    fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult;
+
+    /// Destroy Rikiddo instance for a specific pool.
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
     fn destroy(poolid: Self::PoolId) -> DispatchResult;
 
-    /// Fetch the current fee
+    /// Returns the current fee.
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+    /// * `rikiddo`: A specific type of Rikiddo as specified in the pallet's configuration.
     fn fee(poolid: Self::PoolId) -> Result<Self::Balance, DispatchError>;
 
-    /// Return price P_i(q) for asset q_i in q
+    /// Returns the price of one specific asset.
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+    /// * `asset_in_question`: The balance of the asset for which the price should be returned.
+    /// * `asset_balances`: The balance vector of the assets.
     fn price(
         poolid: Self::PoolId,
         asset_in_question: Self::Balance,
         asset_balances: &[Self::Balance],
     ) -> Result<Self::Balance, DispatchError>;
 
-    /// Update market data
+    /// Update the market data by adding volume.
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+    /// * `volume`: The volume that was traded in the pool with id `poolid`.
     fn update_volume(
         poolid: Self::PoolId,
         volume: Self::Balance,
