@@ -138,7 +138,7 @@ parameter_type_with_key! {
 
 macro_rules! create_zeitgeist_runtime {
     ($($additional_pallets:tt)*) => {
-        // Pallets are enumerated depending on the dependency graph.
+        // Pallets are enumerated based on the dependency graph.
         //
         // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
         // `PredictionMarkets` depends on `SimpleDisputes`.
@@ -156,6 +156,7 @@ macro_rules! create_zeitgeist_runtime {
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
                 TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+                Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
 
                 // Other Parity pallets
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
@@ -414,6 +415,23 @@ impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
+}
+
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureRoot<AccountId>;
+    type Burn = Burn;
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type RejectOrigin = EnsureRoot<AccountId>;
+    type SpendFunds = ();
+    type SpendPeriod = SpendPeriod;
+    type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_utility::Config for Runtime {
