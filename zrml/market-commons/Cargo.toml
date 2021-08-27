@@ -1,8 +1,8 @@
 [dependencies]
-frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-support = { branch = "polkadot-v0.9.9", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.9", default-features = false, git = "https://github.com/paritytech/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
-sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.9", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
 [features]
