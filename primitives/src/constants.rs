@@ -2,6 +2,7 @@ pub mod ztg;
 
 use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
+use sp_runtime::Permill;
 
 // Definitions for time
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
@@ -74,4 +75,14 @@ parameter_types! {
     pub const MinLiquidity: Balance = 100 * BASE;
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
+}
+
+// Treasury
+parameter_types! {
+    pub const Burn: Permill = Permill::from_percent(50);
+    pub const MaxApprovals: u32 = 100;
+    pub const ProposalBond: Permill = Permill::from_percent(5);
+    pub const ProposalBondMinimum: Balance = 10 * BASE;
+    pub const SpendPeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 }
