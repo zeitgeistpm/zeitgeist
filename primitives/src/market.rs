@@ -26,6 +26,8 @@ pub struct Market<AccountId, BlockNumber> {
     pub report: Option<Report<AccountId, BlockNumber>>,
     // The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
+    // See [`MarketDisputeMechanism`].
+    pub mdm: MarketDisputeMechanism<AccountId>,
 }
 
 impl<AccountId, B> Market<AccountId, B> {
@@ -67,6 +69,20 @@ pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
     pub outcome: OutcomeReport,
+}
+
+/// How a market should resolve disputes
+#[derive(
+    Clone,
+    PartialEq,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    sp_runtime::RuntimeDebug,
+)]
+pub enum MarketDisputeMechanism<AI> {
+    Authorized(AI),
+    Court,
+    SimpleDisputes,
 }
 
 /// Defines whether the end is represented as a blocknumber or a timestamp.

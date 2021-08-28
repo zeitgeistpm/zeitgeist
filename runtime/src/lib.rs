@@ -56,10 +56,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
     // major_minor_patch_spec-version
-    spec_version: 21,
+    spec_version: 22,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 4,
+    transaction_version: 5,
 };
 
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
@@ -108,7 +108,7 @@ parameter_types! {
   pub const MinNominatorStake: u128 = BASE / 2;
   pub const MinSelectedCandidates: u32 = 1;
   pub const SS58Prefix: u8 = 73;
-  pub const TransactionByteFee: Balance = 10 * MILLI;
+  pub const TransactionByteFee: Balance = 100 * MICRO;
   pub const Version: RuntimeVersion = VERSION;
   pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
   pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
@@ -138,7 +138,7 @@ parameter_type_with_key! {
 
 macro_rules! create_zeitgeist_runtime {
     ($($additional_pallets:tt)*) => {
-        // Pallets are enumerated depending on the dependency graph.
+        // Pallets are enumerated based on the dependency graph.
         //
         // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
         // `PredictionMarkets` depends on `SimpleDisputes`.
@@ -156,6 +156,7 @@ macro_rules! create_zeitgeist_runtime {
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
                 TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+                Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
 
                 // Other Parity pallets
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
@@ -426,6 +427,23 @@ impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
+}
+
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureRoot<AccountId>;
+    type Burn = Burn;
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type RejectOrigin = EnsureRoot<AccountId>;
+    type SpendFunds = ();
+    type SpendPeriod = SpendPeriod;
+    type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_utility::Config for Runtime {

@@ -24,7 +24,7 @@ where
     total_value.saturating_mul(perthousand) / _1000_balance
 }
 
-// Perthousand ranges from 0 to 1000 so it will never overflow.
+// Perthousand ranges from 0 to 1000 so this function will never overflow.
 pub fn perthousand_to_balance<B, T>(perthousand: T) -> B
 where
     B: From<u16>,

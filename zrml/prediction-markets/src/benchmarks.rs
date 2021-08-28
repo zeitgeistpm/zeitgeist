@@ -16,7 +16,8 @@ use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketEnd, MarketType, MultiHash, OutcomeReport, ScalarPosition,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketEnd, MarketType, MultiHash,
+        OutcomeReport, ScalarPosition,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -49,11 +50,25 @@ fn create_market_common<T: Config>(
         create_market_common_parameters::<T>(permission)?;
 
     if let MarketType::Categorical(categories) = options {
-        let _ = Call::<T>::create_categorical_market(oracle, end, metadata, creation, categories)
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let _ = Call::<T>::create_categorical_market(
+            oracle,
+            end,
+            metadata,
+            creation,
+            categories,
+            MarketDisputeMechanism::SimpleDisputes,
+        )
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     } else if let MarketType::Scalar(range) = options {
-        let _ = Call::<T>::create_scalar_market(oracle, end, metadata, creation, range)
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let _ = Call::<T>::create_scalar_market(
+            oracle,
+            end,
+            metadata,
+            creation,
+            range,
+            MarketDisputeMechanism::SimpleDisputes,
+        )
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     } else {
         panic!("create_market_common: Unsupported market type: {:?}", options);
     }
@@ -264,13 +279,13 @@ benchmarks! {
         let (caller, oracle, end, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
         let categories = T::MaxCategories::get();
-    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, categories)
+    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, categories, MarketDisputeMechanism::SimpleDisputes)
 
     create_scalar_market {
         let (caller, oracle, end, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
         let outcome_range = (0u128, u128::MAX);
-    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, outcome_range)
+    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, outcome_range, MarketDisputeMechanism::SimpleDisputes)
 
     deploy_swap_pool_for_market {
         let a in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);

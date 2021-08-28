@@ -42,7 +42,7 @@ mod pallet {
         dispatch::Weight,
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
-        traits::{Get, Hooks, IsType},
+        traits::{Get, IsType},
         Blake2_128Concat, PalletId,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
@@ -598,13 +598,6 @@ mod pallet {
         SwapExactAmountIn(SwapEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// An exact amount of an asset is leaving the pool. \[account, amount\]
         SwapExactAmountOut(SwapEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-        fn on_runtime_upgrade() -> Weight {
-            crate::migrations::_0_1_2_add_pool_market_id::migrate::<T>()
-        }
     }
 
     #[pallet::pallet]

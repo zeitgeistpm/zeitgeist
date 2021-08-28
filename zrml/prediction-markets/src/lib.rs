@@ -91,8 +91,8 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, Market, MarketCreation, MarketDispute, MarketEnd, MarketStatus, MarketType,
-            MultiHash, OutcomeReport, Report, ScalarPosition,
+            Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketEnd,
+            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -343,6 +343,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             categories: u16,
+            mdm: MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             Self::ensure_create_market_end(end)?;
@@ -368,16 +369,17 @@ mod pallet {
             };
 
             let market = Market {
-                creator: sender.clone(),
                 creation,
                 creator_fee: 0,
-                oracle,
+                creator: sender.clone(),
                 end,
-                metadata: Vec::from(multihash),
                 market_type: MarketType::Categorical(categories),
-                status,
+                mdm,
+                metadata: Vec::from(multihash),
+                oracle,
                 report: None,
                 resolved_outcome: None,
+                status,
             };
 
             let market_id = T::MarketCommons::push_market(market)?;
@@ -431,6 +433,7 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
             pool_join_additional_assets: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>)>,
+            mdm: MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
             let weight_market_creation;
@@ -444,6 +447,7 @@ mod pallet {
                         metadata,
                         creation,
                         category_count,
+                        mdm,
                     )?
                 }
                 MarketType::Scalar(range) => {
@@ -455,6 +459,7 @@ mod pallet {
                         metadata,
                         creation,
                         range,
+                        mdm,
                     )?
                 }
             };
@@ -503,6 +508,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             outcome_range: (u128, u128),
+            mdm: MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             Self::ensure_create_market_end(end)?;
@@ -527,16 +533,17 @@ mod pallet {
             };
 
             let market = Market {
-                creator: sender.clone(),
                 creation,
                 creator_fee: 0,
-                oracle,
+                creator: sender.clone(),
                 end,
-                metadata: Vec::from(multihash),
                 market_type: MarketType::Scalar(outcome_range),
-                status,
+                mdm,
+                metadata: Vec::from(multihash),
+                oracle,
                 report: None,
                 resolved_outcome: None,
+                status,
             };
 
             let market_id = T::MarketCommons::push_market(market)?;
@@ -896,15 +903,6 @@ mod pallet {
             CurrencyId = Asset<MarketIdOf<Self>>,
         >;
 
-        /// Responsible for handling disputes
-        type SimpleDisputes: DisputeApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-            Origin = Self::Origin,
-        >;
-
         /// The module identifier.
         type PalletId: Get<PalletId>;
 
@@ -914,6 +912,15 @@ mod pallet {
 
         /// The number of blocks the reporting period remains open.
         type ReportingPeriod: Get<Self::BlockNumber>;
+
+        /// See [`SimpleDisputesPalletApi`].
+        type SimpleDisputes: DisputeApi<
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Origin = Self::Origin,
+        >;
 
         /// Slash
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -989,6 +996,8 @@ mod pallet {
     where
         T: Config,
     {
+        /// Custom addition block initialization logic wasn't successful
+        BadOnInitialize,
         /// A complete set of shares has been bought [market_id, buyer]
         BoughtCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved [market_id]
@@ -1021,17 +1030,13 @@ mod pallet {
             });
             with_transaction(|| match rslt {
                 Err(err) => {
+                    Self::deposit_event(Event::BadOnInitialize);
                     log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
                     TransactionOutcome::Rollback(())
                 }
                 Ok(_) => TransactionOutcome::Commit(()),
             });
             total_weight
-        }
-
-        fn on_runtime_upgrade() -> Weight {
-            crate::migrations::_0_1_2_move_storage_to_simple_disputes_and_market_commons::migrate::<T>(
-            )
         }
     }
 
@@ -1300,12 +1305,27 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber>,
         ) -> Result<u64, DispatchError> {
             let disputes = Disputes::<T>::get(market_id);
-            let resolved_outcome = T::SimpleDisputes::on_resolution(
-                &default_dispute_bound::<T>,
-                &disputes,
-                market_id,
-                market,
-            )?;
+            let resolved_outcome = match market.mdm {
+                MarketDisputeMechanism::Authorized(_) => T::SimpleDisputes::on_resolution(
+                    &default_dispute_bound::<T>,
+                    &disputes,
+                    market_id,
+                    market,
+                )?,
+                MarketDisputeMechanism::Court => T::SimpleDisputes::on_resolution(
+                    &default_dispute_bound::<T>,
+                    &disputes,
+                    market_id,
+                    market,
+                )?,
+                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::on_resolution(
+                    &default_dispute_bound::<T>,
+                    &disputes,
+                    market_id,
+                    market,
+                )?,
+            };
+
             Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
