@@ -78,6 +78,7 @@ fn generic_genesis(
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
+        advisory: zeitgeist_runtime::AdvisoryConfig::default(),
         #[cfg(not(feature = "parachain"))]
         aura: zeitgeist_runtime::AuraConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),

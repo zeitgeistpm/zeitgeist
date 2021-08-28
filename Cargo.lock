@@ -12276,6 +12276,7 @@ dependencies = [
  "pallet-author-mapping",
  "pallet-author-slot-filter",
  "pallet-balances",
+ "pallet-collective",
  "pallet-crowdloan-rewards",
  "pallet-grandpa",
  "pallet-identity",
