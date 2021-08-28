@@ -160,6 +160,7 @@ macro_rules! create_zeitgeist_runtime {
                 // Other Parity pallets
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 21,
+                Collective: pallet_collective::{Call, Config<T>, Event<T>, Pallet, Storage} = 22,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
@@ -390,6 +391,17 @@ impl pallet_balances::Config for Runtime {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_collective::Config for Runtime {
+    type Origin = Origin;
+    type Proposal = ();
+    type Event = Event;
+    type MotionDuration = ();
+    type MaxProposals = ();
+    type MaxMembers = ();
+    type DefaultVote = ();
+    type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}

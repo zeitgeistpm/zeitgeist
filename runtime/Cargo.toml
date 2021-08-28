@@ -10,6 +10,7 @@ orml-currencies = { branch = "master", default-features = false, git = "https://
 orml-tokens = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-traits = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-collective = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-randomness-collective-flip = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-sudo = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-timestamp = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -117,6 +118,7 @@ runtime-benchmarks = [
     "frame-system/runtime-benchmarks",
     "hex-literal",
     "pallet-balances/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
@@ -137,6 +139,7 @@ std = [
 	"orml-tokens/std",
 	"orml-traits/std",
 	"pallet-balances/std",
+	"pallet-collective/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
