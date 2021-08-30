@@ -1,6 +1,6 @@
 use crate::{
     constants::INITIAL_FEE,
-    traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
+    traits::{Lmsr, MarketAverage, RikiddoMV, Fee},
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
@@ -116,7 +116,7 @@ pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
     FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     pub config: RikiddoConfig<FS>,
@@ -194,7 +194,7 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     pub fn new(config: RikiddoConfig<FS>, fees: FE, ma_short: MA, ma_long: MA) -> Self {
@@ -536,7 +536,7 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     type FU = FU;
@@ -662,7 +662,7 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     /// Clear market data

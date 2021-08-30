@@ -1,21 +1,10 @@
 //! # Rikiddo
 //!
-//! Generic and modular implemenation of Rikiddo market scoring rule.
-//!
-//! Provides traits and implementations for sigmoid fee caluclation, calculation of ema based on
-//! market volume, LMSR, Rikiddo using sigmoid fee calculation and two ema periods.
-//!
-//! Rikiddo is a liquidity-sensitive logarithm market scoring algorithm, which can be used
-//! to determine the prices of event assets and their corresponding probabilities. It incorporates
-//! historical trading data to optimize it's reactiveness to abrupt and longer lasting changes
-//! in the market trend. More information at [blog.zeitgeist.pm].
-//!
-//! [blog.zeitgeist.pm]: https://blog.zeitgeist.pm/introducing-zeitgeists-rikiddo-scoring-rule/
+//! Manages prices of event assets within a pool
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // This is required to be able to use the derive(Arbitrary) macro.
 #![cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
-#![warn(missing_docs)]
 
 extern crate alloc;
 
@@ -24,29 +13,12 @@ pub mod mock;
 mod tests;
 pub mod traits;
 pub mod types;
-
 pub use pallet::*;
 
 #[frame_support::pallet]
-pub mod pallet {
-    //! # Rikiddo pallet
-    //!
-    //! Abstracts Rikiddo's core functions to be used within a Substrate chain.
-    //!
-    //! This implementation of the Rikiddo pallet is solely a "bookkeeper" of Rikiddo instances,
-    //! i.e. it can spawn, update, destroy and use a specific instance to retrieve price
-    //! information for a given set of assets. Internally it uses a Rikiddo implementation that
-    //! is based on a port of the rust fixed library, [substrate-fixed], consequently it must
-    //! handle all conversions between the `Balance` type and the selected fixed point type.
-    //!
-    //! This pallet is highly configurable, you can select the balance type, the fixed point types
-    //! and the actual implementation of Rikiddo (for example ema or wma of market data) for your
-    //! specific use case. By using multiple instances, potentially multiple Rikiddo variants
-    //! can run simulatenously on one chain, which can be used to ease migrations.
-    //!
-    //! [substrate-fixed]: https://github.com/encointer/substrate-fixed
+mod pallet {
     use crate::{
-        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
+        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoMVPallet},
         types::{TimestampedVolume, UnixTimestamp},
     };
     use core::{
@@ -72,6 +44,7 @@ pub mod pallet {
         },
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
+    
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
         /// Defines the type of traded amounts
@@ -186,7 +159,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config<I>, I: 'static> RikiddoSigmoidMVPallet for Pallet<T, I>
+    impl<T: Config<I>, I: 'static> RikiddoMVPallet for Pallet<T, I>
     where
         <T::FixedTypeS as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
         <T::Timestamp as Time>::Moment: Into<UnixTimestamp>,
@@ -196,12 +169,7 @@ pub mod pallet {
         type FU = T::FixedTypeU;
         type Rikiddo = T::Rikiddo;
 
-        /// Returns a vector of prices for a given set of assets (same order as `asset_balances`).
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
-        /// * `asset_balances`: The balance vector of the assets.
+        /// Return price P_i(q) for all assets in q
         fn all_prices(
             poolid: Self::PoolId,
             asset_balances: &[Self::Balance],
@@ -218,23 +186,14 @@ pub mod pallet {
             }
         }
 
-        /// Clear market data for a specific asset pool.
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// Clear market data for specific asset pool
         fn clear(poolid: Self::PoolId) -> Result<(), DispatchError> {
             let mut rikiddo = Self::get_rikiddo(&poolid)?;
             rikiddo.clear();
             Ok(())
         }
 
-        /// Returns the total cost for a specific vector of assets (see <a href="https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf">LS-LMSR paper</a>).
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
-        /// * `asset_balances`: The balance vector of the assets.
+        /// Return cost C(q) for all assets in q
         fn cost(
             poolid: Self::PoolId,
             asset_balances: &[Self::Balance],
@@ -251,12 +210,7 @@ pub mod pallet {
             }
         }
 
-        /// Create Rikiddo instance for specifc asset pool.
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
-        /// * `rikiddo`: A specific type of Rikiddo as specified in the pallet's configuration.
+        /// Create Rikiddo instance for specifc asset pool
         fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult {
             if Self::get_rikiddo(&poolid).is_ok() {
                 return Err(Error::<T, I>::RikiddoAlreadyExistsForPool.into());
@@ -266,23 +220,14 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Destroy Rikiddo instance for a specific pool.
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// Destroy Rikiddo instance
         fn destroy(poolid: Self::PoolId) -> DispatchResult {
             let _ = Self::get_rikiddo(&poolid)?;
             <RikiddoPerPool<T, I>>::remove(poolid);
             Ok(())
         }
 
-        /// Returns the current fee.
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
-        /// * `rikiddo`: A specific type of Rikiddo as specified in the pallet's configuration.
+        /// Fetch the current fee
         fn fee(poolid: Self::PoolId) -> Result<Self::Balance, DispatchError> {
             let rikiddo = Self::get_rikiddo(&poolid)?;
 
@@ -295,13 +240,7 @@ pub mod pallet {
             }
         }
 
-        /// Returns the price of one specific asset.
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
-        /// * `asset_in_question`: The balance of the asset for which the price should be returned.
-        /// * `asset_balances`: The balance vector of the assets.
+        /// Return price P_i(q) for asset q_i in q
         fn price(
             poolid: Self::PoolId,
             asset_in_question: Self::Balance,
@@ -320,12 +259,7 @@ pub mod pallet {
             }
         }
 
-        /// Update the market data by adding volume.
-        ///
-        /// # Arguments
-        ///
-        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
-        /// * `volume`: The volume that was traded in the pool with id `poolid`.
+        /// Update market data
         fn update_volume(
             poolid: Self::PoolId,
             volume: Self::Balance,

@@ -7,14 +7,18 @@ use substrate_fixed::{
     ParseFixedError,
 };
 
-pub trait Sigmoid {
+/// Fee calculating structures that take one argument.
+pub trait Fee {
+    /// A fixed point type.
     type FS: Fixed;
 
     /// Calculate fee
     fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
 }
 
+/// Market average implementations, such as EMA, SMA, median, WMA, etc.
 pub trait MarketAverage {
+    /// An unsigned fixed point type.
     type FU: FixedUnsigned;
 
     /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume
@@ -30,7 +34,9 @@ pub trait MarketAverage {
     ) -> Result<Option<Self::FU>, &'static str>;
 }
 
+/// "Logarithmic Market Scoring Rule" (LMSR) specification.
 pub trait Lmsr {
+    /// An unsigned fixed point type.
     type FU: FixedUnsigned;
 
     /// Return price P_i(q) for all assets in q
@@ -50,6 +56,7 @@ pub trait Lmsr {
     ) -> Result<Self::FU, &'static str>;
 }
 
+/// A specification for any implementation of the Rikiddo variant that uses the market volume.
 pub trait RikiddoMV: Lmsr {
     /// Clear market data
     fn clear(&mut self);
@@ -61,8 +68,9 @@ pub trait RikiddoMV: Lmsr {
     ) -> Result<Option<Self::FU>, &'static str>;
 }
 
-/// Functions required for a pallet that offers Rikiddo functionality
-pub trait RikiddoSigmoidMVPallet {
+/// A specification that a pallet should follow if it wants to offer Rikiddo
+/// functionality, that is based on the [`RikiddoMV`](trait@RikiddoMV) trait.
+pub trait RikiddoMVPallet {
     /// The type that represents on-chain balances.
     type Balance;
     /// The id of the pool of assets that's associated to one Rikiddo instance.

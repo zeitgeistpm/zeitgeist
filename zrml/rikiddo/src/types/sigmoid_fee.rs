@@ -1,7 +1,7 @@
 use super::convert_to_signed;
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
-    traits::Sigmoid,
+    traits::Fee,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
@@ -139,7 +139,7 @@ where
     }
 }
 
-impl<FS> Sigmoid for FeeSigmoid<FS>
+impl<FS> Fee for FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>>,
 {
