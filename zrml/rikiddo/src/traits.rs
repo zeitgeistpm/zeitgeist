@@ -1,3 +1,5 @@
+//! This module contains a collection of traits for Rikiddo and its components.
+
 use crate::types::TimestampedVolume;
 use core::convert::TryFrom;
 use frame_support::dispatch::DispatchResult;
@@ -16,18 +18,18 @@ pub trait Fee {
     fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
 }
 
-/// Market average implementations, such as EMA, SMA, median, WMA, etc.
+/// Market average specification for implementations such as EMA, SMA, median, WMA, etc.
 pub trait MarketAverage {
     /// An unsigned fixed point type.
     type FU: FixedUnsigned;
 
-    /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume
+    /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume.
     fn get(&self) -> Option<Self::FU>;
 
-    /// Clear market data
+    /// Clear market data.
     fn clear(&mut self);
 
-    /// Update market volume
+    /// Update market volume.
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
@@ -39,16 +41,16 @@ pub trait Lmsr {
     /// An unsigned fixed point type.
     type FU: FixedUnsigned;
 
-    /// Return price P_i(q) for all assets in q
+    /// Return price P_i(q) for all assets in q.
     fn all_prices(&self, asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str>;
 
-    /// Return cost C(q) for all assets in q
+    /// Return cost C(q) for all assets in q.
     fn cost(&self, asset_balances: &[Self::FU]) -> Result<Self::FU, &'static str>;
 
-    /// Fetch the current fee
+    /// Fetch the current fee.
     fn fee(&self) -> Result<Self::FU, &'static str>;
 
-    /// Return price P_i(q) for asset q_i in q
+    /// Return price P_i(q) for asset q_i in q.
     fn price(
         &self,
         asset_balances: &[Self::FU],
@@ -58,10 +60,10 @@ pub trait Lmsr {
 
 /// A specification for any implementation of the Rikiddo variant that uses the market volume.
 pub trait RikiddoMV: Lmsr {
-    /// Clear market data
+    /// Clear market data.
     fn clear(&mut self);
 
-    /// Update market data
+    /// Update market data.
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
@@ -80,11 +82,8 @@ pub trait RikiddoMVPallet {
     /// A type that implements the RikiddoMV trait (LMSR + Rikiddo based on MarketVolume).
     type Rikiddo: RikiddoMV;
 
-    /// Return price P_i(q) for all assets in q
-    /// Pool - Exit
-    ///
-    /// Retrieves all prices for a given set of assets.
-    /// Returns a vector of prices (same order as `asset_balances`).
+
+    /// Returns a vector of prices for a given set of assets (same order as `asset_balances`).
     ///
     /// # Arguments
     ///
@@ -161,28 +160,32 @@ pub trait RikiddoMVPallet {
     ) -> Result<Option<Self::Balance>, DispatchError>;
 }
 
-/// Converts a fixed point decimal number into another type
+/// Converts a fixed point decimal number into another type.
 pub trait FromFixedDecimal<N: Into<u128>>
 where
     Self: Sized,
 {
+    /// Craft a fixed point decimal number from `N`.
     fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError>;
 }
 
-/// Converts a fixed point decimal number into Fixed type (Balance -> Fixed)
-pub trait IntoFixedFromDecimal<F: Fixed> {
+/// Converts a fixed point decimal number into another type.
+pub trait IntoFixedFromDecimal<F> {
+    /// Converts a fixed point decimal number into another type.
     fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
 }
 
-/// Converts a Fixed type into fixed point decimal number
+/// Converts a type into a fixed point decimal number.
 pub trait FromFixedToDecimal<F>
 where
     Self: Sized + TryFrom<u128>,
 {
+    /// Craft a fixed point decimal number from another type.
     fn from_fixed_to_fixed_decimal(fixed: F, places: u8) -> Result<Self, &'static str>;
 }
 
-/// Converts a fixed point decimal number into Fixed type
+/// Converts a type into a fixed point decimal number.
 pub trait IntoFixedDecimal<N: TryFrom<u128>> {
+    /// Converts a type into a fixed point decimal number.
     fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str>;
 }

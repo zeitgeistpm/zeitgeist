@@ -16,7 +16,23 @@ pub mod types;
 pub use pallet::*;
 
 #[frame_support::pallet]
-mod pallet {
+pub mod pallet {
+    //! The pallet that bridges Rikiddo instances to pools.
+    //!
+    //! Abstracts Rikiddo's core functions to be used within a Substrate chain.
+    //!
+    //! This implementation of the Rikiddo pallet is solely a "bookkeeper" of Rikiddo instances,
+    //! i.e. it can spawn, update, destroy and use a specific instance to retrieve price
+    //! information for a given set of assets. Internally it uses a Rikiddo implementation that
+    //! is based on a port of the rust fixed library, [substrate-fixed], consequently it must
+    //! handle all conversions between the `Balance` type and the selected fixed point type.
+    //!
+    //! This pallet is highly configurable, you can select the balance type, the fixed point types
+    //! and the actual implementation of Rikiddo (for example ema or wma of market data) for your
+    //! specific use case. By using multiple instances, potentially multiple Rikiddo variants
+    //! can run simulatenously on one chain, which can be used to ease migrations.
+    //!
+    //! [substrate-fixed]: https://github.com/encointer/substrate-fixed
     use crate::{
         traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoMVPallet},
         types::{TimestampedVolume, UnixTimestamp},
@@ -47,23 +63,23 @@ mod pallet {
     
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
-        /// Defines the type of traded amounts
+        /// Defines the type of traded amounts.
         type Balance: Copy + Into<u128> + TryFrom<u128> + Debug;
 
-        /// Offers timestamping functionality
+        /// Offers timestamping functionality.
         type Timestamp: Time;
 
-        /// Will be used for the fractional part of the fixed point numbers
+        /// Will be used for the fractional part of the fixed point numbers.
         /// Calculation: Select FixedTYPE<UWIDTH>, such that TYPE = the type of Balance (i.e. FixedU128)
-        /// Select the generic UWIDTH = floor(log2(10.pow(fractional_decimals)))
+        /// Select the generic UWIDTH = floor(log2(10.pow(fractional_decimals))).
         type FixedTypeU: Decode
             + Encode
             + FixedUnsigned
             + LossyFrom<FixedU32<U32>>
             + LossyFrom<FixedU128<U128>>;
 
-        /// Will be used for the fractional part of the fixed point numbers
-        /// Calculation: Select FixedTYPE, such that it is the signed variant of FixedTypeU
+        /// Will be used for the fractional part of the fixed point numbers.
+        /// Calculation: Select FixedTYPE, such that it is the signed variant of FixedTypeU.
         /// It is possible to reduce the fractional bit count by one, effectively eliminating
         /// conversion overflows when the MSB of the unsigned fixed type is set, but in exchange
         /// Reducing the fractional precision by one bit.
@@ -76,14 +92,14 @@ mod pallet {
             + LossyFrom<FixedI128<U127>>
             + PartialOrd<I9F23>;
 
-        // Number of fractional decimal places for one unit of currency
+        /// Number of fractional decimal places for one unit of currency.
         #[pallet::constant]
         type BalanceFractionalDecimals: Get<u8>;
 
-        /// Type that's used as an id for pools
+        /// Type that's used as an id for pools.
         type PoolId: Copy + Decode + FullEncode;
 
-        /// Rikiddo variant
+        /// Rikiddo variant.
         type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec;
     }
 

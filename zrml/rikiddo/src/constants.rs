@@ -1,3 +1,6 @@
+//! This module contains constants that are used during the processing of market data and
+//! the calculation of fees.
+
 use crate::types::Timespan;
 use substrate_fixed::{
     types::extra::{U24, U32},
