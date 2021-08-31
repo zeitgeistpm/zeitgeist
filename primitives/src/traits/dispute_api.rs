@@ -8,6 +8,7 @@ pub trait DisputeApi {
     type Balance;
     type BlockNumber;
     type MarketId;
+    type Moment;
     type Origin;
 
     /// Disputes a reported outcome.
@@ -21,7 +22,7 @@ pub trait DisputeApi {
         dispute_bound: &D,
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber>,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<OutcomeReport, DispatchError>
     where
         D: Fn(usize) -> Self::Balance;

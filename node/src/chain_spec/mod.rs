@@ -29,7 +29,7 @@ use {
 const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
     let hours_per_year = 8766;
     let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
-    let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK;
+    let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
     let rounds_per_year = millisecs_per_year / round_millisecs;
 
     let annual_inflation = ztg::STAKING_PTD;

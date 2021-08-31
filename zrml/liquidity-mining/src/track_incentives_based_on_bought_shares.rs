@@ -1,10 +1,12 @@
 use crate::{
-    utils::{calculate_perthousand, calculate_perthousand_value, perthousand_to_balance},
-    BalanceOf, BlockBoughtShares, Markets, OwnedValues, PerBlockIncentive,
+    utils::{calculate_perthousand, calculate_perthousand_value},
+    BalanceOf, BlockBoughtShares, MomentOf, OwnedValues, PerBlockIncentive,
 };
-use alloc::vec::Vec;
+use alloc::{collections::BTreeSet, vec::Vec};
 use core::marker::PhantomData;
 use sp_runtime::traits::{CheckedDiv, Saturating};
+use zeitgeist_primitives::types::MarketPeriod;
+use zrml_market_commons::MarketCommonsPalletApi;
 
 // Per-thousand that every incentive should transfer to the perpetual balance.
 // Currently is 0.1%
@@ -19,9 +21,9 @@ where
 {
     pub(crate) fn exec(curr_block: T::BlockNumber) -> Option<usize> {
         let per_block_incentives = <PerBlockIncentive<T>>::get();
-        let ppb = BalanceOf::<T>::from(PERPETUAL_PTD);
         let market_incentives = Self::markets_incentives(per_block_incentives, curr_block)?;
         let market_incentives_len = market_incentives.len();
+        let ppb = BalanceOf::<T>::from(PERPETUAL_PTD);
 
         for (market_id, incentive) in market_incentives {
             let mut total_bought_shares = BalanceOf::<T>::from(0u8);
@@ -77,18 +79,23 @@ where
         curr_block: T::BlockNumber,
     ) -> Option<Vec<(T::MarketId, BalanceOf<T>)>> {
         let mut normalized_total = BalanceOf::<T>::from(0u8);
-        let normalized_values: Vec<_> = <Markets<T>>::iter()
-            .map(|(market_id, period)| {
-                let normalized_value = Self::normalize_market(curr_block, period);
+        let markets_periods: BTreeSet<_> = <BlockBoughtShares<T>>::iter().map(|el| el.0).collect();
+        let now = T::MarketCommons::now();
+
+        let normalized_values: Vec<_> = markets_periods
+            .into_iter()
+            .filter_map(|market_id| {
+                let period = T::MarketCommons::market(&market_id).ok()?.period;
+                let normalized_value = Self::normalize_market(curr_block, now, &period);
                 normalized_total = normalized_total.saturating_add(normalized_value);
-                (market_id, normalized_value)
+                Some((market_id, normalized_value))
             })
             .collect();
         normalized_values
             .into_iter()
             .map(|(market_id, normalized_value)| {
-                let incentive_ptd = calculate_perthousand(normalized_value, &normalized_total)?;
-                let incentive = calculate_perthousand_value(incentive_ptd, per_block_incentives);
+                let ptd = calculate_perthousand(normalized_value, &normalized_total)?.into();
+                let incentive = calculate_perthousand_value(ptd, per_block_incentives);
                 Some((market_id, incentive))
             })
             .collect()
@@ -117,12 +124,20 @@ where
     // The greater the output, the more incentives the market will receive
     fn normalize_market(
         curr_block: T::BlockNumber,
-        [start, end]: [T::BlockNumber; 2],
+        now: MomentOf<T>,
+        period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
     ) -> BalanceOf<T> {
-        let total_blocks = end.saturating_sub(start);
-        let remaining_blocks = end.saturating_sub(curr_block);
-        let zero = T::BlockNumber::from(0u8);
-        let ptd = calculate_perthousand(remaining_blocks, &total_blocks).unwrap_or(zero);
-        perthousand_to_balance(ptd)
+        let opt = match period {
+            MarketPeriod::Block(range) => {
+                let total_value = range.end.saturating_sub(range.start);
+                calculate_perthousand(range.end.saturating_sub(curr_block), &total_value)
+            }
+            MarketPeriod::Timestamp(range) => {
+                let total_value = range.end.saturating_sub(range.start);
+                let value = now.saturating_sub(range.start);
+                calculate_perthousand(value, &total_value)
+            }
+        };
+        opt.map(|ptd| ptd.into()).unwrap_or_default()
     }
 }

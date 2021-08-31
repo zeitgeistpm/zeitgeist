@@ -7,9 +7,9 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, BASE},
+    constants::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, MinimumPeriod, BASE},
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
     },
 };
@@ -32,14 +32,17 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
     }
 );
 
 impl crate::Config for Runtime {
     type Currency = Balances;
     type Event = ();
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LmPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
@@ -80,6 +83,19 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
+    type WeightInfo = ();
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+    type Timestamp = Timestamp;
+}
+
+impl pallet_timestamp::Config for Runtime {
+    type MinimumPeriod = MinimumPeriod;
+    type Moment = Moment;
+    type OnTimestampSet = ();
     type WeightInfo = ();
 }
 

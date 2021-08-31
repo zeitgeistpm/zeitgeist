@@ -1,14 +1,16 @@
 #![cfg(test)]
 use crate as zrml_rikiddo;
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::construct_runtime;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use substrate_fixed::types::extra::U34;
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
-    types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
+    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, MinimumPeriod, BASE},
+    types::{
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, UncheckedExtrinsicTest,
+    },
 };
 
 pub const ALICE: AccountIdTest = 0;
@@ -20,10 +22,6 @@ pub const FRED: AccountIdTest = 5;
 
 pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
-
-parameter_types! {
-    pub const MinimumPeriod: u64 = 0;
-}
 
 construct_runtime!(
     pub enum Runtime
@@ -85,7 +83,7 @@ impl pallet_balances::Config for Runtime {
 
 impl pallet_timestamp::Config for Runtime {
     type MinimumPeriod = MinimumPeriod;
-    type Moment = u64;
+    type Moment = Moment;
     type OnTimestampSet = ();
     type WeightInfo = ();
 }
