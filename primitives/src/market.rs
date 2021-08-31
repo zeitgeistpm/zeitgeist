@@ -1,36 +1,42 @@
 use crate::types::OutcomeReport;
 use alloc::vec::Vec;
+use core::ops::{Range, RangeInclusive};
 
+/// Types
+///
+/// * `AI`: Account Id
+/// * `BN`: Block Number
+/// * `M`: Moment (Time moment)
 #[derive(
     PartialEq, parity_scale_codec::Decode, parity_scale_codec::Encode, sp_runtime::RuntimeDebug,
 )]
-pub struct Market<AccountId, BlockNumber> {
+pub struct Market<AI, BN, M> {
     // Creator of this market.
-    pub creator: AccountId,
+    pub creator: AI,
     // Creation type.
     pub creation: MarketCreation,
     // The fee the creator gets from each winning share.
     pub creator_fee: u8,
     // Oracle that reports the outcome of this market.
-    pub oracle: AccountId,
-    // Ending block for this market.
-    pub end: MarketEnd<BlockNumber>,
+    pub oracle: AI,
     // Metadata for the market, usually a content address of IPFS
     // hosted JSON.
     pub metadata: Vec<u8>,
     // The type of the market.
     pub market_type: MarketType,
+    /// Market start and end
+    pub period: MarketPeriod<BN, M>,
     // The current status of the market.
     pub status: MarketStatus,
     // The report of the market. Only `Some` if it has been reported.
-    pub report: Option<Report<AccountId, BlockNumber>>,
+    pub report: Option<Report<AI, BN>>,
     // The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     // See [`MarketDisputeMechanism`].
-    pub mdm: MarketDisputeMechanism<AccountId>,
+    pub mdm: MarketDisputeMechanism<AI>,
 }
 
-impl<AccountId, B> Market<AccountId, B> {
+impl<AI, BN, M> Market<AI, BN, M> {
     // Returns the number of outcomes for a market.
     pub fn outcomes(&self) -> u16 {
         match self.market_type {
@@ -85,19 +91,29 @@ pub enum MarketDisputeMechanism<AI> {
     SimpleDisputes,
 }
 
-/// Defines whether the end is represented as a blocknumber or a timestamp.
+/// Defines whether the period is represented as a blocknumber or a timestamp.
+///
+/// ****** IMPORTANT *****
+///
+/// Must be an exclusive range because:
+///
+/// 1. `zrml_predition_markets::Pallet::admin_move_market_to_closed` uses the current block as the
+/// end period.
+/// 2. The liquidity mining pallet takes into consideration the different between the two blocks.
+/// So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
+/// 3. With inclusive ranges it is not possible to express empty ranges and this feature
+/// mostly conflicts with existent tests and corner cases.
 #[derive(
     Clone,
-    Copy,
     Eq,
     PartialEq,
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
     sp_runtime::RuntimeDebug,
 )]
-pub enum MarketEnd<BlockNumber> {
-    Block(BlockNumber),
-    Timestamp(u64),
+pub enum MarketPeriod<BN, M> {
+    Block(Range<BN>),
+    Timestamp(Range<M>),
 }
 
 /// Defines the state of the market.
@@ -158,6 +174,3 @@ pub struct Report<AccountId, BlockNumber> {
     pub by: AccountId,
     pub outcome: OutcomeReport,
 }
-
-// An inclusive range between the left side (lower) and right (upper).
-type RangeInclusive<T> = (T, T);

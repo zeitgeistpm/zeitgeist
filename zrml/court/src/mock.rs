@@ -7,9 +7,9 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, CourtCaseDuration, MaxReserves, StakeWeight, BASE},
+    constants::{BlockHashCount, CourtCaseDuration, MaxReserves, MinimumPeriod, StakeWeight, BASE},
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
     },
 };
@@ -36,6 +36,7 @@ construct_runtime!(
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
     }
 );
 
@@ -90,6 +91,14 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type Timestamp = Timestamp;
+}
+
+impl pallet_timestamp::Config for Runtime {
+    type MinimumPeriod = MinimumPeriod;
+    type Moment = Moment;
+    type OnTimestampSet = ();
+    type WeightInfo = ();
 }
 
 pub struct ExtBuilder {

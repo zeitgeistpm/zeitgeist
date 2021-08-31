@@ -46,6 +46,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
+    type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -202,8 +203,9 @@ mod pallet {
         type AccountId = T::AccountId;
         type Balance = BalanceOf<T>;
         type BlockNumber = T::BlockNumber;
-        type Origin = T::Origin;
         type MarketId = MarketIdOf<T>;
+        type Moment = MomentOf<T>;
+        type Origin = T::Origin;
 
         fn on_dispute(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
@@ -225,7 +227,7 @@ mod pallet {
             _: &D,
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber>,
+            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> Result<OutcomeReport, DispatchError>
         where
             D: Fn(usize) -> Self::Balance,

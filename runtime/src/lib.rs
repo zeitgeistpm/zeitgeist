@@ -65,7 +65,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
 pub type AdaptedBasicCurrency =
     orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
@@ -104,7 +103,6 @@ parameter_types! {
   pub const MaxNominatorsPerCollator: u32 = 32;
   pub const MinBlocksPerRound: u32 = (BLOCKS_PER_DAY / 6) as _;
   pub const MinCollatorStake: u128 = 64 * BASE;
-  pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
   pub const MinNominatorStake: u128 = BASE / 2;
   pub const MinSelectedCandidates: u32 = 1;
   pub const SS58Prefix: u8 = 73;
@@ -446,6 +444,7 @@ impl parachain_info::Config for Runtime {}
 impl zrml_liquidity_mining::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
     type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
@@ -454,6 +453,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type Timestamp = Timestamp;
 }
 
 impl zrml_orderbook_v1::Config for Runtime {
@@ -483,7 +483,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type SimpleDisputes = SimpleDisputes;
     type Slash = ();
     type Swaps = Swaps;
-    type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }

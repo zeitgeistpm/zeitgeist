@@ -1,17 +1,24 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{Balances, ExtBuilder, LiquidityMining, Origin, Runtime, System, ALICE, BOB},
+    mock::{
+        Balances, ExtBuilder, LiquidityMining, MarketCommons, Origin, Runtime, System, ALICE, BOB,
+    },
     track_incentives_based_on_bought_shares::TrackIncentivesBasedOnBoughtShares,
     track_incentives_based_on_sold_shares::TrackIncentivesBasedOnSoldShares,
-    BlockBoughtShares, BlockSoldShares, LiquidityMiningPalletApi as _, Markets, OwnedValues,
+    BlockBoughtShares, BlockSoldShares, LiquidityMiningPalletApi as _, OwnedValues,
 };
+use core::ops::Range;
 use frame_support::{
     assert_err, assert_ok,
     dispatch::DispatchError,
     traits::{Currency, OnFinalize},
 };
 use frame_system::RawOrigin;
+use zeitgeist_primitives::types::{
+    Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
+};
+use zrml_market_commons::MarketCommonsPalletApi;
 
 #[test]
 fn blocks_shares_are_updated_after_each_block() {
@@ -31,17 +38,16 @@ fn blocks_shares_are_updated_after_each_block() {
 fn distribute_market_incentives_removes_market_and_distributes_all_incentives_to_lps() {
     ExtBuilder::default().build().execute_with(|| {
         let initial_alice_balance = Balances::free_balance(ALICE);
-        LiquidityMining::add_market_period(0, [1, 5]);
-        LiquidityMining::add_market_period(1, [1, 5]);
+        create_default_market(0, 1..5);
+        create_default_market(1, 1..5);
+
         LiquidityMining::add_shares(ALICE, 0, 10);
         LiquidityMining::add_shares(ALICE, 1, 10);
         LiquidityMining::on_finalize(2);
 
-        assert_eq!(<Markets<Runtime>>::iter().count(), 2);
         assert_eq!(<OwnedValues<Runtime>>::iter().count(), 2);
         assert_ok!(LiquidityMining::distribute_market_incentives(&0));
         assert_ok!(LiquidityMining::distribute_market_incentives(&1));
-        assert_eq!(<Markets<Runtime>>::iter().count(), 0);
         assert_eq!(<OwnedValues<Runtime>>::iter().count(), 0);
 
         // In this case, each market have the same amount of incentives
@@ -80,8 +86,8 @@ fn genesis_has_lm_account_and_initial_per_block_distribution() {
 fn owned_balances_are_updated_after_bought_shares() {
     ExtBuilder::default().build().execute_with(|| {
         System::set_block_number(5);
-        LiquidityMining::add_market_period(0, [1, 11]);
-        LiquidityMining::add_market_period(1, [1, 21]);
+        create_default_market(0, 1..11);
+        create_default_market(1, 1..21);
 
         LiquidityMining::add_shares(ALICE, 0, 100);
         LiquidityMining::add_shares(ALICE, 1, 200);
@@ -130,8 +136,8 @@ fn owned_balances_are_updated_after_bought_shares() {
 fn owned_balances_are_updated_after_sold_shares() {
     ExtBuilder::default().build().execute_with(|| {
         System::set_block_number(5);
-        LiquidityMining::add_market_period(0, [1, 11]);
-        LiquidityMining::add_market_period(1, [1, 21]);
+        create_default_market(0, 1..11);
+        create_default_market(1, 1..21);
 
         LiquidityMining::add_shares(ALICE, 0, 100);
         LiquidityMining::add_shares(ALICE, 1, 200);
@@ -174,6 +180,25 @@ fn only_sudo_can_change_per_block_distribution() {
             DispatchError::BadOrigin
         );
     });
+}
+
+fn create_default_market(market_id: u128, period: Range<u64>) {
+    MarketCommons::insert_market(
+        market_id,
+        Market {
+            creation: MarketCreation::Permissionless,
+            creator_fee: 0,
+            creator: 0,
+            market_type: MarketType::Categorical(0),
+            mdm: MarketDisputeMechanism::SimpleDisputes,
+            metadata: vec![],
+            oracle: 0,
+            period: MarketPeriod::Block(period),
+            report: None,
+            resolved_outcome: None,
+            status: MarketStatus::Closed,
+        },
+    );
 }
 
 // One bought share value of a particular market in a particular block

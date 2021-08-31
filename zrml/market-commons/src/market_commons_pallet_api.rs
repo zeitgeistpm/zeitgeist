@@ -10,9 +10,10 @@ use zeitgeist_primitives::types::{Market, PoolId};
 /// Simple disputes - Pallet Api
 pub trait MarketCommonsPalletApi {
     type AccountId;
-    type BlockNumber;
+    type BlockNumber: AtLeast32Bit;
     type Currency: ReservableCurrency<Self::AccountId>;
     type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + Member + Parameter;
+    type Moment: AtLeast32Bit + Copy + Default + Parameter;
 
     // Market
 
@@ -24,16 +25,16 @@ pub trait MarketCommonsPalletApi {
     /// Gets a market from the storage.
     fn market(
         market_id: &Self::MarketId,
-    ) -> Result<Market<Self::AccountId, Self::BlockNumber>, DispatchError>;
+    ) -> Result<Market<Self::AccountId, Self::BlockNumber, Self::Moment>, DispatchError>;
 
     /// Mutates a given market storage
     fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
     where
-        F: FnOnce(&mut Market<Self::AccountId, Self::BlockNumber>) -> DispatchResult;
+        F: FnOnce(&mut Market<Self::AccountId, Self::BlockNumber, Self::Moment>) -> DispatchResult;
 
     /// Pushes a new market into the storage, returning its related auto-incremented ID.
     fn push_market(
-        market: Market<Self::AccountId, Self::BlockNumber>,
+        market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Self::MarketId, DispatchError>;
 
     /// Removes a market from the storage.
@@ -47,9 +48,15 @@ pub trait MarketCommonsPalletApi {
     /// Fetches the pool id associated with a given `market_id`.
     fn market_pool(market_id: &Self::MarketId) -> Result<PoolId, DispatchError>;
 
+    /// Returns the current UTC time (milliseconds)
+    fn now() -> Self::Moment;
+
     // Migrations (Temporary)
 
-    fn insert_market(market_id: Self::MarketId, market: Market<Self::AccountId, Self::BlockNumber>);
+    fn insert_market(
+        market_id: Self::MarketId,
+        market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+    );
 
     fn set_market_counter(counter: Self::MarketId);
 }

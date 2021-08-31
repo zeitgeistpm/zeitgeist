@@ -11,6 +11,9 @@
 
 extern crate alloc;
 
+#[macro_use]
+mod utils;
+
 mod benchmarks;
 mod liquidity_mining_pallet_api;
 mod mock;
@@ -18,7 +21,6 @@ mod owned_values_params;
 mod tests;
 mod track_incentives_based_on_bought_shares;
 mod track_incentives_based_on_sold_shares;
-mod utils;
 pub mod weights;
 
 pub use liquidity_mining_pallet_api::LiquidityMiningPalletApi;
@@ -30,7 +32,10 @@ mod pallet {
         owned_values_params::OwnedValuesParams,
         track_incentives_based_on_bought_shares::TrackIncentivesBasedOnBoughtShares,
         track_incentives_based_on_sold_shares::TrackIncentivesBasedOnSoldShares,
-        utils::{calculate_perthousand, calculate_perthousand_value, perthousand_to_balance},
+        utils::{
+            calculate_average_blocks_of_a_time_period, calculate_perthousand,
+            calculate_perthousand_value,
+        },
         weights::WeightInfoZeitgeist,
         LiquidityMiningPalletApi,
     };
@@ -42,7 +47,7 @@ mod pallet {
         dispatch::DispatchResult,
         log,
         storage::{
-            types::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+            types::{StorageDoubleMap, StorageValue, ValueQuery},
             with_transaction,
         },
         traits::{
@@ -55,10 +60,15 @@ mod pallet {
         traits::{AccountIdConversion, Saturating, Zero},
         SaturatedConversion, TransactionOutcome,
     };
-    use zeitgeist_primitives::{traits::MarketId, types::MaxUsize};
+    use zeitgeist_primitives::{
+        traits::MarketId,
+        types::{MarketPeriod, MaxUsize},
+    };
+    use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -77,6 +87,12 @@ mod pallet {
     pub trait Config: frame_system::Config {
         type Currency: ReservableCurrency<Self::AccountId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type MarketCommons: MarketCommonsPalletApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            Currency = Self::Currency,
+            MarketId = Self::MarketId,
+        >;
         type MarketId: MarketId;
         type PalletId: Get<PalletId>;
         type WeightInfo: WeightInfoZeitgeist;
@@ -100,7 +116,7 @@ mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         /// Pallet account does not have enough funds
-        FundAccountDoesNotEnoughBalance,
+        FundDoesNotHaveEnoughBalance,
     }
 
     #[cfg(feature = "std")]
@@ -177,10 +193,6 @@ mod pallet {
         type BlockNumber = T::BlockNumber;
         type MarketId = T::MarketId;
 
-        fn add_market_period(market_id: Self::MarketId, period: [Self::BlockNumber; 2]) {
-            <Markets<T>>::insert(market_id, period)
-        }
-
         fn add_shares(
             account_id: Self::AccountId,
             market_id: Self::MarketId,
@@ -194,6 +206,7 @@ mod pallet {
         fn distribute_market_incentives(market_id: &Self::MarketId) -> DispatchResult {
             let pallet_account_id = Pallet::<T>::pallet_account_id();
             let mut final_total_incentives = BalanceOf::<T>::from(0u8);
+
             let values: Vec<_> = <OwnedValues<T>>::drain_prefix(market_id)
                 .filter_map(
                     |(
@@ -206,10 +219,17 @@ mod pallet {
                         },
                     )| {
                         let actual_perpetual_incentives = {
-                            let [start, end] = <Markets<T>>::get(market_id)?;
-                            let market_blocks = end.saturating_sub(start);
-                            let ptd = calculate_perthousand(participated_blocks, &market_blocks)?;
-                            let ptd_balance = perthousand_to_balance(ptd);
+                            let opt = match T::MarketCommons::market(market_id).ok()?.period {
+                                MarketPeriod::Block(range) => calculate_perthousand(
+                                    participated_blocks,
+                                    &range.end.saturating_sub(range.start),
+                                ),
+                                MarketPeriod::Timestamp(range) => calculate_perthousand(
+                                    participated_blocks,
+                                    &calculate_average_blocks_of_a_time_period::<T>(&range),
+                                ),
+                            };
+                            let ptd_balance = opt.map(|ptd| ptd.into())?;
                             calculate_perthousand_value(ptd_balance, perpetual_incentives)
                         };
                         let final_incentives =
@@ -228,7 +248,7 @@ mod pallet {
                 T::Currency::free_balance(&pallet_account_id)
                     .saturating_sub(final_total_incentives),
             )
-            .map_err(|_err| Error::<T>::FundAccountDoesNotEnoughBalance)?;
+            .map_err(|_err| Error::<T>::FundDoesNotHaveEnoughBalance)?;
 
             let accounts_len = values.len().saturated_into();
             for (account_id, incentives) in values {
@@ -238,9 +258,8 @@ mod pallet {
                     incentives,
                     ExistenceRequirement::AllowDeath,
                 )
-                .map_err(|_err| Error::<T>::FundAccountDoesNotEnoughBalance)?;
+                .map_err(|_err| Error::<T>::FundDoesNotHaveEnoughBalance)?;
             }
-            <Markets<T>>::remove(&market_id);
             Self::deposit_event(Event::DistributedIncentives(final_total_incentives, accounts_len));
             Ok(())
         }
@@ -256,7 +275,7 @@ mod pallet {
         }
     }
 
-    /// Shares bought in the current block being constructed. Automatically erased after each finalized block.
+    /// Shares bought in the current block being constructed. Automatically *erased* after each finalized block.
     #[pallet::storage]
     pub type BlockBoughtShares<T: Config> = StorageDoubleMap<
         _,
@@ -268,7 +287,7 @@ mod pallet {
         ValueQuery,
     >;
 
-    /// Shares sold in the current block being constructed. Automatically erased after each finalized block.
+    /// Shares sold in the current block being constructed. Automatically *erased* after each finalized block.
     #[pallet::storage]
     pub type BlockSoldShares<T: Config> = StorageDoubleMap<
         _,
@@ -280,12 +299,8 @@ mod pallet {
         ValueQuery,
     >;
 
-    /// Market end periods
-    #[pallet::storage]
-    pub type Markets<T: Config> = StorageMap<_, Blake2_128Concat, T::MarketId, [T::BlockNumber; 2]>;
-
     /// Owned balances (not shares) that are going to be distributed as incentives. Automatically
-    /// updated after each finalized block.
+    /// *updated* after each finalized block.
     #[pallet::storage]
     pub type OwnedValues<T: Config> = StorageDoubleMap<
         _,

@@ -16,7 +16,7 @@ use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketEnd, MarketType, MultiHash,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
         OutcomeReport, ScalarPosition,
     },
 };
@@ -27,18 +27,24 @@ use zrml_market_commons::MarketCommonsPalletApi;
 fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
 ) -> Result<
-    (T::AccountId, T::AccountId, MarketEnd<T::BlockNumber>, MultiHash, MarketCreation),
+    (
+        T::AccountId,
+        T::AccountId,
+        MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        MultiHash,
+        MarketCreation,
+    ),
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
     let _ = CurrencyOf::<T>::deposit_creating(&caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
-    let end = <MarketEnd<T::BlockNumber>>::Block((u128::MAX).saturated_into());
+    let period = MarketPeriod::Block(0u128.saturated_into()..u128::MAX.saturated_into());
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;
     let creation = permission;
-    Ok((caller, oracle, end, MultiHash::Sha3_384(metadata), creation))
+    Ok((caller, oracle, period, MultiHash::Sha3_384(metadata), creation))
 }
 
 // Create a market based on common parameters
@@ -46,13 +52,13 @@ fn create_market_common<T: Config>(
     permission: MarketCreation,
     options: MarketType,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, oracle, end, metadata, creation) =
+    let (caller, oracle, period, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
 
     if let MarketType::Categorical(categories) = options {
         let _ = Call::<T>::create_categorical_market(
             oracle,
-            end,
+            period,
             metadata,
             creation,
             categories,
@@ -62,7 +68,7 @@ fn create_market_common<T: Config>(
     } else if let MarketType::Scalar(range) = options {
         let _ = Call::<T>::create_scalar_market(
             oracle,
-            end,
+            period,
             metadata,
             creation,
             range,
@@ -143,7 +149,7 @@ fn setup_redeem_shares_common<T: Config>(
     if let MarketType::Categorical(categories) = market_type {
         outcome = OutcomeReport::Categorical(categories.saturating_sub(1));
     } else if let MarketType::Scalar(range) = market_type {
-        outcome = OutcomeReport::Scalar(range.1);
+        outcome = OutcomeReport::Scalar(*range.end());
     } else {
         panic!("setup_redeem_shares_common: Unsupported market type: {:?}", market_type);
     }
@@ -170,7 +176,7 @@ fn setup_resolve_common_scalar<T: Config>(
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
-        MarketType::Scalar((0u128, u128::MAX)),
+        MarketType::Scalar(0u128..=u128::MAX),
         OutcomeReport::Scalar(u128::MAX),
     )?;
     let _ = generate_accounts_with_assets::<T>(
@@ -199,7 +205,6 @@ benchmarks! {
         // c = num. asset types
         let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
         // Complexity: c*a + c*b ∈ O(a)
-
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
@@ -276,16 +281,16 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), marketid)
 
     create_categorical_market {
-        let (caller, oracle, end, metadata, creation) =
+        let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
         let categories = T::MaxCategories::get();
-    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, categories, MarketDisputeMechanism::SimpleDisputes)
+    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, categories, MarketDisputeMechanism::SimpleDisputes)
 
     create_scalar_market {
-        let (caller, oracle, end, metadata, creation) =
+        let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-        let outcome_range = (0u128, u128::MAX);
-    }: _(RawOrigin::Signed(caller), oracle, end, metadata, creation, outcome_range, MarketDisputeMechanism::SimpleDisputes)
+        let outcome_range = 0u128..=u128::MAX;
+    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, outcome_range, MarketDisputeMechanism::SimpleDisputes)
 
     deploy_swap_pool_for_market {
         let a in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
@@ -304,7 +309,7 @@ benchmarks! {
         let a in 0..(T::MaxDisputes::get() - 1) as u32;
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
-            MarketType::Scalar((0u128, u128::MAX)),
+            MarketType::Scalar(0u128..=u128::MAX),
             OutcomeReport::Scalar(42)
         )?;
     }:  {
@@ -394,7 +399,7 @@ benchmarks! {
 
     redeem_shares_scalar {
         let (caller, marketid) = setup_redeem_shares_common::<T>(
-            MarketType::Scalar((0u128, u128::MAX))
+            MarketType::Scalar(0u128..=u128::MAX)
         )?;
     }: redeem_shares(RawOrigin::Signed(caller), marketid)
 

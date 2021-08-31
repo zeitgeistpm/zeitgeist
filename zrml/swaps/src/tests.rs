@@ -232,7 +232,7 @@ fn only_root_can_call_admin_set_pool_as_stale() {
         assert_noop!(
             Swaps::admin_set_pool_as_stale(
                 alice_signed(),
-                MarketType::Scalar((0, 0)),
+                MarketType::Scalar(0..=0),
                 0,
                 OutcomeReport::Scalar(1)
             ),
@@ -243,7 +243,7 @@ fn only_root_can_call_admin_set_pool_as_stale() {
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
         assert_ok!(Swaps::admin_set_pool_as_stale(
             Origin::root(),
-            MarketType::Scalar((0, 0)),
+            MarketType::Scalar(0..=0),
             0,
             OutcomeReport::Scalar(1)
         ),);
