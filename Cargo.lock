@@ -11956,6 +11956,7 @@ dependencies = [
  "pallet-author-mapping",
  "pallet-author-slot-filter",
  "pallet-balances",
+ "pallet-collective",
  "pallet-grandpa",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
