@@ -25,7 +25,6 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 parameter_types! {
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
     pub const ExistentialDeposit: Balance = 1;
-    pub const SharesPalletId: PalletId = PalletId(*b"test/sha");
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 

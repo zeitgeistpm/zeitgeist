@@ -1,13 +1,16 @@
 #![cfg(test)]
 
 use crate as zrml_court;
-use frame_support::{construct_runtime, parameter_types, PalletId};
+use frame_support::construct_runtime;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, CourtCaseDuration, MaxReserves, MinimumPeriod, StakeWeight, BASE},
+    constants::{
+        BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, StakeWeight,
+        TreasuryPalletId, BASE,
+    },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
@@ -16,13 +19,10 @@ use zeitgeist_primitives::{
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
 
 type Block = BlockTest<Runtime>;
 type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
-
-parameter_types! {
-    pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
-}
 
 construct_runtime!(
     pub enum Runtime
@@ -44,8 +44,10 @@ impl crate::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
     type Event = ();
     type MarketCommons = MarketCommons;
+    type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type StakeWeight = StakeWeight;
+    type TreasuryId = TreasuryPalletId;
 }
 
 impl frame_system::Config for Runtime {
@@ -107,7 +109,14 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, 1_000 * BASE), (BOB, 1_000 * BASE)] }
+        Self {
+            balances: vec![
+                (ALICE, 1_000 * BASE),
+                (BOB, 1_000 * BASE),
+                (CHARLIE, 1_000 * BASE),
+                (Court::treasury_account_id(), 1_000 * BASE),
+            ],
+        }
     }
 }
 
