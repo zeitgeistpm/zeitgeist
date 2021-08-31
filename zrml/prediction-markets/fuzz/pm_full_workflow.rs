@@ -1,11 +1,12 @@
 #![no_main]
 
 use arbitrary::Arbitrary;
+use core::ops::{Range, RangeInclusive};
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::{
     traits::DisputeApi,
-    types::{MarketCreation, MarketDisputeMechanism, MarketEnd, MultiHash, OutcomeReport},
+    types::{MarketCreation, MarketDisputeMechanism, MarketPeriod, MultiHash, OutcomeReport},
 };
 use zrml_prediction_markets::mock::{
     ExtBuilder, Origin, PredictionMarkets, Runtime, SimpleDisputes, System,
@@ -20,7 +21,7 @@ fuzz_target!(|data: Data| {
         let _ = PredictionMarkets::create_scalar_market(
             Origin::signed(data.create_scalar_market_origin.into()),
             data.create_scalar_market_oracle.into(),
-            MarketEnd::Timestamp(data.create_scalar_market_timestamp),
+            MarketPeriod::Block(data.create_scalar_market_period),
             data.create_scalar_market_metadata,
             market_creation(data.create_scalar_market_creation),
             data.create_scalar_market_outcome_range,
@@ -70,10 +71,10 @@ fuzz_target!(|data: Data| {
 struct Data {
     create_scalar_market_origin: u8,
     create_scalar_market_oracle: u8,
-    create_scalar_market_timestamp: u64,
+    create_scalar_market_period: Range<u64>,
     create_scalar_market_metadata: MultiHash,
     create_scalar_market_creation: u8,
-    create_scalar_market_outcome_range: (u128, u128),
+    create_scalar_market_outcome_range: RangeInclusive<u128>,
     create_scalar_market_mdm: u8,
 
     buy_complete_set_origin: u8,

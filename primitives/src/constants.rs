@@ -6,7 +6,7 @@ use sp_runtime::Permill;
 
 // Definitions for time
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
+pub const MILLISECS_PER_BLOCK: u32 = 12000;
 pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60;
 
@@ -50,7 +50,7 @@ parameter_types! {
     pub const MinCategories: u16 = 2;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
-    pub const ReportingPeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
     pub const ValidityBond: Balance = 50 * CENT;
 }
 
@@ -75,6 +75,11 @@ parameter_types! {
     pub const MinLiquidity: Balance = 100 * BASE;
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
+}
+
+// Time
+parameter_types! {
+    pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
 }
 
 // Treasury
