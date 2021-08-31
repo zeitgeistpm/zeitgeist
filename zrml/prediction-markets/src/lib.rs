@@ -68,7 +68,7 @@ pub use pallet::*;
 mod pallet {
     use crate::weights::*;
     use alloc::{vec, vec::Vec};
-    use core::{cmp, marker::PhantomData};
+    use core::{cmp, marker::PhantomData, ops::RangeInclusive};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
@@ -76,7 +76,7 @@ mod pallet {
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, IsType, OnUnbalanced,
-            ReservableCurrency, Time,
+            ReservableCurrency,
         },
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
@@ -91,7 +91,7 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketEnd,
+            Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
         },
     };
@@ -106,6 +106,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     type NegativeImbalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -177,27 +178,28 @@ mod pallet {
         }
 
         /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
+        //
+        // ***** IMPORTANT *****
+        //
+        // Within the same block, operations that interact with the activeness of the same
+        // market will behave differently before and after this call.
         #[pallet::weight(T::WeightInfo::admin_move_market_to_closed())]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
-
-            let market = T::MarketCommons::market(&market_id)?;
-            let new_end = match market.end {
-                MarketEnd::Block(_) => {
-                    let current_block = <frame_system::Pallet<T>>::block_number();
-                    MarketEnd::Block(current_block)
-                }
-                MarketEnd::Timestamp(_) => {
-                    let now = T::Timestamp::now().saturated_into::<u64>();
-                    MarketEnd::Timestamp(now)
-                }
-            };
-
             T::MarketCommons::mutate_market(&market_id, |m| {
-                m.end = new_end;
+                m.period = match m.period {
+                    MarketPeriod::Block(ref range) => {
+                        let current_block = <frame_system::Pallet<T>>::block_number();
+                        MarketPeriod::Block(range.start..current_block)
+                    }
+                    MarketPeriod::Timestamp(ref range) => {
+                        let now = T::MarketCommons::now();
+                        MarketPeriod::Timestamp(range.start..now)
+                    }
+                };
                 Ok(())
             })?;
             Ok(())
@@ -339,14 +341,14 @@ mod pallet {
         pub fn create_categorical_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
-            end: MarketEnd<T::BlockNumber>,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             creation: MarketCreation,
             categories: u16,
             mdm: MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-            Self::ensure_create_market_end(end)?;
+            Self::ensure_market_is_active(&period)?;
 
             ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
             ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
@@ -372,24 +374,17 @@ mod pallet {
                 creation,
                 creator_fee: 0,
                 creator: sender.clone(),
-                end,
                 market_type: MarketType::Categorical(categories),
                 mdm,
                 metadata: Vec::from(multihash),
                 oracle,
+                period,
                 report: None,
                 resolved_outcome: None,
                 status,
             };
 
             let market_id = T::MarketCommons::push_market(market)?;
-            if let MarketEnd::Block(block) = end {
-                T::LiquidityMining::add_market_period(
-                    market_id,
-                    [<frame_system::Pallet<T>>::block_number(), block],
-                );
-            }
-
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
             Ok(())
@@ -426,7 +421,7 @@ mod pallet {
         pub fn create_market_and_deploy_assets(
             origin: OriginFor<T>,
             oracle: T::AccountId,
-            end: MarketEnd<T::BlockNumber>,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             creation: MarketCreation,
             assets: MarketType,
@@ -443,7 +438,7 @@ mod pallet {
                     Self::create_categorical_market(
                         origin.clone(),
                         oracle,
-                        end,
+                        period,
                         metadata,
                         creation,
                         category_count,
@@ -455,7 +450,7 @@ mod pallet {
                     Self::create_scalar_market(
                         origin.clone(),
                         oracle,
-                        end,
+                        period,
                         metadata,
                         creation,
                         range,
@@ -504,16 +499,16 @@ mod pallet {
         pub fn create_scalar_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
-            end: MarketEnd<T::BlockNumber>,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             creation: MarketCreation,
-            outcome_range: (u128, u128),
+            outcome_range: RangeInclusive<u128>,
             mdm: MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-            Self::ensure_create_market_end(end)?;
+            Self::ensure_market_is_active(&period)?;
 
-            ensure!(outcome_range.0 < outcome_range.1, "Invalid range provided.");
+            ensure!(outcome_range.start() < outcome_range.end(), "Invalid range provided.");
 
             // Require sha3-384 as multihash.
             let MultiHash::Sha3_384(multihash) = metadata;
@@ -536,24 +531,17 @@ mod pallet {
                 creation,
                 creator_fee: 0,
                 creator: sender.clone(),
-                end,
                 market_type: MarketType::Scalar(outcome_range),
                 mdm,
                 metadata: Vec::from(multihash),
                 oracle,
+                period,
                 report: None,
                 resolved_outcome: None,
                 status,
             };
 
             let market_id = T::MarketCommons::push_market(market)?;
-            if let MarketEnd::Block(block) = end {
-                T::LiquidityMining::add_market_period(
-                    market_id,
-                    [<frame_system::Pallet<T>>::block_number(), block],
-                );
-            }
-
             Self::deposit_event(Event::MarketCreated(market_id, sender));
 
             Ok(())
@@ -576,9 +564,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
-            // ensure the market is active
-            let status = market.status;
-            ensure!(status == MarketStatus::Active, Error::<T>::MarketNotActive);
+            Self::ensure_market_is_active(&market.period)?;
 
             // ensure a swap pool does not already exist
             ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
@@ -652,12 +638,11 @@ mod pallet {
                         Error::<T>::NoWinningBalance
                     );
 
-                    let (bound_low, bound_high) =
-                        if let MarketType::Scalar(range) = market.market_type {
-                            range
-                        } else {
-                            return Err(Error::<T>::InvalidMarketType.into());
-                        };
+                    let bound = if let MarketType::Scalar(range) = market.market_type {
+                        range
+                    } else {
+                        return Err(Error::<T>::InvalidMarketType.into());
+                    };
 
                     let calc_payouts = |final_value, low, high| -> (Perbill, Perbill) {
                         if final_value <= low {
@@ -677,7 +662,8 @@ mod pallet {
                         )
                     };
 
-                    let (long_percent, short_percent) = calc_payouts(value, bound_low, bound_high);
+                    let (long_percent, short_percent) =
+                        calc_payouts(value, *bound.start(), *bound.end());
 
                     let long_payout = long_percent.mul_floor(long_balance);
                     let short_payout = short_percent.mul_floor(short_balance);
@@ -757,33 +743,31 @@ mod pallet {
                 // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
 
-                // ensure market is not active
-                ensure!(!Self::is_market_active(market.end), Error::<T>::MarketNotClosed);
+                Self::ensure_market_is_closed(&market.period)?;
 
-                match market.end {
-                    MarketEnd::Block(block) => {
-                        // blocks
-                        if current_block <= block + T::ReportingPeriod::get() {
-                            ensure!(
-                                sender == market.oracle
-                                    || T::ApprovalOrigin::ensure_origin(origin).is_ok(),
-                                Error::<T>::ReporterNotOracle
-                            );
-                        } // otherwise anyone can be the reporter
+                let mut should_check_origin = false;
+                match market.period {
+                    MarketPeriod::Block(ref range) => {
+                        if current_block <= range.end + T::ReportingPeriod::get().into() {
+                            should_check_origin = true;
+                        }
                     }
-                    MarketEnd::Timestamp(timestamp) => {
-                        // unix timestamp
-                        let now = T::Timestamp::now().saturated_into::<u64>();
-                        let reporting_period_in_ms =
-                            T::ReportingPeriod::get().saturated_into::<u64>() * MILLISECS_PER_BLOCK;
-                        if now <= timestamp + reporting_period_in_ms {
-                            ensure!(
-                                sender == market.oracle
-                                    || T::ApprovalOrigin::ensure_origin(origin).is_ok(),
-                                Error::<T>::ReporterNotOracle
-                            );
-                        } // otherwise anyone can be the reporter
+                    MarketPeriod::Timestamp(ref range) => {
+                        let rp_moment: MomentOf<T> = T::ReportingPeriod::get().into();
+                        let reporting_period_in_ms = rp_moment * MILLISECS_PER_BLOCK.into();
+                        if T::MarketCommons::now() <= range.end + reporting_period_in_ms {
+                            should_check_origin = true;
+                        }
                     }
+                }
+
+                if should_check_origin {
+                    let sender_is_oracle = sender == market.oracle;
+                    let origin_has_permission = T::ApprovalOrigin::ensure_origin(origin).is_ok();
+                    ensure!(
+                        sender_is_oracle || origin_has_permission,
+                        Error::<T>::ReporterNotOracle
+                    );
                 }
 
                 market.report =
@@ -814,7 +798,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
+            Self::ensure_market_is_active(&market.period)?;
 
             let market_account = Self::market_account(market_id);
             ensure!(
@@ -911,7 +895,7 @@ mod pallet {
         type OracleBond: Get<BalanceOf<Self>>;
 
         /// The number of blocks the reporting period remains open.
-        type ReportingPeriod: Get<Self::BlockNumber>;
+        type ReportingPeriod: Get<u32>;
 
         /// See [`SimpleDisputesPalletApi`].
         type SimpleDisputes: DisputeApi<
@@ -919,6 +903,7 @@ mod pallet {
             Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
             Origin = Self::Origin,
         >;
 
@@ -927,9 +912,6 @@ mod pallet {
 
         /// Swaps pallet API
         type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
-
-        /// The type that offers timestamping functionality
-        type Timestamp: Time;
 
         /// The base amount of currency that must be bonded for a permissionless market,
         /// guaranteeing that it will resolve as anything but `Invalid`.
@@ -944,10 +926,6 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
-        /// End block is too soon.
-        EndBlockTooSoon,
-        /// End timestamp is too soon.
-        EndTimestampTooSoon,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
@@ -956,22 +934,20 @@ mod pallet {
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
-        /// The market status is something other than active.
-        MarketNotActive,
         /// Sender does not have enough balance to buy shares.
         NotEnoughBalance,
         /// The outcome being reported is out of range.
         OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
-        /// A market with the provided ID does not exist.
-        MarketDoesNotExist,
         /// A reported market was expected
         MarketIsNotReported,
         /// A resolved market was expected
         MarketIsNotResolved,
-        /// The market is not closed.
-        MarketNotClosed,
+        /// Market was expected to be closed
+        MarketIsNotClosed,
+        /// Market was expected to be active
+        MarketIsNotActive,
         /// The market is not reported on.
         MarketNotReported,
         /// The maximum number of disputes has been reached.
@@ -1068,7 +1044,7 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Vec<Asset<MarketIdOf<T>>> {
             match market.market_type {
                 MarketType::Categorical(categories) => {
@@ -1123,7 +1099,7 @@ mod pallet {
             ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance,);
 
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(Self::is_market_active(market.end), Error::<T>::MarketNotActive);
+            Self::ensure_market_is_active(&market.period)?;
 
             let market_account = Self::market_account(market_id);
             CurrencyOf::<T>::transfer(
@@ -1161,7 +1137,7 @@ mod pallet {
         }
 
         fn calculate_internal_resolve_weight(
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             total_accounts: u32,
             total_asset_accounts: u32,
             total_categories: u32,
@@ -1199,17 +1175,39 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_create_market_end(end: MarketEnd<T::BlockNumber>) -> DispatchResult {
-            match end {
-                MarketEnd::Block(block) => {
-                    let current_block = <frame_system::Pallet<T>>::block_number();
-                    ensure!(current_block < block, Error::<T>::EndBlockTooSoon);
-                }
-                MarketEnd::Timestamp(timestamp) => {
-                    let now = T::Timestamp::now();
-                    ensure!(now < timestamp.saturated_into(), Error::<T>::EndTimestampTooSoon);
-                }
-            };
+        // Must be `MarketStatus::Active` and period within range
+        fn ensure_market_is_active(
+            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        ) -> DispatchResult {
+            ensure!(
+                match period {
+                    MarketPeriod::Block(range) => {
+                        <frame_system::Pallet<T>>::block_number() < range.end
+                    }
+                    MarketPeriod::Timestamp(range) => {
+                        T::MarketCommons::now() < range.end
+                    }
+                },
+                Error::<T>::MarketIsNotActive
+            );
+            Ok(())
+        }
+
+        // Must NOT be `MarketStatus::Active` and period outside of range
+        fn ensure_market_is_closed(
+            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        ) -> DispatchResult {
+            ensure!(
+                match period {
+                    MarketPeriod::Block(range) => {
+                        <frame_system::Pallet<T>>::block_number() >= range.end
+                    }
+                    MarketPeriod::Timestamp(range) => {
+                        T::MarketCommons::now() >= range.end
+                    }
+                },
+                Error::<T>::MarketIsNotClosed
+            );
             Ok(())
         }
 
@@ -1220,7 +1218,7 @@ mod pallet {
         }
 
         fn ensure_outcome_matches_market_type(
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
             if let OutcomeReport::Categorical(ref inner) = outcome {
@@ -1233,7 +1231,7 @@ mod pallet {
             if let OutcomeReport::Scalar(ref inner) = outcome {
                 if let MarketType::Scalar(ref outcome_range) = market.market_type {
                     ensure!(
-                        inner >= &outcome_range.0 && inner <= &outcome_range.1,
+                        inner >= outcome_range.start() && inner <= outcome_range.end(),
                         Error::<T>::OutcomeOutOfRange
                     );
                 } else {
@@ -1243,22 +1241,9 @@ mod pallet {
             Ok(())
         }
 
-        fn is_market_active(end: MarketEnd<T::BlockNumber>) -> bool {
-            match end {
-                MarketEnd::Block(block) => {
-                    let current_block = <frame_system::Pallet<T>>::block_number();
-                    current_block < block
-                }
-                MarketEnd::Timestamp(timestamp) => {
-                    let now = T::Timestamp::now();
-                    now < timestamp.saturated_into()
-                }
-            }
-        }
-
         // If a market is categorical, destroys all non-winning assets.
         fn manage_resolved_categorical_market(
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
         ) -> Result<[usize; 3], DispatchError> {
@@ -1302,7 +1287,7 @@ mod pallet {
 
         fn on_resolution(
             market_id: &MarketIdOf<T>,
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
             let disputes = Disputes::<T>::get(market_id);
             let resolved_outcome = match market.mdm {
@@ -1370,7 +1355,10 @@ mod pallet {
 
         fn resolution_manager<F>(now: T::BlockNumber, mut cb: F) -> DispatchResult
         where
-            F: FnMut(&MarketIdOf<T>, &Market<T::AccountId, T::BlockNumber>) -> DispatchResult,
+            F: FnMut(
+                &MarketIdOf<T>,
+                &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            ) -> DispatchResult,
         {
             let dispute_period = T::DisputePeriod::get();
             if now <= dispute_period {
@@ -1400,7 +1388,7 @@ mod pallet {
 
         // If the market is already disputed, does nothing.
         fn set_market_as_disputed(
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
         ) -> DispatchResult {
             if market.status != MarketStatus::Disputed {
@@ -1415,7 +1403,7 @@ mod pallet {
         // If a market has a pool that is `Active`, then changes from `Active` to `Stale`. If
         // the market does not exist or the market does not have a pool, does nothing.
         fn set_pool_to_stale(
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
         ) -> DispatchResult {
@@ -1430,7 +1418,7 @@ mod pallet {
 
         fn validate_dispute(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market: &Market<T::AccountId, T::BlockNumber>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             num_disputes: u32,
             outcome: &OutcomeReport,
         ) -> DispatchResult {

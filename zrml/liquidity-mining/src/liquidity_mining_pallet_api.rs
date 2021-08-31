@@ -7,12 +7,6 @@ pub trait LiquidityMiningPalletApi {
     type BlockNumber;
     type MarketId;
 
-    /// Adds a market period to calculate incentives.
-    ///
-    /// Before calling any other function of this interface, it is important to first
-    /// register a market period through this method.
-    fn add_market_period(market_id: Self::MarketId, period: [Self::BlockNumber; 2]);
-
     /// Increases the number of stored pool shares of an account for a given market.
     ///
     /// It is up to the caller to synchronize the amount of shares between different pallets

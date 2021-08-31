@@ -12,11 +12,11 @@ use zeitgeist_primitives::{
     constants::{
         BlockHashCount, ExitFee, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks,
         MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight,
-        SwapsPalletId,
+        MinimumPeriod, SwapsPalletId,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-        MarketId, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 
@@ -53,8 +53,10 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currencies: orml_currencies::{Event<T>, Pallet},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
     }
 );
@@ -136,9 +138,23 @@ impl pallet_balances::Config for Runtime {
 impl zrml_liquidity_mining::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
     type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+    type Timestamp = Timestamp;
+}
+
+impl pallet_timestamp::Config for Runtime {
+    type MinimumPeriod = MinimumPeriod;
+    type Moment = Moment;
+    type OnTimestampSet = ();
+    type WeightInfo = ();
 }
 
 pub struct ExtBuilder {

@@ -22,7 +22,7 @@ use zeitgeist_primitives::{
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-        MarketId, SerdeWrapper, UncheckedExtrinsicTest,
+        MarketId, Moment, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 
@@ -40,7 +40,7 @@ pub type AdaptedBasicCurrency =
     orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
 
 ord_parameter_types! {
-    pub const Sudo: AccountIdTest = 69;
+    pub const Sudo: AccountIdTest = SUDO;
 }
 
 parameter_types! {
@@ -56,7 +56,7 @@ parameter_types! {
     pub const MaximumBlockWeight: Weight = 1024;
     pub const MinimumPeriod: u64 = 0;
     pub const OracleBond: Balance = 100;
-    pub const ReportingPeriod: BlockNumber = 10;
+    pub const ReportingPeriod: u32 = 10;
     pub const ValidityBond: Balance = 200;
     pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
@@ -106,7 +106,6 @@ impl crate::Config for Runtime {
     type SimpleDisputes = SimpleDisputes;
     type Slash = ();
     type Swaps = Swaps;
-    type Timestamp = Timestamp;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
 }
@@ -170,7 +169,7 @@ impl pallet_balances::Config for Runtime {
 
 impl pallet_timestamp::Config for Runtime {
     type MinimumPeriod = MinimumPeriod;
-    type Moment = u64;
+    type Moment = Moment;
     type OnTimestampSet = ();
     type WeightInfo = ();
 }
@@ -178,6 +177,7 @@ impl pallet_timestamp::Config for Runtime {
 impl zrml_liquidity_mining::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type PalletId = LiquidityMiningPalletId;
     type WeightInfo = zrml_liquidity_mining::weights::WeightInfo<Runtime>;
@@ -186,6 +186,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type Timestamp = Timestamp;
 }
 
 impl zrml_simple_disputes::Config for Runtime {

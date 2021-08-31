@@ -23,7 +23,7 @@ where
             };
 
             let ptd = if let Some(el) = calculate_perthousand(sold_shares, &values.total_shares) {
-                el
+                el.into()
             } else {
                 // `total_shares` is zero
                 continue;

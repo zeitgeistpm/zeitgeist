@@ -235,7 +235,7 @@ pub struct RunCmd {
     pub parachain_id: u32,
 }
 
-impl std::ops::Deref for RunCmd {
+impl core::ops::Deref for RunCmd {
     type Target = sc_cli::RunCmd;
 
     #[inline]

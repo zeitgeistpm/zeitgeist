@@ -13,8 +13,10 @@ zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining"
 orml-currencies = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-tokens = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+zrml-market-commons = { optional = true, path = "../market-commons" }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]
@@ -26,8 +28,10 @@ mock = [
     "orml-currencies",
     "orml-tokens",
     "pallet-balances",
+    "pallet-timestamp",
     "sp-api",
     "sp-io",
+    "zrml-market-commons",
     "zrml-swaps-runtime-api",
 ]
 runtime-benchmarks = [

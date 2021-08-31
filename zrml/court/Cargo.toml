@@ -11,6 +11,7 @@ zrml-market-commons = { default-features = false, path = "../market-commons" }
 [dev-dependencies]
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
 pallet-randomness-collective-flip = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
+pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate"}
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate" }
 
 [features]

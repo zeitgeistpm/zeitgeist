@@ -12024,6 +12024,7 @@ dependencies = [
  "frame-system",
  "pallet-balances",
  "pallet-randomness-collective-flip",
+ "pallet-timestamp",
  "parity-scale-codec",
  "rand 0.8.4",
  "sp-io",
@@ -12040,11 +12041,13 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "serde",
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
+ "zrml-market-commons",
 ]
 
 [[package]]
@@ -12174,12 +12177,14 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "sp-api",
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
+ "zrml-market-commons",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]
