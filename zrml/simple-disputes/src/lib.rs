@@ -108,14 +108,17 @@ mod pallet {
         type Origin = T::Origin;
 
         fn on_dispute(
+            bond: Self::Balance,
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: Self::MarketId,
+            _: &Self::MarketId,
+            who: &Self::AccountId,
         ) -> DispatchResult {
+            CurrencyOf::<T>::reserve(who, bond)?;
             Ok(())
         }
 
         fn on_resolution<D>(
-            dispute_bound: &D,
+            bond: &D,
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
@@ -181,14 +184,14 @@ mod pallet {
                     }
 
                     for (i, dispute) in disputes.iter().enumerate() {
-                        let actual_dispute_bond = dispute_bound(i);
+                        let actual_bond = bond(i);
                         if dispute.outcome == resolved_outcome {
-                            CurrencyOf::<T>::unreserve(&dispute.by, actual_dispute_bond);
+                            CurrencyOf::<T>::unreserve(&dispute.by, actual_bond);
 
                             correct_reporters.push(dispute.by.clone());
                         } else {
                             let (imbalance, _) =
-                                CurrencyOf::<T>::slash_reserved(&dispute.by, actual_dispute_bond);
+                                CurrencyOf::<T>::slash_reserved(&dispute.by, actual_bond);
                             overall_imbalance.subsume(imbalance);
                         }
                     }

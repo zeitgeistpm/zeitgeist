@@ -1,13 +1,16 @@
 #![cfg(test)]
 
 use crate as zrml_liquidity_mining;
-use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
+use frame_support::{construct_runtime, traits::GenesisBuild};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxLocks, MaxReserves, MinimumPeriod, BASE},
+    constants::{
+        BlockHashCount, ExistentialDeposit, LiquidityMiningPalletId, MaxLocks, MaxReserves,
+        MinimumPeriod, BASE,
+    },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
@@ -19,10 +22,6 @@ pub const BOB: AccountIdTest = 1;
 
 type Block = BlockTest<Runtime>;
 type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
-
-parameter_types! {
-    pub const LmPalletId: PalletId = PalletId(*b"test/lmg");
-}
 
 construct_runtime!(
     pub enum Runtime
@@ -44,7 +43,7 @@ impl crate::Config for Runtime {
     type Event = ();
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
-    type PalletId = LmPalletId;
+    type PalletId = LiquidityMiningPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
