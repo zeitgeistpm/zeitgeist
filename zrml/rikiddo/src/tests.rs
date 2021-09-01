@@ -7,7 +7,7 @@ use substrate_fixed::{
 };
 
 use crate::{
-    mock::*,
+    mock::ExtBuilder,
     types::{convert_to_signed, convert_to_unsigned},
 };
 
