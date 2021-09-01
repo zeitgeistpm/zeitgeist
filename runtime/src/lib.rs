@@ -165,7 +165,7 @@ macro_rules! create_zeitgeist_runtime {
                 // Other Parity pallets
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 21,
-                Collective: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 22,
+                Advisory: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 22,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,

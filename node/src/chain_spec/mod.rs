@@ -75,6 +75,7 @@ fn generic_genesis(
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
+        advisory: zeitgeist_runtime::AdvisoryConfig::default(),
         #[cfg(not(feature = "parachain"))]
         aura: zeitgeist_runtime::AuraConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
@@ -95,7 +96,6 @@ fn generic_genesis(
         balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts.iter().cloned().map(|k| (k, initial_balance)).collect(),
         },
-        collective: zeitgeist_runtime::CollectiveConfig::default(),
         #[cfg(not(feature = "parachain"))]
         grandpa: zeitgeist_runtime::GrandpaConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),

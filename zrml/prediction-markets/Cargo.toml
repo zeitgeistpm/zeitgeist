@@ -16,6 +16,7 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 orml-currencies = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-tokens = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+pallet-collective = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
@@ -31,6 +32,7 @@ mock = [
     "orml-currencies",
     "orml-tokens",
     "pallet-balances",
+    "pallet-collective",
     "pallet-timestamp",
     "sp-api",
     "sp-io",
@@ -40,7 +42,8 @@ mock = [
 runtime-benchmarks = [
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks"
+    "frame-system/runtime-benchmarks",
+    "pallet-collective/runtime-benchmarks",
 ]
 std = [
     'frame-benchmarking?/std',

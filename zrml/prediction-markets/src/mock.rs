@@ -74,6 +74,7 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
+        Advisory: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
@@ -81,7 +82,7 @@ construct_runtime!(
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
-        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
     }
@@ -165,6 +166,24 @@ impl pallet_balances::Config for Runtime {
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    pub const AdvisoryCommitteeMotionDuration: BlockNumber = 3;
+    pub const AdvisoryCommitteeMaxProposals: u32 = 3;
+    pub const AdvisoryCommitteeMaxMembers: u32 = 5;
+}
+
+pub type AdvisoryCommittee = pallet_collective::Instance1;
+impl pallet_collective::Config<AdvisoryCommittee> for Runtime {
+    type Origin = Origin;
+    type Proposal = Call;
+    type Event = Event;
+    type MotionDuration = AdvisoryCommitteeMotionDuration;
+    type MaxProposals = AdvisoryCommitteeMaxProposals;
+    type MaxMembers = AdvisoryCommitteeMaxMembers;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
     type WeightInfo = ();
 }
 
