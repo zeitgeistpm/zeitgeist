@@ -606,6 +606,7 @@ impl_runtime_apis! {
 
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
+            add_benchmark!(params, batches, pallet_collective, Advisory);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
