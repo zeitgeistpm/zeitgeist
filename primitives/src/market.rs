@@ -8,7 +8,11 @@ use core::ops::{Range, RangeInclusive};
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
 #[derive(
-    PartialEq, parity_scale_codec::Decode, parity_scale_codec::Encode, sp_runtime::RuntimeDebug,
+    Clone,
+    PartialEq,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    sp_runtime::RuntimeDebug,
 )]
 pub struct Market<AI, BN, M> {
     // Creator of this market.
