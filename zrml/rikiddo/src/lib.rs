@@ -15,15 +15,21 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use frame_support::{Twox64Concat, debug, dispatch::DispatchResult, pallet_prelude::StorageMap, traits::{Get, Hooks, Time}};
-    use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
-    use sp_runtime::DispatchError;
     use core::{
         convert::TryFrom,
         fmt::Debug,
         marker::PhantomData,
         ops::{AddAssign, BitOrAssign, ShlAssign},
     };
+    use frame_support::{
+        debug,
+        dispatch::DispatchResult,
+        pallet_prelude::StorageMap,
+        traits::{Get, Hooks, Time},
+        Twox64Concat,
+    };
+    use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
+    use sp_runtime::DispatchError;
     use substrate_fixed::{
         traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, ToFixed},
         types::{
@@ -89,13 +95,14 @@ mod pallet {
 
     // This is the storage containing the Rikiddo instances per pool.
     #[pallet::storage]
-    pub type RikiddoPerPool<T: Config<I>, I: 'static = ()> = StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;
+    pub type RikiddoPerPool<T: Config<I>, I: 'static = ()> =
+        StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;
 
     #[pallet::hooks]
     impl<T: Config<I>, I: 'static> Hooks<T::BlockNumber> for Pallet<T, I> {}
 
     #[pallet::pallet]
-    pub struct Pallet<T, I=()>(PhantomData<T>, PhantomData<I>);
+    pub struct Pallet<T, I = ()>(PhantomData<T>, PhantomData<I>);
 
     #[pallet::call]
     impl<T: Config<I>, I: 'static> Pallet<T, I> {}
@@ -111,12 +118,12 @@ mod pallet {
 
         fn convert_balance_to_fixed(balance: &T::Balance) -> Result<T::FixedTypeU, DispatchError> {
             match T::FixedTypeU::from_fixed_decimal(*balance, T::BalanceFractionalDecimals::get()) {
-                Ok(res) => return Ok(res),
+                Ok(res) => Ok(res),
                 Err(err) => {
                     debug(&err);
-                    return Err(Error::<T, I>::FixedConversionImpossible.into());
+                    Err(Error::<T, I>::FixedConversionImpossible.into())
                 }
-            };
+            }
         }
 
         fn convert_fixed_to_balance(fixed: &T::FixedTypeU) -> Result<T::Balance, DispatchError> {
@@ -124,10 +131,10 @@ mod pallet {
                 *fixed,
                 T::BalanceFractionalDecimals::get(),
             ) {
-                Ok(res) => return Ok(res),
+                Ok(res) => Ok(res),
                 Err(err) => {
                     debug(&err);
-                    return Err(Error::<T, I>::FixedConversionImpossible.into());
+                    Err(Error::<T, I>::FixedConversionImpossible.into())
                 }
             }
         }
@@ -170,10 +177,10 @@ mod pallet {
             let balances_fixed = Self::convert_balance_to_fixed_vector(asset_balances)?;
 
             match rikiddo.all_prices(&balances_fixed) {
-                Ok(prices) => return Ok(Self::convert_fixed_to_balance_vector(&prices)?),
+                Ok(prices) => Self::convert_fixed_to_balance_vector(&prices),
                 Err(err) => {
                     debug(&err);
-                    return Err(err.into());
+                    Err(err.into())
                 }
             }
         }
@@ -194,10 +201,10 @@ mod pallet {
             let balances_fixed = Self::convert_balance_to_fixed_vector(asset_balances)?;
 
             match rikiddo.cost(&balances_fixed) {
-                Ok(cost) => return Ok(Self::convert_fixed_to_balance(&cost)?),
+                Ok(cost) => Self::convert_fixed_to_balance(&cost),
                 Err(err) => {
                     debug(&err);
-                    return Err(err.into());
+                    Err(err.into())
                 }
             }
         }
@@ -224,10 +231,10 @@ mod pallet {
             let rikiddo = Self::get_rikiddo(&poolid)?;
 
             match rikiddo.fee() {
-                Ok(fee) => return Ok(Self::convert_fixed_to_balance(&fee)?),
+                Ok(fee) => Self::convert_fixed_to_balance(&fee),
                 Err(err) => {
                     debug(&err);
-                    return Err(err.into());
+                    Err(err.into())
                 }
             }
         }
@@ -243,10 +250,10 @@ mod pallet {
             let balance_in_question = Self::convert_balance_to_fixed(&asset_in_question)?;
 
             match rikiddo.price(&balances_fixed, &balance_in_question) {
-                Ok(price) => return Ok(Self::convert_fixed_to_balance(&price)?),
+                Ok(price) => Self::convert_fixed_to_balance(&price),
                 Err(err) => {
                     debug(&err);
-                    return Err(err.into());
+                    Err(err.into())
                 }
             }
         }
@@ -260,8 +267,7 @@ mod pallet {
             let timestamp: UnixTimestamp = T::Timestamp::now().into();
             let volume_fixed: Self::FU = Self::convert_balance_to_fixed(&volume)?;
 
-            let timestamped_volume =
-                TimestampedVolume { timestamp: timestamp.into(), volume: volume_fixed };
+            let timestamped_volume = TimestampedVolume { timestamp, volume: volume_fixed };
             let mut rikiddo = Self::get_rikiddo(&poolid)?;
 
             // Update rikiddo market data by adding the TimestampedVolume

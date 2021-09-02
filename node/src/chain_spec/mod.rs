@@ -15,7 +15,10 @@ use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::{
-    constants::{BALANCE_FRACTIONAL_DECIMAL_PLACES, ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD}},
+    constants::{
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        BALANCE_FRACTIONAL_DECIMAL_PLACES,
+    },
     types::{AccountId, Balance, Signature},
 };
 use zeitgeist_runtime::{SS58Prefix, TokensConfig};

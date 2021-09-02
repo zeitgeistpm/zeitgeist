@@ -2,10 +2,10 @@ use crate::{
     constants::INITIAL_FEE,
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
+use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use frame_support::dispatch::{Decode, Encode};
 use hashbrown::HashMap;
 use sp_core::RuntimeDebug;
-use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use substrate_fixed::{
     consts::LOG2_E,
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
