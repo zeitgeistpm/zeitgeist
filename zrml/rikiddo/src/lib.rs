@@ -18,8 +18,9 @@ mod pallet {
     use frame_support::{Twox64Concat, debug, dispatch::DispatchResult, pallet_prelude::StorageMap, traits::{Get, Hooks, Time}};
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
     use sp_runtime::DispatchError;
-    use sp_std::{
+    use core::{
         convert::TryFrom,
+        fmt::Debug,
         marker::PhantomData,
         ops::{AddAssign, BitOrAssign, ShlAssign},
     };
@@ -43,7 +44,7 @@ mod pallet {
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
         /// Defines the type of traded amounts
-        type Balance: Copy + Into<u128> + TryFrom<u128> + sp_std::fmt::Debug;
+        type Balance: Copy + Into<u128> + TryFrom<u128> + Debug;
 
         /// Offers timestamping functionality
         type Timestamp: Time;

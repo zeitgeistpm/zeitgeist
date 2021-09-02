@@ -1,6 +1,6 @@
 use frame_support::dispatch::{Decode, Encode};
 use sp_core::RuntimeDebug;
-use sp_std::convert::TryFrom;
+use core::convert::TryFrom;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
     types::extra::{U127, U128},

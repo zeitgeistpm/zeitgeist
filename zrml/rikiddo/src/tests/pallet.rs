@@ -1,5 +1,4 @@
-use sp_std::convert::TryInto;
-
+use core::convert::TryInto;
 use frame_support::{
     assert_noop, assert_ok,
     traits::{OnFinalize, OnInitialize},

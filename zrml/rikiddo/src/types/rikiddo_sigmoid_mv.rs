@@ -5,7 +5,7 @@ use crate::{
 use frame_support::dispatch::{Decode, Encode};
 use hashbrown::HashMap;
 use sp_core::RuntimeDebug;
-use sp_std::ops::{AddAssign, BitOrAssign, ShlAssign};
+use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use substrate_fixed::{
     consts::LOG2_E,
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
