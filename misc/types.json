@@ -38,10 +38,10 @@
     "creation": "MarketCreation",
     "creator_fee": "u8",
     "oracle": "AccountId",
-    "end": "MarketEnd",
     "metadata": "Vec<u8>",
     "market_type": "MarketType",
-    "market_status": "MarketStatus",
+    "period": "MarketPeriod",
+    "status": "MarketStatus",
     "report": "Option<Report>",
     "resolved_outcome": "Option<Outcome>",
     "mdm": "MarketDisputeMechanism"
@@ -64,18 +64,12 @@
       "SimpleDisputes": null
     }
   },
-  "MarketEnd": {
-    "_enum": {
-      "Block": "BlockNumber",
-      "Timestamp": "u64"
-    }
-  },
   "MarketId": "u128",
   "MarketIdOf": "u128",
-  "MarketType": {
+  "MarketPeriod": {
     "_enum": {
-      "Categorical": "u16",
-      "Scalar": "(u128, u128)"
+      "Block": "Range<BlockNumber>",
+      "Timestamp": "Range<Moment>"
     }
   },
   "MarketStatus": {
@@ -89,6 +83,14 @@
       "Resolved"
     ]
   },
+  "MarketType": {
+    "_enum": {
+      "Categorical": "u16",
+      "Scalar": "(u128, u128)"
+    }
+  },
+  "MaxUsize": "u64",
+  "Moment": "u64",
   "MultiHash": {
     "_enum": {
       "Sha3_384": "[u8; 50]"

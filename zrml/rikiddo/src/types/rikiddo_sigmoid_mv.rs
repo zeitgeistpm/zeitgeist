@@ -288,7 +288,7 @@ where
         formula_components: &RikiddoFormulaComponents<FS>,
     ) -> Result<FS, &'static str> {
         let exponent_of_balance_in_question =
-            if let Some(res) = formula_components.exponents.get(&asset_in_question_balance) {
+            if let Some(res) = formula_components.exponents.get(asset_in_question_balance) {
                 *res
             } else {
                 return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
@@ -304,7 +304,7 @@ where
                 continue;
             }
 
-            let elem_div_sum_fee = if let Some(res) = formula_components.exponents.get(&elem) {
+            let elem_div_sum_fee = if let Some(res) = formula_components.exponents.get(elem) {
                 *res
             } else {
                 return Err("[RikiddoSigmoidMV] Cannot find exponent of asset balance in \
