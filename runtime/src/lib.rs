@@ -28,11 +28,15 @@ use frame_support::{
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
-    EnsureRoot,
+    EnsureOneOf, EnsureRoot,
 };
 use orml_traits::parameter_type_with_key;
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{
+    crypto::KeyTypeId,
+    u32_trait::{_1, _2},
+    OpaqueMetadata,
+};
 use sp_runtime::{
     create_runtime_str, generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
@@ -159,6 +163,7 @@ macro_rules! create_zeitgeist_runtime {
                 // Other Parity pallets
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 21,
+                Advisory: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 22,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
@@ -391,6 +396,24 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const AdvisoryCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const AdvisoryCommitteeMaxProposals: u32 = 100;
+    pub const AdvisoryCommitteeMaxMembers: u32 = 100;
+}
+
+pub type AdvisoryCommittee = pallet_collective::Instance1;
+impl pallet_collective::Config<AdvisoryCommittee> for Runtime {
+    type Origin = Origin;
+    type Proposal = Call;
+    type Event = Event;
+    type MotionDuration = AdvisoryCommitteeMotionDuration;
+    type MaxProposals = AdvisoryCommitteeMaxProposals;
+    type MaxMembers = AdvisoryCommitteeMaxMembers;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_sudo::Config for Runtime {
@@ -464,9 +487,14 @@ impl zrml_orderbook_v1::Config for Runtime {
     type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
+type MoreThanHalfCouncil = EnsureOneOf<
+    AccountId,
+    EnsureRoot<AccountId>,
+    pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, AdvisoryCommittee>,
+>;
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
-    type ApprovalOrigin = EnsureRoot<AccountId>;
+    type ApprovalOrigin = MoreThanHalfCouncil;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -577,6 +605,7 @@ impl_runtime_apis! {
 
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
+            add_benchmark!(params, batches, pallet_collective, Advisory);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
