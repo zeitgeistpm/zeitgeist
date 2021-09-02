@@ -1,6 +1,6 @@
 use crate::{
     constants::INITIAL_FEE,
-    traits::{Lmsr, MarketAverage, RikiddoMV, Fee},
+    traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};

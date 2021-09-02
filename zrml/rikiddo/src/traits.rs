@@ -15,6 +15,10 @@ pub trait Fee {
     type FS: Fixed;
 
     /// Calculate fee
+    ///
+    /// # Arguments
+    ///
+    /// * `r`: An external value that is incorporated into the fee calculation.
     fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
 }
 
@@ -23,13 +27,17 @@ pub trait MarketAverage {
     /// An unsigned fixed point type.
     type FU: FixedUnsigned;
 
-    /// Get average (sma, ema, wma, depending on the concrete implementation) of market volume.
+    /// Get the market average (such es EMA, SMA, median, WMA, etc.)
     fn get(&self) -> Option<Self::FU>;
 
     /// Clear market data.
     fn clear(&mut self);
 
-    /// Update market volume.
+    /// Update market data.
+    ///
+    /// # Arguments
+    ///
+    /// * `volume`: The timestamped volume that should be added to the market data
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
@@ -41,16 +49,30 @@ pub trait Lmsr {
     /// An unsigned fixed point type.
     type FU: FixedUnsigned;
 
-    /// Return price P_i(q) for all assets in q.
+    /// Returns a vector of prices for a given set of assets (same order as `asset_balances`).
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+    /// * `asset_balances`: The balance vector of the assets.
     fn all_prices(&self, asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str>;
 
-    /// Return cost C(q) for all assets in q.
+    /// Returns the total cost for a specific vector of assets (see <a href="https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf">LS-LMSR paper</a>).
+    ///
+    /// # Arguments
+    ///
+    /// * `asset_balances`: The balance vector of the assets.
     fn cost(&self, asset_balances: &[Self::FU]) -> Result<Self::FU, &'static str>;
 
-    /// Fetch the current fee.
+    /// Returns the current fee.
     fn fee(&self) -> Result<Self::FU, &'static str>;
 
-    /// Return price P_i(q) for asset q_i in q.
+    /// Returns the price of one specific asset.
+    ///
+    /// # Arguments
+    ///
+    /// * `asset_in_question`: The balance of the asset for which the price should be returned.
+    /// * `asset_balances`: The balance vector of the assets.
     fn price(
         &self,
         asset_balances: &[Self::FU],
@@ -64,6 +86,10 @@ pub trait RikiddoMV: Lmsr {
     fn clear(&mut self);
 
     /// Update market data.
+    ///
+    /// # Arguments
+    ///
+    /// * `volume`: The timestamped volume that should be added to the market data
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
@@ -81,7 +107,6 @@ pub trait RikiddoMVPallet {
     type FU: FixedUnsigned;
     /// A type that implements the RikiddoMV trait (LMSR + Rikiddo based on MarketVolume).
     type Rikiddo: RikiddoMV;
-
 
     /// Returns a vector of prices for a given set of assets (same order as `asset_balances`).
     ///
