@@ -384,8 +384,8 @@ mod pallet {
                 status,
             };
 
-            let market_id = T::MarketCommons::push_market(market)?;
-            Self::deposit_event(Event::MarketCreated(market_id, sender));
+            let market_id = T::MarketCommons::push_market(market.clone())?;
+            Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
             Ok(())
         }
@@ -541,8 +541,8 @@ mod pallet {
                 status,
             };
 
-            let market_id = T::MarketCommons::push_market(market)?;
-            Self::deposit_event(Event::MarketCreated(market_id, sender));
+            let market_id = T::MarketCommons::push_market(market.clone())?;
+            Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
             Ok(())
         }
@@ -979,7 +979,11 @@ mod pallet {
         /// A market has been approved [market_id]
         MarketApproved(MarketIdOf<T>),
         /// A market has been created [market_id, creator]
-        MarketCreated(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
+        MarketCreated(
+            MarketIdOf<T>,
+            Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            <T as frame_system::Config>::AccountId,
+        ),
         /// A pending market has been cancelled. [market_id, creator]
         MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed [market_id, new_outcome]
