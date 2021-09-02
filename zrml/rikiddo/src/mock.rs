@@ -7,9 +7,9 @@ use sp_runtime::{
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{ExistentialDeposit, MaxReserves, BASE, BLOCK_HASH_COUNT},
+    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, PoolId, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, PoolId, UncheckedExtrinsicTest,
     },
 };
 
@@ -24,7 +24,6 @@ pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
-    pub const BlockHashCount: u64 = BLOCK_HASH_COUNT;
     pub const MinimumPeriod: u64 = 0;
     pub const FractionalDecimalPlaces: u8 = 10;
 }
