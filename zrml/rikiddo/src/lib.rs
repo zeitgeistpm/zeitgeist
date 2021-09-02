@@ -15,13 +15,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use frame_support::{
-        debug,
-        dispatch::DispatchResult,
-        pallet_prelude::StorageMap,
-        traits::{Get, Hooks, Time},
-        Twox64Concat,
-    };
+    use frame_support::{Twox64Concat, debug, dispatch::DispatchResult, pallet_prelude::StorageMap, traits::{Get, Hooks, Time}};
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
     use sp_runtime::DispatchError;
     use sp_std::{
@@ -47,7 +41,7 @@ mod pallet {
     use substrate_fixed::types::extra::LeEqU128;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config<I: 'static = ()>: frame_system::Config {
         /// Defines the type of traded amounts
         type Balance: Copy + Into<u128> + TryFrom<u128> + sp_std::fmt::Debug;
 
@@ -89,7 +83,7 @@ mod pallet {
     }
 
     #[pallet::error]
-    pub enum Error<T> {
+    pub enum Error<T, I = ()> {
         FixedConversionImpossible,
         RikiddoNotFoundForPool,
         RikiddoAlreadyExistsForPool,
@@ -97,23 +91,23 @@ mod pallet {
 
     // This is the storage containing the Rikiddo instances per pool.
     #[pallet::storage]
-    pub type RikiddoPerPool<T: Config> = StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;
+    pub type RikiddoPerPool<T: Config<I>, I: 'static = ()> = StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+    impl<T: Config<I>, I: 'static> Hooks<T::BlockNumber> for Pallet<T, I> {}
 
     #[pallet::pallet]
-    pub struct Pallet<T>(PhantomData<T>);
+    pub struct Pallet<T, I=()>(PhantomData<T>, PhantomData<I>);
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {}
 
-    impl<T: Config> Pallet<T> {
+    impl<T: Config<I>, I: 'static> Pallet<T, I> {
         fn get_rikiddo(poolid: &T::PoolId) -> Result<T::Rikiddo, DispatchError> {
-            if let Ok(rikiddo) = <RikiddoPerPool<T>>::try_get(poolid) {
+            if let Ok(rikiddo) = <RikiddoPerPool<T, I>>::try_get(poolid) {
                 Ok(rikiddo)
             } else {
-                Err(Error::<T>::RikiddoNotFoundForPool.into())
+                Err(Error::<T, I>::RikiddoNotFoundForPool.into())
             }
         }
 
@@ -122,7 +116,7 @@ mod pallet {
                 Ok(res) => return Ok(res),
                 Err(err) => {
                     debug(&err);
-                    return Err(Error::<T>::FixedConversionImpossible.into());
+                    return Err(Error::<T, I>::FixedConversionImpossible.into());
                 }
             };
         }
@@ -135,7 +129,7 @@ mod pallet {
                 Ok(res) => return Ok(res),
                 Err(err) => {
                     debug(&err);
-                    return Err(Error::<T>::FixedConversionImpossible.into());
+                    return Err(Error::<T, I>::FixedConversionImpossible.into());
                 }
             }
         }
@@ -159,7 +153,7 @@ mod pallet {
         }
     }
 
-    impl<T: Config> RikiddoSigmoidMVPallet for Pallet<T>
+    impl<T: Config<I>, I: 'static> RikiddoSigmoidMVPallet for Pallet<T, I>
     where
         <T::FixedTypeS as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
         <T::Timestamp as Time>::Moment: Into<UnixTimestamp>,
@@ -213,17 +207,17 @@ mod pallet {
         /// Create Rikiddo instance for specifc asset pool
         fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult {
             if Self::get_rikiddo(&poolid).is_ok() {
-                return Err(Error::<T>::RikiddoAlreadyExistsForPool.into());
+                return Err(Error::<T, I>::RikiddoAlreadyExistsForPool.into());
             }
 
-            <RikiddoPerPool<T>>::insert(poolid, rikiddo);
+            <RikiddoPerPool<T, I>>::insert(poolid, rikiddo);
             Ok(())
         }
 
         /// Destroy Rikiddo instance
         fn destroy(poolid: Self::PoolId) -> DispatchResult {
             let _ = Self::get_rikiddo(&poolid)?;
-            <RikiddoPerPool<T>>::remove(poolid);
+            <RikiddoPerPool<T, I>>::remove(poolid);
             Ok(())
         }
 
@@ -278,7 +272,7 @@ mod pallet {
                     if let Some(inner) = res {
                         inner
                     } else {
-                        <RikiddoPerPool<T>>::insert(poolid, rikiddo);
+                        <RikiddoPerPool<T, I>>::insert(poolid, rikiddo);
                         return Ok(None);
                     }
                 }
@@ -290,7 +284,7 @@ mod pallet {
 
             // Convert result back into Balance type
             let result = Self::convert_fixed_to_balance(&balance_fixed)?;
-            <RikiddoPerPool<T>>::insert(poolid, rikiddo);
+            <RikiddoPerPool<T, I>>::insert(poolid, rikiddo);
             Ok(Some(result))
         }
     }
