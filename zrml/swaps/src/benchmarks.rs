@@ -5,12 +5,13 @@ use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec};
-use frame_support::{dispatch::UnfilteredDispatchable, traits::Get};
+use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::BASE,
+    traits::Swaps as _,
     types::{Asset, MarketType, OutcomeReport},
 };
 
@@ -55,8 +56,8 @@ fn bench_create_pool<T: Config>(
     let market_id = T::MarketId::from(0u8);
     let assets = generate_assets::<T>(&caller, asset_count_unwrapped, asset_amount);
     let weights = vec![T::MinWeight::get(); asset_count_unwrapped];
-    let _ = Call::<T>::create_pool(assets.clone(), market_id, weights)
-        .dispatch_bypass_filter(RawOrigin::Signed(caller).into());
+    let _ =
+        Pallet::<T>::create_pool(caller, assets.clone(), market_id, Default::default(), weights);
     (<NextPoolId<T>>::get() - 1, assets, market_id)
 }
 
@@ -65,15 +66,6 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get()), None);
     }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
-
-    create_pool {
-        // Step through every possible amount of assets <= MaxAssets
-        let a in 0..T::MaxAssets::get() as u32;
-        let caller = whitelisted_caller();
-        let assets = generate_assets::<T>(&caller, a as usize, None);
-        let weights = vec![T::MinWeight::get(); a as usize];
-        let market_id = T::MarketId::from(0u8);
-    }: _(RawOrigin::Signed(caller), assets, market_id, weights)
 
     pool_exit {
         let a in 0..T::MaxAssets::get() as u32;

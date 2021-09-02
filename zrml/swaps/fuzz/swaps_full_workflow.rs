@@ -7,13 +7,6 @@ use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
-        let _ = Swaps::create_pool(
-            Origin::signed(data.create_pool_origin.into()),
-            data.create_pool_assets.into_iter().map(asset).collect(),
-            data.create_market_id.into(),
-            data.create_pool_weights,
-        );
-
         let _ = Swaps::pool_join(
             Origin::signed(data.pool_join_origin.into()),
             data.pool_join_pool_id.into(),
@@ -85,11 +78,6 @@ fuzz_target!(|data: Data| {
 
 #[derive(Debug, arbitrary::Arbitrary)]
 struct Data {
-    create_market_id: u8,
-    create_pool_assets: Vec<(u128, u16)>,
-    create_pool_origin: u8,
-    create_pool_weights: Vec<u128>,
-
     pool_join_origin: u8,
     pool_join_pool_id: u8,
     pool_join_pool_amount: u128,
