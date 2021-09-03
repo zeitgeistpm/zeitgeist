@@ -49,7 +49,7 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_runtime::{
         traits::{AccountIdConversion, Zero},
-        DispatchError, DispatchResult, SaturatedConversion,
+        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
@@ -697,10 +697,13 @@ mod pallet {
             Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist)
         }
 
-        fn inc_next_pool_id() -> PoolId {
+        fn inc_next_pool_id() -> Result<PoolId, DispatchError> {
             let id = <NextPoolId<T>>::get();
-            <NextPoolId<T>>::mutate(|n| *n += 1);
-            id
+            <NextPoolId<T>>::try_mutate(|n| {
+                *n = n.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+                Ok::<_, DispatchError>(())
+            })?;
+            Ok(id)
         }
 
         // Mutates a stored pool. Returns `Err` if `pool_id` does not exist.
@@ -746,7 +749,7 @@ mod pallet {
 
             let amount = T::MinLiquidity::get();
 
-            let next_pool_id = Self::inc_next_pool_id();
+            let next_pool_id = Self::inc_next_pool_id()?;
             let pool_account = Self::pool_account_id(next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight: u128 = 0;

@@ -6,6 +6,9 @@ use crate::chain_spec::{
 };
 use sc_service::ChainType;
 use sp_core::sr25519;
+use zeitgeist_primitives::types::Balance;
+
+const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
 
 pub fn dev_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
@@ -46,7 +49,7 @@ pub fn dev_config(
                     get_account_id_from_seed::<sr25519::Public>("Ferdie"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
                 ],
-                zeitgeist_primitives::types::Balance::MAX >> 4,
+                INITIAL_BALANCE,
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 zeitgeist_wasm,
             )
