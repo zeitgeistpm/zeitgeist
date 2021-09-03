@@ -15,24 +15,24 @@ pub mod traits;
 pub mod types;
 pub use pallet::*;
 
+/// The pallet that bridges Rikiddo instances to pools.
+///
+/// Abstracts Rikiddo's core functions to be used within a Substrate chain.
+///
+/// This implementation of the Rikiddo pallet is solely a "bookkeeper" of Rikiddo instances,
+/// i.e. it can spawn, update, destroy and use a specific instance to retrieve price
+/// information for a given set of assets. Internally it uses a Rikiddo implementation that
+/// is based on a port of the rust fixed library, [substrate-fixed], consequently it must
+/// handle all conversions between the `Balance` type and the selected fixed point type.
+///
+/// This pallet is highly configurable, you can select the balance type, the fixed point types
+/// and the actual implementation of Rikiddo (for example ema or wma of market data) for your
+/// specific use case. By using multiple instances, potentially multiple Rikiddo variants
+/// can run simulatenously on one chain, which can be used to ease migrations.
+///
+/// [substrate-fixed]: https://github.com/encointer/substrate-fixed
 #[frame_support::pallet]
 pub mod pallet {
-    //! The pallet that bridges Rikiddo instances to pools.
-    //!
-    //! Abstracts Rikiddo's core functions to be used within a Substrate chain.
-    //!
-    //! This implementation of the Rikiddo pallet is solely a "bookkeeper" of Rikiddo instances,
-    //! i.e. it can spawn, update, destroy and use a specific instance to retrieve price
-    //! information for a given set of assets. Internally it uses a Rikiddo implementation that
-    //! is based on a port of the rust fixed library, [substrate-fixed], consequently it must
-    //! handle all conversions between the `Balance` type and the selected fixed point type.
-    //!
-    //! This pallet is highly configurable, you can select the balance type, the fixed point types
-    //! and the actual implementation of Rikiddo (for example ema or wma of market data) for your
-    //! specific use case. By using multiple instances, potentially multiple Rikiddo variants
-    //! can run simulatenously on one chain, which can be used to ease migrations.
-    //!
-    //! [substrate-fixed]: https://github.com/encointer/substrate-fixed
     use crate::{
         traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoMVPallet},
         types::{TimestampedVolume, UnixTimestamp},
@@ -103,14 +103,18 @@ pub mod pallet {
         type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec;
     }
 
+    /// Potential errors within the Rikiddo pallet.
+    #[allow(missing_docs)]
     #[pallet::error]
     pub enum Error<T, I = ()> {
+        /// Conversion between the `Balance` and the internal Rikiddo core type failed.
         FixedConversionImpossible,
+        /// For a given `poolid`, no Rikiddo instance could be found.
         RikiddoNotFoundForPool,
+        /// Trying to create a Rikiddo instance for a `poolid` that already has a Rikiddo instance.
         RikiddoAlreadyExistsForPool,
     }
 
-    // This is the storage containing the Rikiddo instances per pool.
     #[pallet::storage]
     pub type RikiddoPerPool<T: Config<I>, I: 'static = ()> =
         StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;

@@ -83,6 +83,7 @@ cfg_if::cfg_if! {
 }
 
 /// A enum that wrappes an amount of time in different units.
+/// An enum that wrappes an amount of time in different units.
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Timespan {

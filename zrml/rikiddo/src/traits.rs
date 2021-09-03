@@ -14,7 +14,7 @@ pub trait Fee {
     /// A fixed point type.
     type FS: Fixed;
 
-    /// Calculate fee
+    /// Calculate fee.
     ///
     /// # Arguments
     ///
@@ -37,7 +37,7 @@ pub trait MarketAverage {
     ///
     /// # Arguments
     ///
-    /// * `volume`: The timestamped volume that should be added to the market data
+    /// * `volume`: The timestamped volume that should be added to the market data.
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
@@ -89,7 +89,7 @@ pub trait RikiddoMV: Lmsr {
     ///
     /// # Arguments
     ///
-    /// * `volume`: The timestamped volume that should be added to the market data
+    /// * `volume`: The timestamped volume that should be added to the market data.
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
