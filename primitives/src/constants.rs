@@ -1,8 +1,17 @@
+#![allow(
+  // Constants parameters inside `parameter_types!` already check
+  // arithmetic operations at compile time
+    clippy::integer_arithmetic
+)]
+
 pub mod ztg;
 
-use crate::types::{Balance, BlockNumber};
+use crate::{
+    asset::Asset,
+    types::{AccountId, AccountIdTest, Balance, BlockNumber, CurrencyId},
+};
 use frame_support::{parameter_types, PalletId};
-use sp_runtime::Permill;
+use sp_runtime::{traits::AccountIdConversion, Permill};
 
 // Definitions for time
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
@@ -38,6 +47,13 @@ parameter_types! {
 // Liquidity Mining parameters
 parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
+}
+
+// ORML
+parameter_types! {
+    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
+    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+    pub DustAccountTest: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 // Prediction Market parameters

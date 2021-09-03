@@ -23,6 +23,10 @@ where
         currency_id: Self::CurrencyId,
     ) -> (usize, Vec<(T::AccountId, AccountData<T::Balance>)>) {
         let mut total = 0;
+        #[allow(
+            // Iterator will never yield more than `usize::MAX` elements
+            clippy::integer_arithmetic
+        )]
         let accounts = <Accounts<T>>::iter()
             .filter_map(|(k0, k1, v)| {
                 total += 1;

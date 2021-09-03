@@ -1,6 +1,6 @@
 pub use crate::{
-    asset::*, market::*, outcome_report::OutcomeReport, pool::Pool, pool_status::PoolStatus,
-    serde_wrapper::*,
+    asset::*, market::*, max_usize::*, outcome_report::OutcomeReport, pool::Pool,
+    pool_status::PoolStatus, serde_wrapper::*,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
@@ -70,11 +70,6 @@ pub type DigestItem = generic::DigestItem<Hash>;
 
 /// The market identifier type.
 pub type MarketId = u128;
-
-/// The biggest pointer size taking into consideration all known targeting machine architectures.
-///
-/// Useful to cast `usize` into `MaxUsize` with the guarantee that no truncation will occur.
-pub type MaxUsize = u64;
 
 /// Time
 pub type Moment = u64;
