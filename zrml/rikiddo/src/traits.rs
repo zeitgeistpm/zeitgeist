@@ -44,7 +44,7 @@ pub trait MarketAverage {
     ) -> Result<Option<Self::FU>, &'static str>;
 }
 
-/// "Logarithmic Market Scoring Rule" (LMSR) specification.
+/// Logarithmic Market Scoring Rule (LMSR) specification.
 pub trait Lmsr {
     /// An unsigned fixed point type.
     type FU: FixedUnsigned;
@@ -53,11 +53,12 @@ pub trait Lmsr {
     ///
     /// # Arguments
     ///
-    /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
     /// * `asset_balances`: The balance vector of the assets.
     fn all_prices(&self, asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str>;
 
-    /// Returns the total cost for a specific vector of assets (see <a href="https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf">LS-LMSR paper</a>).
+    /// Returns the total cost for a specific vector of assets (see [LS-LMSR paper]).
+    ///
+    /// [LS-LMSR paper]: https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf
     ///
     /// # Arguments
     ///
@@ -126,7 +127,9 @@ pub trait RikiddoMVPallet {
     /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
     fn clear(poolid: Self::PoolId) -> DispatchResult;
 
-    /// Returns the total cost for a specific vector of assets (see <a href="https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf">LS-LMSR paper</a>).
+    /// Returns the total cost for a specific vector of assets (see [LS-LMSR paper]).
+    ///
+    /// [LS-LMSR paper]: https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf
     ///
     /// # Arguments
     ///

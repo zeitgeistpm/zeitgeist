@@ -213,7 +213,13 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Return cost C(q) for all assets in q
+        /// Returns the total cost for a specific vector of assets (see [LS-LMSR paper]).
+        ///
+        /// [LS-LMSR paper]: https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// * `asset_balances`: The balance vector of the assets.
         fn cost(
             poolid: Self::PoolId,
             asset_balances: &[Self::Balance],
