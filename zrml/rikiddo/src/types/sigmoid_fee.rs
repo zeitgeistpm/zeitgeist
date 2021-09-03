@@ -27,9 +27,9 @@ use substrate_fixed::{
 use super::convert_to_signed;
 
 
-/// A structure that contains all configuration constants used to calculated a fee based on a
-/// sigmoid curve. The usage of the configuration parameters is depicted in equation `z(r)` within
-/// the [Dynamic Automated Market Making] paper from Andrew Nguyed et al. Use the `default()`
+/// Configurable values used to calculate a fee based on a sigmoid curve. The usage of the
+/// configuration parameters is depicted in equation `z(r)` within the
+/// [Dynamic Automated Market Making] paper from Andrew Nguyed et al. Use the `default()`
 /// function if uncertain about which values to take.
 ///
 /// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
@@ -104,8 +104,9 @@ where
     }
 }
 
-/// Implementation of `z(r)` as described in [Dynamic Automated Market Making] paper from
-/// Andrew Nguyed et al.
+/// Offers an implementation of `z(r)` as described in [Dynamic Automated Market Making] paper from
+/// Andrew Nguyed et al. based on a predetermined set of
+/// [configuration values](struct@FeeSigmoidConfig)
 ///
 /// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
 #[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
@@ -153,7 +154,7 @@ impl<FS> FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
 {
-    /// Create a new FeeSigmoid instance based on a [`FeeSigmoidConfig`](struct@FeeSigmoidConfig)
+    /// Create a new `FeeSigmoid` instance based on a [`FeeSigmoidConfig`](struct@FeeSigmoidConfig)
     /// configuration. Use `default()` if uncertain which values to use.
     ///
     /// # Arguments
