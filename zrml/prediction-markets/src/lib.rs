@@ -992,28 +992,28 @@ mod pallet {
     {
         /// Custom addition block initialization logic wasn't successful
         BadOnInitialize,
-        /// A complete set of shares has been bought [market_id, buyer]
+        /// A complete set of shares has been bought \[market_id, buyer\]
         BoughtCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
-        /// A market has been approved [market_id]
+        /// A market has been approved \[market_id\]
         MarketApproved(MarketIdOf<T>),
-        /// A market has been created [market_id, creator]
+        /// A market has been created \[market_id, creator\]
         MarketCreated(
             MarketIdOf<T>,
             Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             <T as frame_system::Config>::AccountId,
         ),
-        /// A pending market has been cancelled. [market_id, creator]
+        /// A pending market has been cancelled. \[market_id, creator\]
         MarketCancelled(MarketIdOf<T>),
-        /// A market has been disputed [market_id, new_outcome]
+        /// A market has been disputed \[market_id, new_outcome\]
         MarketDisputed(MarketIdOf<T>, OutcomeReport),
         /// NOTE: Maybe we should only allow rejections.
-        /// A pending market has been rejected as invalid. [market_id]
+        /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
-        /// A market has been reported on [market_id, reported_outcome]
+        /// A market has been reported on \[market_id, reported_outcome\]
         MarketReported(MarketIdOf<T>, OutcomeReport),
-        /// A market has been resolved [market_id, real_outcome]
+        /// A market has been resolved \[market_id, real_outcome\]
         MarketResolved(MarketIdOf<T>, u16),
-        /// A complete set of shares has been sold [market_id, seller]
+        /// A complete set of shares has been sold \[market_id, seller\]
         SoldCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
     }
 

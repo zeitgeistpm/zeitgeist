@@ -5,6 +5,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // This is required to be able to use the derive(Arbitrary) macro.
 #![cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
+#![deny(missing_docs)]
 
 extern crate alloc;
 
@@ -32,6 +33,10 @@ pub use pallet::*;
 ///
 /// [substrate-fixed]: https://github.com/encointer/substrate-fixed
 #[frame_support::pallet]
+// The allow(missing_docs) attribute seems to be necessary, because some attribute-like macros
+// from the Substrate framework generate undocumented code. It seems to be impossible to move
+// the code into an anonymous module to resolve this issue.
+#[allow(missing_docs)]
 pub mod pallet {
     use crate::{
         traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoMVPallet},
@@ -103,8 +108,8 @@ pub mod pallet {
         type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec;
     }
 
+    
     /// Potential errors within the Rikiddo pallet.
-    #[allow(missing_docs)]
     #[pallet::error]
     pub enum Error<T, I = ()> {
         /// Conversion between the `Balance` and the internal Rikiddo core type failed.
@@ -115,6 +120,7 @@ pub mod pallet {
         RikiddoAlreadyExistsForPool,
     }
 
+    /// Storage that maps pool ids to Rikiddo instances.
     #[pallet::storage]
     pub type RikiddoPerPool<T: Config<I>, I: 'static = ()> =
         StorageMap<_, Twox64Concat, T::PoolId, T::Rikiddo>;
