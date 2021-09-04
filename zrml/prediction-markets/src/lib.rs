@@ -295,8 +295,12 @@ mod pallet {
             let num_disputes: u32 = disputes.len().saturated_into();
             let outcome_clone = outcome.clone();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
-            CurrencyOf::<T>::reserve(&who, default_dispute_bound::<T>(disputes.len()))?;
-            T::SimpleDisputes::on_dispute(&disputes, market_id)?;
+            T::SimpleDisputes::on_dispute(
+                default_dispute_bond::<T>(disputes.len()),
+                &disputes,
+                &market_id,
+                &who,
+            )?;
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
             <Disputes<T>>::mutate(market_id, |disputes| {
@@ -1296,19 +1300,19 @@ mod pallet {
             let disputes = Disputes::<T>::get(market_id);
             let resolved_outcome = match market.mdm {
                 MarketDisputeMechanism::Authorized(_) => T::SimpleDisputes::on_resolution(
-                    &default_dispute_bound::<T>,
+                    &default_dispute_bond::<T>,
                     &disputes,
                     market_id,
                     market,
                 )?,
                 MarketDisputeMechanism::Court => T::SimpleDisputes::on_resolution(
-                    &default_dispute_bound::<T>,
+                    &default_dispute_bond::<T>,
                     &disputes,
                     market_id,
                     market,
                 )?,
                 MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::on_resolution(
-                    &default_dispute_bound::<T>,
+                    &default_dispute_bond::<T>,
                     &disputes,
                     market_id,
                     market,
@@ -1435,7 +1439,7 @@ mod pallet {
     }
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub fn default_dispute_bound<T>(n: usize) -> BalanceOf<T>
+    pub fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {

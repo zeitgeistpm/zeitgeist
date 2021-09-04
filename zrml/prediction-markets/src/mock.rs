@@ -16,9 +16,9 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, ExitFee, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
-        MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
-        SimpleDisputesPalletId, SwapsPalletId, BASE,
+        BlockHashCount, ExitFee, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
+        MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinCategories,
+        MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -51,7 +51,6 @@ parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
     pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
-    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"test/lmp");
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const MaximumBlockWeight: Weight = 1024;
     pub const MinimumPeriod: u64 = 0;
