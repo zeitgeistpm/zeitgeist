@@ -13,13 +13,15 @@ pub trait DisputeApi {
 
     /// Disputes a reported outcome.
     fn on_dispute(
+        bond: Self::Balance,
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-        market_id: Self::MarketId,
+        market_id: &Self::MarketId,
+        who: &Self::AccountId,
     ) -> DispatchResult;
 
     /// Manages markets resolutions moving all reported markets to resolved.
     fn on_resolution<D>(
-        dispute_bound: &D,
+        bound: &D,
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,

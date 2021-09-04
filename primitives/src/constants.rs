@@ -26,6 +26,7 @@ parameter_types! {
 // Court
 parameter_types! {
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
+    pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
     pub const StakeWeight: u128 = 2 * BASE;
 }
 
@@ -36,7 +37,7 @@ parameter_types! {
 
 // Liquidity Mining parameters
 parameter_types! {
-    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zrml/lmg");
+    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
 }
 
 // Prediction Market parameters
