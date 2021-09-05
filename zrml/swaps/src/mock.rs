@@ -1,18 +1,18 @@
 #![cfg(feature = "mock")]
 
 use crate as zrml_swaps;
-use frame_support::{construct_runtime, parameter_types, PalletId};
+use frame_support::{construct_runtime, parameter_types};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, ExitFee, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks,
-        MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight,
-        MinimumPeriod, SwapsPalletId,
+        BlockHashCount, DustAccountTest, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId,
+        MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight,
+        MinLiquidity, MinWeight, MinimumPeriod, SwapsPalletId,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -23,8 +23,6 @@ use zeitgeist_primitives::{
 // parameter_types imported from zeitgeist_primitives
 parameter_types! {
     pub const ExistentialDeposit: u32 = 1;
-    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 parameter_type_with_key! {
@@ -119,7 +117,7 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
-    type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+    type OnDust = orml_tokens::TransferDust<Runtime, DustAccountTest>;
     type WeightInfo = ();
 }
 

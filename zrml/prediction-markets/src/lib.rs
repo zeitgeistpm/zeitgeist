@@ -466,7 +466,7 @@ mod pallet {
             let market_id = T::MarketCommons::latest_market_id()?;
             let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
                 .actual_weight
-                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32));
+                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weight_len = weights.len() as u32;
             let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
@@ -480,13 +480,14 @@ mod pallet {
                     Asset::ScalarOutcome(_, position) => Asset::ScalarOutcome(market_id, position),
                     _ => asset_in,
                 };
-                weight_pool_joins += T::Swaps::pool_join_with_exact_asset_amount(
+                let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
                     who.clone(),
                     pool_id,
                     asset_in,
                     asset_amount,
                     min_pool_amount,
                 )?;
+                weight_pool_joins = weight_pool_joins.saturating_add(local_weight);
             }
 
             Ok(Some(
@@ -648,7 +649,10 @@ mod pallet {
                         return Err(Error::<T>::InvalidMarketType.into());
                     };
 
-                    let calc_payouts = |final_value, low, high| -> (Perbill, Perbill) {
+                    let calc_payouts = |final_value: u128,
+                                        low: u128,
+                                        high: u128|
+                     -> (Perbill, Perbill) {
                         if final_value <= low {
                             return (Perbill::zero(), Perbill::one());
                         }
@@ -656,14 +660,14 @@ mod pallet {
                             return (Perbill::one(), Perbill::zero());
                         }
 
-                        let payout_long: Perbill =
-                            Perbill::from_rational(final_value - low, high - low);
-                        (
-                            payout_long,
-                            Perbill::from_parts(
-                                Perbill::one().deconstruct() - payout_long.deconstruct(),
-                            ),
-                        )
+                        let payout_long: Perbill = Perbill::from_rational(
+                            final_value.saturating_sub(low),
+                            high.saturating_sub(low),
+                        );
+                        let payout_short: Perbill = Perbill::from_parts(
+                            Perbill::one().deconstruct().saturating_sub(payout_long.deconstruct()),
+                        );
+                        (payout_long, payout_short)
                     };
 
                     let (long_percent, short_percent) =
@@ -1086,14 +1090,14 @@ mod pallet {
             }
             if market.status == MarketStatus::Disputed {
                 let disputes = Disputes::<T>::get(market_id);
-                let num_disputes = disputes.len();
-                let prev_dispute = disputes[num_disputes - 1].clone();
-                let at = prev_dispute.at;
-                let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(&at);
-                remove_item::<MarketIdOf<T>>(&mut old_disputes_per_block, market_id);
-                MarketIdsPerDisputeBlock::<T>::mutate(&at, |mut ids| {
-                    remove_item::<MarketIdOf<T>>(&mut ids, market_id);
-                });
+                if let Some(last_dispute) = disputes.last() {
+                    let at = last_dispute.at;
+                    let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(&at);
+                    remove_item::<MarketIdOf<T>>(&mut old_disputes_per_block, market_id);
+                    MarketIdsPerDisputeBlock::<T>::mutate(&at, |mut ids| {
+                        remove_item::<MarketIdOf<T>>(&mut ids, market_id);
+                    });
+                }
             }
 
             Ok(())

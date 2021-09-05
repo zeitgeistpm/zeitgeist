@@ -11,4 +11,5 @@ cargo clippy --all-features --release -- \
   -Aclippy::type_complexity \
   -Aclippy::unnecessary_cast \
   -Aclippy::unnecessary_mut_passed \
-  -Aclippy::unused_unit
+  -Aclippy::unused_unit \
+  -Dclippy::integer_arithmetic
