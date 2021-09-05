@@ -1,5 +1,5 @@
 use crate::cli::{Cli, Subcommand};
-use sc_cli::SubstrateCli;
+use sc_cli::{ExecutionStrategy, SubstrateCli};
 use sc_service::PartialComponents;
 #[cfg(feature = "parachain")]
 use {
@@ -8,7 +8,7 @@ use {
 };
 
 pub fn run() -> sc_cli::Result<()> {
-    let cli = <Cli as SubstrateCli>::from_args();
+    let mut cli = <Cli as SubstrateCli>::from_args();
 
     match &cli.subcommand {
         #[cfg(feature = "runtime-benchmarks")]
@@ -145,7 +145,7 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok((cmd.run(client, backend), task_manager))
             })
         }
-        None => none_command(&cli),
+        None => none_command(&mut cli),
     }
 }
 
@@ -160,7 +160,9 @@ fn extract_genesis_wasm(chain_spec: Box<dyn sc_service::ChainSpec>) -> sc_cli::R
 }
 
 #[cfg(feature = "parachain")]
-fn none_command(cli: &Cli) -> sc_cli::Result<()> {
+fn none_command(cli: &mut Cli) -> sc_cli::Result<()> {
+    manage_execution(&mut cli.run.base.import_params.execution_strategies.execution);
+
     let runner = cli.create_runner(&cli.run.normalize())?;
 
     runner.run_node_until_exit(|parachain_config| async move {
@@ -203,8 +205,11 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 }
 
 #[cfg(not(feature = "parachain"))]
-fn none_command(cli: &Cli) -> sc_cli::Result<()> {
+fn none_command(cli: &mut Cli) -> sc_cli::Result<()> {
+    manage_execution(&mut cli.run.import_params.execution_strategies.execution);
+
     let runner = cli.create_runner(&cli.run)?;
+
     runner.run_node_until_exit(|config| async move {
         match config.role {
             sc_cli::Role::Light => crate::service::new_light(config),
@@ -212,4 +217,21 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         }
         .map_err(sc_cli::Error::Service)
     })
+}
+
+// * If not set, makes WASM the default execution
+//
+// * If set, forbids non WASM executions
+fn manage_execution(execution_strategy: &mut Option<ExecutionStrategy>) {
+    let invalid_execution = || panic!("WASM execution is the only possible option");
+    if let Some(elem) = execution_strategy {
+        match elem {
+            ExecutionStrategy::Both => invalid_execution(),
+            ExecutionStrategy::Native => invalid_execution(),
+            ExecutionStrategy::NativeElseWasm => invalid_execution(),
+            ExecutionStrategy::Wasm => {}
+        }
+    } else {
+        *execution_strategy = Some(ExecutionStrategy::Wasm);
+    }
 }

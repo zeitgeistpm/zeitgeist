@@ -20,8 +20,8 @@ use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
-        OutcomeReport, ScalarPosition,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MaxRuntimeUsize,
+        MultiHash, OutcomeReport, ScalarPosition,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -207,12 +207,12 @@ benchmarks! {
         // Unfortunately frame-benchmarking does not allow to b = b.min(a) here
         let b in 0..10;
         // c = num. asset types
-        let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
+        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         // Complexity: c*a + c*b ∈ O(a)
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
 
-        for i in 0..c.min(T::MaxDisputes::get() as u32) {
+        for i in 0..c.min(T::MaxDisputes::get()) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&marketid);
             let _ = T::SimpleDisputes::on_dispute(Default::default(), &disputes, &marketid, &origin)?;
@@ -228,7 +228,7 @@ benchmarks! {
         // b = num. accounts with assets
         let b in 0..10;
         // c = num. asset types
-        let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
+        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         // Complexity: c*a + c*b ∈ O(a)
 
         let c_u16 = c.saturated_into();
@@ -269,7 +269,7 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(origin)? }
 
     buy_complete_set {
-        let a in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
+        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(a.saturated_into())
@@ -297,7 +297,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, outcome_range, MarketDisputeMechanism::SimpleDisputes)
 
     deploy_swap_pool_for_market {
-        let a in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
+        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into())
@@ -306,11 +306,12 @@ benchmarks! {
         let _ = Call::<T>::buy_complete_set(marketid, min_liquidity)
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
-        let weights = vec![MinWeight::get(); (a + 1) as usize];
+        let weight_len: usize = MaxRuntimeUsize::from(a).into();
+        let weights = vec![MinWeight::get(); weight_len.saturating_add(1)];
     }: _(RawOrigin::Signed(caller), marketid, weights)
 
     dispute {
-        let a in 0..(T::MaxDisputes::get() - 1) as u32;
+        let a in 0..(T::MaxDisputes::get() - 1);
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
@@ -328,7 +329,7 @@ benchmarks! {
         // b = num. accounts with assets
         let b in 0..10;
         // c = num. asset types
-        let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
+        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
         let c_u16 = c.saturated_into();
         let (_, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
@@ -344,9 +345,9 @@ benchmarks! {
         // b = num. accounts with assets
         let b in 0..10;
         // c = num. asset types
-        let c in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
+        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         // d = num. disputes
-        let d in 0..T::MaxDisputes::get() as u32;
+        let d in 0..T::MaxDisputes::get();
 
         let c_u16 = c.saturated_into();
         let (caller, marketid) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
@@ -428,7 +429,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), marketid, outcome)
 
     sell_complete_set {
-        let a in (T::MinCategories::get() as u32)..(T::MaxCategories::get() as u32);
+        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(a.saturated_into())

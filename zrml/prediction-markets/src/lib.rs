@@ -92,7 +92,8 @@ mod pallet {
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
-            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
+            MarketStatus, MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, Report,
+            ScalarPosition,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -118,11 +119,11 @@ mod pallet {
             T::WeightInfo::admin_destroy_reported_market(
                 4_500,
                 4_500,
-                T::MaxCategories::get() as u32
+                T::MaxCategories::get().into()
             ).max(T::WeightInfo::admin_destroy_disputed_market(
                 4_500,
                 4_500,
-                T::MaxCategories::get() as u32
+                T::MaxCategories::get().into()
             ))
         )]
         pub fn admin_destroy_market(
@@ -212,7 +213,7 @@ mod pallet {
             .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
                 4_200,
                 4_200,
-                T::MaxCategories::get() as u32
+                T::MaxCategories::get().into()
             ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
         ))]
         pub fn admin_move_market_to_resolved(
@@ -270,7 +271,7 @@ mod pallet {
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
         // This also occurs in numerous other functions.
         #[pallet::weight(
-            T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32)
+            T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
         )]
         #[transactional]
         pub fn buy_complete_set(
@@ -415,7 +416,7 @@ mod pallet {
         ///     last element within the 3-tuple contains the minimum pool amount (see Swaps pallet)
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
-            .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get() as u32))
+            .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
             // (it is loosely coupled to this pallet using a trait). Will be adjusted later
@@ -467,7 +468,7 @@ mod pallet {
             let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
                 .actual_weight
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
-            let weight_len = weights.len() as u32;
+            let weight_len: MaxRuntimeUsize = weights.len().into();
             let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins = 0;
@@ -493,9 +494,9 @@ mod pallet {
             Ok(Some(
                 weight_market_creation
                     .saturating_add(weight_bcs)
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weight_len))
+                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weight_len.into()))
                     .saturating_add(weight_pool_joins)
-                    .saturating_add(T::DbWeight::get().reads(2 as Weight)),
+                    .saturating_add(T::DbWeight::get().reads(2)),
             )
             .into())
         }
@@ -796,7 +797,7 @@ mod pallet {
         /// Destroys a complete set of outcomes shares for a market.
         ///
         #[pallet::weight(
-            T::WeightInfo::sell_complete_set(T::MaxCategories::get() as u32)
+            T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
         pub fn sell_complete_set(
             origin: OriginFor<T>,
