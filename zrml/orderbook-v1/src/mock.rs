@@ -1,15 +1,14 @@
 #![cfg(feature = "mock")]
 
 use crate as orderbook_v1;
-use frame_support::{construct_runtime, parameter_types, PalletId};
+use frame_support::{construct_runtime, parameter_types};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
-    Perbill,
+    traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, MaxLocks, MaxReserves},
+    constants::{BlockHashCount, DustAccountTest, MaxLocks, MaxReserves},
     types::{
         AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
         UncheckedExtrinsicTest,
@@ -23,9 +22,7 @@ pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 parameter_types! {
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
     pub const ExistentialDeposit: Balance = 1;
-    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 parameter_type_with_key! {
@@ -89,7 +86,7 @@ impl orml_tokens::Config for Runtime {
     type Event = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
-    type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+    type OnDust = orml_tokens::TransferDust<Runtime, DustAccountTest>;
     type WeightInfo = ();
 }
 

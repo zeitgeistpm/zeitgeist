@@ -17,7 +17,7 @@ mod pallet {
         traits::{Currency, Get, Hooks, Imbalance, IsType, ReservableCurrency},
         PalletId,
     };
-    use sp_runtime::DispatchError;
+    use sp_runtime::{traits::CheckedDiv, ArithmeticError, DispatchError, SaturatedConversion};
     use zeitgeist_primitives::{
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{Asset, Market, MarketDispute, MarketStatus, OutcomeReport},
@@ -197,8 +197,10 @@ mod pallet {
                     }
 
                     // fold all the imbalances into one and reward the correct reporters.
-                    let reward_per_each =
-                        overall_imbalance.peek() / (correct_reporters.len() as u32).into();
+                    let reward_per_each = overall_imbalance
+                        .peek()
+                        .checked_div(&correct_reporters.len().saturated_into())
+                        .ok_or(ArithmeticError::DivisionByZero)?;
                     for correct_reporter in &correct_reporters {
                         let (amount, leftover) = overall_imbalance.split(reward_per_each);
                         CurrencyOf::<T>::resolve_creating(correct_reporter, amount);

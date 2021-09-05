@@ -58,7 +58,7 @@ mod pallet {
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
     use sp_runtime::{
         traits::{AccountIdConversion, Saturating, Zero},
-        SaturatedConversion, TransactionOutcome,
+        TransactionOutcome,
     };
     use zeitgeist_primitives::{
         traits::MarketId,
@@ -156,9 +156,9 @@ mod pallet {
         fn on_finalize(block: T::BlockNumber) {
             let fun = || {
                 let added_len = TrackIncentivesBasedOnBoughtShares::<T>::exec(block)?;
-                Self::deposit_event(Event::AddedIncentives(added_len.saturated_into()));
+                Self::deposit_event(Event::AddedIncentives(added_len.into()));
                 let subtracted_len = TrackIncentivesBasedOnSoldShares::<T>::exec();
-                Self::deposit_event(Event::SubtractedIncentives(subtracted_len.saturated_into()));
+                Self::deposit_event(Event::SubtractedIncentives(subtracted_len.into()));
                 Some(())
             };
             with_transaction(|| match fun() {
@@ -250,7 +250,7 @@ mod pallet {
             )
             .map_err(|_err| Error::<T>::FundDoesNotHaveEnoughBalance)?;
 
-            let accounts_len = values.len().saturated_into();
+            let accounts_len = values.len().into();
             for (account_id, incentives) in values {
                 T::Currency::transfer(
                     &pallet_account_id,

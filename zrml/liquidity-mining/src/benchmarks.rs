@@ -1,3 +1,7 @@
+#![allow(
+    // Auto-generated code is a no man's land
+    clippy::integer_arithmetic
+)]
 #![cfg(feature = "runtime-benchmarks")]
 
 use crate::pallet::{BalanceOf, Call, Config, Pallet};

@@ -1,3 +1,7 @@
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
 #![cfg(feature = "mock")]
 
 use crate as prediction_markets;
@@ -5,20 +9,20 @@ use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{OnFinalize, OnInitialize},
     weights::Weight,
-    PalletId,
 };
 use frame_system::EnsureSignedBy;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
-    traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, ExitFee, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinCategories,
-        MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId, SwapsPalletId, BASE,
+        BlockHashCount, DustAccountTest, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId,
+        MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves,
+        MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
+        SimpleDisputesPalletId, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -50,14 +54,12 @@ parameter_types! {
     pub const DisputeFactor: Balance = 25;
     pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
-    pub const GetNativeCurrencyId: Asset<MarketId> = Asset::Ztg;
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const MaximumBlockWeight: Weight = 1024;
     pub const MinimumPeriod: u64 = 0;
     pub const OracleBond: Balance = 100;
     pub const ReportingPeriod: u32 = 10;
     pub const ValidityBond: Balance = 200;
-    pub DustAccount: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 parameter_type_with_key! {
@@ -150,7 +152,7 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
-    type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+    type OnDust = orml_tokens::TransferDust<Runtime, DustAccountTest>;
     type WeightInfo = ();
 }
 

@@ -47,7 +47,10 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::Encode;
-    use sp_runtime::traits::{Hash, Zero};
+    use sp_runtime::{
+        traits::{Hash, Zero},
+        ArithmeticError, DispatchError,
+    };
     use zeitgeist_primitives::{traits::MarketId, types::Asset};
 
     pub(crate) type BalanceOf<T> =
@@ -223,7 +226,10 @@ mod pallet {
             }
 
             <OrderData<T>>::insert(hash, Some(order));
-            <Nonce<T>>::mutate(|n| *n += 1);
+            <Nonce<T>>::try_mutate(|n| {
+                *n = n.checked_add(1).ok_or(ArithmeticError::Overflow)?;
+                Ok::<_, DispatchError>(())
+            })?;
             Self::deposit_event(Event::OrderMade(sender, hash));
 
             if bid {
