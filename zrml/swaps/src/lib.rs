@@ -74,26 +74,6 @@ mod pallet {
             Self::set_pool_as_stale(&market_type, pool_id, &outcome_report)
         }
 
-        /// Temporary probably - The Swap is created per prediction market.
-        #[pallet::weight(T::WeightInfo::create_pool(weights.len() as u32))]
-        #[frame_support::transactional]
-        pub fn create_pool(
-            origin: OriginFor<T>,
-            assets: Vec<Asset<T::MarketId>>,
-            market_id: T::MarketId,
-            weights: Vec<u128>,
-        ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            let _ = <Self as Swaps<T::AccountId>>::create_pool(
-                who,
-                assets,
-                market_id,
-                Zero::zero(),
-                weights,
-            )?;
-            Ok(())
-        }
-
         /// Pool - Exit
         ///
         /// Retrieves a given set of assets from `pool_id` to `origin`.

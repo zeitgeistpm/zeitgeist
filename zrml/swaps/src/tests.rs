@@ -8,6 +8,7 @@ use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use orml_traits::MultiCurrency;
 use zeitgeist_primitives::{
     constants::BASE,
+    traits::Swaps as _,
     types::{Asset, MarketId, MarketType, OutcomeReport},
 };
 
@@ -512,8 +513,9 @@ fn create_initial_pool() {
         let _ = Currencies::deposit(asset, &BOB, _100);
     });
     assert_ok!(Swaps::create_pool(
-        Origin::signed(BOB),
+        BOB,
         ASSETS.iter().cloned().collect(),
+        0,
         0,
         vec!(_2, _2, _2, _2),
     ));
