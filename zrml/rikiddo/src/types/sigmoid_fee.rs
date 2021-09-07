@@ -2,7 +2,8 @@ use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Sigmoid,
 };
-use frame_support::dispatch::{fmt::Debug, Decode, Encode};
+use frame_support::dispatch::{Decode, Encode};
+use sp_core::RuntimeDebug;
 use substrate_fixed::{
     traits::{FixedSigned, LossyFrom, LossyInto},
     transcendental::sqrt,
@@ -15,7 +16,7 @@ use substrate_fixed::{
 
 use super::convert_to_signed;
 
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned> {
     pub m: FS,
     pub p: FS,
@@ -42,7 +43,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
@@ -66,7 +67,7 @@ where
     type FS = FS;
 
     // z(r) in https://files.kyber.network/DMM-Feb21.pdf
-    fn calculate(&self, r: Self::FS) -> Result<Self::FS, &'static str> {
+    fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str> {
         let r_minus_n = if let Some(res) = r.checked_sub(self.config.n) {
             res
         } else {

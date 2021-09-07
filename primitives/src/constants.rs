@@ -25,6 +25,18 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
+pub const BALANCE_FRACTIONAL_DECIMAL_PLACES: u8 = {
+    let mut base = BASE;
+    let mut counter: u8 = 0;
+
+    while base >= 10 {
+        base /= 10;
+        counter += 1;
+    }
+
+    counter
+};
+
 // Balance
 parameter_types! {
     pub const ExistentialDeposit: u128 = CENT;

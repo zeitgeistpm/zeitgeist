@@ -15,7 +15,10 @@ use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::{
-    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+    constants::{
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        BALANCE_FRACTIONAL_DECIMAL_PLACES,
+    },
     types::{AccountId, Balance, Signature},
 };
 use zeitgeist_runtime::{SS58Prefix, TokensConfig};
@@ -227,7 +230,7 @@ fn token_properties() -> Map<String, Value> {
     let mut properties = Map::new();
     properties.insert("ss58Format".into(), SS58Prefix::get().into());
     properties.insert("tokenSymbol".into(), "ZBP".into());
-    properties.insert("tokenDecimals".into(), 10.into());
+    properties.insert("tokenDecimals".into(), BALANCE_FRACTIONAL_DECIMAL_PLACES.into());
     properties
 }
 
