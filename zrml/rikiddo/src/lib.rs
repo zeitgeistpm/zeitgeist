@@ -15,14 +15,15 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
+    use crate::{
+        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
+        types::{TimestampedVolume, UnixTimestamp},
+    };
     use core::{
         convert::TryFrom,
         fmt::Debug,
         marker::PhantomData,
         ops::{AddAssign, BitOrAssign, ShlAssign},
-    use crate::{
-        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
-        types::{TimestampedVolume, UnixTimestamp},
     };
     use frame_support::{
         debug,

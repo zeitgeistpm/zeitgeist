@@ -7,7 +7,12 @@ use frame_support::traits::{OnFinalize, OnInitialize};
 use frame_system::RawOrigin;
 use libfuzzer_sys::fuzz_target;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
-use zrml_rikiddo::{Config, mock::*, traits::RikiddoSigmoidMVPallet, types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV, Timespan}};
+use zrml_rikiddo::{
+    mock::*,
+    traits::RikiddoSigmoidMVPallet,
+    types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV, Timespan},
+    Config,
+};
 
 fn run_to_block(n: u64) {
     while System::block_number() < n {
@@ -47,7 +52,8 @@ fuzz_target!(|data: Data| {
             if idx % 2 == 1 {
                 current_block += 1;
                 run_to_block(current_block);
-                let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), current_block).unwrap();
+                let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), current_block)
+                    .unwrap();
             }
         }
 

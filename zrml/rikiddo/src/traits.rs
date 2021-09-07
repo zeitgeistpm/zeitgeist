@@ -1,5 +1,5 @@
-use core::convert::TryFrom;
 use crate::types::TimestampedVolume;
+use core::convert::TryFrom;
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
 use substrate_fixed::{

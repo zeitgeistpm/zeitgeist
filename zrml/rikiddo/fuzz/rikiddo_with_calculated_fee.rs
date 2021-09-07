@@ -6,9 +6,14 @@ use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 
 mod shared;
-use shared::{fixed_from_u128};
+use shared::fixed_from_u128;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
-use zrml_rikiddo::{traits::{Lmsr, RikiddoMV}, types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV, Timespan, TimestampedVolume, UnixTimestamp}};
+use zrml_rikiddo::{
+    traits::{Lmsr, RikiddoMV},
+    types::{
+        EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV, Timespan, TimestampedVolume, UnixTimestamp,
+    },
+};
 
 fuzz_target!(|data: Data| {
     let asset_balances_fixed: Vec<FixedU128<U33>> =
@@ -30,7 +35,7 @@ fuzz_target!(|data: Data| {
         };
         let _ = rikiddo.update_volume(&timestamped_volume);
     }
-    
+
     // Calculate cost and price using calculated fee from r = ma_short / ma_long
     let _ = rikiddo.cost(&asset_balances_fixed[..]);
     let _ = rikiddo.price(&asset_balances_fixed[..], &price_for_fixed);

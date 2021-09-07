@@ -1,9 +1,9 @@
-use core::{cmp::Ordering, convert::TryFrom};
 use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal};
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 #[cfg(feature = "arbitrary")]
 use core::mem;
+use core::{cmp::Ordering, convert::TryFrom};
 use frame_support::dispatch::{Decode, Encode};
 use sp_core::RuntimeDebug;
 use substrate_fixed::{

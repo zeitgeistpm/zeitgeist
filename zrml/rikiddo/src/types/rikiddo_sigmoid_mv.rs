@@ -2,9 +2,9 @@ use crate::{
     constants::INITIAL_FEE,
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
-use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use frame_support::dispatch::{Decode, Encode};
 use hashbrown::HashMap;
 use sp_core::RuntimeDebug;
