@@ -3,6 +3,12 @@ use substrate_fixed::{types::extra::U64, FixedI128, FixedU128};
 use super::{ema_market_volume::ema_create_test_struct, max_allowed_error};
 use crate::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
+mod cost;
+mod fee;
+mod market_volume;
+mod misc;
+mod price;
+
 type Rikiddo = RikiddoSigmoidMV<
     FixedU128<U64>,
     FixedI128<U64>,
@@ -14,7 +20,7 @@ fn ln_exp_sum(exponents: &Vec<f64>) -> f64 {
     exponents.iter().fold(0f64, |acc, val| acc + val.exp()).ln()
 }
 
-fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
+pub(super) fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
     let fee_times_sum = fee * balances.iter().sum::<f64>();
     let exponents = balances.iter().map(|e| e / fee_times_sum).collect();
     fee_times_sum * ln_exp_sum(&exponents)
@@ -43,7 +49,7 @@ fn price_second_quotient(fee: f64, balances: &Vec<f64>) -> f64 {
         / denominator
 }
 
-fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
+pub(super) fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
     let balance_sum = balances.iter().sum::<f64>();
     let fee_times_sum = fee * balance_sum;
     let balance_exponential_results: Vec<f64> =
@@ -56,9 +62,3 @@ fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
     let denominator: f64 = balance_exponential_results.iter().sum::<f64>() * balance_sum;
     left_from_addition + (numerator / denominator)
 }
-
-mod cost;
-mod fee;
-mod market_volume;
-mod misc;
-mod price;

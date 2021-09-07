@@ -1,18 +1,13 @@
-use crate::types::{EmaConfig, FeeSigmoidConfig, TimestampedVolume};
-use core::fmt::Debug;
-use frame_support::{
-    pallet_prelude::{MaybeSerializeDeserialize, Member},
-    Parameter,
-};
-use parity_scale_codec::Codec;
-use sp_runtime::traits::AtLeast32BitUnsigned;
-use substrate_fixed::traits::{Fixed, FixedSigned, FixedUnsigned};
+use crate::types::TimestampedVolume;
+use frame_support::dispatch::DispatchResult;
+use sp_runtime::DispatchError;
+use substrate_fixed::traits::{Fixed, FixedUnsigned};
 
 pub trait Sigmoid {
     type FS: Fixed;
 
     /// Calculate fee
-    fn calculate(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
+    fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
 }
 
 pub trait MarketAverage {
@@ -25,7 +20,7 @@ pub trait MarketAverage {
     fn clear(&mut self);
 
     /// Update market volume
-    fn update(
+    fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str>;
@@ -40,6 +35,9 @@ pub trait Lmsr {
     /// Return cost C(q) for all assets in q
     fn cost(&self, asset_balances: &[Self::FU]) -> Result<Self::FU, &'static str>;
 
+    /// Fetch the current fee
+    fn fee(&self) -> Result<Self::FU, &'static str>;
+
     /// Return price P_i(q) for asset q_i in q
     fn price(
         &self,
@@ -53,59 +51,52 @@ pub trait RikiddoMV: Lmsr {
     fn clear(&mut self);
 
     /// Update market data
-    fn update(
+    fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
     ) -> Result<Option<Self::FU>, &'static str>;
 }
 
 pub trait RikiddoSigmoidMVPallet {
-    type Balance: Parameter
-        + Member
-        + AtLeast32BitUnsigned
-        + Codec
-        + Default
-        + Copy
-        + MaybeSerializeDeserialize
-        + Debug;
-
-    type FS: FixedSigned;
+    type Balance;
+    type PoolId: Copy;
     type FU: FixedUnsigned;
-
-    /// Clear market data for specific asset pool
-    fn clear(poolid: u128);
-
-    /// Return cost C(q) for all assets in q
-    fn cost(
-        poolid: u128,
-        asset_balances: Vec<Self::Balance>,
-    ) -> Result<Self::Balance, &'static str>;
-
-    /// Create Rikiddo instance for specifc asset pool
-    fn create(
-        poolid: u128,
-        fee_config: FeeSigmoidConfig<Self::FS>,
-        ema_config_short: EmaConfig<Self::FU>,
-        ema_config_long: EmaConfig<Self::FU>,
-        balance_one_unit: Self::Balance,
-    );
-
-    /// Destroy Rikiddo instance
-    fn destroy(poolid: u128);
-
-    /// Return price P_i(q) for asset q_i in q
-    fn price(
-        poolid: u128,
-        asset_in_question: Self::Balance,
-        asset_balances: Vec<Self::Balance>,
-    ) -> Result<Self::Balance, &'static str>;
+    type Rikiddo: RikiddoMV;
 
     /// Return price P_i(q) for all assets in q
     fn all_prices(
-        poolid: u128,
-        asset_balances: Vec<Self::Balance>,
-    ) -> Result<Vec<Self::Balance>, &'static str>;
+        poolid: Self::PoolId,
+        asset_balances: &[Self::Balance],
+    ) -> Result<Vec<Self::Balance>, DispatchError>;
+
+    /// Clear market data for specific asset pool
+    fn clear(poolid: Self::PoolId) -> DispatchResult;
+
+    /// Create Rikiddo instance for specifc asset pool
+    fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult;
+
+    /// Return cost C(q) for all assets in q
+    fn cost(
+        poolid: Self::PoolId,
+        asset_balances: &[Self::Balance],
+    ) -> Result<Self::Balance, DispatchError>;
+
+    /// Destroy Rikiddo instance
+    fn destroy(poolid: Self::PoolId) -> DispatchResult;
+
+    /// Fetch the current fee
+    fn fee(poolid: Self::PoolId) -> Result<Self::Balance, DispatchError>;
+
+    /// Return price P_i(q) for asset q_i in q
+    fn price(
+        poolid: Self::PoolId,
+        asset_in_question: Self::Balance,
+        asset_balances: &[Self::Balance],
+    ) -> Result<Self::Balance, DispatchError>;
 
     /// Update market data
-    fn update(poolid: u128, volume: Self::Balance) -> Result<Option<Self::Balance>, &'static str>;
+    fn update_volume(
+        poolid: Self::PoolId,
+        volume: Self::Balance,
+    ) -> Result<Option<Self::Balance>, DispatchError>;
 }

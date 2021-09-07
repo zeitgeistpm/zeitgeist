@@ -38,7 +38,7 @@ fn check_price_helper_result(helper: u8) -> Result<(), &'static str> {
     let param_u =
         vec![<FixedU128<U64>>::from_num(param_f64[0]), <FixedU128<U64>>::from_num(param_f64[1])];
     // This fills the formula_components with the correct values
-    let _ = rikiddo.cost_with_forumla(&param_u, formula_components, true, true, true);
+    let _ = rikiddo.cost_with_forumla(&param_u, formula_components, true, true);
     let rikiddo_price;
     let rikiddo_price_f64;
     let error_msg_function;

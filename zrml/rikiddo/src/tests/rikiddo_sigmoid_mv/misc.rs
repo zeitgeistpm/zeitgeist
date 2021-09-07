@@ -23,37 +23,6 @@ fn rikiddo_default_does_not_panic() -> Result<(), &'static str> {
 }
 
 #[test]
-fn rikiddo_default_ln_sum_exp_strategy_exp_i_overflow() {
-    let rikiddo = Rikiddo::default();
-    let param = vec![<FixedI128<U64>>::from_num(100u64)];
-    assert_err!(
-        rikiddo.default_cost_strategy(&param),
-        "[RikiddoSigmoidMV] Error during calculation: exp(i) in ln sum_i(exp^i)"
-    );
-}
-
-#[test]
-fn rikiddo_default_ln_sum_exp_strategy_sum_exp_i_overflow() {
-    let rikiddo = Rikiddo::default();
-    let exponent = <FixedI128<U64>>::from_num(42.7f64);
-    let param = vec![exponent, exponent, exponent];
-    assert_err!(
-        rikiddo.default_cost_strategy(&param),
-        "[RikiddoSigmoidMV] Overflow during calculation: sum_i(e^i)"
-    );
-}
-
-#[test]
-fn rikiddo_default_ln_sum_exp_strategy_ln_zero() {
-    let rikiddo = Rikiddo::default();
-    let param = vec![];
-    assert_err!(
-        rikiddo.default_cost_strategy(&param),
-        "[RikiddoSigmoidMV] ln(exp_sum), exp_sum <= 0"
-    );
-}
-
-#[test]
 fn rikiddo_optimized_ln_sum_exp_strategy_exponent_subtract_overflow() {
     let rikiddo = Rikiddo::default();
     let param = vec![<FixedI128<U64>>::from_num(1i64 << 63)];
@@ -114,32 +83,19 @@ fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static
         <FixedI128<U64>>::from_num(exponent1),
         <FixedI128<U64>>::from_num(exponent2),
     ];
-    // Evaluate the result of the default cost strategy
-    let mut result_fixed = rikiddo.default_cost_strategy(&param_fixed)?;
-    let result_f64: f64 = ln_exp_sum(&param_f64);
-    let mut result_fixed_f64: f64 = result_fixed.to_num();
-    let mut difference_abs = (result_f64 - result_fixed_f64).abs();
-    // The fixed calculation seems to be quite errorneous: Difference = 0.00000007886511177446209
-    assert!(
-        difference_abs <= 0.000001f64,
-        "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
-        result_fixed_f64,
-        result_f64,
-        difference_abs,
-        max_allowed_error(64)
-    );
-
-    // Evaluate the result of the optimize cost strategy
-    result_fixed = rikiddo.optimized_cost_strategy(
+    // Evaluate the result of the opimized cost strategy
+    let result_fixed = rikiddo.optimized_cost_strategy(
         &param_fixed,
         &param_fixed[2],
         &mut RikiddoFormulaComponents::default(),
         false,
     )?;
-    result_fixed_f64 = result_fixed.to_num();
-    difference_abs = (result_f64 - result_fixed_f64).abs();
+    let result_f64: f64 = ln_exp_sum(&param_f64);
+    let result_fixed_f64: f64 = result_fixed.to_num();
+    let difference_abs = (result_f64 - result_fixed_f64).abs();
+    // The fixed calculation seems to be quite errorneous: Difference = 0.00000007886511177446209
     assert!(
-        difference_abs <= 0.00000001f64,
+        difference_abs <= 0.000001f64,
         "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
         result_fixed_f64,
         result_f64,

@@ -1,15 +1,16 @@
 #![cfg(test)]
-use crate as zrml_rikiddo;
-use frame_support::construct_runtime;
+use crate::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
+use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-use substrate_fixed::types::extra::U34;
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, MinimumPeriod, BASE},
+    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, PoolId,
+        UncheckedExtrinsicTest,
     },
 };
 
@@ -23,6 +24,11 @@ pub const FRED: AccountIdTest = 5;
 pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
+parameter_types! {
+    pub const MinimumPeriod: u64 = 0;
+    pub const FractionalDecimalPlaces: u8 = 10;
+}
+
 construct_runtime!(
     pub enum Runtime
     where
@@ -31,7 +37,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Rikiddo: zrml_rikiddo::{Pallet, Storage},
+        Rikiddo: crate::{Pallet, Storage},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent},
     }
@@ -40,7 +46,16 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Timestamp = Timestamp;
     type Balance = Balance;
-    type FractionalType = U34;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = FractionalDecimalPlaces;
+    type PoolId = PoolId;
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
 }
 
 impl frame_system::Config for Runtime {

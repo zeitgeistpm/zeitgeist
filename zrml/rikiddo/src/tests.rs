@@ -2,16 +2,18 @@
 
 use frame_support::assert_err;
 use substrate_fixed::{
-    types::extra::{U1, U2, U3, U7, U8},
-    FixedI8, FixedU8,
+    traits::ToFixed,
+    types::extra::{U1, U2, U3, U33, U7, U8},
+    FixedI8, FixedU128, FixedU8,
 };
 
-use crate::{
-    mock::ExtBuilder,
-    types::{convert_to_signed, convert_to_unsigned},
+use crate::types::{
+    convert_to_signed, convert_to_unsigned, FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal,
+    IntoFixedFromDecimal,
 };
 
 mod ema_market_volume;
+mod pallet;
 mod rikiddo_sigmoid_mv;
 mod sigmoid_fee;
 
@@ -64,8 +66,87 @@ fn convert_signed_to_unsigned_returns_correct_result() -> Result<(), &'static st
 }
 
 #[test]
-fn it_is_a_dummy_test() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert!(true);
-    });
+fn fixed_point_decimal_to_fixed_type_returns_correct_result() {
+    // This vector contains tuples of (fixed_point_decimal, fractional_decimal_places)
+    let test_vector: Vec<(u128, u8)> = vec![
+        (0, 0),
+        (10_000_000_000, 10),
+        (1, 10),
+        (123_456_789, 10),
+        (9_999, 2),
+        (736_101, 2),
+        (133_733_333_333, 8),
+    ];
+    let test_vector_correct_number: Vec<f64> =
+        vec![0.0, 1.0, 0.0_000_000_001, 0.0_123_456_789, 99.99, 7_361.01, 1_337.33_333_333];
+
+    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
+        let converted: FixedU128<U33> = tv.0.to_fixed_from_fixed_decimal(tv.1).unwrap();
+        assert_eq!(converted, <FixedU128<U33>>::from_num(tvc));
+    }
+}
+
+#[test]
+fn fixed_point_decimal_from_fixed_type_returns_correct_result() {
+    // This vector contains tuples of (Fixed type, places)
+    // The tuples tests every logical path
+    let test_vector: Vec<(FixedU128<U33>, u8)> = vec![
+        (32.5f64.to_fixed(), 0),
+        (32.25f64.to_fixed(), 0),
+        (200.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 2),
+        (200.1254f64.to_fixed(), 2),
+        (123.456f64.to_fixed(), 3),
+    ];
+    let test_vector_correct_number: Vec<u128> =
+        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456];
+
+    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
+        let converted: u128 = u128::from_fixed_to_fixed_decimal(tv.0, tv.1).unwrap();
+        assert_eq!(converted, tvc);
+    }
+}
+
+#[test]
+fn fixed_type_to_fixed_point_decimal_returns_correct_result() {
+    // This vector contains tuples of (Fixed type, places)
+    // The tuples tests every logical path
+    let test_vector: Vec<(FixedU128<U33>, u8)> = vec![
+        (32.5f64.to_fixed(), 0),
+        (32.25f64.to_fixed(), 0),
+        (200.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 8),
+        (200.1234f64.to_fixed(), 2),
+        (200.1254f64.to_fixed(), 2),
+        (123.456f64.to_fixed(), 3),
+    ];
+    let test_vector_correct_number: Vec<u128> =
+        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456];
+
+    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
+        let converted: u128 = tv.0.to_fixed_decimal(tv.1).unwrap();
+        assert_eq!(converted, tvc);
+    }
+}
+
+#[test]
+fn fixed_type_from_fixed_point_decimal_returns_correct_result() {
+    // This vector contains tuples of (fixed_point_decimal, fractional_decimal_places)
+    let test_vector: Vec<(u128, u8)> = vec![
+        (0, 0),
+        (10_000_000_000, 10),
+        (1, 10),
+        (123_456_789, 10),
+        (9_999, 2),
+        (736_101, 2),
+        (133_733_333_333, 8),
+    ];
+    let test_vector_correct_number: Vec<f64> =
+        vec![0.0, 1.0, 0.0_000_000_001, 0.0_123_456_789, 99.99, 7_361.01, 1_337.33_333_333];
+
+    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
+        let converted = <FixedU128<U33>>::from_fixed_decimal(tv.0, tv.1).unwrap();
+        assert_eq!(converted, <FixedU128<U33>>::from_num(tvc));
+    }
 }
