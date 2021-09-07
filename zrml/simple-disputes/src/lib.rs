@@ -6,10 +6,14 @@
 
 extern crate alloc;
 
+mod simple_disputes_pallet_api;
+
 pub use pallet::*;
+pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
 
 #[frame_support::pallet]
 mod pallet {
+    use crate::SimpleDisputesPalletApi;
     use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
@@ -213,6 +217,8 @@ mod pallet {
             Ok(resolved_outcome)
         }
     }
+
+    impl<T> SimpleDisputesPalletApi for Pallet<T> where T: Config {}
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);

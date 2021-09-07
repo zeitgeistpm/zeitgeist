@@ -1,2 +1,3 @@
-/// Court - Pallet Api
-pub trait CourtPalletApi {}
+use zeitgeist_primitives::traits::DisputeApi;
+
+pub trait CourtPalletApi: DisputeApi {}

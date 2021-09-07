@@ -11985,6 +11985,7 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "zeitgeist-primitives",
+ "zrml-court",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-orderbook-v1",
@@ -12020,6 +12021,7 @@ name = "zrml-court"
 version = "0.1.0"
 dependencies = [
  "arrayvec 0.7.1",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "pallet-balances",
@@ -12100,6 +12102,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-randomness-collective-flip",
  "pallet-timestamp",
  "parity-scale-codec",
  "sp-api",
@@ -12107,6 +12110,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
+ "zrml-court",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
