@@ -9,6 +9,7 @@ sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "http
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
+zrml-court = { default-features = false, path = "../court" }
 zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 # Mock
@@ -16,6 +17,7 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 orml-currencies = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 orml-tokens = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+pallet-randomness-collective-flip = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
@@ -31,6 +33,7 @@ mock = [
     "orml-currencies",
     "orml-tokens",
     "pallet-balances",
+    "pallet-randomness-collective-flip",
     "pallet-timestamp",
     "sp-api",
     "sp-io",
@@ -51,6 +54,7 @@ std = [
     'sp-arithmetic/std',
     'sp-runtime/std',
     'zeitgeist-primitives/std',
+    'zrml-court/std',
     'zrml-liquidity-mining/std',
     'zrml-market-commons/std',
     'zrml-simple-disputes/std',
