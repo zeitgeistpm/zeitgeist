@@ -3,12 +3,15 @@
 use crate::{
     mock::{
         Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
-        CHARLIE,
+        CHARLIE, INITIAL_BALANCE,
     },
-    Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes,
+    Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes, RESERVE_ID,
 };
 use core::ops::Range;
-use frame_support::{assert_noop, assert_ok, traits::Hooks};
+use frame_support::{
+    assert_noop, assert_ok,
+    traits::{Hooks, NamedReservableCurrency},
+};
 use sp_runtime::traits::Header;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -32,23 +35,27 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     resolved_outcome: None,
     status: MarketStatus::Closed,
 };
-const DEFAULT_SET_OF_JURORS: &[(u128, Juror<u128>)] = &[
-    (7, Juror { staked: 1, status: JurorStatus::Ok }),
-    (6, Juror { staked: 2, status: JurorStatus::Tardy }),
-    (5, Juror { staked: 3, status: JurorStatus::Ok }),
-    (4, Juror { staked: 4, status: JurorStatus::Tardy }),
-    (3, Juror { staked: 5, status: JurorStatus::Ok }),
-    (2, Juror { staked: 6, status: JurorStatus::Ok }),
-    (1, Juror { staked: 7, status: JurorStatus::Ok }),
+const DEFAULT_SET_OF_JURORS: &[(u128, Juror)] = &[
+    (7, Juror { status: JurorStatus::Ok }),
+    (6, Juror { status: JurorStatus::Tardy }),
+    (5, Juror { status: JurorStatus::Ok }),
+    (4, Juror { status: JurorStatus::Tardy }),
+    (3, Juror { status: JurorStatus::Ok }),
+    (2, Juror { status: JurorStatus::Ok }),
+    (1, Juror { status: JurorStatus::Ok }),
 ];
 
 #[test]
-fn exit_court_successfully_removes_a_juror() {
+fn exit_court_successfully_removes_a_juror_and_frees_balances() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 1);
+        assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
         assert_ok!(Court::exit_court(Origin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 0);
+        assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
     });
 }
 
@@ -68,12 +75,12 @@ fn join_court_reserves_balance_according_to_the_number_of_jurors() {
         assert_eq!(Balances::free_balance(ALICE), 1000 * BASE);
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance(ALICE), 2 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
 
         assert_eq!(Balances::free_balance(BOB), 1000 * BASE);
         assert_ok!(Court::join_court(Origin::signed(BOB)));
         assert_eq!(Balances::free_balance(BOB), 996 * BASE);
-        assert_eq!(Balances::reserved_balance(BOB), 4 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 4 * BASE);
     });
 }
 
@@ -83,7 +90,7 @@ fn join_court_successfully_stores_a_juror() {
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_eq!(
             Jurors::<Runtime>::iter().next().unwrap(),
-            (ALICE, Juror { staked: 2 * BASE, status: JurorStatus::Ok })
+            (ALICE, Juror { status: JurorStatus::Ok })
         );
     });
 }
@@ -105,12 +112,34 @@ fn on_dispute_stores_jurors_that_should_vote() {
         setup_blocks(1..123);
         let _ = Court::join_court(Origin::signed(ALICE));
         let _ = Court::join_court(Origin::signed(BOB));
-        Court::on_dispute(BASE, &[], &0, &ALICE).unwrap();
+        Court::on_dispute(0, &[], &0, &ALICE).unwrap();
         assert_noop!(
             Court::join_court(Origin::signed(ALICE)),
             Error::<Runtime>::JurorAlreadyExists
         );
         assert_eq!(RequestedJurors::<Runtime>::iter().count(), 2);
+    });
+}
+
+// Alice is the winner, Bob is tardy and Charlie is the loser
+#[test]
+fn on_resolution_awards_winners_and_slashes_losers() {
+    ExtBuilder::default().build().execute_with(|| {
+        setup_blocks(1..2);
+        Court::join_court(Origin::signed(ALICE)).unwrap();
+        Court::join_court(Origin::signed(BOB)).unwrap();
+        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        Court::on_dispute(0, &[], &0, &ALICE).unwrap();
+        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
+        let _ = Court::on_resolution(&|_| 0, &[], &0, &DEFAULT_MARKET).unwrap();
+        assert_eq!(Balances::free_balance(ALICE), 998 * BASE + 3 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
+        assert_eq!(Balances::free_balance(BOB), 996 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 4 * BASE);
+        assert_eq!(Balances::free_balance(CHARLIE), 994 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &CHARLIE), 3 * BASE);
     });
 }
 
@@ -121,7 +150,7 @@ fn on_resolution_decides_market_outcome_based_on_the_majority() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        Court::on_dispute(BASE, &[], &0, &ALICE).unwrap();
+        Court::on_dispute(0, &[], &0, &ALICE).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
@@ -137,7 +166,7 @@ fn on_resolution_sets_late_jurors_as_tardy() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::on_dispute(BASE, &[], &0, &ALICE).unwrap();
+        Court::on_dispute(0, &[], &0, &ALICE).unwrap();
         let _ = Court::on_resolution(&|_| 0, &[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(ALICE).unwrap().status, JurorStatus::Ok);
         assert_eq!(Jurors::<Runtime>::get(BOB).unwrap().status, JurorStatus::Tardy);
@@ -151,7 +180,7 @@ fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tard
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        Court::on_dispute(BASE, &[], &0, &ALICE).unwrap();
+        Court::on_dispute(0, &[], &0, &ALICE).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
@@ -166,14 +195,15 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
         setup_blocks(1..2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::set_juror_as_tardy(&BOB).unwrap();
+        Court::set_stored_juror_as_tardy(&BOB).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::on_dispute(BASE, &[], &0, &ALICE).unwrap();
+        Court::on_dispute(0, &[], &0, &ALICE).unwrap();
         let _ = Court::on_resolution(&|_| 0, &[], &0, &DEFAULT_MARKET).unwrap();
-        let slash = 8000000000;
-        assert_eq!(Balances::free_balance(Court::treasury_account_id()), 1_000 * BASE + slash);
-        assert_eq!(Balances::free_balance(BOB), 1_000 * BASE - slash);
-        assert_eq!(Balances::reserved_balance(BOB), 0);
+        let join_court_stake = 40000000000;
+        let slash = join_court_stake / 5;
+        assert_eq!(Balances::free_balance(Court::treasury_account_id()), INITIAL_BALANCE + slash);
+        assert_eq!(Balances::free_balance(BOB), INITIAL_BALANCE - slash);
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 0);
     });
 }
 
@@ -184,7 +214,7 @@ fn on_resolution_removes_requested_jurors_and_votes() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
-        Court::on_dispute(BASE, &[], &0, &ALICE).unwrap();
+        Court::on_dispute(0, &[], &0, &ALICE).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();

@@ -19,10 +19,11 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, DustAccountTest, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId,
-        MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves,
-        MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight, PmPalletId,
-        SimpleDisputesPalletId, SwapsPalletId, BASE,
+        BlockHashCount, CourtCaseDuration, CourtPalletId, DustAccountTest, ExitFee,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
+        MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinCategories,
+        MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
+        TreasuryPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -37,6 +38,7 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
+pub const TREASURY: AccountIdTest = 99;
 
 pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
@@ -46,7 +48,6 @@ pub type AdaptedBasicCurrency =
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
-
 parameter_types! {
     pub const AdvisoryBond: Balance = 50;
     pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
@@ -76,10 +77,12 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        Court: zrml_court::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
@@ -91,6 +94,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Court = Court;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -168,11 +172,24 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl pallet_randomness_collective_flip::Config for Runtime {}
+
 impl pallet_timestamp::Config for Runtime {
     type MinimumPeriod = MinimumPeriod;
     type Moment = Moment;
     type OnTimestampSet = ();
     type WeightInfo = ();
+}
+
+impl zrml_court::Config for Runtime {
+    type CourtCaseDuration = CourtCaseDuration;
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type PalletId = CourtPalletId;
+    type Random = RandomnessCollectiveFlip;
+    type StakeWeight = StakeWeight;
+    type TreasuryPalletId = TreasuryPalletId;
+    type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
