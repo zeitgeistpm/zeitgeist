@@ -228,7 +228,8 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
                 }
                 Ordering::Greater => {
                     // Cutting down to `places` + arithmetic rounding of the last digit
-                    let frac_plus_one_digit_str = &frac_string[0..(places as usize).saturating_add(1)];
+                    let frac_plus_one_digit_str =
+                        &frac_string[0..(places as usize).saturating_add(1)];
 
                     if let Ok(mut res) = frac_plus_one_digit_str.parse::<u128>() {
                         let last_digit = res % 10;
