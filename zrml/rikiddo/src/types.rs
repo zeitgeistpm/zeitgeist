@@ -77,7 +77,6 @@ cfg_if::cfg_if! {
 
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
-#[cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
 pub enum Timespan {
     Seconds(u32),
     Minutes(u32),

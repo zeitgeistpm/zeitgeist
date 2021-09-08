@@ -3,6 +3,8 @@
 //! Manages prices of event assets within a pool
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// This is required to be able to use the derive(Arbitrary) macro.
+#![cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
 
 extern crate alloc;
 
