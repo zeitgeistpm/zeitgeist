@@ -12548,9 +12548,11 @@ dependencies = [
  "sp-api",
  "sp-io",
  "sp-runtime",
+ "substrate-fixed",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
+ "zrml-rikiddo",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]

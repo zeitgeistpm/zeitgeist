@@ -38,8 +38,8 @@ use sp_runtime::{
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
-use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use zeitgeist_primitives::{constants::*, types::*};
+use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     nimbus_primitives::{CanAuthor, NimbusId},
@@ -557,6 +557,8 @@ impl zrml_simple_disputes::Config for Runtime {
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
     type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
@@ -567,6 +569,7 @@ impl zrml_swaps::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
+    type Rikiddo = Rikiddo;
     type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }

@@ -28,15 +28,15 @@ pub const MICRO: Balance = MILLI / 1000; // 10_000
 
 // Rikiddo and TokensConfig
 parameter_types! {
-    BalanceFractionalDecimals: u8 = {
+    pub const BalanceFractionalDecimals: u8 = {
         let mut base = BASE;
         let mut counter: u8 = 0;
-    
+
         while base >= 10 {
             base /= 10;
             counter += 1;
         }
-    
+
         counter
     };
 }

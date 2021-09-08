@@ -7,6 +7,7 @@ parity-scale-codec = { default-features = false, features = ["derive"], version 
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
+zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 
 # Mock
 
@@ -16,6 +17,7 @@ pallet-balances = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
+substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", optional = true }
 zrml-market-commons = { optional = true, path = "../market-commons" }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
@@ -31,6 +33,7 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
+    "substrate-fixed",
     "zrml-market-commons",
     "zrml-swaps-runtime-api",
 ]
@@ -48,6 +51,7 @@ std = [
     "sp-runtime/std",
     "zeitgeist-primitives/std",
     "zrml-liquidity-mining/std",
+    "zrml-rikiddo/std",
 ]
 
 [package]
