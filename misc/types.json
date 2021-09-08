@@ -111,6 +111,12 @@
       "Ask"
     ]
   },
+  "ScoringRule": {
+    "_enum": [
+      "CPMM",
+      "RikiddoSigmoidMarketEma"
+    ]
+  },
   "Outcome": {
     "_enum": {
       "Categorical": "u16",
@@ -119,10 +125,12 @@
   },
   "Pool": {
     "assets": "Vec<Asset>",
+    "market_id": "MarketId",
     "pool_status": "PoolStatus",
+    "scoring_rule": "ScoringRule",
     "swap_fee": "Balance",
-    "total_weight": "u128",
-    "weights": "BTreeMap<Asset, u128>"
+    "total_weight": "Option<u128>",
+    "weights": "Option<BTreeMap<Asset, u128>>"
   },
   "PoolAssetEvent": {
     "bound": "Balance",

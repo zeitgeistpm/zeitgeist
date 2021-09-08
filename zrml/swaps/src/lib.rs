@@ -53,7 +53,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
-        types::{Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, SerdeWrapper},
+        types::{Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper},
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
 
@@ -329,7 +329,9 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset)?,
                         total_supply.saturated_into(),
-                        pool.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?.saturated_into(),
+                        pool.total_weight
+                            .ok_or(Error::<T>::PoolMissingWeightInformation)?
+                            .saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?
@@ -706,7 +708,11 @@ mod pallet {
             pool: &Pool<BalanceOf<T>, T::MarketId>,
             asset: &Asset<T::MarketId>,
         ) -> Result<u128, Error<T>> {
-            pool.weights.get(asset).cloned().ok_or(Error::<T>::AssetNotBound)
+            pool.weights.as_ref()
+                .ok_or(Error::<T>::PoolMissingWeightInformation)?
+                .get(asset)
+                .cloned()
+                .ok_or(Error::<T>::AssetNotBound)
         }
     }
 
@@ -754,9 +760,10 @@ mod pallet {
                     assets,
                     market_id,
                     pool_status: PoolStatus::Active,
+                    scoring_rule: ScoringRule::CPMM,
                     swap_fee,
-                    Some(total_weight),
-                    weights: map,
+                    total_weight: Some(total_weight),
+                    weights: Some(map),
                 }),
             );
 
@@ -851,7 +858,10 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(pool_ref, &asset_in)?,
                         total_supply.saturated_into(),
-                        pool_ref.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?.saturated_into(),
+                        pool_ref
+                            .total_weight
+                            .ok_or(Error::<T>::PoolMissingWeightInformation)?
+                            .saturated_into(),
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.saturated_into(),
                     )?

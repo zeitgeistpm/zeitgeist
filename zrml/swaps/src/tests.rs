@@ -162,12 +162,12 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
 
         assert_eq!(pool.assets, ASSETS.iter().cloned().collect::<Vec<_>>());
         assert_eq!(pool.swap_fee, 0);
-        assert_eq!(pool.total_weight, _8);
+        assert_eq!(pool.total_weight.unwrap(), _8);
 
-        assert_eq!(*pool.weights.get(&ASSET_A).unwrap(), _2);
-        assert_eq!(*pool.weights.get(&ASSET_B).unwrap(), _2);
-        assert_eq!(*pool.weights.get(&ASSET_C).unwrap(), _2);
-        assert_eq!(*pool.weights.get(&ASSET_D).unwrap(), _2);
+        assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_A).unwrap(), _2);
+        assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_B).unwrap(), _2);
+        assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_C).unwrap(), _2);
+        assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_D).unwrap(), _2);
     });
 }
 
