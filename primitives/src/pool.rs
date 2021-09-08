@@ -14,7 +14,7 @@ pub struct Pool<Balance, MarketId> {
     pub market_id: MarketId,
     pub pool_status: PoolStatus,
     pub scoring_rule: ScoringRule,
-    pub swap_fee: Balance,
+    pub swap_fee: Option<Balance>,
     pub total_weight: Option<u128>,
     pub weights: Option<BTreeMap<Asset<MarketId>, u128>>,
 }
@@ -24,7 +24,7 @@ where
     MarketId: Ord,
 {
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
-        if let Some(weights) = &self.weights  {
+        if let Some(weights) = &self.weights {
             return BTreeMap::get(weights, asset).is_some();
         }
 

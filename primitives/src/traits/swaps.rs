@@ -1,4 +1,4 @@
-use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId};
+use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId, ScoringRule};
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, DispatchResult, Weight};
 
@@ -13,14 +13,17 @@ pub trait Swaps<AccountId> {
     /// * `who`: The account that is the creator of the pool. Must have enough
     /// funds for each of the assets to cover the `MinLiqudity`.
     /// * `assets`: The assets that are used in the pool.
-    /// * `swap_fee`: The fee applied to each swap.
+    /// * `market_id`: The market id of the market the pool belongs to.
+    /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
+    /// * `swap_fee`: The fee applied to each swap (in case the scoring rule doesn't provide fees).
     /// * `weights`: These are the denormalized weights (the raw weights).
     fn create_pool(
         creator: AccountId,
         assets: Vec<Asset<Self::MarketId>>,
         market_id: Self::MarketId,
-        swap_fee: Self::Balance,
-        weights: Vec<u128>,
+        scoring_rule: ScoringRule,
+        swap_fee: Option<Self::Balance>,
+        weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
     fn pool_exit_with_exact_asset_amount(

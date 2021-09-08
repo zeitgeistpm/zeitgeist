@@ -53,7 +53,9 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
-        types::{Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper},
+        types::{
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper,
+        },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
 
@@ -535,6 +537,8 @@ mod pallet {
         BadLimitPrice,
         BelowMinimumWeight,
         InsufficientBalance,
+        InvalidWeightArgument,
+        InvalidFeeArgument,
         LimitIn,
         LimitOut,
         MathApproximation,
@@ -708,7 +712,8 @@ mod pallet {
             pool: &Pool<BalanceOf<T>, T::MarketId>,
             asset: &Asset<T::MarketId>,
         ) -> Result<u128, Error<T>> {
-            pool.weights.as_ref()
+            pool.weights
+                .as_ref()
                 .ok_or(Error::<T>::PoolMissingWeightInformation)?
                 .get(asset)
                 .cloned()
@@ -723,36 +728,62 @@ mod pallet {
         type Balance = BalanceOf<T>;
         type MarketId = T::MarketId;
 
+        /// Creates an initial active pool.
+        ///
+        /// This function checks everything before introducing state changes, nevertheless it is
+        /// <b> recommended to call this function within a transaction (transacational) </b>.
+        ///
+        /// # Arguments
+        ///
+        /// * `who`: The account that is the creator of the pool. Must have enough
+        /// funds for each of the assets to cover the `MinLiqudity`.
+        /// * `assets`: The assets that are used in the pool.
+        /// * `market_id`: The market id of the market the pool belongs to.
+        /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
+        /// * `swap_fee`: The fee applied to each swap (in case the scoring rule doesn't provide fees).
+        /// * `weights`: These are the denormalized weights (the raw weights).
         fn create_pool(
             who: T::AccountId,
             assets: Vec<Asset<T::MarketId>>,
             market_id: Self::MarketId,
-            swap_fee: BalanceOf<T>,
-            weights: Vec<u128>,
+            scoring_rule: ScoringRule,
+            swap_fee: Option<BalanceOf<T>>,
+            weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
-            Self::check_provided_values_len_must_equal_assets_len(&assets, &weights)?;
+            let swap_fee_unwrapped;
+            let weights_unwrapped;
 
-            ensure!(assets.len() <= T::MaxAssets::get().into(), Error::<T>::TooManyAssets);
+            if let ScoringRule::CPMM = scoring_rule {
+                swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
+            }
 
+            Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
+            ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets);
             let amount = T::MinLiquidity::get();
-
             let next_pool_id = Self::inc_next_pool_id()?;
             let pool_account = Self::pool_account_id(next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight: u128 = 0;
 
-            for (asset, weight) in assets.iter().copied().zip(weights) {
+            // Two loops to check everything before introducing state changes
+            for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
                 let free_balance = T::Shares::free_balance(asset, &who);
                 ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
                 ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                 ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
-
-                T::Shares::transfer(asset, &who, &pool_account, amount)?;
                 map.insert(asset, weight);
                 total_weight = total_weight.check_add_rslt(&weight)?;
             }
 
             ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
+
+            for asset in assets.iter() {
+                T::Shares::transfer(*asset, &who, &pool_account, amount)?;
+            }
+
+            let pool_shares_id = Self::pool_shares_id(next_pool_id);
+            T::Shares::deposit(pool_shares_id, &who, amount)?;
 
             <Pools<T>>::insert(
                 next_pool_id,
@@ -766,9 +797,6 @@ mod pallet {
                     weights: Some(map),
                 }),
             );
-
-            let pool_shares_id = Self::pool_shares_id(next_pool_id);
-            T::Shares::deposit(pool_shares_id, &who, amount)?;
 
             Self::deposit_event(Event::PoolCreate(CommonPoolEventParams {
                 pool_id: next_pool_id,
