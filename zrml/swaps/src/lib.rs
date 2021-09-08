@@ -194,9 +194,9 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset)?,
                         total_supply.saturated_into(),
-                        pool.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?,
+                        pool.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
                         pool_amount.saturated_into(),
-                        pool.swap_fee.saturated_into(),
+                        pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
@@ -332,10 +332,10 @@ mod pallet {
                         Self::pool_weight_rslt(&pool, &asset)?,
                         total_supply.saturated_into(),
                         pool.total_weight
-                            .ok_or(Error::<T>::PoolMissingWeightInformation)?
+                            .ok_or(Error::<T>::PoolMissingWeight)?
                             .saturated_into(),
                         pool_amount.saturated_into(),
-                        pool.swap_fee.saturated_into(),
+                        pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
@@ -405,7 +405,7 @@ mod pallet {
                         balance_out.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset_out)?,
                         asset_amount_in.saturated_into(),
-                        pool.swap_fee.saturated_into(),
+                        pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
@@ -472,7 +472,7 @@ mod pallet {
                         balance_out.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset_out)?,
                         asset_amount_out.saturated_into(),
-                        pool.swap_fee.saturated_into(),
+                        pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
@@ -537,8 +537,8 @@ mod pallet {
         BadLimitPrice,
         BelowMinimumWeight,
         InsufficientBalance,
-        InvalidWeightArgument,
         InvalidFeeArgument,
+        InvalidWeightArgument,
         LimitIn,
         LimitOut,
         MathApproximation,
@@ -548,7 +548,8 @@ mod pallet {
         MaxTotalWeight,
         PoolDoesNotExist,
         PoolIsNotActive,
-        PoolMissingWeightInformation,
+        PoolMissingWeight,
+        PoolMissingFee,
         ProvidedValuesLenMustEqualAssetsLen,
         TooManyAssets,
     }
@@ -714,7 +715,7 @@ mod pallet {
         ) -> Result<u128, Error<T>> {
             pool.weights
                 .as_ref()
-                .ok_or(Error::<T>::PoolMissingWeightInformation)?
+                .ok_or(Error::<T>::PoolMissingWeight)?
                 .get(asset)
                 .cloned()
                 .ok_or(Error::<T>::AssetNotBound)
@@ -728,20 +729,7 @@ mod pallet {
         type Balance = BalanceOf<T>;
         type MarketId = T::MarketId;
 
-        /// Creates an initial active pool.
-        ///
-        /// This function checks everything before introducing state changes, nevertheless it is
-        /// <b> recommended to call this function within a transaction (transacational) </b>.
-        ///
-        /// # Arguments
-        ///
-        /// * `who`: The account that is the creator of the pool. Must have enough
-        /// funds for each of the assets to cover the `MinLiqudity`.
-        /// * `assets`: The assets that are used in the pool.
-        /// * `market_id`: The market id of the market the pool belongs to.
-        /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
-        /// * `swap_fee`: The fee applied to each swap (in case the scoring rule doesn't provide fees).
-        /// * `weights`: These are the denormalized weights (the raw weights).
+        #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
             assets: Vec<Asset<T::MarketId>>,
@@ -750,11 +738,12 @@ mod pallet {
             swap_fee: Option<BalanceOf<T>>,
             weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
-            let swap_fee_unwrapped;
-            let weights_unwrapped;
+            let mut weights_unwrapped = Vec::new();
+            let mut map = BTreeMap::new();
+            let mut total_weight= 0;
 
             if let ScoringRule::CPMM = scoring_rule {
-                swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                 weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
             }
 
@@ -763,25 +752,23 @@ mod pallet {
             let amount = T::MinLiquidity::get();
             let next_pool_id = Self::inc_next_pool_id()?;
             let pool_account = Self::pool_account_id(next_pool_id);
-            let mut map = BTreeMap::new();
-            let mut total_weight: u128 = 0;
 
-            // Two loops to check everything before introducing state changes
+            // Two loops, one to check everything one to introduce state changes
             for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
                 let free_balance = T::Shares::free_balance(asset, &who);
                 ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
                 ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                 ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
-                map.insert(asset, weight);
-                total_weight = total_weight.check_add_rslt(&weight)?;
+
+                if let ScoringRule::CPMM = scoring_rule {
+                    map.insert(asset, weight);
+                    total_weight = total_weight.check_add_rslt(&weight)?;
+                }
+
+                T::Shares::transfer(asset, &who, &pool_account, amount)?;
             }
 
             ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
-
-            for asset in assets.iter() {
-                T::Shares::transfer(*asset, &who, &pool_account, amount)?;
-            }
-
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             T::Shares::deposit(pool_shares_id, &who, amount)?;
 
@@ -791,10 +778,14 @@ mod pallet {
                     assets,
                     market_id,
                     pool_status: PoolStatus::Active,
-                    scoring_rule: ScoringRule::CPMM,
+                    scoring_rule,
                     swap_fee,
-                    total_weight: Some(total_weight),
-                    weights: Some(map),
+                    total_weight: if let ScoringRule::CPMM = scoring_rule {
+                        Some(total_weight)
+                    } else {
+                        None
+                    },
+                    weights: if let ScoringRule::CPMM = scoring_rule { Some(map) } else { None },
                 }),
             );
 
@@ -839,9 +830,9 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(pool_ref, &asset)?,
                         total_supply.saturated_into(),
-                        pool_ref.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?,
+                        pool_ref.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
                         asset_amount.saturated_into(),
-                        pool_ref.swap_fee.saturated_into(),
+                        pool_ref.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
@@ -888,10 +879,10 @@ mod pallet {
                         total_supply.saturated_into(),
                         pool_ref
                             .total_weight
-                            .ok_or(Error::<T>::PoolMissingWeightInformation)?
+                            .ok_or(Error::<T>::PoolMissingWeight)?
                             .saturated_into(),
                         asset_amount.saturated_into(),
-                        pool_ref.swap_fee.saturated_into(),
+                        pool_ref.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(pool_amount >= min_pool_amount, Error::<T>::LimitOut);

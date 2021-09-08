@@ -6,11 +6,7 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use orml_traits::MultiCurrency;
-use zeitgeist_primitives::{
-    constants::BASE,
-    traits::Swaps as _,
-    types::{Asset, MarketId, MarketType, OutcomeReport},
-};
+use zeitgeist_primitives::{constants::BASE, traits::Swaps as _, types::{Asset, MarketId, MarketType, OutcomeReport, ScoringRule}};
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
@@ -161,7 +157,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
         let pool = Swaps::pools(0).unwrap();
 
         assert_eq!(pool.assets, ASSETS.iter().cloned().collect::<Vec<_>>());
-        assert_eq!(pool.swap_fee, 0);
+        assert_eq!(pool.swap_fee.unwrap(), 0);
         assert_eq!(pool.total_weight.unwrap(), _8);
 
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_A).unwrap(), _2);
@@ -516,8 +512,9 @@ fn create_initial_pool() {
         BOB,
         ASSETS.iter().cloned().collect(),
         0,
-        0,
-        vec!(_2, _2, _2, _2),
+        ScoringRule::CPMM,
+        Some(0),
+        Some(vec!(_2, _2, _2, _2)),
     ));
 }
 
