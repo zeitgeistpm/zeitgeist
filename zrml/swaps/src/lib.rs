@@ -47,9 +47,18 @@ mod pallet {
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
+    use parity_scale_codec::{Decode, Encode};
     use sp_runtime::{
         traits::{AccountIdConversion, Zero},
         ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
+    };
+    use substrate_fixed::{
+        traits::{FixedSigned, FixedUnsigned, LossyFrom},
+        types::{
+            extra::{U127, U128, U24, U31, U32},
+            I9F23, U1F127,
+        },
+        FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
@@ -58,6 +67,10 @@ mod pallet {
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
+    use zrml_rikiddo::{
+        traits::RikiddoSigmoidMVPallet,
+        types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
+    };
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -331,9 +344,7 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset)?,
                         total_supply.saturated_into(),
-                        pool.total_weight
-                            .ok_or(Error::<T>::PoolMissingWeight)?
-                            .saturated_into(),
+                        pool.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
@@ -500,6 +511,31 @@ mod pallet {
         /// The fee for exiting a pool.
         type ExitFee: Get<BalanceOf<Self>>;
 
+        /// Will be used for the fractional part of the fixed point numbers
+        /// Calculation: Select FixedTYPE<UWIDTH>, such that TYPE = the type of Balance (i.e. FixedU128)
+        /// Select the generic UWIDTH = floor(log2(10.pow(fractional_decimals)))
+        type FixedTypeU: Decode
+            + Encode
+            + FixedUnsigned
+            + From<u32>
+            + LossyFrom<FixedU32<U32>>
+            + LossyFrom<FixedU128<U128>>;
+
+        /// Will be used for the fractional part of the fixed point numbers
+        /// Calculation: Select FixedTYPE, such that it is the signed variant of FixedTypeU
+        /// It is possible to reduce the fractional bit count by one, effectively eliminating
+        /// conversion overflows when the MSB of the unsigned fixed type is set, but in exchange
+        /// Reducing the fractional precision by one bit.
+        type FixedTypeS: Decode
+            + Encode
+            + FixedSigned
+            + From<I9F23>
+            + LossyFrom<FixedI32<U24>>
+            + LossyFrom<FixedI32<U31>>
+            + LossyFrom<U1F127>
+            + LossyFrom<FixedI128<U127>>
+            + PartialOrd<I9F23>;
+
         type LiquidityMining: LiquidityMiningPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
@@ -522,11 +558,26 @@ mod pallet {
         /// The module identifier.
         type PalletId: Get<PalletId>;
 
+        /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
+        type Rikiddo: RikiddoSigmoidMVPallet<
+            Balance = BalanceOf<Self>,
+            PoolId = PoolId,
+            FU = Self::FixedTypeU,
+            Rikiddo = RikiddoSigmoidMV<
+                Self::FixedTypeU,
+                Self::FixedTypeS,
+                FeeSigmoid<Self::FixedTypeS>,
+                EmaMarketVolume<Self::FixedTypeU>,
+            >,
+        >;
+
+        /// The custom `MultiReservableCurrency` type
         type Shares: ZeitgeistMultiReservableCurrency<
             Self::AccountId,
             CurrencyId = Asset<Self::MarketId>,
         >;
 
+        /// The weight information for swap's dispatchable functions.
         type WeightInfo: WeightInfoZeitgeist;
     }
 
@@ -740,7 +791,7 @@ mod pallet {
         ) -> Result<PoolId, DispatchError> {
             let mut weights_unwrapped = Vec::new();
             let mut map = BTreeMap::new();
-            let mut total_weight= 0;
+            let mut total_weight = 0;
 
             if let ScoringRule::CPMM = scoring_rule {
                 let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
@@ -830,7 +881,10 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(pool_ref, &asset)?,
                         total_supply.saturated_into(),
-                        pool_ref.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
+                        pool_ref
+                            .total_weight
+                            .ok_or(Error::<T>::PoolMissingWeight)?
+                            .saturated_into(),
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
