@@ -192,7 +192,7 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset)?,
                         total_supply.saturated_into(),
-                        pool.total_weight,
+                        pool.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?,
                         pool_amount.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?
@@ -329,7 +329,7 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(&pool, &asset)?,
                         total_supply.saturated_into(),
-                        pool.total_weight.saturated_into(),
+                        pool.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?.saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.saturated_into(),
                     )?
@@ -542,6 +542,7 @@ mod pallet {
         MaxTotalWeight,
         PoolDoesNotExist,
         PoolIsNotActive,
+        PoolMissingWeightInformation,
         ProvidedValuesLenMustEqualAssetsLen,
         TooManyAssets,
     }
@@ -754,7 +755,7 @@ mod pallet {
                     market_id,
                     pool_status: PoolStatus::Active,
                     swap_fee,
-                    total_weight,
+                    Some(total_weight),
                     weights: map,
                 }),
             );
@@ -803,7 +804,7 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(pool_ref, &asset)?,
                         total_supply.saturated_into(),
-                        pool_ref.total_weight,
+                        pool_ref.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?,
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.saturated_into(),
                     )?
@@ -850,7 +851,7 @@ mod pallet {
                         asset_balance.saturated_into(),
                         Self::pool_weight_rslt(pool_ref, &asset_in)?,
                         total_supply.saturated_into(),
-                        pool_ref.total_weight.saturated_into(),
+                        pool_ref.total_weight.ok_or(Error::<T>::PoolMissingWeightInformation)?.saturated_into(),
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.saturated_into(),
                     )?
