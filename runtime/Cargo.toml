@@ -27,6 +27,7 @@ sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "http
 sp-session = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-transaction-pool = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-version = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 
 # Benchmark
 
@@ -78,6 +79,7 @@ zrml-liquidity-mining = { default-features = false, path = "../zrml/liquidity-mi
 zrml-market-commons = { default-features = false, path = "../zrml/market-commons" }
 zrml-orderbook-v1 = { default-features = false, path = "../zrml/orderbook-v1" }
 zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
+zrml-rikiddo = { default-features = false, path = "../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
@@ -114,7 +116,6 @@ parachain = [
 	"xcm",
 ]
 runtime-benchmarks = [
-	"pallet-utility/runtime-benchmarks",
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking",
@@ -122,6 +123,7 @@ runtime-benchmarks = [
     "hex-literal",
     "pallet-balances/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+	"pallet-utility/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
@@ -159,6 +161,7 @@ std = [
 	"sp-session/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
+	"substrate-fixed/std",
 
 	# Benchmark
 
@@ -209,6 +212,7 @@ std = [
 	"zrml-market-commons/std",
 	"zrml-orderbook-v1/std",
 	"zrml-prediction-markets/std",
+	"zrml-rikiddo/std",
 	"zrml-simple-disputes/std",
 	"zrml-swaps-runtime-api/std",
 	"zrml-swaps/std",
