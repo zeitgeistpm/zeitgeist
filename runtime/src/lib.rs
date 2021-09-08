@@ -37,6 +37,8 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
+use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use zeitgeist_primitives::{constants::*, types::*};
 #[cfg(feature = "parachain")]
 use {
@@ -127,11 +129,19 @@ macro_rules! create_zeitgeist_runtime {
                 Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 41,
 
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 42,
+<<<<<<< HEAD
                 Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 43,
                 Court: zrml_court::{Event<T>, Pallet, Storage} = 44,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 45,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 46,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
+=======
+                Court: zrml_court::{Event<T>, Pallet, Storage} = 43,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 44,
+                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 46,
+                Rikiddo: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 47,
+>>>>>>> Add Rikiddo to the runtime
 
                 $($additional_pallets)*
             }
@@ -520,6 +530,22 @@ impl zrml_prediction_markets::Config for Runtime {
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
+}
+
+pub type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
+impl zrml_rikiddo::Config<RikiddoSigmoidFeeMarketVolumeEma> for Runtime {
+    type Timestamp = Timestamp;
+    type Balance = Balance;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = BalanceFractionalDecimals;
+    type PoolId = PoolId;
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
 }
 
 impl zrml_simple_disputes::Config for Runtime {
