@@ -36,6 +36,7 @@ pub struct TimestampedVolume<F: Fixed> {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_for_timestamped_volume {
     ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        #[allow(clippy::integer_arithmetic)]
         impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>>
         where
             Frac: $LeEqU,
@@ -76,6 +77,7 @@ cfg_if::cfg_if! {
 
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
+#[cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
 pub enum Timespan {
     Seconds(u32),
     Minutes(u32),
@@ -158,11 +160,13 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
         let mut decimal_string = decimal_u128.to_string();
 
         if decimal_string.len() <= places as usize {
+            // This can never underflow (places >= len). Saturating subtraction to satisfy clippy.
             decimal_string = "0.".to_owned()
-                + &"0".repeat(places as usize - decimal_string.len())
+                + &"0".repeat((places as usize).saturating_sub(decimal_string.len()))
                 + &decimal_string;
         } else {
-            decimal_string.insert(decimal_string.len() - places as usize, '.');
+            // This can never underflow (len >= places). Saturating subtraction to satisfy clippy.
+            decimal_string.insert(decimal_string.len().saturating_sub(places as usize), '.');
         }
 
         F::from_str(&decimal_string)
@@ -192,7 +196,7 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
                     // `from_num(1)` cannot panic if `from_num(2)` succeeded
                     if let Some(res) = F::from_num(1).checked_div(two) {
                         if fixed.frac() >= res {
-                            result += 1;
+                            result = result.saturating_add(1);
                         }
                     }
                 }
@@ -219,19 +223,19 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
             match frac_string.len().cmp(&(places as usize)) {
                 Ordering::Less => {
                     fixed_str.retain(|c| c != '.');
-                    // Padding to the right side up to `places`
-                    fixed_str += &"0".repeat(places as usize - frac_string.len());
+                    // Padding to the right side up to `places`. Cannot underflow.
+                    fixed_str += &"0".repeat((places as usize).saturating_sub(frac_string.len()));
                 }
                 Ordering::Greater => {
                     // Cutting down to `places` + arithmetic rounding of the last digit
-                    let frac_plus_one_digit_str = &frac_string[0..places as usize + 1];
+                    let frac_plus_one_digit_str = &frac_string[0..(places as usize).saturating_add(1)];
 
                     if let Ok(mut res) = frac_plus_one_digit_str.parse::<u128>() {
                         let last_digit = res % 10;
                         res /= 10;
 
                         if last_digit >= 5 {
-                            res += 1;
+                            res = res.saturating_add(1);
                         }
 
                         fixed_str = fixed.int().to_string() + &res.to_string()

@@ -1,6 +1,10 @@
-#![no_main]
 //! Fuzz test: Rikiddo pallet is called with calculated fee
 //!   -> create, force fee by multiple update_volume, cost, price, all_prices, clear, destroy
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
+#![no_main]
 
 use arbitrary::Arbitrary;
 use frame_support::traits::{OnFinalize, OnInitialize};

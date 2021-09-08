@@ -1,5 +1,9 @@
-#![no_main]
 //! Fuzz test: Conversion Balance -> FixedU
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
+#![no_main]
 
 use libfuzzer_sys::fuzz_target;
 use zrml_rikiddo::traits::FromFixedToDecimal;

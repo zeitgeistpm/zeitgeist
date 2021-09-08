@@ -1,6 +1,10 @@
-#![no_main]
 //! Fuzz test: EmaMarketVolume is called with estimation mode activated
 //! -> Configure the struct in a way that it estimates the ema at the second update, update
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
+#![no_main]
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;

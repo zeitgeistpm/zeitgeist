@@ -100,6 +100,7 @@ impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<FU> {
 
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
+#[cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
 pub enum MarketVolumeState {
     Uninitialized,
     DataCollectionStarted,

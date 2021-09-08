@@ -1,5 +1,9 @@
-#![no_main]
 //! Fuzz test: FeeSigmoid.calculate() is called
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
+#![no_main]
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
