@@ -150,7 +150,7 @@ pub enum MarketStatus {
 }
 
 /// Defines the type of market.
-/// All markets also have the `Invalid` resolution.
+/// All markets also have themin_assets_out `Invalid` resolution.
 #[derive(
     Clone,
     Eq,
