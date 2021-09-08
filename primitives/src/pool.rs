@@ -24,8 +24,11 @@ where
     MarketId: Ord,
 {
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
-        let weight = BTreeMap::get(&self.weights, asset);
-        weight.is_some()
+        if let Some(weights) = &self.weights  {
+            return BTreeMap::get(weights, asset).is_some();
+        }
+
+        false
     }
 }
 

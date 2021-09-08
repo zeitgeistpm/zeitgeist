@@ -1,5 +1,5 @@
 pub use crate::{
-    asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::Pool,
+    asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::{Pool, ScoringRule},
     pool_status::PoolStatus, serde_wrapper::*,
 };
 #[cfg(feature = "arbitrary")]
