@@ -33,6 +33,7 @@ where
 }
 
 #[derive(
+    Copy,
     Clone,
     Eq,
     PartialEq,
