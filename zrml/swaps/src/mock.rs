@@ -39,7 +39,7 @@ construct_runtime!(
         Currencies: orml_currencies::{Event<T>, Pallet},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
-        Rikiddo: zrml_rikiddo::{Pallet, Storage},
+        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -62,7 +62,7 @@ impl crate::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type Rikiddo = Rikiddo;
+    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type Shares = Currencies;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }

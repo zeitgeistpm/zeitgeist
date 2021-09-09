@@ -114,7 +114,7 @@
   "ScoringRule": {
     "_enum": [
       "CPMM",
-      "RikiddoSigmoidMarketEma"
+      "RikiddoSigmoidFeeMarketEma"
     ]
   },
   "Outcome": {

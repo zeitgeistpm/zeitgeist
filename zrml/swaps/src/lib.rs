@@ -68,6 +68,7 @@ mod pallet {
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_rikiddo::{
+        constants::{EMA_SHORT, EMA_LONG},
         traits::RikiddoSigmoidMVPallet,
         types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
     };
@@ -518,6 +519,7 @@ mod pallet {
             + Encode
             + FixedUnsigned
             + From<u32>
+            + LossyFrom<FixedU32<U24>>
             + LossyFrom<FixedU32<U32>>
             + LossyFrom<FixedU128<U128>>;
 
@@ -559,7 +561,7 @@ mod pallet {
         type PalletId: Get<PalletId>;
 
         /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
-        type Rikiddo: RikiddoSigmoidMVPallet<
+        type RikiddoSigmoidFeeMarketEma: RikiddoSigmoidMVPallet<
             Balance = BalanceOf<Self>,
             PoolId = PoolId,
             FU = Self::FixedTypeU,
@@ -790,8 +792,6 @@ mod pallet {
             weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
             let mut weights_unwrapped = Vec::new();
-            let mut map = BTreeMap::new();
-            let mut total_weight = 0;
 
             if let ScoringRule::CPMM = scoring_rule {
                 let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
@@ -803,8 +803,9 @@ mod pallet {
             let amount = T::MinLiquidity::get();
             let next_pool_id = Self::inc_next_pool_id()?;
             let pool_account = Self::pool_account_id(next_pool_id);
+            let mut map = BTreeMap::new();
+            let mut total_weight = 0;
 
-            // Two loops, one to check everything one to introduce state changes
             for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
                 let free_balance = T::Shares::free_balance(asset, &who);
                 ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
@@ -822,6 +823,19 @@ mod pallet {
             ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             T::Shares::deposit(pool_shares_id, &who, amount)?;
+
+            if let ScoringRule::RikiddoSigmoidFeeMarketEma = scoring_rule {
+                let mut rikiddo_instance: RikiddoSigmoidMV<
+                    T::FixedTypeU,
+                    T::FixedTypeS,
+                    FeeSigmoid<T::FixedTypeS>,
+                    EmaMarketVolume<T::FixedTypeU>,
+                > = Default::default();
+                rikiddo_instance.ma_short.config.ema_period = EMA_SHORT;
+                rikiddo_instance.ma_long.config.ema_period = EMA_LONG;
+                rikiddo_instance.ma_long.config.ema_period_estimate_after = Some(EMA_SHORT);
+                let _ = T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
+            }
 
             <Pools<T>>::insert(
                 next_pool_id,

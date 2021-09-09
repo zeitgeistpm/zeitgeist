@@ -127,21 +127,13 @@ macro_rules! create_zeitgeist_runtime {
                 // Zeitgeist
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 40,
                 Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 41,
-
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 42,
-<<<<<<< HEAD
                 Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 43,
                 Court: zrml_court::{Event<T>, Pallet, Storage} = 44,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 45,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 46,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
-=======
-                Court: zrml_court::{Event<T>, Pallet, Storage} = 43,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 44,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 46,
-                Rikiddo: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 47,
->>>>>>> Add Rikiddo to the runtime
+                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 48,
 
                 $($additional_pallets)*
             }
@@ -569,7 +561,7 @@ impl zrml_swaps::Config for Runtime {
     type MinLiquidity = MinLiquidity;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type Rikiddo = Rikiddo;
+    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
