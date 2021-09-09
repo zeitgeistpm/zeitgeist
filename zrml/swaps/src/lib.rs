@@ -587,6 +587,7 @@ mod pallet {
     pub enum Error<T> {
         AboveMaximumWeight,
         AssetNotBound,
+        BaseAssetNotFound,
         BadLimitPrice,
         BelowMinimumWeight,
         InsufficientBalance,
@@ -782,10 +783,24 @@ mod pallet {
         type Balance = BalanceOf<T>;
         type MarketId = T::MarketId;
 
+        /// Creates an initial active pool.
+        ///
+        /// # Arguments
+        ///
+        /// * `who`: The account that is the creator of the pool. Must have enough
+        /// funds for each of the assets to cover the `MinLiqudity`.
+        /// * `assets`: The assets that are used in the pool.
+        /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
+        ///                 Optional if scoring rule is CPMM.
+        /// * `market_id`: The market id of the market the pool belongs to.
+        /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
+        /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
+        /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
         #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
             assets: Vec<Asset<T::MarketId>>,
+            base_asset: Option<Asset<T::MarketId>>,
             market_id: Self::MarketId,
             scoring_rule: ScoringRule,
             swap_fee: Option<BalanceOf<T>>,
@@ -796,6 +811,8 @@ mod pallet {
             if let ScoringRule::CPMM = scoring_rule {
                 let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                 weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
+            } else {
+                ensure!(base_asset != None, Error::<T>::BaseAssetNotFound);
             }
 
             Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
@@ -841,6 +858,7 @@ mod pallet {
                 next_pool_id,
                 Some(Pool {
                     assets,
+                    base_asset,
                     market_id,
                     pool_status: PoolStatus::Active,
                     scoring_rule,

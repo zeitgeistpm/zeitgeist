@@ -515,6 +515,7 @@ fn create_initial_pool() {
     assert_ok!(Swaps::create_pool(
         BOB,
         ASSETS.iter().cloned().collect(),
+        Some(ASSETS.last().unwrap().clone()),
         0,
         ScoringRule::CPMM,
         Some(0),
