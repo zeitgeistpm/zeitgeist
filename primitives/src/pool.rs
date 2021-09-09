@@ -11,6 +11,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 )]
 pub struct Pool<Balance, MarketId> {
     pub assets: Vec<Asset<MarketId>>,
+    pub base_asset: Option<Asset<MarketId>>,
     pub market_id: MarketId,
     pub pool_status: PoolStatus,
     pub scoring_rule: ScoringRule,
