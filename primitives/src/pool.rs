@@ -43,5 +43,5 @@ where
 )]
 pub enum ScoringRule {
     CPMM,
-    RikiddoSigmoidMarketEma,
+    RikiddoSigmoidFeeMarketEma,
 }
