@@ -1,7 +1,5 @@
-#![allow(
-    // Auto-generated code is a no man's land
-    clippy::integer_arithmetic
-)]
+// Auto-generated code is a no man's land
+#![allow(clippy::integer_arithmetic, clippy::indexing_slicing)]
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
@@ -53,7 +51,7 @@ fn bench_create_pool<T: Config>(
     let asset_count_unwrapped: usize = {
         match asset_count {
             Some(ac) => ac,
-            _ => T::MaxAssets::get(),
+            _ => T::MaxAssets::get().into(),
         }
     };
 
@@ -68,11 +66,11 @@ fn bench_create_pool<T: Config>(
 benchmarks! {
     admin_set_pool_as_stale {
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get()), None);
+        let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None);
     }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
 
     pool_exit {
-        let a in 0..T::MaxAssets::get() as u32;
+        let a in 0..T::MaxAssets::get().into();
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize), None);
         let pool_amount = T::MinLiquidity::get();
@@ -96,7 +94,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount, pool_amount)
 
     pool_join {
-        let a in 0..T::MaxAssets::get() as u32;
+        let a in 0..T::MaxAssets::get().into();
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
             Some(T::MinLiquidity::get() * 2u32.into()));
