@@ -108,7 +108,7 @@ fn allows_the_full_user_lifecycle() {
 #[test]
 fn assets_must_be_bounded() {
     ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool();
+        create_initial_pool(ScoringRule::CPMM);
         assert_noop!(
             Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, 1, ASSET_E, 1, 1),
             crate::Error::<Runtime>::AssetNotBound
@@ -153,7 +153,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
         let next_pool_before = Swaps::next_pool_id();
         assert_eq!(next_pool_before, 0);
 
-        create_initial_pool();
+        create_initial_pool(ScoringRule::CPMM);
 
         let next_pool_after = Swaps::next_pool_id();
         assert_eq!(next_pool_after, 1);
@@ -211,9 +211,31 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
 }
 
 #[test]
+fn get_spot_price_returns_correct_results () {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM);
+        assert_eq!(Swaps::get_spot_price(0, ASSETS[0], ASSETS[1]), Ok(BASE));
+
+        create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        // Asset out, base currency in. About 33%
+        let price_base_in = Swaps::get_spot_price(1, ASSETS[0], *ASSETS.last().unwrap()).unwrap();
+        // Between 0.3 and 0.4
+        assert!(price_base_in > 3 * BASE / 10 && price_base_in < 4 * BASE / 10);
+        // Base currency in, asset out. About 300%
+        let price_base_out = Swaps::get_spot_price(1, *ASSETS.last().unwrap(), ASSETS[0]).unwrap();
+        // Between 2.9 and 3.1
+        assert!(price_base_out > 28 * BASE / 10 && price_base_out < 31 * BASE / 10);
+        // Asset in, asset out. About 100%.
+        let price_asset_in_out = Swaps::get_spot_price(1, ASSETS[0], ASSETS[1]).unwrap();
+        // Between 0.9 and 1.1
+        assert!(price_asset_in_out > 9 * BASE / 10 && price_asset_in_out < 11 * BASE / 10);
+    });
+}
+
+#[test]
 fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
     ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool();
+        create_initial_pool(ScoringRule::CPMM);
 
         assert_noop!(
             Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, u128::MAX, ASSET_B, _1, _1,),
@@ -254,7 +276,7 @@ fn only_root_can_call_admin_set_pool_as_stale() {
 #[test]
 fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
     ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool();
+        create_initial_pool(ScoringRule::CPMM);
 
         assert_noop!(
             Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _1, ASSET_B, u128::MAX, _1,),
@@ -440,7 +462,7 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
 #[test]
 fn provided_values_len_must_equal_assets_len() {
     ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool();
+        create_initial_pool(ScoringRule::CPMM);
         assert_noop!(
             Swaps::pool_join(alice_signed(), 0, _5, vec![]),
             crate::Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen
@@ -508,7 +530,7 @@ fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
 
-fn create_initial_pool() {
+fn create_initial_pool(scoring_rule: ScoringRule) {
     ASSETS.iter().cloned().for_each(|asset| {
         let _ = Currencies::deposit(asset, &BOB, _100);
     });
@@ -517,14 +539,14 @@ fn create_initial_pool() {
         ASSETS.iter().cloned().collect(),
         Some(ASSETS.last().unwrap().clone()),
         0,
-        ScoringRule::CPMM,
-        Some(0),
-        Some(vec!(_2, _2, _2, _2)),
+        scoring_rule,
+        if scoring_rule == ScoringRule::CPMM { Some(0) } else { None },
+        if scoring_rule == ScoringRule::CPMM { Some(vec!(_2, _2, _2, _2)) } else { None },
     ));
 }
 
 fn create_initial_pool_with_funds_for_alice() {
-    create_initial_pool();
+    create_initial_pool(ScoringRule::CPMM);
     let _ = Currencies::deposit(ASSET_A, &ALICE, _25);
     let _ = Currencies::deposit(ASSET_B, &ALICE, _25);
     let _ = Currencies::deposit(ASSET_C, &ALICE, _25);
