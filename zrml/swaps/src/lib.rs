@@ -505,7 +505,7 @@ mod pallet {
 
         type MarketId: MarketId;
 
-        type MaxAssets: Get<usize>;
+        type MaxAssets: Get<u16>;
         type MaxInRatio: Get<BalanceOf<Self>>;
         type MaxOutRatio: Get<BalanceOf<Self>>;
         type MaxTotalWeight: Get<u128>;
@@ -725,7 +725,7 @@ mod pallet {
         ) -> Result<PoolId, DispatchError> {
             Self::check_provided_values_len_must_equal_assets_len(&assets, &weights)?;
 
-            ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets);
+            ensure!(assets.len() <= T::MaxAssets::get().into(), Error::<T>::TooManyAssets);
 
             let amount = T::MinLiquidity::get();
 
