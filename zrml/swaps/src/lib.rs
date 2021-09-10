@@ -684,11 +684,16 @@ mod pallet {
                 )?
                 .saturated_into());
             }
-            
+
             // Price when using Rikiddo.
             let mut balances = Vec::new();
+            let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
 
             for asset in pool.assets {
+                if asset == base_asset {
+                    continue;
+                }
+
                 if asset == asset_in {
                     balances.push(balance_in);
                     continue;
@@ -700,18 +705,23 @@ mod pallet {
                 balances.push(T::Shares::free_balance(asset, &pool_account));
             }
 
-            if asset_in == pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)? {
+            if asset_in == base_asset {
                 Ok(bdiv(
                     BASE,
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?.saturated_into(),
-                )?.saturated_into())
-            } else if asset_out == pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)? {
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
+                        .saturated_into(),
+                )?
+                .saturated_into())
+            } else if asset_out == base_asset {
                 T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)
             } else {
                 Ok(bdiv(
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?.saturated_into(),
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?.saturated_into(),
-                )?.saturated_into())
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
+                        .saturated_into(),
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
+                        .saturated_into(),
+                )?
+                .saturated_into())
             }
         }
 
@@ -842,19 +852,16 @@ mod pallet {
             swap_fee: Option<BalanceOf<T>>,
             weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
-            let mut weights_unwrapped = Vec::new();
+            let mut weights_unwrapped = vec![T::MinWeight::get(); assets.len()];
 
             if scoring_rule == ScoringRule::CPMM {
                 let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                 weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
+                Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
             } else {
                 ensure!(base_asset != None, Error::<T>::BaseAssetNotFound);
             }
 
-            // Sort assets for future binary search, for example to check if an asset is included.
-            let sort_assets = assets.as_mut_slice();
-            sort_assets.sort();
-            Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
             ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets);
             let amount = T::MinLiquidity::get();
             let next_pool_id = Self::inc_next_pool_id()?;
@@ -893,6 +900,9 @@ mod pallet {
                 let _ = T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
             }
 
+            // Sort assets for future binary search, for example to check if an asset is included.
+            let sort_assets = assets.as_mut_slice();
+            sort_assets.sort();
             <Pools<T>>::insert(
                 next_pool_id,
                 Some(Pool {

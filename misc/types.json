@@ -68,8 +68,8 @@
   "MarketIdOf": "u128",
   "MarketPeriod": {
     "_enum": {
-      "Block": "Range<BlockNumber>",
-      "Timestamp": "Range<Moment>"
+      "Block": "RangeBlockNumber",
+      "Timestamp": "RangeTimestamp"
     }
   },
   "MarketStatus": {
@@ -110,6 +110,14 @@
       "Bid",
       "Ask"
     ]
+  },
+  "RangeBlockNumber": {
+    "start": "BlockNumber",
+    "end": "BlockNumber"
+  },
+  "RangeTimestamp": {
+    "start": "Moment",
+    "end": "Moment"
   },
   "ScoringRule": {
     "_enum": [
