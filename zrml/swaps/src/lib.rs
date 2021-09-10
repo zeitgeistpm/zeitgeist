@@ -28,7 +28,7 @@ mod pallet {
     use crate::{
         check_arithm_rslt::CheckArithmRslt,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
-        fixed::bmul,
+        fixed::{bdiv, bmul},
         utils::{
             pool_exit_with_exact_amount, pool_join_with_exact_amount, swap_exact_amount,
             PoolExitWithExactAmountParams, PoolJoinWithExactAmountParams, PoolParams,
@@ -61,6 +61,7 @@ mod pallet {
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
+        constants::BASE,
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper,
@@ -68,7 +69,7 @@ mod pallet {
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_rikiddo::{
-        constants::{EMA_SHORT, EMA_LONG},
+        constants::{EMA_LONG, EMA_SHORT},
         traits::RikiddoSigmoidMVPallet,
         types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
     };
@@ -114,7 +115,7 @@ mod pallet {
             let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-
+            // TODO HERE
             let params = PoolParams {
                 asset_bounds: min_assets_out,
                 event: |evt| Self::deposit_event(Event::PoolExit(evt)),
@@ -587,6 +588,7 @@ mod pallet {
     pub enum Error<T> {
         AboveMaximumWeight,
         AssetNotBound,
+        AssetNotInPool,
         BaseAssetNotFound,
         BadLimitPrice,
         BelowMinimumWeight,
@@ -662,21 +664,55 @@ mod pallet {
             asset_out: Asset<T::MarketId>,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
-
+            let assets_slice = pool.assets.as_slice();
+            ensure!(assets_slice.binary_search(&asset_in).is_ok(), Error::<T>::AssetNotInPool);
+            ensure!(assets_slice.binary_search(&asset_out).is_ok(), Error::<T>::AssetNotInPool);
             let pool_account = Self::pool_account_id(pool_id);
             let balance_in = T::Shares::free_balance(asset_in, &pool_account);
-            let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
             let balance_out = T::Shares::free_balance(asset_out, &pool_account);
-            let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
 
-            Ok(crate::math::calc_spot_price(
-                balance_in.saturated_into(),
-                in_weight,
-                balance_out.saturated_into(),
-                out_weight,
-                0,
-            )?
-            .saturated_into())
+            if pool.scoring_rule == ScoringRule::CPMM {
+                let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
+                let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
+
+                return Ok(crate::math::calc_spot_price(
+                    balance_in.saturated_into(),
+                    in_weight,
+                    balance_out.saturated_into(),
+                    out_weight,
+                    0,
+                )?
+                .saturated_into());
+            }
+            
+            // Price when using Rikiddo.
+            let mut balances = Vec::new();
+
+            for asset in pool.assets {
+                if asset == asset_in {
+                    balances.push(balance_in);
+                    continue;
+                } else if asset == asset_out {
+                    balances.push(balance_out);
+                    continue;
+                }
+
+                balances.push(T::Shares::free_balance(asset, &pool_account));
+            }
+
+            if asset_in == pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)? {
+                Ok(bdiv(
+                    BASE,
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?.saturated_into(),
+                )?.saturated_into())
+            } else if asset_out == pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)? {
+                T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)
+            } else {
+                Ok(bdiv(
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?.saturated_into(),
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?.saturated_into(),
+                )?.saturated_into())
+            }
         }
 
         pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
@@ -710,7 +746,7 @@ mod pallet {
         pub(crate) fn check_if_pool_is_active(
             pool: &Pool<BalanceOf<T>, T::MarketId>,
         ) -> DispatchResult {
-            if let PoolStatus::Active = pool.pool_status {
+            if pool.pool_status == PoolStatus::Active {
                 Ok(())
             } else {
                 Err(Error::<T>::PoolIsNotActive.into())
@@ -799,7 +835,7 @@ mod pallet {
         #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
-            assets: Vec<Asset<T::MarketId>>,
+            mut assets: Vec<Asset<T::MarketId>>,
             base_asset: Option<Asset<T::MarketId>>,
             market_id: Self::MarketId,
             scoring_rule: ScoringRule,
@@ -808,13 +844,16 @@ mod pallet {
         ) -> Result<PoolId, DispatchError> {
             let mut weights_unwrapped = Vec::new();
 
-            if let ScoringRule::CPMM = scoring_rule {
+            if scoring_rule == ScoringRule::CPMM {
                 let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                 weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
             } else {
                 ensure!(base_asset != None, Error::<T>::BaseAssetNotFound);
             }
 
+            // Sort assets for future binary search, for example to check if an asset is included.
+            let sort_assets = assets.as_mut_slice();
+            sort_assets.sort();
             Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
             ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets);
             let amount = T::MinLiquidity::get();
@@ -829,7 +868,7 @@ mod pallet {
                 ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                 ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
 
-                if let ScoringRule::CPMM = scoring_rule {
+                if scoring_rule == ScoringRule::CPMM {
                     map.insert(asset, weight);
                     total_weight = total_weight.check_add_rslt(&weight)?;
                 }
@@ -841,7 +880,7 @@ mod pallet {
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             T::Shares::deposit(pool_shares_id, &who, amount)?;
 
-            if let ScoringRule::RikiddoSigmoidFeeMarketEma = scoring_rule {
+            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 let mut rikiddo_instance: RikiddoSigmoidMV<
                     T::FixedTypeU,
                     T::FixedTypeS,
@@ -863,12 +902,12 @@ mod pallet {
                     pool_status: PoolStatus::Active,
                     scoring_rule,
                     swap_fee,
-                    total_weight: if let ScoringRule::CPMM = scoring_rule {
+                    total_weight: if scoring_rule == ScoringRule::CPMM {
                         Some(total_weight)
                     } else {
                         None
                     },
-                    weights: if let ScoringRule::CPMM = scoring_rule { Some(map) } else { None },
+                    weights: if scoring_rule == ScoringRule::CPMM { Some(map) } else { None },
                 }),
             );
 
@@ -995,7 +1034,7 @@ mod pallet {
             outcome_report: &OutcomeReport,
         ) -> DispatchResult {
             Self::mutate_pool(pool_id, |pool| {
-                if let PoolStatus::Stale = pool.pool_status {
+                if pool.pool_status == PoolStatus::Stale {
                     return Ok(());
                 }
                 if let MarketType::Categorical(_) = market_type {
