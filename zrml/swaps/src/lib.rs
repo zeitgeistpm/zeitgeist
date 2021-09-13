@@ -1047,6 +1047,7 @@ mod pallet {
                 if pool.pool_status == PoolStatus::Stale {
                     return Ok(());
                 }
+
                 if let MarketType::Categorical(_) = market_type {
                     if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                         pool.assets.retain(|el| {
@@ -1058,7 +1059,13 @@ mod pallet {
                         });
                     }
                 }
+
                 pool.pool_status = PoolStatus::Stale;
+
+                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
+                }
+
                 Ok(())
             })
         }
