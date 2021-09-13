@@ -50,8 +50,8 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
-    type FixedTypeU = FixedU128<U33>;
-    type FixedTypeS = FixedI128<U33>;
+    type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
+    type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;

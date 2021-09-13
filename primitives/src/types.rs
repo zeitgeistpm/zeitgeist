@@ -1,16 +1,6 @@
 pub use crate::{
-<<<<<<< HEAD
     asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::{Pool, ScoringRule},
     pool_status::PoolStatus, serde_wrapper::*,
-=======
-    asset::*,
-    market::*,
-    max_usize::*,
-    outcome_report::OutcomeReport,
-    pool::{Pool, ScoringRule},
-    pool_status::PoolStatus,
-    serde_wrapper::*,
->>>>>>> Modify create_pool to accept scoring rule (incomplete)
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};

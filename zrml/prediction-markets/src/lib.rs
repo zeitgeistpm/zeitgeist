@@ -93,6 +93,7 @@ mod pallet {
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
+            ScoringRule,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -588,8 +589,18 @@ mod pallet {
 
             let mut assets = Self::outcome_assets(market_id, &market);
             assets.push(Asset::Ztg);
+            let last_asset =
+                if assets.last().is_some() { Some(assets.last().unwrap().clone()) } else { None };
 
-            let pool_id = T::Swaps::create_pool(sender, assets, market_id, Zero::zero(), weights)?;
+            let pool_id = T::Swaps::create_pool(
+                sender,
+                assets,
+                last_asset,
+                market_id,
+                ScoringRule::CPMM,
+                Some(Zero::zero()),
+                Some(weights),
+            )?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             Ok(())

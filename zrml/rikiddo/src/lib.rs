@@ -42,12 +42,15 @@ pub use pallet::*;
 /// can run simulatenously on one chain, which can be used to ease migrations.
 ///
 /// [substrate-fixed]: https://github.com/encointer/substrate-fixed
-#[frame_support::pallet]
+
+
 // The allow(missing_docs) attribute seems to be necessary, because some attribute-like macros
 // from the Substrate framework generate undocumented code. It seems to be impossible to move
 // the code into an anonymous module to resolve this issue.
 #[allow(missing_docs)]
+#[frame_support::pallet]
 pub mod pallet {
+    use alloc::vec::Vec;
     use crate::{
         traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoMVPallet},
         types::{TimestampedVolume, UnixTimestamp},

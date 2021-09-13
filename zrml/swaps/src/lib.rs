@@ -36,7 +36,7 @@ mod pallet {
         },
         weights::*,
     };
-    use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+    use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::Weight,
@@ -70,7 +70,7 @@ mod pallet {
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
-        traits::RikiddoSigmoidMVPallet,
+        traits::RikiddoMVPallet,
         types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
     };
 
@@ -562,7 +562,7 @@ mod pallet {
         type PalletId: Get<PalletId>;
 
         /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
-        type RikiddoSigmoidFeeMarketEma: RikiddoSigmoidMVPallet<
+        type RikiddoSigmoidFeeMarketEma: RikiddoMVPallet<
             Balance = BalanceOf<Self>,
             PoolId = PoolId,
             FU = Self::FixedTypeU,
@@ -862,7 +862,7 @@ mod pallet {
                 ensure!(base_asset != None, Error::<T>::BaseAssetNotFound);
             }
 
-            ensure!(assets.len() <= T::MaxAssets::get(), Error::<T>::TooManyAssets);
+            ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
             let amount = T::MinLiquidity::get();
             let next_pool_id = Self::inc_next_pool_id()?;
             let pool_account = Self::pool_account_id(next_pool_id);

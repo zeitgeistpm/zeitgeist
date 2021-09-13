@@ -5,6 +5,7 @@ frame-system = { branch = "moonbeam-polkadot-v0.9.10", default-features = false,
 orml-traits = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-rikiddo = { default-features = false, path = "../rikiddo" }
@@ -33,7 +34,6 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
-    "substrate-fixed",
     "zrml-market-commons",
     "zrml-swaps-runtime-api",
 ]
@@ -49,6 +49,7 @@ std = [
     "orml-traits/std",
     "parity-scale-codec/std",
     "sp-runtime/std",
+    "substrate-fixed/std",
     "zeitgeist-primitives/std",
     "zrml-liquidity-mining/std",
     "zrml-rikiddo/std",

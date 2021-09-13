@@ -1,5 +1,8 @@
 //! This module offers the Rikiddo core functionality. The implementation is modular in regards
 //! to the caluclation of the fee and the evaluation of the collected market volumes.
+
+extern crate alloc;
+use alloc::vec::Vec;
 use crate::{
     constants::INITIAL_FEE,
     traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
