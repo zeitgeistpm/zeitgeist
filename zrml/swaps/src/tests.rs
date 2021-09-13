@@ -211,7 +211,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
 }
 
 #[test]
-fn get_spot_price_returns_correct_results () {
+fn get_spot_price_returns_correct_results() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM);
         assert_eq!(Swaps::get_spot_price(0, ASSETS[0], ASSETS[1]), Ok(BASE));

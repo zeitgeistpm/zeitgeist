@@ -12128,6 +12128,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
+ "substrate-fixed",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
@@ -12135,6 +12136,7 @@ dependencies = [
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
+ "zrml-rikiddo",
  "zrml-simple-disputes",
  "zrml-swaps",
 ]

@@ -4,6 +4,7 @@ frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "h
 frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-traits = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
 sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
@@ -17,7 +18,6 @@ pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/parity
 pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
 sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
-substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", optional = true }
 zrml-market-commons = { optional = true, path = "../market-commons" }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
@@ -33,7 +33,6 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
-    "substrate-fixed",
     "zrml-market-commons",
     "zrml-swaps-runtime-api",
 ]
@@ -49,6 +48,7 @@ std = [
     "orml-traits/std",
     "parity-scale-codec/std",
     "sp-runtime/std",
+    "substrate-fixed/std",
     "zeitgeist-primitives/std",
     "zrml-liquidity-mining/std",
     "zrml-rikiddo/std",
