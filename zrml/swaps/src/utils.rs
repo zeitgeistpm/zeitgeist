@@ -124,9 +124,9 @@ pub(crate) fn swap_exact_amount<F1, F2, T>(
     mut p: SwapExactAmountParams<'_, F1, F2, T>,
 ) -> DispatchResult
 where
-    F1: FnMut() -> Result<[BalanceOf<T>; 2], DispatchError>,
+    F1: FnMut(BalanceOf<T>) -> Result<[BalanceOf<T>; 2], DispatchError>,
     F2: FnMut(SwapEvent<T::AccountId, BalanceOf<T>>),
-    T: Config,
+    T: crate::Config,
 {
     let who = ensure_signed(p.origin)?;
 
@@ -136,7 +136,7 @@ where
     let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
     ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
 
-    let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
+    let [asset_amount_in, asset_amount_out] = (p.asset_amounts)(spot_price_before)?;
 
     T::Shares::transfer(p.asset_in, &who, p.pool_account_id, asset_amount_in)?;
     T::Shares::transfer(p.asset_out, p.pool_account_id, &who, asset_amount_out)?;
