@@ -217,14 +217,14 @@ fn get_spot_price_returns_correct_results() {
         assert_eq!(Swaps::get_spot_price(0, ASSETS[0], ASSETS[1]), Ok(BASE));
 
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma);
-        // Asset out, base currency in. About 33%
+        // Asset out, base currency in. Should receive about 1/3 -> price about 3
         let price_base_in = Swaps::get_spot_price(1, ASSETS[0], *ASSETS.last().unwrap()).unwrap();
         // Between 0.3 and 0.4
-        assert!(price_base_in > 3 * BASE / 10 && price_base_in < 4 * BASE / 10);
+        assert!(price_base_in > 28 * BASE / 10 && price_base_in < 31 * BASE / 10);
         // Base currency in, asset out. About 300%
         let price_base_out = Swaps::get_spot_price(1, *ASSETS.last().unwrap(), ASSETS[0]).unwrap();
         // Between 2.9 and 3.1
-        assert!(price_base_out > 28 * BASE / 10 && price_base_out < 31 * BASE / 10);
+        assert!(price_base_out > 3 * BASE / 10 && price_base_out < 4 * BASE / 10);
         // Asset in, asset out. About 100%.
         let price_asset_in_out = Swaps::get_spot_price(1, ASSETS[0], ASSETS[1]).unwrap();
         // Between 0.9 and 1.1

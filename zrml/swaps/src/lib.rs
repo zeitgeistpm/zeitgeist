@@ -115,7 +115,6 @@ mod pallet {
             let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-            // TODO HERE
             let params = PoolParams {
                 asset_bounds: min_assets_out,
                 event: |evt| Self::deposit_event(Event::PoolExit(evt)),
@@ -706,19 +705,19 @@ mod pallet {
             }
 
             if asset_in == base_asset {
+                T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)
+            } else if asset_out == base_asset {
                 Ok(bdiv(
                     BASE,
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
                         .saturated_into(),
                 )?
                 .saturated_into())
-            } else if asset_out == base_asset {
-                T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)
             } else {
                 Ok(bdiv(
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
-                        .saturated_into(),
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
+                        .saturated_into(),
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
                         .saturated_into(),
                 )?
                 .saturated_into())
