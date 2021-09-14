@@ -397,7 +397,7 @@ mod pallet {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let params = SwapExactAmountParams {
-                asset_amounts: || {
+                asset_amounts: |price: BalanceOf<T>| {
                     let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
                     ensure!(
                         asset_amount_in
@@ -409,17 +409,26 @@ mod pallet {
                         Error::<T>::MaxInRatio
                     );
 
-                    let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
+                    let asset_amount_out: BalanceOf<T>;
 
-                    let asset_amount_out: BalanceOf<T> = crate::math::calc_out_given_in(
-                        balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?,
-                        balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?,
-                        asset_amount_in.saturated_into(),
-                        pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
-                    )?
-                    .saturated_into();
+                    if pool.scoring_rule == ScoringRule::CPMM {
+                        let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
+
+                        asset_amount_out = crate::math::calc_out_given_in(
+                            balance_in.saturated_into(),
+                            Self::pool_weight_rslt(&pool, &asset_in)?,
+                            balance_out.saturated_into(),
+                            Self::pool_weight_rslt(&pool, &asset_out)?,
+                            asset_amount_in.saturated_into(),
+                            pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        )?
+                        .saturated_into();
+                    } else {
+                        asset_amount_out = bdiv(
+                            asset_amount_in.saturated_into(),
+                            price.saturated_into()
+                        )?.saturated_into();
+                    }
                     ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
                     Ok([asset_amount_in, asset_amount_out])
@@ -464,9 +473,7 @@ mod pallet {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let params = SwapExactAmountParams {
-                asset_amounts: || {
-                    let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
-
+                asset_amounts: |price: BalanceOf<T>| {
                     let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
                     ensure!(
                         asset_amount_out
@@ -478,17 +485,27 @@ mod pallet {
                         Error::<T>::MaxOutRatio,
                     );
 
-                    let asset_amount_in: BalanceOf<T> = crate::math::calc_in_given_out(
-                        balance_in.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_in)?,
-                        balance_out.saturated_into(),
-                        Self::pool_weight_rslt(&pool, &asset_out)?,
-                        asset_amount_out.saturated_into(),
-                        pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
-                    )?
-                    .saturated_into();
-                    ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
+                    let asset_amount_in: BalanceOf<T>;
 
+                    if pool.scoring_rule == ScoringRule::CPMM {
+                        let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
+                        asset_amount_in = crate::math::calc_in_given_out(
+                            balance_in.saturated_into(),
+                            Self::pool_weight_rslt(&pool, &asset_in)?,
+                            balance_out.saturated_into(),
+                            Self::pool_weight_rslt(&pool, &asset_out)?,
+                            asset_amount_out.saturated_into(),
+                            pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        )?
+                        .saturated_into();
+                    } else {
+                        asset_amount_in = bmul(
+                            asset_amount_out.saturated_into(),
+                            price.saturated_into()
+                        )?.saturated_into();
+                    }
+
+                    ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
                     Ok([asset_amount_in, asset_amount_out])
                 },
                 asset_bound: max_amount_asset_in,
