@@ -113,12 +113,19 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
     fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError> {
         let decimal_u128 = decimal.into();
         let mut decimal_string = decimal_u128.to_string();
-
+        #[allow(
+            // This can never underflow (places >= len)
+            clippy::integer_arithmetic
+        )]
         if decimal_string.len() <= places as usize {
             decimal_string = "0.".to_owned()
                 + &"0".repeat(places as usize - decimal_string.len())
                 + &decimal_string;
         } else {
+            #[allow(
+                // This can never underflow (len >= places)
+                clippy::integer_arithmetic
+            )]
             decimal_string.insert(decimal_string.len() - places as usize, '.');
         }
 
@@ -162,7 +169,7 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
                     // `from_num(1)` cannot panic if `from_num(2)` succeeded
                     if let Some(res) = F::from_num(1).checked_div(two) {
                         if fixed.frac() >= res {
-                            result += 1;
+                            result = result.saturating_add(1);
                         }
                     }
                 }
@@ -187,6 +194,10 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
             let frac_string = &fixed_frac.to_string()[2..];
 
             match frac_string.len().cmp(&(places as usize)) {
+                #[allow(
+                    // Cannot underflow
+                    clippy::integer_arithmetic
+                )]
                 Ordering::Less => {
                     fixed_str.retain(|c| c != '.');
                     // Padding to the right side up to `places`
@@ -194,14 +205,15 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
                 }
                 Ordering::Greater => {
                     // Cutting down to `places` + arithmetic rounding of the last digit
-                    let frac_plus_one_digit_str = &frac_string[0..places as usize + 1];
+                    let frac_plus_one_digit_str =
+                        &frac_string[0..(places as usize).saturating_add(1)];
 
                     if let Ok(mut res) = frac_plus_one_digit_str.parse::<u128>() {
                         let last_digit = res % 10;
                         res /= 10;
 
                         if last_digit >= 5 {
-                            res += 1;
+                            res = res.saturating_add(1);
                         }
 
                         fixed_str = fixed.int().to_string() + &res.to_string()
