@@ -9,7 +9,8 @@ use frame_support::{dispatch::DispatchResult, ensure, traits::Get};
 use frame_system::ensure_signed;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
-use zeitgeist_primitives::types::{Asset, Pool, PoolId};
+use zeitgeist_primitives::types::{Asset, Pool, PoolId, ScoringRule};
+use zrml_rikiddo::traits::RikiddoSigmoidMVPallet;
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
 pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, T>(
@@ -131,10 +132,14 @@ where
     let who = ensure_signed(p.origin)?;
 
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
-    ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
-    ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
+
+    if p.pool.scoring_rule == ScoringRule::CPMM {
+        ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
+        ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
+    }
+
     let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
+    // ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)(spot_price_before)?;
 
@@ -142,14 +147,19 @@ where
     T::Shares::transfer(p.asset_out, p.pool_account_id, &who, asset_amount_out)?;
 
     let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
-    ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
+    // ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+    // ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
     ensure!(
         spot_price_before
             <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
                 .saturated_into(),
         Error::<T>::MathApproximation
     );
+
+    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+        let volume = asset_amount_in.check_add_rslt(&asset_amount_out)?;
+        T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
+    }
 
     (p.event)(SwapEvent {
         asset_amount_in,

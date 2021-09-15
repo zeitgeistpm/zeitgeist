@@ -8,17 +8,10 @@ sp-core = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git 
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-<<<<<<< HEAD
 hashbrown = { default-features = false, version = "0.11"}
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
-=======
-hashbrown = { default-features = true, version = "0.11"}
-pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
-pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
-sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
->>>>>>> Update PM + Make project buildable for WASM
 
 [dev-dependencies]
 zrml-rikiddo = { features = ["mock"], path = "." }

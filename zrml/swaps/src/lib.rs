@@ -731,13 +731,17 @@ mod pallet {
                 )?
                 .saturated_into())
             } else {
-                Ok(bdiv(
+                let price_without_fee = bdiv(
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
                         .saturated_into(),
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
                         .saturated_into(),
                 )?
-                .saturated_into())
+                .saturated_into();
+                let fee: u128 = bmul(price_without_fee,
+                    T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into()
+                )?;
+                Ok(price_without_fee.check_add_rslt(&fee)?.saturated_into())
             }
         }
 
