@@ -131,23 +131,17 @@ mod pallet {
         type Origin = T::Origin;
 
         fn on_dispute(
-            _: Self::Balance,
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            _: &Self::AccountId,
         ) -> DispatchResult {
             Ok(())
         }
 
-        fn on_resolution<D>(
-            _: &D,
+        fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError>
-        where
-            D: Fn(usize) -> Self::Balance,
-        {
+        ) -> Result<OutcomeReport, DispatchError> {
             let market_ai = if let MarketDisputeMechanism::Authorized(ref el) = market.mdm {
                 el
             } else {

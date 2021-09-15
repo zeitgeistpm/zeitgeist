@@ -462,12 +462,9 @@ mod pallet {
         type Origin = T::Origin;
 
         fn on_dispute(
-            bond: Self::Balance,
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            who: &Self::AccountId,
         ) -> DispatchResult {
-            CurrencyOf::<T>::reserve_named(&RESERVE_ID, who, bond)?;
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
             let necessary_jurors_num = Self::necessary_jurors_num(disputes);
             let mut rng = Self::rng();
@@ -484,15 +481,11 @@ mod pallet {
         // rewarded if sided on the most voted outcome but jurors that voted second most
         // voted outcome (winner of the losing majority) are placed as tardy instead of
         // being slashed.
-        fn on_resolution<D>(
-            _: &D,
+        fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) -> Result<OutcomeReport, DispatchError>
-        where
-            D: Fn(usize) -> Self::Balance,
-        {
+            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+        ) -> Result<OutcomeReport, DispatchError> {
             let mut requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
                 .filter_map(|el| {
                     let j = Self::juror(&el.0).ok()?;

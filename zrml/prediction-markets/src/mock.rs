@@ -19,11 +19,11 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, CourtCaseDuration, CourtPalletId, DustAccountTest, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinCategories,
-        MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
-        TreasuryPalletId, BASE,
+        AuthorizedPalletId, BlockHashCount, CourtCaseDuration, CourtPalletId, DustAccountTest,
+        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories,
+        MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight,
+        MinCategories, MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId, StakeWeight,
+        SwapsPalletId, TreasuryPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
@@ -76,6 +76,7 @@ construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
+        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
@@ -94,6 +95,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Authorized = Authorized;
     type Court = Court;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
@@ -181,6 +183,13 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl zrml_authorized::Config for Runtime {
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type PalletId = AuthorizedPalletId;
+    type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
+}
+
 impl zrml_court::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
     type Event = Event;
@@ -193,7 +202,6 @@ impl zrml_court::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Currency = Balances;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
@@ -211,11 +219,9 @@ impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type OracleBond = OracleBond;
     type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;
     type Swaps = Swaps;
-    type ValidityBond = ValidityBond;
 }
 
 impl zrml_swaps::Config for Runtime {
