@@ -12017,6 +12017,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-authorized"
+version = "0.1.2"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-market-commons",
+]
+
+[[package]]
 name = "zrml-court"
 version = "0.1.0"
 dependencies = [
