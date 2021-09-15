@@ -62,7 +62,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         traits::MarketId,
-        types::{MarketPeriod, MaxUsize},
+        types::{MarketPeriod, MaxRuntimeUsize},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -105,12 +105,12 @@ mod pallet {
         T: Config,
     {
         /// The number of markets that received incentives in a block
-        AddedIncentives(MaxUsize),
+        AddedIncentives(MaxRuntimeUsize),
         /// The total amount of incentives distributed to accounts along side the number
         /// of accounts that received these incentives.
-        DistributedIncentives(BalanceOf<T>, MaxUsize),
+        DistributedIncentives(BalanceOf<T>, MaxRuntimeUsize),
         /// The number of markets that subtracted incentives in a block
-        SubtractedIncentives(MaxUsize),
+        SubtractedIncentives(MaxRuntimeUsize),
     }
 
     #[pallet::error]

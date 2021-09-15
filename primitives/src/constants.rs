@@ -96,7 +96,7 @@ parameter_types! {
 // Swaps parameters
 parameter_types! {
     pub const ExitFee: Balance = 0;
-    pub const MaxAssets: usize = MaxCategories::get() as usize + 1;
+    pub const MaxAssets: u16 = MaxCategories::get() + 1;
     pub const MaxInRatio: Balance = BASE / 2;
     pub const MaxOutRatio: Balance = (BASE / 3) + 1;
     pub const MaxTotalWeight: Balance = 50 * BASE;
