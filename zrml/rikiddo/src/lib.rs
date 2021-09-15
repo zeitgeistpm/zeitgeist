@@ -75,7 +75,7 @@ pub mod pallet {
         },
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
-    
+
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
         /// Defines the type of traded amounts.
@@ -118,7 +118,6 @@ pub mod pallet {
         type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec;
     }
 
-    
     /// Potential errors within the Rikiddo pallet.
     #[pallet::error]
     pub enum Error<T, I = ()> {

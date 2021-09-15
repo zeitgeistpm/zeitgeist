@@ -1,5 +1,6 @@
 //! This module contains the structures used to calculate the fee based on a sigmoid curve.
 
+use super::convert_to_signed;
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Fee,
@@ -24,8 +25,6 @@ use substrate_fixed::{
     types::extra::{LeEqU128, LeEqU32, LeEqU64},
     FixedI64,
 };
-use super::convert_to_signed;
-
 
 /// Configurable values used to calculate a fee based on a sigmoid curve. The usage of the
 /// configuration parameters is depicted in equation `z(r)` within the
