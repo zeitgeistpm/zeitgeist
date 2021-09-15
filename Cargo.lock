@@ -12144,6 +12144,8 @@ dependencies = [
 name = "zrml-rikiddo"
 version = "0.1.2"
 dependencies = [
+ "arbitrary",
+ "cfg-if 1.0.0",
  "frame-support",
  "frame-system",
  "hashbrown 0.11.2",
@@ -12155,6 +12157,19 @@ dependencies = [
  "sp-runtime",
  "substrate-fixed",
  "zeitgeist-primitives",
+ "zrml-rikiddo",
+]
+
+[[package]]
+name = "zrml-rikiddo-fuzz"
+version = "0.0.0"
+dependencies = [
+ "arbitrary",
+ "frame-support",
+ "frame-system",
+ "libfuzzer-sys",
+ "substrate-fixed",
+ "zrml-rikiddo",
 ]
 
 [[package]]

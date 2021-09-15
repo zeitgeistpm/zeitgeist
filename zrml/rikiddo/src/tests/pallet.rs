@@ -11,8 +11,8 @@ type Balance = <Runtime as Config>::Balance;
 use crate::{
     mock::*,
     tests::rikiddo_sigmoid_mv::{cost, price},
-    traits::RikiddoSigmoidMVPallet,
-    types::{FromFixedDecimal, IntoFixedDecimal, Timespan},
+    traits::{FromFixedDecimal, IntoFixedDecimal, RikiddoSigmoidMVPallet},
+    types::Timespan,
     Config,
 };
 

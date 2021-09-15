@@ -1,4 +1,9 @@
-#![cfg(test)]
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
+#![cfg(feature = "mock")]
+
 use crate::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use frame_support::{construct_runtime, parameter_types};
 use sp_runtime::{

@@ -1,0 +1,89 @@
+[[bin]]
+doc = false
+name = "balance_to_fixedu_conversion"
+path = "balance_to_fixedu_conversion.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "ema_market_volume_first_state"
+path = "ema_market_volume_first_state.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "ema_market_volume_second_state"
+path = "ema_market_volume_second_state.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "ema_market_volume_third_state"
+path = "ema_market_volume_third_state.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "ema_market_volume_estimate_ema"
+path = "ema_market_volume_estimate_ema.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "fee_sigmoid"
+path = "fee_sigmoid.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "fixedi_to_fixedu_conversion"
+path = "fixedi_to_fixedu_conversion.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "fixedu_to_balance_conversion"
+path = "fixedu_to_balance_conversion.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "fixedu_to_fixedi_conversion"
+path = "fixedu_to_fixedi_conversion.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "rikiddo_pallet"
+path = "rikiddo_pallet.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "rikiddo_with_calculated_fee"
+path = "rikiddo_with_calculated_fee.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "rikiddo_with_initial_fee"
+path = "rikiddo_with_initial_fee.rs"
+test = false
+
+[dependencies]
+arbitrary = { features = ["derive"], version = "1.0" }
+frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+libfuzzer-sys = "0.4"
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
+zrml-rikiddo = { features = ["arbitrary", "mock"], path = ".." }
+
+[package]
+authors = ["Automatically generated"]
+edition = "2018"
+name = "zrml-rikiddo-fuzz"
+publish = false
+version = "0.0.0"
+
+[package.metadata]
+cargo-fuzz = true

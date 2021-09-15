@@ -2,6 +2,8 @@ use crate::{
     constants::INITIAL_FEE,
     traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
 };
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use frame_support::dispatch::{Decode, Encode};
 use hashbrown::HashMap;
@@ -16,6 +18,11 @@ use substrate_fixed::{
     },
     FixedI128, FixedI32, FixedU128, FixedU32,
 };
+#[cfg(feature = "arbitrary")]
+use substrate_fixed::{
+    types::extra::{LeEqU128, LeEqU32, LeEqU64},
+    FixedI64, FixedU64,
+};
 
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 
@@ -23,6 +30,36 @@ use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 pub struct RikiddoConfig<FI: Fixed> {
     pub initial_fee: FI,
     pub(crate) log2_e: FI,
+}
+
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_rikiddo_config {
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        impl<'a, Frac> Arbitrary<'a> for RikiddoConfig<$t<Frac>>
+        where
+            Frac: $LeEqU,
+            $t<Frac>: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
+        {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+                Ok(RikiddoConfig::<$t<Frac>>::new(<$t<Frac>>::from_bits(
+                    <$p as Arbitrary<'a>>::arbitrary(u)?,
+                )))
+            }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                <$p as Arbitrary<'a>>::size_hint(depth)
+            }
+        }
+    };
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_rikiddo_config! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_rikiddo_config! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_rikiddo_config! {FixedI128, LeEqU128, i128}
+    }
 }
 
 impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> RikiddoConfig<FS> {
@@ -86,6 +123,65 @@ where
     pub fees: FE,
     pub ma_short: MA,
     pub ma_long: MA,
+}
+
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
+    ( $ts:ident, $LeEqUs:ident, $tu:ident, $LeEqUu:ident ) => {
+        impl<'a, FracU, FracS, FE, MA> Arbitrary<'a>
+            for RikiddoSigmoidMV<$tu<FracU>, $ts<FracS>, FE, MA>
+        where
+            FracU: $LeEqUu,
+            FracS: $LeEqUs,
+            $tu<FracU>: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
+            $ts<FracS>: FixedSigned
+                + From<I9F23>
+                + LossyFrom<FixedI32<U31>>
+                + LossyFrom<U1F127>
+                + LossyFrom<FixedI128<U127>>
+                + PartialOrd<I9F23>,
+            <$ts<FracS> as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
+            FE: Sigmoid<FS = $ts<FracS>> + Arbitrary<'a>,
+            MA: MarketAverage<FU = $tu<FracU>> + Arbitrary<'a>,
+        {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+                Ok(RikiddoSigmoidMV::new(
+                    <RikiddoConfig<$ts<FracS>> as Arbitrary<'a>>::arbitrary(u)?,
+                    <FE as Arbitrary<'a>>::arbitrary(u)?,
+                    <MA as Arbitrary<'a>>::arbitrary(u)?,
+                    <MA as Arbitrary<'a>>::arbitrary(u)?,
+                ))
+            }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                let (min, max) = <RikiddoConfig<$ts<FracS>> as Arbitrary<'a>>::size_hint(depth);
+
+                let fe_size = <FE as Arbitrary<'a>>::size_hint(depth);
+                let ma_size = <MA as Arbitrary<'a>>::size_hint(depth);
+
+                let max_accumulated = max
+                    .unwrap_or(0)
+                    .saturating_add(fe_size.1.unwrap_or(fe_size.0))
+                    .saturating_add(ma_size.1.unwrap_or(ma_size.0).saturating_mul(2));
+                let min_accumulated = min.saturating_add(fe_size.0).saturating_add(ma_size.0);
+
+                if max_accumulated == usize::MAX {
+                    (min_accumulated, None)
+                } else {
+                    (min_accumulated, Some(max_accumulated))
+                }
+            }
+        }
+    };
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_rikiddo_sigmoid_mv! {FixedI32, LeEqU32, FixedU32, LeEqU32}
+        impl_arbitrary_for_rikiddo_sigmoid_mv! {FixedI64, LeEqU64, FixedU64, LeEqU64}
+        impl_arbitrary_for_rikiddo_sigmoid_mv! {FixedI128, LeEqU128, FixedU128, LeEqU128}
+    }
 }
 
 impl<FU, FS, FE, MA> RikiddoSigmoidMV<FU, FS, FE, MA>

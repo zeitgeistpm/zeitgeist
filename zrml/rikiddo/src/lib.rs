@@ -3,11 +3,13 @@
 //! Manages prices of event assets within a pool
 
 #![cfg_attr(not(feature = "std"), no_std)]
+// This is required to be able to use the derive(Arbitrary) macro.
+#![cfg_attr(feature = "arbitrary", allow(clippy::integer_arithmetic))]
 
 extern crate alloc;
 
 pub mod constants;
-mod mock;
+pub mod mock;
 mod tests;
 pub mod traits;
 pub mod types;
@@ -15,6 +17,10 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
+    use crate::{
+        traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
+        types::{TimestampedVolume, UnixTimestamp},
+    };
     use core::{
         convert::TryFrom,
         fmt::Debug,
@@ -38,12 +44,6 @@ mod pallet {
         },
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
-
-    use crate::{
-        traits::{Lmsr, RikiddoMV, RikiddoSigmoidMVPallet},
-        types::{FromFixedDecimal, FromFixedToDecimal, TimestampedVolume, UnixTimestamp},
-    };
-
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
         /// Defines the type of traded amounts
