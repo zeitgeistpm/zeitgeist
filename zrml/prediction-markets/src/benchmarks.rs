@@ -215,7 +215,7 @@ benchmarks! {
         for i in 0..c.min(T::MaxDisputes::get()) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&marketid);
-            let _ = T::SimpleDisputes::on_dispute(Default::default(), &disputes, &marketid, &origin)?;
+            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
         }
 
         let approval_origin = T::ApprovalOrigin::successful_origin();
@@ -320,7 +320,7 @@ benchmarks! {
     }:  {
         let origin = caller.clone();
         let disputes = crate::Disputes::<T>::get(&marketid);
-        let _ = T::SimpleDisputes::on_dispute(Default::default(), &disputes, &marketid, &origin)?;
+        let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
     }
 
     internal_resolve_categorical_reported {
@@ -336,7 +336,7 @@ benchmarks! {
     }: {
         let market = T::MarketCommons::market(&marketid)?;
         let disputes = crate::Disputes::<T>::get(&marketid);
-        T::SimpleDisputes::on_resolution(&default_dispute_bond::<T>, &disputes, &marketid, &market)?
+        T::SimpleDisputes::on_resolution(&disputes, &marketid, &market)?
     }
 
     internal_resolve_categorical_disputed {
@@ -355,12 +355,12 @@ benchmarks! {
         for i in 0..c.min(d) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&marketid);
-            let _ = T::SimpleDisputes::on_dispute(Default::default(), &disputes, &marketid, &origin)?;
+            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;
         let disputes = crate::Disputes::<T>::get(&marketid);
-        T::SimpleDisputes::on_resolution(&default_dispute_bond::<T>, &disputes, &marketid, &market)?
+        T::SimpleDisputes::on_resolution(&disputes, &marketid, &market)?
     }
 
     internal_resolve_scalar_reported {
@@ -370,7 +370,7 @@ benchmarks! {
     }: {
         let market = T::MarketCommons::market(&marketid)?;
         let disputes = crate::Disputes::<T>::get(&marketid);
-        T::SimpleDisputes::on_resolution(&default_dispute_bond::<T>, &disputes, &marketid, &market)?
+        T::SimpleDisputes::on_resolution(&disputes, &marketid, &market)?
     }
 
     internal_resolve_scalar_disputed {
@@ -383,12 +383,12 @@ benchmarks! {
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(&marketid);
             let origin = caller.clone();
-            let _ = T::SimpleDisputes::on_dispute(Default::default(), &disputes, &marketid, &origin)?;
+            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;
         let disputes = crate::Disputes::<T>::get(&marketid);
-        T::SimpleDisputes::on_resolution(&default_dispute_bond::<T>, &disputes, &marketid, &market)?
+        T::SimpleDisputes::on_resolution(&disputes, &marketid, &market)?
     }
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
