@@ -31,7 +31,7 @@ pub use sigmoid_fee::*;
 /// A timestamp that contains the seconds since January 1st, 1970 at UTC.
 pub type UnixTimestamp = u64;
 
-/// A 2-tuple of a unix timestmp and a volume coupled within a common structure.
+/// A 2-tuple containing an unix timestamp and a volume.
 #[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct TimestampedVolume<F: Fixed> {
     /// The timestamp of the volume.

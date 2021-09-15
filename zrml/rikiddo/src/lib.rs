@@ -1,6 +1,16 @@
 //! # Rikiddo
 //!
-//! Manages prices of event assets within a pool
+//! Generic and modular implemenation of Rikiddo market scoring rule.
+//!
+//! Provides traits and implementations for sigmoid fee caluclation, calculation of ema based on
+//! market volume, LMSR and Rikiddo using sigmoid fee calculation and two ema periods.
+//!
+//! Rikiddo is a liquidity-sensitive logarithm market scoring algorithm, which can be used
+//! to determine the prices of event assets and their corresponding probabilities. It incorporates
+//! historical trading data to optimize it's reactiveness to abrupt and longer lasting changes
+//! in the market trend. More information at [blog.zeitgeist.pm].
+//!
+//! [blog.zeitgeist.pm]: https://blog.zeitgeist.pm/introducing-zeitgeists-rikiddo-scoring-rule/
 
 #![cfg_attr(not(feature = "std"), no_std)]
 // This is required to be able to use the derive(Arbitrary) macro.
@@ -195,7 +205,12 @@ pub mod pallet {
         type FU = T::FixedTypeU;
         type Rikiddo = T::Rikiddo;
 
-        /// Return price P_i(q) for all assets in q
+        /// Returns a vector of prices for a given set of assets (same order as `asset_balances`).
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// * `asset_balances`: The balance vector of the assets.
         fn all_prices(
             poolid: Self::PoolId,
             asset_balances: &[Self::Balance],
@@ -212,7 +227,11 @@ pub mod pallet {
             }
         }
 
-        /// Clear market data for specific asset pool
+        /// Clear market data for a specific asset pool.
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
         fn clear(poolid: Self::PoolId) -> Result<(), DispatchError> {
             let mut rikiddo = Self::get_rikiddo(&poolid)?;
             rikiddo.clear();
@@ -242,7 +261,12 @@ pub mod pallet {
             }
         }
 
-        /// Create Rikiddo instance for specifc asset pool
+        /// Create Rikiddo instance for specifc asset pool.
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// * `rikiddo`: A specific type of Rikiddo as specified in the pallet's configuration.
         fn create(poolid: Self::PoolId, rikiddo: Self::Rikiddo) -> DispatchResult {
             if Self::get_rikiddo(&poolid).is_ok() {
                 return Err(Error::<T, I>::RikiddoAlreadyExistsForPool.into());
@@ -252,14 +276,23 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Destroy Rikiddo instance
+        /// Destroy Rikiddo instance for a specific pool.
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
         fn destroy(poolid: Self::PoolId) -> DispatchResult {
             let _ = Self::get_rikiddo(&poolid)?;
             <RikiddoPerPool<T, I>>::remove(poolid);
             Ok(())
         }
 
-        /// Fetch the current fee
+        /// Returns the current fee.
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// * `rikiddo`: A specific type of Rikiddo as specified in the pallet's configuration.
         fn fee(poolid: Self::PoolId) -> Result<Self::Balance, DispatchError> {
             let rikiddo = Self::get_rikiddo(&poolid)?;
 
@@ -272,7 +305,13 @@ pub mod pallet {
             }
         }
 
-        /// Return price P_i(q) for asset q_i in q
+        /// Returns the price of one specific asset.
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// * `asset_in_question`: The balance of the asset for which the price should be returned.
+        /// * `asset_balances`: The balance vector of the assets.
         fn price(
             poolid: Self::PoolId,
             asset_in_question: Self::Balance,
@@ -291,7 +330,12 @@ pub mod pallet {
             }
         }
 
-        /// Update market data
+        /// Update the market data by adding volume.
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
+        /// * `volume`: The volume that was traded in the pool with id `poolid`.
         fn update_volume(
             poolid: Self::PoolId,
             volume: Self::Balance,

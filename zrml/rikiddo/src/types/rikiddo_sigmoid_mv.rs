@@ -158,7 +158,7 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
                 + LossyFrom<FixedI128<U127>>
                 + PartialOrd<I9F23>,
             <$ts<FracS> as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-            FE: Sigmoid<FS = $ts<FracS>> + Arbitrary<'a>,
+            FE: Fee<FS = $ts<FracS>> + Arbitrary<'a>,
             MA: MarketAverage<FU = $tu<FracU>> + Arbitrary<'a>,
         {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
