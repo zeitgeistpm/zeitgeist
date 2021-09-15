@@ -48,15 +48,8 @@ pub trait MarketCommonsPalletApi {
     /// Fetches the pool id associated with a given `market_id`.
     fn market_pool(market_id: &Self::MarketId) -> Result<PoolId, DispatchError>;
 
+    // Etc
+
     /// Returns the current UTC time (milliseconds)
     fn now() -> Self::Moment;
-
-    // Migrations (Temporary)
-
-    fn insert_market(
-        market_id: Self::MarketId,
-        market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    );
-
-    fn set_market_counter(counter: Self::MarketId);
 }

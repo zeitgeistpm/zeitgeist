@@ -411,7 +411,7 @@ fn it_resolves_a_disputed_market() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100));
 
         run_to_block(100);
 

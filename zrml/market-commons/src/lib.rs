@@ -155,21 +155,10 @@ mod pallet {
                 .map_err(|_err| Error::<T>::MarketPoolDoesNotExist.into())
         }
 
+        // Etc
+
         fn now() -> Self::Moment {
             T::Timestamp::now()
-        }
-
-        // Migrations (Temporary)
-
-        fn insert_market(
-            market_id: Self::MarketId,
-            market: Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) {
-            <Markets<T>>::insert(market_id, market);
-        }
-
-        fn set_market_counter(market_counter: Self::MarketId) {
-            MarketCounter::<T>::put(market_counter);
         }
     }
 

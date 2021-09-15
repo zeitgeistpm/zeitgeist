@@ -5,7 +5,7 @@ extern crate alloc;
 mod asset;
 pub mod constants;
 mod market;
-mod max_usize;
+mod max_runtime_usize;
 mod outcome_report;
 mod pool;
 mod pool_status;

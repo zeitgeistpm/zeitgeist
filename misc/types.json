@@ -89,7 +89,7 @@
       "Scalar": "(u128, u128)"
     }
   },
-  "MaxUsize": "u64",
+  "MaxRuntimeUsize": "u64",
   "Moment": "u64",
   "MultiHash": {
     "_enum": {

@@ -1,9 +1,7 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{
-        Balances, ExtBuilder, LiquidityMining, MarketCommons, Origin, Runtime, System, ALICE, BOB,
-    },
+    mock::{Balances, ExtBuilder, LiquidityMining, Origin, Runtime, System, ALICE, BOB},
     track_incentives_based_on_bought_shares::TrackIncentivesBasedOnBoughtShares,
     track_incentives_based_on_sold_shares::TrackIncentivesBasedOnSoldShares,
     BlockBoughtShares, BlockSoldShares, LiquidityMiningPalletApi as _, OwnedValues,
@@ -18,7 +16,7 @@ use frame_system::RawOrigin;
 use zeitgeist_primitives::types::{
     Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
 };
-use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_market_commons::Markets;
 
 #[test]
 fn blocks_shares_are_updated_after_each_block() {
@@ -183,7 +181,7 @@ fn only_sudo_can_change_per_block_distribution() {
 }
 
 fn create_default_market(market_id: u128, period: Range<u64>) {
-    MarketCommons::insert_market(
+    Markets::<Runtime>::insert(
         market_id,
         Market {
             creation: MarketCreation::Permissionless,

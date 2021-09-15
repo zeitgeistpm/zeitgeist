@@ -213,22 +213,25 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
         let mut fixed_str = fixed.to_string();
         let fixed_frac = fixed.frac();
 
+        let places_usize: usize = places.into();
+
         if fixed_frac == 0 {
             // Add `places` times 0 to pad all remaining fractional decimal places
-            fixed_str += &"0".repeat(places as usize);
+            fixed_str += &"0".repeat(places_usize);
         } else {
-            let frac_string = &fixed_frac.to_string()[2..];
+            let frac_string = fixed_frac.to_string();
+            let frac_str = frac_string.get(2..).unwrap_or_default();
 
-            match frac_string.len().cmp(&(places as usize)) {
+            match frac_str.len().cmp(&places_usize) {
                 Ordering::Less => {
                     fixed_str.retain(|c| c != '.');
                     // Padding to the right side up to `places`. Cannot underflow.
-                    fixed_str += &"0".repeat((places as usize).saturating_sub(frac_string.len()));
+                    fixed_str += &"0".repeat(places_usize.saturating_sub(frac_str.len()));
                 }
                 Ordering::Greater => {
                     // Cutting down to `places` + arithmetic rounding of the last digit
                     let frac_plus_one_digit_str =
-                        &frac_string[0..(places as usize).saturating_add(1)];
+                        frac_str.get(..places_usize.saturating_add(1)).unwrap_or_default();
 
                     if let Ok(mut res) = frac_plus_one_digit_str.parse::<u128>() {
                         let last_digit = res % 10;

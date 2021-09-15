@@ -79,8 +79,7 @@ mod pallet {
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let _ = Self::juror(&who)?;
-            Jurors::<T>::remove(&who);
-            CurrencyOf::<T>::unreserve_all_named(&RESERVE_ID, &who);
+            Self::remove_juror_from_all_courts_of_all_markets(&who);
             Ok(())
         }
 
@@ -260,8 +259,6 @@ mod pallet {
                     slash,
                     BalanceStatus::Free,
                 )?;
-                CurrencyOf::<T>::unreserve_all_named(&RESERVE_ID, ai);
-                Jurors::<T>::remove(ai);
                 Self::remove_juror_from_all_courts_of_all_markets(ai);
                 Ok::<_, DispatchError>(())
             };
@@ -436,8 +433,10 @@ mod pallet {
             Ok((best_score.0.clone(), Some(second_best_score.0.clone())))
         }
 
-        // Obliterates all stored references of a juror
+        // Obliterates all stored references of a juror un-reserving balances.
         fn remove_juror_from_all_courts_of_all_markets(ai: &T::AccountId) {
+            CurrencyOf::<T>::unreserve_all_named(&RESERVE_ID, ai);
+            Jurors::<T>::remove(ai);
             let mut market_ids = BTreeSet::new();
             market_ids.extend(RequestedJurors::<T>::iter().map(|el| el.0));
             for market_id in &market_ids {
