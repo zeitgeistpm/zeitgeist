@@ -19,8 +19,7 @@ jobs:
           "clippy",
           "misc",
           "parachain",
-          "standalone",
-          "wasm"
+          "standalone"
         ]
     steps:
       - name: Checkout repository
