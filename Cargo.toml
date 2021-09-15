@@ -3,6 +3,7 @@ members = [
     "node",
     "primitives",
     "runtime",
+    "zrml/authorized",
     "zrml/court",
     "zrml/liquidity-mining",
     "zrml/market-commons",

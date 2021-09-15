@@ -88,8 +88,6 @@ mod pallet {
         /// 1. Any resolution must either have a `Disputed` or `Reported` market status
         /// 2. If status is `Disputed`, then at least one dispute must exist
         InvalidMarketStatus,
-        /// Market does not have a report
-        NoReport,
     }
 
     #[pallet::event]
@@ -130,7 +128,7 @@ mod pallet {
         where
             D: Fn(usize) -> Self::Balance,
         {
-            let report = market.report.clone().ok_or(Error::<T>::NoReport)?;
+            let report = T::MarketCommons::report(market)?;
 
             // if the market was permissionless and not invalid, return `ValidityBond`.
             // if market.creation == MarketCreation::Permissionless {
