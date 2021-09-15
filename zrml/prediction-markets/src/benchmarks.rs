@@ -20,8 +20,8 @@ use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
-        OutcomeReport, ScalarPosition,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MaxRuntimeUsize,
+        MultiHash, OutcomeReport, ScalarPosition,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
