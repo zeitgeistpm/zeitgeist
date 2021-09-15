@@ -37,6 +37,11 @@ pub const BALANCE_FRACTIONAL_DECIMAL_PLACES: u8 = {
     counter
 };
 
+// Authorized
+parameter_types! {
+    pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
+}
+
 // Balance
 parameter_types! {
     pub const ExistentialDeposit: u128 = CENT;
