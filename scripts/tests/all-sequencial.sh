@@ -8,5 +8,4 @@
 . "$(dirname "$0")/clippy.sh" --source-only
 . "$(dirname "$0")/parachain.sh" --source-only
 . "$(dirname "$0")/standalone.sh" --source-only
-. "$(dirname "$0")/wasm.sh" --source-only
 . "$(dirname "$0")/fuzz.sh" --source-only
