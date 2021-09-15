@@ -3,6 +3,10 @@ use crate::{
     constants::{EMA_SHORT, SMOOTHING},
     traits::MarketAverage,
 };
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
+#[cfg(feature = "arbitrary")]
+use core::mem;
 use frame_support::dispatch::{Decode, Encode};
 use sp_core::RuntimeDebug;
 use substrate_fixed::{
@@ -10,12 +14,68 @@ use substrate_fixed::{
     types::extra::{U24, U64},
     FixedU128, FixedU32,
 };
+#[cfg(feature = "arbitrary")]
+use substrate_fixed::{
+    types::extra::{LeEqU128, LeEqU16, LeEqU32, LeEqU64, LeEqU8},
+    FixedI128, FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU64, FixedU8,
+};
 
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaConfig<FI: Fixed> {
     pub ema_period: Timespan,
     pub ema_period_estimate_after: Option<Timespan>,
     pub smoothing: FI,
+}
+
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_ema_config {
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        impl<'a, Frac> Arbitrary<'a> for EmaConfig<$t<Frac>>
+        where
+            Frac: $LeEqU,
+            $t<Frac>: Fixed,
+        {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
+                Ok(EmaConfig::<$t<Frac>> {
+                    ema_period: <Timespan as Arbitrary<'a>>::arbitrary(u)?,
+                    ema_period_estimate_after: Some(<Timespan as Arbitrary<'a>>::arbitrary(u)?),
+                    smoothing: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                })
+            }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                let (min, max) = <Timespan as Arbitrary<'a>>::size_hint(depth);
+                let fsc_size = <$p as Arbitrary<'a>>::size_hint(depth);
+                let max_accumulated = max
+                    .unwrap_or(min)
+                    .saturating_mul(2)
+                    .saturating_add(fsc_size.1.unwrap_or(fsc_size.0));
+                let min_accumulated = min.saturating_mul(2).saturating_add(fsc_size.0);
+
+                if max_accumulated == usize::MAX {
+                    (min_accumulated, None)
+                } else {
+                    (min_accumulated, Some(max_accumulated))
+                }
+            }
+        }
+    };
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_ema_config! {FixedI8, LeEqU8, i8}
+        impl_arbitrary_for_ema_config! {FixedI16, LeEqU16, i16}
+        impl_arbitrary_for_ema_config! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_ema_config! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_ema_config! {FixedI128, LeEqU128, i128}
+        impl_arbitrary_for_ema_config! {FixedU8, LeEqU8, u8}
+        impl_arbitrary_for_ema_config! {FixedU16, LeEqU16, u16}
+        impl_arbitrary_for_ema_config! {FixedU32, LeEqU32, u32}
+        impl_arbitrary_for_ema_config! {FixedU64, LeEqU64, u64}
+        impl_arbitrary_for_ema_config! {FixedU128, LeEqU128, u128}
+    }
 }
 
 impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaConfig<FU> {
@@ -39,6 +99,7 @@ impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<FU> {
 }
 
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub enum MarketVolumeState {
     Uninitialized,
     DataCollectionStarted,
@@ -54,6 +115,73 @@ pub struct EmaMarketVolume<FU: FixedUnsigned> {
     state: MarketVolumeState,
     start_time: UnixTimestamp,
     volumes_per_period: FU,
+}
+
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_ema_market_volume {
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        impl<'a, Frac> Arbitrary<'a> for EmaMarketVolume<$t<Frac>>
+        where
+            Frac: $LeEqU,
+            $t<Frac>: FixedUnsigned,
+        {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
+                Ok(EmaMarketVolume::<$t<Frac>>::new(
+                    <EmaConfig<$t<Frac>> as Arbitrary<'a>>::arbitrary(u)?,
+                ))
+            }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                let (min, max) = <EmaConfig<$t<Frac>> as Arbitrary<'a>>::size_hint(depth);
+                let fixed_size = mem::size_of::<$t<Frac>>();
+                let ema_size = (fixed_size, fixed_size);
+                let multiplier_size = (fixed_size, fixed_size);
+                let last_time_size = <UnixTimestamp as Arbitrary<'a>>::size_hint(depth);
+                let state_size = <MarketVolumeState as Arbitrary<'a>>::size_hint(depth);
+                let start_time_size = <UnixTimestamp as Arbitrary<'a>>::size_hint(depth);
+                let volumes_per_period = (fixed_size, fixed_size);
+
+                let max_accumulated = max
+                    .unwrap_or(0)
+                    .saturating_mul(2)
+                    .saturating_add(ema_size.1)
+                    .saturating_add(multiplier_size.1)
+                    .saturating_add(last_time_size.1.unwrap_or(last_time_size.0))
+                    .saturating_add(state_size.1.unwrap_or(state_size.0))
+                    .saturating_add(start_time_size.1.unwrap_or(start_time_size.0))
+                    .saturating_add(volumes_per_period.0);
+                let min_accumulated = min
+                    .saturating_add(ema_size.0)
+                    .saturating_add(multiplier_size.0)
+                    .saturating_add(last_time_size.0)
+                    .saturating_add(state_size.0)
+                    .saturating_add(start_time_size.0)
+                    .saturating_add(volumes_per_period.0);
+
+                if max_accumulated == usize::MAX {
+                    (min_accumulated, None)
+                } else {
+                    (min_accumulated, Some(max_accumulated))
+                }
+            }
+        }
+    };
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_ema_market_volume! {FixedI8, LeEqU8, i8}
+        impl_arbitrary_for_ema_market_volume! {FixedI16, LeEqU16, i16}
+        impl_arbitrary_for_ema_market_volume! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_ema_market_volume! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_ema_market_volume! {FixedI128, LeEqU128, i128}
+        impl_arbitrary_for_ema_market_volume! {FixedU8, LeEqU8, u8}
+        impl_arbitrary_for_ema_market_volume! {FixedU16, LeEqU16, u16}
+        impl_arbitrary_for_ema_market_volume! {FixedU32, LeEqU32, u32}
+        impl_arbitrary_for_ema_market_volume! {FixedU64, LeEqU64, u64}
+        impl_arbitrary_for_ema_market_volume! {FixedU128, LeEqU128, u128}
+    }
 }
 
 impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
@@ -229,7 +357,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                 // It should not state transit, if the amount of gathered data is too low.
                 // This would result in a multiplier that is greater than 1, which can lead to
                 // a negative ema. The amount depends on the size of the smoothing factor.
-                if timestamp_sub_start_time > Into::<u64>::into(comparison_value)
+                if timestamp_sub_start_time > u64::from(comparison_value)
                     && (*self.volumes_per_period() + 1.into()) >= self.config.smoothing
                 {
                     // We extrapolate the txs per period

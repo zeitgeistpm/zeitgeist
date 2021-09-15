@@ -1,3 +1,8 @@
+use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal};
+#[cfg(feature = "arbitrary")]
+use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+#[cfg(feature = "arbitrary")]
+use core::mem;
 use core::{cmp::Ordering, convert::TryFrom};
 use frame_support::dispatch::{Decode, Encode};
 use sp_core::RuntimeDebug;
@@ -5,6 +10,11 @@ use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
     types::extra::{U127, U128},
     FixedI128, FixedU128, ParseFixedError,
+};
+#[cfg(feature = "arbitrary")]
+use substrate_fixed::{
+    types::extra::{LeEqU128, LeEqU16, LeEqU32, LeEqU64, LeEqU8},
+    FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU32, FixedU64, FixedU8,
 };
 
 mod ema_market_volume;
@@ -23,7 +33,50 @@ pub struct TimestampedVolume<F: Fixed> {
     pub volume: F,
 }
 
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_for_timestamped_volume {
+    ( $t:ident, $LeEqU:ident, $p:ty ) => {
+        #[allow(clippy::integer_arithmetic)]
+        impl<'a, Frac> Arbitrary<'a> for TimestampedVolume<$t<Frac>>
+        where
+            Frac: $LeEqU,
+            $t<Frac>: Fixed,
+        {
+            fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
+                return Ok(TimestampedVolume {
+                    timestamp: <UnixTimestamp as Arbitrary<'a>>::arbitrary(u)?,
+                    volume: <$t<Frac>>::from_bits(<$p as Arbitrary<'a>>::arbitrary(u)?),
+                });
+            }
+
+            #[inline]
+            fn size_hint(_depth: usize) -> (usize, Option<usize>) {
+                let bytecount_fixed = mem::size_of::<$t<Frac>>();
+                let bytecount_timestamp = mem::size_of::<UnixTimestamp>();
+                let required_bytes = bytecount_fixed + bytecount_timestamp;
+                (required_bytes, Some(required_bytes))
+            }
+        }
+    };
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "arbitrary")] {
+        impl_arbitrary_for_timestamped_volume! {FixedI8, LeEqU8, i8}
+        impl_arbitrary_for_timestamped_volume! {FixedI16, LeEqU16, i16}
+        impl_arbitrary_for_timestamped_volume! {FixedI32, LeEqU32, i32}
+        impl_arbitrary_for_timestamped_volume! {FixedI64, LeEqU64, i64}
+        impl_arbitrary_for_timestamped_volume! {FixedI128, LeEqU128, i128}
+        impl_arbitrary_for_timestamped_volume! {FixedU8, LeEqU8, u8}
+        impl_arbitrary_for_timestamped_volume! {FixedU16, LeEqU16, u16}
+        impl_arbitrary_for_timestamped_volume! {FixedU32, LeEqU32, u32}
+        impl_arbitrary_for_timestamped_volume! {FixedU64, LeEqU64, u64}
+        impl_arbitrary_for_timestamped_volume! {FixedU128, LeEqU128, u128}
+    }
+}
+
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Timespan {
     Seconds(u32),
     Minutes(u32),
@@ -91,21 +144,12 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
     // We can safely cast because until here we know that the msb is not set.
     let integer_part: TO = convert_common(num)?;
     let fractional_part: FixedU128<U128> = num.frac().to_fixed();
-
     if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
         Ok(res)
     } else {
         // This error should be impossible to reach.
         Err("Something went wrong during FixedSigned to FixedUnsigned type conversion")
     }
-}
-
-/// Converts a fixed point decimal number into another type
-pub trait FromFixedDecimal<N: Into<u128>>
-where
-    Self: Sized,
-{
-    fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError>;
 }
 
 /// Converts a fixed point decimal number into Fixed type
@@ -115,20 +159,17 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
         let mut decimal_string = decimal_u128.to_string();
 
         if decimal_string.len() <= places as usize {
+            // This can never underflow (places >= len). Saturating subtraction to satisfy clippy.
             decimal_string = "0.".to_owned()
-                + &"0".repeat(places as usize - decimal_string.len())
+                + &"0".repeat((places as usize).saturating_sub(decimal_string.len()))
                 + &decimal_string;
         } else {
-            decimal_string.insert(decimal_string.len() - places as usize, '.');
+            // This can never underflow (len >= places). Saturating subtraction to satisfy clippy.
+            decimal_string.insert(decimal_string.len().saturating_sub(places as usize), '.');
         }
 
         F::from_str(&decimal_string)
     }
-}
-
-/// Converts a fixed point decimal number into Fixed type (Balance -> Fixed)
-pub trait IntoFixedFromDecimal<F: Fixed> {
-    fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError>;
 }
 
 /// Converts a fixed point decimal number into Fixed type
@@ -140,14 +181,6 @@ where
     fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError> {
         F::from_fixed_decimal(self, places)
     }
-}
-
-/// Converts a Fixed type into fixed point decimal number
-pub trait FromFixedToDecimal<F>
-where
-    Self: Sized + TryFrom<u128>,
-{
-    fn from_fixed_to_fixed_decimal(fixed: F, places: u8) -> Result<Self, &'static str>;
 }
 
 /// Converts a Fixed type into a fixed point decimal number (Fixed -> Balance)
@@ -162,7 +195,7 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
                     // `from_num(1)` cannot panic if `from_num(2)` succeeded
                     if let Some(res) = F::from_num(1).checked_div(two) {
                         if fixed.frac() >= res {
-                            result += 1;
+                            result = result.saturating_add(1);
                         }
                     }
                 }
@@ -189,19 +222,20 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
             match frac_string.len().cmp(&(places as usize)) {
                 Ordering::Less => {
                     fixed_str.retain(|c| c != '.');
-                    // Padding to the right side up to `places`
-                    fixed_str += &"0".repeat(places as usize - frac_string.len());
+                    // Padding to the right side up to `places`. Cannot underflow.
+                    fixed_str += &"0".repeat((places as usize).saturating_sub(frac_string.len()));
                 }
                 Ordering::Greater => {
                     // Cutting down to `places` + arithmetic rounding of the last digit
-                    let frac_plus_one_digit_str = &frac_string[0..places as usize + 1];
+                    let frac_plus_one_digit_str =
+                        &frac_string[0..(places as usize).saturating_add(1)];
 
                     if let Ok(mut res) = frac_plus_one_digit_str.parse::<u128>() {
                         let last_digit = res % 10;
                         res /= 10;
 
                         if last_digit >= 5 {
-                            res += 1;
+                            res = res.saturating_add(1);
                         }
 
                         fixed_str = fixed.int().to_string() + &res.to_string()
@@ -229,11 +263,6 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
             Err("The parsed fixed decimal representation does not fit into the target type")
         }
     }
-}
-
-/// Converts a fixed point decimal number into Fixed type
-pub trait IntoFixedDecimal<N: TryFrom<u128>> {
-    fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str>;
 }
 
 /// Converts a fixed point decimal number into Fixed type
