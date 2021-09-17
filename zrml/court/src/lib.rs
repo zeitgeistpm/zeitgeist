@@ -233,19 +233,39 @@ mod pallet {
             Jurors::<T>::get(account_id).ok_or_else(|| Error::<T>::JurorDoesNotExists.into())
         }
 
+        // # Manages tardy jurors and returns valid winners and valid losers.
+        //
+        // ## Management
+        //
         // * Jurors that didn't vote within `CourtCaseDuration` or didn't vote at all are
         // placed as tardy.
         //
-        // * Slashes 20% of staked funds and removes tardy jurors that didn't vote  or voted
+        // * Slashes 20% of staked funds and removes tardy jurors that didn't vote or voted
         // after the maximum allowed block.
-        fn manage_tardy_jurors<F>(
-            requested_jurors: &mut [(T::AccountId, Juror, T::BlockNumber)],
-            votes: &[(T::AccountId, (T::BlockNumber, OutcomeReport))],
+        //
+        // ## Returned list of accounts
+        //
+        // All new and old tardy jurors, excluding the ones that voted within `CourtCaseDuration`,
+        // are removed from the list of accounts that will be slashed to reward winners. Already
+        // tardy jurors that voted again on the second most voted outcome are also removed from the
+        // same list.
+        //
+        // In other words, does not yield slashed accounts, winners of the losing side,
+        // accounts that didn't vote or accounts that voted after the maximum allowed block
+        fn manage_tardy_jurors<'a, 'b, F>(
+            requested_jurors: &'a [(
+                T::AccountId,
+                Juror,
+                T::BlockNumber,
+                Option<&(T::BlockNumber, OutcomeReport)>,
+            )],
             mut cb: F,
-        ) -> DispatchResult
+        ) -> Result<Vec<(&'b T::AccountId, &'b OutcomeReport)>, DispatchError>
         where
-            F: FnMut(&T::AccountId, &mut Juror, &OutcomeReport) -> DispatchResult,
+            F: FnMut(&OutcomeReport) -> bool,
+            'a: 'b,
         {
+            let mut valid_winners_and_losers = Vec::with_capacity(requested_jurors.len());
             let treasury_account_id = Self::treasury_account_id();
 
             let slash_and_remove_juror = |ai: &T::AccountId| {
@@ -263,27 +283,40 @@ mod pallet {
                 Ok::<_, DispatchError>(())
             };
 
-            for (ai, juror, max_block) in requested_jurors {
-                if let Some((_, (block, outcome))) = votes.iter().find(|el| &el.0 == ai) {
+            for (ai, juror, max_block, vote_opt) in requested_jurors {
+                if let Some((block, outcome)) = vote_opt {
                     let vote_is_expired = block > max_block;
                     if vote_is_expired {
+                        // Tardy juror voted after maximum allowed block. Slash
                         if let JurorStatus::Tardy = juror.status {
                             slash_and_remove_juror(ai)?;
-                        } else {
-                            Self::set_stored_and_in_memory_juror_as_tardy(ai, juror)?;
                         }
-                        continue;
+                        // Ordinary juror voted after maximum allowed block. Set as tardy
+                        else {
+                            Self::set_stored_juror_as_tardy(ai)?;
+                        }
+                    } else {
+                        let has_voted_on_the_second_most_outcome = cb(outcome);
+                        if has_voted_on_the_second_most_outcome {
+                            // Don't set already tardy juror as tardy again
+                            if JurorStatus::Tardy != juror.status {
+                                Self::set_stored_juror_as_tardy(ai)?;
+                            }
+                        } else {
+                            valid_winners_and_losers.push((ai, outcome));
+                        }
                     }
-
-                    cb(ai, juror, outcome)?;
+                // Tardy juror didn't vote. Slash
                 } else if let JurorStatus::Tardy = juror.status {
                     slash_and_remove_juror(ai)?;
-                } else {
-                    Self::set_stored_and_in_memory_juror_as_tardy(ai, juror)?;
+                }
+                // Ordinary juror didn't vote. Set as tardy
+                else {
+                    Self::set_stored_juror_as_tardy(ai)?;
                 }
             }
 
-            Ok(())
+            Ok(valid_winners_and_losers)
         }
 
         // Modifies a stored juror.
@@ -310,54 +343,16 @@ mod pallet {
             INITIAL_JURORS_NUM.saturating_add(SUBSEQUENT_JURORS_FACTOR.saturating_mul(len))
         }
 
-        // Handy iterator 👍
-        //
-        // Used by `slash_losers_to_award_winners`. Tardy jurors include previously removed
-        // accounts, winners of the losing side, accounts that didn't vote and accounts that voted
-        // after the maximum allowed block, therefore, this function only yields valid winners
-        // and valid jurors that voted on the third or worse outcome.
-        fn non_tardy_jurors_with_votes<'a, 'b>(
-            requested_jurors: &'a mut [(T::AccountId, Juror, T::BlockNumber)],
-            votes: &'b [(T::AccountId, (T::BlockNumber, OutcomeReport))],
-        ) -> impl Iterator<
-            Item = (
-                &'a mut T::AccountId,
-                &'a mut Juror,
-                &'a mut T::BlockNumber,
-                &'b (T::BlockNumber, OutcomeReport),
-            ),
-        > {
-            requested_jurors.iter_mut().filter_map(move |(jai, j, max_block)| {
-                if matches!(j.status, JurorStatus::Tardy) {
-                    return None;
-                }
-                let vote_opt = votes.iter().find(|el| &el.0 == jai).map(|el| &el.1);
-                Some((jai, j, max_block, vote_opt?))
-            })
-        }
-
-        // Useful when dealing with both structures at the same time
-        fn set_stored_and_in_memory_juror_as_tardy(
-            account_id: &T::AccountId,
-            juror: &mut Juror,
-        ) -> DispatchResult {
-            juror.status = JurorStatus::Tardy;
-            Self::set_stored_juror_as_tardy(account_id)
-        }
-
         // Every juror that not voted on the first or second most voted outcome are slashed.
         fn slash_losers_to_award_winners(
-            requested_jurors: &mut [(T::AccountId, Juror, T::BlockNumber)],
-            votes: &[(T::AccountId, (T::BlockNumber, OutcomeReport))],
+            valid_winners_and_losers: &[(&T::AccountId, &OutcomeReport)],
             winner_outcome: &OutcomeReport,
         ) -> DispatchResult {
             let mut total_incentives = BalanceOf::<T>::from(0u8);
             let mut total_winners = BalanceOf::<T>::from(0u8);
 
-            for (jai, _, _, (_, outcome)) in
-                Self::non_tardy_jurors_with_votes(requested_jurors, votes)
-            {
-                if outcome == winner_outcome {
+            for (jai, outcome) in valid_winners_and_losers {
+                if outcome == &winner_outcome {
                     total_winners = total_winners.saturating_add(BalanceOf::<T>::from(1u8));
                 } else {
                     let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, jai);
@@ -376,10 +371,8 @@ mod pallet {
                     return Ok(());
                 };
 
-            for (jai, _, _, (_, outcome)) in
-                Self::non_tardy_jurors_with_votes(requested_jurors, votes)
-            {
-                if outcome == winner_outcome {
+            for (jai, outcome) in valid_winners_and_losers {
+                if outcome == &winner_outcome {
                     CurrencyOf::<T>::deposit_into_existing(jai, individual_winner_incentive)?;
                 }
             }
@@ -486,25 +479,21 @@ mod pallet {
             market_id: &Self::MarketId,
             _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<OutcomeReport, DispatchError> {
-            let mut requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
-                .filter_map(|el| {
-                    let j = Self::juror(&el.0).ok()?;
-                    Some((el.0, j, el.1))
-                })
-                .collect();
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
+            let requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
+                .map(|(juror_id, max_allowed_block)| {
+                    let juror = Self::juror(&juror_id)?;
+                    let vote_opt = votes.iter().find(|el| el.0 == juror_id).map(|el| &el.1);
+                    Ok((juror_id, juror, max_allowed_block, vote_opt))
+                })
+                .collect::<Result<_, DispatchError>>()?;
             let (first, second_opt) = Self::two_best_outcomes(&votes)?;
-            if let Some(second) = second_opt {
-                Self::manage_tardy_jurors(&mut requested_jurors, &votes, |ai, juror, outcome| {
-                    if outcome == &second {
-                        Self::set_stored_and_in_memory_juror_as_tardy(ai, juror)?;
-                    }
-                    Ok(())
-                })?;
+            let valid_winners_and_losers = if let Some(second) = second_opt {
+                Self::manage_tardy_jurors(&requested_jurors, |outcome| outcome == &second)?
             } else {
-                Self::manage_tardy_jurors(&mut requested_jurors, &votes, |_, _, _| Ok(()))?;
-            }
-            Self::slash_losers_to_award_winners(&mut requested_jurors, &votes, &first)?;
+                Self::manage_tardy_jurors(&requested_jurors, |_| false)?
+            };
+            Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
             Votes::<T>::remove_prefix(market_id, None);
             RequestedJurors::<T>::remove_prefix(market_id, None);
             Ok(first)
