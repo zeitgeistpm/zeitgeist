@@ -10,7 +10,7 @@ use frame_system::ensure_signed;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
 use zeitgeist_primitives::types::{Asset, Pool, PoolId, ScoringRule};
-use zrml_rikiddo::traits::RikiddoSigmoidMVPallet;
+use zrml_rikiddo::traits::RikiddoMVPallet;
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
 pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, T>(
