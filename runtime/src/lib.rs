@@ -128,21 +128,24 @@ macro_rules! create_zeitgeist_runtime {
 }
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
+    // Other Parity pallets
+    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 50,
+
     // System
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>} = 50,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 51,
+    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>} = 60,
+    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 61,
 
     // Consensus
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 60,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 61,
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 62,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 63,
+    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 70,
+    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 71,
+    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 72,
+    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 73,
 
     // XCM
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 70,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
-    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
+    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 80,
+    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 81,
+    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 82,
+    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 83,
     CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
 );
 #[cfg(not(feature = "parachain"))]
@@ -325,6 +328,18 @@ impl orml_tokens::Config for Runtime {
     type MaxLocks = MaxLocks;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
     type WeightInfo = ();
+}
+
+#[cfg(feature = "parachain")]
+impl pallet_crowdloan_rewards::Config for Runtime {
+    type Event = Event;
+    type InitializationPayment = InitializationPayment;
+    type Initialized = Initialized;
+    type MaxInitContributors = MaxInitContributorsBatchSizes;
+    type MinimumReward = MinimumReward;
+    type RelayChainAccountId = AccountId;
+    type RewardCurrency = Balances;
+    type WeightInfo = pallet_crowdloan_rewards::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_balances::Config for Runtime {
