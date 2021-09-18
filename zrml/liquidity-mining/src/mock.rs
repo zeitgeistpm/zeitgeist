@@ -20,15 +20,12 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 
-type Block = BlockTest<Runtime>;
-type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
-
 construct_runtime!(
     pub enum Runtime
     where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},

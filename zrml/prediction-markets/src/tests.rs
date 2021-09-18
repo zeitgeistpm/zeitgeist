@@ -15,7 +15,7 @@ use frame_support::{
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::BASE,
+    constants::{AdvisoryBond, OracleBond, ValidityBond, BASE, CENT},
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MultiHash, OutcomeReport, ScalarPosition,
@@ -51,14 +51,14 @@ fn it_creates_binary_markets() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
         // check the correct amount was reserved
-        let reserved = Balances::reserved_balance(&ALICE);
-        assert_eq!(reserved, 300);
+        let alice_reserved = Balances::reserved_balance(&ALICE);
+        assert_eq!(alice_reserved, ValidityBond::get() + OracleBond::get());
 
         // Creates an advised market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Advised, 0..1);
 
-        let alice_reserved = Balances::reserved_balance(&ALICE);
-        assert_eq!(alice_reserved, 450);
+        let new_alice_reserved = Balances::reserved_balance(&ALICE);
+        assert_eq!(new_alice_reserved, AdvisoryBond::get() + OracleBond::get() + alice_reserved);
 
         // Make sure that the market id has been incrementing
         let market_id = MarketCommons::latest_market_id().unwrap();
@@ -336,7 +336,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
         // Just skip to waaaay overdue.
-        run_to_block(3000);
+        run_to_block(9000);
 
         assert_ok!(PredictionMarkets::report(
             Origin::signed(ALICE), // alice reports her own market now
@@ -351,7 +351,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         assert_eq!(market.oracle, BOB);
 
         // make sure it still resolves
-        run_to_block(3011);
+        run_to_block(9011);
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -483,23 +483,23 @@ fn it_resolves_a_disputed_market() {
         //
         // slashed amounts
         // ---------------------------
-        // - OracleBond: 100
+        // - OracleBond: 50 * CENT
         // - Dave's reserve: 125
-        // Total: 225
-        // Per each: 112
+        // Total: 50 * CENT + 125
+        // Per each: 25 * CENT + 62
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + 112);
+        assert_eq!(charlie_balance, 1_000 * BASE + 25 * CENT + 62);
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(&EVE);
-        assert_eq!(eve_balance, 1_000 * BASE + 112);
+        assert_eq!(eve_balance, 1_000 * BASE + 25 * CENT + 62);
 
         let dave_balance = Balances::free_balance(&DAVE);
         assert_eq!(dave_balance, 1_000 * BASE - 125);
 
         let alice_balance = Balances::free_balance(&ALICE);
-        assert_eq!(alice_balance, 1_000 * BASE - 100);
+        assert_eq!(alice_balance, 1_000 * BASE - 50 * CENT);
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter

@@ -56,8 +56,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 5,
 };
 
-pub type AdaptedBasicCurrency =
-    orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
@@ -314,7 +312,7 @@ impl orml_currencies::Config for Runtime {
     type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
-    type NativeCurrency = AdaptedBasicCurrency;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
     type WeightInfo = ();
 }
 
