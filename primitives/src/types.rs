@@ -55,6 +55,9 @@ impl<'a> Arbitrary<'a> for MultiHash {
     }
 }
 
+/// ORML adapter
+pub type BasicCurrencyAdapter<R, B> = orml_currencies::BasicCurrencyAdapter<R, B, Amount, Balance>;
+
 pub type CurrencyId = Asset<MarketId>;
 
 /// Index of a transaction in the chain.

@@ -2,7 +2,6 @@
 
 use crate as zrml_swaps;
 use frame_support::{construct_runtime, parameter_types};
-use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
@@ -15,8 +14,8 @@ use zeitgeist_primitives::{
         MinLiquidity, MinWeight, MinimumPeriod, SwapsPalletId,
     },
     types::{
-        AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-        MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 
@@ -37,15 +36,13 @@ pub const CHARLIE: AccountIdTest = 2;
 pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 
-pub type AdaptedBasicCurrency = BasicCurrencyAdapter<Runtime, Balances, i128, u128>;
-pub type Block = BlockTest<Runtime>;
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 construct_runtime!(
     pub enum Runtime
     where
-        Block = Block,
-        NodeBlock = Block,
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
@@ -106,7 +103,7 @@ impl orml_currencies::Config for Runtime {
     type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
-    type NativeCurrency = AdaptedBasicCurrency;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
     type WeightInfo = ();
 }
 
@@ -185,7 +182,7 @@ impl ExtBuilder {
 }
 
 sp_api::mock_impl_runtime_apis! {
-    impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, AccountIdTest, Balance, MarketId>
+    impl zrml_swaps_runtime_api::SwapsApi<BlockTest<Runtime>, PoolId, AccountIdTest, Balance, MarketId>
       for Runtime
     {
         fn get_spot_price(

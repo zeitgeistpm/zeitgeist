@@ -8,26 +8,25 @@ use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{OnFinalize, OnInitialize},
-    weights::Weight,
 };
 use frame_system::EnsureSignedBy;
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
 };
 use zeitgeist_primitives::{
     constants::{
-        AuthorizedPalletId, BlockHashCount, CourtCaseDuration, CourtPalletId, DustAccountTest,
-        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories,
-        MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight,
-        MinCategories, MinLiquidity, MinWeight, PmPalletId, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, TreasuryPalletId, BASE,
+        AdvisoryBond, AuthorizedPalletId, BlockHashCount, CourtCaseDuration, CourtPalletId,
+        DustAccountTest, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
+        MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight,
+        MaxWeight, MinCategories, MinLiquidity, MinWeight, MinimumPeriod, OracleBond, PmPalletId,
+        ReportingPeriod, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId,
+        ValidityBond, BASE,
     },
     types::{
-        AccountIdTest, Amount, Asset, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index,
-        MarketId, Moment, SerdeWrapper, UncheckedExtrinsicTest,
+        AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
+        CurrencyId, Hash, Index, MarketId, Moment, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 
@@ -40,29 +39,15 @@ pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 pub const TREASURY: AccountIdTest = 99;
 
-pub type Block = BlockTest<Runtime>;
-pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
-pub type AdaptedBasicCurrency =
-    orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, Balance>;
-
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 parameter_types! {
-    pub const AdvisoryBond: Balance = 50;
-    pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
     pub const DisputeBond: Balance = 100;
     pub const DisputeFactor: Balance = 25;
     pub const DisputePeriod: BlockNumber = 10;
     pub const ExistentialDeposit: u64 = 1;
-    pub const MaximumBlockLength: u32 = 2 * 1024;
-    pub const MaximumBlockWeight: Weight = 1024;
-    pub const MinimumPeriod: u64 = 0;
-    pub const OracleBond: Balance = 100;
-    pub const ReportingPeriod: u32 = 10;
-    pub const ValidityBond: Balance = 200;
 }
-
 parameter_type_with_key! {
   pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
     Default::default()
@@ -72,9 +57,9 @@ parameter_type_with_key! {
 construct_runtime!(
     pub enum Runtime
     where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
@@ -147,7 +132,7 @@ impl orml_currencies::Config for Runtime {
     type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
-    type NativeCurrency = AdaptedBasicCurrency;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
     type WeightInfo = ();
 }
 
@@ -285,7 +270,7 @@ pub fn run_to_block(n: BlockNumber) {
 }
 
 sp_api::mock_impl_runtime_apis! {
-    impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<Block, MarketId, Hash> for Runtime {
+    impl zrml_prediction_markets_runtime_api::PredictionMarketsApi<BlockTest<Runtime>, MarketId, Hash> for Runtime {
         fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
             Asset::PoolShare(SerdeWrapper(1))
         }
