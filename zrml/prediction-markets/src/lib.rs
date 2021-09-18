@@ -75,8 +75,8 @@ mod pallet {
         pallet_prelude::{StorageMap, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, IsType, OnUnbalanced,
-            ReservableCurrency,
+            Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
+            NamedReservableCurrency, OnUnbalanced,
         },
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
@@ -84,11 +84,11 @@ mod pallet {
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
-        traits::{AccountIdConversion, Saturating, Zero},
-        DispatchError, DispatchResult, SaturatedConversion,
+        traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
+        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::MILLISECS_PER_BLOCK,
+        constants::{PmPalletId, MILLISECS_PER_BLOCK},
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
@@ -97,6 +97,8 @@ mod pallet {
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
+
+    pub(crate) const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -248,7 +250,7 @@ mod pallet {
 
             let creator = market.creator;
 
-            CurrencyOf::<T>::unreserve(&creator, T::AdvisoryBond::get());
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
             T::MarketCommons::mutate_market(&market_id, |m| {
                 m.status = MarketStatus::Active;
                 Ok(())
@@ -295,12 +297,20 @@ mod pallet {
             let num_disputes: u32 = disputes.len().saturated_into();
             let outcome_clone = outcome.clone();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
-            T::SimpleDisputes::on_dispute(
-                default_dispute_bond::<T>(disputes.len()),
-                &disputes,
-                &market_id,
+            CurrencyOf::<T>::reserve_named(
+                &RESERVE_ID,
                 &who,
+                default_dispute_bond::<T>(disputes.len()),
             )?;
+            match market.mdm {
+                MarketDisputeMechanism::Authorized(_) => {
+                    T::Authorized::on_dispute(&disputes, &market_id)?
+                }
+                MarketDisputeMechanism::Court => T::Court::on_dispute(&disputes, &market_id)?,
+                MarketDisputeMechanism::SimpleDisputes => {
+                    T::SimpleDisputes::on_dispute(&disputes, &market_id)?
+                }
+            }
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
             <Disputes<T>>::mutate(market_id, |disputes| {
@@ -335,7 +345,7 @@ mod pallet {
             ensure!(creator == sender, "Canceller must be market creator.");
             ensure!(status == MarketStatus::Proposed, "Market must be pending approval.");
             // The market is being cancelled, return the deposit.
-            CurrencyOf::<T>::unreserve(&creator, T::AdvisoryBond::get());
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketCancelled(market_id));
             Ok(())
@@ -364,12 +374,12 @@ mod pallet {
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
                     MarketStatus::Active
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
                     MarketStatus::Proposed
                 }
             };
@@ -522,12 +532,12 @@ mod pallet {
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
                     MarketStatus::Active
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve(&sender, required_bond)?;
+                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
                     MarketStatus::Proposed
                 }
             };
@@ -726,7 +736,11 @@ mod pallet {
 
             let market = T::MarketCommons::market(&market_id)?;
             let creator = market.creator;
-            let (imbalance, _) = CurrencyOf::<T>::slash_reserved(&creator, T::AdvisoryBond::get());
+            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                &RESERVE_ID,
+                &creator,
+                T::AdvisoryBond::get(),
+            );
             // Slashes the imbalance.
             T::Slash::on_unbalanced(imbalance);
             T::MarketCommons::remove_market(&market_id)?;
@@ -852,6 +866,16 @@ mod pallet {
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
         type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+
+        /// See [`AuthorizedPalletApi`].
+        type Authorized: zrml_authorized::AuthorizedPalletApi<
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+            Origin = Self::Origin,
+        >;
 
         /// See [`CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
@@ -1311,23 +1335,105 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
+            // if the market was permissionless and not invalid, return `ValidityBond`.
+            // if market.creation == MarketCreation::Permissionless {
+            //     if report.outcome != 0 {
+            //         CurrencyOf::<T>::unreserve(&market.creator, T::ValidityBond::get());
+            //     } else {
+            //         // Give it to the treasury instead.
+            //         let (imbalance, _) =
+            //             CurrencyOf::<T>::slash_reserved(&market.creator, T::ValidityBond::get());
+            //         T::Slash::on_unbalanced(imbalance);
+            //     }
+            // }
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &market.creator, T::ValidityBond::get());
+
             let disputes = Disputes::<T>::get(market_id);
             let resolved_outcome = match market.mdm {
                 MarketDisputeMechanism::Authorized(_) => {
-                    return Err(DispatchError::Other("Authorized dispute is not yet implemented"));
+                    T::Authorized::on_resolution(&disputes, market_id, market)?
                 }
-                MarketDisputeMechanism::Court => T::Court::on_resolution(
-                    &default_dispute_bond::<T>,
-                    &disputes,
-                    market_id,
-                    market,
-                )?,
-                MarketDisputeMechanism::SimpleDisputes => T::SimpleDisputes::on_resolution(
-                    &default_dispute_bond::<T>,
-                    &disputes,
-                    market_id,
-                    market,
-                )?,
+                MarketDisputeMechanism::Court => {
+                    T::Court::on_resolution(&disputes, market_id, market)?
+                }
+                MarketDisputeMechanism::SimpleDisputes => {
+                    T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                }
+            };
+
+            let report = T::MarketCommons::report(market)?;
+
+            match market.status {
+                MarketStatus::Reported => {
+                    // the oracle bond gets returned if the reporter was the oracle
+                    if report.by == market.oracle {
+                        CurrencyOf::<T>::unreserve_named(
+                            &RESERVE_ID,
+                            &market.creator,
+                            T::OracleBond::get(),
+                        );
+                    } else {
+                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                            &RESERVE_ID,
+                            &market.creator,
+                            T::OracleBond::get(),
+                        );
+
+                        // give it to the real reporter
+                        CurrencyOf::<T>::resolve_creating(&report.by, imbalance);
+                    }
+                }
+                MarketStatus::Disputed => {
+                    let mut correct_reporters: Vec<T::AccountId> = Vec::new();
+
+                    let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
+
+                    // if the reporter reported right, return the OracleBond, otherwise
+                    // slash it to pay the correct reporters
+                    if report.outcome == resolved_outcome {
+                        CurrencyOf::<T>::unreserve_named(
+                            &RESERVE_ID,
+                            &market.creator,
+                            T::OracleBond::get(),
+                        );
+                    } else {
+                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                            &RESERVE_ID,
+                            &market.creator,
+                            T::OracleBond::get(),
+                        );
+
+                        overall_imbalance.subsume(imbalance);
+                    }
+
+                    for (i, dispute) in disputes.iter().enumerate() {
+                        let actual_bond = default_dispute_bond::<T>(i);
+                        if dispute.outcome == resolved_outcome {
+                            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &dispute.by, actual_bond);
+
+                            correct_reporters.push(dispute.by.clone());
+                        } else {
+                            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                                &RESERVE_ID,
+                                &dispute.by,
+                                actual_bond,
+                            );
+                            overall_imbalance.subsume(imbalance);
+                        }
+                    }
+
+                    // fold all the imbalances into one and reward the correct reporters.
+                    let reward_per_each = overall_imbalance
+                        .peek()
+                        .checked_div(&correct_reporters.len().saturated_into())
+                        .ok_or(ArithmeticError::DivisionByZero)?;
+                    for correct_reporter in &correct_reporters {
+                        let (amount, leftover) = overall_imbalance.split(reward_per_each);
+                        CurrencyOf::<T>::resolve_creating(correct_reporter, amount);
+                        overall_imbalance = leftover;
+                    }
+                }
+                _ => (),
             };
 
             Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;

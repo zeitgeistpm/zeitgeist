@@ -134,7 +134,6 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Currency = Balances;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;

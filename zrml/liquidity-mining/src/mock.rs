@@ -39,7 +39,6 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type Currency = Balances;
     type Event = ();
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
