@@ -50,9 +50,7 @@ mod pallet {
             types::{StorageDoubleMap, StorageValue, ValueQuery},
             with_transaction,
         },
-        traits::{
-            Currency, ExistenceRequirement, Get, Hooks, IsType, ReservableCurrency, WithdrawReasons,
-        },
+        traits::{Currency, ExistenceRequirement, Get, Hooks, IsType, WithdrawReasons},
         Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
@@ -67,7 +65,9 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) type BalanceOf<T> =
-        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type CurrencyOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
@@ -85,12 +85,10 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Currency: ReservableCurrency<Self::AccountId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
-            Currency = Self::Currency,
             MarketId = Self::MarketId,
         >;
         type MarketId: MarketId;
@@ -123,7 +121,10 @@ mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            T::Currency::deposit_creating(&Pallet::<T>::pallet_account_id(), self.initial_balance);
+            CurrencyOf::<T>::deposit_creating(
+                &Pallet::<T>::pallet_account_id(),
+                self.initial_balance,
+            );
             <PerBlockIncentive<T>>::put(self.per_block_distribution);
         }
     }
@@ -241,18 +242,18 @@ mod pallet {
                 )
                 .collect();
 
-            T::Currency::ensure_can_withdraw(
+            CurrencyOf::<T>::ensure_can_withdraw(
                 &pallet_account_id,
                 final_total_incentives,
                 WithdrawReasons::all(),
-                T::Currency::free_balance(&pallet_account_id)
+                CurrencyOf::<T>::free_balance(&pallet_account_id)
                     .saturating_sub(final_total_incentives),
             )
             .map_err(|_err| Error::<T>::FundDoesNotHaveEnoughBalance)?;
 
             let accounts_len = values.len().into();
             for (account_id, incentives) in values {
-                T::Currency::transfer(
+                CurrencyOf::<T>::transfer(
                     &pallet_account_id,
                     &account_id,
                     incentives,

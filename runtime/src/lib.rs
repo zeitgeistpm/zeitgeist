@@ -117,10 +117,11 @@ macro_rules! create_zeitgeist_runtime {
                 Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 41,
 
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 42,
-                Court: zrml_court::{Event<T>, Pallet, Storage} = 43,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 44,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 46,
+                Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 43,
+                Court: zrml_court::{Event<T>, Pallet, Storage} = 44,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 45,
+                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 46,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
 
                 $($additional_pallets)*
             }
@@ -390,6 +391,13 @@ impl pallet_utility::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl parachain_info::Config for Runtime {}
 
+impl zrml_authorized::Config for Runtime {
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type PalletId = AuthorizedPalletId;
+    type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
+}
+
 impl zrml_court::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
     type Event = Event;
@@ -402,7 +410,6 @@ impl zrml_court::Config for Runtime {
 }
 
 impl zrml_liquidity_mining::Config for Runtime {
-    type Currency = Balances;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type MarketId = MarketId;
@@ -427,6 +434,7 @@ impl zrml_orderbook_v1::Config for Runtime {
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRoot<AccountId>;
+    type Authorized = Authorized;
     type Court = Court;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
@@ -452,11 +460,9 @@ impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type OracleBond = OracleBond;
     type PalletId = SimpleDisputesPalletId;
     type Shares = Tokens;
     type Swaps = Swaps;
-    type ValidityBond = ValidityBond;
 }
 
 impl zrml_swaps::Config for Runtime {
@@ -541,6 +547,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
+            add_benchmark!(params, batches, zrml_authorized, Authorized);
             add_benchmark!(params, batches, zrml_court, Court);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
             add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);

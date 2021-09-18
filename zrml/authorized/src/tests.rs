@@ -54,7 +54,7 @@ fn on_resolution_denies_non_authorized_markets() {
         let mut market = market_mock::<Runtime>(ALICE);
         market.mdm = MarketDisputeMechanism::Court;
         assert_noop!(
-            Authorized::on_resolution(&|_| 0, &[], &0, &market),
+            Authorized::on_resolution(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveAuthorizedMechanism
         );
     });
@@ -64,7 +64,7 @@ fn on_resolution_denies_non_authorized_markets() {
 fn on_resolution_must_demand_an_already_included_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Authorized::on_resolution(&|_| 0, &[], &0, &market_mock::<Runtime>(ALICE)),
+            Authorized::on_resolution(&[], &0, &market_mock::<Runtime>(ALICE)),
             Error::<Runtime>::UnknownOutcome
         );
     });
@@ -77,7 +77,7 @@ fn on_resolution_removes_stored_outcomes() {
         Markets::<Runtime>::insert(0, &market);
         Authorized::authorize_market_outcome(Origin::signed(ALICE), OutcomeReport::Scalar(1))
             .unwrap();
-        let _ = Authorized::on_resolution(&|_| 0, &[], &0, &market).unwrap();
+        let _ = Authorized::on_resolution(&[], &0, &market).unwrap();
         assert_eq!(Outcomes::<Runtime>::get(0, ALICE), None);
     });
 }
@@ -89,9 +89,6 @@ fn on_resolution_returns_the_canonical_outcome() {
         Markets::<Runtime>::insert(0, &market);
         Authorized::authorize_market_outcome(Origin::signed(ALICE), OutcomeReport::Scalar(1))
             .unwrap();
-        assert_eq!(
-            Authorized::on_resolution(&|_| 0, &[], &0, &market).unwrap(),
-            OutcomeReport::Scalar(1)
-        );
+        assert_eq!(Authorized::on_resolution(&[], &0, &market).unwrap(), OutcomeReport::Scalar(1));
     });
 }
