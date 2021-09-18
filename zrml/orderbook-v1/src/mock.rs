@@ -18,13 +18,9 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 
-pub type Block = BlockTest<Runtime>;
-pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
-
 parameter_types! {
     pub const ExistentialDeposit: Balance = 1;
 }
-
 parameter_type_with_key! {
   pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
     Default::default()
@@ -34,9 +30,9 @@ parameter_type_with_key! {
 construct_runtime!(
     pub enum Runtime
     where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Orderbook: orderbook_v1::{Call, Event<T>, Pallet},

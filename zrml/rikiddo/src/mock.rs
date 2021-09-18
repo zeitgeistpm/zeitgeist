@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
+    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, MinimumPeriod, BASE},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, PoolId,
         UncheckedExtrinsicTest,
@@ -26,20 +26,16 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 
-pub type Block = BlockTest<Runtime>;
-pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
-
 parameter_types! {
-    pub const MinimumPeriod: u64 = 0;
     pub const FractionalDecimalPlaces: u8 = 10;
 }
 
 construct_runtime!(
     pub enum Runtime
     where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Rikiddo: crate::{Pallet, Storage},
