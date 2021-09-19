@@ -12187,7 +12187,6 @@ dependencies = [
  "frame-system",
  "libfuzzer-sys",
  "substrate-fixed",
- "zeitgeist-primitives",
  "zrml-rikiddo",
 ]
 

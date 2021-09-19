@@ -11,7 +11,6 @@ use frame_support::traits::{OnFinalize, OnInitialize};
 use frame_system::RawOrigin;
 use libfuzzer_sys::fuzz_target;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
-use zeitgeist_primitives::constants::MinimumPeriod;
 use zrml_rikiddo::{
     mock::*,
     traits::RikiddoSigmoidMVPallet,
@@ -57,11 +56,8 @@ fuzz_target!(|data: Data| {
             if idx % 2 == 1 {
                 current_block += 1;
                 run_to_block(current_block);
-                let _ = <Runtime as Config>::Timestamp::set(
-                    RawOrigin::None.into(),
-                    MinimumPeriod::get() * current_block,
-                )
-                .unwrap();
+                let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), current_block)
+                    .unwrap();
             }
         }
 
