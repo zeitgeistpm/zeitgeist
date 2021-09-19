@@ -12,7 +12,7 @@ use sp_runtime::{
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, MinimumPeriod, BASE},
+    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, PoolId,
         UncheckedExtrinsicTest,
@@ -27,6 +27,7 @@ pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 
 parameter_types! {
+    pub const MinimumPeriod: u64 = 0;
     pub const FractionalDecimalPlaces: u8 = 10;
 }
 
