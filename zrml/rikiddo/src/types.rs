@@ -2,8 +2,8 @@
 //! functionality, as well as the Rikiddo core functionality itself.
 
 extern crate alloc;
-use alloc::{borrow::ToOwned, string::ToString};
 use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal};
+use alloc::{borrow::ToOwned, string::ToString};
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 #[cfg(feature = "arbitrary")]
