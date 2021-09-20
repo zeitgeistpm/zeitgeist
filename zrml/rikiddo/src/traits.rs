@@ -1,8 +1,8 @@
 //! This module contains a collection of traits for Rikiddo and its components.
 
 extern crate alloc;
-use alloc::vec::Vec;
 use crate::types::TimestampedVolume;
+use alloc::vec::Vec;
 use core::convert::TryFrom;
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;

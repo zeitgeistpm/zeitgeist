@@ -2,11 +2,11 @@
 //! to the caluclation of the fee and the evaluation of the collected market volumes.
 
 extern crate alloc;
-use alloc::vec::Vec;
 use crate::{
     constants::INITIAL_FEE,
     traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
 };
+use alloc::vec::Vec;
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 use core::ops::{AddAssign, BitOrAssign, ShlAssign};

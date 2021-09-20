@@ -155,6 +155,7 @@
   "PoolStatus": {
     "_enum": {
       "Active": null,
+      "CollectingSubsidy": null,
       "Stale": null
     }
   },

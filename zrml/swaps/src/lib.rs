@@ -424,10 +424,9 @@ mod pallet {
                         )?
                         .saturated_into();
                     } else {
-                        asset_amount_out = bdiv(
-                            asset_amount_in.saturated_into(),
-                            price.saturated_into()
-                        )?.saturated_into();
+                        asset_amount_out =
+                            bdiv(asset_amount_in.saturated_into(), price.saturated_into())?
+                                .saturated_into();
                     }
                     ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
@@ -499,10 +498,9 @@ mod pallet {
                         )?
                         .saturated_into();
                     } else {
-                        asset_amount_in = bmul(
-                            asset_amount_out.saturated_into(),
-                            price.saturated_into()
-                        )?.saturated_into();
+                        asset_amount_in =
+                            bmul(asset_amount_out.saturated_into(), price.saturated_into())?
+                                .saturated_into();
                     }
 
                     ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
@@ -738,8 +736,9 @@ mod pallet {
                         .saturated_into(),
                 )?
                 .saturated_into();
-                let fee: u128 = bmul(price_without_fee,
-                    T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into()
+                let fee: u128 = bmul(
+                    price_without_fee,
+                    T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into(),
                 )?;
                 Ok(price_without_fee.check_add_rslt(&fee)?.saturated_into())
             }
@@ -889,13 +888,21 @@ mod pallet {
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
 
-            for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
+            for (asset, weight) in assets.iter().copied().zip(weights_unwrapped).filter(|pair| {
+                if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma
+                    && Some(pair.0) != base_asset
+                {
+                    return false;
+                }
+
+                true
+            }) {
                 let free_balance = T::Shares::free_balance(asset, &who);
                 ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
-                ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
-                ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
 
                 if scoring_rule == ScoringRule::CPMM {
+                    ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
+                    ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
                     map.insert(asset, weight);
                     total_weight = total_weight.check_add_rslt(&weight)?;
                 }
@@ -929,7 +936,11 @@ mod pallet {
                     assets,
                     base_asset,
                     market_id,
-                    pool_status: PoolStatus::Active,
+                    pool_status: if scoring_rule == ScoringRule::CPMM {
+                        PoolStatus::Active
+                    } else {
+                        PoolStatus::CollectingSubsidy
+                    },
                     scoring_rule,
                     swap_fee,
                     total_weight: if scoring_rule == ScoringRule::CPMM {
