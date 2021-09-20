@@ -153,7 +153,7 @@ mod pallet {
         /// * `pool_id`: Unique pool identifier.
         /// * `asset`: Asset leaving the pool.
         /// * `asset_amount`: Asset amount that is leaving the pool.
-        /// * `max_pool_amount`: The calculated amount of assets for the pool must the equal or
+        /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
         /// greater than the given value.
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
         pub fn pool_exit_with_exact_asset_amount(
@@ -960,6 +960,19 @@ mod pallet {
             Ok(next_pool_id)
         }
 
+        /// Pool - Exit with exact pool amount
+        ///
+        /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
+        /// this method injects the exactly amount of `asset_amount` to `origin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `who`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset`: Asset leaving the pool.
+        /// * `asset_amount`: Asset amount that is leaving the pool.
+        /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
+        /// greater than the given value.
         #[frame_support::transactional]
         fn pool_exit_with_exact_asset_amount(
             who: T::AccountId,
@@ -1015,6 +1028,19 @@ mod pallet {
             pool_exit_with_exact_amount::<_, _, _, _, T>(params).map(|_| weight)
         }
 
+        /// Pool - Join with exact asset amount
+        ///
+        /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
+        /// this method transfers the exactly amount of `asset_amount` to `pool_id`.
+        ///
+        /// # Arguments
+        ///
+        /// * `who`: Liquidity Provider (LP). The account whose assets should be received.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `asset_in`: Asset entering the pool.
+        /// * `asset_amount`: Asset amount that is entering the pool.
+        /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
+        /// than the given value.
         #[frame_support::transactional]
         fn pool_join_with_exact_asset_amount(
             who: T::AccountId,
