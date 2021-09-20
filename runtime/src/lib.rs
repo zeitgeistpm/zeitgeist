@@ -559,6 +559,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
+    type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
