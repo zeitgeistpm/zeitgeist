@@ -16,6 +16,7 @@ pub struct Pool<Balance, MarketId> {
     pub pool_status: PoolStatus,
     pub scoring_rule: ScoringRule,
     pub swap_fee: Option<Balance>,
+    pub total_subsidy: Option<Balance>,
     pub total_weight: Option<u128>,
     pub weights: Option<BTreeMap<Asset<MarketId>, u128>>,
 }
@@ -45,4 +46,18 @@ where
 pub enum ScoringRule {
     CPMM,
     RikiddoSigmoidFeeMarketEma,
+}
+
+#[derive(
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    sp_runtime::RuntimeDebug,
+)]
+pub struct SubsidyProvider<Address, Balance> {
+    pub address: Address,
+    pub subsidy: Balance,
 }

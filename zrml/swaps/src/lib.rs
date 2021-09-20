@@ -43,13 +43,13 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType},
-        Blake2_128Concat, PalletId,
+        Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::MultiCurrency;
+    use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
     use sp_runtime::{
-        traits::{AccountIdConversion, Zero},
+        traits::{AccountIdConversion, Saturating, Zero},
         ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
     };
     use substrate_fixed::{
@@ -65,6 +65,7 @@ mod pallet {
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper,
+            SubsidyProvider,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -525,6 +526,7 @@ mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// The fee for exiting a pool.
+        #[pallet::constant]
         type ExitFee: Get<BalanceOf<Self>>;
 
         /// Will be used for the fractional part of the fixed point numbers
@@ -562,17 +564,34 @@ mod pallet {
 
         type MarketId: MarketId;
 
+        #[pallet::constant]
         type MaxAssets: Get<u16>;
+        
+        #[pallet::constant]
         type MaxInRatio: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
         type MaxOutRatio: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
         type MaxTotalWeight: Get<u128>;
+
+        #[pallet::constant]
         type MaxWeight: Get<u128>;
-        type MinWeight: Get<u128>;
 
         /// The minimum amount of liqudity required to bootstrap a pool.
+        #[pallet::constant]
         type MinLiquidity: Get<BalanceOf<Self>>;
 
+        /// The minimum amount of subsidy required to state transit a market into active state.
+        /// Must be greater than 0, but can be arbitrarily close to 0.
+        #[pallet::constant]
+        type MinSubsidy: Get<BalanceOf<Self>>;
+        #[pallet::constant]
+        type MinWeight: Get<u128>;
+
         /// The module identifier.
+        #[pallet::constant]
         type PalletId: Get<PalletId>;
 
         /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
@@ -607,7 +626,9 @@ mod pallet {
         BadLimitPrice,
         BelowMinimumWeight,
         InsufficientBalance,
+        InsufficientSubsidy,
         InvalidFeeArgument,
+        InvalidStateTransition,
         InvalidWeightArgument,
         LimitIn,
         LimitOut,
@@ -664,8 +685,18 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn pools)]
-    pub type Pools<T: Config> =
-        StorageMap<_, Blake2_128Concat, u128, Option<Pool<BalanceOf<T>, T::MarketId>>, ValueQuery>;
+    pub type Pools<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        PoolId,
+        Option<Pool<BalanceOf<T>, T::MarketId>>,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
+    #[pallet::getter(fn subsidy_providers)]
+    pub type SubsidyProviders<T: Config> =
+        StorageMap<_, Twox64Concat, PoolId, SubsidyProvider<T::AccountId, BalanceOf<T>>>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
@@ -943,6 +974,11 @@ mod pallet {
                     },
                     scoring_rule,
                     swap_fee,
+                    total_subsidy: if scoring_rule == ScoringRule::CPMM {
+                        None
+                    } else {
+                        Some(BalanceOf::<T>::zero())
+                    },
                     total_weight: if scoring_rule == ScoringRule::CPMM {
                         Some(total_weight)
                     } else {
@@ -1095,6 +1131,80 @@ mod pallet {
             Ok(Self::pool_by_id(pool_id)?)
         }
 
+        /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
+        /// state and all other conditions are met.
+        ///
+        /// # Arguments
+        ///
+        /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
+        /// than the given value.
+        #[frame_support::transactional]
+        fn set_pool_as_active(pool_id: PoolId) -> DispatchResult {
+            Self::mutate_pool(pool_id, |pool| {
+                // Ensure all preconditions are met.
+                if pool.pool_status == PoolStatus::Active {
+                    return Ok(());
+                } else if pool.pool_status != PoolStatus::CollectingSubsidy {
+                    return Err(Error::<T>::InvalidStateTransition.into());
+                }
+
+                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::InsufficientSubsidy)?;
+                ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
+                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let pool_account = Pallet::<T>::pool_account_id(pool_id);
+                let mut account_created = false;
+                let mut total_balance = <BalanceOf<T>>::zero();
+
+                // Transfer all reserved funds to the pool account and distribute pool shares.
+                for provider in <SubsidyProviders<T>>::drain() {
+                    if !account_created {
+                        T::Shares::unreserve(base_asset, &provider.1.address, provider.1.subsidy);
+                        T::Shares::transfer(
+                            base_asset,
+                            &provider.1.address,
+                            &pool_account,
+                            provider.1.subsidy,
+                        )?;
+                        total_balance = provider.1.subsidy;
+                        account_created = true;
+                    }
+
+                    let transfered = T::Shares::repatriate_reserved(
+                        base_asset,
+                        &provider.1.address,
+                        &pool_account,
+                        provider.1.subsidy,
+                        BalanceStatus::Free,
+                    )?;
+
+                    total_balance.saturating_add(transfered);
+                }
+
+                // This can only happen if other pallets consumed some of the reserved
+                // balance for subsidy.
+                if total_balance != total_subsidy {
+                    ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
+                    pool.total_subsidy = Some(total_balance);
+                }
+
+                // TODO:
+                // - Transfer pool shares to the users (Solve cost(q) = total_balance)
+                // - Emit event: pool_id, SubsidyCollected
+                // - Emit event: Pool State Transition - pool_id, state
+                return Ok(());
+            })
+        }
+
+        /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
+        /// that is not ZTG or winning assets from the selected pool.
+        ///
+        /// Does nothing if pool is already stale. Returns `Err` if `pool_id` does not exist.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_type`: Type of the market (e.g. categorical or scalar).
+        /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
+        /// * `outcome_report`: The resulting outcome.
         fn set_pool_as_stale(
             market_type: &MarketType,
             pool_id: PoolId,
