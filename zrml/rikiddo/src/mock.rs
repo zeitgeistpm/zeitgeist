@@ -3,6 +3,8 @@
     clippy::integer_arithmetic
 )]
 #![cfg(feature = "mock")]
+#![allow(missing_docs)]
+#![doc(hidden)]
 
 use crate::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use frame_support::{construct_runtime, parameter_types};

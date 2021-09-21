@@ -8,7 +8,7 @@
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 use substrate_fixed::{types::extra::U33, FixedI128};
-use zrml_rikiddo::{traits::Sigmoid, types::FeeSigmoid};
+use zrml_rikiddo::{traits::Fee, types::FeeSigmoid};
 
 mod shared;
 use shared::fixed_from_i128;

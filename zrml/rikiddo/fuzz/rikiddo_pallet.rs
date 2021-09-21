@@ -13,7 +13,7 @@ use libfuzzer_sys::fuzz_target;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zrml_rikiddo::{
     mock::*,
-    traits::RikiddoSigmoidMVPallet,
+    traits::RikiddoMVPallet,
     types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV, Timespan},
     Config,
 };

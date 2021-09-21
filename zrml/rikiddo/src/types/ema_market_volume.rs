@@ -1,3 +1,4 @@
+//! This module contains the structures used to calculate the exponential moving average.
 use super::{Timespan, TimestampedVolume, UnixTimestamp};
 use crate::{
     constants::{EMA_SHORT, SMOOTHING},
@@ -20,10 +21,17 @@ use substrate_fixed::{
     FixedI128, FixedI16, FixedI32, FixedI64, FixedI8, FixedU16, FixedU64, FixedU8,
 };
 
+/// Configuration values used during the calculation of the exponenial moving average.
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaConfig<FI: Fixed> {
+    /// The duration of one ema period.
     pub ema_period: Timespan,
+    /// It is possible to estimate the values required to calculate the ema before `ema_period`
+    /// has passed. The count of added volumes after `ema_period` is estimated from the current
+    /// count of volumes.
     pub ema_period_estimate_after: Option<Timespan>,
+    /// The smoothing factor that's used to calculate the multiplier
+    /// `k = smoothing / (1 + tx_count_per_period)`.
     pub smoothing: FI,
 }
 
@@ -79,6 +87,12 @@ cfg_if::cfg_if! {
 }
 
 impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> EmaConfig<FU> {
+    /// Create a new `EmaConfig` instance based on a [`EmaConfig`](struct@EmaConfig)
+    /// configuration. Use `default()` if uncertain which values to use.
+    ///
+    /// # Arguments
+    ///
+    /// * See [`EmaConfig`](struct@EmaConfig).
     pub fn new(
         ema_period: Timespan,
         mut ema_period_estimate_after: Option<Timespan>,
@@ -98,17 +112,25 @@ impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<FU> {
     }
 }
 
+/// The current state of an instance of the [`EmaMarketVolume`](struct@EmaMarketVolume) struct.
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub enum MarketVolumeState {
+    /// The first state before any data was received.
     Uninitialized,
+    /// The second state. Used as long not enough data was gathered.
     DataCollectionStarted,
+    /// The final state, during which the evaluation of the data can happen.
     DataCollected,
 }
 
+/// The EmaMarketVolume `struct` offers functionality to collect and evaluate market volume data
+/// into an exponential moving average value.
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct EmaMarketVolume<FU: FixedUnsigned> {
+    /// See [`EmaConfig`](struct@EmaConfig).
     pub config: EmaConfig<FU>,
+    /// The current ema value or any intermediate value.
     pub ema: FU,
     multiplier: FU,
     last_time: UnixTimestamp,
@@ -185,6 +207,11 @@ cfg_if::cfg_if! {
 }
 
 impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
+    /// Initialize the structure based on a configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * See [`EmaConfig`](struct@EmaConfig)
     pub fn new(config: EmaConfig<FU>) -> Self {
         Self {
             config,
@@ -270,23 +297,27 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
         Ok(Some(self.ema))
     }
 
+    /// When the final state is reached, this function can be used to retrieve the multiplier.
     pub fn multiplier(&self) -> &FU {
         &self.multiplier
     }
 
+    /// Returns the `UnixTimestamp` of the last volume that was added.
     pub fn last_time(&self) -> &UnixTimestamp {
         &self.last_time
     }
 
-    // Following functions are required mainly for testing.
+    /// Returns the current state of the data collection and evaluation automaton.
     pub fn state(&self) -> &MarketVolumeState {
         &self.state
     }
 
+    /// Returns the `UnixTimestamp` of the first volume that was added.
     pub fn start_time(&self) -> &UnixTimestamp {
         &self.start_time
     }
 
+    /// Returns how many separate volumes one ema period contains.
     pub fn volumes_per_period(&self) -> &FU {
         &self.volumes_per_period
     }
@@ -301,7 +332,10 @@ impl<FU: FixedUnsigned + From<u32> + LossyFrom<FixedU32<U24>>> Default for EmaMa
 impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
     type FU = FU;
 
-    /// Calculate average (sma, ema, wma, depending on the concrete implementation) of market volume
+    /// Get the ema value if available, otherwise `None`. Using this function is prefered in most
+    /// cases, because directly accessing the `ema` field will also return a valid result during
+    /// the time when not enough data was gathered, but the `ema` value is still a
+    /// `sma` value at this time.
     fn get(&self) -> Option<Self::FU> {
         match &self.state {
             MarketVolumeState::DataCollected => Some(self.ema),
@@ -309,7 +343,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
         }
     }
 
-    /// Clear market data
+    /// Clear market data.
     fn clear(&mut self) {
         self.ema = FU::from_num(0);
         self.multiplier = FU::from_num(0);
@@ -319,7 +353,16 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
         self.volumes_per_period = FU::from_num(0);
     }
 
-    /// Update market volume
+    /// Update market data. This implementation will count the
+    /// [`TimestampedVolume`](struct@TimestampedVolume)s for one period and then use the amount
+    /// to derive the multiplier based on the smoothing factor. It will continue counting volumes,
+    /// if the resulting multiplier is still greater than one (very rare case, could lead to
+    /// negative ema). Once enough data is gathered, the ema is updated after every new incoming
+    /// `volume`.
+    ///
+    /// # Arguments
+    ///
+    /// * `volume`: The timestamped volume that should be added to the market data.
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
