@@ -673,6 +673,8 @@ mod pallet {
         PoolJoinWithExactPoolAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
+        /// Total subsidy collected for a pool. \[pool_id, subsidy\]
+        SubsidyCollected(PoolId, BalanceOf<T>),
         /// An exact amount of an asset is entering the pool. \[account, amount\]
         SwapExactAmountIn(SwapEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// An exact amount of an asset is leaving the pool. \[account, amount\]
@@ -760,18 +762,13 @@ mod pallet {
                 )?
                 .saturated_into())
             } else {
-                let price_without_fee = bdiv(
+                Ok(bdiv(
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
                         .saturated_into(),
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
                         .saturated_into(),
                 )?
-                .saturated_into();
-                let fee: u128 = bmul(
-                    price_without_fee,
-                    T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into(),
-                )?;
-                Ok(price_without_fee.check_add_rslt(&fee)?.saturated_into())
+                .saturated_into())
             }
         }
 
@@ -1152,9 +1149,9 @@ mod pallet {
                 ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
                 let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                 let pool_account = Pallet::<T>::pool_account_id(pool_id);
+                let pool_shares_id = Self::pool_shares_id(pool_id);
                 let mut account_created = false;
                 let mut total_balance = <BalanceOf<T>>::zero();
-                let mut providers = Vec::new();
 
                 // Transfer all reserved funds to the pool account and distribute pool shares.
                 for provider in <SubsidyProviders<T>>::drain() {
@@ -1167,7 +1164,9 @@ mod pallet {
                             provider.1.subsidy,
                         )?;
                         total_balance = provider.1.subsidy;
+                        T::Shares::deposit(pool_shares_id, &provider.1.address, provider.1.subsidy)?;
                         account_created = true;
+                        continue;
                     }
 
                     let transfered = T::Shares::repatriate_reserved(
@@ -1177,9 +1176,8 @@ mod pallet {
                         provider.1.subsidy,
                         BalanceStatus::Free,
                     )?;
-
+                    T::Shares::deposit(pool_shares_id, &provider.1.address, transfered)?;
                     total_balance.saturating_add(transfered);
-                    providers.push(provider);
                 }
 
                 // This can only happen if other pallets consumed some of the reserved
@@ -1189,11 +1187,20 @@ mod pallet {
                     pool.total_subsidy = Some(total_balance);
                 }
 
-                // TODO:
-                // - Transfer pool shares to the users (Solve cost(q) = total_balance)
-                // - Emit event: pool_id, SubsidyCollected
-                // - Emit event: Pool State Transition - pool_id, state
-                return Ok(());
+                // Assign the initial set of outstanding assets to the pool account.
+                let outstanding_assets_per_event =
+                    T::RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
+                        pool_id,
+                        pool.assets.len().saturated_into::<u32>().saturating_sub(1),
+                        total_balance,
+                    )?;
+
+                for asset in pool.assets.iter() {
+                    T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
+                }
+
+                Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
+                Ok(())
             })
         }
 

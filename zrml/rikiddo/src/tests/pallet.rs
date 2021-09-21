@@ -215,10 +215,11 @@ fn rikiddo_pallet_initial_outstanding_assets_returns_correct_result() {
         let subsidy_f64 = 1000f64;
         let subsidy = subsidy_f64 as u128 * frac_places.pow(10);
         let fee: f64 = (Rikiddo::fee(0).unwrap() as f64) / (10f64.powf(frac_places as f64));
-        let outstanding_assets = Rikiddo::initial_outstanding_assets(0, num_assets, subsidy).unwrap();
-        let outstanding_assets_shifted = (outstanding_assets as f64) / (10f64.powf(frac_places as f64));
-        let outstanding_assets_f64 = 
-            initial_outstanding_assets(num_assets, subsidy_f64, fee);
+        let outstanding_assets =
+            Rikiddo::initial_outstanding_assets(0, num_assets, subsidy).unwrap();
+        let outstanding_assets_shifted =
+            (outstanding_assets as f64) / (10f64.powf(frac_places as f64));
+        let outstanding_assets_f64 = initial_outstanding_assets(num_assets, subsidy_f64, fee);
         let difference_abs = (outstanding_assets_f64 - outstanding_assets_shifted as f64).abs();
         assert!(
             difference_abs <= 0.000001f64,
