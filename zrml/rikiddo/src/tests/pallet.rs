@@ -7,10 +7,9 @@ use frame_system::RawOrigin;
 
 type FixedS = <Runtime as Config>::FixedTypeS;
 type Balance = <Runtime as Config>::Balance;
-
 use crate::{
     mock::*,
-    tests::rikiddo_sigmoid_mv::{cost, price},
+    tests::rikiddo_sigmoid_mv::{cost, initial_outstanding_assets, price},
     traits::{FromFixedDecimal, IntoFixedDecimal, RikiddoMVPallet},
     types::Timespan,
     Config,
@@ -203,6 +202,31 @@ fn rikiddo_pallet_cost_returns_correct_result() {
             cost_pallet_balance_with_fee,
             difference_abs_with_fee,
             max_difference_with_fee,
+        );
+    });
+}
+
+#[test]
+fn rikiddo_pallet_initial_outstanding_assets_returns_correct_result() {
+    ExtBuilder::default().build().execute_with(|| {
+        let _ = default_prepare_calculation();
+        let frac_places = Balance::from(<Runtime as Config>::BalanceFractionalDecimals::get());
+        let num_assets = 4u32;
+        let subsidy_f64 = 1000f64;
+        let subsidy = subsidy_f64 as u128 * frac_places.pow(10);
+        let fee: f64 = (Rikiddo::fee(0).unwrap() as f64) / (10f64.powf(frac_places as f64));
+        let outstanding_assets = Rikiddo::initial_outstanding_assets(0, num_assets, subsidy).unwrap();
+        let outstanding_assets_shifted = (outstanding_assets as f64) / (10f64.powf(frac_places as f64));
+        let outstanding_assets_f64 = 
+            initial_outstanding_assets(num_assets, subsidy_f64, fee);
+        let difference_abs = (outstanding_assets_f64 - outstanding_assets_shifted as f64).abs();
+        assert!(
+            difference_abs <= 0.000001f64,
+            "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
+            outstanding_assets_shifted,
+            outstanding_assets_f64,
+            difference_abs,
+            0.000001f64
         );
     });
 }

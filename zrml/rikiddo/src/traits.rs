@@ -189,7 +189,6 @@ pub trait RikiddoMVPallet {
     /// * `num_assets`: The number of distinct outcome events.
     /// * `subsidy`: The initial total subsidy gathered.
     fn initial_outstanding_assets(
-        &self,
         pool_id: Self::PoolId,
         num_assets: u32,
         subsidy: Self::Balance,
