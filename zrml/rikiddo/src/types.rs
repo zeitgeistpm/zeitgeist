@@ -1,3 +1,6 @@
+//! This module contains a collection of types that are required to implement the Rikiddo core
+//! functionality, as well as the Rikiddo core functionality itself.
+
 use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal};
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
@@ -25,11 +28,15 @@ pub use ema_market_volume::*;
 pub use rikiddo_sigmoid_mv::*;
 pub use sigmoid_fee::*;
 
+/// A timestamp that contains the seconds since January 1st, 1970 at UTC.
 pub type UnixTimestamp = u64;
 
+/// A 2-tuple containing an unix timestamp and a volume.
 #[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct TimestampedVolume<F: Fixed> {
+    /// The timestamp of the volume.
     pub timestamp: UnixTimestamp,
+    /// The volume.
     pub volume: F,
 }
 
@@ -75,17 +82,25 @@ cfg_if::cfg_if! {
     }
 }
 
+/// A enum that wrappes an amount of time in different units.
+/// An enum that wrappes an amount of time in different units.
 #[derive(Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Timespan {
+    /// Contains seconds.
     Seconds(u32),
+    /// Contains minutes.
     Minutes(u32),
+    /// Contains hours.
     Hours(u32),
+    /// Contains days.
     Days(u16),
+    /// Contains weeks.
     Weeks(u16),
 }
 
 impl Timespan {
+    /// Convert the current `Timespan` into a number of seconds.
     pub fn to_seconds(&self) -> u32 {
         match *self {
             // Any value that leads to a saturation is greater than
@@ -105,7 +120,7 @@ impl Timespan {
     }
 }
 
-/// Returns integer part of FROM, if the msb is not set and and num does it into FROM
+/// Returns integer part of `FROM`, if the msb is not set and and num does it into `FROM`.
 fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str> {
     // Check if number is negatie
     if num < FROM::from_num(0u8) {
@@ -122,7 +137,7 @@ fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str>
     Ok(num_u128.to_fixed())
 }
 
-/// Converts an unsigned fixed point number into a signed fixed point number (fallible)
+/// Converts an unsigned fixed point number into a signed fixed point number (fallible).
 pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI128<U127>>>(
     num: FROM,
 ) -> Result<TO, &'static str> {
@@ -137,7 +152,7 @@ pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI
     }
 }
 
-/// Converts a signed fixed point number into an unsigned fixed point number (fallible)
+/// Converts a signed fixed point number into an unsigned fixed point number (fallible).
 pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<FixedU128<U128>>>(
     num: FROM,
 ) -> Result<TO, &'static str> {
@@ -152,8 +167,8 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
     }
 }
 
-/// Converts a fixed point decimal number into Fixed type
 impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
+    /// Craft a `Fixed` type from a fixed point decimal number of type `N`
     fn from_fixed_decimal(decimal: N, places: u8) -> Result<Self, ParseFixedError> {
         let decimal_u128 = decimal.into();
         let mut decimal_string = decimal_u128.to_string();
@@ -172,19 +187,19 @@ impl<F: Fixed, N: Into<u128>> FromFixedDecimal<N> for F {
     }
 }
 
-/// Converts a fixed point decimal number into Fixed type
 impl<F, N> IntoFixedFromDecimal<F> for N
 where
     F: Fixed + FromFixedDecimal<Self>,
     N: Into<u128>,
 {
+    /// Converts a fixed point decimal number into `Fixed` type (e.g. `Balance` -> `Fixed`).
     fn to_fixed_from_fixed_decimal(self, places: u8) -> Result<F, ParseFixedError> {
         F::from_fixed_decimal(self, places)
     }
 }
 
-/// Converts a Fixed type into a fixed point decimal number (Fixed -> Balance)
 impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
+    /// Craft a fixed point decimal number from a `Fixed` type (e.g. `Fixed` -> `Balance`).
     fn from_fixed_to_fixed_decimal(fixed: F, places: u8) -> Result<N, &'static str> {
         if places == 0 {
             let mut result = fixed.to_num::<u128>();
@@ -268,12 +283,12 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
     }
 }
 
-/// Converts a fixed point decimal number into Fixed type
 impl<F, N> IntoFixedDecimal<N> for F
 where
     F: Fixed,
     N: FromFixedToDecimal<Self>,
 {
+    /// Converts a `Fixed` type into a fixed point decimal number.
     fn to_fixed_decimal(self, places: u8) -> Result<N, &'static str> {
         N::from_fixed_to_fixed_decimal(self, places)
     }

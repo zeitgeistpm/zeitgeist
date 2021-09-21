@@ -1,7 +1,9 @@
+//! This module contains the structures used to calculate the fee based on a sigmoid curve.
+
 use super::convert_to_signed;
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
-    traits::Sigmoid,
+    traits::Fee,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
@@ -24,12 +26,23 @@ use substrate_fixed::{
     FixedI64,
 };
 
+/// Configurable values used to calculate a fee based on a sigmoid curve. The usage of the
+/// configuration parameters is depicted in equation `z(r)` within the
+/// [Dynamic Automated Market Making] paper from Andrew Nguyed et al. Use the `default()`
+/// function if uncertain about which values to take.
+///
+/// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned> {
+    /// Parameter to fine tune the fee calcultation (refer to example in paper).
     pub m: FS,
+    /// Parameter to fine tune the fee calcultation (refer to example in paper).
     pub p: FS,
+    /// Break point used to encourage or discourage trade.
     pub n: FS,
+    /// The initial fee, that is added to the sigmoid fee result.
     pub initial_fee: FS,
+    /// The minimal revenue sets the lower bound for fees.
     pub min_revenue: FS,
 }
 
@@ -90,11 +103,17 @@ where
     }
 }
 
+/// Offers an implementation of `z(r)` as described in [Dynamic Automated Market Making] paper from
+/// Andrew Nguyed et al. based on a predetermined set of
+/// [configuration values](struct@FeeSigmoidConfig)
+///
+/// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
 #[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
 {
+    /// The constants used during the fee calculations.
     pub config: FeeSigmoidConfig<FS>,
 }
 
@@ -134,18 +153,30 @@ impl<FS> FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,
 {
+    /// Create a new `FeeSigmoid` instance based on a [`FeeSigmoidConfig`](struct@FeeSigmoidConfig)
+    /// configuration. Use `default()` if uncertain which values to use.
+    ///
+    /// # Arguments
+    ///
+    /// * `config`: Parameters used during the fee calculation.
     pub fn new(config: FeeSigmoidConfig<FS>) -> Self {
         Self { config }
     }
 }
 
-impl<FS> Sigmoid for FeeSigmoid<FS>
+impl<FS> Fee for FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + PartialOrd<I9F23> + LossyFrom<FixedI128<U127>>,
 {
     type FS = FS;
 
-    // z(r) in https://files.kyber.network/DMM-Feb21.pdf
+    /// Calculate fee: min(`min_revenue`, `initial_fee` + z(r))
+    ///
+    /// # Arguments
+    ///
+    /// * `r`: Some kind of information about the market, for example an ema.
+    ///
+    /// [z(r)]: https://files.kyber.network/DMM-Feb21.pdf
     fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str> {
         let r_minus_n = if let Some(res) = r.checked_sub(self.config.n) {
             res

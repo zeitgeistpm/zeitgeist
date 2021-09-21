@@ -1,6 +1,6 @@
 use super::max_allowed_error;
 use crate::{
-    traits::Sigmoid,
+    traits::Fee,
     types::{FeeSigmoid, FeeSigmoidConfig},
 };
 use frame_support::assert_err;

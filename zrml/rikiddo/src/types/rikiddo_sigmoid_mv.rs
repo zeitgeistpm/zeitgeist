@@ -1,6 +1,8 @@
+//! This module offers the Rikiddo core functionality. The implementation is modular in regards
+//! to the caluclation of the fee and the evaluation of the collected market volumes.
 use crate::{
     constants::INITIAL_FEE,
-    traits::{Lmsr, MarketAverage, RikiddoMV, Sigmoid},
+    traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
@@ -26,8 +28,10 @@ use substrate_fixed::{
 
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 
+/// Configuration values used within the Rikiddo core functions.
 #[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
+    /// An initial fee that is used whenever the fee cannot be calculated.
     pub initial_fee: FI,
     pub(crate) log2_e: FI,
 }
@@ -63,6 +67,12 @@ cfg_if::cfg_if! {
 }
 
 impl<FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>> RikiddoConfig<FS> {
+    /// Create a new `RikiddoConfig` instance based on a [`RikiddoConfig`](struct@RikiddoConfig)
+    /// configuration. Use `default()` if uncertain which values to use.
+    ///
+    /// # Arguments
+    ///
+    /// * See [`RikiddoConfig`](struct@RikiddoConfig).
     pub fn new(initial_fee: FS) -> Self {
         Self { initial_fee, log2_e: FS::lossy_from(LOG2_E) }
     }
@@ -111,17 +121,24 @@ where
     }
 }
 
+/// Configuration values used within the Rikiddo core functions.
 #[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,
     FS: FixedSigned + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
+    /// See [`RikiddoConfig`](struct@RikiddoConfig).
     pub config: RikiddoConfig<FS>,
+    /// A structure that implements the [`Fee`](trait@Fee) trait. Used to calculate the fee.
     pub fees: FE,
+    /// A structure that implements the [`MarketAverage`](trait@MarketAverage) trait. It is used
+    /// to calculate the ema for the shorter ema period.
     pub ma_short: MA,
+    /// A structure that implements the [`MarketAverage`](trait@MarketAverage) trait. It is used
+    /// to calculate the ema for the longer ema period.
     pub ma_long: MA,
 }
 
@@ -141,7 +158,7 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
                 + LossyFrom<FixedI128<U127>>
                 + PartialOrd<I9F23>,
             <$ts<FracS> as Fixed>::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-            FE: Sigmoid<FS = $ts<FracS>> + Arbitrary<'a>,
+            FE: Fee<FS = $ts<FracS>> + Arbitrary<'a>,
             MA: MarketAverage<FU = $tu<FracU>> + Arbitrary<'a>,
         {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbiraryResult<Self> {
@@ -194,9 +211,14 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
+    /// Initialize the structure based on a configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * See [`RikiddoSigmoidMV`](struct@RikiddoSigmoidMV)
     pub fn new(config: RikiddoConfig<FS>, fees: FE, ma_short: MA, ma_long: MA) -> Self {
         Self { config, fees, ma_short, ma_long }
     }
@@ -434,7 +456,8 @@ where
         }
     }
 
-    pub fn price_helper_combine_all_parts(
+    // Calculates the price.
+    pub(crate) fn price_helper_combine_all_parts(
         &self,
         cost_part: FS,
         first_quotient: FS,
@@ -536,12 +559,18 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
     type FU = FU;
 
-    /// Return price P_i(q) for all assets in q
+    /// Returns a vector of prices for a given set of assets (same order as `asset_balances`).
+    /// This function is significantly faster compared to sequentially invoking `price(...)` for
+    /// every asset.
+    ///
+    /// # Arguments
+    ///
+    /// * `asset_balances`: The balance vector of the assets.
     fn all_prices(&self, asset_balances: &[Self::FU]) -> Result<Vec<Self::FU>, &'static str> {
         let mut formula_components = RikiddoFormulaComponents::default();
         let mut asset_balances_signed = Vec::with_capacity(asset_balances.len());
@@ -574,7 +603,13 @@ where
         Ok(result)
     }
 
-    /// Return cost C(q) for all assets in q
+    /// Returns the total cost for a specific vector of assets (see [LS-LMSR paper]).
+    ///
+    /// [LS-LMSR paper]: https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf
+    ///
+    /// # Arguments
+    ///
+    /// * `asset_balances`: The balance vector of the assets.
     fn cost(&self, asset_balances: &[Self::FU]) -> Result<Self::FU, &'static str> {
         convert_to_unsigned(self.cost_with_forumla(
             asset_balances,
@@ -584,7 +619,7 @@ where
         )?)
     }
 
-    /// Fetch the current fee
+    /// Returns the current fee.
     fn fee(&self) -> Result<Self::FU, &'static str> {
         let mas = if let Some(res) = self.ma_short.get() {
             res
@@ -614,7 +649,12 @@ where
         convert_to_unsigned::<FS, FU>(self.fees.calculate_fee(ratio_signed)?)
     }
 
-    /// Return price P_i(q) for asset q_i in q
+    /// Returns the price of one specific asset.
+    ///
+    /// # Arguments
+    ///
+    /// * `asset_in_question`: The balance of the asset for which the price should be returned.
+    /// * `asset_balances`: The balance vector of the assets.
     fn price(
         &self,
         asset_balances: &[Self::FU],
@@ -662,17 +702,20 @@ where
         + LossyFrom<FixedI128<U127>>
         + PartialOrd<I9F23>,
     FS::Bits: Copy + ToFixed + AddAssign + BitOrAssign + ShlAssign,
-    FE: Sigmoid<FS = FS>,
+    FE: Fee<FS = FS>,
     MA: MarketAverage<FU = FU>,
 {
-    /// Clear market data
+    /// Clear market data.
     fn clear(&mut self) {
         self.ma_short.clear();
         self.ma_long.clear();
     }
 
-    /// Update market data
-    /// Returns volume ratio short / long or None
+    /// Update market data.
+    ///
+    /// # Arguments
+    ///
+    /// * `volume`: The timestamped volume that should be added to the market data.
     fn update_volume(
         &mut self,
         volume: &TimestampedVolume<Self::FU>,
