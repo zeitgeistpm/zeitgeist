@@ -70,6 +70,20 @@ pub trait Lmsr {
     /// Returns the current fee.
     fn fee(&self) -> Result<Self::FU, &'static str>;
 
+    /// Returns the initial quantities of outstanding event outcome assets.
+    /// If 4 event outcome assets exist and this function returns 100, then the outstanding
+    /// shares for every single of those event outcome assets are 100.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_assets`: The number of distinct outcome events.
+    /// * `subsidy`: The initial total subsidy gathered.
+    fn initial_outstanding_assets(
+        &self,
+        num_assets: u32,
+        subsidy: Self::FU,
+    ) -> Result<Self::FU, &'static str>;
+
     /// Returns the price of one specific asset.
     ///
     /// # Arguments
@@ -164,6 +178,22 @@ pub trait RikiddoMVPallet {
     /// * `poolid`: The id of the asset pool for which all asset prices shall be calculated.
     /// * `rikiddo`: A specific type of Rikiddo as specified in the pallet's configuration.
     fn fee(poolid: Self::PoolId) -> Result<Self::Balance, DispatchError>;
+
+    /// Returns the initial quantities of outstanding event outcome assets.
+    /// If 4 event outcome assets exist and this function returns 100, then the outstanding
+    /// shares for every single of those event outcome assets are 100.
+    ///
+    /// # Arguments
+    ///
+    /// * `poolid`: Id of the pool for which the outstanding shares shall be calculated.
+    /// * `num_assets`: The number of distinct outcome events.
+    /// * `subsidy`: The initial total subsidy gathered.
+    fn initial_outstanding_assets(
+        &self,
+        pool_id: Self::PoolId,
+        num_assets: u32,
+        subsidy: Self::Balance,
+    ) -> Result<Self::Balance, DispatchError>;
 
     /// Returns the price of one specific asset.
     ///

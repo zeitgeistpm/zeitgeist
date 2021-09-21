@@ -566,7 +566,7 @@ mod pallet {
 
         #[pallet::constant]
         type MaxAssets: Get<u16>;
-        
+
         #[pallet::constant]
         type MaxInRatio: Get<BalanceOf<Self>>;
 
