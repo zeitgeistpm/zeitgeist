@@ -668,25 +668,22 @@ where
         let fee = self.config.initial_fee;
         let conversion_error = "[RikidoSigmoidMV] Number of assets does not fit in FU";
         let fee_overflow = "[RikidoSigmoidMV] Overflow during calculation: fee * num_assets";
-        let one_div = "[RikidoSigmoidMV] Overflow during calculation: 1 / (fee * num_assets)";
         let ln_error = "[RikiddoSigmoidMV] ln(num_assets) failed";
-        let add_error = "[RikidoSigmoidMV] Overflow during calculation: ln(num_assets) + 1 / \
-                             (fee * num_assets)";
-        let denom_error = "[RikidoSigmoidMV] Overflow during calculation: fee * \
-                                     num_assets * (ln(num_assets) + 1 / (fee * num_assets))";
+        let denom_error =
+            "[RikidoSigmoidMV] Overflow during calculation: fee * num_assets * ln(num_assets) + 1";
         let laste = "[RikidoSigmoidMV] Overflow during calculation: numerator / denominator";
         let num_assets_fs = num_assets.checked_to_fixed().ok_or(conversion_error)?;
         let fee_times_num_assets = fee.checked_mul(num_assets_fs).ok_or(fee_overflow)?;
         // This should not fail
         let ln_num_assets: FS = ln(num_assets_fs).map_err(|_| ln_error)?;
-        let one_div_fee_times = 1
-            .checked_to_fixed::<FS>()
-            .ok_or(conversion_error)?
-            .checked_div(fee_times_num_assets)
-            .ok_or(one_div)?;
-        let ln_total = ln_num_assets.checked_add(one_div_fee_times).ok_or(add_error)?;
-        let denominator = fee_times_num_assets.checked_mul(ln_total).ok_or(denom_error)?;
-        convert_to_unsigned(convert_to_signed::<Self::FU, FS>(subsidy)?.checked_div(denominator).ok_or(laste)?)
+        let denominator = fee_times_num_assets
+            .checked_mul(ln_num_assets)
+            .ok_or(denom_error)?
+            .checked_add(1.checked_to_fixed().ok_or(conversion_error)?)
+            .ok_or(denom_error)?;
+        convert_to_unsigned(
+            convert_to_signed::<Self::FU, FS>(subsidy)?.checked_div(denominator).ok_or(laste)?,
+        )
     }
 
     /// Returns the price of one specific asset.
