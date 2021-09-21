@@ -1154,6 +1154,7 @@ mod pallet {
                 let pool_account = Pallet::<T>::pool_account_id(pool_id);
                 let mut account_created = false;
                 let mut total_balance = <BalanceOf<T>>::zero();
+                let mut providers = Vec::new();
 
                 // Transfer all reserved funds to the pool account and distribute pool shares.
                 for provider in <SubsidyProviders<T>>::drain() {
@@ -1178,6 +1179,7 @@ mod pallet {
                     )?;
 
                     total_balance.saturating_add(transfered);
+                    providers.push(provider);
                 }
 
                 // This can only happen if other pallets consumed some of the reserved
