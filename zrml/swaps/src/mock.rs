@@ -1,34 +1,23 @@
 #![cfg(feature = "mock")]
 
 use crate as zrml_swaps;
-use frame_support::{construct_runtime, parameter_types};
-use orml_traits::parameter_type_with_key;
+use frame_support::construct_runtime;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, DustAccountTest, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId,
-        MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight,
-        MinLiquidity, MinWeight, MinimumPeriod, SwapsPalletId,
+        BlockHashCount, DustAccountTest, ExistentialDeposit, ExistentialDeposits, ExitFee,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
+        MaxReserves, MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight, MinimumPeriod,
+        SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
-
-// parameter_types imported from zeitgeist_primitives
-parameter_types! {
-    pub const ExistentialDeposit: u32 = 1;
-}
-
-parameter_type_with_key! {
-  pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-    Default::default()
-  };
-}
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -158,13 +147,7 @@ pub struct ExtBuilder {
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
-            balances: vec![
-                (ALICE, 1_000),
-                (BOB, 1_000),
-                (CHARLIE, 1_000),
-                (DAVE, 1_000),
-                (EVE, 1_000),
-            ],
+            balances: vec![(ALICE, BASE), (BOB, BASE), (CHARLIE, BASE), (DAVE, BASE), (EVE, BASE)],
         }
     }
 }

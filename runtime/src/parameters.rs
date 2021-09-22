@@ -13,7 +13,6 @@ use frame_support::{
     },
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
@@ -53,10 +52,4 @@ parameter_types! {
     })
     .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
     .build_or_panic();
-}
-
-parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-      Default::default()
-    };
 }
