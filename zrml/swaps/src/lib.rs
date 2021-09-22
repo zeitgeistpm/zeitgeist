@@ -150,9 +150,9 @@ mod pallet {
         ///
         /// # Arguments
         ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be unreserved.
         /// * `pool_id`: Unique pool identifier.
-        /// * `amount`: The amount of base currency that should be added to subsidy.
+        /// * `amount`: The amount of base currency that should be removed from subsidy.
         #[pallet::weight(0)]
         pub fn pool_exit_subsidy(
             origin: OriginFor<T>,
@@ -356,7 +356,7 @@ mod pallet {
         ///
         /// # Arguments
         ///
-        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be reserved.
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be added to subsidy.
         #[pallet::weight(0)]
