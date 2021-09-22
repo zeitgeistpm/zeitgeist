@@ -28,6 +28,21 @@ pub trait Swaps<AccountId> {
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
+    /// Pool will be marked as `PoolStatus::Active`, if the state transition is possible.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
+    /// than the given value.
+    fn end_subsidy_phase(pool_id: PoolId) -> DispatchResult;
+
+    /// All supporters will receive their reserved funds back and the pool is destroyed.
+    ///
+    /// # Arguments
+    ///
+    /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
+    fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> DispatchResult;
+
     /// Pool - Exit with exact pool amount
     ///
     /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
@@ -89,12 +104,4 @@ pub trait Swaps<AccountId> {
         pool_id: PoolId,
         outcome_report: &OutcomeReport,
     ) -> DispatchResult;
-
-    /// Pool will be marked as `PoolStatus::Active`, if the state transition is possible.
-    ///
-    /// # Arguments
-    ///
-    /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
-    /// than the given value.
-    fn set_pool_as_active(pool_id: PoolId) -> DispatchResult;
 }

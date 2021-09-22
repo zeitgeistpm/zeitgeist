@@ -176,10 +176,6 @@
     ]
   },
   "SerdeWrapper": "Balance",
-  "SubsidyProvider": {
-    "address": "AccountId",
-    "subsidy": "Balance"
-  },
   "SwapEvent": {
     "asset_amount_in": "Balance",
     "asset_amount_out": "Balance",
