@@ -68,8 +68,8 @@
   "MarketIdOf": "u128",
   "MarketPeriod": {
     "_enum": {
-      "Block": "RangeBlockNumber",
-      "Timestamp": "RangeTimestamp"
+      "Block": "Range<BlockNumber>",
+      "Timestamp": "Range<Moment>"
     }
   },
   "MarketStatus": {
@@ -111,14 +111,6 @@
       "Ask"
     ]
   },
-  "RangeBlockNumber": {
-    "start": "BlockNumber",
-    "end": "BlockNumber"
-  },
-  "RangeTimestamp": {
-    "start": "Moment",
-    "end": "Moment"
-  },
   "ScoringRule": {
     "_enum": [
       "CPMM",
@@ -137,7 +129,8 @@
     "market_id": "MarketId",
     "pool_status": "PoolStatus",
     "scoring_rule": "ScoringRule",
-    "swap_fee": "Balance",
+    "swap_fee": "Option<Balance>",
+    "total_subsidy": "Option<Balance>",
     "total_weight": "Option<u128>",
     "weights": "Option<BTreeMap<Asset, u128>>"
   },
