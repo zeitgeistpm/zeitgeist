@@ -18,9 +18,10 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
         AdvisoryBond, AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount,
-        CourtCaseDuration, CourtPalletId, DisputeBond, DisputeFactor, DustAccountTest, ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
+        CourtCaseDuration, CourtPalletId, DisputeBond, DisputeFactor, DustAccountTest,
+        ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
         LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
-        MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight,
+        MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinSubsidy, MinWeight,
         MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod, SimpleDisputesPalletId,
         StakeWeight, SwapsPalletId, TreasuryPalletId, ValidityBond, BASE,
     },
@@ -228,6 +229,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
+    type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;

@@ -36,9 +36,15 @@ mod pallet {
         },
         weights::*,
     };
-    use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
+    use alloc::{collections::btree_map::BTreeMap, vec::Vec};
     use core::marker::PhantomData;
-    use frame_support::{Blake2_128Concat, PalletId, Twox64Concat, dispatch::Weight, ensure, pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery}, traits::{Get, IsType}};
+    use frame_support::{
+        dispatch::Weight,
+        ensure,
+        pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        traits::{Get, IsType},
+        Blake2_128Concat, PalletId, Twox64Concat,
+    };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
@@ -892,50 +898,34 @@ mod pallet {
             swap_fee: Option<BalanceOf<T>>,
             weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
-            let mut weights_unwrapped = vec![T::MinWeight::get(); assets.len()];
-
-            if scoring_rule == ScoringRule::CPMM {
-                let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
-                weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
-                Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
-            } else {
-                ensure!(base_asset != None, Error::<T>::BaseAssetNotFound);
-            }
-
             ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
             let amount = T::MinLiquidity::get();
             let next_pool_id = Self::inc_next_pool_id()?;
+            let pool_shares_id = Self::pool_shares_id(next_pool_id);
             let pool_account = Self::pool_account_id(next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
 
-            for (asset, weight) in assets.iter().copied().zip(weights_unwrapped).filter(|pair| {
-                if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma
-                    && Some(pair.0) != base_asset
-                {
-                    return false;
-                }
+            if scoring_rule == ScoringRule::CPMM {
+                let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
+                Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
 
-                true
-            }) {
-                let free_balance = T::Shares::free_balance(asset, &who);
-                ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
-
-                if scoring_rule == ScoringRule::CPMM {
+                for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
+                    let free_balance = T::Shares::free_balance(asset, &who);
+                    ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
                     ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                     ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
                     map.insert(asset, weight);
                     total_weight = total_weight.check_add_rslt(&weight)?;
+                    T::Shares::transfer(asset, &who, &pool_account, amount)?;
                 }
 
-                T::Shares::transfer(asset, &who, &pool_account, amount)?;
-            }
-
-            ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
-            let pool_shares_id = Self::pool_shares_id(next_pool_id);
-            T::Shares::deposit(pool_shares_id, &who, amount)?;
-
-            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
+                T::Shares::deposit(pool_shares_id, &who, amount)?;
+            } else {
+                let base_asset_unwrapped = base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                ensure!(assets.contains(&base_asset_unwrapped), Error::<T>::BaseAssetNotFound);
                 let mut rikiddo_instance: RikiddoSigmoidMV<
                     T::FixedTypeU,
                     T::FixedTypeS,
@@ -1022,14 +1012,10 @@ mod pallet {
         fn end_subsidy_phase(pool_id: PoolId) -> DispatchResult {
             Self::mutate_pool(pool_id, |pool| {
                 // Ensure all preconditions are met.
-                if pool.pool_status == PoolStatus::Active {
-                    return Ok(());
-                } else if pool.pool_status != PoolStatus::CollectingSubsidy {
+                if pool.pool_status != PoolStatus::CollectingSubsidy {
                     return Err(Error::<T>::InvalidStateTransition.into());
                 }
 
-                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::InsufficientSubsidy)?;
-                ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
                 let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                 let pool_account = Pallet::<T>::pool_account_id(pool_id);
                 let pool_shares_id = Self::pool_shares_id(pool_id);
@@ -1043,12 +1029,7 @@ mod pallet {
 
                     if !account_created {
                         T::Shares::unreserve(base_asset, &provider_address, subsidy);
-                        T::Shares::transfer(
-                            base_asset,
-                            &provider_address,
-                            &pool_account,
-                            subsidy,
-                        )?;
+                        T::Shares::transfer(base_asset, &provider_address, &pool_account, subsidy)?;
                         total_balance = subsidy;
                         T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
                         account_created = true;
@@ -1067,12 +1048,8 @@ mod pallet {
                     total_balance.saturating_add(transfered);
                 }
 
-                // This can only happen if other pallets consumed some of the reserved
-                // balance for subsidy.
-                if total_balance != total_subsidy {
-                    ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                    pool.total_subsidy = Some(total_balance);
-                }
+                ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
+                pool.total_subsidy = Some(total_balance);
 
                 // Assign the initial set of outstanding assets to the pool account.
                 let outstanding_assets_per_event =
@@ -1082,10 +1059,11 @@ mod pallet {
                         total_balance,
                     )?;
 
-                for asset in pool.assets.iter() {
+                for asset in pool.assets.iter().filter(|e| **e != base_asset) {
                     T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
                 }
 
+                pool.pool_status = PoolStatus::Active;
                 Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
                 Ok(())
             })
@@ -1246,6 +1224,10 @@ mod pallet {
                     return Ok(());
                 }
 
+                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
+                }
+
                 if let MarketType::Categorical(_) = market_type {
                     if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                         pool.assets.retain(|el| {
@@ -1259,11 +1241,6 @@ mod pallet {
                 }
 
                 pool.pool_status = PoolStatus::Stale;
-
-                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
-                }
-
                 Ok(())
             })
         }

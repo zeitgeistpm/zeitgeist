@@ -599,7 +599,7 @@ mod pallet {
                 assets,
                 last_asset,
                 market_id,
-                ScoringRule::CPMM,
+                scoring_rule,
                 if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
                 if scoring_rule == ScoringRule::CPMM { Some(weights) } else { None },
             )?;

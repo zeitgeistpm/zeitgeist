@@ -6,11 +6,13 @@ use crate::{
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
-    types::{Asset, MarketId, MarketType, OutcomeReport, ScoringRule},
+    types::{Asset, MarketId, MarketType, OutcomeReport, PoolStatus, ScoringRule},
 };
+use zrml_rikiddo::traits::RikiddoMVPallet;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
@@ -175,9 +177,15 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
 fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Errors trigger correctly.
-        assert_noop!(Swaps::destroy_pool_in_subsidy_phase(0), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_noop!(
+            Swaps::destroy_pool_in_subsidy_phase(0),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
         create_initial_pool(ScoringRule::CPMM);
-        assert_noop!(Swaps::destroy_pool_in_subsidy_phase(0), crate::Error::<Runtime>::InvalidStateTransition);
+        assert_noop!(
+            Swaps::destroy_pool_in_subsidy_phase(0),
+            crate::Error::<Runtime>::InvalidStateTransition
+        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         // Reserve some funds for subsidy
         assert_ok!(Currencies::reserve(ASSET_D, &ALICE, _25));
@@ -188,6 +196,46 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
         assert!(!crate::SubsidyProviders::<Runtime>::contains_key(1, ALICE));
         assert!(!crate::Pools::<Runtime>::contains_key(1));
+    });
+}
+
+#[test]
+fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM);
+        assert_noop!(Swaps::end_subsidy_phase(0), crate::Error::<Runtime>::InvalidStateTransition);
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        assert_noop!(Swaps::end_subsidy_phase(1), crate::Error::<Runtime>::InsufficientSubsidy);
+
+        // Reserve some funds for subsidy
+        let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
+        assert_ok!(Currencies::deposit(ASSET_D, &ALICE, min_subsidy));
+        assert_ok!(Currencies::reserve(ASSET_D, &ALICE, min_subsidy));
+        crate::SubsidyProviders::<Runtime>::insert(1, ALICE, min_subsidy);
+        assert_ok!(Swaps::end_subsidy_phase(1));
+
+        // Check that subsidy was deposited, shares were distributed in exchange, the initial
+        // outstanding event outcome assets are assigned to the pool account and pool is active.
+        assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
+
+        let pool_shares_id = Swaps::pool_shares_id(1);
+        assert_eq!(Currencies::total_balance(pool_shares_id, &ALICE), min_subsidy);
+
+        let pool_account_id = Swaps::pool_account_id(1);
+        let total_subsidy = Currencies::total_balance(ASSET_D, &pool_account_id);
+        assert_eq!(total_subsidy, min_subsidy);
+        let initial_outstanding_assets = RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
+            1,
+            (ASSETS.len() - 1).saturated_into::<u32>(),
+            total_subsidy,
+        )
+        .unwrap();
+        let balance_asset_a = Currencies::total_balance(ASSET_A, &pool_account_id);
+        let balance_asset_b = Currencies::total_balance(ASSET_B, &pool_account_id);
+        let balance_asset_c = Currencies::total_balance(ASSET_C, &pool_account_id);
+        assert!(balance_asset_a == initial_outstanding_assets);
+        assert!(balance_asset_a == balance_asset_b && balance_asset_b == balance_asset_c);
+        assert_eq!(Swaps::pool_by_id(1).unwrap().pool_status, PoolStatus::Active);
     });
 }
 
@@ -556,7 +604,8 @@ fn swap_exact_amount_in_exchanges_correct_values() {
         panic!("{} - {}", in_balance, out_balance);
         // Between 25.9 and 26.1
         assert!(in_balance > 259 * BASE / 10 && in_balance < 261 * BASE / 10);
-    });*/
+    });
+    */
 }
 
 #[test]
