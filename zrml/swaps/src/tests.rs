@@ -5,7 +5,7 @@ use crate::{
     mock::*,
 };
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
@@ -168,6 +168,26 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_B).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_C).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_D).unwrap(), _2);
+    });
+}
+
+#[test]
+fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Errors trigger correctly.
+        assert_noop!(Swaps::destroy_pool_in_subsidy_phase(0), crate::Error::<Runtime>::PoolDoesNotExist);
+        create_initial_pool(ScoringRule::CPMM);
+        assert_noop!(Swaps::destroy_pool_in_subsidy_phase(0), crate::Error::<Runtime>::InvalidStateTransition);
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        // Reserve some funds for subsidy
+        assert_ok!(Currencies::reserve(ASSET_D, &ALICE, _25));
+        assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), _25);
+        crate::SubsidyProviders::<Runtime>::insert(1, ALICE, _25);
+        assert_ok!(Swaps::destroy_pool_in_subsidy_phase(1));
+        // Rserved balanced was returned and all storage cleared.
+        assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
+        assert!(!crate::SubsidyProviders::<Runtime>::contains_key(1, ALICE));
+        assert!(!crate::Pools::<Runtime>::contains_key(1));
     });
 }
 
