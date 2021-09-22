@@ -23,6 +23,7 @@ where
     F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
+    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(p.pool_id);
 
@@ -60,6 +61,7 @@ where
     F3: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
+    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(p.pool_id);
@@ -91,6 +93,7 @@ where
     F3: FnMut(Asset<T::MarketId>) -> DispatchResult,
     T: Config,
 {
+    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let total_issuance = T::Shares::total_issuance(pool_shares_id);
 
