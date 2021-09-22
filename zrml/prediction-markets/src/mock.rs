@@ -10,7 +10,6 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
-use orml_traits::parameter_type_with_key;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -18,9 +17,10 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{
         AdvisoryBond, AuthorizedPalletId, BlockHashCount, CourtCaseDuration, CourtPalletId,
-        DustAccountTest, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
-        MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight,
-        MaxWeight, MinCategories, MinLiquidity, MinWeight, MinimumPeriod, OracleBond, PmPalletId,
+        DisputeBond, DisputeFactor, DustAccountTest, ExistentialDeposit, ExistentialDeposits,
+        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories,
+        MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight,
+        MinCategories, MinLiquidity, MinWeight, MinimumPeriod, OracleBond, PmPalletId,
         ReportingPeriod, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId,
         ValidityBond, BASE,
     },
@@ -37,21 +37,12 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
-pub const TREASURY: AccountIdTest = 99;
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 parameter_types! {
-    pub const DisputeBond: Balance = 100;
-    pub const DisputeFactor: Balance = 25;
     pub const DisputePeriod: BlockNumber = 10;
-    pub const ExistentialDeposit: u64 = 1;
-}
-parameter_type_with_key! {
-  pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-    Default::default()
-  };
 }
 
 construct_runtime!(
@@ -240,6 +231,7 @@ impl Default for ExtBuilder {
                 (DAVE, 1_000 * BASE),
                 (EVE, 1_000 * BASE),
                 (FRED, 1_000 * BASE),
+                (SUDO, 1_000 * BASE),
             ],
         }
     }
