@@ -47,17 +47,3 @@ pub enum ScoringRule {
     CPMM,
     RikiddoSigmoidFeeMarketEma,
 }
-
-#[derive(
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    sp_runtime::RuntimeDebug,
-)]
-pub struct SubsidyProvider<Address, Balance> {
-    pub address: Address,
-    pub subsidy: Balance,
-}

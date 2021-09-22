@@ -38,13 +38,7 @@ mod pallet {
     };
     use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
-    use frame_support::{
-        dispatch::Weight,
-        ensure,
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
-        traits::{Get, IsType},
-        Blake2_128Concat, PalletId, Twox64Concat,
-    };
+    use frame_support::{Blake2_128Concat, PalletId, Twox64Concat, dispatch::Weight, ensure, pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery}, traits::{Get, IsType}};
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
@@ -65,7 +59,6 @@ mod pallet {
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper,
-            SubsidyProvider,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -698,7 +691,7 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn subsidy_providers)]
     pub type SubsidyProviders<T: Config> =
-        StorageMap<_, Twox64Concat, PoolId, SubsidyProvider<T::AccountId, BalanceOf<T>>>;
+        StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, T::AccountId, BalanceOf<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
@@ -993,6 +986,111 @@ mod pallet {
             Ok(next_pool_id)
         }
 
+        /// All supporters will receive their reserved funds back and the pool is destroyed.
+        ///
+        /// # Arguments
+        ///
+        /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
+        fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> DispatchResult {
+            let _ = Self::mutate_pool(pool_id, |pool| {
+                // Ensure all preconditions are met.
+                if pool.pool_status != PoolStatus::CollectingSubsidy {
+                    return Err(Error::<T>::InvalidStateTransition.into());
+                }
+
+                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+
+                for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
+                    T::Shares::unreserve(base_asset, &provider.0, provider.1);
+                }
+
+                Ok(())
+            })?;
+
+            Pools::<T>::remove(pool_id);
+            Ok(())
+        }
+
+        /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
+        /// state and all other conditions are met.
+        ///
+        /// # Arguments
+        ///
+        /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
+        /// than the given value.
+        #[frame_support::transactional]
+        fn end_subsidy_phase(pool_id: PoolId) -> DispatchResult {
+            Self::mutate_pool(pool_id, |pool| {
+                // Ensure all preconditions are met.
+                if pool.pool_status == PoolStatus::Active {
+                    return Ok(());
+                } else if pool.pool_status != PoolStatus::CollectingSubsidy {
+                    return Err(Error::<T>::InvalidStateTransition.into());
+                }
+
+                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::InsufficientSubsidy)?;
+                ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
+                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let pool_account = Pallet::<T>::pool_account_id(pool_id);
+                let pool_shares_id = Self::pool_shares_id(pool_id);
+                let mut account_created = false;
+                let mut total_balance = <BalanceOf<T>>::zero();
+
+                // Transfer all reserved funds to the pool account and distribute pool shares.
+                for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
+                    let provider_address = provider.0;
+                    let subsidy = provider.1;
+
+                    if !account_created {
+                        T::Shares::unreserve(base_asset, &provider_address, subsidy);
+                        T::Shares::transfer(
+                            base_asset,
+                            &provider_address,
+                            &pool_account,
+                            subsidy,
+                        )?;
+                        total_balance = subsidy;
+                        T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
+                        account_created = true;
+                        continue;
+                    }
+
+                    let remaining = T::Shares::repatriate_reserved(
+                        base_asset,
+                        &provider_address,
+                        &pool_account,
+                        subsidy,
+                        BalanceStatus::Free,
+                    )?;
+                    let transfered = subsidy.saturating_sub(remaining);
+                    T::Shares::deposit(pool_shares_id, &provider_address, transfered)?;
+                    total_balance.saturating_add(transfered);
+                }
+
+                // This can only happen if other pallets consumed some of the reserved
+                // balance for subsidy.
+                if total_balance != total_subsidy {
+                    ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
+                    pool.total_subsidy = Some(total_balance);
+                }
+
+                // Assign the initial set of outstanding assets to the pool account.
+                let outstanding_assets_per_event =
+                    T::RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
+                        pool_id,
+                        pool.assets.len().saturated_into::<u32>().saturating_sub(1),
+                        total_balance,
+                    )?;
+
+                for asset in pool.assets.iter() {
+                    T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
+                }
+
+                Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
+                Ok(())
+            })
+        }
+
         /// Pool - Exit with exact pool amount
         ///
         /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,
@@ -1126,82 +1224,6 @@ mod pallet {
 
         fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError> {
             Ok(Self::pool_by_id(pool_id)?)
-        }
-
-        /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
-        /// state and all other conditions are met.
-        ///
-        /// # Arguments
-        ///
-        /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
-        /// than the given value.
-        #[frame_support::transactional]
-        fn set_pool_as_active(pool_id: PoolId) -> DispatchResult {
-            Self::mutate_pool(pool_id, |pool| {
-                // Ensure all preconditions are met.
-                if pool.pool_status == PoolStatus::Active {
-                    return Ok(());
-                } else if pool.pool_status != PoolStatus::CollectingSubsidy {
-                    return Err(Error::<T>::InvalidStateTransition.into());
-                }
-
-                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::InsufficientSubsidy)?;
-                ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-                let pool_account = Pallet::<T>::pool_account_id(pool_id);
-                let pool_shares_id = Self::pool_shares_id(pool_id);
-                let mut account_created = false;
-                let mut total_balance = <BalanceOf<T>>::zero();
-
-                // Transfer all reserved funds to the pool account and distribute pool shares.
-                for provider in <SubsidyProviders<T>>::drain() {
-                    if !account_created {
-                        T::Shares::unreserve(base_asset, &provider.1.address, provider.1.subsidy);
-                        T::Shares::transfer(
-                            base_asset,
-                            &provider.1.address,
-                            &pool_account,
-                            provider.1.subsidy,
-                        )?;
-                        total_balance = provider.1.subsidy;
-                        T::Shares::deposit(pool_shares_id, &provider.1.address, provider.1.subsidy)?;
-                        account_created = true;
-                        continue;
-                    }
-
-                    let transfered = T::Shares::repatriate_reserved(
-                        base_asset,
-                        &provider.1.address,
-                        &pool_account,
-                        provider.1.subsidy,
-                        BalanceStatus::Free,
-                    )?;
-                    T::Shares::deposit(pool_shares_id, &provider.1.address, transfered)?;
-                    total_balance.saturating_add(transfered);
-                }
-
-                // This can only happen if other pallets consumed some of the reserved
-                // balance for subsidy.
-                if total_balance != total_subsidy {
-                    ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                    pool.total_subsidy = Some(total_balance);
-                }
-
-                // Assign the initial set of outstanding assets to the pool account.
-                let outstanding_assets_per_event =
-                    T::RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
-                        pool_id,
-                        pool.assets.len().saturated_into::<u32>().saturating_sub(1),
-                        total_balance,
-                    )?;
-
-                for asset in pool.assets.iter() {
-                    T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
-                }
-
-                Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
-                Ok(())
-            })
         }
 
         /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
