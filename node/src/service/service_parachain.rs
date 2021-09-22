@@ -29,7 +29,7 @@ pub fn new_partial(
         TFullClient<Block, RuntimeApi, Executor>,
         TFullBackend<Block>,
         (),
-        sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+        sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
         sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (Option<Telemetry>, Option<TelemetryWorkerHandle>),
     >,
@@ -135,11 +135,13 @@ where
         relay_chain_full_node.backend.clone(),
     );
 
+    let skip_prediction = parachain_config.force_authoring;
     let is_collator = parachain_config.role.is_authority();
     let prometheus_registry = parachain_config.prometheus_registry().cloned();
     let transaction_pool = params.transaction_pool.clone();
     let mut task_manager = params.task_manager;
     let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
+
     let (network, system_rpc_tx, start_network) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &parachain_config,
@@ -149,10 +151,11 @@ where
             import_queue: import_queue.clone(),
             on_demand: None,
             block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
+            warp_sync: None,
         })?;
 
     let rpc_client = client.clone();
-    let rpc_extensions_builder = Box::new(move |_, _| rpc_ext_builder(rpc_client.clone()));
+    let rpc_extensions_builder = Box::new(move |_, _| Ok(rpc_ext_builder(rpc_client.clone())));
 
     sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         backend: backend.clone(),
@@ -218,6 +221,7 @@ where
             proposer_factory,
             relay_chain_backend: relay_chain_full_node.backend.clone(),
             relay_chain_client: relay_chain_full_node.client.clone(),
+            skip_prediction,
         });
 
         let spawner = task_manager.spawn_handle();

@@ -23,16 +23,19 @@ pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
-  pub const BondDuration: u32 = BLOCKS_PER_DAY as u32;
   pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
   pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
+  pub const LeaveCandidatesDelay: u32 = 2;
+  pub const LeaveNominatorsDelay: u32 = 2;
   pub const MaxCollatorsPerNominator: u32 = 16;
   pub const MaxNominatorsPerCollator: u32 = 32;
   pub const MinBlocksPerRound: u32 = (BLOCKS_PER_DAY / 6) as _;
   pub const MinCollatorStake: u128 = 64 * BASE;
   pub const MinNominatorStake: u128 = BASE / 2;
   pub const MinSelectedCandidates: u32 = 1;
+  pub const RevokeNominationDelay: u32 = 2;
+  pub const RewardPaymentDelay: u32 = 2;
   pub const SS58Prefix: u8 = 73;
   pub const TransactionByteFee: Balance = 100 * MICRO;
   pub const Version: RuntimeVersion = VERSION;
