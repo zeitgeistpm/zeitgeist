@@ -16,20 +16,10 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
-use zeitgeist_primitives::{
-    constants::{
-        AdvisoryBond, AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount,
-        CourtCaseDuration, CourtPalletId, DustAccountTest, ExitFee, GetNativeCurrencyId,
-        LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
-        MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinWeight,
-        MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, TreasuryPalletId, ValidityBond, BASE,
-    },
-    types::{
+use zeitgeist_primitives::{constants::{AdvisoryBond, AuthorizedPalletId, BASE, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration, CourtPalletId, DustAccountTest, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinSubsidy, MinWeight, MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, ValidityBond}, types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
-    },
-};
+    }};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -240,6 +230,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
+    type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
