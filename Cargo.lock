@@ -11000,8 +11000,8 @@ version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
- "cfg-if 1.0.0",
- "rand 0.7.3",
+ "cfg-if 0.1.10",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
@@ -11980,6 +11980,7 @@ dependencies = [
  "sp-session",
  "sp-transaction-pool",
  "sp-version",
+ "substrate-fixed",
  "substrate-wasm-builder",
  "xcm",
  "xcm-builder",
@@ -11991,6 +11992,7 @@ dependencies = [
  "zrml-market-commons",
  "zrml-orderbook-v1",
  "zrml-prediction-markets",
+ "zrml-rikiddo",
  "zrml-simple-disputes",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
@@ -12126,6 +12128,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
+ "substrate-fixed",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
@@ -12133,6 +12136,7 @@ dependencies = [
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-prediction-markets-runtime-api",
+ "zrml-rikiddo",
  "zrml-simple-disputes",
  "zrml-swaps",
 ]
@@ -12221,9 +12225,11 @@ dependencies = [
  "sp-api",
  "sp-io",
  "sp-runtime",
+ "substrate-fixed",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
+ "zrml-rikiddo",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]

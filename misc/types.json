@@ -68,8 +68,8 @@
   "MarketIdOf": "u128",
   "MarketPeriod": {
     "_enum": {
-      "Block": "Range<BlockNumber>",
-      "Timestamp": "Range<Moment>"
+      "Block": "RangeBlockNumber",
+      "Timestamp": "RangeTimestamp"
     }
   },
   "MarketStatus": {
@@ -111,6 +111,20 @@
       "Ask"
     ]
   },
+  "RangeBlockNumber": {
+    "start": "BlockNumber",
+    "end": "BlockNumber"
+  },
+  "RangeTimestamp": {
+    "start": "Moment",
+    "end": "Moment"
+  },
+  "ScoringRule": {
+    "_enum": [
+      "CPMM",
+      "RikiddoSigmoidFeeMarketEma"
+    ]
+  },
   "Outcome": {
     "_enum": {
       "Categorical": "u16",
@@ -119,10 +133,13 @@
   },
   "Pool": {
     "assets": "Vec<Asset>",
+    "base_currency": "Option<Asset>",
+    "market_id": "MarketId",
     "pool_status": "PoolStatus",
+    "scoring_rule": "ScoringRule",
     "swap_fee": "Balance",
-    "total_weight": "u128",
-    "weights": "BTreeMap<Asset, u128>"
+    "total_weight": "Option<u128>",
+    "weights": "Option<BTreeMap<Asset, u128>>"
   },
   "PoolAssetEvent": {
     "bound": "Balance",
@@ -138,6 +155,7 @@
   "PoolStatus": {
     "_enum": {
       "Active": null,
+      "CollectingSubsidy": null,
       "Stale": null
     }
   },

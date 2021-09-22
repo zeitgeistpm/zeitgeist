@@ -25,17 +25,20 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
-pub const BALANCE_FRACTIONAL_DECIMAL_PLACES: u8 = {
-    let mut base = BASE;
-    let mut counter: u8 = 0;
+// Rikiddo and TokensConfig
+parameter_types! {
+    pub const BalanceFractionalDecimals: u8 = {
+        let mut base = BASE;
+        let mut counter: u8 = 0;
 
-    while base >= 10 {
-        base /= 10;
-        counter += 1;
-    }
+        while base >= 10 {
+            base /= 10;
+            counter += 1;
+        }
 
-    counter
-};
+        counter
+    };
+}
 
 // Authorized
 parameter_types! {
@@ -107,6 +110,7 @@ parameter_types! {
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
     pub const MinLiquidity: Balance = 100 * BASE;
+    pub const MinSubsidy: Balance = MinLiquidity::get();
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
 }

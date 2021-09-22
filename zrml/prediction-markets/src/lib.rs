@@ -93,6 +93,7 @@ mod pallet {
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
+            ScoringRule,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -439,6 +440,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             assets: MarketType,
+            scoring_rule: ScoringRule,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
             pool_join_additional_assets: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>)>,
@@ -478,7 +480,7 @@ mod pallet {
                 .actual_weight
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weight_len = weights.len().saturated_into();
-            let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
+            let _ = Self::deploy_swap_pool_for_market(origin, market_id, scoring_rule, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins = 0;
 
@@ -574,6 +576,7 @@ mod pallet {
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
+            scoring_rule: ScoringRule,
             weights: Vec<u128>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
@@ -586,8 +589,18 @@ mod pallet {
 
             let mut assets = Self::outcome_assets(market_id, &market);
             assets.push(Asset::Ztg);
+            let last_asset =
+                if assets.last().is_some() { Some(assets.last().unwrap().clone()) } else { None };
 
-            let pool_id = T::Swaps::create_pool(sender, assets, market_id, Zero::zero(), weights)?;
+            let pool_id = T::Swaps::create_pool(
+                sender,
+                assets,
+                last_asset,
+                market_id,
+                ScoringRule::CPMM,
+                if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
+                if scoring_rule == ScoringRule::CPMM { Some(weights) } else { None },
+            )?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             Ok(())

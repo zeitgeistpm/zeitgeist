@@ -36,7 +36,9 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
+use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::All,
@@ -113,13 +115,13 @@ macro_rules! create_zeitgeist_runtime {
                 // Zeitgeist
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 40,
                 Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 41,
-
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 42,
                 Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 43,
                 Court: zrml_court::{Event<T>, Pallet, Storage} = 44,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 45,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 46,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
+                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 48,
 
                 $($additional_pallets)*
             }
@@ -454,6 +456,22 @@ impl zrml_prediction_markets::Config for Runtime {
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }
 
+pub type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
+impl zrml_rikiddo::Config<RikiddoSigmoidFeeMarketVolumeEma> for Runtime {
+    type Timestamp = Timestamp;
+    type Balance = Balance;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = BalanceFractionalDecimals;
+    type PoolId = PoolId;
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
+}
+
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
     type LiquidityMining = LiquidityMining;
@@ -466,6 +484,8 @@ impl zrml_simple_disputes::Config for Runtime {
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
     type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
@@ -474,8 +494,10 @@ impl zrml_swaps::Config for Runtime {
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
+    type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
+    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
