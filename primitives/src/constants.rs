@@ -11,6 +11,7 @@ use crate::{
     types::{AccountId, AccountIdTest, Balance, BlockNumber, CurrencyId},
 };
 use frame_support::{parameter_types, PalletId};
+use orml_traits::parameter_type_with_key;
 use sp_runtime::{traits::AccountIdConversion, Permill};
 
 // Definitions for time
@@ -67,6 +68,15 @@ parameter_types! {
 }
 
 // ORML
+parameter_type_with_key! {
+    // Well, not every asset is a currency ¯\_(ツ)_/¯
+    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+        match currency_id {
+            Asset::Ztg => ExistentialDeposit::get(),
+            _ => 0
+        }
+    };
+}
 parameter_types! {
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
     pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();

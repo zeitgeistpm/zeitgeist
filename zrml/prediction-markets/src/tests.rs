@@ -15,7 +15,7 @@ use frame_support::{
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::{AdvisoryBond, OracleBond, ValidityBond, BASE, CENT},
+    constants::{AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT},
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MultiHash, OutcomeReport, ScalarPosition,
@@ -169,7 +169,7 @@ fn it_allows_to_buy_a_complete_set() {
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
         // Allows someone to generate a complete set
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
         let market = MarketCommons::market(&0).unwrap();
 
@@ -177,16 +177,16 @@ fn it_allows_to_buy_a_complete_set() {
         let assets = PredictionMarkets::outcome_assets(0, &market);
         for asset in assets.iter() {
             let bal = Tokens::free_balance(*asset, &BOB);
-            assert_eq!(bal, 100);
+            assert_eq!(bal, CENT);
         }
 
         // also check native balance
         let bal = Balances::free_balance(&BOB);
-        assert_eq!(bal, 1_000 * BASE - 100);
+        assert_eq!(bal, 1_000 * BASE - CENT);
 
         let market_account = PredictionMarkets::market_account(0);
         let market_bal = Balances::free_balance(market_account);
-        assert_eq!(market_bal, 100);
+        assert_eq!(market_bal, CENT);
     });
 }
 
@@ -219,9 +219,9 @@ fn it_allows_to_sell_a_complete_set() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
-        assert_ok!(PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 100,));
+        assert_ok!(PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, CENT));
 
         let market = MarketCommons::market(&0).unwrap();
 
@@ -364,7 +364,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
         run_to_block(100);
 
@@ -393,9 +393,9 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         let share_b = Asset::CategoricalOutcome(0, 1);
         let share_b_total = Tokens::total_issuance(share_b);
-        assert_eq!(share_b_total, 100);
+        assert_eq!(share_b_total, CENT);
         let share_b_bal = Tokens::free_balance(share_b, &CHARLIE);
-        assert_eq!(share_b_bal, 100);
+        assert_eq!(share_b_bal, CENT);
 
         let share_c = Asset::CategoricalOutcome(0, 2);
         let share_c_total = Tokens::total_issuance(share_c);
@@ -411,7 +411,7 @@ fn it_resolves_a_disputed_market() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
         run_to_block(100);
 
@@ -450,13 +450,13 @@ fn it_resolves_a_disputed_market() {
 
         // check everyone's deposits
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
-        assert_eq!(charlie_reserved, 100);
+        assert_eq!(charlie_reserved, DisputeBond::get());
 
         let dave_reserved = Balances::reserved_balance(&DAVE);
-        assert_eq!(dave_reserved, 125);
+        assert_eq!(dave_reserved, DisputeBond::get() + DisputeFactor::get());
 
         let eve_reserved = Balances::reserved_balance(&EVE);
-        assert_eq!(eve_reserved, 150);
+        assert_eq!(eve_reserved, DisputeBond::get() + 2 * DisputeFactor::get());
 
         // check disputes length
         let disputes = crate::Disputes::<Runtime>::get(&0);
@@ -484,19 +484,21 @@ fn it_resolves_a_disputed_market() {
         // slashed amounts
         // ---------------------------
         // - OracleBond: 50 * CENT
-        // - Dave's reserve: 125
-        // Total: 50 * CENT + 125
-        // Per each: 25 * CENT + 62
+        // - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
+        // Total: 50 * CENT + DisputeBond::get() + DisputeFactor::get()
+        // Per each: 25 * CENT + (DisputeBond::get() + DisputeFactor::get()) / 2
+
+        let dave_reserved = DisputeBond::get() + DisputeFactor::get();
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + 25 * CENT + 62);
+        assert_eq!(charlie_balance, 1_000 * BASE + 25 * CENT + dave_reserved / 2);
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(&EVE);
-        assert_eq!(eve_balance, 1_000 * BASE + 25 * CENT + 62);
+        assert_eq!(eve_balance, 1_000 * BASE + 25 * CENT + dave_reserved / 2);
 
         let dave_balance = Balances::free_balance(&DAVE);
-        assert_eq!(dave_balance, 1_000 * BASE - 125);
+        assert_eq!(dave_balance, 1_000 * BASE - dave_reserved);
 
         let alice_balance = Balances::free_balance(&ALICE);
         assert_eq!(alice_balance, 1_000 * BASE - 50 * CENT);
@@ -514,7 +516,7 @@ fn it_allows_to_redeem_shares() {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1);
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
         run_to_block(100);
 
         assert_ok!(PredictionMarkets::report(
@@ -620,13 +622,13 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         ));
 
         // is ok
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
         // set the timestamp
         Timestamp::set_timestamp(123_456_789);
 
         assert_noop!(
-            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100),
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT),
             Error::<Runtime>::MarketIsNotActive,
         );
 

@@ -1,14 +1,16 @@
 #![cfg(feature = "mock")]
 
 use crate as orderbook_v1;
-use frame_support::{construct_runtime, parameter_types};
-use orml_traits::parameter_type_with_key;
+use frame_support::construct_runtime;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, DustAccountTest, MaxLocks, MaxReserves},
+    constants::{
+        BlockHashCount, DustAccountTest, ExistentialDeposit, ExistentialDeposits, MaxLocks,
+        MaxReserves, BASE,
+    },
     types::{
         AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
         UncheckedExtrinsicTest,
@@ -17,15 +19,6 @@ use zeitgeist_primitives::{
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
-
-parameter_types! {
-    pub const ExistentialDeposit: Balance = 1;
-}
-parameter_type_with_key! {
-  pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-    Default::default()
-  };
-}
 
 construct_runtime!(
     pub enum Runtime
@@ -104,10 +97,9 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        Self { balances: vec![(ALICE, 1_000), (BOB, 1_000)] }
+        Self { balances: vec![(ALICE, BASE), (BOB, BASE)] }
     }
 }
-
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
         let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
