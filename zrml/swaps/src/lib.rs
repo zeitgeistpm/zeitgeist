@@ -329,6 +329,7 @@ mod pallet {
             max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
+            ensure!(pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let who = ensure_signed(origin)?;
             let who_clone = who.clone();
@@ -621,6 +622,7 @@ mod pallet {
         InsufficientBalance,
         InsufficientSubsidy,
         InvalidFeeArgument,
+        InvalidScoringRule,
         InvalidStateTransition,
         InvalidWeightArgument,
         LimitIn,
