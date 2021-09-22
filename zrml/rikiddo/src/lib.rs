@@ -272,13 +272,10 @@ mod pallet {
 
             // Update rikiddo market data by adding the TimestampedVolume
             let balance_fixed = match rikiddo.update_volume(&timestamped_volume) {
-                Ok(res) => {
-                    if let Some(inner) = res {
-                        inner
-                    } else {
-                        <RikiddoPerPool<T, I>>::insert(poolid, rikiddo);
-                        return Ok(None);
-                    }
+                Ok(Some(inner)) => inner,
+                Ok(None) => {
+                    <RikiddoPerPool<T, I>>::insert(poolid, rikiddo);
+                    return Ok(None);
                 }
                 Err(err) => {
                     debug(&err);
