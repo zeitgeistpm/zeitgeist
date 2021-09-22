@@ -40,7 +40,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::Weight,
-        ensure,
+        ensure, log,
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         traits::{Get, IsType},
         Blake2_128Concat, PalletId, Twox64Concat,
@@ -140,6 +140,76 @@ mod pallet {
                 who: who_clone,
             };
             crate::utils::pool::<_, _, _, T>(params)
+        }
+
+        /// Pool - Remove subsidty from a pool that uses the Rikiddo scoring rule.
+        ///
+        /// Unreserves `pool_amount` of the base currency from being used as subsidy.
+        /// If `amount` is greater than the amount reserved for subsidy by `origin`,
+        /// then the whole amount reserved for subsidy will be unreserved.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `amount`: The amount of base currency that should be added to subsidy.
+        #[pallet::weight(0)]
+        pub fn pool_exit_subsidy(
+            origin: OriginFor<T>,
+            pool_id: PoolId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let pool = Self::pool_by_id(pool_id)?;
+            ensure!(
+                pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
+                Error::<T>::InvalidScoringRule
+            );
+            let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+            let mut real_amount = amount;
+            let upper_bound;
+            let transferred;
+
+            if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
+                upper_bound = subsidy;
+
+                if amount > subsidy {
+                    real_amount = subsidy;
+                }
+
+                let missing = T::Shares::unreserve(base_asset, &who, real_amount);
+                transferred = real_amount.saturating_sub(missing);
+
+                if transferred != real_amount {
+                    log::warn!(
+                        "[Swaps] Data inconsistency: Unreserved subsidy is less than previously \
+                         reserved subsidy.
+                    Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
+                        pool_id,
+                        who,
+                        transferred,
+                        subsidy
+                    );
+                }
+
+                let new_amount = subsidy.saturating_sub(transferred);
+
+                if new_amount > <BalanceOf<T>>::zero() {
+                    <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
+                } else {
+                    let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
+                }
+            } else {
+                return Err(Error::<T>::NoSubsidyProvided.into());
+            }
+
+            Self::deposit_event(Event::<T>::PoolExitSubsidy(PoolAssetEvent {
+                bound: upper_bound,
+                cpep: CommonPoolEventParams { pool_id, who },
+                transferred,
+            }));
+
+            Ok(())
         }
 
         /// Pool - Exit with exact pool amount
@@ -280,6 +350,46 @@ mod pallet {
             crate::utils::pool::<_, _, _, T>(params)
         }
 
+        /// Pool - Add subsidy to a pool that uses the Rikiddo scoring rule.
+        ///
+        /// Reserves `pool_amount` of the base currency to be added as subsidy on pool activation.
+        ///
+        /// # Arguments
+        ///
+        /// * `origin`: Liquidity Provider (LP). The account whose assets should be transferred.
+        /// * `pool_id`: Unique pool identifier.
+        /// * `amount`: The amount of base currency that should be added to subsidy.
+        #[pallet::weight(0)]
+        pub fn pool_join_subsidy(
+            origin: OriginFor<T>,
+            pool_id: PoolId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let pool = Self::pool_by_id(pool_id)?;
+            ensure!(
+                pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
+                Error::<T>::InvalidScoringRule
+            );
+            let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+            T::Shares::reserve(base_asset, &who, amount)?;
+
+            let _ = <SubsidyProviders<T>>::mutate(&pool_id, &who, |user_subsidy| {
+                if let Some(prev_val) = user_subsidy {
+                    *prev_val += amount;
+                } else {
+                    *user_subsidy = Some(amount);
+                }
+            });
+
+            Self::deposit_event(Event::<T>::PoolJoinSubsidy(PoolAssetEvent {
+                bound: amount,
+                cpep: CommonPoolEventParams { pool_id, who },
+                transferred: amount,
+            }));
+            Ok(())
+        }
+
         /// Pool - Join with exact asset amount
         ///
         /// Joins an asset provided from `origin` to `pool_id`. Differently from `pool_join`,
@@ -335,7 +445,6 @@ mod pallet {
             max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
-            ensure!(pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let who = ensure_signed(origin)?;
             let who_clone = who.clone();
@@ -638,6 +747,7 @@ mod pallet {
         MaxInRatio,
         MaxOutRatio,
         MaxTotalWeight,
+        NoSubsidyProvided,
         PoolDoesNotExist,
         PoolIsNotActive,
         PoolMissingWeight,
@@ -656,6 +766,8 @@ mod pallet {
         PoolCreate(CommonPoolEventParams<<T as frame_system::Config>::AccountId>),
         /// Someone has exited a pool. \[account, amount\]
         PoolExit(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
+        /// Someone has (partially) exited a pool by removing subsidy. \[account, amount\]
+        PoolExitSubsidy(PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// Exits a pool given an exact amount of an asset. \[account, amount\]
         PoolExitWithExactAssetAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
@@ -666,6 +778,8 @@ mod pallet {
         ),
         /// Someone has joined a pool. \[account, amount\]
         PoolJoin(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
+        /// Someone has joined a pool by providing subsidy. \[account, amount\]
+        PoolJoinSubsidy(PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// Joins a pool given an exact amount of an asset. \[account, amount\]
         PoolJoinWithExactAssetAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
@@ -1046,6 +1160,19 @@ mod pallet {
                         BalanceStatus::Free,
                     )?;
                     let transfered = subsidy.saturating_sub(remaining);
+
+                    if transfered != subsidy {
+                        log::warn!(
+                            "[Swaps] Data inconsistency: In end_subsidy_phase - Unreserved \
+                             subsidy is less than previously reserved subsidy.
+                        Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
+                            pool_id,
+                            provider_address,
+                            transfered,
+                            subsidy
+                        );
+                    }
+
                     T::Shares::deposit(pool_shares_id, &provider_address, transfered)?;
                     total_balance.saturating_add(transfered);
                 }
