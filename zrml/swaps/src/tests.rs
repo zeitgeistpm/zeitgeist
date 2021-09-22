@@ -7,7 +7,11 @@ use crate::{
 use frame_support::{assert_noop, assert_ok, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
-use zeitgeist_primitives::{constants::BASE, traits::Swaps as _, types::{Asset, MarketId, MarketType, OutcomeReport, PoolStatus, ScoringRule}};
+use zeitgeist_primitives::{
+    constants::BASE,
+    traits::Swaps as _,
+    types::{Asset, MarketId, MarketType, OutcomeReport, PoolStatus, ScoringRule},
+};
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
@@ -173,9 +177,15 @@ fn create_pool_generates_a_new_pool_with_correct_parameters() {
 fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Errors trigger correctly.
-        assert_noop!(Swaps::destroy_pool_in_subsidy_phase(0), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_noop!(
+            Swaps::destroy_pool_in_subsidy_phase(0),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
         create_initial_pool(ScoringRule::CPMM);
-        assert_noop!(Swaps::destroy_pool_in_subsidy_phase(0), crate::Error::<Runtime>::InvalidStateTransition);
+        assert_noop!(
+            Swaps::destroy_pool_in_subsidy_phase(0),
+            crate::Error::<Runtime>::InvalidStateTransition
+        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         // Reserve some funds for subsidy
         assert_ok!(Currencies::reserve(ASSET_D, &ALICE, _25));
@@ -216,9 +226,10 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         assert_eq!(total_subsidy, min_subsidy);
         let initial_outstanding_assets = RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
             1,
-            (ASSETS.len()-1).saturated_into::<u32>(),
+            (ASSETS.len() - 1).saturated_into::<u32>(),
             total_subsidy,
-        ).unwrap();
+        )
+        .unwrap();
         let balance_asset_a = Currencies::total_balance(ASSET_A, &pool_account_id);
         let balance_asset_b = Currencies::total_balance(ASSET_B, &pool_account_id);
         let balance_asset_c = Currencies::total_balance(ASSET_C, &pool_account_id);
