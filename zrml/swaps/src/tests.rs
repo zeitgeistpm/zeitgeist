@@ -1,10 +1,7 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{
-    events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
-    mock::*,
-};
-use frame_support::{assert_noop, assert_ok, error::BadOrigin};
+use crate::{SubsidyProviders, events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent}, mock::*};
+use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::{
@@ -466,6 +463,27 @@ fn pool_join_increases_correct_pool_parameters() {
         })));
         assert_all_parameters([_20, _20, _20, _20], _5, [_105, _105, _105, _105], _105);
     })
+}
+
+#[test]
+fn pool_join_subsidy_reserves_correct_values() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM);
+        assert_noop!(Swaps::pool_join_subsidy(alice_signed(), 0, 42), crate::Error::<Runtime>::InvalidScoringRule);
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        let pool_id = 1;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
+        let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        assert_eq!(reserved, _20);
+        assert_eq!(reserved, noted);
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5));
+        reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        assert_eq!(reserved, _25);
+        assert_eq!(reserved, noted);
+        assert_storage_noop!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5).unwrap_or(()));
+    });
 }
 
 #[test]
