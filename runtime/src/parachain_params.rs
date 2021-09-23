@@ -8,6 +8,7 @@ use frame_support::{
     weights::Weight,
 };
 use polkadot_parachain::primitives::Sibling;
+use sp_runtime::Perbill;
 use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
     AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
@@ -15,11 +16,16 @@ use xcm_builder::{
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
     TakeWeightCredit,
 };
+use zeitgeist_primitives::types::Balance;
 
 parameter_types! {
     pub AllowUnpaidFrom: Vec<MultiLocation> = vec![ MultiLocation::X1(Junction::Parent) ];
     pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain(ParachainInfo::parachain_id().into()));
+    pub const InitializationPayment: Perbill = Perbill::from_percent(30);
+    pub const Initialized: bool = false;
     pub const MaxDownwardMessageWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 10;
+    pub const MaxInitContributorsBatchSizes: u32 = 500;
+    pub const MinimumReward: Balance = 0;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub const RocLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
