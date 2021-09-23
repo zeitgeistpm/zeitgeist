@@ -8,7 +8,7 @@ set -euxo pipefail
 
 PARACHAIN_CHAIN=battery_station_staging
 PARACHAIN_ID=2050
-POLKADOT_BRANCH=release-v0.9.8
+POLKADOT_BRANCH=release-v0.9.10
 POLKADOT_DIR="target/polkadot"
 RELAYCHAIN_CHAIN=rococo-local
 

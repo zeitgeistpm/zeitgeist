@@ -19,9 +19,10 @@ pub use parameters::*;
 #[cfg(feature = "parachain")]
 pub use xcmp_message::XCMPMessage;
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
+    traits::{Contains, Everything},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -29,7 +30,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic,
-    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT},
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -39,10 +40,8 @@ use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::All,
     nimbus_primitives::{CanAuthor, NimbusId},
     parachain_params::*,
-    xcm::v0::{MultiAsset, MultiLocation, Xcm},
 };
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -129,7 +128,7 @@ macro_rules! create_zeitgeist_runtime {
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
     // System
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Pallet, Storage, Inherent, Event<T>} = 50,
+    ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 50,
     ParachainInfo: parachain_info::{Config, Pallet, Storage} = 51,
 
     // Consensus
@@ -143,7 +142,6 @@ create_zeitgeist_runtime!(
     DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
     PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
-    CumulusPing: cumulus_ping::{Call, Event<T>, Pallet, Storage} = 99,
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
@@ -155,8 +153,8 @@ create_zeitgeist_runtime!(
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type Event = Event;
-    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
     type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
 
 #[cfg(feature = "parachain")]
@@ -181,21 +179,14 @@ impl cumulus_pallet_xcm::Config for Runtime {
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
     type Event = Event;
+    type VersionWrapper = ();
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-}
-
-#[cfg(feature = "parachain")]
-impl cumulus_ping::Config for Runtime {
-    type Call = Call;
-    type Event = Event;
-    type Origin = Origin;
-    type XcmSender = XcmRouter;
 }
 
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountId;
-    type BaseCallFilter = ();
+    type BaseCallFilter = Everything;
     type BlockHashCount = BlockHashCount;
     type BlockLength = RuntimeBlockLength;
     type BlockNumber = BlockNumber;
@@ -224,6 +215,7 @@ impl frame_system::Config for Runtime {
 #[cfg(not(feature = "parachain"))]
 impl pallet_aura::Config for Runtime {
     type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
+    type DisabledValidators = ();
 }
 
 #[cfg(feature = "parachain")]
@@ -279,23 +271,25 @@ impl pallet_grandpa::Config for Runtime {
 impl pallet_xcm::Config for Runtime {
     type Event = Event;
     type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+    type LocationInverter = xcm_builder::LocationInverter<Ancestry>;
     type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call>;
-    type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+    type XcmExecuteFilter = Everything;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
     type XcmReserveTransferFilter = ();
     type XcmRouter = XcmRouter;
-    type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+    type XcmTeleportFilter = Everything;
 }
 
 #[cfg(feature = "parachain")]
 impl parachain_staking::Config for Runtime {
-    type BondDuration = BondDuration;
     type Currency = Balances;
     type DefaultBlocksPerRound = DefaultBlocksPerRound;
     type DefaultCollatorCommission = DefaultCollatorCommission;
     type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
     type Event = Event;
+    type LeaveCandidatesDelay = LeaveCandidatesDelay;
+    type LeaveNominatorsDelay = LeaveNominatorsDelay;
     type MaxCollatorsPerNominator = MaxCollatorsPerNominator;
     type MaxNominatorsPerCollator = MaxNominatorsPerCollator;
     type MinBlocksPerRound = MinBlocksPerRound;
@@ -305,6 +299,8 @@ impl parachain_staking::Config for Runtime {
     type MinNominatorStk = MinNominatorStake;
     type MinSelectedCandidates = MinSelectedCandidates;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
+    type RevokeNominationDelay = RevokeNominationDelay;
+    type RewardPaymentDelay = RewardPaymentDelay;
     type WeightInfo = ();
 }
 
@@ -320,6 +316,7 @@ impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
     type CurrencyId = CurrencyId;
+    type DustRemovalWhitelist = DustRemovalWhitelist;
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
@@ -510,6 +507,19 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn benchmark_metadata(_: bool) -> (
+            Vec<frame_benchmarking::BenchmarkList>,
+            Vec<frame_support::traits::StorageInfo>,
+        ) {
+            use frame_benchmarking::BenchmarkList;
+            use frame_support::traits::StorageInfoTrait;
+
+            let list = Vec::<BenchmarkList>::new();
+            let storage_info = AllPalletsWithSystem::storage_info();
+
+            (list, storage_info)
+        }
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig,
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
@@ -634,6 +644,10 @@ impl_runtime_apis! {
 
     #[cfg(not(feature = "parachain"))]
     impl sp_finality_grandpa::GrandpaApi<Block> for Runtime {
+        fn current_set_id() -> pallet_grandpa::fg_primitives::SetId {
+            Grandpa::current_set_id()
+        }
+
         fn generate_key_ownership_proof(
             _set_id: pallet_grandpa::fg_primitives::SetId,
             _authority_id: pallet_grandpa::AuthorityId,
@@ -740,4 +754,20 @@ cumulus_pallet_parachain_system::register_validate_block! {
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
     NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
+}
+
+pub struct DustRemovalWhitelist;
+
+impl Contains<AccountId> for DustRemovalWhitelist {
+    fn contains(ai: &AccountId) -> bool {
+        let pallets = vec![
+            AuthorizedPalletId::get().into_account(),
+            CourtPalletId::get().into_account(),
+            LiquidityMiningPalletId::get().into_account(),
+            PmPalletId::get().into_account(),
+            SimpleDisputesPalletId::get().into_account(),
+            SwapsPalletId::get().into_account(),
+        ];
+        pallets.contains(ai)
+    }
 }

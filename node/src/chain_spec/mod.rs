@@ -119,6 +119,8 @@ fn generic_genesis(
             inflation_config: acs.inflation_info,
             nominations: acs.nominations,
         },
+        #[cfg(feature = "parachain")]
+        parachain_system: zeitgeist_runtime::ParachainSystemConfig::default(),
         sudo: zeitgeist_runtime::SudoConfig { key: root_key },
         system: zeitgeist_runtime::SystemConfig {
             code: wasm_binary.to_vec(),

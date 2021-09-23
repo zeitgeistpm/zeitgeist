@@ -1,21 +1,21 @@
 [dependencies]
-frame-benchmarking = { branch = "polkadot-v0.9.8", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
-frame-support = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
-orml-traits = { branch = "master", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
+orml-traits = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
-sp-runtime = { branch = "polkadot-v0.9.8", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 
 # Mock
 
-orml-currencies = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
-orml-tokens = { branch = "master", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
-pallet-balances = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
-pallet-timestamp = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
-sp-api = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
-sp-io = { branch = "polkadot-v0.9.8", git = "https://github.com/paritytech/substrate", optional = true }
+orml-currencies = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
+orml-tokens = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
+sp-api = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
+sp-io = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 zrml-market-commons = { optional = true, path = "../market-commons" }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
