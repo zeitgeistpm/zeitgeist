@@ -48,10 +48,7 @@ mod pallet {
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
-    use sp_runtime::{
-        traits::{AccountIdConversion, Saturating, Zero},
-        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
-    };
+    use sp_runtime::{ArithmeticError, DispatchError, DispatchResult, SaturatedConversion, traits::{AccountIdConversion, CheckedSub, Saturating, Zero}};
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
         types::{
@@ -198,17 +195,12 @@ mod pallet {
                     let new_amount = subsidy.saturating_sub(transferred);
                     let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
     
-                    if new_amount > zero_balance {
-                        if missing > zero_balance {
-                            <SubsidyProviders<T>>::insert(&pool_id, &who, zero_balance);
-                            pool.total_subsidy = Some(total_subsidy - subsidy);
-                        } else {
+                    if new_amount > zero_balance && missing == zero_balance {
                             <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
-                            pool.total_subsidy = Some(total_subsidy - transferred);
-                        }
+                            pool.total_subsidy = Some(total_subsidy.checked_sub(&transferred).ok_or(ArithmeticError::Overflow)?);
                     } else {
                         let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
-                        pool.total_subsidy = Some(total_subsidy - subsidy);
+                        pool.total_subsidy = Some(total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?);
                     }
                 } else {
                     return Err(Error::<T>::NoSubsidyProvided.into());
