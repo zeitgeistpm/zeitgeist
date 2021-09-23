@@ -175,7 +175,8 @@ where
     if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
         // Currently the only allowed trades are base_currency <-> event asset. We count the
         // volume in base_currency.
-        let volume = asset_amount_in.check_add_rslt(&asset_amount_out)?;
+        let base_asset = p.pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+        let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
         T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
     }
 

@@ -640,10 +640,27 @@ mod pallet {
                         )?
                         .saturated_into();
                     } else {
-                        // TODO
-                        asset_amount_in = <BalanceOf<T>>::zero();
-                        //    bmul(asset_amount_out.saturated_into(), price.saturated_into())?
-                        //        .saturated_into();
+                        let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                        ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
+                        ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
+
+                        let mut outstanding_before = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                        let mut outstanding_after = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+
+                        for asset in pool.assets.iter().filter(|e| **e != base_asset) {
+                            let total_amount = T::Shares::total_issuance(*asset);
+                            outstanding_before.push(total_amount);
+
+                            if *asset == asset_in {
+                                outstanding_after.push(total_amount + asset_amount_out);
+                            } else {
+                                outstanding_after.push(total_amount);
+                            }
+                        }
+
+                        let cost_before = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
+                        let cost_after = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
+                        asset_amount_in = cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?;
                     }
 
                     ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
