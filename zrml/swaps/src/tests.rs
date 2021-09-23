@@ -3,7 +3,7 @@
 use crate::{SubsidyProviders, events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent}, mock::*};
 use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{SaturatedConversion, traits::Zero};
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
@@ -403,24 +403,51 @@ fn pool_exit_decreases_correct_pool_parameters() {
 #[test]
 fn pool_exit_subsidy_unreserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
-        /*
         create_initial_pool(ScoringRule::CPMM);
-        assert_noop!(Swaps::pool_join_subsidy(alice_signed(), 0, 42), crate::Error::<Runtime>::InvalidScoringRule);
+        assert_noop!(Swaps::pool_exit_subsidy(alice_signed(), 0, 42), crate::Error::<Runtime>::InvalidScoringRule);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 1, 42),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 1;
-        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
+        assert_noop!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, 42), crate::Error::<Runtime>::NoSubsidyProvided);
+
+        // Add some subsidy
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
         let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
         let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
-        assert_eq!(reserved, _20);
-        assert_eq!(reserved, noted);
-        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5));
-        reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        let mut total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, _25);
         assert_eq!(reserved, noted);
-        assert_storage_noop!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5).unwrap_or(()));
-        */
-        // TODO
+        assert_eq!(reserved, total_subsidy);
+
+        // Exit 5 subsidy and see if the storage is consistent
+        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _5));
+        reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, noted);
+        assert_eq!(reserved, total_subsidy);
+
+        // Exit the remaining subsidy and see if the storage is consistent
+        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _20));
+        reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        assert!(<SubsidyProviders<Runtime>>::get(pool_id, &ALICE).is_none());
+        total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, 0);
+        assert_eq!(reserved, total_subsidy);
+
+        // Add some subsidy, manually remove some reserved balance (create inconsistency)
+        // and check if the internal values are adjusted to the inconsistency.
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
+        assert_eq!(Currencies::unreserve(ASSET_D, &ALICE, _20), 0);
+        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _20));
+        reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        assert!(<SubsidyProviders<Runtime>>::get(pool_id, &ALICE).is_none());
+        total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, 0);
+        assert_eq!(reserved, total_subsidy);
     });
 }
 
