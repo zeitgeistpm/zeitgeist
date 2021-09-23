@@ -184,15 +184,15 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
             crate::Error::<Runtime>::InvalidStateTransition
         );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        let pool_id = 1;
         // Reserve some funds for subsidy
-        assert_ok!(Currencies::reserve(ASSET_D, &ALICE, _25));
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), _25);
-        crate::SubsidyProviders::<Runtime>::insert(1, ALICE, _25);
-        assert_ok!(Swaps::destroy_pool_in_subsidy_phase(1));
+        assert_ok!(Swaps::destroy_pool_in_subsidy_phase(pool_id));
         // Rserved balanced was returned and all storage cleared.
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
-        assert!(!crate::SubsidyProviders::<Runtime>::contains_key(1, ALICE));
-        assert!(!crate::Pools::<Runtime>::contains_key(1));
+        assert!(!crate::SubsidyProviders::<Runtime>::contains_key(pool_id, ALICE));
+        assert!(!crate::Pools::<Runtime>::contains_key(pool_id));
     });
 }
 
@@ -201,28 +201,32 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM);
         assert_noop!(Swaps::end_subsidy_phase(0), crate::Error::<Runtime>::InvalidStateTransition);
+        assert_noop!(
+            Swaps::end_subsidy_phase(1),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
-        assert_noop!(Swaps::end_subsidy_phase(1), crate::Error::<Runtime>::InsufficientSubsidy);
+        let pool_id = 1;
+        assert_noop!(Swaps::end_subsidy_phase(pool_id), crate::Error::<Runtime>::InsufficientSubsidy);
 
         // Reserve some funds for subsidy
         let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
         assert_ok!(Currencies::deposit(ASSET_D, &ALICE, min_subsidy));
-        assert_ok!(Currencies::reserve(ASSET_D, &ALICE, min_subsidy));
-        crate::SubsidyProviders::<Runtime>::insert(1, ALICE, min_subsidy);
-        assert_ok!(Swaps::end_subsidy_phase(1));
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, min_subsidy));
+        assert_ok!(Swaps::end_subsidy_phase(pool_id));
 
         // Check that subsidy was deposited, shares were distributed in exchange, the initial
         // outstanding event outcome assets are assigned to the pool account and pool is active.
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
 
-        let pool_shares_id = Swaps::pool_shares_id(1);
+        let pool_shares_id = Swaps::pool_shares_id(pool_id);
         assert_eq!(Currencies::total_balance(pool_shares_id, &ALICE), min_subsidy);
 
-        let pool_account_id = Swaps::pool_account_id(1);
+        let pool_account_id = Swaps::pool_account_id(pool_id);
         let total_subsidy = Currencies::total_balance(ASSET_D, &pool_account_id);
         assert_eq!(total_subsidy, min_subsidy);
         let initial_outstanding_assets = RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
-            1,
+            pool_id,
             (ASSETS.len() - 1).saturated_into::<u32>(),
             total_subsidy,
         )
@@ -232,7 +236,7 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         let balance_asset_c = Currencies::total_balance(ASSET_C, &pool_account_id);
         assert!(balance_asset_a == initial_outstanding_assets);
         assert!(balance_asset_a == balance_asset_b && balance_asset_b == balance_asset_c);
-        assert_eq!(Swaps::pool_by_id(1).unwrap().pool_status, PoolStatus::Active);
+        assert_eq!(Swaps::pool_by_id(pool_id).unwrap().pool_status, PoolStatus::Active);
     });
 }
 
@@ -397,6 +401,30 @@ fn pool_exit_decreases_correct_pool_parameters() {
 }
 
 #[test]
+fn pool_exit_subsidy_unreserves_correct_values() {
+    ExtBuilder::default().build().execute_with(|| {
+        /*
+        create_initial_pool(ScoringRule::CPMM);
+        assert_noop!(Swaps::pool_join_subsidy(alice_signed(), 0, 42), crate::Error::<Runtime>::InvalidScoringRule);
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        let pool_id = 1;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
+        let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        assert_eq!(reserved, _20);
+        assert_eq!(reserved, noted);
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5));
+        reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        assert_eq!(reserved, _25);
+        assert_eq!(reserved, noted);
+        assert_storage_noop!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5).unwrap_or(()));
+        */
+        // TODO
+    });
+}
+
+#[test]
 fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -477,11 +505,13 @@ fn pool_join_subsidy_reserves_correct_values() {
         let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
         assert_eq!(reserved, _20);
         assert_eq!(reserved, noted);
+        assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
         noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
         assert_eq!(reserved, _25);
         assert_eq!(reserved, noted);
+        assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
         assert_storage_noop!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5).unwrap_or(()));
     });
 }

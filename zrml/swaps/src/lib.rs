@@ -160,56 +160,68 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let pool = Self::pool_by_id(pool_id)?;
-            ensure!(
-                pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
-                Error::<T>::InvalidScoringRule
-            );
-            let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-            let mut real_amount = amount;
-            let upper_bound;
-            let transferred;
 
-            if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
-                upper_bound = subsidy;
+            <Pools<T>>::try_mutate(pool_id, |pool_opt| {
+                let pool = pool_opt.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
 
-                if amount > subsidy {
-                    real_amount = subsidy;
-                }
-
-                let missing = T::Shares::unreserve(base_asset, &who, real_amount);
-                transferred = real_amount.saturating_sub(missing);
-
-                if transferred != real_amount {
-                    log::warn!(
-                        "[Swaps] Data inconsistency: Unreserved subsidy is less than previously \
-                         reserved subsidy.
-                    Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
-                        pool_id,
-                        who,
-                        transferred,
-                        subsidy
-                    );
-                }
-
-                let new_amount = subsidy.saturating_sub(transferred);
-
-                if new_amount > <BalanceOf<T>>::zero() {
-                    <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
+                ensure!(
+                    pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
+                    Error::<T>::InvalidScoringRule
+                );
+                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let mut real_amount = amount;
+                let upper_bound;
+                let transferred;
+    
+                if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
+                    upper_bound = subsidy;
+    
+                    if amount > subsidy {
+                        real_amount = subsidy;
+                    }
+    
+                    let missing = T::Shares::unreserve(base_asset, &who, real_amount);
+                    transferred = real_amount.saturating_sub(missing);
+                    let zero_balance = <BalanceOf<T>>::zero();
+    
+                    if missing > zero_balance {
+                        log::warn!(
+                            "[Swaps] Data inconsistency: More subsidy provided than currently reserved.
+                        Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
+                            pool_id,
+                            who,
+                            transferred,
+                            subsidy
+                        );
+                    }
+    
+                    let new_amount = subsidy.saturating_sub(transferred);
+                    let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
+    
+                    if new_amount > zero_balance {
+                        if missing > zero_balance {
+                            <SubsidyProviders<T>>::insert(&pool_id, &who, zero_balance);
+                            pool.total_subsidy = Some(total_subsidy - subsidy);
+                        } else {
+                            <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
+                            pool.total_subsidy = Some(total_subsidy - transferred);
+                        }
+                    } else {
+                        let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
+                        pool.total_subsidy = Some(total_subsidy - subsidy);
+                    }
                 } else {
-                    let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
+                    return Err(Error::<T>::NoSubsidyProvided.into());
                 }
-            } else {
-                return Err(Error::<T>::NoSubsidyProvided.into());
-            }
+    
+                Self::deposit_event(Event::<T>::PoolExitSubsidy(PoolAssetEvent {
+                    bound: upper_bound,
+                    cpep: CommonPoolEventParams { pool_id, who },
+                    transferred,
+                }));
 
-            Self::deposit_event(Event::<T>::PoolExitSubsidy(PoolAssetEvent {
-                bound: upper_bound,
-                cpep: CommonPoolEventParams { pool_id, who },
-                transferred,
-            }));
-
-            Ok(())
+                Ok(())
+            })
         }
 
         /// Pool - Exit with exact pool amount
@@ -366,28 +378,36 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let pool = Self::pool_by_id(pool_id)?;
-            ensure!(
-                pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
-                Error::<T>::InvalidScoringRule
-            );
-            let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-            T::Shares::reserve(base_asset, &who, amount)?;
 
-            let _ = <SubsidyProviders<T>>::mutate(&pool_id, &who, |user_subsidy| {
-                if let Some(prev_val) = user_subsidy {
-                    *prev_val += amount;
-                } else {
-                    *user_subsidy = Some(amount);
-                }
-            });
+            <Pools<T>>::try_mutate(pool_id, |pool_opt| {
+                let pool = pool_opt.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
 
-            Self::deposit_event(Event::<T>::PoolJoinSubsidy(PoolAssetEvent {
-                bound: amount,
-                cpep: CommonPoolEventParams { pool_id, who },
-                transferred: amount,
-            }));
-            Ok(())
+                ensure!(
+                    pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
+                    Error::<T>::InvalidScoringRule
+                );
+                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                T::Shares::reserve(base_asset, &who, amount)?;
+    
+                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
+                let _ = <SubsidyProviders<T>>::mutate(&pool_id, &who, |user_subsidy| {
+                    if let Some(prev_val) = user_subsidy {
+                        *prev_val += amount;
+                    } else {
+                        *user_subsidy = Some(amount);
+                    }
+
+                    pool.total_subsidy = Some(total_subsidy + amount);
+                });
+    
+                Self::deposit_event(Event::<T>::PoolJoinSubsidy(PoolAssetEvent {
+                    bound: amount,
+                    cpep: CommonPoolEventParams { pool_id, who },
+                    transferred: amount,
+                }));
+
+                Ok(())
+            })
         }
 
         /// Pool - Join with exact asset amount
@@ -750,8 +770,9 @@ mod pallet {
         NoSubsidyProvided,
         PoolDoesNotExist,
         PoolIsNotActive,
-        PoolMissingWeight,
         PoolMissingFee,
+        PoolMissingSubsidy,
+        PoolMissingWeight,
         ProvidedValuesLenMustEqualAssetsLen,
         TooManyAssets,
     }
@@ -1132,6 +1153,8 @@ mod pallet {
                     return Err(Error::<T>::InvalidStateTransition.into());
                 }
 
+                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?; 
+                ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
                 let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                 let pool_account = Pallet::<T>::pool_account_id(pool_id);
                 let pool_shares_id = Self::pool_shares_id(pool_id);
@@ -1163,8 +1186,8 @@ mod pallet {
 
                     if transfered != subsidy {
                         log::warn!(
-                            "[Swaps] Data inconsistency: In end_subsidy_phase - Unreserved \
-                             subsidy is less than previously reserved subsidy.
+                            "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy provided \
+                            than currently reserved.
                         Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                             pool_id,
                             provider_address,
