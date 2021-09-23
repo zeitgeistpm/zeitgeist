@@ -6,7 +6,6 @@ use crate::{
 };
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get};
-use frame_system::ensure_signed;
 use orml_traits::MultiCurrency;
 use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
 use zeitgeist_primitives::types::{Asset, Pool, PoolId, ScoringRule};
@@ -128,12 +127,10 @@ pub(crate) fn swap_exact_amount<F1, F2, T>(
     mut p: SwapExactAmountParams<'_, F1, F2, T>,
 ) -> DispatchResult
 where
-    F1: FnMut(BalanceOf<T>) -> Result<[BalanceOf<T>; 2], DispatchError>,
+    F1: FnMut() -> Result<[BalanceOf<T>; 2], DispatchError>,
     F2: FnMut(SwapEvent<T::AccountId, BalanceOf<T>>),
     T: crate::Config,
 {
-    let who = ensure_signed(p.origin)?;
-
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
 
     if p.pool.scoring_rule == ScoringRule::CPMM {
@@ -142,16 +139,32 @@ where
     }
 
     let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    // ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
+    ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
 
-    let [asset_amount_in, asset_amount_out] = (p.asset_amounts)(spot_price_before)?;
+    let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
-    T::Shares::transfer(p.asset_in, &who, p.pool_account_id, asset_amount_in)?;
-    T::Shares::transfer(p.asset_out, p.pool_account_id, &who, asset_amount_out)?;
+    if p.pool.scoring_rule == ScoringRule::CPMM {
+        T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+        T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+    } else {
+        let base_asset = p.pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+
+        if p.asset_in == base_asset {
+            T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+            T::Shares::deposit(p.asset_out, &p.who, asset_amount_out)?;
+        } else if p.asset_out == base_asset {
+            // T::Shares::burn(p.asset_in, &p.who, asset_amount_out)?;
+            T::Shares::withdraw(p.asset_in, &p.who, asset_amount_in)?;
+            T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_in)?;
+        } else {
+            // Just for safety, should already be checked in p.asset_amounts.
+            return Err(Error::<T>::UnsupportedTrade.into());
+        }
+    }
 
     let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    // ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
-    // ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
+    ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+    ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
     ensure!(
         spot_price_before
             <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
@@ -160,6 +173,8 @@ where
     );
 
     if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+        // Currently the only allowed trades are base_currency <-> event asset. We count the
+        // volume in base_currency.
         let volume = asset_amount_in.check_add_rslt(&asset_amount_out)?;
         T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
     }
@@ -168,7 +183,7 @@ where
         asset_amount_in,
         asset_amount_out,
         asset_bound: p.asset_bound,
-        cpep: CommonPoolEventParams { pool_id: p.pool_id, who },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         max_price: p.max_price,
     });
 
@@ -230,8 +245,8 @@ where
     pub(crate) asset_out: Asset<T::MarketId>,
     pub(crate) event: F2,
     pub(crate) max_price: BalanceOf<T>,
-    pub(crate) origin: T::Origin,
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_id: PoolId,
     pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
+    pub(crate) who: T::AccountId,
 }
