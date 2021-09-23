@@ -516,26 +516,27 @@ mod pallet {
             min_asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-            let params = SwapExactAmountParams {
-                asset_amounts: |price: BalanceOf<T>| {
-                    let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
-                    ensure!(
-                        asset_amount_in
-                            <= bmul(
-                                balance_in.saturated_into(),
-                                T::MaxInRatio::get().saturated_into()
-                            )?
-                            .saturated_into(),
-                        Error::<T>::MaxInRatio
-                    );
+            ensure!(T::Shares::free_balance(asset_in, &who) >= asset_amount_in, Error::<T>::InsufficientBalance);
 
+            let params = SwapExactAmountParams {
+                asset_amounts: || {
                     let asset_amount_out: BalanceOf<T>;
 
                     if pool.scoring_rule == ScoringRule::CPMM {
                         let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
-
+                        let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
+                        ensure!(
+                            asset_amount_in
+                                <= bmul(
+                                    balance_in.saturated_into(),
+                                    T::MaxInRatio::get().saturated_into()
+                                )?
+                                .saturated_into(),
+                            Error::<T>::MaxInRatio
+                        );
                         asset_amount_out = crate::math::calc_out_given_in(
                             balance_in.saturated_into(),
                             Self::pool_weight_rslt(&pool, &asset_in)?,
@@ -546,9 +547,27 @@ mod pallet {
                         )?
                         .saturated_into();
                     } else {
-                        asset_amount_out =
-                            bdiv(asset_amount_in.saturated_into(), price.saturated_into())?
-                                .saturated_into();
+                        let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                        ensure!(asset_out == base_asset, Error::<T>::UnsupportedTrade);
+                        ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
+
+                        let mut outstanding_before = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                        let mut outstanding_after = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+
+                        for asset in pool.assets.iter().filter(|e| **e != base_asset) {
+                            let total_amount = T::Shares::total_issuance(*asset);
+                            outstanding_before.push(total_amount);
+
+                            if *asset == asset_in {
+                                outstanding_after.push(total_amount - asset_amount_in);
+                            } else {
+                                outstanding_after.push(total_amount);
+                            }
+                        }
+
+                        let cost_before = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
+                        let cost_after = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
+                        asset_amount_out = cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?;
                     }
                     ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
@@ -559,10 +578,10 @@ mod pallet {
                 asset_out,
                 event: |evt| Self::deposit_event(Event::SwapExactAmountIn(evt)),
                 max_price,
-                origin,
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
+                who
             };
             swap_exact_amount::<_, _, T>(params)
         }
@@ -591,10 +610,11 @@ mod pallet {
             asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
         ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let params = SwapExactAmountParams {
-                asset_amounts: |price: BalanceOf<T>| {
+                asset_amounts: || {
                     let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
                     ensure!(
                         asset_amount_out
@@ -620,9 +640,10 @@ mod pallet {
                         )?
                         .saturated_into();
                     } else {
-                        asset_amount_in =
-                            bmul(asset_amount_out.saturated_into(), price.saturated_into())?
-                                .saturated_into();
+                        // TODO
+                        asset_amount_in = <BalanceOf<T>>::zero();
+                        //    bmul(asset_amount_out.saturated_into(), price.saturated_into())?
+                        //        .saturated_into();
                     }
 
                     ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
@@ -633,10 +654,10 @@ mod pallet {
                 asset_out,
                 event: |evt| Self::deposit_event(Event::SwapExactAmountOut(evt)),
                 max_price,
-                origin,
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
+                who
             };
             swap_exact_amount::<_, _, T>(params)
         }
@@ -767,6 +788,7 @@ mod pallet {
         PoolMissingWeight,
         ProvidedValuesLenMustEqualAssetsLen,
         TooManyAssets,
+        UnsupportedTrade,
     }
 
     #[pallet::event]

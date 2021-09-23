@@ -3,7 +3,7 @@
 use crate::{SubsidyProviders, events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent}, mock::*};
 use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::{SaturatedConversion, traits::Zero};
+use sp_runtime::{SaturatedConversion};
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
