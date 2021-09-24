@@ -878,9 +878,8 @@ mod pallet {
             asset_out: Asset<T::MarketId>,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
-            let assets_slice = pool.assets.as_slice();
-            ensure!(assets_slice.binary_search(&asset_in).is_ok(), Error::<T>::AssetNotInPool);
-            ensure!(assets_slice.binary_search(&asset_out).is_ok(), Error::<T>::AssetNotInPool);
+            ensure!(pool.assets.binary_search(&asset_in).is_ok(), Error::<T>::AssetNotInPool);
+            ensure!(pool.assets.binary_search(&asset_out).is_ok(), Error::<T>::AssetNotInPool);
             let pool_account = Self::pool_account_id(pool_id);
             let balance_in = T::Shares::free_balance(asset_in, &pool_account);
             let balance_out = T::Shares::free_balance(asset_out, &pool_account);

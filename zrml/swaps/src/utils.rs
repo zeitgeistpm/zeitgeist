@@ -132,14 +132,16 @@ where
     T: crate::Config,
 {
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
+    ensure!(p.pool.assets.binary_search(&p.asset_in).is_ok(), Error::<T>::AssetNotInPool);
+    ensure!(p.pool.assets.binary_search(&p.asset_out).is_ok(), Error::<T>::AssetNotInPool);
 
     if p.pool.scoring_rule == ScoringRule::CPMM {
         ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
         ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
     }
 
-    let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
+    // let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
+    // ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
@@ -162,7 +164,7 @@ where
         }
     }
 
-    let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
+    /*let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
     ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
     ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
     ensure!(
@@ -170,7 +172,7 @@ where
             <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
                 .saturated_into(),
         Error::<T>::MathApproximation
-    );
+    );*/
 
     if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
         // Currently the only allowed trades are base_currency <-> event asset. We count the
