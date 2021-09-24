@@ -651,7 +651,7 @@ mod pallet {
                             let total_amount = T::Shares::total_issuance(*asset);
                             outstanding_before.push(total_amount);
 
-                            if *asset == asset_in {
+                            if *asset == asset_out {
                                 outstanding_after.push(total_amount + asset_amount_out);
                             } else {
                                 outstanding_after.push(total_amount);

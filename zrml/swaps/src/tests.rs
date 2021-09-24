@@ -618,7 +618,7 @@ fn provided_values_len_must_equal_assets_len() {
 }
 
 #[test]
-fn swap_exact_amount_in_exchanges_correct_values_for_cpmm() {
+fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         // CPMM
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -649,17 +649,18 @@ fn swap_exact_amount_in_exchanges_correct_values_for_cpmm() {
 }
 
 #[test]
-fn swap_exact_amount_in_exchanges_correct_values_for_rikiddo() {
+fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
     ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 0;
+
         // Generate funds, add subsidy and start pool.
         let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
         assert_ok!(Currencies::deposit(ASSET_D, &ALICE, min_subsidy + _1));
-        assert_ok!(Currencies::deposit(ASSET_A, &ALICE, _1));
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, min_subsidy));
         assert_ok!(Swaps::end_subsidy_phase(pool_id));
+        assert_ok!(Currencies::deposit(ASSET_A, &ALICE, _1));
+
         // Check if unsupport trades are catched (base_asset in || asset_in == asset_out).
         assert_noop!(Swaps::swap_exact_amount_in(
             alice_signed(),
@@ -680,7 +681,7 @@ fn swap_exact_amount_in_exchanges_correct_values_for_rikiddo() {
             _2,
         ), crate::Error::<Runtime>::UnsupportedTrade);
         assert_ok!(Currencies::withdraw(ASSET_D, &ALICE, _1));
-        println!("tot before: {}", Currencies::total_balance(ASSET_D, &ALICE));
+
         // Check if the trade is executed.
         let asset_a_issuance = Currencies::total_issuance(ASSET_A);
         assert_ok!(Swaps::swap_exact_amount_in(
@@ -692,27 +693,21 @@ fn swap_exact_amount_in_exchanges_correct_values_for_rikiddo() {
             0,
             _2,
         ));
+
         // Check if the balances were updated accordingly.
         let asset_a_issuance_after = Currencies::total_issuance(ASSET_A);
         let alice_balance_a_after = Currencies::total_balance(ASSET_A, &ALICE);
         let alice_balance_d_after = Currencies::total_balance(ASSET_D, &ALICE);
         assert_eq!(asset_a_issuance - asset_a_issuance_after, _1);
         assert_eq!(alice_balance_a_after, 0);
-        panic!("{}", alice_balance_d_after);
-        // TODO: Check asset bounds in utils swap function
-        /*
-        let pool_account = Swaps::pool_account_id(0);
-        let in_balance = Currencies::free_balance(ASSET_A, &pool_account);
-        let out_balance = Currencies::free_balance(ASSET_B, &pool_account);
-        panic!("{} - {}", in_balance, out_balance);
-        // Between 25.9 and 26.1
-        assert!(in_balance > 259 * BASE / 10 && in_balance < 261 * BASE / 10);
-        */
+
+        // Received base_currency greater than 0.3 and smaller than 0.4
+        assert!(alice_balance_d_after > 3 * BASE / 10 && alice_balance_d_after < 4 * BASE / 10);
     });
 }
 
 #[test]
-fn swap_exact_amount_out_exchanges_correct_values() {
+fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM);
@@ -730,6 +725,63 @@ fn swap_exact_amount_out_exchanges_correct_values() {
             [_101 + 0101010100, _99, _100, _100],
             _100,
         );
+    });
+}
+
+#[test]
+fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        let pool_id = 0;
+
+        // Generate funds, add subsidy and start pool.
+        let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
+        assert_ok!(Currencies::deposit(ASSET_D, &ALICE, min_subsidy + (BASE * 4) / 10));
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, min_subsidy));
+        assert_ok!(Swaps::end_subsidy_phase(pool_id));
+
+        // Check if unsupport trades are catched (base_asset out || asset_in == asset_out).
+        assert_noop!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            pool_id,
+            ASSET_B,
+            _1,
+            ASSET_D,
+            _1 / 2,
+            _2,
+        ), crate::Error::<Runtime>::UnsupportedTrade);
+        assert_noop!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            pool_id,
+            ASSET_D,
+            _1,
+            ASSET_D,
+            _1 / 2,
+            _2,
+        ), crate::Error::<Runtime>::UnsupportedTrade);
+
+        // Check if the trade is executed.
+        let asset_a_issuance = Currencies::total_issuance(ASSET_A);
+        assert_ok!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            pool_id,
+            ASSET_D,
+            _1,
+            ASSET_A,
+            _1,
+            _20,
+        ));
+
+        // Check if the balances were updated accordingly.
+        let asset_a_issuance_after = Currencies::total_issuance(ASSET_A);
+        let alice_balance_a_after = Currencies::total_balance(ASSET_A, &ALICE);
+        let alice_balance_d_after = Currencies::total_balance(ASSET_D, &ALICE);
+        assert_eq!(asset_a_issuance_after - asset_a_issuance, _1);
+        assert_eq!(alice_balance_a_after, _1);
+
+        // Left over base currency must be less than 0.1
+        assert!(alice_balance_d_after < BASE / 10);
     });
 }
 
