@@ -881,10 +881,10 @@ mod pallet {
             ensure!(pool.assets.binary_search(&asset_in).is_ok(), Error::<T>::AssetNotInPool);
             ensure!(pool.assets.binary_search(&asset_out).is_ok(), Error::<T>::AssetNotInPool);
             let pool_account = Self::pool_account_id(pool_id);
-            let balance_in = T::Shares::free_balance(asset_in, &pool_account);
-            let balance_out = T::Shares::free_balance(asset_out, &pool_account);
 
             if pool.scoring_rule == ScoringRule::CPMM {
+                let balance_in = T::Shares::free_balance(asset_in, &pool_account);
+                let balance_out = T::Shares::free_balance(asset_out, &pool_account);
                 let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
                 let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
 
@@ -899,42 +899,62 @@ mod pallet {
             }
 
             // Price when using Rikiddo.
+            ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::PoolIsNotActive);
             let mut balances = Vec::new();
             let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
 
-            for asset in pool.assets {
-                if asset == base_asset {
-                    continue;
+            // Fees are estimated here. The error scales with the fee. For the future, we'll have
+            // to figure out how to extract the fee out of the price when using Rikiddo.
+            if asset_in == asset_out {
+                return Ok(T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturating_add(BASE.saturated_into()));
+            }
+
+            let mut balance_in = <BalanceOf<T>>::zero();
+            let mut balance_out = <BalanceOf<T>>::zero();
+
+            for asset in pool.assets.iter().filter(|asset| **asset != base_asset) {
+                let issuance = T::Shares::total_issuance(*asset);
+
+                if *asset == asset_in {
+                    balance_in = issuance;
+                } else if *asset == asset_out {
+                    balance_out = issuance;
                 }
 
-                if asset == asset_in {
-                    balances.push(balance_in);
-                    continue;
-                } else if asset == asset_out {
-                    balances.push(balance_out);
-                    continue;
-                }
-
-                balances.push(T::Shares::free_balance(asset, &pool_account));
+                balances.push(issuance);
             }
 
             if asset_in == base_asset {
-                T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)
+                T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)
             } else if asset_out == base_asset {
-                Ok(bdiv(
+                let price_with_inverse_fee = bdiv(
                     BASE,
-                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
+                    T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
                         .saturated_into(),
                 )?
-                .saturated_into())
+                .saturated_into();
+                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into();
+                let fee_plus_one = BASE.saturating_add(fee_pct);
+                let price_with_fee: u128 = bmul(fee_plus_one, bmul(
+                    price_with_inverse_fee,
+                    fee_plus_one,
+                )?)?;
+                Ok(price_with_fee.saturated_into())
             } else {
-                Ok(bdiv(
+                let price_without_fee = bdiv(
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_out, &balances)?
                         .saturated_into(),
                     T::RikiddoSigmoidFeeMarketEma::price(pool_id, balance_in, &balances)?
                         .saturated_into(),
                 )?
-                .saturated_into())
+                .saturated_into();
+                let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into();
+                let fee_plus_one = BASE.saturating_add(fee_pct);
+                let price_with_fee: u128 = bmul(
+                    fee_plus_one,
+                    price_without_fee,
+                )?;
+                Ok(price_with_fee.saturated_into())
             }
         }
 
@@ -1008,7 +1028,7 @@ mod pallet {
         }
 
         // Mutates a stored pool. Returns `Err` if `pool_id` does not exist.
-        fn mutate_pool<F>(pool_id: PoolId, mut cb: F) -> DispatchResult
+        pub(crate) fn mutate_pool<F>(pool_id: PoolId, mut cb: F) -> DispatchResult
         where
             F: FnMut(&mut Pool<BalanceOf<T>, T::MarketId>) -> DispatchResult,
         {
