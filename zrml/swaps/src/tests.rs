@@ -680,6 +680,9 @@ fn swap_exact_amount_in_exchanges_correct_values_for_rikiddo() {
             _2,
         ), crate::Error::<Runtime>::UnsupportedTrade);
         assert_ok!(Currencies::withdraw(ASSET_D, &ALICE, _1));
+        println!("tot before: {}", Currencies::total_balance(ASSET_D, &ALICE));
+        // Check if the trade is executed.
+        let asset_a_issuance = Currencies::total_issuance(ASSET_A);
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
             pool_id,
@@ -689,7 +692,14 @@ fn swap_exact_amount_in_exchanges_correct_values_for_rikiddo() {
             0,
             _2,
         ));
-        // TODO: Check new balances.
+        // Check if the balances were updated accordingly.
+        let asset_a_issuance_after = Currencies::total_issuance(ASSET_A);
+        let alice_balance_a_after = Currencies::total_balance(ASSET_A, &ALICE);
+        let alice_balance_d_after = Currencies::total_balance(ASSET_D, &ALICE);
+        assert_eq!(asset_a_issuance - asset_a_issuance_after, _1);
+        assert_eq!(alice_balance_a_after, 0);
+        panic!("{}", alice_balance_d_after);
+        // TODO: Check asset bounds in utils swap function
         /*
         let pool_account = Swaps::pool_account_id(0);
         let in_balance = Currencies::free_balance(ASSET_A, &pool_account);
