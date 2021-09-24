@@ -156,7 +156,7 @@ where
             T::Shares::deposit(p.asset_out, &p.who, asset_amount_out)?;
         } else if p.asset_out == base_asset {
             T::Shares::withdraw(p.asset_in, &p.who, asset_amount_in)?;
-            T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_in)?;
+            T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
         } else {
             // Just for safety, should already be checked in p.asset_amounts.
             return Err(Error::<T>::UnsupportedTrade.into());
