@@ -157,9 +157,13 @@ mod pallet {
         fn on_finalize(block: T::BlockNumber) {
             let fun = || {
                 let added_len = TrackIncentivesBasedOnBoughtShares::<T>::exec(block)?;
-                Self::deposit_event(Event::AddedIncentives(added_len.into()));
+                if added_len > 0 {
+                    Self::deposit_event(Event::AddedIncentives(added_len.into()));
+                }
                 let subtracted_len = TrackIncentivesBasedOnSoldShares::<T>::exec();
-                Self::deposit_event(Event::SubtractedIncentives(subtracted_len.into()));
+                if subtracted_len > 0 {
+                    Self::deposit_event(Event::SubtractedIncentives(subtracted_len.into()));
+                }
                 Some(())
             };
             with_transaction(|| match fun() {
