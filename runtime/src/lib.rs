@@ -126,15 +126,14 @@ macro_rules! create_zeitgeist_runtime {
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
 
                 // Zeitgeist
-                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 40,
-                Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 41,
-                MarketCommons: zrml_market_commons::{Pallet, Storage} = 42,
-                Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 43,
-                Court: zrml_court::{Event<T>, Pallet, Storage} = 44,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 45,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 46,
+                MarketCommons: zrml_market_commons::{Pallet, Storage} = 40,
+                Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 41,
+                Court: zrml_court::{Event<T>, Pallet, Storage} = 42,
+                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 43,
+                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 44,
+                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 46,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
-                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 48,
 
                 $($additional_pallets)*
             }
@@ -492,14 +491,6 @@ impl zrml_market_commons::Config for Runtime {
     type Timestamp = Timestamp;
 }
 
-impl zrml_orderbook_v1::Config for Runtime {
-    type Currency = Balances;
-    type Event = Event;
-    type MarketId = MarketId;
-    type Shares = Tokens;
-    type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
-}
-
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
@@ -668,7 +659,6 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, zrml_court, Court);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
             add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
-            add_benchmark!(params, batches, zrml_orderbook_v1, Orderbook);
 
             if batches.is_empty() {
                 return Err("Benchmark not found for this pallet.".into());

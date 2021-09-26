@@ -80,7 +80,6 @@ zrml-authorized = { default-features = false, path = "../zrml/authorized" }
 zrml-court = { default-features = false, path = "../zrml/court" }
 zrml-liquidity-mining = { default-features = false, path = "../zrml/liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../zrml/market-commons" }
-zrml-orderbook-v1 = { default-features = false, path = "../zrml/orderbook-v1" }
 zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
 zrml-rikiddo = { default-features = false, path = "../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
@@ -136,7 +135,6 @@ runtime-benchmarks = [
     "zrml-authorized/runtime-benchmarks",
     "zrml-court/runtime-benchmarks",
     "zrml-liquidity-mining/runtime-benchmarks",
-    "zrml-orderbook-v1/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
     "zrml-simple-disputes/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
@@ -219,7 +217,6 @@ std = [
 	"zrml-court/std",
 	"zrml-liquidity-mining/std",
 	"zrml-market-commons/std",
-	"zrml-orderbook-v1/std",
 	"zrml-prediction-markets/std",
 	"zrml-rikiddo/std",
 	"zrml-simple-disputes/std",
