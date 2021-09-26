@@ -38,13 +38,7 @@ mod pallet {
     };
     use alloc::{collections::btree_map::BTreeMap, vec::Vec};
     use core::marker::PhantomData;
-    use frame_support::{
-        dispatch::Weight,
-        ensure, log,
-        pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
-        traits::{Get, IsType},
-        Blake2_128Concat, PalletId, Twox64Concat,
-    };
+    use frame_support::{Blake2_128Concat, PalletId, Twox64Concat, dispatch::{DispatchResultWithPostInfo, Weight}, ensure, log, pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery}, traits::{Get, IsType}};
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
@@ -153,7 +147,7 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be unreserved.
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be removed from subsidy.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_exit_subsidy())]
         pub fn pool_exit_subsidy(
             origin: OriginFor<T>,
             pool_id: PoolId,
@@ -339,7 +333,7 @@ mod pallet {
             pool_id: PoolId,
             pool_amount: BalanceOf<T>,
             max_assets_in: Vec<BalanceOf<T>>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
@@ -361,7 +355,9 @@ mod pallet {
                 transfer_pool: |_| Self::mint_pool_shares(pool_id, &who, pool_amount),
                 who: who.clone(),
             };
-            crate::utils::pool::<_, _, _, T>(params)
+
+            let _ = crate::utils::pool::<_, _, _, T>(params)?;
+            Ok(Some(T::WeightInfo::pool_join(pool.assets.len().saturated_into())).into())
         }
 
         /// Pool - Add subsidy to a pool that uses the Rikiddo scoring rule.
@@ -373,7 +369,7 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be reserved.
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be added to subsidy.
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::pool_join_subsidy())]
         pub fn pool_join_subsidy(
             origin: OriginFor<T>,
             pool_id: PoolId,
@@ -515,7 +511,7 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_in())]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_in_rikiddo(T::MaxAssets::get().into()))]
         #[frame_support::transactional]
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
@@ -525,7 +521,7 @@ mod pallet {
             asset_out: Asset<T::MarketId>,
             min_asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
@@ -602,7 +598,13 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            swap_exact_amount::<_, _, T>(params)
+            let _ = swap_exact_amount::<_, _, T>(params)?;
+
+            if pool.scoring_rule == ScoringRule::CPMM {
+                Ok(Some(T::WeightInfo::swap_exact_amount_in_cpmm()).into())
+            } else {
+                Ok(Some(T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into())).into())
+            }
         }
 
         /// Swap - Exact amount out
@@ -618,7 +620,7 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
         /// * `max_price`: Market price must be equal or less than the provided value.
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_out())]
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_out_rikiddo(T::MaxAssets::get().into()))]
         #[frame_support::transactional]
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
@@ -628,7 +630,7 @@ mod pallet {
             asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
             max_price: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
@@ -701,7 +703,13 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            swap_exact_amount::<_, _, T>(params)
+            let _ = swap_exact_amount::<_, _, T>(params)?;
+
+            if pool.scoring_rule == ScoringRule::CPMM {
+                Ok(Some(T::WeightInfo::swap_exact_amount_out_cpmm()).into())
+            } else {
+                Ok(Some(T::WeightInfo::swap_exact_amount_out_rikiddo(pool.assets.len().saturated_into())).into())
+            }
         }
     }
 
