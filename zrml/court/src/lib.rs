@@ -73,13 +73,14 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        // `transactional` attribute is not used here because `remove` and `unreserve_named` are
-        // infallible.
+        // `transactional` attribute is not used simply because
+        // `remove_juror_from_all_courts_of_all_markets` is infallible.
         #[pallet::weight(T::WeightInfo::exit_court())]
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let _ = Self::juror(&who)?;
+            let juror = Self::juror(&who)?;
             Self::remove_juror_from_all_courts_of_all_markets(&who);
+            Self::deposit_event(Event::ExitedJuror(who, juror));
             Ok(())
         }
 
@@ -95,7 +96,9 @@ mod pallet {
             let jurors_num_plus_one = jurors_num.checked_add(1).ok_or(ArithmeticError::Overflow)?;
             let stake = Self::current_required_stake(jurors_num_plus_one);
             CurrencyOf::<T>::reserve_named(&RESERVE_ID, &who, stake)?;
-            Jurors::<T>::insert(&who, Juror { status: JurorStatus::Ok });
+            let juror = Juror { status: JurorStatus::Ok };
+            Jurors::<T>::insert(&who, juror.clone());
+            Self::deposit_event(Event::JoinedJuror(who, juror));
             Ok(())
         }
 
@@ -163,9 +166,14 @@ mod pallet {
     }
 
     #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config, {}
+        T: Config,
+    {
+        ExitedJuror(T::AccountId, Juror),
+        JoinedJuror(T::AccountId, Juror),
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
