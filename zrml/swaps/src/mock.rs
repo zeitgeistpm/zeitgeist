@@ -11,8 +11,8 @@ use zeitgeist_primitives::{
     constants::{
         BalanceFractionalDecimals, BlockHashCount, DustAccountTest, ExistentialDeposit,
         ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
-        MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinLiquidity,
-        MinSubsidy, MinWeight, MinimumPeriod, SwapsPalletId,
+        MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinAssets,
+        MinLiquidity, MinSubsidy, MinWeight, MinimumPeriod, SwapsPalletId,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -60,6 +60,7 @@ impl crate::Config for Runtime {
     type MaxOutRatio = MaxOutRatio;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
+    type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;

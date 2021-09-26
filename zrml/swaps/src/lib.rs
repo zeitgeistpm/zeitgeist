@@ -48,7 +48,10 @@ mod pallet {
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
-    use sp_runtime::{ArithmeticError, DispatchError, DispatchResult, SaturatedConversion, traits::{AccountIdConversion, CheckedSub, Saturating, Zero}};
+    use sp_runtime::{
+        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
+        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
+    };
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
         types::{
@@ -169,21 +172,22 @@ mod pallet {
                 let mut real_amount = amount;
                 let upper_bound;
                 let transferred;
-    
+
                 if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
                     upper_bound = subsidy;
-    
+
                     if amount > subsidy {
                         real_amount = subsidy;
                     }
-    
+
                     let missing = T::Shares::unreserve(base_asset, &who, real_amount);
                     transferred = real_amount.saturating_sub(missing);
                     let zero_balance = <BalanceOf<T>>::zero();
-    
+
                     if missing > zero_balance {
                         log::warn!(
-                            "[Swaps] Data inconsistency: More subsidy provided than currently reserved.
+                            "[Swaps] Data inconsistency: More subsidy provided than currently \
+                             reserved.
                         Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                             pool_id,
                             who,
@@ -191,21 +195,27 @@ mod pallet {
                             subsidy
                         );
                     }
-    
+
                     let new_amount = subsidy.saturating_sub(transferred);
                     let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
-    
+
                     if new_amount > zero_balance && missing == zero_balance {
-                            <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
-                            pool.total_subsidy = Some(total_subsidy.checked_sub(&transferred).ok_or(ArithmeticError::Overflow)?);
+                        <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
+                        pool.total_subsidy = Some(
+                            total_subsidy
+                                .checked_sub(&transferred)
+                                .ok_or(ArithmeticError::Overflow)?,
+                        );
                     } else {
                         let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
-                        pool.total_subsidy = Some(total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?);
+                        pool.total_subsidy = Some(
+                            total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?,
+                        );
                     }
                 } else {
                     return Err(Error::<T>::NoSubsidyProvided.into());
                 }
-    
+
                 Self::deposit_event(Event::<T>::PoolExitSubsidy(PoolAssetEvent {
                     bound: upper_bound,
                     cpep: CommonPoolEventParams { pool_id, who },
@@ -380,7 +390,7 @@ mod pallet {
                 );
                 let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                 T::Shares::reserve(base_asset, &who, amount)?;
-    
+
                 let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
                 let _ = <SubsidyProviders<T>>::mutate(&pool_id, &who, |user_subsidy| {
                     if let Some(prev_val) = user_subsidy {
@@ -391,7 +401,7 @@ mod pallet {
 
                     pool.total_subsidy = Some(total_subsidy + amount);
                 });
-    
+
                 Self::deposit_event(Event::<T>::PoolJoinSubsidy(PoolAssetEvent {
                     bound: amount,
                     cpep: CommonPoolEventParams { pool_id, who },
@@ -519,7 +529,10 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-            ensure!(T::Shares::free_balance(asset_in, &who) >= asset_amount_in, Error::<T>::InsufficientBalance);
+            ensure!(
+                T::Shares::free_balance(asset_in, &who) >= asset_amount_in,
+                Error::<T>::InsufficientBalance
+            );
 
             let params = SwapExactAmountParams {
                 asset_amounts: || {
@@ -551,8 +564,10 @@ mod pallet {
                         ensure!(asset_out == base_asset, Error::<T>::UnsupportedTrade);
                         ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
-                        let mut outstanding_before = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
-                        let mut outstanding_after = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                        let mut outstanding_before =
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                        let mut outstanding_after =
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
 
                         for asset in pool.assets.iter().filter(|e| **e != base_asset) {
                             let total_amount = T::Shares::total_issuance(*asset);
@@ -565,9 +580,13 @@ mod pallet {
                             }
                         }
 
-                        let cost_before = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
-                        let cost_after = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                        asset_amount_out = cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?;
+                        let cost_before =
+                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
+                        let cost_after =
+                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
+                        asset_amount_out = cost_before
+                            .checked_sub(&cost_after)
+                            .ok_or(ArithmeticError::Overflow)?;
                     }
                     ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
@@ -581,7 +600,7 @@ mod pallet {
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
-                who
+                who,
             };
             swap_exact_amount::<_, _, T>(params)
         }
@@ -644,8 +663,10 @@ mod pallet {
                         ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
                         ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
-                        let mut outstanding_before = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
-                        let mut outstanding_after = Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                        let mut outstanding_before =
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                        let mut outstanding_after =
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
 
                         for asset in pool.assets.iter().filter(|e| **e != base_asset) {
                             let total_amount = T::Shares::total_issuance(*asset);
@@ -658,9 +679,13 @@ mod pallet {
                             }
                         }
 
-                        let cost_before = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
-                        let cost_after = T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                        asset_amount_in = cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?;
+                        let cost_before =
+                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
+                        let cost_after =
+                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
+                        asset_amount_in = cost_after
+                            .checked_sub(&cost_before)
+                            .ok_or(ArithmeticError::Overflow)?;
                     }
 
                     ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
@@ -674,7 +699,7 @@ mod pallet {
                 pool_account_id: &pool_account_id,
                 pool_id,
                 pool: &pool,
-                who
+                who,
             };
             swap_exact_amount::<_, _, T>(params)
         }
@@ -737,6 +762,10 @@ mod pallet {
 
         #[pallet::constant]
         type MaxWeight: Get<u128>;
+
+        #[pallet::constant]
+        /// The minimum amount of assets in a pool.
+        type MinAssets: Get<u16>;
 
         /// The minimum amount of liqudity required to bootstrap a pool.
         #[pallet::constant]
@@ -804,6 +833,7 @@ mod pallet {
         PoolMissingSubsidy,
         PoolMissingWeight,
         ProvidedValuesLenMustEqualAssetsLen,
+        TooFewAssets,
         TooManyAssets,
         UnsupportedTrade,
     }
@@ -906,7 +936,8 @@ mod pallet {
             // Fees are estimated here. The error scales with the fee. For the future, we'll have
             // to figure out how to extract the fee out of the price when using Rikiddo.
             if asset_in == asset_out {
-                return Ok(T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturating_add(BASE.saturated_into()));
+                return Ok(T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?
+                    .saturating_add(BASE.saturated_into()));
             }
 
             let mut balance_in = <BalanceOf<T>>::zero();
@@ -935,10 +966,8 @@ mod pallet {
                 .saturated_into();
                 let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into();
                 let fee_plus_one = BASE.saturating_add(fee_pct);
-                let price_with_fee: u128 = bmul(fee_plus_one, bmul(
-                    price_with_inverse_fee,
-                    fee_plus_one,
-                )?)?;
+                let price_with_fee: u128 =
+                    bmul(fee_plus_one, bmul(price_with_inverse_fee, fee_plus_one)?)?;
                 Ok(price_with_fee.saturated_into())
             } else {
                 let price_without_fee = bdiv(
@@ -950,10 +979,7 @@ mod pallet {
                 .saturated_into();
                 let fee_pct = T::RikiddoSigmoidFeeMarketEma::fee(pool_id)?.saturated_into();
                 let fee_plus_one = BASE.saturating_add(fee_pct);
-                let price_with_fee: u128 = bmul(
-                    fee_plus_one,
-                    price_without_fee,
-                )?;
+                let price_with_fee: u128 = bmul(fee_plus_one, price_without_fee)?;
                 Ok(price_with_fee.saturated_into())
             }
         }
@@ -1086,6 +1112,7 @@ mod pallet {
             weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
             ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
+            ensure!(assets.len() >= usize::from(T::MinAssets::get()), Error::<T>::TooFewAssets);
             let amount = T::MinLiquidity::get();
             let next_pool_id = Self::inc_next_pool_id()?;
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
@@ -1203,7 +1230,7 @@ mod pallet {
                     return Err(Error::<T>::InvalidStateTransition.into());
                 }
 
-                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?; 
+                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
                 ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
                 let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                 let pool_account = Pallet::<T>::pool_account_id(pool_id);
@@ -1236,8 +1263,8 @@ mod pallet {
 
                     if transfered != subsidy {
                         log::warn!(
-                            "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy provided \
-                            than currently reserved.
+                            "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy \
+                             provided than currently reserved.
                         Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                             pool_id,
                             provider_address,

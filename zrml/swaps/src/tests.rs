@@ -1,10 +1,18 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{SubsidyProviders, events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent}, mock::*};
+use crate::{
+    events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
+    mock::*,
+    SubsidyProviders,
+};
 use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
-use sp_runtime::{SaturatedConversion};
-use zeitgeist_primitives::{constants::BASE, traits::Swaps as _, types::{Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule}};
+use sp_runtime::SaturatedConversion;
+use zeitgeist_primitives::{
+    constants::BASE,
+    traits::Swaps as _,
+    types::{Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule},
+};
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
@@ -227,13 +235,13 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM);
         assert_noop!(Swaps::end_subsidy_phase(0), crate::Error::<Runtime>::InvalidStateTransition);
-        assert_noop!(
-            Swaps::end_subsidy_phase(1),
-            crate::Error::<Runtime>::PoolDoesNotExist
-        );
+        assert_noop!(Swaps::end_subsidy_phase(1), crate::Error::<Runtime>::PoolDoesNotExist);
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 1;
-        assert_noop!(Swaps::end_subsidy_phase(pool_id), crate::Error::<Runtime>::InsufficientSubsidy);
+        assert_noop!(
+            Swaps::end_subsidy_phase(pool_id),
+            crate::Error::<Runtime>::InsufficientSubsidy
+        );
 
         // Reserve some funds for subsidy
         let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
@@ -294,11 +302,27 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         );
         assert_ok!(Currencies::deposit(ASSET_A, &ALICE, u64::MAX.into()));
         assert_noop!(
-            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, u64::MAX.into(), ASSET_B, _1, _1),
+            Swaps::swap_exact_amount_in(
+                alice_signed(),
+                0,
+                ASSET_A,
+                u64::MAX.into(),
+                ASSET_B,
+                _1,
+                _1
+            ),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
-            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, u64::MAX.into(), ASSET_B, _1, _1),
+            Swaps::swap_exact_amount_out(
+                alice_signed(),
+                0,
+                ASSET_A,
+                u64::MAX.into(),
+                ASSET_B,
+                _1,
+                _1
+            ),
             crate::Error::<Runtime>::PoolIsNotActive
         );
     });
@@ -314,15 +338,20 @@ fn get_spot_price_returns_correct_results() {
         // Rikiddo.
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 1;
-        assert_noop!(Swaps::get_spot_price(pool_id, ASSETS[0], ASSETS[0]), crate::Error::<Runtime>::PoolIsNotActive);
+        assert_noop!(
+            Swaps::get_spot_price(pool_id, ASSETS[0], ASSETS[0]),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
         subsidize_and_start_rikiddo_market(pool_id, &ALICE, 0);
 
         // Asset out, base currency in. Should receive about 1/3 -> price about 3
-        let price_base_in = Swaps::get_spot_price(pool_id, ASSETS[0], *ASSETS.last().unwrap()).unwrap();
+        let price_base_in =
+            Swaps::get_spot_price(pool_id, ASSETS[0], *ASSETS.last().unwrap()).unwrap();
         // Between 0.3 and 0.4
         assert!(price_base_in > 28 * BASE / 10 && price_base_in < 31 * BASE / 10);
         // Base currency in, asset out. Price about 3.
-        let price_base_out = Swaps::get_spot_price(pool_id, *ASSETS.last().unwrap(), ASSETS[0]).unwrap();
+        let price_base_out =
+            Swaps::get_spot_price(pool_id, *ASSETS.last().unwrap(), ASSETS[0]).unwrap();
         // Between 2.9 and 3.1
         assert!(price_base_out > 3 * BASE / 10 && price_base_out < 4 * BASE / 10);
         // Asset in, asset out. Price about 1.
@@ -340,12 +369,26 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
         assert_ok!(Currencies::deposit(ASSET_A, &ALICE, u64::MAX.into()));
 
         assert_noop!(
-            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, u64::MAX.into(), ASSET_B, _1, _1,),
+            Swaps::swap_exact_amount_in(
+                alice_signed(),
+                0,
+                ASSET_A,
+                u64::MAX.into(),
+                ASSET_B,
+                _1,
+                _1,
+            ),
             crate::Error::<Runtime>::MaxInRatio
         );
 
         assert_noop!(
-            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, u64::MAX.into(), 1),
+            Swaps::pool_join_with_exact_asset_amount(
+                alice_signed(),
+                0,
+                ASSET_A,
+                u64::MAX.into(),
+                1
+            ),
             crate::Error::<Runtime>::MaxInRatio
         );
     });
@@ -437,14 +480,20 @@ fn pool_exit_decreases_correct_pool_parameters() {
 fn pool_exit_subsidy_unreserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM);
-        assert_noop!(Swaps::pool_exit_subsidy(alice_signed(), 0, 42), crate::Error::<Runtime>::InvalidScoringRule);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, 42),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
         assert_noop!(
             Swaps::pool_exit_subsidy(alice_signed(), 1, 42),
             crate::Error::<Runtime>::PoolDoesNotExist
         );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 1;
-        assert_noop!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, 42), crate::Error::<Runtime>::NoSubsidyProvided);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), pool_id, 42),
+            crate::Error::<Runtime>::NoSubsidyProvided
+        );
 
         // Add some subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
@@ -557,7 +606,10 @@ fn pool_join_increases_correct_pool_parameters() {
 fn pool_join_subsidy_reserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM);
-        assert_noop!(Swaps::pool_join_subsidy(alice_signed(), 0, 42), crate::Error::<Runtime>::InvalidScoringRule);
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, 42),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 1;
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
@@ -692,24 +744,14 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
         assert_ok!(Currencies::deposit(ASSET_A, &ALICE, _1));
 
         // Check if unsupport trades are catched (base_asset in || asset_in == asset_out).
-        assert_noop!(Swaps::swap_exact_amount_in(
-            alice_signed(),
-            pool_id,
-            ASSET_D,
-            _1,
-            ASSET_B,
-            _1 / 2,
-            _2,
-        ), crate::Error::<Runtime>::UnsupportedTrade);
-        assert_noop!(Swaps::swap_exact_amount_in(
-            alice_signed(),
-            pool_id,
-            ASSET_D,
-            _1,
-            ASSET_D,
-            _1 / 2,
-            _2,
-        ), crate::Error::<Runtime>::UnsupportedTrade);
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice_signed(), pool_id, ASSET_D, _1, ASSET_B, _1 / 2, _2,),
+            crate::Error::<Runtime>::UnsupportedTrade
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice_signed(), pool_id, ASSET_D, _1, ASSET_D, _1 / 2, _2,),
+            crate::Error::<Runtime>::UnsupportedTrade
+        );
         assert_ok!(Currencies::withdraw(ASSET_D, &ALICE, _1));
 
         // Check if the trade is executed.
@@ -769,24 +811,14 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
         subsidize_and_start_rikiddo_market(pool_id, &ALICE, (BASE * 4) / 10);
 
         // Check if unsupport trades are catched (base_asset out || asset_in == asset_out).
-        assert_noop!(Swaps::swap_exact_amount_out(
-            alice_signed(),
-            pool_id,
-            ASSET_B,
-            _20,
-            ASSET_D,
-            _1,
-            _20,
-        ), crate::Error::<Runtime>::UnsupportedTrade);
-        assert_noop!(Swaps::swap_exact_amount_out(
-            alice_signed(),
-            pool_id,
-            ASSET_D,
-            _2,
-            ASSET_D,
-            _1,
-            _2,
-        ), crate::Error::<Runtime>::UnsupportedTrade);
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice_signed(), pool_id, ASSET_B, _20, ASSET_D, _1, _20,),
+            crate::Error::<Runtime>::UnsupportedTrade
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice_signed(), pool_id, ASSET_D, _2, ASSET_D, _1, _2,),
+            crate::Error::<Runtime>::UnsupportedTrade
+        );
 
         // Check if the trade is executed.
         let asset_a_issuance = Currencies::total_issuance(ASSET_A);
@@ -869,7 +901,11 @@ fn assert_all_parameters(
 }
 
 // Subsidize and start a Rikiddo pool. Extra is the amount of additional base asset added to who.
-fn subsidize_and_start_rikiddo_market(pool_id: PoolId, who: &<Runtime as frame_system::Config>::AccountId, extra: crate::BalanceOf<Runtime>) {
+fn subsidize_and_start_rikiddo_market(
+    pool_id: PoolId,
+    who: &<Runtime as frame_system::Config>::AccountId,
+    extra: crate::BalanceOf<Runtime>,
+) {
     let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));

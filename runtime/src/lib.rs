@@ -553,6 +553,7 @@ impl zrml_swaps::Config for Runtime {
     type FixedTypeS = FixedI128<U33>;
     type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
+    type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;

@@ -20,7 +20,7 @@ use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
         Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MaxRuntimeUsize,
-        MultiHash, OutcomeReport, ScalarPosition,
+        MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -308,7 +308,7 @@ benchmarks! {
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len.saturating_add(1)];
-    }: _(RawOrigin::Signed(caller), marketid, weights)
+    }: _(RawOrigin::Signed(caller), marketid, ScoringRule::CPMM, weights)
 
     dispute {
         let a in 0..(T::MaxDisputes::get() - 1) as u32;

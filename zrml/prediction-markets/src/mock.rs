@@ -21,8 +21,8 @@ use zeitgeist_primitives::{
         CourtCaseDuration, CourtPalletId, DisputeBond, DisputeFactor, DustAccountTest,
         ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
         LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
-        MaxReserves, MaxTotalWeight, MaxWeight, MinCategories, MinLiquidity, MinSubsidy, MinWeight,
-        MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod, SimpleDisputesPalletId,
+        MaxReserves, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
+        MinWeight, MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod, SimpleDisputesPalletId,
         StakeWeight, SwapsPalletId, TreasuryPalletId, ValidityBond, BASE,
     },
     types::{
@@ -228,6 +228,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxOutRatio = MaxOutRatio;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
+    type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
