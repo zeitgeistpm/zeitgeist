@@ -169,7 +169,7 @@ mod pallet {
     #[pallet::generate_deposit(fn deposit_event)]
     pub enum Event<T>
     where
-        T: Config
+        T: Config,
     {
         ExitedJuror(T::AccountId, Juror),
         JoinedJuror(T::AccountId, Juror),
