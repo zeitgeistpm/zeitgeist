@@ -665,7 +665,7 @@ where
         num_assets: u32,
         subsidy: Self::FU,
     ) -> Result<Self::FU, &'static str> {
-        let fee = self.config.initial_fee;
+        let fee = self.fees.minimum_fee();
         let conversion_error = "[RikidoSigmoidMV] Number of assets does not fit in FU";
         let fee_overflow = "[RikidoSigmoidMV] Overflow during calculation: fee * num_assets";
         let ln_error = "[RikiddoSigmoidMV] ln(num_assets) failed";

@@ -16,9 +16,9 @@ type Rikiddo = RikiddoSigmoidMV<
     EmaMarketVolume<FixedU128<U64>>,
 >;
 
-pub(super) fn initial_outstanding_assets(num_assets: u32, subsidy: f64, initial_fee: f64) -> f64 {
+pub(super) fn initial_outstanding_assets(num_assets: u32, subsidy: f64, minimum_fee: f64) -> f64 {
     let num_assets_f64: f64 = num_assets.into();
-    let fee_times_num = initial_fee * num_assets_f64;
+    let fee_times_num = minimum_fee * num_assets_f64;
     subsidy / (fee_times_num * num_assets_f64.ln() + 1f64)
 }
 

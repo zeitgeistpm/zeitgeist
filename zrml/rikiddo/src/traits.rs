@@ -22,6 +22,9 @@ pub trait Fee {
     ///
     /// * `r`: An external value that is incorporated into the fee calculation.
     fn calculate_fee(&self, r: Self::FS) -> Result<Self::FS, &'static str>;
+
+    /// Return the minimum fee
+    fn minimum_fee(&self) -> Self::FS;
 }
 
 /// Market average specification for implementations such as EMA, SMA, median, WMA, etc.

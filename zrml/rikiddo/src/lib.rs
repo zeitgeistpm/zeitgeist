@@ -146,7 +146,7 @@ pub mod pallet {
     impl<T: Config<I>, I: 'static> Pallet<T, I> {}
 
     impl<T: Config<I>, I: 'static> Pallet<T, I> {
-        fn get_rikiddo(poolid: &T::PoolId) -> Result<T::Rikiddo, DispatchError> {
+        pub(crate) fn get_rikiddo(poolid: &T::PoolId) -> Result<T::Rikiddo, DispatchError> {
             if let Ok(rikiddo) = <RikiddoPerPool<T, I>>::try_get(poolid) {
                 Ok(rikiddo)
             } else {

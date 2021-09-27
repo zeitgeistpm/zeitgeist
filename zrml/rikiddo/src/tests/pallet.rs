@@ -7,13 +7,7 @@ use frame_system::RawOrigin;
 
 type FixedS = <Runtime as Config>::FixedTypeS;
 type Balance = <Runtime as Config>::Balance;
-use crate::{
-    mock::*,
-    tests::rikiddo_sigmoid_mv::{cost, initial_outstanding_assets, price},
-    traits::{FromFixedDecimal, IntoFixedDecimal, RikiddoMVPallet},
-    types::Timespan,
-    Config,
-};
+use crate::{Config, mock::*, tests::rikiddo_sigmoid_mv::{cost, initial_outstanding_assets, price}, traits::{Fee, FromFixedDecimal, IntoFixedDecimal, RikiddoMVPallet}, types::Timespan};
 
 #[inline]
 // Returns the maximum balance difference. If `frac_dec_places` is 10, and
@@ -214,7 +208,7 @@ fn rikiddo_pallet_initial_outstanding_assets_returns_correct_result() {
         let num_assets = 4u32;
         let subsidy_f64 = 1000f64;
         let subsidy = subsidy_f64 as u128 * frac_places.pow(10);
-        let fee: f64 = (Rikiddo::fee(0).unwrap() as f64) / (10f64.powf(frac_places as f64));
+        let fee: f64 = Rikiddo::get_rikiddo(&0).unwrap().fees.minimum_fee().to_num();
         let outstanding_assets =
             Rikiddo::initial_outstanding_assets(0, num_assets, subsidy).unwrap();
         let outstanding_assets_shifted =
