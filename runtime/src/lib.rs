@@ -12,12 +12,8 @@ mod parachain_params;
 mod parameters;
 #[cfg(feature = "parachain")]
 mod xcm_config;
-#[cfg(feature = "parachain")]
-mod xcmp_message;
 
 pub use parameters::*;
-#[cfg(feature = "parachain")]
-pub use xcmp_message::XCMPMessage;
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
@@ -57,7 +53,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-pub type BlockId = generic::BlockId<Block>;
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 pub type Executive = frame_executive::Executive<
     Runtime,
@@ -67,7 +62,6 @@ pub type Executive = frame_executive::Executive<
     AllPallets,
 >;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-pub type SignedBlock = generic::SignedBlock<Block>;
 pub type SignedExtra = (
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
@@ -453,11 +447,8 @@ impl zrml_prediction_markets::Config for Runtime {
 
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
-    type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
-    type Shares = Tokens;
-    type Swaps = Swaps;
 }
 
 impl zrml_swaps::Config for Runtime {
