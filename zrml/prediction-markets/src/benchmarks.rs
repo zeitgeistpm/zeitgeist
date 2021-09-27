@@ -5,7 +5,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Config;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
@@ -215,7 +214,8 @@ benchmarks! {
         for i in 0..c.min(T::MaxDisputes::get()) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&marketid);
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
+            let market = T::MarketCommons::market(&Default::default()).unwrap();
+            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid, &market)?;
         }
 
         let approval_origin = T::ApprovalOrigin::successful_origin();
@@ -320,7 +320,8 @@ benchmarks! {
     }:  {
         let origin = caller.clone();
         let disputes = crate::Disputes::<T>::get(&marketid);
-        let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
+        let market = T::MarketCommons::market(&Default::default()).unwrap();
+        let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid, &market)?;
     }
 
     internal_resolve_categorical_reported {
@@ -355,7 +356,8 @@ benchmarks! {
         for i in 0..c.min(d) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&marketid);
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
+            let market = T::MarketCommons::market(&Default::default()).unwrap();
+            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;
@@ -383,7 +385,8 @@ benchmarks! {
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(&marketid);
             let origin = caller.clone();
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid)?;
+            let market = T::MarketCommons::market(&Default::default()).unwrap();
+            let _ = T::SimpleDisputes::on_dispute(&disputes, &marketid, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&marketid)?;

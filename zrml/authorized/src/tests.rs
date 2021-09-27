@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 use crate::{
+    market_mock,
     mock::{Authorized, ExtBuilder, Origin, Runtime, ALICE, BOB},
-    utils::market_mock,
     Error, Outcomes,
 };
 use frame_support::assert_noop;
@@ -44,6 +44,18 @@ fn authorize_market_outcome_forbids_more_than_one_outcome_for_a_market() {
         assert_noop!(
             Authorized::authorize_market_outcome(Origin::signed(BOB), OutcomeReport::Scalar(1)),
             Error::<Runtime>::MarketsCanNotHaveMoreThanOneAuthorizedAccount
+        );
+    });
+}
+
+#[test]
+fn on_dispute_denies_non_authorized_markets() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = market_mock::<Runtime>(ALICE);
+        market.mdm = MarketDisputeMechanism::Court;
+        assert_noop!(
+            Authorized::on_dispute(&[], &0, &market),
+            Error::<Runtime>::MarketDoesNotHaveAuthorizedMechanism
         );
     });
 }
