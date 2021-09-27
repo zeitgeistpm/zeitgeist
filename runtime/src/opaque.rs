@@ -10,7 +10,6 @@ use alloc::vec::Vec;
 use sp_runtime::{generic, impl_opaque_keys};
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-pub type SessionHandlers = ();
 
 #[cfg(feature = "parachain")]
 impl_opaque_keys! {

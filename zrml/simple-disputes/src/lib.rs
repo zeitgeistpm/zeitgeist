@@ -22,10 +22,9 @@ mod pallet {
     };
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
-        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
-        types::{Asset, Market, MarketDispute, MarketStatus, OutcomeReport},
+        traits::DisputeApi,
+        types::{Market, MarketDispute, MarketStatus, OutcomeReport},
     };
-    use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     type BalanceOf<T> =
@@ -44,14 +43,6 @@ mod pallet {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        /// Common market parameters
-        type LiquidityMining: LiquidityMiningPalletApi<
-            AccountId = Self::AccountId,
-            Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
-            MarketId = MarketIdOf<Self>,
-        >;
-
         /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
@@ -60,16 +51,6 @@ mod pallet {
 
         /// The pallet identifier.
         type PalletId: Get<PalletId>;
-
-        /// Swap shares
-        type Shares: ZeitgeistMultiReservableCurrency<
-            Self::AccountId,
-            Balance = BalanceOf<Self>,
-            CurrencyId = Asset<<Self::MarketCommons as MarketCommonsPalletApi>::MarketId>,
-        >;
-
-        /// Swaps pallet
-        type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
     }
 
     #[pallet::error]

@@ -194,11 +194,8 @@ impl zrml_market_commons::Config for Runtime {
 
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
-    type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
-    type Shares = Tokens;
-    type Swaps = Swaps;
 }
 
 impl zrml_swaps::Config for Runtime {
