@@ -28,7 +28,6 @@ sp-consensus = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com
 sp-core = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
 sp-timestamp = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
-sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
 structopt = { version = "0.3" }
 substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
 
