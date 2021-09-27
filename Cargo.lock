@@ -12506,7 +12506,6 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime",
  "zeitgeist-primitives",
- "zrml-liquidity-mining",
  "zrml-market-commons",
 ]
 
