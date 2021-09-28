@@ -595,12 +595,12 @@ mod pallet {
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            scoring_rule: ScoringRule,
             weights: Vec<u128>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
 
             // ensure a swap pool does not already exist
@@ -851,6 +851,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
 
             let market_account = Self::market_account(market_id);
@@ -1013,6 +1014,8 @@ mod pallet {
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
+        /// An operation is requested that is unsupported for the given scoring rule.
+        InvalidScoringRule,
         /// Sender does not have enough balance to buy shares.
         NotEnoughBalance,
         /// The outcome being reported is out of range.
@@ -1191,9 +1194,10 @@ mod pallet {
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance,);
+            ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance);
 
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
 
             let market_account = Self::market_account(market_id);
