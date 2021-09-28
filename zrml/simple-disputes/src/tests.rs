@@ -28,7 +28,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
 };
 
 #[test]
-fn on_dispute_denies_non_authorized_markets() {
+fn on_dispute_denies_non_simple_disputes_markets() {
     ExtBuilder.build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.mdm = MarketDisputeMechanism::Court;
@@ -40,7 +40,7 @@ fn on_dispute_denies_non_authorized_markets() {
 }
 
 #[test]
-fn on_resolution_denies_non_authorized_markets() {
+fn on_resolution_denies_non_simple_disputes_markets() {
     ExtBuilder.build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.mdm = MarketDisputeMechanism::Court;
