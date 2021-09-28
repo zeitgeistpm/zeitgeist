@@ -2,9 +2,13 @@ use frame_support::assert_err;
 use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128};
 
 use super::{initial_outstanding_assets, ln_exp_sum, Rikiddo};
-use crate::{constants::INITIAL_FEE, traits::{Fee, Lmsr}, types::{
+use crate::{
+    constants::INITIAL_FEE,
+    traits::{Fee, Lmsr},
+    types::{
         convert_to_signed, EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoFormulaComponents,
-    }};
+    },
+};
 
 #[test]
 fn rikiddo_default_does_not_panic() -> Result<(), &'static str> {

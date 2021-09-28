@@ -37,7 +37,7 @@ fn generate_assets<T: Config>(
         let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
         assets.push(asset);
 
-            T::Shares::deposit(asset, owner, asset_amount_unwrapped).unwrap()
+        T::Shares::deposit(asset, owner, asset_amount_unwrapped).unwrap()
     }
 
     assets
@@ -50,7 +50,7 @@ fn bench_create_pool<T: Config>(
     asset_count: Option<usize>,
     asset_amount: Option<BalanceOf<T>>,
     scoring_rule: ScoringRule,
-    subsidize: bool
+    subsidize: bool,
 ) -> (u128, Vec<Asset<T::MarketId>>, T::MarketId) {
     let asset_count_unwrapped: usize = {
         match asset_count {
@@ -80,7 +80,8 @@ fn bench_create_pool<T: Config>(
         let min_subsidy = T::MinSubsidy::get();
         let _ = T::Shares::deposit(base_asset.unwrap(), &caller, min_subsidy).unwrap();
         let _ = Call::<T>::pool_join_subsidy(pool_id, T::MinSubsidy::get())
-            .dispatch_bypass_filter(RawOrigin::Signed(caller).into()).unwrap();
+            .dispatch_bypass_filter(RawOrigin::Signed(caller).into())
+            .unwrap();
         let _ = Pallet::<T>::end_subsidy_phase(pool_id).unwrap();
     }
 

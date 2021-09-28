@@ -7,7 +7,13 @@ use frame_system::RawOrigin;
 
 type FixedS = <Runtime as Config>::FixedTypeS;
 type Balance = <Runtime as Config>::Balance;
-use crate::{Config, mock::*, tests::rikiddo_sigmoid_mv::{cost, initial_outstanding_assets, price}, traits::{Fee, FromFixedDecimal, IntoFixedDecimal, RikiddoMVPallet}, types::Timespan};
+use crate::{
+    mock::*,
+    tests::rikiddo_sigmoid_mv::{cost, initial_outstanding_assets, price},
+    traits::{Fee, FromFixedDecimal, IntoFixedDecimal, RikiddoMVPallet},
+    types::Timespan,
+    Config,
+};
 
 #[inline]
 // Returns the maximum balance difference. If `frac_dec_places` is 10, and

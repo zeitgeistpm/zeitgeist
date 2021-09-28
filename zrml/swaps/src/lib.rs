@@ -38,7 +38,13 @@ mod pallet {
     };
     use alloc::{collections::btree_map::BTreeMap, vec::Vec};
     use core::marker::PhantomData;
-    use frame_support::{Blake2_128Concat, PalletId, Twox64Concat, dispatch::{DispatchResultWithPostInfo, Weight}, ensure, log, pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery}, traits::{Get, IsType}};
+    use frame_support::{
+        dispatch::{DispatchResultWithPostInfo, Weight},
+        ensure, log,
+        pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        traits::{Get, IsType},
+        Blake2_128Concat, PalletId, Twox64Concat,
+    };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
@@ -603,7 +609,10 @@ mod pallet {
             if pool.scoring_rule == ScoringRule::CPMM {
                 Ok(Some(T::WeightInfo::swap_exact_amount_in_cpmm()).into())
             } else {
-                Ok(Some(T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into())).into())
+                Ok(Some(T::WeightInfo::swap_exact_amount_in_rikiddo(
+                    pool.assets.len().saturated_into(),
+                ))
+                .into())
             }
         }
 
@@ -708,7 +717,10 @@ mod pallet {
             if pool.scoring_rule == ScoringRule::CPMM {
                 Ok(Some(T::WeightInfo::swap_exact_amount_out_cpmm()).into())
             } else {
-                Ok(Some(T::WeightInfo::swap_exact_amount_out_rikiddo(pool.assets.len().saturated_into())).into())
+                Ok(Some(T::WeightInfo::swap_exact_amount_out_rikiddo(
+                    pool.assets.len().saturated_into(),
+                ))
+                .into())
             }
         }
     }

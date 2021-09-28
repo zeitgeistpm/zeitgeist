@@ -66,6 +66,7 @@ fn create_market_common<T: Config>(
             creation,
             categories,
             MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
         )
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     } else if let MarketType::Scalar(range) = options {
@@ -76,6 +77,7 @@ fn create_market_common<T: Config>(
             creation,
             range,
             MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
         )
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     } else {
@@ -288,13 +290,15 @@ benchmarks! {
         let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
         let categories = T::MaxCategories::get();
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, categories, MarketDisputeMechanism::SimpleDisputes)
+    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, categories,
+            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 
     create_scalar_market {
         let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
         let outcome_range = 0u128..=u128::MAX;
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, outcome_range, MarketDisputeMechanism::SimpleDisputes)
+    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, outcome_range,
+            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 
     deploy_swap_pool_for_market {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -308,7 +312,7 @@ benchmarks! {
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len.saturating_add(1)];
-    }: _(RawOrigin::Signed(caller), marketid, ScoringRule::CPMM, weights)
+    }: _(RawOrigin::Signed(caller), marketid, weights)
 
     dispute {
         let a in 0..(T::MaxDisputes::get() - 1) as u32;

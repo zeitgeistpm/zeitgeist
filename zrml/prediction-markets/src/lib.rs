@@ -69,10 +69,17 @@ mod pallet {
     use crate::weights::*;
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData, ops::RangeInclusive};
-    use frame_support::{Blake2_128Concat, PalletId, Twox64Concat, dispatch::{DispatchResultWithPostInfo, Weight}, ensure, log, pallet_prelude::{StorageMap, StorageValue, ValueQuery}, storage::{with_transaction, TransactionOutcome}, traits::{
+    use frame_support::{
+        dispatch::{DispatchResultWithPostInfo, Weight},
+        ensure, log,
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        storage::{with_transaction, TransactionOutcome},
+        traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             NamedReservableCurrency, OnUnbalanced,
-        }, transactional};
+        },
+        transactional, Blake2_128Concat, PalletId, Twox64Concat,
+    };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
@@ -80,7 +87,15 @@ mod pallet {
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
     };
-    use zeitgeist_primitives::{constants::{PmPalletId, MILLISECS_PER_BLOCK}, traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency}, types::{Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition, ScoringRule, SubsidyUntil}};
+    use zeitgeist_primitives::{
+        constants::{PmPalletId, MILLISECS_PER_BLOCK},
+        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
+        types::{
+            Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
+            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
+            ScoringRule, SubsidyUntil,
+        },
+    };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -232,7 +247,7 @@ mod pallet {
         pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
-            let creator = market.creator;
+            let creator = market.creator.clone();
 
             CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
             T::MarketCommons::mutate_market(&market_id, |m| {
@@ -351,7 +366,7 @@ mod pallet {
             creation: MarketCreation,
             categories: u16,
             mdm: MarketDisputeMechanism<T::AccountId>,
-            scoring_rule: ScoringRule
+            scoring_rule: ScoringRule,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
@@ -360,7 +375,7 @@ mod pallet {
             ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
 
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                Self::ensure_market_start_is_in_time(period)?;
+                Self::ensure_market_start_is_in_time(&period)?;
             }
 
             // Require sha3-384 as multihash.
@@ -402,7 +417,7 @@ mod pallet {
             let market_id = T::MarketCommons::push_market(market.clone())?;
 
             if market.status == MarketStatus::CollectingSubsidy {
-                Self::start_subsidy(&market, market_id);
+                Self::start_subsidy(&market, market_id)?;
             }
 
             Self::deposit_event(Event::MarketCreated(market_id, market, sender));
@@ -463,7 +478,7 @@ mod pallet {
                         creation,
                         category_count,
                         mdm,
-                        ScoringRule::CPMM
+                        ScoringRule::CPMM,
                     )?
                 }
                 MarketType::Scalar(range) => {
@@ -476,7 +491,7 @@ mod pallet {
                         creation,
                         range,
                         mdm,
-                        ScoringRule::CPMM
+                        ScoringRule::CPMM,
                     )?
                 }
             };
@@ -535,7 +550,7 @@ mod pallet {
             ensure!(outcome_range.start() < outcome_range.end(), "Invalid range provided.");
 
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                Self::ensure_market_start_is_in_time(period)?;
+                Self::ensure_market_start_is_in_time(&period)?;
             }
 
             // Require sha3-384 as multihash.
@@ -546,7 +561,7 @@ mod pallet {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
                     CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
-                    
+
                     if scoring_rule == ScoringRule::CPMM {
                         MarketStatus::Active
                     } else {
@@ -572,14 +587,14 @@ mod pallet {
                 report: None,
                 resolved_outcome: None,
                 status,
-                scoring_rule
+                scoring_rule,
             };
             let market_id = T::MarketCommons::push_market(market.clone())?;
 
             if market.status == MarketStatus::CollectingSubsidy {
-                Self::start_subsidy(&market, market_id);
+                Self::start_subsidy(&market, market_id)?;
             }
-            
+
             Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
             Ok(())
@@ -619,7 +634,7 @@ mod pallet {
                 market_id,
                 ScoringRule::CPMM,
                 Some(Zero::zero()),
-                Some(weights)
+                Some(weights),
             )?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
@@ -951,13 +966,13 @@ mod pallet {
         type MaxCategories: Get<u16>;
 
         /// The shortest period of collecting subsidy for a Rikiddo market.
-        type MaxSubsidyPeriod: Get<MomentOf<Self>>;
+        type MaxSubsidyPeriod: Get<u64>;
 
         /// The minimum number of categories available for categorical markets.
         type MinCategories: Get<u16>;
 
         /// The shortest period of collecting subsidy for a Rikiddo market.
-        type MinSubsidyPeriod: Get<MomentOf<Self>>;
+        type MinSubsidyPeriod: Get<u64>;
 
         /// The maximum number of disputes allowed on any single market.
         type MaxDisputes: Get<u32>;
@@ -1139,7 +1154,8 @@ mod pallet {
     // All the values are "cached" here. Results in data duplication, but speeds up the iteration
     // over every market significantly (otherwise 25µs per relevant market per block).
     #[pallet::storage]
-    pub type MarketsCollectingSubsidy<T: Config> = StorageValue<_, Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>, ValueQuery>;
+    pub type MarketsCollectingSubsidy<T: Config> =
+        StorageValue<_, Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
@@ -1318,21 +1334,32 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_market_start_is_in_time(period: MarketPeriod<T::BlockNumber, MomentOf<T>>) -> DispatchResult {
-            let mut interval = 0;
-                
+        fn ensure_market_start_is_in_time(
+            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        ) -> DispatchResult {
+            let interval;
+
             match period {
                 MarketPeriod::Block(range) => {
-                    let interval_blocks: u128 = range.start.saturating_sub(<frame_system::Pallet<T>>::block_number()).saturated_into();
+                    let interval_blocks: u128 = range
+                        .start
+                        .saturating_sub(<frame_system::Pallet<T>>::block_number())
+                        .saturated_into();
                     interval = interval_blocks.saturating_mul(MILLISECS_PER_BLOCK.into());
-                },
+                }
                 MarketPeriod::Timestamp(range) => {
                     interval = range.start.saturating_sub(T::MarketCommons::now()).saturated_into();
                 }
             }
 
-            ensure!(interval >= T::MinSubsidyPeriod::get().saturated_into::<u128>(), <Error<T>>::MarketStartTooSoon);
-            ensure!(interval <= T::MaxSubsidyPeriod::get().saturated_into::<u128>(), <Error<T>>::MarketStartTooLate);
+            ensure!(
+                interval >= u128::from(T::MinSubsidyPeriod::get()),
+                <Error<T>>::MarketStartTooSoon
+            );
+            ensure!(
+                interval <= u128::from(T::MaxSubsidyPeriod::get()),
+                <Error<T>>::MarketStartTooLate
+            );
             Ok(())
         }
 
@@ -1605,16 +1632,22 @@ mod pallet {
 
         // Creates a pool for the market and registers the market in the list of markets
         // currently collecting subsidy.
-        fn start_subsidy(market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>, market_id: MarketIdOf<T>) -> DispatchResult {
+        fn start_subsidy(
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
             ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
-            ensure!(market.status == MarketStatus::CollectingSubsidy, Error::<T>::MarketIsNotCollectingSubsidy);
+            ensure!(
+                market.status == MarketStatus::CollectingSubsidy,
+                Error::<T>::MarketIsNotCollectingSubsidy
+            );
 
             let mut assets = Self::outcome_assets(market_id, &market);
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
 
             let pool_id = T::Swaps::create_pool(
-                market.creator,
+                market.creator.clone(),
                 assets,
                 Some(base_asset),
                 market_id,
@@ -1625,7 +1658,7 @@ mod pallet {
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             <MarketsCollectingSubsidy<T>>::mutate(|markets| {
-                markets.push(SubsidyUntil {market_id, period: market.period})
+                markets.push(SubsidyUntil { market_id, period: market.period.clone() })
             });
             Ok(())
         }

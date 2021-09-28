@@ -15,6 +15,7 @@ use frame_support::{
 use frame_system::RawOrigin;
 use zeitgeist_primitives::types::{
     Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
+    ScoringRule,
 };
 use zrml_market_commons::Markets;
 
@@ -195,6 +196,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             report: None,
             resolved_outcome: None,
             status: MarketStatus::Closed,
+            scoring_rule: ScoringRule::CPMM,
         },
     );
 }
