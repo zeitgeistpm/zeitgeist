@@ -83,7 +83,6 @@ struct Data {
     report_market_id: u8,
     report_outcome: u128,
 
-    dispute_origin: u8,
     dispute_market_id: u8,
 
     redeem_origin: u8,

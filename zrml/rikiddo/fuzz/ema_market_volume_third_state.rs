@@ -40,7 +40,6 @@ fuzz_target!(|data: Data| {
 #[derive(Debug, Arbitrary)]
 struct Data {
     first_update_volume: u128,
-    second_update_volume: u128,
     smoothing: u128,
     third_update_volume: TimestampedVolume<FixedU128<U33>>,
     ema_market_volume: EmaMarketVolume<FixedU128<U33>>,
