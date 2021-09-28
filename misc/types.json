@@ -41,6 +41,7 @@
     "metadata": "Vec<u8>",
     "market_type": "MarketType",
     "period": "MarketPeriod",
+    "scoring_rule": "ScoringRule",
     "status": "MarketStatus",
     "report": "Option<Report>",
     "resolved_outcome": "Option<Outcome>",
@@ -78,6 +79,8 @@
       "Active",
       "Suspended",
       "Closed",
+      "CollectingSubsidy",
+      "InsufficientSubsidy",
       "Reported",
       "Disputed",
       "Resolved"
