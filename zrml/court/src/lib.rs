@@ -47,7 +47,7 @@ mod pallet {
     use zeitgeist_primitives::{
         constants::CourtPalletId,
         traits::DisputeApi,
-        types::{Market, MarketDispute, OutcomeReport},
+        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -69,7 +69,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -159,6 +159,8 @@ mod pallet {
         JurorAlreadyExists,
         /// An account id does not exist on the jurors storage.
         JurorDoesNotExists,
+        /// On dispute or resolution, someone tried to pass a non-court market type
+        MarketDoesNotHaveCourtMechanism,
         /// No-one voted on an outcome to resolve a market
         NoVotes,
         /// Forbids voting of unknown accounts
@@ -465,7 +467,11 @@ mod pallet {
         fn on_dispute(
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
+            if market.mdm != MarketDisputeMechanism::Court {
+                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
+            }
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
             let necessary_jurors_num = Self::necessary_jurors_num(disputes);
             let mut rng = Self::rng();
@@ -485,8 +491,11 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<OutcomeReport, DispatchError> {
+            if market.mdm != MarketDisputeMechanism::Court {
+                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
+            }
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
             let requested_jurors: Vec<_> = RequestedJurors::<T>::iter_prefix(market_id)
                 .map(|(juror_id, max_allowed_block)| {

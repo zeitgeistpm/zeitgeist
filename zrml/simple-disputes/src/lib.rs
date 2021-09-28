@@ -6,7 +6,9 @@
 
 extern crate alloc;
 
+mod mock;
 mod simple_disputes_pallet_api;
+mod tests;
 
 pub use pallet::*;
 pub use simple_disputes_pallet_api::SimpleDisputesPalletApi;
@@ -23,7 +25,7 @@ mod pallet {
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketStatus, OutcomeReport},
+        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -58,6 +60,8 @@ mod pallet {
         /// 1. Any resolution must either have a `Disputed` or `Reported` market status
         /// 2. If status is `Disputed`, then at least one dispute must exist
         InvalidMarketStatus,
+        /// On dispute or resolution, someone tried to pass a non-simple-disputes market type
+        MarketDoesNotHaveSimpleDisputesMechanism,
     }
 
     #[pallet::event]
@@ -82,7 +86,11 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
+            if market.mdm != MarketDisputeMechanism::SimpleDisputes {
+                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
+            }
             Ok(())
         }
 
@@ -91,12 +99,12 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<OutcomeReport, DispatchError> {
-            let report = T::MarketCommons::report(market)?;
-
-            let resolved_outcome = match market.status {
-                MarketStatus::Reported => report.outcome.clone(),
+            if market.mdm != MarketDisputeMechanism::SimpleDisputes {
+                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
+            }
+            Ok(match market.status {
+                MarketStatus::Reported => T::MarketCommons::report(market)?.outcome.clone(),
                 MarketStatus::Disputed => {
-                    // count the last dispute's outcome as the winning one
                     if let Some(last_dispute) = disputes.last() {
                         last_dispute.outcome.clone()
                     } else {
@@ -104,9 +112,7 @@ mod pallet {
                     }
                 }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
-            };
-
-            Ok(resolved_outcome)
+            })
         }
     }
 

@@ -8,8 +8,6 @@ mod authorized_pallet_api;
 mod benchmarks;
 mod mock;
 mod tests;
-#[cfg(any(feature = "runtime-benchmarks", test))]
-mod utils;
 pub mod weights;
 
 pub use authorized_pallet_api::AuthorizedPalletApi;
@@ -98,7 +96,7 @@ mod pallet {
     pub enum Error<T> {
         /// An account trying to register an outcome is not tied to any authorized market.
         AccountIsNotLinkedToAnyAuthorizedMarket,
-        /// On resolution, someone tried to pass a non-authorized market type
+        /// On dispute or resolution, someone tried to pass a non-authorized market type
         MarketDoesNotHaveAuthorizedMechanism,
         /// It is not possible to have more than one stored outcome for the same market.
         MarketsCanNotHaveMoreThanOneAuthorizedAccount,
@@ -133,8 +131,13 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            Ok(())
+            if let MarketDisputeMechanism::Authorized(_) = market.mdm {
+                Ok(())
+            } else {
+                Err(Error::<T>::MarketDoesNotHaveAuthorizedMechanism.into())
+            }
         }
 
         fn on_resolution(
@@ -173,4 +176,26 @@ mod pallet {
         T::AccountId,
         OutcomeReport,
     >;
+}
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub(crate) fn market_mock<T>(
+    ai: T::AccountId,
+) -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+where
+    T: crate::Config,
+{
+    zeitgeist_primitives::types::Market {
+        creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: T::AccountId::default(),
+        market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
+        mdm: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
+        metadata: Default::default(),
+        oracle: T::AccountId::default(),
+        period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        report: None,
+        resolved_outcome: None,
+        status: zeitgeist_primitives::types::MarketStatus::Closed,
+    }
 }

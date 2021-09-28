@@ -38,7 +38,7 @@ jobs:
         with:
           override: true
           profile: minimal
-          toolchain: nightly-2021-08-21
+          toolchain: nightly-2021-09-28
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1

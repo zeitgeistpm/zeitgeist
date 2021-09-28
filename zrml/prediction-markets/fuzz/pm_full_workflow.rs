@@ -4,13 +4,10 @@ use arbitrary::Arbitrary;
 use core::ops::{Range, RangeInclusive};
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::{
-    traits::DisputeApi,
-    types::{MarketCreation, MarketDisputeMechanism, MarketPeriod, MultiHash, OutcomeReport},
+use zeitgeist_primitives::types::{
+    MarketCreation, MarketDisputeMechanism, MarketPeriod, MultiHash, OutcomeReport,
 };
-use zrml_prediction_markets::mock::{
-    ExtBuilder, Origin, PredictionMarkets, Runtime, SimpleDisputes, System,
-};
+use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
@@ -49,9 +46,10 @@ fuzz_target!(|data: Data| {
         System::set_block_number(4);
 
         let dispute_market_id = data.dispute_market_id.into();
-        let _ = SimpleDisputes::on_dispute(
-            &zrml_prediction_markets::Disputes::<Runtime>::get(&dispute_market_id),
-            &dispute_market_id,
+        let _ = PredictionMarkets::dispute(
+            Origin::signed(data.report_origin.into()),
+            dispute_market_id,
+            outcome(data.report_outcome),
         );
 
         let _ = PredictionMarkets::on_initialize(5);
@@ -85,7 +83,6 @@ struct Data {
     report_market_id: u8,
     report_outcome: u128,
 
-    dispute_origin: u8,
     dispute_market_id: u8,
 
     redeem_origin: u8,

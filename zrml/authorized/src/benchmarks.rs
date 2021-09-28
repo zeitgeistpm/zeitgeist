@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 use crate::Pallet as Court;
-use crate::{utils::market_mock, Call, Config, Pallet};
+use crate::{market_mock, Call, Config, Pallet};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
 use zeitgeist_primitives::types::OutcomeReport;
