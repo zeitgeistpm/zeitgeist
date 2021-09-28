@@ -28,13 +28,15 @@ pub trait Swaps<AccountId> {
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
-    /// Pool will be marked as `PoolStatus::Active`, if the state transition is possible.
+    /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
+    /// state and all other conditions are met. Returns Ok(true) if everything succeeded,
+    /// Ok(false) if not enough subsidy was collected and an error in all other cases.
     ///
     /// # Arguments
     ///
     /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
     /// than the given value.
-    fn end_subsidy_phase(pool_id: PoolId) -> DispatchResult;
+    fn end_subsidy_phase(pool_id: PoolId) -> Result<bool, DispatchError>;
 
     /// All supporters will receive their reserved funds back and the pool is destroyed.
     ///

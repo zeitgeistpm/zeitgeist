@@ -1236,15 +1236,16 @@ mod pallet {
         }
 
         /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
-        /// state and all other conditions are met.
+        /// state and all other conditions are met. Returns Ok(true) if everything succeeded,
+        /// Ok(false) if not enough subsidy was collected and an error in all other cases.
         ///
         /// # Arguments
         ///
         /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
         /// than the given value.
         #[frame_support::transactional]
-        fn end_subsidy_phase(pool_id: PoolId) -> DispatchResult {
-            Self::mutate_pool(pool_id, |pool| {
+        fn end_subsidy_phase(pool_id: PoolId) -> Result<bool, DispatchError> {
+            let mutate_result = Self::mutate_pool(pool_id, |pool| {
                 // Ensure all preconditions are met.
                 if pool.pool_status != PoolStatus::CollectingSubsidy {
                     return Err(Error::<T>::InvalidStateTransition.into());
@@ -1315,7 +1316,18 @@ mod pallet {
                 pool.pool_status = PoolStatus::Active;
                 Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
                 Ok(())
-            })
+            });
+
+            match mutate_result {
+                Ok(()) => Ok(true),
+                Err(err) => {
+                    if err == Error::<T>::InsufficientSubsidy.into() {
+                        Ok(false)
+                    } else {
+                        Err(err)
+                    }
+                }
+            }
         }
 
         /// Pool - Exit with exact pool amount

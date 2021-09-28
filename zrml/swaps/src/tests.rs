@@ -238,9 +238,10 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         assert_noop!(Swaps::end_subsidy_phase(1), crate::Error::<Runtime>::PoolDoesNotExist);
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 1;
-        assert_noop!(
+        let end_result = Swaps::end_subsidy_phase(pool_id);
+        assert_storage_noop!(
             Swaps::end_subsidy_phase(pool_id),
-            crate::Error::<Runtime>::InsufficientSubsidy
+            Ok(false)
         );
 
         // Reserve some funds for subsidy

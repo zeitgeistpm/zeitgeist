@@ -1554,6 +1554,62 @@ mod pallet {
             ))
         }
 
+        fn process_subsidy_collecting_markets(current_block: T::BlockNumber, current_time: MomentOf<T>) -> DispatchResult {
+            /*
+                - Iterator over every market
+                - If market_start <= current_moment:
+                    - Call swaps rikiddo transit function
+                        - If ok: Set market state to active 
+                        - else: cancel_subsidy_market() - unreserve funds, cancel market.
+                else:
+                    push market in other vector that contains still waiting markets.
+                - Write pending markets back to storage
+            */
+
+            <MarketsCollectingSubsidy<T>>::try_mutate(|e: &mut Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>| { 
+                let mut error_occured = false;
+                let mut error: DispatchError = DispatchError::Other("");
+
+                e.retain(|subsidy_info: &SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>| {
+                    if error_occured { return true; };
+                    let market_ready;
+    
+                    match &subsidy_info.period {
+                        MarketPeriod::Block(period) => {
+                            market_ready = if period.start <= current_block { true } else { false };
+                        },
+                        MarketPeriod::Timestamp(period) => {
+                            market_ready = if period.start <= current_time { true } else { false };
+                        }
+                    }
+    
+                    if market_ready {
+                        let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
+                        if pool_id.is_err() { 
+                            error_occured = true;
+                            error = pool_id.err().unwrap_or(DispatchError::Other(""));
+                            return true;
+                        }
+
+                        let end_subsidy_result = T::Swaps::end_subsidy_phase(pool_id.unwrap_or(u128::MAX));
+
+                        if end_subsidy_result.is_err() { 
+                            error_occured = true;
+                            error = pool_id.err().unwrap_or(DispatchError::Other(""));
+                            return true;
+                        }
+                        
+                        return false;
+                    }
+
+                    return true;
+                }); 
+
+                if error_occured { error.into() } else { Ok(()) }
+            })?;
+            Ok(())
+        }
+
         fn remove_last_dispute_from_market_ids_per_dispute_block(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
             market_id: &MarketIdOf<T>,
