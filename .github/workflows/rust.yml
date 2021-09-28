@@ -31,7 +31,7 @@ jobs:
           components: clippy, rustfmt
           override: true
           profile: minimal
-          toolchain: nightly-2021-08-21
+          toolchain: nightly-2021-09-28
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
@@ -51,7 +51,7 @@ jobs:
         with:
           override: true
           profile: minimal
-          toolchain: nightly-2021-08-21
+          toolchain: nightly-2021-09-28
 
       - uses: actions-rs/install@v0.1
         with:
