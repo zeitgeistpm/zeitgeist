@@ -107,7 +107,7 @@ fn join_court_will_not_insert_an_already_stored_juror() {
 }
 
 #[test]
-fn on_dispute_denies_non_authorized_markets() {
+fn on_dispute_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.mdm = MarketDisputeMechanism::SimpleDisputes;
@@ -119,7 +119,7 @@ fn on_dispute_denies_non_authorized_markets() {
 }
 
 #[test]
-fn on_resolution_denies_non_authorized_markets() {
+fn on_resolution_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.mdm = MarketDisputeMechanism::SimpleDisputes;
