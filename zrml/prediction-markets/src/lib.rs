@@ -25,7 +25,7 @@
 //! - `buy_complete_set` - Buys a complete set of outcome assets for a market.
 //! - `cancel_pending_market` - Allows the proposer of a market that is currently in a `Proposed` state to cancel the market proposal.
 //! - `create_categorical_market` - Creates a new categorical market.
-//! - `create_market_and_deploy_assets` - Create a market, buy a complete set of the assets used
+//! - `create_cpmm_market_and_deploy_assets` - Create a market using CPMM scoring rule, buy a complete set of the assets used and deploy.
 //!    within and deploy an arbitrary amount of those that's greater than the minimum amount.
 //! - `create_scalar_market` - Creates a new scalar market.
 //! - `deploy_swap_pool_for_market` - Deploys a single "canonical" pool for a market.
@@ -231,14 +231,17 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::approve_market())]
         pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
-
             let market = T::MarketCommons::market(&market_id)?;
-
             let creator = market.creator;
 
             CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
             T::MarketCommons::mutate_market(&market_id, |m| {
-                m.status = MarketStatus::Active;
+                if m.scoring_rule == ScoringRule::CPMM {
+                    m.status = MarketStatus::Active;
+                } else {
+                    m.status = MarketStatus::CollectingSubsidy;
+                    Self::start_subsidy(&market, market_id)?;
+                }
                 Ok(())
             })?;
 
@@ -435,14 +438,13 @@ mod pallet {
             .saturating_add(5_000_000_000.saturating_mul(pool_join_additional_assets.len() as u64))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
-        pub fn create_market_and_deploy_assets(
+        pub fn create_cpmm_market_and_deploy_assets(
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             creation: MarketCreation,
             assets: MarketType,
-            scoring_rule: ScoringRule,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
             pool_join_additional_assets: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>)>,
@@ -484,7 +486,7 @@ mod pallet {
                 .actual_weight
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weight_len = weights.len().saturated_into();
-            let _ = Self::deploy_swap_pool_for_market(origin, market_id, scoring_rule, weights)?;
+            let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins = 0;
 
@@ -615,9 +617,9 @@ mod pallet {
                 assets,
                 Some(base_asset),
                 market_id,
-                scoring_rule,
-                if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
-                if scoring_rule == ScoringRule::CPMM { Some(weights) } else { None },
+                ScoringRule::CPMM,
+                Some(Zero::zero()),
+                Some(weights)
             )?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
