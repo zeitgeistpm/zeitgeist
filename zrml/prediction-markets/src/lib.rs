@@ -1337,17 +1337,6 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
-            // if the market was permissionless and not invalid, return `ValidityBond`.
-            // if market.creation == MarketCreation::Permissionless {
-            //     if report.outcome != 0 {
-            //         CurrencyOf::<T>::unreserve(&market.creator, T::ValidityBond::get());
-            //     } else {
-            //         // Give it to the treasury instead.
-            //         let (imbalance, _) =
-            //             CurrencyOf::<T>::slash_reserved(&market.creator, T::ValidityBond::get());
-            //         T::Slash::on_unbalanced(imbalance);
-            //     }
-            // }
             CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &market.creator, T::ValidityBond::get());
 
             let disputes = Disputes::<T>::get(market_id);
