@@ -1,4 +1,6 @@
-use crate::types::{Asset, MarketType, OutcomeReport, Pool, PoolId, ScoringRule};
+use crate::types::{
+    Asset, MarketType, OutcomeReport, Pool, PoolId, ResultWithWeightInfo, ScoringRule,
+};
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, DispatchResult, Weight};
 
@@ -36,7 +38,7 @@ pub trait Swaps<AccountId> {
     ///
     /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
     /// than the given value.
-    fn end_subsidy_phase(pool_id: PoolId) -> Result<bool, DispatchError>;
+    fn end_subsidy_phase(pool_id: PoolId) -> Result<ResultWithWeightInfo<bool>, DispatchError>;
 
     /// All supporters will receive their reserved funds back and the pool is destroyed.
     ///

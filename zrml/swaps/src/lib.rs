@@ -42,6 +42,7 @@ mod pallet {
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        storage::{with_transaction, TransactionOutcome},
         traits::{Get, IsType},
         Blake2_128Concat, PalletId, Twox64Concat,
     };
@@ -64,7 +65,8 @@ mod pallet {
         constants::BASE,
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ScoringRule, SerdeWrapper,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
+            ResultWithWeightInfo, ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -1236,98 +1238,117 @@ mod pallet {
         }
 
         /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
-        /// state and all other conditions are met. Returns Ok(true) if everything succeeded,
-        /// Ok(false) if not enough subsidy was collected and an error in all other cases.
+        /// state and all other conditions are met. Returns result=true if everything succeeded,
+        /// result=false if not enough subsidy was collected and an error in all other cases.
         ///
         /// # Arguments
         ///
         /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
         /// than the given value.
-        #[frame_support::transactional]
-        fn end_subsidy_phase(pool_id: PoolId) -> Result<bool, DispatchError> {
-            let mutate_result = Self::mutate_pool(pool_id, |pool| {
-                // Ensure all preconditions are met.
-                if pool.pool_status != PoolStatus::CollectingSubsidy {
-                    return Err(Error::<T>::InvalidStateTransition.into());
-                }
+        fn end_subsidy_phase(pool_id: PoolId) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
+            let do_mutate = || -> Result<usize, DispatchError> {
+                let mut total_providers: usize = 0;
 
-                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
-                ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
-                let pool_account = Pallet::<T>::pool_account_id(pool_id);
-                let pool_shares_id = Self::pool_shares_id(pool_id);
-                let mut account_created = false;
-                let mut total_balance = <BalanceOf<T>>::zero();
-
-                // Transfer all reserved funds to the pool account and distribute pool shares.
-                for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
-                    let provider_address = provider.0;
-                    let subsidy = provider.1;
-
-                    if !account_created {
-                        T::Shares::unreserve(base_asset, &provider_address, subsidy);
-                        T::Shares::transfer(base_asset, &provider_address, &pool_account, subsidy)?;
-                        total_balance = subsidy;
-                        T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
-                        account_created = true;
-                        continue;
+                Self::mutate_pool(pool_id, |pool| {
+                    // Ensure all preconditions are met.
+                    if pool.pool_status != PoolStatus::CollectingSubsidy {
+                        return Err(Error::<T>::InvalidStateTransition.into());
                     }
 
-                    let remaining = T::Shares::repatriate_reserved(
-                        base_asset,
-                        &provider_address,
-                        &pool_account,
-                        subsidy,
-                        BalanceStatus::Free,
-                    )?;
-                    let transfered = subsidy.saturating_sub(remaining);
+                    let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
+                    ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
+                    let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                    let pool_account = Pallet::<T>::pool_account_id(pool_id);
+                    let pool_shares_id = Self::pool_shares_id(pool_id);
+                    let mut account_created = false;
+                    let mut total_balance = <BalanceOf<T>>::zero();
 
-                    if transfered != subsidy {
-                        log::warn!(
-                            "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy \
-                             provided than currently reserved.
-                        Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
+                    // Transfer all reserved funds to the pool account and distribute pool shares.
+                    for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
+                        total_providers = total_providers.saturating_add(1);
+                        let provider_address = provider.0;
+                        let subsidy = provider.1;
+
+                        if !account_created {
+                            T::Shares::unreserve(base_asset, &provider_address, subsidy);
+                            T::Shares::transfer(
+                                base_asset,
+                                &provider_address,
+                                &pool_account,
+                                subsidy,
+                            )?;
+                            total_balance = subsidy;
+                            T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
+                            account_created = true;
+                            continue;
+                        }
+
+                        let remaining = T::Shares::repatriate_reserved(
+                            base_asset,
+                            &provider_address,
+                            &pool_account,
+                            subsidy,
+                            BalanceStatus::Free,
+                        )?;
+                        let transfered = subsidy.saturating_sub(remaining);
+
+                        if transfered != subsidy {
+                            log::warn!(
+                                "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy \
+                                 provided than currently reserved.
+                            Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
+                                pool_id,
+                                provider_address,
+                                transfered,
+                                subsidy
+                            );
+                        }
+
+                        T::Shares::deposit(pool_shares_id, &provider_address, transfered)?;
+                        total_balance.saturating_add(transfered);
+                    }
+
+                    ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
+                    pool.total_subsidy = Some(total_balance);
+
+                    // Assign the initial set of outstanding assets to the pool account.
+                    let outstanding_assets_per_event =
+                        T::RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
                             pool_id,
-                            provider_address,
-                            transfered,
-                            subsidy
-                        );
+                            pool.assets.len().saturated_into::<u32>().saturating_sub(1),
+                            total_balance,
+                        )?;
+
+                    for asset in pool.assets.iter().filter(|e| **e != base_asset) {
+                        T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
                     }
 
-                    T::Shares::deposit(pool_shares_id, &provider_address, transfered)?;
-                    total_balance.saturating_add(transfered);
-                }
+                    pool.pool_status = PoolStatus::Active;
+                    Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
+                    Ok(())
+                })?;
 
-                ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                pool.total_subsidy = Some(total_balance);
+                Ok(total_providers)
+            };
 
-                // Assign the initial set of outstanding assets to the pool account.
-                let outstanding_assets_per_event =
-                    T::RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
-                        pool_id,
-                        pool.assets.len().saturated_into::<u32>().saturating_sub(1),
-                        total_balance,
-                    )?;
-
-                for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                    T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
-                }
-
-                pool.pool_status = PoolStatus::Active;
-                Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
-                Ok(())
-            });
-
-            match mutate_result {
-                Ok(()) => Ok(true),
-                Err(err) => {
-                    if err == Error::<T>::InsufficientSubsidy.into() {
-                        Ok(false)
-                    } else {
-                        Err(err)
+            with_transaction(|| {
+                let output = do_mutate();
+                match output {
+                    Ok(_) => TransactionOutcome::Commit(Ok(ResultWithWeightInfo {
+                        result: true,
+                        weight: 0,
+                    })),
+                    Err(err) => {
+                        if err == Error::<T>::InsufficientSubsidy.into() {
+                            return TransactionOutcome::Commit(Ok(ResultWithWeightInfo {
+                                result: false,
+                                weight: 0,
+                            }));
+                        }
+                        TransactionOutcome::Rollback(Err(err))
                     }
                 }
-            }
+            })
         }
 
         /// Pool - Exit with exact pool amount

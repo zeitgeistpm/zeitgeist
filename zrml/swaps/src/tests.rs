@@ -238,11 +238,7 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         assert_noop!(Swaps::end_subsidy_phase(1), crate::Error::<Runtime>::PoolDoesNotExist);
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma);
         let pool_id = 1;
-        let end_result = Swaps::end_subsidy_phase(pool_id);
-        assert_storage_noop!(
-            Swaps::end_subsidy_phase(pool_id),
-            Ok(false)
-        );
+        assert_storage_noop!(Swaps::end_subsidy_phase(pool_id).unwrap());
 
         // Reserve some funds for subsidy
         let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
@@ -910,5 +906,5 @@ fn subsidize_and_start_rikiddo_market(
     let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
-    assert_ok!(Swaps::end_subsidy_phase(pool_id));
+    assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
 }
