@@ -5234,6 +5234,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-crowdloan-rewards"
+version = "0.6.0"
+source = "git+https://github.com/PureStake/crowdloan-rewards?branch=moonbeam-polkadot-v0.9.10#56f4e9cdb9e27efcd3337a2dcbcde2f4fdd47c2a"
+dependencies = [
+ "cumulus-pallet-parachain-system",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-balances",
+ "pallet-utility",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-democracy"
 version = "4.0.0-dev"
 source = "git+https://github.com/purestake/substrate?branch=moonbeam-polkadot-v0.9.10#81defe62228ccf159034f608b301989175ac9a6a"
@@ -12254,6 +12276,7 @@ dependencies = [
  "pallet-author-mapping",
  "pallet-author-slot-filter",
  "pallet-balances",
+ "pallet-crowdloan-rewards",
  "pallet-grandpa",
  "pallet-identity",
  "pallet-randomness-collective-flip",
