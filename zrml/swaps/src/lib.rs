@@ -947,6 +947,9 @@ mod pallet {
             let total_amm_funds = T::Shares::free_balance(base_asset, &pool_account);
 
             // Total winning shares
+            // The pool account still holds the winning asset, burn it.
+            let free_balance = T::Shares::free_balance(winning_asset, &pool_account);
+            let _ = T::Shares::withdraw(winning_asset, &pool_account, free_balance);
             let total_winning_assets = T::Shares::total_issuance(winning_asset);
 
             // Profit = AMM balance - total winning shares

@@ -15,8 +15,8 @@
 pub enum PoolStatus {
     /// Shares can be normally negotiated.
     Active,
-    /// No trading is allowed. Only liquidity awaiting redemption is present in the pool.
-    Stale,
     /// No trading is allowed. The pool is waiting to be subsidized.
     CollectingSubsidy,
+    /// No trading is allowed. Only liquidity awaiting redemption is present in the pool.
+    Stale,
 }

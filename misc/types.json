@@ -29,6 +29,7 @@
     "pool_id": "u128",
     "who": "AccountId"
   },
+  "Currency": "Asset",
   "CurrencyId": "Asset",
   "CurrencyIdOf": "Asset",
   "Index": "u64",
@@ -172,6 +173,10 @@
     ]
   },
   "SerdeWrapper": "Balance",
+  "SubsidyUntil": {
+    "market_id": "MarketId",
+    "period": "MarketPeriod"
+  },
   "SwapEvent": {
     "asset_amount_in": "Balance",
     "asset_amount_out": "Balance",

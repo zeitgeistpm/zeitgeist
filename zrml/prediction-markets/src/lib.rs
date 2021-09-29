@@ -246,17 +246,18 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::approve_market())]
         pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
-            let creator = market.creator.clone();
 
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
             T::MarketCommons::mutate_market(&market_id, |m| {
+                ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+
                 if m.scoring_rule == ScoringRule::CPMM {
                     m.status = MarketStatus::Active;
                 } else {
                     m.status = MarketStatus::CollectingSubsidy;
                     Self::start_subsidy(&market, market_id)?;
                 }
+
+                CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &m.creator, T::AdvisoryBond::get());
                 Ok(())
             })?;
 
@@ -1039,16 +1040,18 @@ mod pallet {
         OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
-        /// A reported market was expected
-        MarketIsNotReported,
-        /// A market in subsidy collection phase was expected
-        MarketIsNotCollectingSubsidy,
-        /// A resolved market was expected
-        MarketIsNotResolved,
-        /// Market was expected to be closed
-        MarketIsNotClosed,
-        /// Market was expected to be active
+        /// Market was expected to be active.
         MarketIsNotActive,
+        /// Market was expected to be closed.
+        MarketIsNotClosed,
+        /// A market in subsidy collection phase was expected.
+        MarketIsNotCollectingSubsidy,
+        /// A proposed market was expected.
+        MarketIsNotProposed,
+        /// A reported market was expected.
+        MarketIsNotReported,
+        /// A resolved market was expected.
+        MarketIsNotResolved,
         /// The market is not reported on.
         MarketNotReported,
         /// The point in time when the market becomes active is too soon.
@@ -1629,7 +1632,7 @@ mod pallet {
                                     subsidy_info.market_id,
                                 ));
                             } else {
-                                // Insufficient subsidy, cleanly remove pool and close market market.
+                                // Insufficient subsidy, cleanly remove pool and close market.
                                 let destroy_result = T::Swaps::destroy_pool_in_subsidy_phase(
                                     pool_id.unwrap_or(u128::MAX),
                                 );
@@ -1650,6 +1653,26 @@ mod pallet {
                                 let market_result =
                                     T::MarketCommons::mutate_market(&subsidy_info.market_id, |m| {
                                         m.status = MarketStatus::InsufficientSubsidy;
+
+                                        // Unreserve funds reserved during market creation
+                                        if m.creation == MarketCreation::Permissionless {
+                                            let required_bond =
+                                                T::ValidityBond::get() + T::OracleBond::get();
+                                            CurrencyOf::<T>::unreserve_named(
+                                                &RESERVE_ID,
+                                                &m.creator,
+                                                required_bond,
+                                            );
+                                        } else if m.creation == MarketCreation::Advised {
+                                            // AdvisoryBond was already returned when the market
+                                            // was approved. Approval is inevitable to reach this.
+                                            CurrencyOf::<T>::unreserve_named(
+                                                &RESERVE_ID,
+                                                &m.creator,
+                                                T::OracleBond::get(),
+                                            );
+                                        }
+
                                         Ok(())
                                     });
 
