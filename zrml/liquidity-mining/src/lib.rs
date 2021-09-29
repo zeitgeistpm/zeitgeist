@@ -55,7 +55,7 @@ mod pallet {
     };
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
     use sp_runtime::{
-        traits::{AccountIdConversion, Saturating, Zero},
+        traits::{AccountIdConversion, Saturating},
         TransactionOutcome,
     };
     use zeitgeist_primitives::{
@@ -145,8 +145,8 @@ mod pallet {
         #[inline]
         fn default() -> Self {
             Self {
-                initial_balance: BalanceOf::<T>::zero(),
-                per_block_distribution: BalanceOf::<T>::zero(),
+                initial_balance: BalanceOf::<T>::from(0u8),
+                per_block_distribution: BalanceOf::<T>::from(0u8),
             }
         }
     }
