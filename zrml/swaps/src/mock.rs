@@ -7,18 +7,10 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
-use zeitgeist_primitives::{
-    constants::{
-        BalanceFractionalDecimals, BlockHashCount, DustAccountTest, ExistentialDeposit,
-        ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
-        MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinAssets,
-        MinLiquidity, MinSubsidy, MinWeight, MinimumPeriod, SwapsPalletId,
-    },
-    types::{
+use zeitgeist_primitives::{constants::{BASE, BalanceFractionalDecimals, BlockHashCount, DustAccountTest, ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy, MinWeight, MinimumPeriod, SwapsPalletId}, types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
-    },
-};
+    }};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;

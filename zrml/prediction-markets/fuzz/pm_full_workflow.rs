@@ -4,9 +4,7 @@ use arbitrary::Arbitrary;
 use core::ops::{Range, RangeInclusive};
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::types::{
-    MarketCreation, MarketDisputeMechanism, MarketPeriod, MultiHash, OutcomeReport,
-};
+use zeitgeist_primitives::types::{MarketCreation, MarketDisputeMechanism, MarketPeriod, MultiHash, OutcomeReport, ScoringRule};
 use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
 
 fuzz_target!(|data: Data| {
@@ -23,6 +21,7 @@ fuzz_target!(|data: Data| {
             market_creation(data.create_scalar_market_creation),
             data.create_scalar_market_outcome_range,
             market_dispute_mechanism(data.create_scalar_market_mdm),
+            ScoringRule::CPMM,
         );
 
         let _ = PredictionMarkets::on_initialize(2);

@@ -254,7 +254,7 @@ mod pallet {
                     m.status = MarketStatus::Active;
                 } else {
                     m.status = MarketStatus::CollectingSubsidy;
-                    Self::start_subsidy(&market, market_id)?;
+                    Self::start_subsidy(&m, market_id)?;
                 }
 
                 CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &m.creator, T::AdvisoryBond::get());
