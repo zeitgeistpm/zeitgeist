@@ -279,10 +279,10 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         assert_ok!(Swaps::set_pool_as_stale(
             &MarketType::Categorical(0),
             0,
-            &OutcomeReport::Categorical(0)
+            &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 })
         ));
 
-        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1, _1, _1)));
+        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1)));
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _1, _1));
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _1));
         assert_noop!(
@@ -394,12 +394,13 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
 #[test]
 fn only_root_can_call_admin_set_pool_as_stale() {
     ExtBuilder::default().build().execute_with(|| {
+        let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
         assert_noop!(
             Swaps::admin_set_pool_as_stale(
                 alice_signed(),
-                MarketType::Scalar(0..=0),
+                MarketType::Categorical(0),
                 0,
-                OutcomeReport::Scalar(1)
+                OutcomeReport::Categorical(idx)
             ),
             BadOrigin
         );
@@ -408,9 +409,9 @@ fn only_root_can_call_admin_set_pool_as_stale() {
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
         assert_ok!(Swaps::admin_set_pool_as_stale(
             Origin::root(),
-            MarketType::Scalar(0..=0),
+            MarketType::Categorical(0),
             0,
-            OutcomeReport::Scalar(1)
+            OutcomeReport::Categorical(idx)
         ),);
     });
 }
