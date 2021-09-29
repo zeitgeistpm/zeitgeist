@@ -1089,6 +1089,10 @@ mod pallet {
             Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             <T as frame_system::Config>::AccountId,
         ),
+        /// A market was started after gathering enough subsidy. \[market_id\]
+        MarketStartedWithSubsidy(MarketIdOf<T>),
+        ///A market was discarded after failing to gather enough subsidy. \[market_id\]
+        MarketInsufficientSubsidy(MarketIdOf<T>),
         /// A pending market has been cancelled. \[market_id, creator\]
         MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_outcome\]
@@ -1108,6 +1112,8 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = 0;
+            total_weight += Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+
             let mut do_resolution = || {
                 Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
@@ -1115,6 +1121,7 @@ mod pallet {
                     Ok(())
                 })
             };
+
             with_transaction(|| {
                 let output = do_resolution();
 
@@ -1127,6 +1134,7 @@ mod pallet {
                     Ok(_) => TransactionOutcome::Commit(()),
                 }
             });
+
             total_weight
         }
     }
@@ -1563,74 +1571,128 @@ mod pallet {
         fn process_subsidy_collecting_markets(
             current_block: T::BlockNumber,
             current_time: MomentOf<T>,
-        ) -> DispatchResult {
-            /*
-                - Iterator over every market
-                - If market_start <= current_moment:
-                    - Call swaps rikiddo transit function
-                        - If ok: Set market state to active
-                        - else: cancel_subsidy_market() - unreserve funds, cancel market.
-                else:
-                    push market in other vector that contains still waiting markets.
-                - Write pending markets back to storage
-            */
+        ) -> Weight {
+            let mut total_weight = 0;
 
-            <MarketsCollectingSubsidy<T>>::try_mutate(
-                |e: &mut Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>| {
-                    let mut error_occured = false;
-                    let mut error: DispatchError = DispatchError::Other("");
+            let retain_closure =
+                |subsidy_info: &SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>| {
+                    let market_ready;
 
-                    e.retain(
-                        |subsidy_info: &SubsidyUntil<
-                            T::BlockNumber,
-                            MomentOf<T>,
-                            MarketIdOf<T>,
-                        >| {
-                            if error_occured {
-                                return true;
-                            };
-                            let market_ready;
+                    // Determine whether the current market is past it's subsidy phase
+                    match &subsidy_info.period {
+                        MarketPeriod::Block(period) => {
+                            market_ready = if period.start <= current_block { true } else { false };
+                        }
+                        MarketPeriod::Timestamp(period) => {
+                            market_ready = if period.start <= current_time { true } else { false };
+                        }
+                    }
 
-                            match &subsidy_info.period {
-                                MarketPeriod::Block(period) => {
-                                    market_ready =
-                                        if period.start <= current_block { true } else { false };
-                                }
-                                MarketPeriod::Timestamp(period) => {
-                                    market_ready =
-                                        if period.start <= current_time { true } else { false };
-                                }
-                            }
-
-                            if market_ready {
-                                let pool_id =
-                                    T::MarketCommons::market_pool(&subsidy_info.market_id);
-                                if pool_id.is_err() {
-                                    error_occured = true;
-                                    error = pool_id.err().unwrap_or(DispatchError::Other(""));
-                                    return true;
-                                }
-
-                                let end_subsidy_result =
-                                    T::Swaps::end_subsidy_phase(pool_id.unwrap_or(u128::MAX));
-
-                                if end_subsidy_result.is_err() {
-                                    error_occured = true;
-                                    error = pool_id.err().unwrap_or(DispatchError::Other(""));
-                                    return true;
-                                }
-
-                                return false;
-                            }
-
+                    if market_ready {
+                        let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
+                        if let Err(err) = pool_id {
+                            log::error!(
+                                "[PredictionMarkets] Cannot find pool associated to market.
+                            market_id: {:?}, error: {:?}",
+                                pool_id,
+                                err
+                            );
                             return true;
-                        },
-                    );
+                        }
 
-                    if error_occured { error.into() } else { Ok(()) }
+                        let end_subsidy_result =
+                            T::Swaps::end_subsidy_phase(pool_id.unwrap_or(u128::MAX));
+
+                        if let Ok(result) = end_subsidy_result {
+                            total_weight = total_weight.saturating_add(result.weight);
+                            
+                            if result.result {
+                                // Sufficient subsidy, activate market.
+                                let mutate_result =
+                                    T::MarketCommons::mutate_market(&subsidy_info.market_id, |m| {
+                                        m.status = MarketStatus::Active;
+                                        Ok(())
+                                    });
+
+                                if let Err(err) = mutate_result {
+                                    log::error!(
+                                        "[PredictionMarkets] Cannot find market associated to \
+                                         market id.
+                                    market_id: {:?}, error: {:?}",
+                                        subsidy_info.market_id,
+                                        err
+                                    );
+                                    return true;
+                                }
+
+                                Self::deposit_event(Event::MarketStartedWithSubsidy(
+                                    subsidy_info.market_id,
+                                ));
+                            } else {
+                                // Insufficient subsidy, cleanly remove pool and close market market.
+                                let destroy_result = T::Swaps::destroy_pool_in_subsidy_phase(
+                                    pool_id.unwrap_or(u128::MAX),
+                                );
+
+                                if let Err(err) = destroy_result {
+                                    log::error!(
+                                        "[PredictionMarkets] Cannot destroy pool with missing \
+                                         subsidy.
+                                    market_id: {:?}, error: {:?}",
+                                        subsidy_info.market_id,
+                                        err
+                                    );
+                                    return true;
+                                } else if let Ok(weight) = destroy_result {
+                                    total_weight = total_weight.saturating_add(weight);
+                                }
+
+                                let market_result =
+                                    T::MarketCommons::mutate_market(&subsidy_info.market_id, |m| {
+                                        m.status = MarketStatus::InsufficientSubsidy;
+                                        Ok(())
+                                    });
+
+                                if let Err(err) = market_result {
+                                    log::error!(
+                                        "[PredictionMarkets] Cannot find market associated to \
+                                         market id.
+                                    market_id: {:?}, error: {:?}",
+                                        subsidy_info.market_id,
+                                        err
+                                    );
+                                    return true;
+                                }
+
+                                let _ =
+                                    T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
+                                Self::deposit_event(Event::MarketInsufficientSubsidy(
+                                    subsidy_info.market_id,
+                                ));
+                            }
+
+                            return false;
+                        } else if let Err(err) = end_subsidy_result {
+                            log::error!(
+                                "[PredictionMarkets] An error occured during end of subsidy phase.
+                        pool_id: {:?}, market_id: {:?}, error: {:?}",
+                                pool_id,
+                                subsidy_info.market_id,
+                                err
+                            );
+                        }
+                    }
+
+                    return true;
+                };
+
+            <MarketsCollectingSubsidy<T>>::mutate(
+                |e: &mut Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>| {
+                    e.retain(retain_closure);
                 },
-            )?;
-            Ok(())
+            );
+
+            total_weight
         }
 
         fn remove_last_dispute_from_market_ids_per_dispute_block(

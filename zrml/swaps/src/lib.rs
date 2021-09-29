@@ -65,8 +65,8 @@ mod pallet {
         constants::BASE,
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
-            ResultWithWeightInfo, ScoringRule, SerdeWrapper,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
+            ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -1217,7 +1217,7 @@ mod pallet {
         /// # Arguments
         ///
         /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
-        fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> DispatchResult {
+        fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> Result<Weight, DispatchError> {
             let _ = Self::mutate_pool(pool_id, |pool| {
                 // Ensure all preconditions are met.
                 if pool.pool_status != PoolStatus::CollectingSubsidy {
@@ -1230,11 +1230,16 @@ mod pallet {
                     T::Shares::unreserve(base_asset, &provider.0, provider.1);
                 }
 
+                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
+                }
+
                 Ok(())
             })?;
 
             Pools::<T>::remove(pool_id);
-            Ok(())
+            // TODO: Return correct weight.
+            Ok(0)
         }
 
         /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
@@ -1328,6 +1333,7 @@ mod pallet {
                     Ok(())
                 })?;
 
+                // TODO adjust weight.
                 Ok(total_providers)
             };
 

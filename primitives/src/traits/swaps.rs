@@ -31,8 +31,9 @@ pub trait Swaps<AccountId> {
     ) -> Result<PoolId, DispatchError>;
 
     /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
-    /// state and all other conditions are met. Returns Ok(true) if everything succeeded,
-    /// Ok(false) if not enough subsidy was collected and an error in all other cases.
+    /// state and all other conditions are met. Returns the result of the operation and
+    /// the total weight. If the result is false, not enough subsidy was gathered and the
+    /// state transition was aborted.
     ///
     /// # Arguments
     ///
@@ -45,7 +46,7 @@ pub trait Swaps<AccountId> {
     /// # Arguments
     ///
     /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
-    fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> DispatchResult;
+    fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
     /// Pool - Exit with exact pool amount
     ///

@@ -54,6 +54,9 @@ pub trait MarketCommonsPalletApi {
     /// Connects a pool identified by `pool_id` to a market identified by `market_id`.
     fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId);
 
+    /// Removes the pool id associated with a given `market_id`
+    fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult;
+
     /// Fetches the pool id associated with a given `market_id`.
     fn market_pool(market_id: &Self::MarketId) -> Result<PoolId, DispatchError>;
 
