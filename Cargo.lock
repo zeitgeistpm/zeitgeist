@@ -12259,6 +12259,7 @@ dependencies = [
  "pallet-author-slot-filter",
  "pallet-balances",
  "pallet-grandpa",
+ "pallet-identity",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",

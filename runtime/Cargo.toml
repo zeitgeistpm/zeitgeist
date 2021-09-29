@@ -10,6 +10,7 @@ orml-currencies = { branch = "moonbeam-polkadot-v0.9.10", default-features = fal
 orml-tokens = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 orml-traits = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-identity = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-sudo = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -134,17 +135,18 @@ runtime-benchmarks = [
 std = [
 	"frame-executive/std",
 	"frame-support/std",
-	"frame-system/std",
 	"frame-system-rpc-runtime-api/std",
+	"frame-system/std",
 	"orml-currencies/std",
 	"orml-tokens/std",
 	"orml-traits/std",
 	"pallet-balances/std",
+	"pallet-identity/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
-	"pallet-transaction-payment/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
+	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
 	"pallet-utility/std",
 	"parity-scale-codec/std",
