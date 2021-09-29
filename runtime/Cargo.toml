@@ -52,6 +52,7 @@ nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.10", default-features = f
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 pallet-author-mapping = { branch = "master", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/crowdloan-rewards", optional = true }
 parachain-staking = { branch = "master", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
 
 # Polkadot
@@ -102,6 +103,7 @@ parachain = [
 	"pallet-author-inherent",
 	"pallet-author-mapping",
 	"pallet-author-slot-filter",
+	"pallet-crowdloan-rewards",
 	"parachain-staking",
 
 	# Polkadot
@@ -182,6 +184,7 @@ std = [
 	"pallet-author-inherent?/std",
 	"pallet-author-mapping?/std",
 	"pallet-author-slot-filter?/std",
+	"pallet-crowdloan-rewards?/std",
 	"parachain-staking?/std",
 
 	# Polkadot

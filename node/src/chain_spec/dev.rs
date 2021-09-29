@@ -6,7 +6,7 @@ use crate::chain_spec::{
 };
 use sc_service::ChainType;
 use sp_core::sr25519;
-use zeitgeist_primitives::types::Balance;
+use zeitgeist_primitives::{constants::BASE, types::Balance};
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
 
@@ -27,6 +27,7 @@ pub fn dev_config(
                         get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
                         crate::chain_spec::DEFAULT_STAKING_AMOUNT,
                     )],
+                    crowdloan_fund_pot: 100u128.saturating_mul(BASE),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
                     nominations: vec![],
                     parachain_id,
