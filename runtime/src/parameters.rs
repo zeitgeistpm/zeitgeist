@@ -22,6 +22,15 @@ pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
+  // Identity
+  pub const BasicDeposit: Balance = 8 * BASE;
+  pub const FieldDeposit: Balance = 256 * CENT;
+  pub const SubAccountDeposit: Balance = 2 * BASE;
+  pub const MaxSubAccounts: u32 = 64;
+  pub const MaxAdditionalFields: u32 = 64;
+  pub const MaxRegistrars: u32 = 8;
+
+  // Staking
   pub const CollatorDeposit: Balance = 2 * BASE;
   pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
   pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
@@ -35,8 +44,9 @@ parameter_types! {
   pub const MinSelectedCandidates: u32 = 1;
   pub const RevokeNominationDelay: u32 = 2;
   pub const RewardPaymentDelay: u32 = 2;
+
+  // System
   pub const SS58Prefix: u8 = 73;
-  pub const TransactionByteFee: Balance = 100 * MICRO;
   pub const Version: RuntimeVersion = VERSION;
   pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
   pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
@@ -55,4 +65,7 @@ parameter_types! {
     })
     .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
     .build_or_panic();
+
+  // Transaction payment
+  pub const TransactionByteFee: Balance = 100 * MICRO;
 }

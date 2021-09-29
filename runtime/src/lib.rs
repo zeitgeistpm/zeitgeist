@@ -96,8 +96,9 @@ macro_rules! create_zeitgeist_runtime {
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
 
                 // Other Parity pallets
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
-                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 21,
+                Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 20,
+                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 21,
+                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 22,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
@@ -295,7 +296,7 @@ impl parachain_staking::Config for Runtime {
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
     type RevokeNominationDelay = RevokeNominationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
-    type WeightInfo = ();
+    type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -330,6 +331,21 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_identity::Config for Runtime {
+    type BasicDeposit = BasicDeposit;
+    type Currency = Balances;
+    type Event = Event;
+    type FieldDeposit = FieldDeposit;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type MaxAdditionalFields = MaxAdditionalFields;
+    type MaxRegistrars = MaxRegistrars;
+    type MaxSubAccounts = MaxSubAccounts;
+    type RegistrarOrigin = EnsureRoot<AccountId>;
+    type Slashed = Treasury;
+    type SubAccountDeposit = SubAccountDeposit;
+    type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_sudo::Config for Runtime {
@@ -344,7 +360,7 @@ impl pallet_timestamp::Config for Runtime {
     type OnTimestampSet = ();
     #[cfg(not(feature = "parachain"))]
     type OnTimestampSet = Aura;
-    type WeightInfo = ();
+    type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -374,7 +390,7 @@ impl pallet_treasury::Config for Runtime {
 impl pallet_utility::Config for Runtime {
     type Event = Event;
     type Call = Call;
-    type WeightInfo = ();
+    type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
