@@ -1605,7 +1605,7 @@ mod pallet {
 
                         if let Ok(result) = end_subsidy_result {
                             total_weight = total_weight.saturating_add(result.weight);
-                            
+
                             if result.result {
                                 // Sufficient subsidy, activate market.
                                 let mutate_result =
@@ -1692,6 +1692,7 @@ mod pallet {
                 },
             );
 
+            // TODO: Add raw weight of this function (excluding end subsidy and destroy calls)
             total_weight
         }
 

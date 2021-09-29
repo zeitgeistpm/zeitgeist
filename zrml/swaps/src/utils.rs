@@ -155,6 +155,7 @@ where
             T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
             T::Shares::deposit(p.asset_out, &p.who, asset_amount_out)?;
         } else if p.asset_out == base_asset {
+            // We can use the lightweight withdraw here, since event assets are not reserved.
             T::Shares::withdraw(p.asset_in, &p.who, asset_amount_in)?;
             T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
         } else {

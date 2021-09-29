@@ -279,7 +279,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         assert_ok!(Swaps::set_pool_as_stale(
             &MarketType::Categorical(0),
             0,
-            &OutcomeReport::Scalar(0)
+            &OutcomeReport::Categorical(0)
         ));
 
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1, _1, _1)));

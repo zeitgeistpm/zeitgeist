@@ -858,6 +858,7 @@ mod pallet {
         TooFewAssets,
         TooManyAssets,
         UnsupportedTrade,
+        WinningAssetNotFound,
     }
 
     #[pallet::event]
@@ -866,6 +867,8 @@ mod pallet {
     where
         T: Config,
     {
+        /// Share holder rewards were distributed. \[pool_id, num_accounts_rewarded, amount\]
+        DistributeShareHolderRewards(PoolId, u64, BalanceOf<T>),
         /// A new pool has been created. \[account\]
         PoolCreate(CommonPoolEventParams<<T as frame_system::Config>::AccountId>),
         /// Someone has exited a pool. \[account, amount\]
@@ -924,6 +927,105 @@ mod pallet {
     pub type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
+        pub(crate) fn distribute_pool_share_rewards(
+            pool: &Pool<BalanceOf<T>, T::MarketId>,
+            pool_id: PoolId,
+            base_asset: Asset<T::MarketId>,
+            winning_asset: Asset<T::MarketId>,
+        ) -> Weight {
+            // CPMM handling of market profit not supported
+            if pool.scoring_rule == ScoringRule::CPMM {
+                return 0;
+            }
+
+            // Total pool shares
+            let shares_id = Self::pool_shares_id(pool_id);
+            let total_pool_shares = T::Shares::total_issuance(shares_id);
+
+            // Total AMM balance
+            let pool_account = Self::pool_account_id(pool_id);
+            let total_amm_funds = T::Shares::free_balance(base_asset, &pool_account);
+
+            // Total winning shares
+            let total_winning_assets = T::Shares::total_issuance(winning_asset);
+
+            // Profit = AMM balance - total winning shares
+            let amm_profit_checked = total_amm_funds.checked_sub(&total_winning_assets);
+            let amm_profit = if let Some(profit) = amm_profit_checked {
+                profit
+            } else {
+                // In case the AMM balance does not suffice to pay out every winner, the pool
+                // rewards will not be distributed (requires investigation and update).
+                log::error!(
+                    "[Swaps] The AMM balance does not suffice to pay out every winner.
+                    market_id: {:?}, pool_id: {:?}, total AMM balance: {:?}, total reward value: \
+                     {:?}",
+                    pool.market_id,
+                    pool_id,
+                    total_amm_funds,
+                    total_winning_assets
+                );
+                return T::DbWeight::get().reads(6);
+            };
+
+            // Iterate through every share holder and exchange shares for rewards.
+            let (total_accounts_num, share_accounts) =
+                T::Shares::accounts_by_currency_id(shares_id);
+            let share_accounts_num = share_accounts.len();
+
+            for share_holder in share_accounts {
+                let share_holder_account = share_holder.0;
+                let share_holder_balance = share_holder.1.free;
+                let reward_pct_unadjusted =
+                    bdiv(share_holder_balance.saturated_into(), total_pool_shares.saturated_into())
+                        .unwrap_or(0);
+
+                // Seems like bdiv does arithmetic rounding. To ensure that we will have enough
+                // reward for everyone and not run into an error, we'll round down in any case.
+                let reward_pct = reward_pct_unadjusted.saturating_sub(1);
+                let holder_reward_unadjusted =
+                    bmul(amm_profit.saturated_into(), reward_pct).unwrap_or(0);
+
+                // Same for bmul.
+                let holder_reward = holder_reward_unadjusted.saturating_sub(1);
+
+                // Should be impossible.
+                if let Err(err) = T::Shares::transfer(
+                    base_asset,
+                    &pool_account,
+                    &share_holder_account,
+                    holder_reward.saturated_into(),
+                ) {
+                    let current_amm_holding = T::Shares::free_balance(base_asset, &pool_account);
+                    log::error!(
+                        "[Swaps] The AMM failed to pay out the share holder reward.
+                        market_id: {:?}, pool_id: {:?}, current AMM holding: {:?},
+                        transfer size: {:?}, to: {:?}, error: {:?}",
+                        pool.market_id,
+                        pool_id,
+                        current_amm_holding,
+                        holder_reward,
+                        share_holder_account,
+                        err,
+                    );
+                }
+
+                // We can use the lightweight withdraw here, since pool shares are not reserved.
+                // We can ignore the result since the balance to transfer is the query result of
+                // the free balance (always sufficient).
+                let _ = T::Shares::withdraw(shares_id, &share_holder_account, share_holder_balance);
+            }
+
+            Self::deposit_event(Event::<T>::DistributeShareHolderRewards(
+                pool_id,
+                share_accounts_num.saturated_into(),
+                amm_profit,
+            ));
+
+            // TODO: return total weight
+            0
+        }
+
         pub fn get_spot_price(
             pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
@@ -1493,7 +1595,8 @@ mod pallet {
         }
 
         /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
-        /// that is not ZTG or winning assets from the selected pool.
+        /// that is not ZTG or winning assets from the selected pool. Additionally, it distributes
+        /// the rewards to all pool share holders.
         ///
         /// Does nothing if pool is already stale. Returns `Err` if `pool_id` does not exist.
         ///
@@ -1502,6 +1605,8 @@ mod pallet {
         /// * `market_type`: Type of the market (e.g. categorical or scalar).
         /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
         /// * `outcome_report`: The resulting outcome.
+        /// than the given value.
+        #[frame_support::transactional]
         fn set_pool_as_stale(
             market_type: &MarketType,
             pool_id: PoolId,
@@ -1512,20 +1617,37 @@ mod pallet {
                     return Ok(());
                 }
 
-                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
-                }
+                let base_asset = pool.base_asset;
+                let mut winning_asset =
+                    Err(DispatchError::Other(Error::<T>::WinningAssetNotFound.into()));
 
                 if let MarketType::Categorical(_) = market_type {
                     if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                         pool.assets.retain(|el| {
                             if let Asset::CategoricalOutcome(_, idx) = el {
-                                idx == winning_asset_idx
+                                if idx == winning_asset_idx {
+                                    winning_asset = Ok(*el);
+                                    return true;
+                                };
+
+                                false
                             } else {
                                 matches!(el, Asset::Ztg)
                             }
                         });
                     }
+                }
+
+                let winning_asset_unwrapped = winning_asset?;
+
+                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?;
+                    Self::distribute_pool_share_rewards(
+                        pool,
+                        pool_id,
+                        base_asset.ok_or(Error::<T>::BaseAssetNotFound)?,
+                        winning_asset_unwrapped,
+                    );
                 }
 
                 pool.pool_status = PoolStatus::Stale;
