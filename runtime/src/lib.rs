@@ -137,6 +137,9 @@ create_zeitgeist_runtime!(
     DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
     PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
+
+    // Third-party
+    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 80,
 );
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
@@ -317,6 +320,22 @@ impl orml_tokens::Config for Runtime {
     type MaxLocks = MaxLocks;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
     type WeightInfo = ();
+}
+
+#[cfg(feature = "parachain")]
+impl pallet_crowdloan_rewards::Config for Runtime {
+    type Event = Event;
+    type InitializationPayment = InitializationPayment;
+    type Initialized = Initialized;
+    type MaxInitContributors = MaxInitContributorsBatchSizes;
+    type MinimumReward = MinimumReward;
+    type RelayChainAccountId = AccountId;
+    type RewardCurrency = Balances;
+    type RewardAddressRelayVoteThreshold = RelaySignaturesThreshold;
+    type VestingBlockNumber = cumulus_primitives_core::relay_chain::BlockNumber;
+    type VestingBlockProvider =
+        cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
+    type WeightInfo = pallet_crowdloan_rewards::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_balances::Config for Runtime {

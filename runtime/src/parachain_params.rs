@@ -3,7 +3,7 @@ use crate::{
 };
 use frame_support::{match_type, parameter_types, traits::Everything, weights::Weight};
 use polkadot_parachain::primitives::Sibling;
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{Perbill, SaturatedConversion};
 use xcm::latest::{BodyId, Junction, Junctions, MultiLocation, NetworkId};
 use xcm_builder::{
     AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
@@ -11,7 +11,7 @@ use xcm_builder::{
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
     TakeWeightCredit,
 };
-use zeitgeist_primitives::constants::MICRO;
+use zeitgeist_primitives::{constants::MICRO, types::Balance};
 
 match_type! {
     pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
@@ -20,6 +20,14 @@ match_type! {
     };
 }
 parameter_types! {
+    // Crowdloan
+    pub const InitializationPayment: Perbill = Perbill::from_percent(30);
+    pub const Initialized: bool = false;
+    pub const MaxInitContributorsBatchSizes: u32 = 500;
+    pub const MinimumReward: Balance = 0;
+    pub const RelaySignaturesThreshold: Perbill = Perbill::from_percent(100);
+
+    // Cumulus and Polkadot
     pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
     pub const RelayChainLocation: MultiLocation = MultiLocation::parent();
     pub const RelayChainNetwork: NetworkId = NetworkId::Kusama;
