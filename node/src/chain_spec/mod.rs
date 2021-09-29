@@ -98,6 +98,8 @@ fn generic_genesis(
         balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts.iter().cloned().map(|k| (k, initial_balance)).collect(),
         },
+        #[cfg(feature = "parachain")]
+        crowdloan: zeitgeist_runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
         #[cfg(not(feature = "parachain"))]
         grandpa: zeitgeist_runtime::GrandpaConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
@@ -169,6 +171,8 @@ impl Extensions {
 fn additional_chain_spec_staging(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
+    use zeitgeist_primitives::constants::BASE;
+
     AdditionalChainSpec {
         candidates: vec![(
             hex!["7225b9e36cc33da17d7f97053c7110559f21967afc09867345367b7de241d03c"].into(),
@@ -176,6 +180,7 @@ fn additional_chain_spec_staging(
                 .unchecked_into(),
             crate::chain_spec::DEFAULT_STAKING_AMOUNT,
         )],
+        crowdloan_fund_pot: 100u128.saturating_mul(BASE),
         inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
         nominations: vec![],
         parachain_id,
