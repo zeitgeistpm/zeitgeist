@@ -36,10 +36,6 @@ substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.10", git = "http
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 
-# Build fix
-
-zeroize_derive = "=1.1.0"
-
 # Cumulus
 
 cumulus-client-cli = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
