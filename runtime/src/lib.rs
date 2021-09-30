@@ -533,17 +533,28 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
-        fn benchmark_metadata(_: bool) -> (
+        fn benchmark_metadata(extra: bool) -> (
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::BenchmarkList;
+            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
+            use frame_system_benchmarking::Pallet as SystemBench;
 
-            let list = Vec::<BenchmarkList>::new();
-            let storage_info = AllPalletsWithSystem::storage_info();
+            let mut list = Vec::<BenchmarkList>::new();
 
-            (list, storage_info)
+            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_balances, Balances);
+            list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+            list_benchmark!(list, extra, pallet_utility, Utility);
+            list_benchmark!(list, extra, zrml_swaps, Swaps);
+            list_benchmark!(list, extra, zrml_authorized, Authorized);
+            list_benchmark!(list, extra, zrml_court, Court);
+            list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
+            list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
+            list_benchmark!(list, extra, zrml_orderbook_v1, Orderbook);
+
+            (list, AllPalletsWithSystem::storage_info())
         }
 
         fn dispatch_benchmark(
@@ -553,6 +564,7 @@ impl_runtime_apis! {
                 add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
+
             impl frame_system_benchmarking::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
