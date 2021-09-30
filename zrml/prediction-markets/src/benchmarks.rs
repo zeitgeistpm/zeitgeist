@@ -19,7 +19,7 @@ use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType, MaxRuntimeUsize,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MaxRuntimeUsize,
         MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
     },
 };
@@ -54,7 +54,7 @@ fn create_market_common_parameters<T: Config>(
 fn create_market_common<T: Config>(
     permission: MarketCreation,
     options: MarketType,
-    scoring_rule: ScoringRule
+    scoring_rule: ScoringRule,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, oracle, period, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
@@ -148,8 +148,11 @@ fn setup_resolve_common_categorical<T: Config>(
 fn setup_redeem_shares_common<T: Config>(
     market_type: MarketType,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, marketid) =
-        create_market_common::<T>(MarketCreation::Permissionless, market_type.clone())?;
+    let (caller, marketid) = create_market_common::<T>(
+        MarketCreation::Permissionless,
+        market_type.clone(),
+        ScoringRule::CPMM,
+    )?;
     let outcome: OutcomeReport;
 
     if let MarketType::Categorical(categories) = market_type {
@@ -243,7 +246,8 @@ benchmarks! {
     admin_move_market_to_closed {
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(T::MaxCategories::get())
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
         )?;
         let approval_origin = T::ApprovalOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_closed(marketid);
@@ -264,7 +268,8 @@ benchmarks! {
     approve_market {
         let (_, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get())
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
         )?;
 
         let origin = T::ApprovalOrigin::successful_origin();
@@ -275,7 +280,8 @@ benchmarks! {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
-            MarketType::Categorical(a.saturated_into())
+            MarketType::Categorical(a.saturated_into()),
+            ScoringRule::CPMM
         )?;
         let amount = BASE * 1_000;
     }: _(RawOrigin::Signed(caller), marketid, amount.saturated_into())
@@ -283,7 +289,8 @@ benchmarks! {
     cancel_pending_market {
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get())
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
         )?;
     }: _(RawOrigin::Signed(caller), marketid)
 
@@ -305,7 +312,8 @@ benchmarks! {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(a.saturated_into())
+            MarketType::Categorical(a.saturated_into()),
+            ScoringRule::CPMM
         )?;
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
         let _ = Call::<T>::buy_complete_set(marketid, min_liquidity)
@@ -424,7 +432,8 @@ benchmarks! {
     reject_market {
         let (_, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get())
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
         )?;
         let approval_origin = T::ApprovalOrigin::successful_origin();
         let call = Call::<T>::reject_market(marketid);
@@ -433,7 +442,8 @@ benchmarks! {
     report {
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(T::MaxCategories::get())
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
         )?;
         let outcome = OutcomeReport::Categorical(0);
         let approval_origin = T::ApprovalOrigin::successful_origin();
@@ -445,7 +455,8 @@ benchmarks! {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, marketid) = create_market_common::<T>(
             MarketCreation::Advised,
-            MarketType::Categorical(a.saturated_into())
+            MarketType::Categorical(a.saturated_into()),
+            ScoringRule::CPMM
         )?;
         let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
         let _ = Call::<T>::buy_complete_set(marketid, amount)
@@ -453,12 +464,22 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), marketid, amount)
 
     start_subsidy {
-        // Total event outcome assets
-        let a in 2..T::MaxCategories::get().into();
+        // Total event outcome assets.
+        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
-        // Create rikiddo permissionless rikiddo market with a asset
-        // Run the benchmark
-    }: {}
+        // Create advised rikiddo market with a assets (advised -> start_subsidy not invoked).
+        let (caller, marketid) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(a.saturated_into()),
+            ScoringRule::RikiddoSigmoidFeeMarketEma
+        )?;
+        let mut market_clone = None;
+        T::MarketCommons::mutate_market(&marketid, |market| {
+            market.status = MarketStatus::CollectingSubsidy;
+            market_clone = Some(market.clone());
+            Ok(())
+        })?;
+    }: { Pallet::<T>::start_subsidy(&market_clone.unwrap(), marketid)? }
 }
 
 impl_benchmark_test_suite!(

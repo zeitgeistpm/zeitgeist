@@ -283,7 +283,8 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
                 idx
             } else {
                 0
-            })
+            }),
+            &Default::default()
         ));
 
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1)));

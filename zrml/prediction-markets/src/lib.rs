@@ -1797,13 +1797,18 @@ mod pallet {
                 return Ok(T::DbWeight::get().reads(1));
             };
             let market_account = Self::market_account(*market_id);
-            let weight = T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report, &market_account)?;
+            let weight = T::Swaps::set_pool_as_stale(
+                &market.market_type,
+                pool_id,
+                outcome_report,
+                &market_account,
+            )?;
             Ok(weight.saturating_add(T::DbWeight::get().reads(2)))
         }
 
         // Creates a pool for the market and registers the market in the list of markets
         // currently collecting subsidy.
-        fn start_subsidy(
+        pub(crate) fn start_subsidy(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
