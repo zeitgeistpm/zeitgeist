@@ -147,7 +147,7 @@ benchmarks! {
             let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
                 .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
         }
-    }: { Pallet::<T>::end_subsidy_phase(pool_id).unwrap() }
+    }: { Pallet::<T>::end_subsidy_phase(pool_id)? }
 
     destroy_pool_in_subsidy_phase {
         // Total subsidy providers
@@ -177,7 +177,7 @@ benchmarks! {
             let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
                 .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
         }
-    }: { Pallet::<T>::destroy_pool_in_subsidy_phase(pool_id).unwrap() }
+    }: { Pallet::<T>::destroy_pool_in_subsidy_phase(pool_id)? }
 
     distribute_pool_share_rewards {
         // Total accounts
@@ -281,6 +281,26 @@ benchmarks! {
         let pool_amount = BASE.saturated_into();
         let max_asset_amount: BalanceOf<T> = T::MinLiquidity::get();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
+
+    set_pool_as_stale_without_reward_distribution {
+        // Total possible outcomes
+        let a in 3..T::MaxAssets::get().into();
+
+        let amount = T::MinSubsidy::get();
+
+        // Create pool with a assets
+        let caller = whitelisted_caller();
+
+        let (pool_id, _, _) = bench_create_pool::<T>(
+            caller,
+            Some(a.saturated_into()),
+            None,
+            ScoringRule::CPMM,
+            false
+        );
+    }: {
+        Pallet::<T>::set_pool_as_stale(&MarketType::Categorical(a as u16), pool_id, &OutcomeReport::Categorical(0))?;
+    }
 
     swap_exact_amount_in_cpmm {
         let a = T::MaxAssets::get();
