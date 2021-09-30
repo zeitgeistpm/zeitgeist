@@ -254,6 +254,7 @@ mod pallet {
                     m.status = MarketStatus::Active;
                 } else {
                     m.status = MarketStatus::CollectingSubsidy;
+                    // TODO: Add weight
                     Self::start_subsidy(&m, market_id)?;
                 }
 
@@ -418,6 +419,7 @@ mod pallet {
             let market_id = T::MarketCommons::push_market(market.clone())?;
 
             if market.status == MarketStatus::CollectingSubsidy {
+                // TODO: Add weight
                 Self::start_subsidy(&market, market_id)?;
             }
 
@@ -593,6 +595,7 @@ mod pallet {
             let market_id = T::MarketCommons::push_market(market.clone())?;
 
             if market.status == MarketStatus::CollectingSubsidy {
+                // TODO: Add weight
                 Self::start_subsidy(&market, market_id)?;
             }
 
@@ -1454,6 +1457,7 @@ mod pallet {
         ) -> Result<u64, DispatchError> {
             CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &market.creator, T::ValidityBond::get());
 
+            let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
             let resolved_outcome = match market.mdm {
                 MarketDisputeMechanism::Authorized(_) => {
@@ -1541,8 +1545,8 @@ mod pallet {
                 }
                 _ => (),
             };
-
-            Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
+            let to_stale_weight = Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
+            total_weight = total_weight.saturating_add(to_stale_weight);
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             let mut total_accounts = 0u32;
@@ -1562,13 +1566,13 @@ mod pallet {
                 m.resolved_outcome = Some(resolved_outcome);
                 Ok(())
             })?;
-            Ok(Self::calculate_internal_resolve_weight(
+            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
                 market,
                 total_accounts,
                 total_asset_accounts,
                 total_categories,
                 disputes.len().saturated_into(),
-            ))
+            )))
         }
 
         fn process_subsidy_collecting_markets(
@@ -1581,6 +1585,7 @@ mod pallet {
                 |subsidy_info: &SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>| {
                     let market_ready;
 
+                    // TODO: Add weight
                     // Determine whether the current market is past it's subsidy phase
                     match &subsidy_info.period {
                         MarketPeriod::Block(period) => {
@@ -1785,15 +1790,15 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
-        ) -> DispatchResult {
+        ) -> Result<Weight, DispatchError> {
             let pool_id = if let Ok(el) = T::MarketCommons::market_pool(market_id) {
                 el
             } else {
-                return Ok(());
+                return Ok(T::DbWeight::get().reads(1));
             };
             let market_account = Self::market_account(*market_id);
-            let _ = T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report, &market_account);
-            Ok(())
+            let weight = T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report, &market_account)?;
+            Ok(weight.saturating_add(T::DbWeight::get().reads(2)))
         }
 
         // Creates a pool for the market and registers the market in the list of markets

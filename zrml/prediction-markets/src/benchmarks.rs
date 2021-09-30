@@ -54,6 +54,7 @@ fn create_market_common_parameters<T: Config>(
 fn create_market_common<T: Config>(
     permission: MarketCreation,
     options: MarketType,
+    scoring_rule: ScoringRule
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, oracle, period, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
@@ -66,7 +67,7 @@ fn create_market_common<T: Config>(
             creation,
             categories,
             MarketDisputeMechanism::SimpleDisputes,
-            ScoringRule::CPMM,
+            scoring_rule,
         )
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     } else if let MarketType::Scalar(range) = options {
@@ -77,7 +78,7 @@ fn create_market_common<T: Config>(
             creation,
             range,
             MarketDisputeMechanism::SimpleDisputes,
-            ScoringRule::CPMM,
+            scoring_rule,
         )
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     } else {
@@ -93,7 +94,7 @@ fn create_close_and_report_market<T: Config>(
     options: MarketType,
     outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, marketid) = create_market_common::<T>(permission, options)?;
+    let (caller, marketid) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
         .dispatch_bypass_filter(T::ApprovalOrigin::successful_origin())?;
     let _ = Call::<T>::report(marketid, outcome)
@@ -403,6 +404,11 @@ benchmarks! {
         let starting_block = frame_system::Pallet::<T>::block_number() + T::DisputePeriod::get();
     }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
 
+    // Benchmark iteration and market validity check without ending subsidy / discarding market.
+    process_subsidy_collecting_markets_raw {
+        // TODO
+    }: {}
+
     redeem_shares_categorical {
         let (caller, marketid) = setup_redeem_shares_common::<T>(
             MarketType::Categorical(T::MaxCategories::get())
@@ -445,6 +451,14 @@ benchmarks! {
         let _ = Call::<T>::buy_complete_set(marketid, amount)
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), marketid, amount)
+
+    start_subsidy {
+        // Total event outcome assets
+        let a in 2..T::MaxCategories::get().into();
+
+        // Create rikiddo permissionless rikiddo market with a asset
+        // Run the benchmark
+    }: {}
 }
 
 impl_benchmark_test_suite!(

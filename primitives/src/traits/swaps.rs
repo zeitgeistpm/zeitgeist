@@ -110,5 +110,5 @@ pub trait Swaps<AccountId> {
         pool_id: PoolId,
         outcome_report: &OutcomeReport,
         winner_payout_account: &AccountId,
-    ) -> DispatchResult;
+    ) -> Result<Weight, DispatchError>;
 }

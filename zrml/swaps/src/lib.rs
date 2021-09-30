@@ -92,7 +92,8 @@ mod pallet {
             ensure_root(origin)?;
             let pool = <Pools<T>>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
             ensure!(pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
-            Self::set_pool_as_stale(&market_type, pool_id, &outcome_report, &Default::default())
+            Self::set_pool_as_stale(&market_type, pool_id, &outcome_report, &Default::default())?;
+            Ok(())
         }
 
         /// Pool - Exit
@@ -1629,7 +1630,7 @@ mod pallet {
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
-        ) -> DispatchResult {
+        ) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
                 if pool.pool_status == PoolStatus::Stale {
                     return Ok(());
@@ -1673,7 +1674,10 @@ mod pallet {
 
                 pool.pool_status = PoolStatus::Stale;
                 Ok(())
-            })
+            })?;
+
+            // TODO: Return correct weight
+            Ok(0)
         }
     }
 }
