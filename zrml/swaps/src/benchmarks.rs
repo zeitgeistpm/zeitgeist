@@ -6,7 +6,7 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Get};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -16,6 +16,28 @@ use zeitgeist_primitives::{
     traits::Swaps as _,
     types::{Asset, MarketType, OutcomeReport, ScoringRule},
 };
+
+// Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
+fn generate_accounts_with_assets<T: Config>(
+    acc_total: u32,
+    acc_asset: u16,
+    acc_amount: BalanceOf<T>,
+) -> Result<Vec<T::AccountId>, &'static str> {
+    let mut accounts = Vec::new();
+
+    for i in 0..acc_total {
+        let acc = account("AssetHolder", i, 0);
+
+        for j in 0..acc_asset {
+            let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), j);
+            T::Shares::deposit(asset, &acc, acc_amount)?;
+        }
+
+        accounts.push(acc);
+    }
+
+    Ok(accounts)
+}
 
 // Generates ``asset_count`` assets
 fn generate_assets<T: Config>(
@@ -93,6 +115,67 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
     }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
+
+    end_subsidy_phase {
+        // Total assets
+        let a in 0..T::MaxAssets::get().into();
+        // Total subsidy providers
+        let b in 0..10;
+
+        // Create pool with a assets
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, _, _) = bench_create_pool::<T>(
+            caller,
+            Some(a.saturated_into()),
+            None,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            false
+        );
+        let amount = T::MinSubsidy::get();
+
+        // Create b accounts, add MinSubsidy base assets and join subsidy
+        let accounts = generate_accounts_with_assets::<T>(
+            b.into(),
+            a.saturated_into(),
+            amount,
+        ).unwrap();
+
+        // Join subsidy with each account
+        for account in accounts {
+            let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
+                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;   
+        }
+    }: { Pallet::<T>::end_subsidy_phase(pool_id).unwrap() }
+
+    destroy_pool_in_subsidy_phase {
+        // Total subsidy providers
+        let a in 0..10;
+        let min_assets_plus_base_asset = 3u16;
+
+        // Create pool with assets
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, _, _) = bench_create_pool::<T>(
+            caller,
+            Some(min_assets_plus_base_asset.into()),
+            None,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            false
+        );
+        let amount = T::MinSubsidy::get();
+
+        // Create a accounts, add MinSubsidy base assets and join subsidy
+        let accounts = generate_accounts_with_assets::<T>(
+            a,
+            min_assets_plus_base_asset,
+            amount,
+        ).unwrap();
+
+        // Join subsidy with each account
+        for account in accounts {
+            let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
+                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;   
+        }
+    }: { Pallet::<T>::destroy_pool_in_subsidy_phase(pool_id).unwrap() }
 
     pool_exit {
         let a in 2 .. T::MaxAssets::get().into();
