@@ -61,14 +61,10 @@ mod pallet {
         },
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
-    use zeitgeist_primitives::{
-        constants::BASE,
-        traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
-        types::{
+    use zeitgeist_primitives::{constants::BASE, traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency}, types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
             ScoringRule, SerdeWrapper,
-        },
-    };
+        }};
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
@@ -648,19 +644,19 @@ mod pallet {
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
-                    ensure!(
-                        asset_amount_out
-                            <= bmul(
-                                balance_out.saturated_into(),
-                                T::MaxOutRatio::get().saturated_into()
-                            )?
-                            .saturated_into(),
-                        Error::<T>::MaxOutRatio,
-                    );
-
                     let asset_amount_in: BalanceOf<T>;
 
                     if pool.scoring_rule == ScoringRule::CPMM {
+                        ensure!(
+                            asset_amount_out
+                                <= bmul(
+                                    balance_out.saturated_into(),
+                                    T::MaxOutRatio::get().saturated_into()
+                                )?
+                                .saturated_into(),
+                            Error::<T>::MaxOutRatio,
+                        );
+
                         let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
                         asset_amount_in = crate::math::calc_in_given_out(
                             balance_in.saturated_into(),
@@ -993,12 +989,14 @@ mod pallet {
                 let holder_reward = holder_reward_unadjusted.saturating_sub(1);
 
                 // Should be impossible.
-                if let Err(err) = T::Shares::transfer(
+                let transfer_result = T::Shares::transfer(
                     base_asset,
                     &pool_account,
                     &share_holder_account,
                     holder_reward.saturated_into(),
-                ) {
+                );
+                if let Err(err) = transfer_result
+                {
                     let current_amm_holding = T::Shares::free_balance(base_asset, &pool_account);
                     log::error!(
                         "[Swaps] The AMM failed to pay out the share holder reward.
@@ -1112,7 +1110,7 @@ mod pallet {
         }
 
         pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
-            T::PalletId::get().into_sub_account(pool_id)
+            T::PalletId::get().into_sub_account(pool_id.saturated_into::<u128>())
         }
 
         pub(crate) fn burn_pool_shares(

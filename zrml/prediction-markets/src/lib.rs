@@ -1197,7 +1197,7 @@ mod pallet {
         }
 
         pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
-            T::PalletId::get().into_sub_account(market_id)
+            T::PalletId::get().into_sub_account(market_id.saturated_into::<u128>())
         }
 
         /// Clears this market from being stored for automatic resolution.
