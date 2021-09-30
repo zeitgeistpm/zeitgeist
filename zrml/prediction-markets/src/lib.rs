@@ -1575,7 +1575,7 @@ mod pallet {
             )))
         }
 
-        fn process_subsidy_collecting_markets(
+        pub(crate) fn process_subsidy_collecting_markets(
             current_block: T::BlockNumber,
             current_time: MomentOf<T>,
         ) -> Weight {

@@ -14,13 +14,13 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::SaturatedConversion;
+use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, MaxRuntimeUsize,
-        MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
+        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule, SubsidyUntil,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -414,8 +414,22 @@ benchmarks! {
 
     // Benchmark iteration and market validity check without ending subsidy / discarding market.
     process_subsidy_collecting_markets_raw {
-        // TODO
-    }: {}
+        // Number of markets collecting subsidy.
+        let a in 0..10;
+
+        let market_info = SubsidyUntil {
+            market_id: MarketIdOf::<T>::zero(),
+            period: MarketPeriod::Block(T::BlockNumber::one()..T::BlockNumber::one())
+        };
+
+        let markets = vec![market_info; a as usize];
+        <MarketsCollectingSubsidy<T>>::put(markets);
+    }: { 
+        Pallet::<T>::process_subsidy_collecting_markets(
+            T::BlockNumber::zero(),
+            MomentOf::<T>::zero()
+        )
+    }
 
     redeem_shares_categorical {
         let (caller, marketid) = setup_redeem_shares_common::<T>(
