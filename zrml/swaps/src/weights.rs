@@ -35,19 +35,23 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_swaps (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_set_pool_as_stale() -> Weight;
-    fn pool_exit(a: u32) -> Weight;
-    fn pool_exit_subsidy() -> Weight;
-    fn pool_exit_with_exact_asset_amount() -> Weight;
-    fn pool_exit_with_exact_pool_amount() -> Weight;
-    fn pool_join(a: u32) -> Weight;
-    fn pool_join_subsidy() -> Weight;
-    fn pool_join_with_exact_asset_amount() -> Weight;
-    fn pool_join_with_exact_pool_amount() -> Weight;
-    fn swap_exact_amount_in_cpmm() -> Weight;
-    fn swap_exact_amount_in_rikiddo(a: u32) -> Weight;
-    fn swap_exact_amount_out_cpmm() -> Weight;
-    fn swap_exact_amount_out_rikiddo(a: u32) -> Weight;
+	fn admin_set_pool_as_stale() -> Weight;
+	fn end_subsidy_phase(a: u32, b: u32, ) -> Weight;
+	fn destroy_pool_in_subsidy_phase(a: u32, ) -> Weight;
+	fn distribute_pool_share_rewards(a: u32, b: u32, ) -> Weight;
+	fn pool_exit(a: u32, ) -> Weight;
+	fn pool_exit_subsidy() -> Weight;
+	fn pool_exit_with_exact_asset_amount() -> Weight;
+	fn pool_exit_with_exact_pool_amount() -> Weight;
+	fn pool_join(a: u32, ) -> Weight;
+	fn pool_join_subsidy() -> Weight;
+	fn pool_join_with_exact_asset_amount() -> Weight;
+	fn pool_join_with_exact_pool_amount() -> Weight;
+	fn set_pool_as_stale_without_reward_distribution(a: u32, ) -> Weight;
+	fn swap_exact_amount_in_cpmm() -> Weight;
+	fn swap_exact_amount_in_rikiddo(a: u32, ) -> Weight;
+	fn swap_exact_amount_out_cpmm() -> Weight;
+	fn swap_exact_amount_out_rikiddo(a: u32, ) -> Weight;
 }
 
 /// Weight functions for zrml_swaps (automatically generated)
@@ -58,6 +62,36 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
+    fn destroy_pool_in_subsidy_phase(a: u32, ) -> Weight {
+		(242_669_000 as Weight)
+			// Standard Error: 2_823_000
+			.saturating_add((327_536_000 as Weight).saturating_mul(a as Weight))
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+	}
+    fn distribute_pool_share_rewards(a: u32, b: u32, ) -> Weight {
+		(8_248_319_000 as Weight)
+			// Standard Error: 16_510_000
+			.saturating_add((335_139_000 as Weight).saturating_mul(b as Weight))
+			.saturating_add(T::DbWeight::get().reads(8 as Weight))
+			.saturating_add(T::DbWeight::get().reads((3 as Weight).saturating_mul(a as Weight)))
+			.saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(b as Weight)))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(b as Weight)))
+	}
+    fn end_subsidy_phase(a: u32, b: u32, ) -> Weight {
+		(0 as Weight)
+			// Standard Error: 16_071_000
+			.saturating_add((455_657_000 as Weight).saturating_mul(a as Weight))
+			// Standard Error: 14_219_000
+			.saturating_add((826_196_000 as Weight).saturating_mul(b as Weight))
+			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+			.saturating_add(T::DbWeight::get().reads((5 as Weight).saturating_mul(b as Weight)))
+			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+			.saturating_add(T::DbWeight::get().writes((5 as Weight).saturating_mul(b as Weight)))
+	}
     fn pool_exit(a: u32) -> Weight {
         (61_298_000 as Weight)
             // Standard Error: 14_000
@@ -106,6 +140,13 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
+    fn set_pool_as_stale_without_reward_distribution(a: u32, ) -> Weight {
+		(120_332_000 as Weight)
+			// Standard Error: 1_069_000
+			.saturating_add((6_893_000 as Weight).saturating_mul(a as Weight))
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
     fn swap_exact_amount_in_cpmm() -> Weight {
         (154_924_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))

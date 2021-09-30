@@ -120,7 +120,7 @@ benchmarks! {
 
     end_subsidy_phase {
         // Total assets
-        let a in 0..T::MaxAssets::get().into();
+        let a in (T::MinAssets::get().into())..T::MaxAssets::get().into();
         // Total subsidy providers
         let b in 0..10;
 
