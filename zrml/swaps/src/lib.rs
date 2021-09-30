@@ -61,10 +61,14 @@ mod pallet {
         },
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
-    use zeitgeist_primitives::{constants::BASE, traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency}, types::{
+    use zeitgeist_primitives::{
+        constants::BASE,
+        traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
+        types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
             ScoringRule, SerdeWrapper,
-        }};
+        },
+    };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
@@ -931,7 +935,7 @@ mod pallet {
         ) -> Weight {
             // CPMM handling of market profit not supported
             if pool.scoring_rule == ScoringRule::CPMM {
-                return 0;
+                return 1_000_000;
             }
 
             // Total pool shares
@@ -988,15 +992,15 @@ mod pallet {
                 // Same for bmul.
                 let holder_reward = holder_reward_unadjusted.saturating_sub(1);
 
-                // Should be impossible.
                 let transfer_result = T::Shares::transfer(
                     base_asset,
                     &pool_account,
                     &share_holder_account,
                     holder_reward.saturated_into(),
                 );
-                if let Err(err) = transfer_result
-                {
+
+                // Should be impossible.
+                if let Err(err) = transfer_result {
                     let current_amm_holding = T::Shares::free_balance(base_asset, &pool_account);
                     log::error!(
                         "[Swaps] The AMM failed to pay out the share holder reward.

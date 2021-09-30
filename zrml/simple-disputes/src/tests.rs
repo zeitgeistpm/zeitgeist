@@ -5,7 +5,13 @@ use crate::{
     Error,
 };
 use frame_support::assert_noop;
-use zeitgeist_primitives::{traits::DisputeApi, types::{Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report, ScoringRule}};
+use zeitgeist_primitives::{
+    traits::DisputeApi,
+    types::{
+        Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+        MarketType, OutcomeReport, Report, ScoringRule,
+    },
+};
 
 const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     creation: MarketCreation::Permissionless,

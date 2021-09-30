@@ -6,7 +6,9 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec};
+use frame_benchmarking::{
+    account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
+};
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Get};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -143,7 +145,7 @@ benchmarks! {
         // Join subsidy with each account
         for account in accounts {
             let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
-                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;   
+                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
         }
     }: { Pallet::<T>::end_subsidy_phase(pool_id).unwrap() }
 
@@ -173,9 +175,49 @@ benchmarks! {
         // Join subsidy with each account
         for account in accounts {
             let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
-                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;   
+                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
         }
     }: { Pallet::<T>::destroy_pool_in_subsidy_phase(pool_id).unwrap() }
+
+    distribute_pool_share_rewards {
+        // Total accounts
+        let a in 10..20;
+        // Total pool share holders
+        let b in 0..10;
+
+        let min_assets_plus_base_asset = 3u16;
+        let amount = T::MinSubsidy::get();
+
+        // Create a accounts, add MinSubsidy base assets
+        let accounts = generate_accounts_with_assets::<T>(
+            a,
+            min_assets_plus_base_asset,
+            amount,
+        ).unwrap();
+
+        let (pool_id, _, _) = bench_create_pool::<T>(
+            accounts[0].clone(),
+            Some(min_assets_plus_base_asset.into()),
+            None,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            false
+        );
+
+        // Join subsidy with b accounts
+        for account in accounts[0..b.saturated_into()].iter() {
+            let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
+                .dispatch_bypass_filter(RawOrigin::Signed(account.clone()).into())?;
+        }
+
+        Pallet::<T>::end_subsidy_phase(pool_id)?;
+        let pool = <Pools<T>>::get(pool_id).unwrap();
+    }: {
+        Pallet::<T>::distribute_pool_share_rewards(
+            &pool,
+            pool_id,
+            pool.base_asset.unwrap(),
+            Asset::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into()));
+    }
 
     pool_exit {
         let a in 2 .. T::MaxAssets::get().into();

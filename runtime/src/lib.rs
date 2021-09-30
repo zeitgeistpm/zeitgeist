@@ -868,8 +868,9 @@ pub fn native_version() -> NativeVersion {
 pub struct DustRemovalWhitelist;
 
 impl Contains<AccountId> for DustRemovalWhitelist
-    where 
-        frame_support::PalletId: AccountIdConversion<AccountId> {
+where
+    frame_support::PalletId: AccountIdConversion<AccountId>,
+{
     fn contains(ai: &AccountId) -> bool {
         let pallets = vec![
             AuthorizedPalletId::get(),
