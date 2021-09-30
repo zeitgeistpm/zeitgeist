@@ -90,7 +90,9 @@ mod pallet {
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            Self::set_pool_as_stale(&market_type, pool_id, &outcome_report)
+            let pool = <Pools<T>>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
+            ensure!(pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
+            Self::set_pool_as_stale(&market_type, pool_id, &outcome_report, &Default::default())
         }
 
         /// Pool - Exit
@@ -932,6 +934,7 @@ mod pallet {
             pool_id: PoolId,
             base_asset: Asset<T::MarketId>,
             winning_asset: Asset<T::MarketId>,
+            winner_payout_account: &T::AccountId,
         ) -> Weight {
             // CPMM handling of market profit not supported
             if pool.scoring_rule == ScoringRule::CPMM {
@@ -1020,6 +1023,15 @@ mod pallet {
                 // the free balance (always sufficient).
                 let _ = T::Shares::withdraw(shares_id, &share_holder_account, share_holder_balance);
             }
+
+            let remaining_pool_funds = T::Shares::free_balance(base_asset, &pool_account);
+            // Transfer winner payout - Infallible since the balance was just read from storage.
+            let _ = T::Shares::transfer(
+                base_asset,
+                &pool_account,
+                &winner_payout_account,
+                remaining_pool_funds,
+            );
 
             Self::deposit_event(Event::<T>::DistributeShareHolderRewards(
                 pool_id,
@@ -1610,12 +1622,13 @@ mod pallet {
         /// * `market_type`: Type of the market (e.g. categorical or scalar).
         /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
         /// * `outcome_report`: The resulting outcome.
-        /// than the given value.
+        /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
         #[frame_support::transactional]
         fn set_pool_as_stale(
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
+            winner_payout_account: &T::AccountId,
         ) -> DispatchResult {
             Self::mutate_pool(pool_id, |pool| {
                 if pool.pool_status == PoolStatus::Stale {
@@ -1654,6 +1667,7 @@ mod pallet {
                         pool_id,
                         base_asset.ok_or(Error::<T>::BaseAssetNotFound)?,
                         winning_asset_unwrapped,
+                        &winner_payout_account,
                     );
                 }
 

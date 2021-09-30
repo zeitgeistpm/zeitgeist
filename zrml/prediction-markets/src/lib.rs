@@ -1791,7 +1791,8 @@ mod pallet {
             } else {
                 return Ok(());
             };
-            let _ = T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report);
+            let market_account = Self::market_account(*market_id);
+            let _ = T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report, &market_account);
             Ok(())
         }
 

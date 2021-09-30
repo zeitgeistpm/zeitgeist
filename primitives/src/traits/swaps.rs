@@ -104,10 +104,11 @@ pub trait Swaps<AccountId> {
     /// * `market_type`: Type of the market (e.g. categorical or scalar).
     /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
     /// * `outcome_report`: The resulting outcome.
-    /// than the given value.
+    /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
     fn set_pool_as_stale(
         market_type: &MarketType,
         pool_id: PoolId,
         outcome_report: &OutcomeReport,
+        winner_payout_account: &AccountId,
     ) -> DispatchResult;
 }

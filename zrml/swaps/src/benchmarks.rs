@@ -216,7 +216,9 @@ benchmarks! {
             &pool,
             pool_id,
             pool.base_asset.unwrap(),
-            Asset::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into()));
+            Asset::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into()),
+            &Default::default()
+        );
     }
 
     pool_exit {
@@ -299,7 +301,7 @@ benchmarks! {
             false
         );
     }: {
-        Pallet::<T>::set_pool_as_stale(&MarketType::Categorical(a as u16), pool_id, &OutcomeReport::Categorical(0))?;
+        Pallet::<T>::set_pool_as_stale(&MarketType::Categorical(a as u16), pool_id, &OutcomeReport::Categorical(0), &Default::default())?;
     }
 
     swap_exact_amount_in_cpmm {
