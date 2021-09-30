@@ -21,7 +21,7 @@ use zeitgeist_primitives::{
     },
     types::{AccountId, Balance, Signature},
 };
-use zeitgeist_runtime::{SS58Prefix, TokensConfig};
+use zeitgeist_runtime::SS58Prefix;
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::{Perbill, Percent},
@@ -78,7 +78,11 @@ fn generic_genesis(
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
-        advisory: zeitgeist_runtime::AdvisoryConfig::default(),
+        advisory_committee_collective: Default::default(),
+        advisory_committee_membership: zeitgeist_runtime::AdvisoryCommitteeMembershipConfig {
+            members: vec![],
+            phantom: Default::default(),
+        },
         #[cfg(not(feature = "parachain"))]
         aura: zeitgeist_runtime::AuraConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
@@ -123,14 +127,14 @@ fn generic_genesis(
             nominations: acs.nominations,
         },
         #[cfg(feature = "parachain")]
-        parachain_system: zeitgeist_runtime::ParachainSystemConfig::default(),
+        parachain_system: Default::default(),
         sudo: zeitgeist_runtime::SudoConfig { key: root_key },
         system: zeitgeist_runtime::SystemConfig {
             code: wasm_binary.to_vec(),
             changes_trie_config: Default::default(),
         },
-        treasury: zeitgeist_runtime::TreasuryConfig::default(),
-        tokens: TokensConfig::default(),
+        treasury: Default::default(),
+        tokens: Default::default(),
     }
 }
 

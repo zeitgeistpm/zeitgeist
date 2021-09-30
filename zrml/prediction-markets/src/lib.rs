@@ -867,7 +867,7 @@ mod pallet {
         ///  advisory committee.
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
-        type ApprovalOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type ApprovalOrigin: EnsureOrigin<Self::Origin>;
 
         /// See [`AuthorizedPalletApi`].
         type Authorized: zrml_authorized::AuthorizedPalletApi<

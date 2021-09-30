@@ -12,6 +12,7 @@ orml-traits = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, 
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-identity = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-membership = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-sudo = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -117,6 +118,7 @@ parachain = [
 ]
 runtime-benchmarks = [
 	"pallet-identity/runtime-benchmarks",
+	"pallet-membership/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
     "frame-benchmarking",
     "frame-support/runtime-benchmarks",
@@ -148,6 +150,7 @@ std = [
 	"pallet-balances/std",
 	"pallet-collective/std",
 	"pallet-identity/std",
+	"pallet-membership/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",

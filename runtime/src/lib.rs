@@ -55,18 +55,30 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 5,
 };
 
-pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
-pub type Executive = frame_executive::Executive<
+
+type Address = sp_runtime::MultiAddress<AccountId, ()>;
+type AdvisoryCommitteeCollectiveInstance = pallet_collective::Instance1;
+type AdvisoryCommitteeMembershipInstance = pallet_membership::Instance1;
+type EnsureRootOrMoreThanHalfOfAdvisoryCommittee = EnsureOneOf<
+    AccountId,
+    EnsureRoot<AccountId>,
+    pallet_collective::EnsureProportionMoreThan<
+        _1,
+        _2,
+        AccountId,
+        AdvisoryCommitteeCollectiveInstance,
+    >,
+>;
+type Executive = frame_executive::Executive<
     Runtime,
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
 >;
-pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-pub type SignedExtra = (
+type Header = generic::Header<BlockNumber, BlakeTwo256>;
+type SignedExtra = (
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -75,7 +87,7 @@ pub type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
-pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 macro_rules! create_zeitgeist_runtime {
     ($($additional_pallets:tt)*) => {
@@ -100,10 +112,11 @@ macro_rules! create_zeitgeist_runtime {
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
 
                 // Other Parity pallets
-                Collective: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 20,
-                Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 21,
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 22,
-                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 23,
+                AdvisoryCommitteeCollective: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 20,
+                AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 21,
+                Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 22,
+                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 23,
+                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 24,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
@@ -355,21 +368,14 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-    pub const AdvisoryCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
-    pub const AdvisoryCommitteeMaxProposals: u32 = 100;
-    pub const AdvisoryCommitteeMaxMembers: u32 = 100;
-}
-
-pub type AdvisoryCommittee = pallet_collective::Instance1;
-impl pallet_collective::Config<AdvisoryCommittee> for Runtime {
+impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime {
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type Event = Event;
+    type MaxMembers = AdvisoryCommitteeMaxMembers;
+    type MaxProposals = AdvisoryCommitteeMaxProposals;
+    type MotionDuration = AdvisoryCommitteeMotionDuration;
     type Origin = Origin;
     type Proposal = Call;
-    type Event = Event;
-    type MotionDuration = AdvisoryCommitteeMotionDuration;
-    type MaxProposals = AdvisoryCommitteeMaxProposals;
-    type MaxMembers = AdvisoryCommitteeMaxMembers;
-    type DefaultVote = pallet_collective::PrimeDefaultVote;
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
@@ -386,6 +392,19 @@ impl pallet_identity::Config for Runtime {
     type Slashed = Treasury;
     type SubAccountDeposit = SubAccountDeposit;
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
+    type AddOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type Event = Event;
+    type MaxMembers = AdvisoryCommitteeMaxMembers;
+    type MembershipChanged = AdvisoryCommitteeCollective;
+    type MembershipInitialized = AdvisoryCommitteeCollective;
+    type PrimeOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type RemoveOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type ResetOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type SwapOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -478,14 +497,9 @@ impl zrml_orderbook_v1::Config for Runtime {
     type WeightInfo = zrml_orderbook_v1::weights::WeightInfo<Runtime>;
 }
 
-type MoreThanHalfCouncil = EnsureOneOf<
-    AccountId,
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, AdvisoryCommittee>,
->;
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
-    type ApprovalOrigin = MoreThanHalfCouncil;
+    type ApprovalOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
     type Authorized = Authorized;
     type Court = Court;
     type DisputeBond = DisputeBond;
@@ -573,6 +587,8 @@ impl_runtime_apis! {
 
             list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
             list_benchmark!(list, extra, pallet_balances, Balances);
+            list_benchmark!(list, extra, pallet_collective, AdvisoryCommitteeCollective);
+            list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_utility, Utility);
             list_benchmark!(list, extra, zrml_swaps, Swaps);
@@ -618,7 +634,8 @@ impl_runtime_apis! {
 
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
-            add_benchmark!(params, batches, pallet_collective, Advisory);
+            add_benchmark!(params, batches, pallet_collective, AdvisoryCommitteeCollective);
+            add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
