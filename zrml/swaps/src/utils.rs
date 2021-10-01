@@ -7,7 +7,7 @@ use crate::{
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get};
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
+use sp_runtime::{DispatchError, SaturatedConversion, traits::{Saturating, Zero}};
 use zeitgeist_primitives::types::{Asset, Pool, PoolId, ScoringRule};
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
@@ -165,14 +165,24 @@ where
     }
 
     let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+
+    // Allow little tolerance
+    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+        ensure!(spot_price_before.saturating_sub(spot_price_after) < 20u8.into(), Error::<T>::MathApproximation);
+    } else {
+        ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+    }
+
     ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
-    ensure!(
-        spot_price_before
-            <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
-                .saturated_into(),
-        Error::<T>::MathApproximation
-    );
+
+    if p.pool.scoring_rule == ScoringRule::CPMM {
+        ensure!(
+            spot_price_before
+                <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
+                    .saturated_into(),
+            Error::<T>::MathApproximation
+        );
+    }
 
     if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
         // Currently the only allowed trades are base_currency <-> event asset. We count the
