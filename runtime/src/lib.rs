@@ -612,7 +612,6 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, zrml_court, Court);
             list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
             list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
-            list_benchmark!(list, extra, zrml_orderbook_v1, Orderbook);
 
             (list, AllPalletsWithSystem::storage_info())
         }
