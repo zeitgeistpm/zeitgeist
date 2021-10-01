@@ -2,7 +2,7 @@ use crate::types::{
     Asset, MarketType, OutcomeReport, Pool, PoolId, ResultWithWeightInfo, ScoringRule,
 };
 use alloc::vec::Vec;
-use frame_support::dispatch::{DispatchError, DispatchResult, Weight};
+use frame_support::dispatch::{DispatchError, Weight};
 
 pub trait Swaps<AccountId> {
     type Balance;

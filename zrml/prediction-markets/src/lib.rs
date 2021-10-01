@@ -244,8 +244,9 @@ mod pallet {
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
         #[pallet::weight(T::WeightInfo::approve_market())]
-        pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
+            let mut extra_weight = 0;
 
             T::MarketCommons::mutate_market(&market_id, |m| {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
@@ -254,8 +255,7 @@ mod pallet {
                     m.status = MarketStatus::Active;
                 } else {
                     m.status = MarketStatus::CollectingSubsidy;
-                    // TODO: Add weight
-                    Self::start_subsidy(&m, market_id)?;
+                    extra_weight = Self::start_subsidy(&m, market_id)?;
                 }
 
                 CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &m.creator, T::AdvisoryBond::get());
@@ -263,7 +263,7 @@ mod pallet {
             })?;
 
             Self::deposit_event(Event::MarketApproved(market_id));
-            Ok(())
+            Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
         }
 
         /// Buys the complete set of outcome shares of a market. For example, when calling this
@@ -369,7 +369,7 @@ mod pallet {
             categories: u16,
             mdm: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
 
@@ -417,15 +417,15 @@ mod pallet {
                 status,
             };
             let market_id = T::MarketCommons::push_market(market.clone())?;
+            let mut extra_weight = 0;
 
             if market.status == MarketStatus::CollectingSubsidy {
-                // TODO: Add weight
-                Self::start_subsidy(&market, market_id)?;
+                extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
             Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
-            Ok(())
+            Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
 
         /// This function combines the creation of a market, the buying of a complete set of
@@ -472,8 +472,7 @@ mod pallet {
             let weight_market_creation;
             let _ = match assets {
                 MarketType::Categorical(category_count) => {
-                    weight_market_creation = T::WeightInfo::create_categorical_market();
-                    Self::create_categorical_market(
+                    weight_market_creation = Self::create_categorical_market(
                         origin.clone(),
                         oracle,
                         period,
@@ -482,11 +481,10 @@ mod pallet {
                         category_count,
                         mdm,
                         ScoringRule::CPMM,
-                    )?
+                    )?.actual_weight.unwrap_or(T::WeightInfo::create_categorical_market())
                 }
                 MarketType::Scalar(range) => {
-                    weight_market_creation = T::WeightInfo::create_scalar_market();
-                    Self::create_scalar_market(
+                    weight_market_creation = Self::create_scalar_market(
                         origin.clone(),
                         oracle,
                         period,
@@ -495,7 +493,7 @@ mod pallet {
                         range,
                         mdm,
                         ScoringRule::CPMM,
-                    )?
+                    )?.actual_weight.unwrap_or(T::WeightInfo::create_scalar_market())
                 }
             };
 
@@ -546,7 +544,7 @@ mod pallet {
             outcome_range: RangeInclusive<u128>,
             mdm: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
 
@@ -593,15 +591,15 @@ mod pallet {
                 scoring_rule,
             };
             let market_id = T::MarketCommons::push_market(market.clone())?;
+            let mut extra_weight = 0;
 
             if market.status == MarketStatus::CollectingSubsidy {
-                // TODO: Add weight
-                Self::start_subsidy(&market, market_id)?;
+                extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
             Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
-            Ok(())
+            Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
         }
 
         /// Deploys a new pool for the market. This pallet keeps track of a single
@@ -1117,8 +1115,7 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let mut total_weight: Weight = 0;
-            total_weight += Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+            let mut total_weight: Weight = Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let mut do_resolution = || {
                 Self::resolution_manager(now, |market_id, market| {
@@ -1580,12 +1577,14 @@ mod pallet {
             current_time: MomentOf<T>,
         ) -> Weight {
             let mut total_weight = 0;
+            let dbweight = T::DbWeight::get();
+            let one_read = T::DbWeight::get().reads(1);
+            let one_write = T::DbWeight::get().writes(1);
 
             let retain_closure =
                 |subsidy_info: &SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>| {
                     let market_ready;
 
-                    // TODO: Add weight
                     // Determine whether the current market is past it's subsidy phase
                     match &subsidy_info.period {
                         MarketPeriod::Block(period) => {
@@ -1598,6 +1597,8 @@ mod pallet {
 
                     if market_ready {
                         let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
+                        total_weight.saturating_add(one_read);
+
                         if let Err(err) = pool_id {
                             log::error!(
                                 "[PredictionMarkets] Cannot find pool associated to market.
@@ -1621,6 +1622,8 @@ mod pallet {
                                         m.status = MarketStatus::Active;
                                         Ok(())
                                     });
+
+                                total_weight = total_weight.saturating_add(one_read).saturating_add(one_write);
 
                                 if let Err(err) = mutate_result {
                                     log::error!(
@@ -1678,6 +1681,7 @@ mod pallet {
                                             );
                                         }
 
+                                        total_weight = total_weight.saturating_add(dbweight.reads(2)).saturating_add(dbweight.writes(2));
                                         Ok(())
                                     });
 
@@ -1694,6 +1698,7 @@ mod pallet {
 
                                 let _ =
                                     T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
+                                total_weight = total_weight.saturating_add(one_read).saturating_add(one_write);
                                 Self::deposit_event(Event::MarketInsufficientSubsidy(
                                     subsidy_info.market_id,
                                 ));
@@ -1714,14 +1719,15 @@ mod pallet {
                     return true;
                 };
 
+            let mut weight_basis = 0;
             <MarketsCollectingSubsidy<T>>::mutate(
                 |e: &mut Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>| {
+                    weight_basis = T::WeightInfo::process_subsidy_collecting_markets_raw(e.len().saturated_into());
                     e.retain(retain_closure);
                 },
             );
 
-            // TODO: Add raw weight of this function (excluding end subsidy and destroy calls)
-            total_weight
+            weight_basis.saturating_add(total_weight)
         }
 
         fn remove_last_dispute_from_market_ids_per_dispute_block(
@@ -1811,7 +1817,7 @@ mod pallet {
         pub(crate) fn start_subsidy(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
+        ) -> Result<Weight, DispatchError> {
             ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
             ensure!(
                 market.status == MarketStatus::CollectingSubsidy,
@@ -1821,6 +1827,7 @@ mod pallet {
             let mut assets = Self::outcome_assets(market_id, &market);
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
+            let total_assets = assets.len();
 
             let pool_id = T::Swaps::create_pool(
                 market.creator.clone(),
@@ -1836,7 +1843,8 @@ mod pallet {
             <MarketsCollectingSubsidy<T>>::mutate(|markets| {
                 markets.push(SubsidyUntil { market_id, period: market.period.clone() })
             });
-            Ok(())
+
+            Ok(T::WeightInfo::start_subsidy(total_assets.saturated_into()))
         }
 
         fn validate_dispute(
