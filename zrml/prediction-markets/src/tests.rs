@@ -5,7 +5,12 @@ use crate::{
     MarketIdsPerReportBlock,
 };
 use core::{cell::RefCell, ops::Range};
-use frame_support::{assert_err, assert_noop, assert_ok, dispatch::{DispatchError, DispatchResult}, storage_root, traits::Get};
+use frame_support::{
+    assert_err, assert_noop, assert_ok,
+    dispatch::{DispatchError, DispatchResult},
+    storage_root,
+    traits::Get,
+};
 
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
@@ -28,7 +33,7 @@ fn gen_metadata(byte: u8) -> MultiHash {
 fn simple_create_categorical_market<T: crate::Config>(
     creation: MarketCreation,
     period: Range<u64>,
-    scoring_rule: ScoringRule
+    scoring_rule: ScoringRule,
 ) {
     assert_ok!(PredictionMarkets::create_categorical_market(
         Origin::signed(ALICE),
@@ -45,14 +50,22 @@ fn simple_create_categorical_market<T: crate::Config>(
 #[test]
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // check the correct amount was reserved
         let alice_reserved = Balances::reserved_balance(&ALICE);
         assert_eq!(alice_reserved, ValidityBond::get() + OracleBond::get());
 
         // Creates an advised market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         let new_alice_reserved = Balances::reserved_balance(&ALICE);
         assert_eq!(new_alice_reserved, AdvisoryBond::get() + OracleBond::get() + alice_reserved);
@@ -105,7 +118,11 @@ fn it_does_not_create_market_with_too_many_categories() {
 fn it_allows_sudo_to_destroy_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // destroy the market
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -121,7 +138,11 @@ fn it_allows_sudo_to_destroy_markets() {
 fn it_allows_advisory_origin_to_approve_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -145,7 +166,11 @@ fn it_allows_advisory_origin_to_approve_markets() {
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -165,7 +190,11 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 fn it_allows_to_buy_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // Allows someone to generate a complete set
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
@@ -193,7 +222,11 @@ fn it_allows_to_buy_a_complete_set() {
 fn it_allows_to_deploy_a_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE,));
 
@@ -216,7 +249,11 @@ fn it_allows_to_deploy_a_pool() {
 fn it_allows_to_sell_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
@@ -241,7 +278,11 @@ fn it_allows_to_sell_a_complete_set() {
 fn it_allows_to_report_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..100, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..100,
+            ScoringRule::CPMM,
+        );
 
         run_to_block(100);
 
@@ -292,7 +333,11 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 fn it_allows_to_dispute_the_outcome_of_a_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // Run to the end of the trading phase.
         run_to_block(100);
@@ -332,7 +377,11 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 fn it_allows_anyone_to_report_an_unreported_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         // Just skip to waaaay overdue.
         run_to_block(9000);
@@ -361,7 +410,11 @@ fn it_allows_anyone_to_report_an_unreported_market() {
 fn it_correctly_resolves_a_market_that_was_reported_on() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
@@ -408,7 +461,11 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 fn it_resolves_a_disputed_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
@@ -513,7 +570,11 @@ fn it_resolves_a_disputed_market() {
 fn it_allows_to_redeem_shares() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
         run_to_block(100);
@@ -608,15 +669,72 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
 }
 
 #[test]
+fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Create permissionless categorical market using Rikiddo.
+        // One will have enough subsidy, one insufficient and the last not ready for activation.
+        let min_sub_period = <Runtime as crate::Config>::MinSubsidyPeriod::get();
+        let max_sub_period = <Runtime as crate::Config>::MaxSubsidyPeriod::get();
+
+        for _ in 0..2 {
+            simple_create_categorical_market::<Runtime>(
+                MarketCreation::Permissionless,
+                min_sub_period..max_sub_period,
+                ScoringRule::RikiddoSigmoidFeeMarketEma,
+            );
+        }
+
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            min_sub_period + 42..max_sub_period,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+
+        let market_enough_subsidy = 0;
+        let market_insufficient_subsidy = 1;
+        let market_not_ready = 2;
+        let min_subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get();
+
+        // Give alice enough funds and subsidize one market
+        assert_ok!(Tokens::deposit(Asset::Ztg, &ALICE, min_subsidy));
+        assert_ok!(Swaps::pool_join_subsidy(
+            Origin::signed(ALICE),
+            market_enough_subsidy,
+            min_subsidy
+        ));
+
+        // Run to block where 2 markets are ready and process all markets.
+        run_to_block(min_sub_period);
+        let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
+        assert!(subsidy_queue.len() == 1);
+        assert!(subsidy_queue[0].market_id == market_not_ready);
+        assert!(
+            MarketCommons::market(&market_enough_subsidy).unwrap().status == MarketStatus::Active
+        );
+        assert!(
+            MarketCommons::market(&market_insufficient_subsidy).unwrap().status
+                == MarketStatus::InsufficientSubsidy
+        );
+    });
+}
+
+#[test]
 fn start_subsidy_creates_pool_and_starts_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
         // Create advised categorical market using Rikiddo.
-        simple_create_categorical_market::<Runtime>(MarketCreation::Advised, 1337..1337, ScoringRule::RikiddoSigmoidFeeMarketEma);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            1337..1337,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
         let market_id = 0;
         let mut market = MarketCommons::market(&market_id).unwrap();
-        
+
         // Ensure and set correct market status.
-        assert_err!(PredictionMarkets::start_subsidy(&market, market_id), crate::Error::<Runtime>::MarketIsNotCollectingSubsidy);
+        assert_err!(
+            PredictionMarkets::start_subsidy(&market, market_id),
+            crate::Error::<Runtime>::MarketIsNotCollectingSubsidy
+        );
         assert_ok!(MarketCommons::mutate_market(&market_id, |market_inner| {
             market_inner.status = MarketStatus::CollectingSubsidy;
             market = market_inner.clone();

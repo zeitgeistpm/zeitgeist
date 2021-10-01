@@ -7,7 +7,10 @@ use crate::{
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get};
 use orml_traits::MultiCurrency;
-use sp_runtime::{DispatchError, SaturatedConversion, traits::{Saturating, Zero}};
+use sp_runtime::{
+    traits::{Saturating, Zero},
+    DispatchError, SaturatedConversion,
+};
 use zeitgeist_primitives::types::{Asset, Pool, PoolId, ScoringRule};
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
@@ -168,7 +171,10 @@ where
 
     // Allow little tolerance
     if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-        ensure!(spot_price_before.saturating_sub(spot_price_after) < 20u8.into(), Error::<T>::MathApproximation);
+        ensure!(
+            spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
+            Error::<T>::MathApproximation
+        );
     } else {
         ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
     }

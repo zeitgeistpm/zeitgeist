@@ -8,7 +8,13 @@ use crate::{
 use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
-use zeitgeist_primitives::{constants::BASE, traits::Swaps as _, types::{AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule}};
+use zeitgeist_primitives::{
+    constants::BASE,
+    traits::Swaps as _,
+    types::{
+        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
+    },
+};
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
@@ -241,7 +247,11 @@ fn distribute_pool_share_rewards() {
         let subsidy_providers: Vec<AccountIdTest> = (1000..1010).collect();
         subsidy_providers.iter().for_each(|provider| {
             assert_ok!(Currencies::deposit(base_asset, provider, subsidy_per_acc));
-            assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*provider), pool_id, subsidy_per_acc));
+            assert_ok!(Swaps::pool_join_subsidy(
+                Origin::signed(*provider),
+                pool_id,
+                subsidy_per_acc
+            ));
         });
 
         // End subsidy phase
@@ -266,13 +276,16 @@ fn distribute_pool_share_rewards() {
         // Distribute pool share rewards
         let pool = Swaps::pool(pool_id).unwrap();
         let winner_payout_account: AccountIdTest = 1337;
-        Swaps::distribute_pool_share_rewards(&pool, pool_id, base_asset, winning_asset, &winner_payout_account);
-        
-        // Check if every subsidy provider got their fair share (percentage)
-        assert_ne!(
-            Currencies::total_balance(base_asset, &subsidy_providers[0]),
-            0
+        Swaps::distribute_pool_share_rewards(
+            &pool,
+            pool_id,
+            base_asset,
+            winning_asset,
+            &winner_payout_account,
         );
+
+        // Check if every subsidy provider got their fair share (percentage)
+        assert_ne!(Currencies::total_balance(base_asset, &subsidy_providers[0]), 0);
 
         for idx in 1..subsidy_providers.len() {
             assert_eq!(
@@ -282,14 +295,11 @@ fn distribute_pool_share_rewards() {
         }
 
         // Check if the winning asset holders can be paid out.
-        let winner_payout_acc_balance = Currencies::total_balance(base_asset, &winner_payout_account);
-        assert!(
-            total_winning_assets <= winner_payout_acc_balance
-        );
+        let winner_payout_acc_balance =
+            Currencies::total_balance(base_asset, &winner_payout_account);
+        assert!(total_winning_assets <= winner_payout_acc_balance);
         // Ensure the remaining "dust" is tiny
-        assert!(
-            winner_payout_acc_balance - total_winning_assets < BASE / 1_000_000
-        );
+        assert!(winner_payout_acc_balance - total_winning_assets < BASE / 1_000_000);
     });
 }
 
@@ -784,20 +794,14 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
             crate::Error::<Runtime>::WinningAssetNotFound
         );
 
-        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A {
-            cidx
-        } else {
-            0
-        };
+        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
-        assert_ok!(
-            Swaps::set_pool_as_stale(
-                &MarketType::Categorical(4),
-                pool_id,
-                &OutcomeReport::Categorical(cat_idx),
-                &Default::default()
-            )
-        );
+        assert_ok!(Swaps::set_pool_as_stale(
+            &MarketType::Categorical(4),
+            pool_id,
+            &OutcomeReport::Categorical(cat_idx),
+            &Default::default()
+        ));
 
         assert_eq!(Swaps::pool_by_id(pool_id).unwrap().pool_status, PoolStatus::Stale);
         assert_eq!(Swaps::pool_by_id(pool_id).unwrap().assets, vec![ASSET_A, ASSET_D]);
@@ -810,11 +814,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 0;
 
-        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A {
-            cidx
-        } else {
-            0
-        };
+        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
         assert_noop!(
             Swaps::set_pool_as_stale(
@@ -831,14 +831,12 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
             Ok(())
         }));
 
-        assert_ok!(
-            Swaps::set_pool_as_stale(
-                &MarketType::Categorical(4),
-                pool_id,
-                &OutcomeReport::Categorical(cat_idx),
-                &Default::default()
-            )
-        );
+        assert_ok!(Swaps::set_pool_as_stale(
+            &MarketType::Categorical(4),
+            pool_id,
+            &OutcomeReport::Categorical(cat_idx),
+            &Default::default()
+        ));
 
         // Rikiddo instance does not exist anymore.
         assert_storage_noop!(RikiddoSigmoidFeeMarketEma::clear(pool_id).unwrap_or(()));
