@@ -1017,6 +1017,15 @@ mod pallet {
                         share_holder_account,
                         err,
                     );
+
+                    if current_amm_holding < holder_reward.saturated_into() {
+                        let _ = T::Shares::transfer(
+                            base_asset,
+                            &pool_account,
+                            &share_holder_account,
+                            current_amm_holding.saturated_into(),
+                        );
+                    }
                 }
 
                 // We can use the lightweight withdraw here, since pool shares are not reserved.
