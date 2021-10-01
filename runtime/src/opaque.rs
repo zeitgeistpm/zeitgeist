@@ -3,13 +3,11 @@
 //! of data like extrinsics, allowing for them to continue syncing the network through upgrades
 //! to even the core data structures.
 
-pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
-
 use crate::Header;
 use alloc::vec::Vec;
 use sp_runtime::{generic, impl_opaque_keys};
 
-pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+pub type Block = generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
 
 #[cfg(feature = "parachain")]
 impl_opaque_keys! {
