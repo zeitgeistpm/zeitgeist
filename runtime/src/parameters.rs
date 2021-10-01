@@ -22,13 +22,18 @@ pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
+  // Collective
+  pub const AdvisoryCommitteeMaxMembers: u32 = 100;
+  pub const AdvisoryCommitteeMaxProposals: u32 = 64;
+  pub const AdvisoryCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+
   // Identity
   pub const BasicDeposit: Balance = 8 * BASE;
   pub const FieldDeposit: Balance = 256 * CENT;
-  pub const SubAccountDeposit: Balance = 2 * BASE;
-  pub const MaxSubAccounts: u32 = 64;
   pub const MaxAdditionalFields: u32 = 64;
   pub const MaxRegistrars: u32 = 8;
+  pub const MaxSubAccounts: u32 = 64;
+  pub const SubAccountDeposit: Balance = 2 * BASE;
 
   // Staking
   pub const CollatorDeposit: Balance = 2 * BASE;
