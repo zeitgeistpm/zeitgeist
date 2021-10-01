@@ -80,6 +80,7 @@ type Executive = frame_executive::Executive<
     AllPallets,
 >;
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
+type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 type SignedExtra = (
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
@@ -526,7 +527,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }
 
-pub type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 impl zrml_rikiddo::Config<RikiddoSigmoidFeeMarketVolumeEma> for Runtime {
     type Timestamp = Timestamp;
     type Balance = Balance;
@@ -883,6 +883,14 @@ where
 
         if let Some(pallet_id) = frame_support::PalletId::try_from_sub_account::<u128>(ai) {
             return pallets.contains(&pallet_id.0);
+        }
+
+        for pallet_id in pallets {
+            let pallet_acc: AccountId = pallet_id.into_account();
+
+            if pallet_acc == *ai {
+                return true;
+            }
         }
 
         false

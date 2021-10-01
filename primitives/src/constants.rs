@@ -8,7 +8,7 @@ pub mod ztg;
 
 use crate::{
     asset::Asset,
-    types::{AccountId, AccountIdTest, Balance, BlockNumber, CurrencyId},
+    types::{AccountId, AccountIdTest, Balance, BlockNumber, CurrencyId, Moment},
 };
 use frame_support::{parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;
@@ -96,9 +96,9 @@ parameter_types! {
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    pub const MinSubsidyPeriod: u64 = 60_000;
+    pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
-    pub const MaxSubsidyPeriod: u64 = 2_678_400_000;
+    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;

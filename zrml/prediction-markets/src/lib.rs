@@ -258,7 +258,7 @@ mod pallet {
                     m.status = MarketStatus::Active;
                 } else {
                     m.status = MarketStatus::CollectingSubsidy;
-                    extra_weight = Self::start_subsidy(&m, market_id)?;
+                    extra_weight = Self::start_subsidy(m, market_id)?;
                 }
 
                 CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &m.creator, T::AdvisoryBond::get());
@@ -486,7 +486,7 @@ mod pallet {
                         ScoringRule::CPMM,
                     )?
                     .actual_weight
-                    .unwrap_or(T::WeightInfo::create_categorical_market())
+                    .unwrap_or_else(T::WeightInfo::create_categorical_market)
                 }
                 MarketType::Scalar(range) => {
                     weight_market_creation = Self::create_scalar_market(
@@ -500,7 +500,7 @@ mod pallet {
                         ScoringRule::CPMM,
                     )?
                     .actual_weight
-                    .unwrap_or(T::WeightInfo::create_scalar_market())
+                    .unwrap_or_else(T::WeightInfo::create_scalar_market)
                 }
             };
 
@@ -975,13 +975,13 @@ mod pallet {
         type MaxCategories: Get<u16>;
 
         /// The shortest period of collecting subsidy for a Rikiddo market.
-        type MaxSubsidyPeriod: Get<u64>;
+        type MaxSubsidyPeriod: Get<MomentOf<Self>>;
 
         /// The minimum number of categories available for categorical markets.
         type MinCategories: Get<u16>;
 
         /// The shortest period of collecting subsidy for a Rikiddo market.
-        type MinSubsidyPeriod: Get<u64>;
+        type MinSubsidyPeriod: Get<MomentOf<Self>>;
 
         /// The maximum number of disputes allowed on any single market.
         type MaxDisputes: Get<u32>;
@@ -1125,16 +1125,12 @@ mod pallet {
             let mut total_weight: Weight =
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
-            let mut do_resolution = || {
-                Self::resolution_manager(now, |market_id, market| {
+            with_transaction(|| {
+                let output = Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
                     total_weight = total_weight.saturating_add(weight);
                     Ok(())
-                })
-            };
-
-            with_transaction(|| {
-                let output = do_resolution();
+                });
 
                 match output {
                     Err(err) => {
@@ -1378,11 +1374,11 @@ mod pallet {
             }
 
             ensure!(
-                interval >= u128::from(T::MinSubsidyPeriod::get()),
+                <MomentOf<T>>::saturated_from(interval) >= T::MinSubsidyPeriod::get(),
                 <Error<T>>::MarketStartTooSoon
             );
             ensure!(
-                interval <= u128::from(T::MaxSubsidyPeriod::get()),
+                <MomentOf<T>>::saturated_from(interval) <= T::MaxSubsidyPeriod::get(),
                 <Error<T>>::MarketStartTooLate
             );
             Ok(())
@@ -1596,10 +1592,10 @@ mod pallet {
                     // Determine whether the current market is past it's subsidy phase
                     match &subsidy_info.period {
                         MarketPeriod::Block(period) => {
-                            market_ready = if period.start <= current_block { true } else { false };
+                            market_ready = period.start <= current_block;
                         }
                         MarketPeriod::Timestamp(period) => {
-                            market_ready = if period.start <= current_time { true } else { false };
+                            market_ready = period.start <= current_time;
                         }
                     }
 
@@ -1728,7 +1724,7 @@ mod pallet {
                         }
                     }
 
-                    return true;
+                    true
                 };
 
             let mut weight_basis = 0;
@@ -1838,7 +1834,7 @@ mod pallet {
                 Error::<T>::MarketIsNotCollectingSubsidy
             );
 
-            let mut assets = Self::outcome_assets(market_id, &market);
+            let mut assets = Self::outcome_assets(market_id, market);
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
             let total_assets = assets.len();

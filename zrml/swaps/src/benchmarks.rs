@@ -137,7 +137,7 @@ benchmarks! {
 
         // Create b accounts, add MinSubsidy base assets and join subsidy
         let accounts = generate_accounts_with_assets::<T>(
-            b.into(),
+            b,
             a.saturated_into(),
             amount,
         ).unwrap();

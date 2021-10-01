@@ -570,16 +570,17 @@ mod pallet {
                         ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
                         let mut outstanding_before =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
                         let mut outstanding_after =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
 
                         for asset in pool.assets.iter().filter(|e| **e != base_asset) {
                             let total_amount = T::Shares::total_issuance(*asset);
                             outstanding_before.push(total_amount);
 
                             if *asset == asset_in {
-                                outstanding_after.push(total_amount - asset_amount_in);
+                                outstanding_after
+                                    .push(total_amount.saturating_sub(asset_amount_in));
                             } else {
                                 outstanding_after.push(total_amount);
                             }
@@ -678,9 +679,9 @@ mod pallet {
                         ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
                         let mut outstanding_before =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
                         let mut outstanding_after =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len() - 1);
+                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
 
                         for asset in pool.assets.iter().filter(|e| **e != base_asset) {
                             let total_amount = T::Shares::total_issuance(*asset);
@@ -1037,7 +1038,7 @@ mod pallet {
             let _ = T::Shares::transfer(
                 base_asset,
                 &pool_account,
-                &winner_payout_account,
+                winner_payout_account,
                 remaining_pool_funds,
             );
 
@@ -1699,7 +1700,7 @@ mod pallet {
                         pool_id,
                         base_asset.ok_or(Error::<T>::BaseAssetNotFound)?,
                         winning_asset_unwrapped,
-                        &winner_payout_account,
+                        winner_payout_account,
                     );
                     extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
                     extra_weight = extra_weight.saturating_add(distribute_weight);
