@@ -42,7 +42,9 @@ fn create_market_common_parameters<T: Config>(
     let caller: T::AccountId = whitelisted_caller();
     let _ = CurrencyOf::<T>::deposit_creating(&caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
-    let period = MarketPeriod::Block(T::MinSubsidyPeriod::get().saturated_into()..u128::MAX.saturated_into());
+    let period = MarketPeriod::Block(
+        T::MinSubsidyPeriod::get().saturated_into()..u128::MAX.saturated_into(),
+    );
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;
@@ -424,7 +426,7 @@ benchmarks! {
 
         let markets = vec![market_info; a as usize];
         <MarketsCollectingSubsidy<T>>::put(markets);
-    }: { 
+    }: {
         Pallet::<T>::process_subsidy_collecting_markets(
             T::BlockNumber::zero(),
             MomentOf::<T>::zero()

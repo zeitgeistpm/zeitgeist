@@ -1040,8 +1040,10 @@ mod pallet {
                 amm_profit,
             ));
 
-            // TODO: return total weight
-            0
+            T::WeightInfo::distribute_pool_share_rewards(
+                total_accounts_num.saturated_into(),
+                share_accounts_num.saturated_into(),
+            )
         }
 
         pub fn get_spot_price(
@@ -1338,7 +1340,9 @@ mod pallet {
         ///
         /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
         fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            let _ = Self::mutate_pool(pool_id, |pool| {
+            let mut total_providers = 0usize;
+
+            Self::mutate_pool(pool_id, |pool| {
                 // Ensure all preconditions are met.
                 if pool.pool_status != PoolStatus::CollectingSubsidy {
                     return Err(Error::<T>::InvalidStateTransition.into());
@@ -1348,6 +1352,7 @@ mod pallet {
 
                 for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
                     T::Shares::unreserve(base_asset, &provider.0, provider.1);
+                    total_providers = total_providers.saturating_add(1);
                 }
 
                 if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
@@ -1358,8 +1363,7 @@ mod pallet {
             })?;
 
             Pools::<T>::remove(pool_id);
-            // TODO: Return correct weight.
-            Ok(0)
+            Ok(T::WeightInfo::destroy_pool_in_subsidy_phase(total_providers.saturated_into()))
         }
 
         /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
@@ -1371,10 +1375,11 @@ mod pallet {
         /// * `pool_id`: Unique pool identifier associated with the pool to be made active.
         /// than the given value.
         fn end_subsidy_phase(pool_id: PoolId) -> Result<ResultWithWeightInfo<bool>, DispatchError> {
-            let do_mutate = || -> Result<usize, DispatchError> {
-                let mut total_providers: usize = 0;
+            let do_mutate = || {
+                let mut total_providers = 0usize;
+                let mut total_assets = 0;
 
-                Self::mutate_pool(pool_id, |pool| {
+                let result = Self::mutate_pool(pool_id, |pool| {
                     // Ensure all preconditions are met.
                     if pool.pool_status != PoolStatus::CollectingSubsidy {
                         return Err(Error::<T>::InvalidStateTransition.into());
@@ -1387,6 +1392,7 @@ mod pallet {
                     let pool_shares_id = Self::pool_shares_id(pool_id);
                     let mut account_created = false;
                     let mut total_balance = <BalanceOf<T>>::zero();
+                    total_assets = pool.assets.len();
 
                     // Transfer all reserved funds to the pool account and distribute pool shares.
                     for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
@@ -1451,28 +1457,42 @@ mod pallet {
                     pool.pool_status = PoolStatus::Active;
                     Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
                     Ok(())
-                })?;
+                });
 
-                // TODO adjust weight.
-                Ok(total_providers)
+                if let Err(err) = result {
+                    if err == Error::<T>::InsufficientSubsidy.into() {
+                        return Ok(ResultWithWeightInfo {
+                            result: false,
+                            weight: T::WeightInfo::end_subsidy_phase(
+                                total_assets.saturated_into(),
+                                total_providers.saturated_into(),
+                            ),
+                        });
+                    }
+
+                    return Err(err);
+                }
+
+                Ok(ResultWithWeightInfo {
+                    result: true,
+                    weight: T::WeightInfo::end_subsidy_phase(
+                        total_assets.saturated_into(),
+                        total_providers.saturated_into(),
+                    ),
+                })
             };
 
             with_transaction(|| {
                 let output = do_mutate();
                 match output {
-                    Ok(_) => TransactionOutcome::Commit(Ok(ResultWithWeightInfo {
-                        result: true,
-                        weight: 0,
-                    })),
-                    Err(err) => {
-                        if err == Error::<T>::InsufficientSubsidy.into() {
-                            return TransactionOutcome::Commit(Ok(ResultWithWeightInfo {
-                                result: false,
-                                weight: 0,
-                            }));
+                    Ok(res) => {
+                        if res.result {
+                            TransactionOutcome::Commit(Ok(res))
+                        } else {
+                            TransactionOutcome::Rollback(Ok(res))
                         }
-                        TransactionOutcome::Rollback(Err(err))
                     }
+                    Err(err) => TransactionOutcome::Rollback(Err(err)),
                 }
             })
         }
@@ -1631,6 +1651,9 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
+            let mut extra_weight = 0;
+            let mut total_assets = 0;
+
             Self::mutate_pool(pool_id, |pool| {
                 if pool.pool_status == PoolStatus::Stale {
                     return Ok(());
@@ -1657,27 +1680,33 @@ mod pallet {
                             }
                         });
                     }
+
+                    total_assets = pool.assets.len();
                 }
 
                 let winning_asset_unwrapped = winning_asset?;
 
                 if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                     T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?;
-                    Self::distribute_pool_share_rewards(
+                    let distribute_weight = Self::distribute_pool_share_rewards(
                         pool,
                         pool_id,
                         base_asset.ok_or(Error::<T>::BaseAssetNotFound)?,
                         winning_asset_unwrapped,
                         &winner_payout_account,
                     );
+                    extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
+                    extra_weight = extra_weight.saturating_add(distribute_weight);
                 }
 
                 pool.pool_status = PoolStatus::Stale;
                 Ok(())
             })?;
 
-            // TODO: Return correct weight
-            Ok(0)
+            Ok(T::WeightInfo::set_pool_as_stale_without_reward_distribution(
+                total_assets.saturated_into(),
+            )
+            .saturating_add(extra_weight))
         }
     }
 }
