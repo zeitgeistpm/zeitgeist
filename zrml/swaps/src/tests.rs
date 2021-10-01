@@ -706,6 +706,83 @@ fn provided_values_len_must_equal_assets_len() {
 }
 
 #[test]
+fn set_pool_as_stale_leaves_only_correct_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM);
+        let pool_id = 0;
+
+        assert_noop!(
+            Swaps::set_pool_as_stale(
+                &MarketType::Categorical(1337),
+                pool_id,
+                &OutcomeReport::Categorical(1337),
+                &Default::default()
+            ),
+            crate::Error::<Runtime>::WinningAssetNotFound
+        );
+
+        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A {
+            cidx
+        } else {
+            0
+        };
+
+        assert_ok!(
+            Swaps::set_pool_as_stale(
+                &MarketType::Categorical(4),
+                pool_id,
+                &OutcomeReport::Categorical(cat_idx),
+                &Default::default()
+            )
+        );
+
+        assert_eq!(Swaps::pool_by_id(pool_id).unwrap().pool_status, PoolStatus::Stale);
+        assert_eq!(Swaps::pool_by_id(pool_id).unwrap().assets, vec![ASSET_A, ASSET_D]);
+    });
+}
+
+#[test]
+fn set_pool_as_stale_handles_rikiddo_pools_properly() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma);
+        let pool_id = 0;
+
+        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A {
+            cidx
+        } else {
+            0
+        };
+
+        assert_noop!(
+            Swaps::set_pool_as_stale(
+                &MarketType::Categorical(4),
+                pool_id,
+                &OutcomeReport::Categorical(cat_idx),
+                &Default::default()
+            ),
+            crate::Error::<Runtime>::InvalidStateTransition
+        );
+
+        assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
+            pool.pool_status = PoolStatus::Active;
+            Ok(())
+        }));
+
+        assert_ok!(
+            Swaps::set_pool_as_stale(
+                &MarketType::Categorical(4),
+                pool_id,
+                &OutcomeReport::Categorical(cat_idx),
+                &Default::default()
+            )
+        );
+
+        // Rikiddo instance does not exist anymore.
+        assert_storage_noop!(RikiddoSigmoidFeeMarketEma::clear(pool_id).unwrap_or(()));
+    });
+}
+
+#[test]
 fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         // CPMM

@@ -244,7 +244,10 @@ mod pallet {
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
         #[pallet::weight(T::WeightInfo::approve_market())]
-        pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResultWithPostInfo {
+        pub fn approve_market(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
             let mut extra_weight = 0;
 
@@ -481,7 +484,9 @@ mod pallet {
                         category_count,
                         mdm,
                         ScoringRule::CPMM,
-                    )?.actual_weight.unwrap_or(T::WeightInfo::create_categorical_market())
+                    )?
+                    .actual_weight
+                    .unwrap_or(T::WeightInfo::create_categorical_market())
                 }
                 MarketType::Scalar(range) => {
                     weight_market_creation = Self::create_scalar_market(
@@ -493,7 +498,9 @@ mod pallet {
                         range,
                         mdm,
                         ScoringRule::CPMM,
-                    )?.actual_weight.unwrap_or(T::WeightInfo::create_scalar_market())
+                    )?
+                    .actual_weight
+                    .unwrap_or(T::WeightInfo::create_scalar_market())
                 }
             };
 
@@ -1115,7 +1122,8 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let mut total_weight: Weight = Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+            let mut total_weight: Weight =
+                Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let mut do_resolution = || {
                 Self::resolution_manager(now, |market_id, market| {
@@ -1623,7 +1631,8 @@ mod pallet {
                                         Ok(())
                                     });
 
-                                total_weight = total_weight.saturating_add(one_read).saturating_add(one_write);
+                                total_weight =
+                                    total_weight.saturating_add(one_read).saturating_add(one_write);
 
                                 if let Err(err) = mutate_result {
                                     log::error!(
@@ -1681,7 +1690,9 @@ mod pallet {
                                             );
                                         }
 
-                                        total_weight = total_weight.saturating_add(dbweight.reads(2)).saturating_add(dbweight.writes(2));
+                                        total_weight = total_weight
+                                            .saturating_add(dbweight.reads(2))
+                                            .saturating_add(dbweight.writes(2));
                                         Ok(())
                                     });
 
@@ -1698,7 +1709,8 @@ mod pallet {
 
                                 let _ =
                                     T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
-                                total_weight = total_weight.saturating_add(one_read).saturating_add(one_write);
+                                total_weight =
+                                    total_weight.saturating_add(one_read).saturating_add(one_write);
                                 Self::deposit_event(Event::MarketInsufficientSubsidy(
                                     subsidy_info.market_id,
                                 ));
@@ -1722,7 +1734,9 @@ mod pallet {
             let mut weight_basis = 0;
             <MarketsCollectingSubsidy<T>>::mutate(
                 |e: &mut Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>| {
-                    weight_basis = T::WeightInfo::process_subsidy_collecting_markets_raw(e.len().saturated_into());
+                    weight_basis = T::WeightInfo::process_subsidy_collecting_markets_raw(
+                        e.len().saturated_into(),
+                    );
                     e.retain(retain_closure);
                 },
             );

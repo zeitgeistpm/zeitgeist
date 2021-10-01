@@ -90,8 +90,6 @@ mod pallet {
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            let pool = <Pools<T>>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
-            ensure!(pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::set_pool_as_stale(&market_type, pool_id, &outcome_report, &Default::default())?;
             Ok(())
         }
@@ -1668,9 +1666,10 @@ mod pallet {
                     return Ok(());
                 }
 
+                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
                 let base_asset = pool.base_asset;
-                let mut winning_asset =
-                    Err(DispatchError::Other(Error::<T>::WinningAssetNotFound.into()));
+                let mut winning_asset: Result<_, DispatchError> =
+                    Err(Error::<T>::WinningAssetNotFound.into());
 
                 if let MarketType::Categorical(_) = market_type {
                     let base_asset_or_default = base_asset.unwrap_or(Asset::Ztg);
@@ -1682,11 +1681,9 @@ mod pallet {
                                     winning_asset = Ok(*el);
                                     return true;
                                 };
-
-                                false
-                            } else {
-                                *el == base_asset_or_default
                             }
+
+                            *el == base_asset_or_default
                         });
                     }
 
