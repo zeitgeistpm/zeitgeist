@@ -8,7 +8,7 @@ pub mod ztg;
 
 use crate::{
     asset::Asset,
-    types::{AccountId, AccountIdTest, Balance, BlockNumber, CurrencyId},
+    types::{AccountId, AccountIdTest, Balance, BlockNumber, CurrencyId, Moment},
 };
 use frame_support::{parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;
@@ -26,17 +26,20 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
-pub const BALANCE_FRACTIONAL_DECIMAL_PLACES: u8 = {
-    let mut base = BASE;
-    let mut counter: u8 = 0;
+// Rikiddo and TokensConfig
+parameter_types! {
+    pub const BalanceFractionalDecimals: u8 = {
+        let mut base = BASE;
+        let mut counter: u8 = 0;
 
-    while base >= 10 {
-        base /= 10;
-        counter += 1;
-    }
+        while base >= 10 {
+            base /= 10;
+            counter += 1;
+        }
 
-    counter
-};
+        counter
+    };
+}
 
 // Authorized
 parameter_types! {
@@ -92,6 +95,10 @@ parameter_types! {
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;
+    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
+    pub const MinSubsidyPeriod: Moment = 60_000;
+    // 2_678_400_000 = 31 days.
+    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
@@ -111,12 +118,14 @@ parameter_types! {
 // Swaps parameters
 parameter_types! {
     pub const ExitFee: Balance = 0;
+    pub const MinAssets: u16 = 2;
     pub const MaxAssets: u16 = MaxCategories::get() + 1;
     pub const MaxInRatio: Balance = BASE / 2;
     pub const MaxOutRatio: Balance = (BASE / 3) + 1;
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
     pub const MinLiquidity: Balance = 100 * BASE;
+    pub const MinSubsidy: Balance = MinLiquidity::get();
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
 }

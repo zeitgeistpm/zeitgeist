@@ -6,10 +6,13 @@ use crate::{
 };
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure, traits::Get};
-use frame_system::ensure_signed;
 use orml_traits::MultiCurrency;
-use sp_runtime::{traits::Zero, DispatchError, SaturatedConversion};
-use zeitgeist_primitives::types::{Asset, Pool, PoolId};
+use sp_runtime::{
+    traits::{Saturating, Zero},
+    DispatchError, SaturatedConversion,
+};
+use zeitgeist_primitives::types::{Asset, Pool, PoolId, ScoringRule};
+use zrml_rikiddo::traits::RikiddoMVPallet;
 
 // Common code for `pool_exit_with_exact_pool_amount` and `pool_exit_with_exact_asset_amount` methods.
 pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, T>(
@@ -22,6 +25,7 @@ where
     F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
+    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(p.pool_id);
 
@@ -59,6 +63,7 @@ where
     F3: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
+    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(p.pool_id);
@@ -90,6 +95,7 @@ where
     F3: FnMut(Asset<T::MarketId>) -> DispatchResult,
     T: Config,
 {
+    ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let total_issuance = T::Shares::total_issuance(pool_shares_id);
 
@@ -126,36 +132,77 @@ pub(crate) fn swap_exact_amount<F1, F2, T>(
 where
     F1: FnMut() -> Result<[BalanceOf<T>; 2], DispatchError>,
     F2: FnMut(SwapEvent<T::AccountId, BalanceOf<T>>),
-    T: Config,
+    T: crate::Config,
 {
-    let who = ensure_signed(p.origin)?;
-
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
-    ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
-    ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
+    ensure!(p.pool.assets.binary_search(&p.asset_in).is_ok(), Error::<T>::AssetNotInPool);
+    ensure!(p.pool.assets.binary_search(&p.asset_out).is_ok(), Error::<T>::AssetNotInPool);
+
+    if p.pool.scoring_rule == ScoringRule::CPMM {
+        ensure!(p.pool.bound(&p.asset_in), Error::<T>::AssetNotBound);
+        ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
+    }
+
     let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
     ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
-    T::Shares::transfer(p.asset_in, &who, p.pool_account_id, asset_amount_in)?;
-    T::Shares::transfer(p.asset_out, p.pool_account_id, &who, asset_amount_out)?;
+    if p.pool.scoring_rule == ScoringRule::CPMM {
+        T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+        T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+    } else {
+        let base_asset = p.pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+
+        if p.asset_in == base_asset {
+            T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+            T::Shares::deposit(p.asset_out, &p.who, asset_amount_out)?;
+        } else if p.asset_out == base_asset {
+            // We can use the lightweight withdraw here, since event assets are not reserved.
+            T::Shares::withdraw(p.asset_in, &p.who, asset_amount_in)?;
+            T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+        } else {
+            // Just for safety, should already be checked in p.asset_amounts.
+            return Err(Error::<T>::UnsupportedTrade.into());
+        }
+    }
 
     let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+
+    // Allow little tolerance
+    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+        ensure!(
+            spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
+            Error::<T>::MathApproximation
+        );
+    } else {
+        ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+    }
+
     ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
-    ensure!(
-        spot_price_before
-            <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
-                .saturated_into(),
-        Error::<T>::MathApproximation
-    );
+
+    if p.pool.scoring_rule == ScoringRule::CPMM {
+        ensure!(
+            spot_price_before
+                <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
+                    .saturated_into(),
+            Error::<T>::MathApproximation
+        );
+    }
+
+    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+        // Currently the only allowed trades are base_currency <-> event asset. We count the
+        // volume in base_currency.
+        let base_asset = p.pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+        let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
+        T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
+    }
 
     (p.event)(SwapEvent {
         asset_amount_in,
         asset_amount_out,
         asset_bound: p.asset_bound,
-        cpep: CommonPoolEventParams { pool_id: p.pool_id, who },
+        cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         max_price: p.max_price,
     });
 
@@ -217,8 +264,8 @@ where
     pub(crate) asset_out: Asset<T::MarketId>,
     pub(crate) event: F2,
     pub(crate) max_price: BalanceOf<T>,
-    pub(crate) origin: T::Origin,
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_id: PoolId,
     pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
+    pub(crate) who: T::AccountId,
 }

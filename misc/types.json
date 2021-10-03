@@ -29,6 +29,7 @@
     "pool_id": "u128",
     "who": "AccountId"
   },
+  "Currency": "Asset",
   "CurrencyId": "Asset",
   "CurrencyIdOf": "Asset",
   "Index": "u64",
@@ -41,6 +42,7 @@
     "metadata": "Vec<u8>",
     "market_type": "MarketType",
     "period": "MarketPeriod",
+    "scoring_rule": "ScoringRule",
     "status": "MarketStatus",
     "report": "Option<Report>",
     "resolved_outcome": "Option<Outcome>",
@@ -78,6 +80,8 @@
       "Active",
       "Suspended",
       "Closed",
+      "CollectingSubsidy",
+      "InsufficientSubsidy",
       "Reported",
       "Disputed",
       "Resolved"
@@ -111,6 +115,12 @@
       "Ask"
     ]
   },
+  "ScoringRule": {
+    "_enum": [
+      "CPMM",
+      "RikiddoSigmoidFeeMarketEma"
+    ]
+  },
   "Outcome": {
     "_enum": {
       "Categorical": "u16",
@@ -119,10 +129,14 @@
   },
   "Pool": {
     "assets": "Vec<Asset>",
+    "base_currency": "Option<Asset>",
+    "market_id": "MarketId",
     "pool_status": "PoolStatus",
-    "swap_fee": "Balance",
-    "total_weight": "u128",
-    "weights": "BTreeMap<Asset, u128>"
+    "scoring_rule": "ScoringRule",
+    "swap_fee": "Option<Balance>",
+    "total_subsidy": "Option<Balance>",
+    "total_weight": "Option<u128>",
+    "weights": "Option<BTreeMap<Asset, u128>>"
   },
   "PoolAssetEvent": {
     "bound": "Balance",
@@ -138,6 +152,7 @@
   "PoolStatus": {
     "_enum": {
       "Active": null,
+      "CollectingSubsidy": null,
       "Stale": null
     }
   },
@@ -158,6 +173,10 @@
     ]
   },
   "SerdeWrapper": "Balance",
+  "SubsidyUntil": {
+    "market_id": "MarketId",
+    "period": "MarketPeriod"
+  },
   "SwapEvent": {
     "asset_amount_in": "Balance",
     "asset_amount_out": "Balance",

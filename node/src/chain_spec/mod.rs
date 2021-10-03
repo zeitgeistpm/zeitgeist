@@ -17,7 +17,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BALANCE_FRACTIONAL_DECIMAL_PLACES,
+        BalanceFractionalDecimals,
     },
     types::{AccountId, Balance, Signature},
 };
@@ -242,7 +242,7 @@ fn token_properties() -> Map<String, Value> {
     let mut properties = Map::new();
     properties.insert("ss58Format".into(), SS58Prefix::get().into());
     properties.insert("tokenSymbol".into(), "ZBP".into());
-    properties.insert("tokenDecimals".into(), BALANCE_FRACTIONAL_DECIMAL_PLACES.into());
+    properties.insert("tokenDecimals".into(), BalanceFractionalDecimals::get().into());
     properties
 }
 

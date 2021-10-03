@@ -18,7 +18,7 @@ use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
         Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        OutcomeReport,
+        OutcomeReport, ScoringRule,
     },
 };
 
@@ -34,6 +34,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     report: None,
     resolved_outcome: None,
     status: MarketStatus::Closed,
+    scoring_rule: ScoringRule::CPMM,
 };
 const DEFAULT_SET_OF_JURORS: &[(u128, Juror)] = &[
     (7, Juror { status: JurorStatus::Ok }),

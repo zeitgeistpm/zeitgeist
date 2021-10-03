@@ -6,18 +6,20 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, DustAccountTest, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
-        MaxReserves, MaxTotalWeight, MaxWeight, MinLiquidity, MinWeight, MinimumPeriod,
-        SwapsPalletId, BASE,
+        BalanceFractionalDecimals, BlockHashCount, DustAccountTest, ExistentialDeposit,
+        ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
+        MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinAssets,
+        MinLiquidity, MinSubsidy, MinWeight, MinimumPeriod, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
+use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -38,6 +40,7 @@ construct_runtime!(
         Currencies: orml_currencies::{Event<T>, Pallet},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
+        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -48,6 +51,8 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
+    type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
@@ -55,9 +60,12 @@ impl crate::Config for Runtime {
     type MaxOutRatio = MaxOutRatio;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
+    type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
+    type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
+    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type Shares = Currencies;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
@@ -132,6 +140,21 @@ impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
     type Timestamp = Timestamp;
+}
+
+impl zrml_rikiddo::Config for Runtime {
+    type Timestamp = Timestamp;
+    type Balance = Balance;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = BalanceFractionalDecimals;
+    type PoolId = PoolId;
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
 }
 
 impl pallet_timestamp::Config for Runtime {

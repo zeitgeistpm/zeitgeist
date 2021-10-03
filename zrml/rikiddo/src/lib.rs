@@ -42,16 +42,18 @@ pub use pallet::*;
 /// can run simulatenously on one chain, which can be used to ease migrations.
 ///
 /// [substrate-fixed]: https://github.com/encointer/substrate-fixed
-#[frame_support::pallet]
+
 // The allow(missing_docs) attribute seems to be necessary, because some attribute-like macros
 // from the Substrate framework generate undocumented code. It seems to be impossible to move
 // the code into an anonymous module to resolve this issue.
 #[allow(missing_docs)]
+#[frame_support::pallet]
 pub mod pallet {
     use crate::{
         traits::{FromFixedDecimal, FromFixedToDecimal, Lmsr, RikiddoMV, RikiddoMVPallet},
         types::{TimestampedVolume, UnixTimestamp},
     };
+    use alloc::vec::Vec;
     use core::{
         convert::TryFrom,
         fmt::Debug,
@@ -144,7 +146,7 @@ pub mod pallet {
     impl<T: Config<I>, I: 'static> Pallet<T, I> {}
 
     impl<T: Config<I>, I: 'static> Pallet<T, I> {
-        fn get_rikiddo(poolid: &T::PoolId) -> Result<T::Rikiddo, DispatchError> {
+        pub(crate) fn get_rikiddo(poolid: &T::PoolId) -> Result<T::Rikiddo, DispatchError> {
             if let Ok(rikiddo) = <RikiddoPerPool<T, I>>::try_get(poolid) {
                 Ok(rikiddo)
             } else {
@@ -297,6 +299,32 @@ pub mod pallet {
 
             match rikiddo.fee() {
                 Ok(fee) => Self::convert_fixed_to_balance(&fee),
+                Err(err) => {
+                    debug(&err);
+                    Err(err.into())
+                }
+            }
+        }
+
+        /// Returns the initial quantities of outstanding event outcome assets.
+        /// If 4 event outcome assets exist and this function returns 100, then the outstanding
+        /// shares for every single of those event outcome assets are 100.
+        ///
+        /// # Arguments
+        ///
+        /// * `poolid`: Id of the pool for which the outstanding shares shall be calculated.
+        /// * `num_assets`: The number of distinct outcome events.
+        /// * `subsidy`: The initial total subsidy gathered.
+        fn initial_outstanding_assets(
+            poolid: Self::PoolId,
+            num_assets: u32,
+            subsidy: Self::Balance,
+        ) -> Result<Self::Balance, DispatchError> {
+            let rikiddo = Self::get_rikiddo(&poolid)?;
+            let subsidy_fixed = Self::convert_balance_to_fixed(&subsidy)?;
+
+            match rikiddo.initial_outstanding_assets(num_assets, subsidy_fixed) {
+                Ok(quantity) => Self::convert_fixed_to_balance(&quantity),
                 Err(err) => {
                     debug(&err);
                     Err(err.into())

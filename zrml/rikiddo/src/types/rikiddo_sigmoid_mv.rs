@@ -1,9 +1,12 @@
 //! This module offers the Rikiddo core functionality. The implementation is modular in regards
 //! to the caluclation of the fee and the evaluation of the collected market volumes.
+
+extern crate alloc;
 use crate::{
     constants::INITIAL_FEE,
     traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
 };
+use alloc::vec::Vec;
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 use core::ops::{AddAssign, BitOrAssign, ShlAssign};
@@ -647,6 +650,40 @@ where
 
         let ratio_signed = convert_to_signed(ratio)?;
         convert_to_unsigned::<FS, FU>(self.fees.calculate_fee(ratio_signed)?)
+    }
+
+    /// Returns the initial quantities of outstanding event outcome assets.
+    /// If 4 event outcome assets exist and this function returns 100, then the outstanding
+    /// shares for every single of those event outcome assets are 100.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_assets`: The number of distinct outcome events.
+    /// * `subsidy`: The initial total subsidy gathered.
+    fn initial_outstanding_assets(
+        &self,
+        num_assets: u32,
+        subsidy: Self::FU,
+    ) -> Result<Self::FU, &'static str> {
+        let fee = self.fees.minimum_fee();
+        let conversion_error = "[RikidoSigmoidMV] Number of assets does not fit in FU";
+        let fee_overflow = "[RikidoSigmoidMV] Overflow during calculation: fee * num_assets";
+        let ln_error = "[RikiddoSigmoidMV] ln(num_assets) failed";
+        let denom_error =
+            "[RikidoSigmoidMV] Overflow during calculation: fee * num_assets * ln(num_assets) + 1";
+        let laste = "[RikidoSigmoidMV] Overflow during calculation: numerator / denominator";
+        let num_assets_fs = num_assets.checked_to_fixed().ok_or(conversion_error)?;
+        let fee_times_num_assets = fee.checked_mul(num_assets_fs).ok_or(fee_overflow)?;
+        // This should not fail
+        let ln_num_assets: FS = ln(num_assets_fs).map_err(|_| ln_error)?;
+        let denominator = fee_times_num_assets
+            .checked_mul(ln_num_assets)
+            .ok_or(denom_error)?
+            .checked_add(1.checked_to_fixed().ok_or(conversion_error)?)
+            .ok_or(denom_error)?;
+        convert_to_unsigned(
+            convert_to_signed::<Self::FU, FS>(subsidy)?.checked_div(denominator).ok_or(laste)?,
+        )
     }
 
     /// Returns the price of one specific asset.

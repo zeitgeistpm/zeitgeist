@@ -25,7 +25,7 @@
 //! - `buy_complete_set` - Buys a complete set of outcome assets for a market.
 //! - `cancel_pending_market` - Allows the proposer of a market that is currently in a `Proposed` state to cancel the market proposal.
 //! - `create_categorical_market` - Creates a new categorical market.
-//! - `create_market_and_deploy_assets` - Create a market, buy a complete set of the assets used
+//! - `create_cpmm_market_and_deploy_assets` - Create a market using CPMM scoring rule, buy a complete set of the assets used and deploy.
 //!    within and deploy an arbitrary amount of those that's greater than the minimum amount.
 //! - `create_scalar_market` - Creates a new scalar market.
 //! - `deploy_swap_pool_for_market` - Deploys a single "canonical" pool for a market.
@@ -72,7 +72,7 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
-        pallet_prelude::{StorageMap, ValueQuery},
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
@@ -93,6 +93,7 @@ mod pallet {
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
+            ScoringRule, SubsidyUntil,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -243,21 +244,29 @@ mod pallet {
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
         #[pallet::weight(T::WeightInfo::approve_market())]
-        pub fn approve_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub fn approve_market(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
+            let mut extra_weight = 0;
 
-            let market = T::MarketCommons::market(&market_id)?;
-
-            let creator = market.creator;
-
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
             T::MarketCommons::mutate_market(&market_id, |m| {
-                m.status = MarketStatus::Active;
+                ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+
+                if m.scoring_rule == ScoringRule::CPMM {
+                    m.status = MarketStatus::Active;
+                } else {
+                    m.status = MarketStatus::CollectingSubsidy;
+                    extra_weight = Self::start_subsidy(m, market_id)?;
+                }
+
+                CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &m.creator, T::AdvisoryBond::get());
                 Ok(())
             })?;
 
             Self::deposit_event(Event::MarketApproved(market_id));
-            Ok(())
+            Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
         }
 
         /// Buys the complete set of outcome shares of a market. For example, when calling this
@@ -362,12 +371,17 @@ mod pallet {
             creation: MarketCreation,
             categories: u16,
             mdm: MarketDisputeMechanism<T::AccountId>,
-        ) -> DispatchResult {
+            scoring_rule: ScoringRule,
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
 
             ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
             ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+
+            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                Self::ensure_market_start_is_in_time(&period)?;
+            }
 
             // Require sha3-384 as multihash.
             let MultiHash::Sha3_384(multihash) = metadata;
@@ -377,7 +391,12 @@ mod pallet {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
                     CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
-                    MarketStatus::Active
+
+                    if scoring_rule == ScoringRule::CPMM {
+                        MarketStatus::Active
+                    } else {
+                        MarketStatus::CollectingSubsidy
+                    }
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
@@ -397,13 +416,19 @@ mod pallet {
                 period,
                 report: None,
                 resolved_outcome: None,
+                scoring_rule,
                 status,
             };
-
             let market_id = T::MarketCommons::push_market(market.clone())?;
+            let mut extra_weight = 0;
+
+            if market.status == MarketStatus::CollectingSubsidy {
+                extra_weight = Self::start_subsidy(&market, market_id)?;
+            }
+
             Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
-            Ok(())
+            Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
 
         /// This function combines the creation of a market, the buying of a complete set of
@@ -434,7 +459,7 @@ mod pallet {
             .saturating_add(5_000_000_000.saturating_mul(pool_join_additional_assets.len() as u64))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
-        pub fn create_market_and_deploy_assets(
+        pub fn create_cpmm_market_and_deploy_assets(
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -450,8 +475,7 @@ mod pallet {
             let weight_market_creation;
             let _ = match assets {
                 MarketType::Categorical(category_count) => {
-                    weight_market_creation = T::WeightInfo::create_categorical_market();
-                    Self::create_categorical_market(
+                    weight_market_creation = Self::create_categorical_market(
                         origin.clone(),
                         oracle,
                         period,
@@ -459,11 +483,13 @@ mod pallet {
                         creation,
                         category_count,
                         mdm,
+                        ScoringRule::CPMM,
                     )?
+                    .actual_weight
+                    .unwrap_or_else(T::WeightInfo::create_categorical_market)
                 }
                 MarketType::Scalar(range) => {
-                    weight_market_creation = T::WeightInfo::create_scalar_market();
-                    Self::create_scalar_market(
+                    weight_market_creation = Self::create_scalar_market(
                         origin.clone(),
                         oracle,
                         period,
@@ -471,7 +497,10 @@ mod pallet {
                         creation,
                         range,
                         mdm,
+                        ScoringRule::CPMM,
                     )?
+                    .actual_weight
+                    .unwrap_or_else(T::WeightInfo::create_scalar_market)
                 }
             };
 
@@ -521,11 +550,16 @@ mod pallet {
             creation: MarketCreation,
             outcome_range: RangeInclusive<u128>,
             mdm: MarketDisputeMechanism<T::AccountId>,
-        ) -> DispatchResult {
+            scoring_rule: ScoringRule,
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
 
             ensure!(outcome_range.start() < outcome_range.end(), "Invalid range provided.");
+
+            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                Self::ensure_market_start_is_in_time(&period)?;
+            }
 
             // Require sha3-384 as multihash.
             let MultiHash::Sha3_384(multihash) = metadata;
@@ -535,7 +569,12 @@ mod pallet {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
                     CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
-                    MarketStatus::Active
+
+                    if scoring_rule == ScoringRule::CPMM {
+                        MarketStatus::Active
+                    } else {
+                        MarketStatus::CollectingSubsidy
+                    }
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
@@ -556,12 +595,18 @@ mod pallet {
                 report: None,
                 resolved_outcome: None,
                 status,
+                scoring_rule,
             };
-
             let market_id = T::MarketCommons::push_market(market.clone())?;
+            let mut extra_weight = 0;
+
+            if market.status == MarketStatus::CollectingSubsidy {
+                extra_weight = Self::start_subsidy(&market, market_id)?;
+            }
+
             Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
-            Ok(())
+            Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
         }
 
         /// Deploys a new pool for the market. This pallet keeps track of a single
@@ -581,15 +626,25 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
 
             // ensure a swap pool does not already exist
             ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
 
             let mut assets = Self::outcome_assets(market_id, &market);
-            assets.push(Asset::Ztg);
+            let base_asset = Asset::Ztg;
+            assets.push(base_asset);
 
-            let pool_id = T::Swaps::create_pool(sender, assets, market_id, Zero::zero(), weights)?;
+            let pool_id = T::Swaps::create_pool(
+                sender,
+                assets,
+                Some(base_asset),
+                market_id,
+                ScoringRule::CPMM,
+                Some(Zero::zero()),
+                Some(weights),
+            )?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             Ok(())
@@ -822,6 +877,7 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
 
             let market_account = Self::market_account(market_id);
@@ -918,8 +974,14 @@ mod pallet {
         /// The maximum number of categories available for categorical markets.
         type MaxCategories: Get<u16>;
 
+        /// The shortest period of collecting subsidy for a Rikiddo market.
+        type MaxSubsidyPeriod: Get<MomentOf<Self>>;
+
         /// The minimum number of categories available for categorical markets.
         type MinCategories: Get<u16>;
+
+        /// The shortest period of collecting subsidy for a Rikiddo market.
+        type MinSubsidyPeriod: Get<MomentOf<Self>>;
 
         /// The maximum number of disputes allowed on any single market.
         type MaxDisputes: Get<u32>;
@@ -978,22 +1040,32 @@ mod pallet {
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
+        /// An operation is requested that is unsupported for the given scoring rule.
+        InvalidScoringRule,
         /// Sender does not have enough balance to buy shares.
         NotEnoughBalance,
         /// The outcome being reported is out of range.
         OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
-        /// A reported market was expected
-        MarketIsNotReported,
-        /// A resolved market was expected
-        MarketIsNotResolved,
-        /// Market was expected to be closed
-        MarketIsNotClosed,
-        /// Market was expected to be active
+        /// Market was expected to be active.
         MarketIsNotActive,
+        /// Market was expected to be closed.
+        MarketIsNotClosed,
+        /// A market in subsidy collection phase was expected.
+        MarketIsNotCollectingSubsidy,
+        /// A proposed market was expected.
+        MarketIsNotProposed,
+        /// A reported market was expected.
+        MarketIsNotReported,
+        /// A resolved market was expected.
+        MarketIsNotResolved,
         /// The market is not reported on.
         MarketNotReported,
+        /// The point in time when the market becomes active is too soon.
+        MarketStartTooSoon,
+        /// The point in time when the market becomes active is too late.
+        MarketStartTooLate,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
         /// The number of categories for a categorical market is too low
@@ -1028,6 +1100,10 @@ mod pallet {
             Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             <T as frame_system::Config>::AccountId,
         ),
+        /// A market was started after gathering enough subsidy. \[market_id\]
+        MarketStartedWithSubsidy(MarketIdOf<T>),
+        ///A market was discarded after failing to gather enough subsidy. \[market_id\]
+        MarketInsufficientSubsidy(MarketIdOf<T>),
         /// A pending market has been cancelled. \[market_id, creator\]
         MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_outcome\]
@@ -1046,20 +1122,26 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let mut total_weight: Weight = 0;
-            let rslt = Self::resolution_manager(now, |market_id, market| {
-                let weight = Self::on_resolution(market_id, market)?;
-                total_weight = total_weight.saturating_add(weight);
-                Ok(())
-            });
-            with_transaction(|| match rslt {
-                Err(err) => {
-                    Self::deposit_event(Event::BadOnInitialize);
-                    log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
-                    TransactionOutcome::Rollback(())
+            let mut total_weight: Weight =
+                Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+
+            with_transaction(|| {
+                let output = Self::resolution_manager(now, |market_id, market| {
+                    let weight = Self::on_resolution(market_id, market)?;
+                    total_weight = total_weight.saturating_add(weight);
+                    Ok(())
+                });
+
+                match output {
+                    Err(err) => {
+                        Self::deposit_event(Event::BadOnInitialize);
+                        log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
+                        TransactionOutcome::Rollback(())
+                    }
+                    Ok(_) => TransactionOutcome::Commit(()),
                 }
-                Ok(_) => TransactionOutcome::Commit(()),
             });
+
             total_weight
         }
     }
@@ -1089,6 +1171,13 @@ mod pallet {
     pub type MarketIdsPerReportBlock<T: Config> =
         StorageMap<_, Twox64Concat, T::BlockNumber, Vec<MarketIdOf<T>>, ValueQuery>;
 
+    /// Contains a list of all markets that are currently collecting subsidy and the deadline.
+    // All the values are "cached" here. Results in data duplication, but speeds up the iteration
+    // over every market significantly (otherwise 25µs per relevant market per block).
+    #[pallet::storage]
+    pub type MarketsCollectingSubsidy<T: Config> =
+        StorageValue<_, Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>, ValueQuery>;
+
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
@@ -1112,7 +1201,7 @@ mod pallet {
         }
 
         pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
-            T::PalletId::get().into_sub_account(market_id)
+            T::PalletId::get().into_sub_account(market_id.saturated_into::<u128>())
         }
 
         /// Clears this market from being stored for automatic resolution.
@@ -1144,9 +1233,10 @@ mod pallet {
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance,);
+            ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance);
 
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
 
             let market_account = Self::market_account(market_id);
@@ -1223,6 +1313,12 @@ mod pallet {
             Ok(())
         }
 
+        #[inline]
+        fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
+            ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
+            Ok(())
+        }
+
         // Must be `MarketStatus::Active` and period within range
         fn ensure_market_is_active(
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
@@ -1259,9 +1355,32 @@ mod pallet {
             Ok(())
         }
 
-        #[inline]
-        fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
-            ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
+        fn ensure_market_start_is_in_time(
+            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        ) -> DispatchResult {
+            let interval;
+
+            match period {
+                MarketPeriod::Block(range) => {
+                    let interval_blocks: u128 = range
+                        .start
+                        .saturating_sub(<frame_system::Pallet<T>>::block_number())
+                        .saturated_into();
+                    interval = interval_blocks.saturating_mul(MILLISECS_PER_BLOCK.into());
+                }
+                MarketPeriod::Timestamp(range) => {
+                    interval = range.start.saturating_sub(T::MarketCommons::now()).saturated_into();
+                }
+            }
+
+            ensure!(
+                <MomentOf<T>>::saturated_from(interval) >= T::MinSubsidyPeriod::get(),
+                <Error<T>>::MarketStartTooSoon
+            );
+            ensure!(
+                <MomentOf<T>>::saturated_from(interval) <= T::MaxSubsidyPeriod::get(),
+                <Error<T>>::MarketStartTooLate
+            );
             Ok(())
         }
 
@@ -1339,6 +1458,7 @@ mod pallet {
         ) -> Result<u64, DispatchError> {
             CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &market.creator, T::ValidityBond::get());
 
+            let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
             let resolved_outcome = match market.mdm {
                 MarketDisputeMechanism::Authorized(_) => {
@@ -1426,8 +1546,8 @@ mod pallet {
                 }
                 _ => (),
             };
-
-            Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
+            let to_stale_weight = Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
+            total_weight = total_weight.saturating_add(to_stale_weight);
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             let mut total_accounts = 0u32;
@@ -1447,13 +1567,177 @@ mod pallet {
                 m.resolved_outcome = Some(resolved_outcome);
                 Ok(())
             })?;
-            Ok(Self::calculate_internal_resolve_weight(
+            Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
                 market,
                 total_accounts,
                 total_asset_accounts,
                 total_categories,
                 disputes.len().saturated_into(),
-            ))
+            )))
+        }
+
+        pub(crate) fn process_subsidy_collecting_markets(
+            current_block: T::BlockNumber,
+            current_time: MomentOf<T>,
+        ) -> Weight {
+            let mut total_weight = 0;
+            let dbweight = T::DbWeight::get();
+            let one_read = T::DbWeight::get().reads(1);
+            let one_write = T::DbWeight::get().writes(1);
+
+            let retain_closure =
+                |subsidy_info: &SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>| {
+                    let market_ready;
+
+                    // Determine whether the current market is past it's subsidy phase
+                    match &subsidy_info.period {
+                        MarketPeriod::Block(period) => {
+                            market_ready = period.start <= current_block;
+                        }
+                        MarketPeriod::Timestamp(period) => {
+                            market_ready = period.start <= current_time;
+                        }
+                    }
+
+                    if market_ready {
+                        let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
+                        total_weight.saturating_add(one_read);
+
+                        if let Err(err) = pool_id {
+                            log::error!(
+                                "[PredictionMarkets] Cannot find pool associated to market.
+                            market_id: {:?}, error: {:?}",
+                                pool_id,
+                                err
+                            );
+                            return true;
+                        }
+
+                        let end_subsidy_result =
+                            T::Swaps::end_subsidy_phase(pool_id.unwrap_or(u128::MAX));
+
+                        if let Ok(result) = end_subsidy_result {
+                            total_weight = total_weight.saturating_add(result.weight);
+
+                            if result.result {
+                                // Sufficient subsidy, activate market.
+                                let mutate_result =
+                                    T::MarketCommons::mutate_market(&subsidy_info.market_id, |m| {
+                                        m.status = MarketStatus::Active;
+                                        Ok(())
+                                    });
+
+                                total_weight =
+                                    total_weight.saturating_add(one_read).saturating_add(one_write);
+
+                                if let Err(err) = mutate_result {
+                                    log::error!(
+                                        "[PredictionMarkets] Cannot find market associated to \
+                                         market id.
+                                    market_id: {:?}, error: {:?}",
+                                        subsidy_info.market_id,
+                                        err
+                                    );
+                                    return true;
+                                }
+
+                                Self::deposit_event(Event::MarketStartedWithSubsidy(
+                                    subsidy_info.market_id,
+                                ));
+                            } else {
+                                // Insufficient subsidy, cleanly remove pool and close market.
+                                let destroy_result = T::Swaps::destroy_pool_in_subsidy_phase(
+                                    pool_id.unwrap_or(u128::MAX),
+                                );
+
+                                if let Err(err) = destroy_result {
+                                    log::error!(
+                                        "[PredictionMarkets] Cannot destroy pool with missing \
+                                         subsidy.
+                                    market_id: {:?}, error: {:?}",
+                                        subsidy_info.market_id,
+                                        err
+                                    );
+                                    return true;
+                                } else if let Ok(weight) = destroy_result {
+                                    total_weight = total_weight.saturating_add(weight);
+                                }
+
+                                let market_result =
+                                    T::MarketCommons::mutate_market(&subsidy_info.market_id, |m| {
+                                        m.status = MarketStatus::InsufficientSubsidy;
+
+                                        // Unreserve funds reserved during market creation
+                                        if m.creation == MarketCreation::Permissionless {
+                                            let required_bond =
+                                                T::ValidityBond::get() + T::OracleBond::get();
+                                            CurrencyOf::<T>::unreserve_named(
+                                                &RESERVE_ID,
+                                                &m.creator,
+                                                required_bond,
+                                            );
+                                        } else if m.creation == MarketCreation::Advised {
+                                            // AdvisoryBond was already returned when the market
+                                            // was approved. Approval is inevitable to reach this.
+                                            CurrencyOf::<T>::unreserve_named(
+                                                &RESERVE_ID,
+                                                &m.creator,
+                                                T::OracleBond::get(),
+                                            );
+                                        }
+
+                                        total_weight = total_weight
+                                            .saturating_add(dbweight.reads(2))
+                                            .saturating_add(dbweight.writes(2));
+                                        Ok(())
+                                    });
+
+                                if let Err(err) = market_result {
+                                    log::error!(
+                                        "[PredictionMarkets] Cannot find market associated to \
+                                         market id.
+                                    market_id: {:?}, error: {:?}",
+                                        subsidy_info.market_id,
+                                        err
+                                    );
+                                    return true;
+                                }
+
+                                let _ =
+                                    T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
+                                total_weight =
+                                    total_weight.saturating_add(one_read).saturating_add(one_write);
+                                Self::deposit_event(Event::MarketInsufficientSubsidy(
+                                    subsidy_info.market_id,
+                                ));
+                            }
+
+                            return false;
+                        } else if let Err(err) = end_subsidy_result {
+                            log::error!(
+                                "[PredictionMarkets] An error occured during end of subsidy phase.
+                        pool_id: {:?}, market_id: {:?}, error: {:?}",
+                                pool_id,
+                                subsidy_info.market_id,
+                                err
+                            );
+                        }
+                    }
+
+                    true
+                };
+
+            let mut weight_basis = 0;
+            <MarketsCollectingSubsidy<T>>::mutate(
+                |e: &mut Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>| {
+                    weight_basis = T::WeightInfo::process_subsidy_collecting_markets_raw(
+                        e.len().saturated_into(),
+                    );
+                    e.retain(retain_closure);
+                },
+            );
+
+            weight_basis.saturating_add(total_weight)
         }
 
         fn remove_last_dispute_from_market_ids_per_dispute_block(
@@ -1522,14 +1806,55 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
-        ) -> DispatchResult {
+        ) -> Result<Weight, DispatchError> {
             let pool_id = if let Ok(el) = T::MarketCommons::market_pool(market_id) {
                 el
             } else {
-                return Ok(());
+                return Ok(T::DbWeight::get().reads(1));
             };
-            let _ = T::Swaps::set_pool_as_stale(&market.market_type, pool_id, outcome_report);
-            Ok(())
+            let market_account = Self::market_account(*market_id);
+            let weight = T::Swaps::set_pool_as_stale(
+                &market.market_type,
+                pool_id,
+                outcome_report,
+                &market_account,
+            )?;
+            Ok(weight.saturating_add(T::DbWeight::get().reads(2)))
+        }
+
+        // Creates a pool for the market and registers the market in the list of markets
+        // currently collecting subsidy.
+        pub(crate) fn start_subsidy(
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            market_id: MarketIdOf<T>,
+        ) -> Result<Weight, DispatchError> {
+            ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
+            ensure!(
+                market.status == MarketStatus::CollectingSubsidy,
+                Error::<T>::MarketIsNotCollectingSubsidy
+            );
+
+            let mut assets = Self::outcome_assets(market_id, market);
+            let base_asset = Asset::Ztg;
+            assets.push(base_asset);
+            let total_assets = assets.len();
+
+            let pool_id = T::Swaps::create_pool(
+                market.creator.clone(),
+                assets,
+                Some(base_asset),
+                market_id,
+                market.scoring_rule,
+                None,
+                None,
+            )?;
+
+            T::MarketCommons::insert_market_pool(market_id, pool_id);
+            <MarketsCollectingSubsidy<T>>::mutate(|markets| {
+                markets.push(SubsidyUntil { market_id, period: market.period.clone() })
+            });
+
+            Ok(T::WeightInfo::start_subsidy(total_assets.saturated_into()))
         }
 
         fn validate_dispute(

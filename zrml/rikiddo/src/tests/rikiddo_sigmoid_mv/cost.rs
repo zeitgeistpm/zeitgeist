@@ -85,7 +85,7 @@ fn rikiddo_cost_function_correct_result() -> Result<(), &'static str> {
         result_fixed_f64,
         result_f64,
         difference_abs,
-        max_allowed_error(64)
+        0.0000001f64
     );
 
     // Evaluate the cost using the default strategy
@@ -100,7 +100,7 @@ fn rikiddo_cost_function_correct_result() -> Result<(), &'static str> {
         result_fixed_f64,
         result_f64,
         difference_abs,
-        max_allowed_error(64)
+        0.0000001f64
     );
     Ok(())
 }
