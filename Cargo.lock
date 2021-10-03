@@ -12314,7 +12314,6 @@ dependencies = [
  "zrml-court",
  "zrml-liquidity-mining",
  "zrml-market-commons",
- "zrml-orderbook-v1",
  "zrml-prediction-markets",
  "zrml-rikiddo",
  "zrml-simple-disputes",
