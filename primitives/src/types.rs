@@ -1,10 +1,10 @@
 pub use crate::{
-    asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::Pool,
+    asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::*,
     pool_status::PoolStatus, serde_wrapper::*,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
-use frame_support::dispatch::{Decode, Encode};
+use frame_support::dispatch::{Decode, Encode, Weight};
 use sp_runtime::{
     generic,
     traits::{IdentifyAccount, Verify},
@@ -90,3 +90,16 @@ pub type BlockTest<R> = frame_system::mocking::MockBlock<R>;
 
 #[cfg(feature = "std")]
 pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrinsic<R>;
+
+#[derive(
+    Clone,
+    Eq,
+    PartialEq,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    sp_runtime::RuntimeDebug,
+)]
+pub struct ResultWithWeightInfo<R> {
+    pub result: R,
+    pub weight: Weight,
+}

@@ -37,7 +37,9 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
+use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
     nimbus_primitives::{CanAuthor, NimbusId},
@@ -78,6 +80,7 @@ type Executive = frame_executive::Executive<
     AllPallets,
 >;
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
+type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 type SignedExtra = (
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
@@ -125,13 +128,13 @@ macro_rules! create_zeitgeist_runtime {
                 // Zeitgeist
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 40,
                 Orderbook: zrml_orderbook_v1::{Call, Event<T>, Pallet, Storage} = 41,
-
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 42,
                 Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 43,
                 Court: zrml_court::{Event<T>, Pallet, Storage} = 44,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 45,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 46,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
+                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 48,
 
                 $($additional_pallets)*
             }
@@ -510,7 +513,9 @@ impl zrml_prediction_markets::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
+    type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MinCategories = MinCategories;
+    type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
@@ -522,6 +527,21 @@ impl zrml_prediction_markets::Config for Runtime {
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
 }
 
+impl zrml_rikiddo::Config<RikiddoSigmoidFeeMarketVolumeEma> for Runtime {
+    type Timestamp = Timestamp;
+    type Balance = Balance;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = BalanceFractionalDecimals;
+    type PoolId = PoolId;
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
+}
+
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
@@ -531,16 +551,21 @@ impl zrml_simple_disputes::Config for Runtime {
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
     type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
+    type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
+    type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
+    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
@@ -842,16 +867,32 @@ pub fn native_version() -> NativeVersion {
 
 pub struct DustRemovalWhitelist;
 
-impl Contains<AccountId> for DustRemovalWhitelist {
+impl Contains<AccountId> for DustRemovalWhitelist
+where
+    frame_support::PalletId: AccountIdConversion<AccountId>,
+{
     fn contains(ai: &AccountId) -> bool {
         let pallets = vec![
-            AuthorizedPalletId::get().into_account(),
-            CourtPalletId::get().into_account(),
-            LiquidityMiningPalletId::get().into_account(),
-            PmPalletId::get().into_account(),
-            SimpleDisputesPalletId::get().into_account(),
-            SwapsPalletId::get().into_account(),
+            AuthorizedPalletId::get(),
+            CourtPalletId::get(),
+            LiquidityMiningPalletId::get(),
+            PmPalletId::get(),
+            SimpleDisputesPalletId::get(),
+            SwapsPalletId::get(),
         ];
-        pallets.contains(ai)
+
+        if let Some(pallet_id) = frame_support::PalletId::try_from_sub_account::<u128>(ai) {
+            return pallets.contains(&pallet_id.0);
+        }
+
+        for pallet_id in pallets {
+            let pallet_acc: AccountId = pallet_id.into_account();
+
+            if pallet_acc == *ai {
+                return true;
+            }
+        }
+
+        false
     }
 }

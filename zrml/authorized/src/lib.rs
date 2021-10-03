@@ -185,6 +185,8 @@ pub(crate) fn market_mock<T>(
 where
     T: crate::Config,
 {
+    use zeitgeist_primitives::types::ScoringRule;
+
     zeitgeist_primitives::types::Market {
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
@@ -196,6 +198,7 @@ where
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
         report: None,
         resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
         status: zeitgeist_primitives::types::MarketStatus::Closed,
     }
 }

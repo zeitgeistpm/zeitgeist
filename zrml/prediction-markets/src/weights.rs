@@ -51,11 +51,13 @@ pub trait WeightInfoZeitgeist {
     fn internal_resolve_scalar_reported() -> Weight;
     fn internal_resolve_scalar_disputed(d: u32) -> Weight;
     fn on_initialize_resolve_overhead() -> Weight;
+    fn process_subsidy_collecting_markets_raw(a: u32) -> Weight;
     fn redeem_shares_categorical() -> Weight;
     fn redeem_shares_scalar() -> Weight;
     fn reject_market() -> Weight;
     fn report() -> Weight;
     fn sell_complete_set(a: u32) -> Weight;
+    fn start_subsidy(_a: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -175,6 +177,13 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     fn on_initialize_resolve_overhead() -> Weight {
         (8_546_000 as Weight).saturating_add(T::DbWeight::get().reads(2 as Weight))
     }
+    fn process_subsidy_collecting_markets_raw(a: u32) -> Weight {
+        (64_449_000 as Weight)
+            // Standard Error: 109_000
+            .saturating_add((1_599_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
     fn redeem_shares_categorical() -> Weight {
         (98_067_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
@@ -203,5 +212,10 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+    }
+    fn start_subsidy(_a: u32) -> Weight {
+        (562_360_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(4 as Weight))
+            .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
 }

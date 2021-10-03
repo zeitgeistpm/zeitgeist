@@ -223,4 +223,9 @@ where
 
         Ok(result)
     }
+
+    /// Return the minimum fee
+    fn minimum_fee(&self) -> Self::FS {
+        self.config.min_revenue
+    }
 }

@@ -22,7 +22,9 @@ pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.10", git 
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
+substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
 zrml-prediction-markets-runtime-api = { features = ["std"], optional = true, path = "./runtime-api" }
+zrml-rikiddo = { optional = true, path = "../rikiddo" }
 zrml-swaps = { optional = true, path = "../swaps" }
 
 [dev-dependencies]
@@ -38,7 +40,9 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
+    "substrate-fixed",
     "zrml-prediction-markets-runtime-api",
+    "zrml-rikiddo",
     "zrml-swaps",
 ]
 runtime-benchmarks = [

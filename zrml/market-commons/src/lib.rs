@@ -165,6 +165,14 @@ mod pallet {
             <MarketPool<T>>::insert(market_id, pool_id);
         }
 
+        fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult {
+            if !<Markets<T>>::contains_key(market_id) {
+                return Err(Error::<T>::MarketDoesNotExist.into());
+            }
+            <MarketPool<T>>::remove(market_id);
+            Ok(())
+        }
+
         fn market_pool(market_id: &Self::MarketId) -> Result<PoolId, DispatchError> {
             <MarketPool<T>>::try_get(market_id)
                 .map_err(|_err| Error::<T>::MarketPoolDoesNotExist.into())

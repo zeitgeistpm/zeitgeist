@@ -14,21 +14,24 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
-        AdvisoryBond, AuthorizedPalletId, BlockHashCount, CourtCaseDuration, CourtPalletId,
-        DisputeBond, DisputeFactor, DustAccountTest, ExistentialDeposit, ExistentialDeposits,
-        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories,
-        MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight,
-        MinCategories, MinLiquidity, MinWeight, MinimumPeriod, OracleBond, PmPalletId,
-        ReportingPeriod, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId,
-        ValidityBond, BASE,
+        AdvisoryBond, AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount,
+        CourtCaseDuration, CourtPalletId, DisputeBond, DisputeFactor, DustAccountTest,
+        ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
+        LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
+        MaxReserves, MaxSubsidyPeriod, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
+        MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OracleBond,
+        PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
+        TreasuryPalletId, ValidityBond, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
+use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
@@ -60,6 +63,7 @@ construct_runtime!(
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
+        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
@@ -81,7 +85,9 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
+    type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MinCategories = MinCategories;
+    type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
@@ -192,6 +198,21 @@ impl zrml_market_commons::Config for Runtime {
     type Timestamp = Timestamp;
 }
 
+impl zrml_rikiddo::Config for Runtime {
+    type Timestamp = Timestamp;
+    type Balance = Balance;
+    type FixedTypeU = FixedU128<U33>;
+    type FixedTypeS = FixedI128<U33>;
+    type BalanceFractionalDecimals = BalanceFractionalDecimals;
+    type PoolId = PoolId;
+    type Rikiddo = RikiddoSigmoidMV<
+        Self::FixedTypeU,
+        Self::FixedTypeS,
+        FeeSigmoid<Self::FixedTypeS>,
+        EmaMarketVolume<Self::FixedTypeU>,
+    >;
+}
+
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
@@ -201,6 +222,8 @@ impl zrml_simple_disputes::Config for Runtime {
 impl zrml_swaps::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
+    type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
+    type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
@@ -208,9 +231,12 @@ impl zrml_swaps::Config for Runtime {
     type MaxOutRatio = MaxOutRatio;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
+    type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
+    type MinSubsidy = MinSubsidy;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
+    type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type Shares = Currency;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }

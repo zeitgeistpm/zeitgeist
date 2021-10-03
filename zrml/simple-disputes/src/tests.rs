@@ -9,7 +9,7 @@ use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
         Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, Report,
+        MarketType, OutcomeReport, Report, ScoringRule,
     },
 };
 
@@ -24,6 +24,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     period: MarketPeriod::Block(0..100),
     report: None,
     resolved_outcome: None,
+    scoring_rule: ScoringRule::CPMM,
     status: MarketStatus::Disputed,
 };
 

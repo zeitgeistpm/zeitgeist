@@ -1,9 +1,10 @@
 use frame_support::assert_err;
-use substrate_fixed::{types::extra::U64, FixedI128};
+use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128};
 
-use super::{ln_exp_sum, max_allowed_error, Rikiddo};
+use super::{initial_outstanding_assets, ln_exp_sum, Rikiddo};
 use crate::{
     constants::INITIAL_FEE,
+    traits::{Fee, Lmsr},
     types::{
         convert_to_signed, EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoFormulaComponents,
     },
@@ -20,6 +21,26 @@ fn rikiddo_default_does_not_panic() -> Result<(), &'static str> {
     );
     assert_eq!(default_rikiddo, rikiddo);
     Ok(())
+}
+
+#[test]
+fn rikiddo_initial_outstanding_assets_returns_correct_result() {
+    let rikiddo = Rikiddo::default();
+    let num_assets = 4u32;
+    let subsidy = 1000u32;
+    let outstanding_assets =
+        rikiddo.initial_outstanding_assets(num_assets, subsidy.to_fixed()).unwrap();
+    let outstanding_assets_f64 =
+        initial_outstanding_assets(num_assets, subsidy.into(), rikiddo.fees.minimum_fee().to_num());
+    let difference_abs = (outstanding_assets_f64 - outstanding_assets.to_num::<f64>()).abs();
+    assert!(
+        difference_abs <= 0.000001f64,
+        "\nFixed result: {}\nFloat result: {}\nDifference: {}\nMax_Allowed_Difference: {}",
+        outstanding_assets,
+        outstanding_assets_f64,
+        difference_abs,
+        0.000001f64
+    );
 }
 
 #[test]
@@ -100,7 +121,7 @@ fn rikiddo_ln_sum_exp_strategies_return_correct_results() -> Result<(), &'static
         result_fixed_f64,
         result_f64,
         difference_abs,
-        max_allowed_error(64)
+        0.000001f64
     );
 
     Ok(())
