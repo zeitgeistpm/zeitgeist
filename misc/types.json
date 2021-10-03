@@ -129,7 +129,7 @@
   },
   "Pool": {
     "assets": "Vec<Asset>",
-    "base_currency": "Option<Asset>",
+    "base_asset": "Option<Asset>",
     "market_id": "MarketId",
     "pool_status": "PoolStatus",
     "scoring_rule": "ScoringRule",

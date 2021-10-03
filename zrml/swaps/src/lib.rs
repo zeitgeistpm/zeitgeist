@@ -871,37 +871,40 @@ mod pallet {
     {
         /// Share holder rewards were distributed. \[pool_id, num_accounts_rewarded, amount\]
         DistributeShareHolderRewards(PoolId, u64, BalanceOf<T>),
-        /// A new pool has been created. \[account\]
-        PoolCreate(CommonPoolEventParams<<T as frame_system::Config>::AccountId>),
-        /// Someone has exited a pool. \[account, amount\]
+        /// A new pool has been created. \[CommonPoolEventParams, pool\]
+        PoolCreate(
+            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
+            Pool<BalanceOf<T>, T::MarketId>,
+        ),
+        /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// Someone has (partially) exited a pool by removing subsidy. \[account, amount\]
         PoolExitSubsidy(PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// Exits a pool given an exact amount of an asset. \[account, amount\]
+        /// Exits a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolExitWithExactAssetAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
-        /// Exits a pool given an exact pool's amount. \[account, amount\]
+        /// Exits a pool given an exact pool's amount. \[PoolAssetEvent\]
         PoolExitWithExactPoolAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
-        /// Someone has joined a pool. \[account, amount\]
+        /// Someone has joined a pool. \[PoolAssetsEvent\]
         PoolJoin(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// Someone has joined a pool by providing subsidy. \[account, amount\]
         PoolJoinSubsidy(PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// Joins a pool given an exact amount of an asset. \[account, amount\]
+        /// Joins a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolJoinWithExactAssetAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
-        /// Joins a pool given an exact pool's amount. \[account, amount\]
+        /// Joins a pool given an exact pool's amount. \[PoolAssetEvent\]
         PoolJoinWithExactPoolAmount(
             PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>,
         ),
         /// Total subsidy collected for a pool. \[pool_id, subsidy\]
         SubsidyCollected(PoolId, BalanceOf<T>),
-        /// An exact amount of an asset is entering the pool. \[account, amount\]
+        /// An exact amount of an asset is entering the pool. \[SwapEvent\]
         SwapExactAmountIn(SwapEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// An exact amount of an asset is leaving the pool. \[account, amount\]
+        /// An exact amount of an asset is leaving the pool. \[SwapEvent\]
         SwapExactAmountOut(SwapEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
     }
 
@@ -1304,6 +1307,7 @@ mod pallet {
                 let _ = T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
             }
 
+<<<<<<< HEAD
             // Sort assets for future binary search, for example to check if an asset is included.
             let sort_assets = assets.as_mut_slice();
             sort_assets.sort();
@@ -1332,12 +1336,27 @@ mod pallet {
                     },
                     weights: if scoring_rule == ScoringRule::CPMM { Some(map) } else { None },
                 }),
+=======
+            ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
+            let pool = Pool {
+                assets,
+                market_id,
+                pool_status: PoolStatus::Active,
+                swap_fee,
+                total_weight,
+                weights: map,
+            };
+
+            <Pools<T>>::insert(
+                next_pool_id,
+                Some(pool.clone()),
+>>>>>>> 69e3080 (Add pool to CreatePool event)
             );
 
             Self::deposit_event(Event::PoolCreate(CommonPoolEventParams {
                 pool_id: next_pool_id,
                 who,
-            }));
+            }, pool));
 
             Ok(next_pool_id)
         }
