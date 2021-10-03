@@ -1256,7 +1256,6 @@ mod pallet {
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
         /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
         /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
-        #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
             mut assets: Vec<Asset<T::MarketId>>,
@@ -1307,56 +1306,39 @@ mod pallet {
                 let _ = T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
             }
 
-<<<<<<< HEAD
             // Sort assets for future binary search, for example to check if an asset is included.
             let sort_assets = assets.as_mut_slice();
             sort_assets.sort();
-            <Pools<T>>::insert(
-                next_pool_id,
-                Some(Pool {
-                    assets,
-                    base_asset,
-                    market_id,
-                    pool_status: if scoring_rule == ScoringRule::CPMM {
-                        PoolStatus::Active
-                    } else {
-                        PoolStatus::CollectingSubsidy
-                    },
-                    scoring_rule,
-                    swap_fee,
-                    total_subsidy: if scoring_rule == ScoringRule::CPMM {
-                        None
-                    } else {
-                        Some(BalanceOf::<T>::zero())
-                    },
-                    total_weight: if scoring_rule == ScoringRule::CPMM {
-                        Some(total_weight)
-                    } else {
-                        None
-                    },
-                    weights: if scoring_rule == ScoringRule::CPMM { Some(map) } else { None },
-                }),
-=======
-            ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
             let pool = Pool {
                 assets,
+                base_asset,
                 market_id,
-                pool_status: PoolStatus::Active,
+                pool_status: if scoring_rule == ScoringRule::CPMM {
+                    PoolStatus::Active
+                } else {
+                    PoolStatus::CollectingSubsidy
+                },
+                scoring_rule,
                 swap_fee,
-                total_weight,
-                weights: map,
+                total_subsidy: if scoring_rule == ScoringRule::CPMM {
+                    None
+                } else {
+                    Some(BalanceOf::<T>::zero())
+                },
+                total_weight: if scoring_rule == ScoringRule::CPMM {
+                    Some(total_weight)
+                } else {
+                    None
+                },
+                weights: if scoring_rule == ScoringRule::CPMM { Some(map) } else { None },
             };
 
-            <Pools<T>>::insert(
-                next_pool_id,
-                Some(pool.clone()),
->>>>>>> 69e3080 (Add pool to CreatePool event)
-            );
+            <Pools<T>>::insert(next_pool_id, Some(pool.clone()));
 
-            Self::deposit_event(Event::PoolCreate(CommonPoolEventParams {
-                pool_id: next_pool_id,
-                who,
-            }, pool));
+            Self::deposit_event(Event::PoolCreate(
+                CommonPoolEventParams { pool_id: next_pool_id, who },
+                pool,
+            ));
 
             Ok(next_pool_id)
         }

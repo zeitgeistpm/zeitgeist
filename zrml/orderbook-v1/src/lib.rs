@@ -35,9 +35,15 @@ mod pallet {
     use crate::{weights::*, Order, OrderSide};
     use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
-    use frame_support::{Blake2_128Concat, Identity, dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::{StorageMap, StorageValue, ValueQuery}, traits::{
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
+        ensure,
+        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        traits::{
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, WithdrawReasons,
-        }};
+        },
+        Blake2_128Concat, Identity,
+    };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::Encode;
@@ -268,7 +274,11 @@ mod pallet {
         /// [taker, order_hash]
         OrderFilled(<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash),
         /// [maker, order_hash, order_data]
-        OrderMade(<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash, Order<T::AccountId, BalanceOf<T>, T::MarketId>),
+        OrderMade(
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::Hash,
+            Order<T::AccountId, BalanceOf<T>, T::MarketId>,
+        ),
     }
 
     #[pallet::hooks]
