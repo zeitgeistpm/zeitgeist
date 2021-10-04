@@ -1256,6 +1256,7 @@ mod pallet {
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
         /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
         /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
+        #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
             mut assets: Vec<Asset<T::MarketId>>,
