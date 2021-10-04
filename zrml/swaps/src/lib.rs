@@ -878,7 +878,7 @@ mod pallet {
         ),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// Someone has (partially) exited a pool by removing subsidy. \[account, amount\]
+        /// Someone has (partially) exited a pool by removing subsidy. \[PoolAssetEvent, amount\]
         PoolExitSubsidy(PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// Exits a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolExitWithExactAssetAmount(
@@ -890,7 +890,7 @@ mod pallet {
         ),
         /// Someone has joined a pool. \[PoolAssetsEvent\]
         PoolJoin(PoolAssetsEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
-        /// Someone has joined a pool by providing subsidy. \[account, amount\]
+        /// Someone has joined a pool by providing subsidy. \[PoolAssetEvent, amount\]
         PoolJoinSubsidy(PoolAssetEvent<<T as frame_system::Config>::AccountId, BalanceOf<T>>),
         /// Joins a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolJoinWithExactAssetAmount(
