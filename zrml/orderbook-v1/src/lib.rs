@@ -42,7 +42,7 @@ mod pallet {
         traits::{
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, WithdrawReasons,
         },
-        Blake2_128Concat,
+        Blake2_128Concat, Identity,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -225,12 +225,12 @@ mod pallet {
                 }
             }
 
-            <OrderData<T>>::insert(hash, Some(order));
+            <OrderData<T>>::insert(hash, Some(order.clone()));
             <Nonce<T>>::try_mutate(|n| {
                 *n = n.checked_add(1).ok_or(ArithmeticError::Overflow)?;
                 Ok::<_, DispatchError>(())
             })?;
-            Self::deposit_event(Event::OrderMade(sender, hash));
+            Self::deposit_event(Event::OrderMade(sender, hash, order));
 
             if bid {
                 Ok(Some(T::WeightInfo::make_order_bid()).into())
@@ -273,8 +273,12 @@ mod pallet {
     {
         /// [taker, order_hash]
         OrderFilled(<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash),
-        /// [maker, order_hash]
-        OrderMade(<T as frame_system::Config>::AccountId, <T as frame_system::Config>::Hash),
+        /// [maker, order_hash, order_data]
+        OrderMade(
+            <T as frame_system::Config>::AccountId,
+            <T as frame_system::Config>::Hash,
+            Order<T::AccountId, BalanceOf<T>, T::MarketId>,
+        ),
     }
 
     #[pallet::hooks]
@@ -301,7 +305,7 @@ mod pallet {
     #[pallet::getter(fn order_data)]
     pub type OrderData<T: Config> = StorageMap<
         _,
-        Blake2_128Concat,
+        Identity,
         T::Hash,
         Option<Order<T::AccountId, BalanceOf<T>, T::MarketId>>,
         ValueQuery,
