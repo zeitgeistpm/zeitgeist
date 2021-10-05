@@ -4,28 +4,85 @@
   clippy::integer_arithmetic
 )]
 
-use crate::VERSION;
+use crate::{AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue, VERSION};
 use frame_support::{
-    parameter_types,
+    match_type, parameter_types,
+    traits::Everything,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         DispatchClass, Weight,
     },
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-use sp_runtime::{Perbill, Percent};
+use polkadot_parachain::primitives::Sibling;
+use sp_runtime::{Perbill, Percent, SaturatedConversion};
 use sp_version::RuntimeVersion;
-use zeitgeist_primitives::{constants::*, types::*};
+use xcm::latest::{BodyId, Junction, Junctions, MultiLocation, NetworkId};
+use xcm_builder::{
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
+    IsConcrete, ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+    SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
+    TakeWeightCredit,
+};
+use zeitgeist_primitives::{
+    constants::{MICRO, *},
+    types::{Balance, *},
+};
 
-pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
-pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+pub const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
+pub const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+pub const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+
+pub type Barrier = (
+    TakeWeightCredit,
+    AllowTopLevelPaidExecutionFrom<Everything>,
+    AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
+);
+pub type LocalAssetTransactor =
+    CurrencyAdapter<Balances, IsConcrete<RelayChainLocation>, LocationToAccountId, AccountId, ()>;
+pub type LocalOriginToLocation = ();
+pub type LocationToAccountId = (
+    ParentIsDefault<AccountId>,
+    SiblingParachainConvertsVia<Sibling, AccountId>,
+    AccountId32Aliases<RelayChainNetwork, AccountId>,
+);
+pub type XcmOriginToTransactDispatchOrigin = (
+    SovereignSignedViaLocation<LocationToAccountId, Origin>,
+    RelayChainAsNative<RelayChainOrigin, Origin>,
+    SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
+    ParentAsSuperuser<Origin>,
+    SignedAccountId32AsNative<RelayChainNetwork, Origin>,
+);
+pub type XcmRouter = (cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>, XcmpQueue);
+
+match_type! {
+  pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
+    MultiLocation { parents: 1, interior: Junctions::Here } |
+    MultiLocation { parents: 1, interior: Junctions::X1(Junction::Plurality { id: BodyId::Unit, .. }) }
+  };
+}
 
 parameter_types! {
   // Collective
   pub const AdvisoryCommitteeMaxMembers: u32 = 100;
   pub const AdvisoryCommitteeMaxProposals: u32 = 64;
   pub const AdvisoryCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+
+  // Crowdloan
+  pub const InitializationPayment: Perbill = Perbill::from_percent(30);
+  pub const Initialized: bool = false;
+  pub const MaxInitContributorsBatchSizes: u32 = 500;
+  pub const MinimumReward: Balance = 0;
+  pub const RelaySignaturesThreshold: Perbill = Perbill::from_percent(100);
+
+  // Cumulus and Polkadot
+  pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
+  pub const RelayChainLocation: MultiLocation = MultiLocation::parent();
+  pub const RelayChainNetwork: NetworkId = NetworkId::Kusama;
+  pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+  pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+  pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+  pub UnitWeightCost: Weight = MICRO.saturated_into();
 
   // Identity
   pub const BasicDeposit: Balance = 8 * BASE;
@@ -51,7 +108,6 @@ parameter_types! {
   pub const RewardPaymentDelay: u32 = 2;
 
   // System
-  pub const SS58Prefix: u8 = 73;
   pub const Version: RuntimeVersion = VERSION;
   pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
   pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()

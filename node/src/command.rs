@@ -1,11 +1,10 @@
 use crate::cli::{Cli, Subcommand};
+use parity_scale_codec::Encode;
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
-#[cfg(feature = "parachain")]
-use {
-    parity_scale_codec::Encode, sp_core::hexdisplay::HexDisplay,
-    sp_runtime::traits::Block as BlockT, std::io::Write,
-};
+use sp_core::hexdisplay::HexDisplay;
+use sp_runtime::traits::Block as BlockT;
+use std::io::Write;
 
 pub fn run() -> sc_cli::Result<()> {
     let cli = <Cli as SubstrateCli>::from_args();
@@ -45,7 +44,6 @@ pub fn run() -> sc_cli::Result<()> {
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
-        #[cfg(feature = "parachain")]
         Some(Subcommand::ExportGenesisState(params)) => {
             let mut builder = sc_cli::LoggerBuilder::new("");
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -71,7 +69,6 @@ pub fn run() -> sc_cli::Result<()> {
 
             Ok(())
         }
-        #[cfg(feature = "parachain")]
         Some(Subcommand::ExportGenesisWasm(params)) => {
             let mut builder = sc_cli::LoggerBuilder::new("");
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -110,7 +107,6 @@ pub fn run() -> sc_cli::Result<()> {
             })
         }
         Some(Subcommand::Key(cmd)) => cmd.run(&cli),
-        #[cfg(feature = "parachain")]
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
@@ -132,11 +128,6 @@ pub fn run() -> sc_cli::Result<()> {
                 cmd.run(config, polkadot_config)
             })
         }
-        #[cfg(not(feature = "parachain"))]
-        Some(Subcommand::PurgeChain(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-            runner.sync_run(|config| cmd.run(config.database))
-        }
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
@@ -149,7 +140,6 @@ pub fn run() -> sc_cli::Result<()> {
     }
 }
 
-#[cfg(feature = "parachain")]
 fn extract_genesis_wasm(chain_spec: Box<dyn sc_service::ChainSpec>) -> sc_cli::Result<Vec<u8>> {
     let mut storage = chain_spec.build_storage()?;
 
@@ -159,7 +149,6 @@ fn extract_genesis_wasm(chain_spec: Box<dyn sc_service::ChainSpec>) -> sc_cli::R
         .ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
-#[cfg(feature = "parachain")]
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run.normalize())?;
 
@@ -199,17 +188,5 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             .await
             .map(|r| r.0)
             .map_err(Into::into)
-    })
-}
-
-#[cfg(not(feature = "parachain"))]
-fn none_command(cli: &Cli) -> sc_cli::Result<()> {
-    let runner = cli.create_runner(&cli.run)?;
-    runner.run_node_until_exit(|config| async move {
-        match config.role {
-            sc_cli::Role::Light => crate::service::new_light(config),
-            _ => crate::service::new_full(config),
-        }
-        .map_err(sc_cli::Error::Service)
     })
 }

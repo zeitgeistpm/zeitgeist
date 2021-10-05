@@ -4,7 +4,7 @@
 
 set -euxo pipefail
 
-# For example, node/res/bs_parachain.json
+# For example, node/res/battery-station.json
 OUTPUT_FILE=
 # For example, "Battery Station"
 PROD_CHAIN_NAME=
@@ -15,7 +15,7 @@ PROD_CHAIN_ID=
 # For example, battery_station_staging
 STAGE_CHAIN=
 
-cargo build --bin zeitgeist --features parachain --release 
+cargo build --bin zeitgeist --release 
 ./target/release/zeitgeist build-spec --chain $STAGE_CHAIN --disable-default-bootnode > $OUTPUT_FILE
 
 sed -i "s/\"id\": \".*\"/\"id\": \"$PROD_CHAIN_ID\"/" $OUTPUT_FILE

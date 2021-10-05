@@ -1,34 +1,26 @@
 mod additional_chain_spec;
-#[cfg(not(feature = "parachain"))]
-mod battery_park;
 mod battery_station;
 mod dev;
 
 pub use additional_chain_spec::AdditionalChainSpec;
-#[cfg(not(feature = "parachain"))]
-pub use battery_park::battery_park_staging_config;
 pub use battery_station::battery_station_staging_config;
 pub use dev::dev_config;
 use hex_literal::hex;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{
+    traits::{IdentifyAccount, Verify},
+    Perbill, Percent,
+};
 use zeitgeist_primitives::{
     constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BalanceFractionalDecimals,
+        ztg::{self, LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        BalanceFractionalDecimals, DefaultBlocksPerRound, SS58Prefix, MILLISECS_PER_BLOCK,
     },
     types::{AccountId, Balance, Signature},
 };
-use zeitgeist_runtime::SS58Prefix;
-#[cfg(feature = "parachain")]
-use {
-    sp_runtime::{Perbill, Percent},
-    zeitgeist_primitives::constants::{ztg, DefaultBlocksPerRound, MILLISECS_PER_BLOCK},
-};
 
-#[cfg(feature = "parachain")]
 const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
     let hours_per_year = 8766;
     let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
@@ -58,15 +50,11 @@ const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance>
         },
     }
 };
-#[cfg(feature = "parachain")]
 const DEFAULT_STAKING_AMOUNT: u128 = 2_000 * zeitgeist_primitives::constants::BASE;
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
 
-#[cfg(feature = "parachain")]
 pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
-#[cfg(not(feature = "parachain"))]
-pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -83,15 +71,9 @@ fn generic_genesis(
             members: vec![],
             phantom: Default::default(),
         },
-        #[cfg(not(feature = "parachain"))]
-        aura: zeitgeist_runtime::AuraConfig {
-            authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
-        },
-        #[cfg(feature = "parachain")]
         author_filter: zeitgeist_runtime::AuthorFilterConfig {
             eligible_ratio: Percent::from_percent(50),
         },
-        #[cfg(feature = "parachain")]
         author_mapping: zeitgeist_runtime::AuthorMappingConfig {
             mappings: acs
                 .candidates
@@ -103,19 +85,12 @@ fn generic_genesis(
         balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts.iter().cloned().map(|k| (k, initial_balance)).collect(),
         },
-        #[cfg(feature = "parachain")]
         crowdloan: zeitgeist_runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
-        #[cfg(not(feature = "parachain"))]
-        grandpa: zeitgeist_runtime::GrandpaConfig {
-            authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
-        },
         liquidity_mining: zeitgeist_runtime::LiquidityMiningConfig {
             initial_balance: LIQUIDITY_MINING,
             per_block_distribution: LIQUIDITY_MINING_PTD.mul_ceil(LIQUIDITY_MINING),
         },
-        #[cfg(feature = "parachain")]
         parachain_info: zeitgeist_runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
-        #[cfg(feature = "parachain")]
         parachain_staking: zeitgeist_runtime::ParachainStakingConfig {
             candidates: acs
                 .candidates
@@ -126,7 +101,6 @@ fn generic_genesis(
             inflation_config: acs.inflation_info,
             nominations: acs.nominations,
         },
-        #[cfg(feature = "parachain")]
         parachain_system: Default::default(),
         sudo: zeitgeist_runtime::SudoConfig { key: root_key },
         system: zeitgeist_runtime::SystemConfig {
@@ -152,7 +126,6 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
 }
 
 /// The extensions for the [`ChainSpec`].
-#[cfg(feature = "parachain")]
 #[derive(
     Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, sc_chain_spec::ChainSpecExtension,
 )]
@@ -164,7 +137,6 @@ pub struct Extensions {
     pub relay_chain: String,
 }
 
-#[cfg(feature = "parachain")]
 impl Extensions {
     /// Try to get the extension from the given `ChainSpec`.
     pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
@@ -172,7 +144,6 @@ impl Extensions {
     }
 }
 
-#[cfg(feature = "parachain")]
 fn additional_chain_spec_staging(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
@@ -190,29 +161,6 @@ fn additional_chain_spec_staging(
         nominations: vec![],
         parachain_id,
     }
-}
-#[cfg(not(feature = "parachain"))]
-fn additional_chain_spec_staging() -> AdditionalChainSpec {
-    AdditionalChainSpec {
-        initial_authorities: vec![(
-            // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
-            hex!["8a9a54bdf73fb4a757f5ab81fabe2f173922fdb92bb8b6e8bedf8b17fa38f500"]
-                .unchecked_into(),
-            // 5HGProUwcyCDMJDxjBBKbv8u7ehr5uoTBS3bckYHPcZMTifW
-            hex!["e61786c6426b55a034f9c4b78dc57d4183927cef8e64b2e496225ed6fca41758"]
-                .unchecked_into(),
-        )],
-    }
-}
-
-#[cfg(not(feature = "parachain"))]
-fn authority_keys_from_seed(
-    s: &str,
-) -> (sp_consensus_aura::sr25519::AuthorityId, sp_finality_grandpa::AuthorityId) {
-    (
-        get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
-        get_from_seed::<sp_finality_grandpa::AuthorityId>(s),
-    )
 }
 
 fn endowed_accounts_staging() -> Vec<AccountId> {

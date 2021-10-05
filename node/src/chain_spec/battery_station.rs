@@ -8,7 +8,7 @@ use zeitgeist_primitives::{constants::BASE, types::Balance};
 const INITIAL_BALANCE: Balance = 10_000 * BASE;
 
 pub fn battery_station_staging_config(
-    #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
+    parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {
     let zeitgeist_wasm = zeitgeist_wasm()?;
 
@@ -18,10 +18,7 @@ pub fn battery_station_staging_config(
         ChainType::Live,
         move || {
             generic_genesis(
-                additional_chain_spec_staging(
-                    #[cfg(feature = "parachain")]
-                    parachain_id,
-                ),
+                additional_chain_spec_staging(parachain_id),
                 endowed_accounts_staging(),
                 INITIAL_BALANCE,
                 root_key_staging(),
@@ -32,12 +29,9 @@ pub fn battery_station_staging_config(
         telemetry_endpoints(),
         Some("battery_station"),
         Some(token_properties()),
-        #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),
             parachain_id: parachain_id.into(),
         },
-        #[cfg(not(feature = "parachain"))]
-        Default::default(),
     ))
 }

@@ -63,6 +63,7 @@ parameter_types! {
 // General
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
+    pub const SS58Prefix: u8 = 73;
 }
 
 // Liquidity Mining parameters

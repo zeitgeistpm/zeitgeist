@@ -9,17 +9,8 @@ use sp_runtime::{generic, impl_opaque_keys};
 
 pub type Block = generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
 
-#[cfg(feature = "parachain")]
 impl_opaque_keys! {
     pub struct SessionKeys {
         pub nimbus: crate::AuthorInherent,
-    }
-}
-
-#[cfg(not(feature = "parachain"))]
-impl_opaque_keys! {
-    pub struct SessionKeys {
-        pub aura: crate::Aura,
-        pub grandpa: crate::Grandpa,
     }
 }

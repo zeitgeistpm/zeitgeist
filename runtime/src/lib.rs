@@ -7,13 +7,8 @@ extern crate alloc;
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod opaque;
-#[cfg(feature = "parachain")]
-mod parachain_params;
 mod parameters;
-#[cfg(feature = "parachain")]
 mod xcm_config;
-
-pub use parameters::*;
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
@@ -22,6 +17,8 @@ use frame_support::{
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
+use nimbus_primitives::{CanAuthor, NimbusId};
+use parameters::*;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
@@ -40,11 +37,6 @@ use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
-#[cfg(feature = "parachain")]
-use {
-    nimbus_primitives::{CanAuthor, NimbusId},
-    parachain_params::*,
-};
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
@@ -91,108 +83,86 @@ type SignedExtra = (
 );
 type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
-macro_rules! create_zeitgeist_runtime {
-    ($($additional_pallets:tt)*) => {
-        // Pallets are enumerated based on the dependency graph.
-        //
-        // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
-        // `PredictionMarkets` depends on `SimpleDisputes`.
-        construct_runtime!(
-            pub enum Runtime where
-                Block = Block,
-                NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
-                UncheckedExtrinsic = UncheckedExtrinsic,
-            {
-                // System
-                System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
-                Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
-                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+// Pallets are enumerated based on the dependency graph.
+//
+// For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
+// `PredictionMarkets` depends on `SimpleDisputes`.
+construct_runtime!(
+    pub enum Runtime where
+        Block = Block,
+        NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        // System
+        System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
+        Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+        ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 3,
+        ParachainInfo: parachain_info::{Config, Pallet, Storage} = 4,
 
-                // Money
-                Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
-                Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
+        // Consensus
+        ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
+        AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 11,
+        AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 12,
+        AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
 
-                // Other Parity pallets
-                AdvisoryCommitteeCollective: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 20,
-                AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 21,
-                Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 22,
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 23,
-                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 24,
+        // XCM
+        CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 20,
+        DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 21,
+        PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 22,
+        XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 23,
 
-                // Third-party
-                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
-                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
+        // Money
+        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 30,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 31,
+        Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 32,
 
-                // Zeitgeist
-                MarketCommons: zrml_market_commons::{Pallet, Storage} = 40,
-                Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 41,
-                Court: zrml_court::{Event<T>, Pallet, Storage} = 42,
-                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 43,
-                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 44,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 46,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
+        // Other Parity pallets
+        AdvisoryCommitteeCollective: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 40,
+        AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 41,
+        Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 42,
+        Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 43,
+        Utility: pallet_utility::{Call, Event, Pallet, Storage} = 44,
 
-                $($additional_pallets)*
-            }
-        );
+        // Third-party
+        Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 50,
+        Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 51,
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 52,
+
+        // Zeitgeist
+        MarketCommons: zrml_market_commons::{Pallet, Storage} = 60,
+        Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 61,
+        Court: zrml_court::{Event<T>, Pallet, Storage} = 62,
+        LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 63,
+        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 64,
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 65,
+        Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 66,
+        PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 67,
     }
-}
-#[cfg(feature = "parachain")]
-create_zeitgeist_runtime!(
-    // System
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 50,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 51,
-
-    // Consensus
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 60,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 61,
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 62,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 63,
-
-    // XCM
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 70,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
-    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
-
-    // Third-party
-    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 80,
-);
-#[cfg(not(feature = "parachain"))]
-create_zeitgeist_runtime!(
-    // Consensus
-    Aura: pallet_aura::{Config<T>, Pallet, Storage} = 50,
-    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 51,
 );
 
-#[cfg(feature = "parachain")]
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
 
-#[cfg(feature = "parachain")]
 impl cumulus_pallet_parachain_system::Config for Runtime {
     type DmpMessageHandler = DmpQueue;
     type Event = Event;
     type OnValidationData = ();
     type OutboundXcmpMessageSource = XcmpQueue;
-    type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
-    type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
+    type ReservedDmpWeight = ReservedDmpWeight;
+    type ReservedXcmpWeight = ReservedXcmpWeight;
     type SelfParaId = parachain_info::Pallet<Runtime>;
     type XcmpMessageHandler = XcmpQueue;
 }
 
-#[cfg(feature = "parachain")]
 impl cumulus_pallet_xcm::Config for Runtime {
     type Event = Event;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
 
-#[cfg(feature = "parachain")]
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
     type Event = Event;
@@ -218,10 +188,7 @@ impl frame_system::Config for Runtime {
     type Lookup = AccountIdLookup<AccountId, ()>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
-    #[cfg(feature = "parachain")]
     type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
-    #[cfg(not(feature = "parachain"))]
-    type OnSetCode = ();
     type Origin = Origin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = SS58Prefix;
@@ -229,13 +196,6 @@ impl frame_system::Config for Runtime {
     type Version = Version;
 }
 
-#[cfg(not(feature = "parachain"))]
-impl pallet_aura::Config for Runtime {
-    type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
-    type DisabledValidators = ();
-}
-
-#[cfg(feature = "parachain")]
 impl pallet_author_inherent::Config for Runtime {
     type AccountLookup = AuthorMapping;
     type AuthorId = NimbusId;
@@ -244,7 +204,6 @@ impl pallet_author_inherent::Config for Runtime {
     type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
 }
 
-#[cfg(feature = "parachain")]
 impl pallet_author_mapping::Config for Runtime {
     type AuthorId = NimbusId;
     type DepositAmount = CollatorDeposit;
@@ -253,38 +212,12 @@ impl pallet_author_mapping::Config for Runtime {
     type WeightInfo = pallet_author_mapping::weights::SubstrateWeight<Runtime>;
 }
 
-#[cfg(feature = "parachain")]
 impl pallet_author_slot_filter::Config for Runtime {
     type Event = Event;
     type RandomnessSource = RandomnessCollectiveFlip;
     type PotentialAuthors = ParachainStaking;
 }
 
-#[cfg(not(feature = "parachain"))]
-impl pallet_grandpa::Config for Runtime {
-    type Event = Event;
-    type Call = Call;
-
-    type KeyOwnerProofSystem = ();
-
-    type KeyOwnerProof =
-        <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
-            KeyTypeId,
-            pallet_grandpa::AuthorityId,
-        )>>::Proof;
-
-    type KeyOwnerIdentification =
-        <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
-            KeyTypeId,
-            pallet_grandpa::AuthorityId,
-        )>>::IdentificationTuple;
-
-    type HandleEquivocation = ();
-
-    type WeightInfo = ();
-}
-
-#[cfg(feature = "parachain")]
 impl pallet_xcm::Config for Runtime {
     type Event = Event;
     type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
@@ -298,7 +231,6 @@ impl pallet_xcm::Config for Runtime {
     type XcmTeleportFilter = Everything;
 }
 
-#[cfg(feature = "parachain")]
 impl parachain_staking::Config for Runtime {
     type Currency = Balances;
     type DefaultBlocksPerRound = DefaultBlocksPerRound;
@@ -341,7 +273,6 @@ impl orml_tokens::Config for Runtime {
     type WeightInfo = ();
 }
 
-#[cfg(feature = "parachain")]
 impl pallet_crowdloan_rewards::Config for Runtime {
     type Event = Event;
     type InitializationPayment = InitializationPayment;
@@ -418,10 +349,7 @@ impl pallet_sudo::Config for Runtime {
 impl pallet_timestamp::Config for Runtime {
     type MinimumPeriod = MinimumPeriod;
     type Moment = u64;
-    #[cfg(feature = "parachain")]
     type OnTimestampSet = ();
-    #[cfg(not(feature = "parachain"))]
-    type OnTimestampSet = Aura;
     type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
@@ -455,7 +383,6 @@ impl pallet_utility::Config for Runtime {
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
-#[cfg(feature = "parachain")]
 impl parachain_info::Config for Runtime {}
 
 impl zrml_authorized::Config for Runtime {
@@ -561,14 +488,12 @@ impl zrml_swaps::Config for Runtime {
 }
 
 impl_runtime_apis! {
-    #[cfg(feature = "parachain")]
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
         fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
             ParachainSystem::collect_collation_info()
         }
     }
 
-    #[cfg(feature = "parachain")]
     impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
         fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
@@ -728,45 +653,6 @@ impl_runtime_apis! {
         }
     }
 
-    #[cfg(not(feature = "parachain"))]
-    impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
-        fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-            Aura::authorities()
-        }
-
-        fn slot_duration() -> sp_consensus_aura::SlotDuration {
-            sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
-        }
-    }
-
-    #[cfg(not(feature = "parachain"))]
-    impl sp_finality_grandpa::GrandpaApi<Block> for Runtime {
-        fn current_set_id() -> pallet_grandpa::fg_primitives::SetId {
-            Grandpa::current_set_id()
-        }
-
-        fn generate_key_ownership_proof(
-            _set_id: pallet_grandpa::fg_primitives::SetId,
-            _authority_id: pallet_grandpa::AuthorityId,
-        ) -> Option<pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof> {
-            None
-        }
-
-        fn grandpa_authorities() -> pallet_grandpa::AuthorityList {
-            Grandpa::grandpa_authorities()
-        }
-
-        fn submit_report_equivocation_unsigned_extrinsic(
-            _equivocation_proof: pallet_grandpa::fg_primitives::EquivocationProof<
-                <Block as BlockT>::Hash,
-                sp_runtime::traits::NumberFor<Block>,
-            >,
-            _key_owner_proof: pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof,
-        ) -> Option<()> {
-            None
-        }
-    }
-
     impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
         fn offchain_worker(header: &<Block as BlockT>::Header) {
             Executive::offchain_worker(header)
@@ -815,10 +701,8 @@ impl_runtime_apis! {
 }
 
 // Check the timestamp and parachain inherents
-#[cfg(feature = "parachain")]
 struct CheckInherents;
 
-#[cfg(feature = "parachain")]
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
     fn check_inherents(
         block: &Block,
@@ -841,7 +725,6 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 }
 
 // Nimbus's Executive wrapper allows relay validators to verify the seal digest
-#[cfg(feature = "parachain")]
 cumulus_pallet_parachain_system::register_validate_block! {
     Runtime = Runtime,
     BlockExecutor = pallet_author_inherent::BlockExecutor::<Runtime, Executive>,

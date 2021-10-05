@@ -24,7 +24,7 @@ git rebase origin/$POLKADOT_BRANCH
 # Build everything
 
 cargo build --release
-cargo build --bin zeitgeist --features parachain --manifest-path ../../Cargo.toml --release
+cargo build --bin zeitgeist --manifest-path ../../Cargo.toml --release
 
 # Set-up
 

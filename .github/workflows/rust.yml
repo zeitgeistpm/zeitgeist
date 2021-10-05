@@ -18,8 +18,7 @@ jobs:
         scripts: [
           "clippy",
           "misc",
-          "parachain",
-          "standalone"
+          "runtime-and-node",
         ]
     steps:
       - name: Checkout repository

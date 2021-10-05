@@ -38,41 +38,34 @@ frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.10", git = "https://
 
 # Cumulus
 
-cumulus-client-cli = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-collator = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-consensus-relay-chain = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-network = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-service = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-cli = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus" }
+cumulus-client-collator = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus" }
+cumulus-client-consensus-relay-chain = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus" }
+cumulus-client-network = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus" }
+cumulus-client-service = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus" }
+cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus" }
+cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/cumulus" }
 
 # Parachain
 
-log = { optional = true, version = "0.4" }
-nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-parachain-staking = { branch = "master", git = "https://github.com/PureStake/moonbeam", optional = true }
-parity-scale-codec = { optional = true, version = "2.0" }
-sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
-sc-tracing = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
-serde = { features = ["derive"], optional = true, version = "1.0" }
-sp-trie = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate", optional = true }
+log = { version = "0.4" }
+nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus" }
+nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus" }
+pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/cumulus" }
+parachain-staking = { branch = "master", git = "https://github.com/PureStake/moonbeam" }
+parity-scale-codec = { version = "2.0" }
+sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
+sc-tracing = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
+serde = { features = ["derive"], version = "1.0" }
+sp-trie = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
 
 # Polkadot
 
-polkadot-cli = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-service = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-test-service = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot", optional = true }
-
-# Standalone
-
-sc-consensus-aura = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
-sc-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
-sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
-sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
+polkadot-cli = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot" }
+polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot" }
+polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot" }
+polkadot-service = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot" }
+polkadot-test-service = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/polkadot" }
 
 # Zeitgeist
 
@@ -83,44 +76,10 @@ zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 [features]
 default = []
-parachain = [
-    "zeitgeist-runtime/parachain",
-
-    # Cumulus
-
-    "cumulus-client-cli",
-    "cumulus-client-collator",
-    "cumulus-client-consensus-relay-chain",
-    "cumulus-client-network",
-    "cumulus-client-service",
-    "cumulus-primitives-core",
-    "cumulus-primitives-parachain-inherent",
-
-    # Parachain
-
-    "log",
-    "nimbus-consensus",
-    "nimbus-primitives",
-    "pallet-author-inherent",
-    "parachain-staking",
-    "parity-scale-codec",
-    "sc-chain-spec",
-    "sc-tracing",
-    "serde",
-    "sp-trie",
-
-    # Polkadot
-
-    "polkadot-cli",
-    "polkadot-parachain",
-    "polkadot-primitives",
-    "polkadot-service",
-    "polkadot-test-service",
-]
 runtime-benchmarks = [
     "frame-benchmarking",
     "frame-benchmarking-cli",
-    "polkadot-service?/runtime-benchmarks",
+    "polkadot-service/runtime-benchmarks",
     "zeitgeist-runtime/runtime-benchmarks"
 ]
 

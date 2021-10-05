@@ -7,7 +7,6 @@ LABEL description="This is the build stage for the Zeitgeist node. Here is creat
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG PROFILE=release
-ARG FEATURES=default
 WORKDIR /zeitgeist
 
 COPY . /zeitgeist
@@ -21,7 +20,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     rustup toolchain install nightly-2021-09-28 && \
     rustup target add wasm32-unknown-unknown --toolchain nightly-2021-09-28 && \
     rustup default stable && \
-    cargo build "--$PROFILE" --features "$FEATURES"
+    cargo build "--$PROFILE"
 
 # ==== SECOND STAGE ====
 
