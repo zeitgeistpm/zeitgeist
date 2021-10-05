@@ -47,7 +47,7 @@ mod pallet {
     use zeitgeist_primitives::{
         constants::CourtPalletId,
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        types::{Market, MarketDispute, MarketDisputeMechanism, Outcome},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -108,7 +108,7 @@ mod pallet {
         pub fn vote(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            outcome: OutcomeReport,
+            outcome: Outcome,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             if Jurors::<T>::get(&who).is_none() {
@@ -267,12 +267,12 @@ mod pallet {
                 T::AccountId,
                 Juror,
                 T::BlockNumber,
-                Option<&(T::BlockNumber, OutcomeReport)>,
+                Option<&(T::BlockNumber, Outcome)>,
             )],
             mut cb: F,
-        ) -> Result<Vec<(&'b T::AccountId, &'b OutcomeReport)>, DispatchError>
+        ) -> Result<Vec<(&'b T::AccountId, &'b Outcome)>, DispatchError>
         where
-            F: FnMut(&OutcomeReport) -> bool,
+            F: FnMut(&Outcome) -> bool,
             'a: 'b,
         {
             let mut valid_winners_and_losers = Vec::with_capacity(requested_jurors.len());
@@ -355,8 +355,8 @@ mod pallet {
 
         // Every juror that not voted on the first or second most voted outcome are slashed.
         fn slash_losers_to_award_winners(
-            valid_winners_and_losers: &[(&T::AccountId, &OutcomeReport)],
-            winner_outcome: &OutcomeReport,
+            valid_winners_and_losers: &[(&T::AccountId, &Outcome)],
+            winner_outcome: &Outcome,
         ) -> DispatchResult {
             let mut total_incentives = BalanceOf::<T>::from(0u8);
             let mut total_winners = BalanceOf::<T>::from(0u8);
@@ -392,9 +392,9 @@ mod pallet {
 
         // For market resolution based on the votes of a market
         fn two_best_outcomes(
-            votes: &[(T::AccountId, (T::BlockNumber, OutcomeReport))],
-        ) -> Result<(OutcomeReport, Option<OutcomeReport>), DispatchError> {
-            let mut scores = BTreeMap::<OutcomeReport, u32>::new();
+            votes: &[(T::AccountId, (T::BlockNumber, Outcome))],
+        ) -> Result<(Outcome, Option<Outcome>), DispatchError> {
+            let mut scores = BTreeMap::<Outcome, u32>::new();
 
             for (_, (_, outcome_report)) in votes {
                 if let Some(el) = scores.get_mut(outcome_report) {
@@ -492,7 +492,7 @@ mod pallet {
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<Outcome, DispatchError> {
             if market.mdm != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
@@ -548,6 +548,6 @@ mod pallet {
         MarketIdOf<T>,
         Blake2_128Concat,
         T::AccountId,
-        (T::BlockNumber, OutcomeReport),
+        (T::BlockNumber, Outcome),
     >;
 }

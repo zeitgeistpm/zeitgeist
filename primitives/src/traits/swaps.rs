@@ -1,6 +1,4 @@
-use crate::types::{
-    Asset, MarketType, OutcomeReport, Pool, PoolId, ResultWithWeightInfo, ScoringRule,
-};
+use crate::types::{Asset, MarketType, Outcome, Pool, PoolId, ResultWithWeightInfo, ScoringRule};
 use alloc::vec::Vec;
 use frame_support::dispatch::{DispatchError, Weight};
 
@@ -108,7 +106,7 @@ pub trait Swaps<AccountId> {
     fn set_pool_as_stale(
         market_type: &MarketType,
         pool_id: PoolId,
-        outcome_report: &OutcomeReport,
+        outcome_report: &Outcome,
         winner_payout_account: &AccountId,
     ) -> Result<Weight, DispatchError>;
 }

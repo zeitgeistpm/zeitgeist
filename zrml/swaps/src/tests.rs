@@ -11,9 +11,7 @@ use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
-    types::{
-        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
-    },
+    types::{AccountIdTest, Asset, MarketId, MarketType, Outcome, PoolId, PoolStatus, ScoringRule},
 };
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
@@ -352,7 +350,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         assert_ok!(Swaps::set_pool_as_stale(
             &MarketType::Categorical(0),
             0,
-            &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
+            &Outcome::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
                 idx
             } else {
                 0
@@ -478,7 +476,7 @@ fn only_root_can_call_admin_set_pool_as_stale() {
                 alice_signed(),
                 MarketType::Categorical(0),
                 0,
-                OutcomeReport::Categorical(idx)
+                Outcome::Categorical(idx)
             ),
             BadOrigin
         );
@@ -489,7 +487,7 @@ fn only_root_can_call_admin_set_pool_as_stale() {
             Origin::root(),
             MarketType::Categorical(0),
             0,
-            OutcomeReport::Categorical(idx)
+            Outcome::Categorical(idx)
         ),);
     });
 }
@@ -788,7 +786,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
             Swaps::set_pool_as_stale(
                 &MarketType::Categorical(1337),
                 pool_id,
-                &OutcomeReport::Categorical(1337),
+                &Outcome::Categorical(1337),
                 &Default::default()
             ),
             crate::Error::<Runtime>::WinningAssetNotFound
@@ -799,7 +797,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
         assert_ok!(Swaps::set_pool_as_stale(
             &MarketType::Categorical(4),
             pool_id,
-            &OutcomeReport::Categorical(cat_idx),
+            &Outcome::Categorical(cat_idx),
             &Default::default()
         ));
 
@@ -820,7 +818,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
             Swaps::set_pool_as_stale(
                 &MarketType::Categorical(4),
                 pool_id,
-                &OutcomeReport::Categorical(cat_idx),
+                &Outcome::Categorical(cat_idx),
                 &Default::default()
             ),
             crate::Error::<Runtime>::InvalidStateTransition
@@ -834,7 +832,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
         assert_ok!(Swaps::set_pool_as_stale(
             &MarketType::Categorical(4),
             pool_id,
-            &OutcomeReport::Categorical(cat_idx),
+            &Outcome::Categorical(cat_idx),
             &Default::default()
         ));
 

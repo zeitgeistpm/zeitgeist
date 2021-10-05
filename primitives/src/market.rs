@@ -1,4 +1,4 @@
-use crate::{pool::ScoringRule, types::OutcomeReport};
+use crate::{pool::ScoringRule, types::Outcome};
 use alloc::vec::Vec;
 use core::ops::{Range, RangeInclusive};
 
@@ -37,7 +37,7 @@ pub struct Market<AI, BN, M> {
     /// The report of the market. Only `Some` if it has been reported.
     pub report: Option<Report<AI, BN>>,
     /// The resolved outcome.
-    pub resolved_outcome: Option<OutcomeReport>,
+    pub resolved_outcome: Option<Outcome>,
     /// See [`MarketDisputeMechanism`].
     pub mdm: MarketDisputeMechanism<AI>,
 }
@@ -80,7 +80,7 @@ pub enum MarketCreation {
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
-    pub outcome: OutcomeReport,
+    pub outcome: Outcome,
 }
 
 /// How a market should resolve disputes
@@ -182,7 +182,7 @@ pub enum MarketType {
 pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
-    pub outcome: OutcomeReport,
+    pub outcome: Outcome,
 }
 
 /// Contains a market id and the market period.

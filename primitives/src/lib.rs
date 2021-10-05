@@ -6,7 +6,7 @@ mod asset;
 pub mod constants;
 mod market;
 mod max_runtime_usize;
-mod outcome_report;
+mod outcome;
 mod pool;
 mod pool_status;
 mod serde_wrapper;

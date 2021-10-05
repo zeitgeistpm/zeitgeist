@@ -18,7 +18,7 @@ use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
         Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        OutcomeReport, ScoringRule,
+        Outcome, ScoringRule,
     },
 };
 
@@ -155,9 +155,9 @@ fn on_resolution_awards_winners_and_slashes_losers() {
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(2)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
+        Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(BOB), 0, Outcome::Scalar(2)).unwrap();
+        Court::vote(Origin::signed(CHARLIE), 0, Outcome::Scalar(3)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE + 3 * BASE);
         assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
@@ -176,11 +176,11 @@ fn on_resolution_decides_market_outcome_based_on_the_majority() {
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(BOB), 0, Outcome::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(CHARLIE), 0, Outcome::Scalar(2)).unwrap();
         let outcome = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(outcome, OutcomeReport::Scalar(1))
+        assert_eq!(outcome, Outcome::Scalar(1))
     });
 }
 
@@ -190,7 +190,7 @@ fn on_resolution_sets_late_jurors_as_tardy() {
         setup_blocks(1..2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(1)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(ALICE).unwrap().status, JurorStatus::Ok);
@@ -206,9 +206,9 @@ fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tard
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(BOB), 0, Outcome::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(CHARLIE), 0, Outcome::Scalar(2)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Jurors::<Runtime>::get(CHARLIE).unwrap().status, JurorStatus::Tardy);
     });
@@ -221,7 +221,7 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::set_stored_juror_as_tardy(&BOB).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(1)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         let join_court_stake = 40000000000;
@@ -240,9 +240,9 @@ fn on_resolution_removes_requested_jurors_and_votes() {
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
-        Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
-        Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
+        Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(BOB), 0, Outcome::Scalar(1)).unwrap();
+        Court::vote(Origin::signed(CHARLIE), 0, Outcome::Scalar(2)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(RequestedJurors::<Runtime>::iter().count(), 0);
         assert_eq!(Votes::<Runtime>::iter().count(), 0);
@@ -302,7 +302,7 @@ fn random_jurors_returns_a_subset_of_jurors() {
 fn vote_will_not_accept_unknown_accounts() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(0)),
+            Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(0)),
             Error::<Runtime>::OnlyJurorsCanVote
         );
     });
@@ -312,8 +312,8 @@ fn vote_will_not_accept_unknown_accounts() {
 fn vote_will_stored_outcome_from_a_juror() {
     ExtBuilder::default().build().execute_with(|| {
         let _ = Court::join_court(Origin::signed(ALICE));
-        let _ = Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(0));
-        assert_eq!(Votes::<Runtime>::get(ALICE, 0).unwrap(), (0, OutcomeReport::Scalar(0)));
+        let _ = Court::vote(Origin::signed(ALICE), 0, Outcome::Scalar(0));
+        assert_eq!(Votes::<Runtime>::get(ALICE, 0).unwrap(), (0, Outcome::Scalar(0)));
     });
 }
 

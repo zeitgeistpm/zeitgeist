@@ -18,7 +18,7 @@ use zeitgeist_primitives::{
     constants::{AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT},
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
+        MarketType, MultiHash, Outcome, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -290,16 +290,12 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         assert_eq!(market.status, MarketStatus::Active);
         assert_eq!(market.report.is_none(), true);
 
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
 
         let market_after = MarketCommons::market(&0).unwrap();
         let report = market_after.report.unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
-        assert_eq!(report.outcome, OutcomeReport::Categorical(1));
+        assert_eq!(report.outcome, Outcome::Categorical(1));
         assert_eq!(report.by, market_after.oracle);
 
         // Reset and report again as approval origin
@@ -309,11 +305,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             Ok(())
         });
 
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(SUDO),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(SUDO), 0, Outcome::Categorical(1)));
 
         // Reset and report again as unauthorized origin
         let _ = MarketCommons::mutate_market(&0, |market| {
@@ -323,7 +315,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         });
 
         assert_noop!(
-            PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            PredictionMarkets::report(Origin::signed(CHARLIE), 0, Outcome::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle
         );
     });
@@ -342,20 +334,12 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         // Run to the end of the trading phase.
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
 
         // Dispute phase is 10 blocks... so only run 5 of them.
         run_to_block(105);
 
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, Outcome::Categorical(0)));
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -365,7 +349,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         let dispute = &disputes[0];
         assert_eq!(dispute.at, 105);
         assert_eq!(dispute.by, CHARLIE);
-        assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
+        assert_eq!(dispute.outcome, Outcome::Categorical(0));
 
         let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(&105);
         assert_eq!(market_ids.len(), 1);
@@ -389,7 +373,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         assert_ok!(PredictionMarkets::report(
             Origin::signed(ALICE), // alice reports her own market now
             0,
-            OutcomeReport::Categorical(1),
+            Outcome::Categorical(1),
         ));
 
         let market = MarketCommons::market(&0).unwrap();
@@ -420,11 +404,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
 
         let reported_ids = MarketIdsPerReportBlock::<Runtime>::get(&100);
         assert_eq!(reported_ids.len(), 1);
@@ -471,35 +451,19 @@ fn it_resolves_a_disputed_market() {
 
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(0)));
 
         run_to_block(102);
 
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, Outcome::Categorical(1)));
 
         run_to_block(103);
 
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(DAVE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, Outcome::Categorical(0)));
 
         run_to_block(104);
 
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(EVE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(EVE), 0, Outcome::Categorical(1)));
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
@@ -579,11 +543,7 @@ fn it_allows_to_redeem_shares() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
         run_to_block(100);
 
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
         run_to_block(111);
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Resolved);
@@ -782,11 +742,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
             Error::<Runtime>::MarketIsNotActive,
         );
 
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(1)));
     });
 }
 
@@ -818,17 +774,17 @@ fn full_scalar_market_lifecycle() {
         run_to_block(100);
 
         // report
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Scalar(100)));
 
         let market_after_report = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_report.report.is_some(), true);
         let report = market_after_report.report.unwrap();
         assert_eq!(report.at, 100);
         assert_eq!(report.by, BOB);
-        assert_eq!(report.outcome, OutcomeReport::Scalar(100));
+        assert_eq!(report.outcome, Outcome::Scalar(100));
 
         // dispute
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, Outcome::Scalar(20)));
         let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 1);
 
@@ -887,11 +843,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
 
         run_to_block(100);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(2)
-        ));
+        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, Outcome::Categorical(2)));
 
         run_to_block(150);
         assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, BASE * 100, vec![0, 0]));

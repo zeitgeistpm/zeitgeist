@@ -20,7 +20,7 @@ use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
         Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule, SubsidyUntil,
+        MaxRuntimeUsize, MultiHash, Outcome, ScalarPosition, ScoringRule, SubsidyUntil,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -92,7 +92,7 @@ fn create_market_common<T: Config>(
 fn create_close_and_report_market<T: Config>(
     permission: MarketCreation,
     options: MarketType,
-    outcome: OutcomeReport,
+    outcome: Outcome,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, marketid) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
     let _ = Call::<T>::admin_move_market_to_closed(marketid)
@@ -134,7 +134,7 @@ fn setup_resolve_common_categorical<T: Config>(
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories),
-        OutcomeReport::Categorical(categories.saturating_sub(1)),
+        Outcome::Categorical(categories.saturating_sub(1)),
     )?;
     let _ = generate_accounts_with_assets::<T>(
         acc_total,
@@ -153,12 +153,12 @@ fn setup_redeem_shares_common<T: Config>(
         market_type.clone(),
         ScoringRule::CPMM,
     )?;
-    let outcome: OutcomeReport;
+    let outcome: Outcome;
 
     if let MarketType::Categorical(categories) = market_type {
-        outcome = OutcomeReport::Categorical(categories.saturating_sub(1));
+        outcome = Outcome::Categorical(categories.saturating_sub(1));
     } else if let MarketType::Scalar(range) = market_type {
-        outcome = OutcomeReport::Scalar(*range.end());
+        outcome = Outcome::Scalar(*range.end());
     } else {
         panic!("setup_redeem_shares_common: Unsupported market type: {:?}", market_type);
     }
@@ -186,7 +186,7 @@ fn setup_resolve_common_scalar<T: Config>(
     let (caller, marketid) = create_close_and_report_market::<T>(
         MarketCreation::Permissionless,
         MarketType::Scalar(0u128..=u128::MAX),
-        OutcomeReport::Scalar(u128::MAX),
+        Outcome::Scalar(u128::MAX),
     )?;
     let _ = generate_accounts_with_assets::<T>(
         acc_total,
@@ -328,7 +328,7 @@ benchmarks! {
         let (caller, marketid) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
-            OutcomeReport::Scalar(42)
+            Outcome::Scalar(42)
         )?;
     }:  {
         let origin = caller.clone();
@@ -459,7 +459,7 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
-        let outcome = OutcomeReport::Categorical(0);
+        let outcome = Outcome::Categorical(0);
         let approval_origin = T::ApprovalOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed(marketid)
             .dispatch_bypass_filter(approval_origin)?;

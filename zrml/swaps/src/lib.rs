@@ -65,7 +65,7 @@ mod pallet {
         constants::BASE,
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
+            Asset, MarketType, Outcome, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
             ScoringRule, SerdeWrapper,
         },
     };
@@ -87,7 +87,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_type: MarketType,
             pool_id: PoolId,
-            outcome_report: OutcomeReport,
+            outcome_report: Outcome,
         ) -> DispatchResult {
             ensure_root(origin)?;
             Self::set_pool_as_stale(&market_type, pool_id, &outcome_report, &Default::default())?;
@@ -1658,7 +1658,7 @@ mod pallet {
         fn set_pool_as_stale(
             market_type: &MarketType,
             pool_id: PoolId,
-            outcome_report: &OutcomeReport,
+            outcome_report: &Outcome,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut extra_weight = 0;
@@ -1677,7 +1677,7 @@ mod pallet {
                 if let MarketType::Categorical(_) = market_type {
                     let base_asset_or_default = base_asset.unwrap_or(Asset::Ztg);
 
-                    if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
+                    if let Outcome::Categorical(winning_asset_idx) = outcome_report {
                         pool.assets.retain(|el| {
                             if let Asset::CategoricalOutcome(_, idx) = *el {
                                 if idx == *winning_asset_idx {

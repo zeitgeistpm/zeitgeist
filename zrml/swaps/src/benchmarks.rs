@@ -16,7 +16,7 @@ use sp_runtime::traits::{SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
-    types::{Asset, MarketType, OutcomeReport, ScoringRule},
+    types::{Asset, MarketType, Outcome, ScoringRule},
 };
 
 // Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
@@ -116,7 +116,7 @@ benchmarks! {
     admin_set_pool_as_stale {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
-    }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
+    }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, Outcome::Categorical(0))
 
     end_subsidy_phase {
         // Total assets
@@ -301,7 +301,7 @@ benchmarks! {
             false
         );
     }: {
-        Pallet::<T>::set_pool_as_stale(&MarketType::Categorical(a as u16), pool_id, &OutcomeReport::Categorical(0), &Default::default())?;
+        Pallet::<T>::set_pool_as_stale(&MarketType::Categorical(a as u16), pool_id, &Outcome::Categorical(0), &Default::default())?;
     }
 
     swap_exact_amount_in_cpmm {

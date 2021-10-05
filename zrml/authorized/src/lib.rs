@@ -27,7 +27,7 @@ mod pallet {
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        types::{Market, MarketDispute, MarketDisputeMechanism, Outcome},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -44,10 +44,7 @@ mod pallet {
         /// Overwrites already provided outcomes for the same market and account.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::authorize_market_outcome())]
-        pub fn authorize_market_outcome(
-            origin: OriginFor<T>,
-            outcome: OutcomeReport,
-        ) -> DispatchResult {
+        pub fn authorize_market_outcome(origin: OriginFor<T>, outcome: Outcome) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let markets = T::MarketCommons::markets();
             let market_id = if let Some(rslt) = markets.iter().find(|el| {
@@ -144,7 +141,7 @@ mod pallet {
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<Outcome, DispatchError> {
             let market_ai = if let MarketDisputeMechanism::Authorized(ref el) = market.mdm {
                 el
             } else {
@@ -174,7 +171,7 @@ mod pallet {
         MarketIdOf<T>,
         Blake2_128Concat,
         T::AccountId,
-        OutcomeReport,
+        Outcome,
     >;
 }
 

@@ -1,6 +1,6 @@
 pub use crate::{
-    asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::*,
-    pool_status::PoolStatus, serde_wrapper::*,
+    asset::*, market::*, max_runtime_usize::*, outcome::Outcome, pool::*, pool_status::PoolStatus,
+    serde_wrapper::*,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};

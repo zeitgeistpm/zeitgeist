@@ -5,7 +5,7 @@ use core::ops::{Range, RangeInclusive};
 use frame_support::traits::Hooks;
 use libfuzzer_sys::fuzz_target;
 use zeitgeist_primitives::types::{
-    MarketCreation, MarketDisputeMechanism, MarketPeriod, MultiHash, OutcomeReport, ScoringRule,
+    MarketCreation, MarketDisputeMechanism, MarketPeriod, MultiHash, Outcome, ScoringRule,
 };
 use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, System};
 
@@ -105,10 +105,6 @@ fn market_dispute_mechanism(seed: u8) -> MarketDisputeMechanism<u128> {
 }
 
 #[inline]
-fn outcome(seed: u128) -> OutcomeReport {
-    if seed % 2 == 0 {
-        OutcomeReport::Categorical(seed as _)
-    } else {
-        OutcomeReport::Scalar(seed as _)
-    }
+fn outcome(seed: u128) -> Outcome {
+    if seed % 2 == 0 { Outcome::Categorical(seed as _) } else { Outcome::Scalar(seed as _) }
 }

@@ -9,7 +9,7 @@ use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
         Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, Report, ScoringRule,
+        MarketType, Outcome, Report, ScoringRule,
     },
 };
 
@@ -55,7 +55,7 @@ fn on_resolution_denies_non_simple_disputes_markets() {
 #[test]
 fn on_resolution_sets_reported_outcome_of_reported_markets_as_the_canonical_outcome() {
     ExtBuilder.build().execute_with(|| {
-        let outcome = OutcomeReport::Scalar(3);
+        let outcome = Outcome::Scalar(3);
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Reported;
         market.report = Some(Report { at: 0, by: 0, outcome: outcome.clone() });
@@ -69,8 +69,8 @@ fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outc
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Disputed;
         let disputes = [
-            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
-            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            MarketDispute { at: 0, by: 0, outcome: Outcome::Scalar(0) },
+            MarketDispute { at: 0, by: 0, outcome: Outcome::Scalar(20) },
         ];
         assert_eq!(
             &SimpleDisputes::on_resolution(&disputes, &0, &market).unwrap(),

@@ -92,8 +92,8 @@ mod pallet {
         traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
-            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            MarketStatus, MarketType, MultiHash, Outcome, Report, ScalarPosition, ScoringRule,
+            SubsidyUntil,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -297,7 +297,7 @@ mod pallet {
         pub fn dispute(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            outcome: OutcomeReport,
+            outcome: Outcome,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let disputes = Disputes::<T>::get(market_id);
@@ -683,7 +683,7 @@ mod pallet {
                 market.resolved_outcome.ok_or(Error::<T>::MarketIsNotResolved)?;
 
             let winning_assets = match resolved_outcome {
-                OutcomeReport::Categorical(category_index) => {
+                Outcome::Categorical(category_index) => {
                     let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
                     let winning_balance = T::Shares::free_balance(winning_currency_id, &sender);
 
@@ -698,7 +698,7 @@ mod pallet {
 
                     vec![(winning_currency_id, winning_balance, winning_balance)]
                 }
-                OutcomeReport::Scalar(value) => {
+                Outcome::Scalar(value) => {
                     let long_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
                     let short_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Short);
                     let long_balance = T::Shares::free_balance(long_currency_id, &sender);
@@ -773,9 +773,9 @@ mod pallet {
             }
 
             // Weight correction
-            if let OutcomeReport::Categorical(_) = resolved_outcome {
+            if let Outcome::Categorical(_) = resolved_outcome {
                 return Ok(Some(T::WeightInfo::redeem_shares_categorical()).into());
-            } else if let OutcomeReport::Scalar(_) = resolved_outcome {
+            } else if let Outcome::Scalar(_) = resolved_outcome {
                 return Ok(Some(T::WeightInfo::redeem_shares_scalar()).into());
             }
 
@@ -811,7 +811,7 @@ mod pallet {
         pub fn report(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
-            outcome: OutcomeReport,
+            outcome: Outcome,
         ) -> DispatchResult {
             let sender = ensure_signed(origin.clone())?;
 
@@ -1107,12 +1107,12 @@ mod pallet {
         /// A pending market has been cancelled. \[market_id, creator\]
         MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_outcome\]
-        MarketDisputed(MarketIdOf<T>, OutcomeReport),
+        MarketDisputed(MarketIdOf<T>, Outcome),
         /// NOTE: Maybe we should only allow rejections.
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
         /// A market has been reported on \[market_id, reported_outcome\]
-        MarketReported(MarketIdOf<T>, OutcomeReport),
+        MarketReported(MarketIdOf<T>, Outcome),
         /// A market has been resolved \[market_id, real_outcome\]
         MarketResolved(MarketIdOf<T>, u16),
         /// A complete set of shares has been sold \[market_id, seller\]
@@ -1305,7 +1305,7 @@ mod pallet {
 
         fn ensure_can_not_dispute_the_same_outcome(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            outcome: &OutcomeReport,
+            outcome: &Outcome,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
                 ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
@@ -1386,16 +1386,16 @@ mod pallet {
 
         fn ensure_outcome_matches_market_type(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            outcome: &OutcomeReport,
+            outcome: &Outcome,
         ) -> DispatchResult {
-            if let OutcomeReport::Categorical(ref inner) = outcome {
+            if let Outcome::Categorical(ref inner) = outcome {
                 if let MarketType::Categorical(ref categories) = market.market_type {
                     ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
                 } else {
                     return Err(Error::<T>::OutcomeMismatch.into());
                 }
             }
-            if let OutcomeReport::Scalar(ref inner) = outcome {
+            if let Outcome::Scalar(ref inner) = outcome {
                 if let MarketType::Scalar(ref outcome_range) = market.market_type {
                     ensure!(
                         inner >= outcome_range.start() && inner <= outcome_range.end(),
@@ -1412,14 +1412,14 @@ mod pallet {
         fn manage_resolved_categorical_market(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
-            outcome_report: &OutcomeReport,
+            outcome_report: &Outcome,
         ) -> Result<[usize; 3], DispatchError> {
             let mut total_accounts: usize = 0;
             let mut total_asset_accounts: usize = 0;
             let mut total_categories: usize = 0;
 
             if let MarketType::Categorical(_) = market.market_type {
-                if let OutcomeReport::Categorical(winning_asset_idx) = *outcome_report {
+                if let Outcome::Categorical(winning_asset_idx) = *outcome_report {
                     let assets = Self::outcome_assets(*market_id, market);
                     total_categories = assets.len().saturated_into();
 
@@ -1805,7 +1805,7 @@ mod pallet {
         fn set_pool_to_stale(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
-            outcome_report: &OutcomeReport,
+            outcome_report: &Outcome,
         ) -> Result<Weight, DispatchError> {
             let pool_id = if let Ok(el) = T::MarketCommons::market_pool(market_id) {
                 el
@@ -1861,7 +1861,7 @@ mod pallet {
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             num_disputes: u32,
-            outcome: &OutcomeReport,
+            outcome: &Outcome,
         ) -> DispatchResult {
             ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
             Self::ensure_outcome_matches_market_type(market, outcome)?;

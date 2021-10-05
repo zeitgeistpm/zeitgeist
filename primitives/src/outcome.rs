@@ -11,7 +11,7 @@ use crate::types::CategoryIndex;
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub enum OutcomeReport {
+pub enum Outcome {
     Categorical(CategoryIndex),
     Scalar(u128),
 }

@@ -1,4 +1,4 @@
-use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
+use crate::{market::MarketDispute, outcome::Outcome, types::Market};
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
 
@@ -23,5 +23,5 @@ pub trait DisputeApi {
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<OutcomeReport, DispatchError>;
+    ) -> Result<Outcome, DispatchError>;
 }

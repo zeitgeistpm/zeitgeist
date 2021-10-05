@@ -11,7 +11,7 @@ use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_call
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
-use zeitgeist_primitives::types::OutcomeReport;
+use zeitgeist_primitives::types::Outcome;
 
 fn deposit<T>(caller: &T::AccountId)
 where
@@ -44,7 +44,7 @@ benchmarks! {
     vote {
         let caller: T::AccountId = whitelisted_caller();
         let market_id = Default::default();
-        let outcome = OutcomeReport::Scalar(u128::MAX);
+        let outcome = Outcome::Scalar(u128::MAX);
         deposit_and_join_court::<T>(&caller);
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 }
