@@ -1,6 +1,6 @@
 # Based from https://github.com/paritytech/substrate/blob/master/.maintain/Dockerfile
 
-FROM phusion/baseimage:focal-1.1.0 as builder
+FROM phusion/baseimage:bionic-1.0.0 as builder
 LABEL maintainer="hi@zeitgeit.pm"
 LABEL description="This is the build stage for the Zeitgeist node. Here is created the binary."
 
@@ -25,7 +25,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 # ==== SECOND STAGE ====
 
-FROM phusion/baseimage:focal-1.1.0
+FROM phusion/baseimage:bionic-1.0.0
 LABEL maintainer="hi@zeitgeist.pm"
 LABEL description="This is the 2nd stage: a very small image where we copy the Zeigeist node binary."
 ARG PROFILE=release
