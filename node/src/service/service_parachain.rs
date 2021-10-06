@@ -19,7 +19,7 @@ pub async fn new_full(
     parachain_id: ParaId,
     polkadot_config: Configuration,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
-    do_new_full(parachain_config, parachain_id, polkadot_config, |_| Default::default()).await
+    do_new_full(parachain_config, parachain_id, polkadot_config).await
 }
 
 pub fn new_partial(
@@ -96,19 +96,11 @@ pub fn new_partial(
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
 #[sc_tracing::logging::prefix_logs_with("🌔 Zeitgeist Parachain")]
-async fn do_new_full<RB>(
+async fn do_new_full(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
-    rpc_ext_builder: RB,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
-where
-    RB: Fn(
-            Arc<TFullClient<Block, RuntimeApi, Executor>>,
-        ) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
-        + Send
-        + 'static,
-{
+) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
     if matches!(parachain_config.role, Role::Light) {
         return Err("Light client not supported!".into());
     }
@@ -154,8 +146,17 @@ where
             warp_sync: None,
         })?;
 
-    let rpc_client = client.clone();
-    let rpc_extensions_builder = Box::new(move |_, _| Ok(rpc_ext_builder(rpc_client.clone())));
+    let rpc_extensions_builder = {
+        let client = client.clone();
+        let pool = transaction_pool.clone();
+
+        Box::new(move |deny_unsafe, _| {
+            let deps =
+                crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
+
+            Ok(crate::rpc::create_full(deps))
+        })
+    };
 
     sc_service::spawn_tasks(sc_service::SpawnTasksParams {
         backend: backend.clone(),
