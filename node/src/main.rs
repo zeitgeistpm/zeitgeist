@@ -3,7 +3,6 @@
 mod chain_spec;
 mod cli;
 mod command;
-#[cfg(not(feature = "parachain"))]
 mod rpc;
 #[macro_use]
 mod service;
