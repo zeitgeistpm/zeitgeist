@@ -24,7 +24,16 @@
   },
   "AuthorId": "AccountId",
   "BlockNumber": "u64",
+  "Bond": {
+    "owner": "AccountId",
+    "amount": "Balance"
+  },
   "CategoryIndex": "u16",
+  "CollatorSnapshot": {
+    "bond": "Balance",
+    "nominators": "Vec<Bond>",
+    "total": "Balance"
+  },
   "CommonPoolEventParams": {
     "pool_id": "u128",
     "who": "AccountId"
@@ -32,7 +41,18 @@
   "Currency": "Asset",
   "CurrencyId": "Asset",
   "CurrencyIdOf": "Asset",
+  "ExitQ": {
+    "candidates": "Vec<AccountId>",
+    "nominators_leaving": "Vec<AccountId>",
+    "candidate_schedule": "Vec<(AccountId, RoundIndex)>",
+    "nominator_schedule": "Vec<(AccountId, Option<AccountId>, RoundIndex)>",
+  },
   "Index": "u64",
+  "InflationInfo": {
+    "expect": "RangeBalance",
+    "annual": "RangePerbill",
+    "round": "RangePerbill"
+  },
   "Lookup": "MultiAddress",
   "Market": {
     "creator": "AccountId",
@@ -57,7 +77,7 @@
   "MarketDispute": {
     "at": "BlockNumber",
     "by": "AccountId",
-    "outcome": "Outcome"
+    "outcome": "OutcomeReport"
   },
   "MarketDisputeMechanism": {
     "_enum": {
@@ -115,17 +135,37 @@
       "Ask"
     ]
   },
+  "OrderedSet": "Vec<Bond>",
+  "RangeBalance": {
+    "min": "Balance",
+    "ideal": "Balance",
+    "max": "Balance"
+  },
+  "RangePerbill": {
+    "min": "Perbill",
+    "ideal": "Perbill",
+    "max": "Perbill"
+  },
+  "RelayChainAccountId": "AccountId32",
+  "RewardInfo": {
+    "total_reward": "Balance",
+    "claimed_reward": "Balance"
+  },
   "ScoringRule": {
     "_enum": [
       "CPMM",
       "RikiddoSigmoidFeeMarketEma"
     ]
   },
-  "Outcome": {
+  "OutcomeReport": {
     "_enum": {
       "Categorical": "u16",
       "Scalar": "u128"
     }
+  },
+  "ParachainBondConfig": {
+    "account": "AccountId",
+    "percent": "Percent"
   },
   "Pool": {
     "assets": "Vec<Asset>",
@@ -163,7 +203,12 @@
   "Report": {
     "at": "BlockNumber",
     "by": "AccountId",
-    "outcome": "Outcome"
+    "outcome": "OutcomeReport"
+  },
+  "RoundInfo": {
+    "current": "RoundIndex",
+    "first": "BlockNumber",
+    "length": "u32"
   },
   "RoundIndex": "u32",
   "ScalarPosition": {
@@ -188,5 +233,6 @@
     "free": "Balance",
     "reserved": "Balance",
     "frozen": "Balance"
-  }
+  },
+  "VestingBlockNumber": "u32"
 }
