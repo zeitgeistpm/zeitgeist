@@ -119,12 +119,12 @@ launch_configured_validator() {
 
         if (( $idx == 1 ))
         then
-            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --node-key=$VALIDATOR_FIRST_BOOTNODE_NODE_KEY --validator"
+            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --node-key=$VALIDATOR_FIRST_BOOTNODE_NODE_KEY --pruning archive --validator"
         elif (( $idx == 2 ))
         then
-            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --node-key=$VALIDATOR_SECOND_BOOTNODE_NODE_KEY --validator"
+            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --node-key=$VALIDATOR_SECOND_BOOTNODE_NODE_KEY --pruning archive --validator"
         else
-            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --validator"
+            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --pruning archive --validator"
         fi
     fi
 }
@@ -198,9 +198,9 @@ launch_configured_parachain() {
 
         if (( $idx == 1 ))
         then
-            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--collator --node-key=$PARACHAIN_FIRST_BOOTNODE_NODE_KEY"
+            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--collator --node-key=$PARACHAIN_FIRST_BOOTNODE_NODE_KEY --pruning archive"
         else
-            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --collator"
+            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --collator --pruning archive"
         fi
     fi  
 }
