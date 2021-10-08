@@ -110,7 +110,7 @@ launch_configured_validator() {
 
     if (( $idx <= 0 ))
     then
-        launch_validator "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR  --rpc-cors=all --rpc-external --ws-external"
+        launch_validator "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --pruning archive --rpc-cors=all --rpc-external --ws-external"
     else
         launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--rpc-cors=all --rpc-methods=Unsafe --unsafe-rpc-external --validator"
         sleep 10
@@ -119,12 +119,12 @@ launch_configured_validator() {
 
         if (( $idx == 1 ))
         then
-            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --node-key=$VALIDATOR_FIRST_BOOTNODE_NODE_KEY --pruning archive --validator"
+            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --node-key=$VALIDATOR_FIRST_BOOTNODE_NODE_KEY --validator"
         elif (( $idx == 2 ))
         then
-            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --node-key=$VALIDATOR_SECOND_BOOTNODE_NODE_KEY --pruning archive --validator"
+            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --node-key=$VALIDATOR_SECOND_BOOTNODE_NODE_KEY --validator"
         else
-            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --pruning archive --validator"
+            launch_validator $LOCAL_CONTAINER_NAME "$DOCKER_EXTRA_PARAMS" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --validator"
         fi
     fi
 }
@@ -188,7 +188,7 @@ launch_configured_parachain() {
 
     if (( $idx <= 0 ))
     then
-        launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --rpc-cors=all --rpc-external --ws-external"
+        launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --pruning archive --rpc-cors=all --rpc-external --ws-external"
     else
         launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--collator --rpc-cors=all --rpc-methods=Unsafe --unsafe-rpc-external"
         sleep 10
@@ -198,9 +198,9 @@ launch_configured_parachain() {
 
         if (( $idx == 1 ))
         then
-            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--collator --node-key=$PARACHAIN_FIRST_BOOTNODE_NODE_KEY --pruning archive"
+            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--collator --node-key=$PARACHAIN_FIRST_BOOTNODE_NODE_KEY"
         else
-            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --collator --pruning archive"
+            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --collator"
         fi
     fi  
 }
