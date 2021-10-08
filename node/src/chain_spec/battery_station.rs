@@ -31,7 +31,7 @@ pub fn battery_station_staging_config(
         vec![],
         telemetry_endpoints(),
         Some("battery_station"),
-        Some(token_properties()),
+        Some(token_properties("ZBS")),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo".into(),

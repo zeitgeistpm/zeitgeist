@@ -6,9 +6,9 @@
 
 set -euxo pipefail
 
-PARACHAIN_CHAIN=battery_station_staging
+PARACHAIN_CHAIN=dev
 PARACHAIN_ID=2050
-POLKADOT_BRANCH=release-v0.9.10
+POLKADOT_BRANCH=release-v0.9.11
 POLKADOT_DIR="target/polkadot"
 RELAYCHAIN_CHAIN=rococo-local
 
@@ -110,8 +110,4 @@ start_collator() {
 
 # Feel free to comment, add or remove collators. Just remember that #Validators > #Collators
 
-# 5EeNXHgaiWZAwZuZdDndJYcRTKuGHkXM2bdGE6LqWCw1bHW7
-start_collator 30333 9933 9944 32000 8200 9200 "upper february enrich inch group ginger loan dutch network empty song source" "0xe6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"
-
-# Alice - Development
-#start_collator 30334 9934 9945 32001 8201 9201 "bottom drive obey lake curtain smoke basket hold race lonely fit walk//Alice" "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"
+start_collator 30333 9933 9944 32000 8200 9200 "bottom drive obey lake curtain smoke basket hold race lonely fit walk//Alice" "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"

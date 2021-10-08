@@ -180,7 +180,7 @@ fn additional_chain_spec_staging(
 
     AdditionalChainSpec {
         candidates: vec![(
-            hex!["7225b9e36cc33da17d7f97053c7110559f21967afc09867345367b7de241d03c"].into(),
+            hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
             hex!["e6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"]
                 .unchecked_into(),
             crate::chain_spec::DEFAULT_STAKING_AMOUNT,
@@ -221,8 +221,8 @@ fn endowed_accounts_staging() -> Vec<AccountId> {
         hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
         // 5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX
         hex!["725bb6fd13d52b3d6830e5a9faed1f6499ca0f5e8aa285df09490646e71e831b"].into(),
-        // 5EeNXHgaiWZAwZuZdDndJYcRTKuGHkXM2bdGE6LqWCw1bHW7
-        hex!["7225b9e36cc33da17d7f97053c7110559f21967afc09867345367b7de241d03c"].into(),
+        // 5D9tF8w1FMSdz52bpiaQis1pCUZy5Gs6HcHS7gHxEzyq4XzU
+        hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
     ]
 }
 
@@ -238,10 +238,10 @@ fn telemetry_endpoints() -> Option<TelemetryEndpoints> {
     .ok()
 }
 
-fn token_properties() -> Map<String, Value> {
+fn token_properties(token_symbol: &str) -> Map<String, Value> {
     let mut properties = Map::new();
     properties.insert("ss58Format".into(), SS58Prefix::get().into());
-    properties.insert("tokenSymbol".into(), "ZBP".into());
+    properties.insert("tokenSymbol".into(), token_symbol.into());
     properties.insert("tokenDecimals".into(), BalanceFractionalDecimals::get().into());
     properties
 }
