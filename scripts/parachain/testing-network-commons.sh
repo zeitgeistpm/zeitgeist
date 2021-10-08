@@ -17,7 +17,7 @@ delete_container() {
 }
 
 generate_account_id() {
-    sudo docker run --rm $VALIDATOR_IMAGE $DOCKER_POLKADOT_BIN key inspect ${3:-} "$OVERALL_SECRET//$1//$2" | grep "Account ID" | awk '{ print $3 }'
+    sudo docker run --rm $VALIDATOR_IMAGE key inspect ${3:-} "$OVERALL_SECRET//$1//$2" | grep "Account ID" | awk '{ print $3 }'
 }
 
 generate_author_insertKey_with_account_id() {
@@ -35,7 +35,7 @@ generate_author_insertKey_with_public_key() {
 }
 
 generate_public_key() {
-    sudo docker run --rm $VALIDATOR_IMAGE $DOCKER_POLKADOT_BIN key inspect ${3:-} "$OVERALL_SECRET//$1//$2" | grep "Public key (hex)" | awk '{ print $4 }'
+    sudo docker run --rm $VALIDATOR_IMAGE key inspect ${3:-} "$OVERALL_SECRET//$1//$2" | grep "Public key (hex)" | awk '{ print $4 }'
 }
 
 initial_container_configurations() {
@@ -89,7 +89,6 @@ launch_validator() {
         --name=$container_name \
         --restart=always \
         $VALIDATOR_IMAGE \
-        $DOCKER_POLKADOT_BIN \
         --base-path=/data \
         --chain=/zeitgeist/relay-chain-spec.json \
         --name=$container_name \
