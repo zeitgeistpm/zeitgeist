@@ -45,7 +45,7 @@
     "candidates": "Vec<AccountId>",
     "nominators_leaving": "Vec<AccountId>",
     "candidate_schedule": "Vec<(AccountId, RoundIndex)>",
-    "nominator_schedule": "Vec<(AccountId, Option<AccountId>, RoundIndex)>",
+    "nominator_schedule": "Vec<(AccountId, Option<AccountId>, RoundIndex)>"
   },
   "Index": "u64",
   "InflationInfo": {
