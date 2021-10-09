@@ -126,8 +126,8 @@ macro_rules! create_zeitgeist_runtime {
 
                 // Zeitgeist
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 40,
-                Authorized: zrml_authorized::{Event<T>, Pallet, Storage} = 41,
-                Court: zrml_court::{Event<T>, Pallet, Storage} = 42,
+                Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 41,
+                Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 42,
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 43,
                 RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 44,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
