@@ -478,12 +478,18 @@ mod pallet {
             let who = ensure_signed(origin.clone())?;
 
             if let MarketType::Categorical(num_cat) = assets {
-                ensure!(pool_join_additional_assets.len().saturated_into::<u16>() == num_cat, Error::<T>::VectorsNotIdentical);
+                ensure!(
+                    pool_join_additional_assets.len().saturated_into::<u16>() == num_cat,
+                    Error::<T>::VectorsNotIdentical
+                );
             } else if let MarketType::Scalar(_) = assets {
                 ensure!(pool_join_additional_assets.len() == 2, Error::<T>::VectorsNotIdentical);
             }
 
-            ensure!(pool_join_additional_assets.len() == min_pool_shares_out.len(), Error::<T>::VectorsNotIdentical);
+            ensure!(
+                pool_join_additional_assets.len() == min_pool_shares_out.len(),
+                Error::<T>::VectorsNotIdentical
+            );
 
             let weight_market_creation;
             let _ = match assets.clone() {
