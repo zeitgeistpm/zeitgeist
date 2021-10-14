@@ -610,6 +610,8 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
         (Asset::CategoricalOutcome(0, 1), extra_amount, 0),
         (Asset::CategoricalOutcome(0, 3), extra_amount, 0),
     ];
+    let additional_liquidity = vec![extra_amount, extra_amount, 0, extra_amount];
+    let additional_liquidity_min_shares = vec![0, 0, 0, 0];
 
     let first_state = RefCell::new(vec![]);
     let second_state = RefCell::new(vec![]);
@@ -623,10 +625,11 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             metadata.clone(),
             creation.clone(),
             assets,
+            MarketDisputeMechanism::SimpleDisputes,
             amount,
             weights.clone(),
-            add_additional.clone(),
-            MarketDisputeMechanism::SimpleDisputes
+            additional_liquidity,
+            additional_liquidity_min_shares
         ));
 
         *first_state.borrow_mut() = storage_root();

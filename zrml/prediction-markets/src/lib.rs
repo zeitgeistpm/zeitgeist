@@ -444,12 +444,14 @@ mod pallet {
         /// * `assets`: The type and the parameters of an asset (for example 5 categorical assets).
         /// * `amount`: The amount of a complete set of assets that should be bought.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `pool_join_additional_assets`: A list of 3-tuples containing the asset amounts to
-        ///     additionally deploy into the market. The first element is the asset, the market
-        ///     id contained within will be replaced by the market id of the market that was just
-        ///     deployed within this function call, the second element in the 3-tuple contains the
-        ///     amount of that asset type that should be added as additional liquidity and the
-        ///     last element within the 3-tuple contains the minimum pool amount (see Swaps pallet)
+        /// * `pool_join_additional_assets`: A vector that contains the number of assets that
+        ///     should be additionally deployed. Must have a length that is equal to the number
+        ///     of categories or scalar outcomes. In case the market is scalar, the first value
+        ///     represents the number of long shares and the second the number of short shares.
+        /// * `min_pool_shares_out`: A vector containing the minimum number of pool shares
+        ///     that are obtained for adding additional liquidity. Must have the same length
+        ///     as `pool_join_additional_assets`. Every number in the vector is associated to
+        ///     the asset amount at the same position in `pool_join_additional_assets`.
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
@@ -459,6 +461,7 @@ mod pallet {
             .saturating_add(5_000_000_000.saturating_mul(pool_join_additional_assets.len() as u64))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
+        #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
             origin: OriginFor<T>,
             oracle: T::AccountId,
@@ -466,14 +469,24 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             assets: MarketType,
+            mdm: MarketDisputeMechanism<T::AccountId>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
-            pool_join_additional_assets: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>, BalanceOf<T>)>,
-            mdm: MarketDisputeMechanism<T::AccountId>,
+            pool_join_additional_assets: Vec<BalanceOf<T>>,
+            min_pool_shares_out: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
+
+            if let MarketType::Categorical(num_cat) = assets {
+                ensure!(pool_join_additional_assets.len().saturated_into::<u16>() == num_cat, Error::<T>::VectorsNotIdentical);
+            } else if let MarketType::Scalar(_) = assets {
+                ensure!(pool_join_additional_assets.len() == 2, Error::<T>::VectorsNotIdentical);
+            }
+
+            ensure!(pool_join_additional_assets.len() == min_pool_shares_out.len(), Error::<T>::VectorsNotIdentical);
+
             let weight_market_creation;
-            let _ = match assets {
+            let _ = match assets.clone() {
                 MarketType::Categorical(category_count) => {
                     weight_market_creation = Self::create_categorical_market(
                         origin.clone(),
@@ -513,20 +526,31 @@ mod pallet {
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins = 0;
 
-            for (mut asset_in, asset_amount, min_pool_amount) in pool_join_additional_assets {
-                asset_in = match asset_in {
-                    Asset::CategoricalOutcome(_, cat_idx) => {
-                        Asset::CategoricalOutcome(market_id, cat_idx)
+            for ((idx, asset_amount), min_pool_shares) in
+                pool_join_additional_assets.into_iter().enumerate().zip(min_pool_shares_out)
+            {
+                if asset_amount == <BalanceOf<T>>::zero() {
+                    continue;
+                };
+
+                let asset_in = match assets {
+                    MarketType::Categorical(_) => {
+                        Asset::CategoricalOutcome(market_id, idx.saturated_into())
                     }
-                    Asset::ScalarOutcome(_, position) => Asset::ScalarOutcome(market_id, position),
-                    _ => asset_in,
+                    MarketType::Scalar(_) => {
+                        if idx == 0 {
+                            Asset::ScalarOutcome(market_id, ScalarPosition::Long)
+                        } else {
+                            Asset::ScalarOutcome(market_id, ScalarPosition::Short)
+                        }
+                    }
                 };
                 let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
                     who.clone(),
                     pool_id,
                     asset_in,
                     asset_amount,
-                    min_pool_amount,
+                    min_pool_shares,
                 )?;
                 weight_pool_joins = weight_pool_joins.saturating_add(local_weight);
             }
@@ -1080,6 +1104,8 @@ mod pallet {
         SwapPoolExists,
         /// Too many categories for a categorical market
         TooManyCategories,
+        /// A function was called that contains multiple vectors which should have the same length.
+        VectorsNotIdentical,
     }
 
     #[pallet::event]
