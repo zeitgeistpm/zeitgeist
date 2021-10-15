@@ -442,24 +442,24 @@ mod pallet {
         /// * `metadata`: A hash pointer to the metadata of the market.
         /// * `creation`: The creation type of the market (permissionless or advised).
         /// * `assets`: The type and the parameters of an asset (for example 5 categorical assets).
-        /// * `amount`: The amount of a complete set of assets that should be bought.
+        /// * `amounts`: A vector containing the amount of each outcome asset that should be
+        ///     deployed. The highest value will be used to buy a complete set, i.e. every outcome
+        ///     asset will be bought in quantities specified by the highest value in this vector.
+        ///     Any value that is lower than the highest value in the vector signals that not
+        ///     all assets should be deployed. For example, `amounts = [120, 150]` means, that after
+        ///     deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `pool_join_additional_assets`: A vector that contains the number of assets that
-        ///     should be additionally deployed. Must have a length that is equal to the number
-        ///     of categories or scalar outcomes. In case the market is scalar, the first value
-        ///     represents the number of long shares and the second the number of short shares.
-        /// * `min_pool_shares_out`: A vector containing the minimum number of pool shares
-        ///     that are obtained for adding additional liquidity. Must have the same length
-        ///     as `pool_join_additional_assets`. Every number in the vector is associated to
-        ///     the asset amount at the same position in `pool_join_additional_assets`.
+        /// * `keep`: Specifies how many assets to keep. Any left-over assets that are specified as
+        ///     zero in this vector are sold. Must have the same length as amounts.
         #[pallet::weight(
-            T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
-            .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32))
-            // Overly generous estimation, since we have no access to Swaps WeightInfo
+            u64::from(T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
+            .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
+            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
+            // TODO: Overly generous estimation, since we have no access to Swaps WeightInfo
             // (it is loosely coupled to this pallet using a trait). Will be adjusted later
-            .saturating_add(5_000_000_000.saturating_mul(pool_join_additional_assets.len() as u64))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight)))
+            // TODO: Add sell weightT::MaxCategories::get().into())
         )]
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
@@ -470,29 +470,26 @@ mod pallet {
             creation: MarketCreation,
             assets: MarketType,
             mdm: MarketDisputeMechanism<T::AccountId>,
-            #[pallet::compact] amount: BalanceOf<T>,
+            amounts: Vec<BalanceOf<T>>,
             weights: Vec<u128>,
-            pool_join_additional_assets: Vec<BalanceOf<T>>,
-            min_pool_shares_out: Vec<BalanceOf<T>>,
+            keep: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
 
             if let MarketType::Categorical(num_cat) = assets {
                 ensure!(
-                    pool_join_additional_assets.len().saturated_into::<u16>() == num_cat,
-                    Error::<T>::VectorsNotIdentical
+                    amounts.len().saturated_into::<u16>() == num_cat,
+                    Error::<T>::NotEnoughAssets
                 );
             } else if let MarketType::Scalar(_) = assets {
-                ensure!(pool_join_additional_assets.len() == 2, Error::<T>::VectorsNotIdentical);
+                ensure!(amounts.len() == 2, Error::<T>::NotEnoughAssets);
             }
 
-            ensure!(
-                pool_join_additional_assets.len() == min_pool_shares_out.len(),
-                Error::<T>::VectorsNotIdentical
-            );
+            ensure!(amounts.len() == keep.len(), Error::<T>::NotEnoughAssets);
 
+            // Create the correct market
             let weight_market_creation;
-            let _ = match assets.clone() {
+            match assets.clone() {
                 MarketType::Categorical(category_count) => {
                     weight_market_creation = Self::create_categorical_market(
                         origin.clone(),
@@ -523,19 +520,27 @@ mod pallet {
                 }
             };
 
+            // Buy a complete set of assets based on the highest number to be deployed
+            let zero_balance = <BalanceOf<T>>::zero();
             let market_id = T::MarketCommons::latest_market_id()?;
-            let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
+            let max_assets = amounts
+                .iter()
+                .fold(zero_balance, |prev, cur| if prev > *cur { prev } else { *cur });
+            let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, max_assets)?
                 .actual_weight
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weight_len = weights.len().saturated_into();
+
+            // Deploy a swap pool with MinLiqudity
             let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins = 0;
+            let mut remaining_sells: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)> =
+                Vec::with_capacity(amounts.len());
 
-            for ((idx, asset_amount), min_pool_shares) in
-                pool_join_additional_assets.into_iter().enumerate().zip(min_pool_shares_out)
-            {
-                if asset_amount == <BalanceOf<T>>::zero() {
+            // Add additional liquidity as specified in amounts
+            for ((idx, asset_amount), keep_amount) in amounts.iter().enumerate().zip(keep) {
+                if *asset_amount == zero_balance {
                     continue;
                 };
 
@@ -555,10 +560,24 @@ mod pallet {
                     who.clone(),
                     pool_id,
                     asset_in,
-                    asset_amount,
-                    min_pool_shares,
+                    *asset_amount,
+                    zero_balance,
                 )?;
+                remaining_sells.push((
+                    asset_in,
+                    max_assets.saturating_sub(*asset_amount).saturating_sub(keep_amount),
+                ));
                 weight_pool_joins = weight_pool_joins.saturating_add(local_weight);
+            }
+
+            // If desired, sell remaining assets. An additional loop is used because the
+            // sell prices change after all additional liqudidity was added.
+            for (asset, amount) in remaining_sells.into_iter() {
+                if amount == zero_balance {
+                    continue;
+                }
+
+                // TODO: Sell
             }
 
             Ok(Some(
@@ -1098,6 +1117,8 @@ mod pallet {
         MarketStartTooLate,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
+        /// The number of assets specified in a parameter does not match the total asset count.
+        NotEnoughAssets,
         /// The number of categories for a categorical market is too low
         NotEnoughCategories,
         /// The user has no winning balance.
@@ -1110,8 +1131,6 @@ mod pallet {
         SwapPoolExists,
         /// Too many categories for a categorical market
         TooManyCategories,
-        /// A function was called that contains multiple vectors which should have the same length.
-        VectorsNotIdentical,
     }
 
     #[pallet::event]
