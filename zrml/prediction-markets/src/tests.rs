@@ -594,6 +594,7 @@ fn it_allows_to_redeem_shares() {
     });
 }
 
+/*
 #[test]
 fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
     let oracle = ALICE;
@@ -670,6 +671,7 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
     // Compare resulting state
     assert_eq!(*first_state.borrow(), *second_state.borrow());
 }
+*/
 
 #[test]
 fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {

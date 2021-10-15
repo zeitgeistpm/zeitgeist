@@ -134,4 +134,27 @@ pub trait Swaps<AccountId> {
         min_asset_amount_out: Self::Balance,
         max_price: Self::Balance,
     ) -> Result<Weight, DispatchError>;
+
+    /// Swap - Exact amount out
+    ///
+    /// Swaps a given `asset_amount_out` of the `asset_in/asset_out` pair to `origin`.
+    ///
+    /// # Arguments
+    ///
+    /// * `who`: The account whose assets should be transferred.
+    /// * `pool_id`: Unique pool identifier.
+    /// * `asset_in`: Asset entering the pool.
+    /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
+    /// * `asset_out`: Asset leaving the pool.
+    /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
+    /// * `max_price`: Market price must be equal or less than the provided value.
+    fn swap_exact_amount_out(
+        who: AccountId,
+        pool_id: PoolId,
+        asset_in: Asset<Self::MarketId>,
+        max_amount_asset_in: Self::Balance,
+        asset_out: Asset<Self::MarketId>,
+        asset_amount_out: Self::Balance,
+        max_price: Self::Balance,
+    ) -> Result<Weight, DispatchError>;
 }
