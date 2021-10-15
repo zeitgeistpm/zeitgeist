@@ -87,11 +87,15 @@ mod pallet {
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
     };
-    use zeitgeist_primitives::{constants::{MILLISECS_PER_BLOCK, MinLiquidity, PmPalletId}, traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency}, types::{
+    use zeitgeist_primitives::{
+        constants::{MinLiquidity, PmPalletId, MILLISECS_PER_BLOCK},
+        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
+        types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
             ScoringRule, SubsidyUntil,
-        }};
+        },
+    };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -470,7 +474,7 @@ mod pallet {
             weights: Vec<u128>,
             keep: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin.clone())?;
+            let _ = ensure_signed(origin.clone())?;
 
             if let MarketType::Categorical(num_cat) = assets {
                 ensure!(
@@ -517,85 +521,25 @@ mod pallet {
             };
 
             // Buy a complete set of assets based on the highest number to be deployed
-            let zero_balance = <BalanceOf<T>>::zero();
             let market_id = T::MarketCommons::latest_market_id()?;
-            let max_assets = amounts
-                .iter()
-                .fold(zero_balance, |prev, cur| if prev > *cur { prev } else { *cur });
-            let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, max_assets)?
-                .actual_weight
-                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
-            let weight_len = weights.len().saturated_into();
+            let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liqudity(
+                origin, market_id, amounts.clone(), weights.clone(), keep,
+            )?
+            .actual_weight
+            .unwrap_or(u64::from(
+                T::WeightInfo::buy_complete_set(
+                    T::MaxCategories::get().min(amounts.len().saturated_into()).into(),
+                )
+                .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
+                    T::MaxCategories::get().min(weights.len().saturated_into()).into(),
+                ))
+                .saturating_add(5_000_000_000.saturating_mul(
+                    T::MaxCategories::get().min(amounts.len().saturated_into()).into(),
+                ))
+                .saturating_add(T::DbWeight::get().reads(2 as Weight)),
+            ));
 
-            // Deploy a swap pool with MinLiquidity
-            let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
-            let pool_id = T::MarketCommons::market_pool(&market_id)?;
-            let mut weight_pool_joins_and_sells = 0;
-            let mut remaining_sells: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)> =
-                Vec::with_capacity(amounts.len());
-
-            // Add additional liquidity as specified in amounts
-            for ((idx, asset_amount), keep_amount) in amounts.iter().enumerate().zip(keep) {
-                if *asset_amount == zero_balance {
-                    continue;
-                };
-
-                let remaining_amount = (*asset_amount).saturating_sub(MinLiquidity::get().saturated_into());
-                let asset_in = match assets {
-                    MarketType::Categorical(_) => {
-                        Asset::CategoricalOutcome(market_id, idx.saturated_into())
-                    }
-                    MarketType::Scalar(_) => {
-                        if idx == 0 {
-                            Asset::ScalarOutcome(market_id, ScalarPosition::Long)
-                        } else {
-                            Asset::ScalarOutcome(market_id, ScalarPosition::Short)
-                        }
-                    }
-                };
-                let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
-                    who.clone(),
-                    pool_id,
-                    asset_in,
-                    remaining_amount,
-                    zero_balance,
-                )?;
-                remaining_sells.push((
-                    asset_in,
-                    max_assets.saturating_sub(*asset_amount).saturating_sub(keep_amount),
-                ));
-                weight_pool_joins_and_sells =
-                    weight_pool_joins_and_sells.saturating_add(local_weight);
-            }
-
-            // If desired, sell remaining assets. An additional loop is used because the
-            // sell prices change after all additional liqudidity was added.
-            for (asset, amount) in remaining_sells.into_iter() {
-                if amount == zero_balance {
-                    continue;
-                }
-
-                let local_weight = T::Swaps::swap_exact_amount_in(
-                    who.clone(),
-                    pool_id,
-                    asset,
-                    amount,
-                    Asset::Ztg,
-                    zero_balance,
-                    u128::MAX.saturated_into(),
-                )?;
-                weight_pool_joins_and_sells =
-                    weight_pool_joins_and_sells.saturating_add(local_weight);
-            }
-
-            Ok(Some(
-                weight_market_creation
-                    .saturating_add(weight_bcs)
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weight_len))
-                    .saturating_add(weight_pool_joins_and_sells)
-                    .saturating_add(T::DbWeight::get().reads(2)),
-            )
-            .into())
+            Ok(Some(weight_market_creation.saturating_add(deploy_and_populate_weight)).into())
         }
 
         #[pallet::weight(T::WeightInfo::create_scalar_market())]
@@ -725,7 +669,8 @@ mod pallet {
                     continue;
                 };
 
-                let remaining_amount = (*asset_amount).saturating_sub(MinLiquidity::get().saturated_into());
+                let remaining_amount =
+                    (*asset_amount).saturating_sub(MinLiquidity::get().saturated_into());
                 let asset_in = match assets {
                     MarketType::Categorical(_) => {
                         Asset::CategoricalOutcome(market_id, idx.saturated_into())

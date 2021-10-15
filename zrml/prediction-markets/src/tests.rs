@@ -1,9 +1,6 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{
-    mock::*, Config, Error, MarketIdsPerDisputeBlock,
-    MarketIdsPerReportBlock,
-};
+use crate::{mock::*, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
 use core::{cell::RefCell, ops::Range};
 use frame_support::{
     assert_err, assert_noop, assert_ok,
@@ -14,10 +11,13 @@ use frame_support::{
 
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::{constants::{AdvisoryBond, BASE, CENT, DisputeBond, DisputeFactor, OracleBond, ValidityBond}, types::{
+use zeitgeist_primitives::{
+    constants::{AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT},
+    types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
-    }};
+    },
+};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
@@ -668,10 +668,10 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             u128::MAX,
         ));
 
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,0), &ALICE), keep_amount);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,1), &ALICE), 0);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,2), &ALICE), 0);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,3), &ALICE), 0);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), keep_amount);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &ALICE), 0);
         *second_state.borrow_mut() = storage_root();
     });
 
