@@ -454,7 +454,7 @@ mod pallet {
             // Overly generous estimation, since we have no access to Swaps WeightInfo
             // (it is loosely coupled to this pallet using a trait). Contains weight for
             // create_pool() and swap_exact_amount_in()
-            .saturating_add(10_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
+            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
             .saturating_add(T::DbWeight::get().reads(2 as Weight)))
         )]
         #[transactional]
@@ -664,6 +664,122 @@ mod pallet {
             Self::deposit_event(Event::MarketCreated(market_id, market, sender));
 
             Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
+        }
+
+        /// This function combines the creation of a market, the buying of a complete set of
+        /// outcome assets, the deployment of the minimum amount of outcome assets and
+        /// the optional deployment of additional outcome asset.
+        ///
+        /// # Arguments
+        ///
+        /// * `oracle`: The oracle of the market who will report the correct outcome.
+        /// * `market_id`: Id of the market for that the pool should be created and populated.
+        /// * `amounts`: A vector containing the amount of each outcome asset that should be
+        ///     deployed. The highest value will be used to buy a complete set, i.e. every outcome
+        ///     asset will be bought in quantities specified by the highest value in this vector.
+        ///     Any value that is lower than the highest value in the vector signals that not
+        ///     all assets should be deployed. For example, `amounts = [120, 150]` means, that after
+        ///     deployment 30 of the first outcome asset will be kept.
+        /// * `weights`: The relative denormalized weight of each asset price.
+        /// * `keep`: Specifies how many assets to keep. Any left-over assets that are specified as
+        ///     zero in this vector are sold. Must have the same length as amounts.
+        #[pallet::weight(
+            u64::from(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into())
+            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
+            // Overly generous estimation, since we have no access to Swaps WeightInfo
+            // (it is loosely coupled to this pallet using a trait). Contains weight for
+            // create_pool() and swap_exact_amount_in()
+            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight)))
+        )]
+        #[transactional]
+        pub fn deploy_swap_pool_and_additional_liqudity(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            amounts: Vec<BalanceOf<T>>,
+            weights: Vec<u128>,
+            keep: Vec<BalanceOf<T>>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin.clone())?;
+            // Buy a complete set of assets based on the highest number to be deployed
+            let assets = T::MarketCommons::market(&market_id)?.market_type;
+            let zero_balance = <BalanceOf<T>>::zero();
+            let max_assets = amounts
+                .iter()
+                .fold(zero_balance, |prev, cur| if prev > *cur { prev } else { *cur });
+            let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, max_assets)?
+                .actual_weight
+                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
+            let weight_len = weights.len().saturated_into();
+
+            // Deploy a swap pool with MinLiquidity
+            let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
+            let pool_id = T::MarketCommons::market_pool(&market_id)?;
+            let mut weight_pool_joins_and_sells = 0;
+            let mut remaining_sells: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)> =
+                Vec::with_capacity(amounts.len());
+
+            // Add additional liquidity as specified in amounts
+            for ((idx, asset_amount), keep_amount) in amounts.iter().enumerate().zip(keep) {
+                if *asset_amount == zero_balance {
+                    continue;
+                };
+
+                let remaining_amount = (*asset_amount).saturating_sub(MinLiquidity::get().saturated_into());
+                let asset_in = match assets {
+                    MarketType::Categorical(_) => {
+                        Asset::CategoricalOutcome(market_id, idx.saturated_into())
+                    }
+                    MarketType::Scalar(_) => {
+                        if idx == 0 {
+                            Asset::ScalarOutcome(market_id, ScalarPosition::Long)
+                        } else {
+                            Asset::ScalarOutcome(market_id, ScalarPosition::Short)
+                        }
+                    }
+                };
+                let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
+                    who.clone(),
+                    pool_id,
+                    asset_in,
+                    remaining_amount,
+                    zero_balance,
+                )?;
+                remaining_sells.push((
+                    asset_in,
+                    max_assets.saturating_sub(*asset_amount).saturating_sub(keep_amount),
+                ));
+                weight_pool_joins_and_sells =
+                    weight_pool_joins_and_sells.saturating_add(local_weight);
+            }
+
+            // If desired, sell remaining assets. An additional loop is used because the
+            // sell prices change after all additional liqudidity was added.
+            for (asset, amount) in remaining_sells.into_iter() {
+                if amount == zero_balance {
+                    continue;
+                }
+
+                let local_weight = T::Swaps::swap_exact_amount_in(
+                    who.clone(),
+                    pool_id,
+                    asset,
+                    amount,
+                    Asset::Ztg,
+                    zero_balance,
+                    u128::MAX.saturated_into(),
+                )?;
+                weight_pool_joins_and_sells =
+                    weight_pool_joins_and_sells.saturating_add(local_weight);
+            }
+
+            Ok(Some(
+                weight_bcs
+                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weight_len))
+                    .saturating_add(weight_pool_joins_and_sells)
+                    .saturating_add(T::DbWeight::get().reads(2)),
+            )
+            .into())
         }
 
         /// Deploys a new pool for the market. This pallet keeps track of a single
