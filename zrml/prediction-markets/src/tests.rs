@@ -1,7 +1,7 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{
-    mock::*, BalanceOf, Config, Error, MarketIdOf, MarketIdsPerDisputeBlock,
+    mock::*, Config, Error, MarketIdsPerDisputeBlock,
     MarketIdsPerReportBlock,
 };
 use core::{cell::RefCell, ops::Range};
@@ -14,13 +14,10 @@ use frame_support::{
 
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
-use zeitgeist_primitives::{
-    constants::{AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT},
-    types::{
+use zeitgeist_primitives::{constants::{AdvisoryBond, BASE, CENT, DisputeBond, DisputeFactor, OracleBond, ValidityBond}, types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
-    },
-};
+    }};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn gen_metadata(byte: u8) -> MultiHash {
@@ -594,7 +591,6 @@ fn it_allows_to_redeem_shares() {
     });
 }
 
-/*
 #[test]
 fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
     let oracle = ALICE;
@@ -603,18 +599,16 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
     let creation = MarketCreation::Permissionless;
     let category_count = 4;
     let assets = MarketType::Categorical(category_count);
-    let extra_amount = 50 * BASE;
-    let amount = <Runtime as zrml_swaps::Config>::MinLiquidity::get() + extra_amount;
+    let extra_amount = 20 * BASE;
+    let keep_amount = 10 * BASE;
+    let min_liqudity = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
+    let amount = min_liqudity + extra_amount;
     let weights = vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 5];
-    let add_additional: Vec<(Asset<MarketIdOf<Runtime>>, BalanceOf<Runtime>, BalanceOf<Runtime>)> = vec![
-        (Asset::CategoricalOutcome(0, 0), extra_amount, 0),
-        (Asset::CategoricalOutcome(0, 1), extra_amount, 0),
-        (Asset::CategoricalOutcome(0, 3), extra_amount, 0),
-    ];
-    let additional_liquidity = vec![extra_amount, extra_amount, 0, extra_amount];
-    let additional_liquidity_min_shares = vec![0, 0, 0, 0];
+    let amounts = vec![amount - extra_amount, amount, amount, amount];
+    let keep = vec![keep_amount, 0, 0, 0];
+    let pool_id = 0;
 
-    let first_state = RefCell::new(vec![]);
+    let first_state: RefCell<Vec<u8>> = RefCell::new(vec![]);
     let second_state = RefCell::new(vec![]);
 
     // Execute the combined convenience function
@@ -627,10 +621,9 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             creation.clone(),
             assets,
             MarketDisputeMechanism::SimpleDisputes,
-            amount,
+            amounts.clone(),
             weights.clone(),
-            additional_liquidity,
-            additional_liquidity_min_shares
+            keep.clone()
         ));
 
         *first_state.borrow_mut() = storage_root();
@@ -651,27 +644,40 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, amount));
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(ALICE),
-            0,
+            pool_id,
             weights
         ));
 
-        for (asset_in, asset_amount, min_pool_amount) in add_additional {
+        for (idx, amount) in amounts.into_iter().enumerate() {
             assert_ok!(Swaps::pool_join_with_exact_asset_amount(
                 Origin::signed(ALICE),
-                0,
-                asset_in,
-                asset_amount,
-                min_pool_amount
+                pool_id,
+                Asset::CategoricalOutcome(0, idx as u16),
+                amount - min_liqudity,
+                0
             ));
         }
 
+        assert_ok!(Swaps::swap_exact_amount_in(
+            Origin::signed(ALICE),
+            pool_id,
+            Asset::CategoricalOutcome(0, 0),
+            amount - min_liqudity - keep[0],
+            Asset::Ztg,
+            0,
+            u128::MAX,
+        ));
+
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,0), &ALICE), keep_amount);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,1), &ALICE), 0);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,2), &ALICE), 0);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0,3), &ALICE), 0);
         *second_state.borrow_mut() = storage_root();
     });
 
     // Compare resulting state
     assert_eq!(*first_state.borrow(), *second_state.borrow());
 }
-*/
 
 #[test]
 fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {

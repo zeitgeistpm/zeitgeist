@@ -87,15 +87,11 @@ mod pallet {
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
     };
-    use zeitgeist_primitives::{
-        constants::{PmPalletId, MILLISECS_PER_BLOCK},
-        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
-        types::{
+    use zeitgeist_primitives::{constants::{MILLISECS_PER_BLOCK, MinLiquidity, PmPalletId}, traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency}, types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
             ScoringRule, SubsidyUntil,
-        },
-    };
+        }};
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -455,11 +451,11 @@ mod pallet {
             u64::from(T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
-            // TODO: Overly generous estimation, since we have no access to Swaps WeightInfo
-            // (it is loosely coupled to this pallet using a trait). Will be adjusted later
-            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
+            // Overly generous estimation, since we have no access to Swaps WeightInfo
+            // (it is loosely coupled to this pallet using a trait). Contains weight for
+            // create_pool() and swap_exact_amount_in()
+            .saturating_add(10_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
             .saturating_add(T::DbWeight::get().reads(2 as Weight)))
-            // TODO: Add sell weightT::MaxCategories::get().into())
         )]
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
@@ -531,10 +527,10 @@ mod pallet {
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weight_len = weights.len().saturated_into();
 
-            // Deploy a swap pool with MinLiqudity
+            // Deploy a swap pool with MinLiquidity
             let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
-            let mut weight_pool_joins = 0;
+            let mut weight_pool_joins_and_sells = 0;
             let mut remaining_sells: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)> =
                 Vec::with_capacity(amounts.len());
 
@@ -544,6 +540,7 @@ mod pallet {
                     continue;
                 };
 
+                let remaining_amount = (*asset_amount).saturating_sub(MinLiquidity::get().saturated_into());
                 let asset_in = match assets {
                     MarketType::Categorical(_) => {
                         Asset::CategoricalOutcome(market_id, idx.saturated_into())
@@ -560,14 +557,15 @@ mod pallet {
                     who.clone(),
                     pool_id,
                     asset_in,
-                    *asset_amount,
+                    remaining_amount,
                     zero_balance,
                 )?;
                 remaining_sells.push((
                     asset_in,
                     max_assets.saturating_sub(*asset_amount).saturating_sub(keep_amount),
                 ));
-                weight_pool_joins = weight_pool_joins.saturating_add(local_weight);
+                weight_pool_joins_and_sells =
+                    weight_pool_joins_and_sells.saturating_add(local_weight);
             }
 
             // If desired, sell remaining assets. An additional loop is used because the
@@ -577,14 +575,24 @@ mod pallet {
                     continue;
                 }
 
-                // TODO: Sell
+                let local_weight = T::Swaps::swap_exact_amount_in(
+                    who.clone(),
+                    pool_id,
+                    asset,
+                    amount,
+                    Asset::Ztg,
+                    zero_balance,
+                    u128::MAX.saturated_into(),
+                )?;
+                weight_pool_joins_and_sells =
+                    weight_pool_joins_and_sells.saturating_add(local_weight);
             }
 
             Ok(Some(
                 weight_market_creation
                     .saturating_add(weight_bcs)
                     .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(weight_len))
-                    .saturating_add(weight_pool_joins)
+                    .saturating_add(weight_pool_joins_and_sells)
                     .saturating_add(T::DbWeight::get().reads(2)),
             )
             .into())
