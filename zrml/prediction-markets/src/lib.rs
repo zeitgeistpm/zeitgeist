@@ -452,14 +452,14 @@ mod pallet {
         /// * `keep`: Specifies how many assets to keep. Any left-over assets that are specified as
         ///     zero in this vector are sold. Must have the same length as amounts.
         #[pallet::weight(
-            u64::from(T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
+            T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
             // (it is loosely coupled to this pallet using a trait). Contains weight for
             // create_pool() and swap_exact_amount_in()
             .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight)))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
@@ -523,10 +523,14 @@ mod pallet {
             // Buy a complete set of assets based on the highest number to be deployed
             let market_id = T::MarketCommons::latest_market_id()?;
             let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liqudity(
-                origin, market_id, amounts.clone(), weights.clone(), keep,
+                origin,
+                market_id,
+                amounts.clone(),
+                weights.clone(),
+                keep,
             )?
             .actual_weight
-            .unwrap_or(u64::from(
+            .unwrap_or_else(|| {
                 T::WeightInfo::buy_complete_set(
                     T::MaxCategories::get().min(amounts.len().saturated_into()).into(),
                 )
@@ -536,8 +540,8 @@ mod pallet {
                 .saturating_add(5_000_000_000.saturating_mul(
                     T::MaxCategories::get().min(amounts.len().saturated_into()).into(),
                 ))
-                .saturating_add(T::DbWeight::get().reads(2 as Weight)),
-            ));
+                .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            });
 
             Ok(Some(weight_market_creation.saturating_add(deploy_and_populate_weight)).into())
         }
@@ -628,13 +632,13 @@ mod pallet {
         /// * `keep`: Specifies how many assets to keep. Any left-over assets that are specified as
         ///     zero in this vector are sold. Must have the same length as amounts.
         #[pallet::weight(
-            u64::from(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into())
+            T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
             // (it is loosely coupled to this pallet using a trait). Contains weight for
             // create_pool() and swap_exact_amount_in()
             .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight)))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
         #[transactional]
         pub fn deploy_swap_pool_and_additional_liqudity(
