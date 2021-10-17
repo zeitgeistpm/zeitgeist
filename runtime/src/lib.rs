@@ -809,8 +809,7 @@ impl_runtime_apis! {
         }
 
         fn pool_profit(pool_id: PoolId) -> SerdeWrapper<Balance> {
-            // TODO: Insert meaningful logic
-            SerdeWrapper(pool_id)
+            SerdeWrapper(Swaps::pool_profit(pool_id).unwrap_or(0))
         }
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {

@@ -1057,6 +1057,37 @@ mod pallet {
             )
         }
 
+        pub fn pool_profit(
+            pool_id: PoolId,
+        ) -> Result<BalanceOf<T>, DispatchError> {
+            let pool = Self::pool_by_id(pool_id)?;
+            let pool_account = Self::pool_account_id(pool_id);
+
+            if pool.scoring_rule == ScoringRule::CPMM {
+                // TODO: implement
+                Ok(<BalanceOf<T>>::zero())
+            } else if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                // TODO: Change into best-case / worst-case profit (currently worst-case)
+                // Worst case: Total ZTG in pool - total_subsidy - most bought event outcome asset
+                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
+                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let total_funds = T::Shares::total_balance(base_asset, &pool_account);
+                let mut most_asset = <BalanceOf<T>>::zero();
+
+                for asset in pool.assets.into_iter() {
+                    let amount = T::Shares::total_balance(asset, &pool_account);
+
+                    if amount > most_asset {
+                        most_asset = amount;
+                    }
+                }
+
+                Ok(total_funds.saturating_sub(total_subsidy).saturating_sub(most_asset))
+            } else {
+                Err(Error::<T>::InvalidScoringRule.into())
+            }
+        }
+
         pub fn get_spot_price(
             pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
