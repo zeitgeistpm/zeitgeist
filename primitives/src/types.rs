@@ -81,16 +81,7 @@ pub type PoolId = u128;
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
-// Tests
-
-pub type AccountIdTest = u128;
-
-#[cfg(feature = "std")]
-pub type BlockTest<R> = frame_system::mocking::MockBlock<R>;
-
-#[cfg(feature = "std")]
-pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrinsic<R>;
-
+// A structure that contains a generic result and total weight.
 #[derive(
     Clone,
     Eq,
@@ -103,3 +94,13 @@ pub struct ResultWithWeightInfo<R> {
     pub result: R,
     pub weight: Weight,
 }
+
+// Tests
+
+pub type AccountIdTest = u128;
+
+#[cfg(feature = "std")]
+pub type BlockTest<R> = frame_system::mocking::MockBlock<R>;
+
+#[cfg(feature = "std")]
+pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrinsic<R>;

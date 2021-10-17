@@ -22,16 +22,6 @@ where
     MarketId: FromStr + fmt::Display,
     PoolId: FromStr + fmt::Display,
 {
-    #[rpc(name = "swaps_poolSharesId")]
-    fn pool_shares_id(
-        &self,
-        pool_id: PoolId,
-        at: Option<BlockHash>,
-    ) -> Result<Asset<SerdeWrapper<MarketId>>>;
-
-    #[rpc(name = "swaps_poolAccountId")]
-    fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<AccountId>;
-
     #[rpc(name = "swaps_getSpotPrice")]
     fn get_spot_price(
         &self,
@@ -49,6 +39,19 @@ where
         asset_out: Asset<MarketId>,
         blocks: Vec<BlockNumber>,
     ) -> Result<Vec<SerdeWrapper<Balance>>>;
+
+    #[rpc(name = "swaps_poolAccountId")]
+    fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<AccountId>;
+
+    #[rpc(name = "swaps_poolProfit")]
+    fn pool_profit(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<SerdeWrapper<Balance>>;
+
+    #[rpc(name = "swaps_poolSharesId")]
+    fn pool_shares_id(
+        &self,
+        pool_id: PoolId,
+        at: Option<BlockHash>,
+    ) -> Result<Asset<SerdeWrapper<MarketId>>>;
 }
 
 /// A struct that implements the [`SwapsApi`].
@@ -106,40 +109,6 @@ where
     Balance: Codec + MaybeDisplay + MaybeFromStr,
     MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr,
 {
-    fn pool_shares_id(
-        &self,
-        pool_id: PoolId,
-        at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<Asset<SerdeWrapper<MarketId>>> {
-        let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(||
-            //if the block hash is not supplied assume the best block
-            self.client.info().best_hash));
-
-        api.pool_shares_id(&at, pool_id).map_err(|e| RpcError {
-            code: ErrorCode::ServerError(Error::RuntimeError.into()),
-            message: "Unable to get pool shares identifier.".into(),
-            data: Some(format!("{:?}", e).into()),
-        })
-    }
-
-    fn pool_account_id(
-        &self,
-        pool_id: PoolId,
-        at: Option<<Block as BlockT>::Hash>,
-    ) -> Result<AccountId> {
-        let api = self.client.runtime_api();
-        let at = BlockId::hash(at.unwrap_or_else(||
-            //if the block hash is not supplied assume the best block
-            self.client.info().best_hash));
-
-        api.pool_account_id(&at, pool_id).map_err(|e| RpcError {
-            code: ErrorCode::ServerError(Error::RuntimeError.into()),
-            message: "Unable to get pool account identifier.".into(),
-            data: Some(format!("{:?}", e).into()),
-        })
-    }
-
     /// If block hash is not supplied, the best block is assumed.
     fn get_spot_price(
         &self,
@@ -174,5 +143,52 @@ where
                 )
             })
             .collect::<Result<Vec<_>>>()
+    }
+
+    fn pool_account_id(
+        &self,
+        pool_id: PoolId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<AccountId> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            //if the block hash is not supplied assume the best block
+            self.client.info().best_hash));
+
+        api.pool_account_id(&at, pool_id).map_err(|e| RpcError {
+            code: ErrorCode::ServerError(Error::RuntimeError.into()),
+            message: "Unable to get pool account identifier.".into(),
+            data: Some(format!("{:?}", e).into()),
+        })
+    }
+
+    fn pool_profit(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<SerdeWrapper<Balance>> {
+        let api = self.client.runtime_api();        
+        let at = BlockId::hash(at.unwrap_or_else(||
+            //if the block hash is not supplied assume the best block
+            self.client.info().best_hash));
+        
+        api.pool_profit(&at, pool_id).map_err(|e| RpcError {
+            code: ErrorCode::ServerError(Error::RuntimeError.into()),
+            message: "Unable to get pool profit.".into(),
+            data: Some(format!("{:?}", e).into()),
+        })
+    }
+
+    fn pool_shares_id(
+        &self,
+        pool_id: PoolId,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> Result<Asset<SerdeWrapper<MarketId>>> {
+        let api = self.client.runtime_api();
+        let at = BlockId::hash(at.unwrap_or_else(||
+            //if the block hash is not supplied assume the best block
+            self.client.info().best_hash));
+
+        api.pool_shares_id(&at, pool_id).map_err(|e| RpcError {
+            code: ErrorCode::ServerError(Error::RuntimeError.into()),
+            message: "Unable to get pool shares identifier.".into(),
+            data: Some(format!("{:?}", e).into()),
+        })
     }
 }

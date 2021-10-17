@@ -13,8 +13,9 @@ sp_api::decl_runtime_apis! {
         Balance: Codec + MaybeDisplay + MaybeFromStr,
         MarketId: Codec
     {
-        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
-        fn pool_account_id(pool_id: PoolId) -> AccountId;
         fn get_spot_price(pool_id: PoolId, asset_in: Asset<MarketId>, asset_out: Asset<MarketId>) -> SerdeWrapper<Balance>;
+        fn pool_account_id(pool_id: PoolId) -> AccountId;
+        fn pool_profit(pool_id: PoolId) -> SerdeWrapper<Balance>;
+        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
     }
 }
