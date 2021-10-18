@@ -49,10 +49,7 @@ mod pallet {
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
     use parity_scale_codec::{Decode, Encode};
-    use sp_runtime::{
-        traits::{AccountIdConversion, CheckedSub, Saturating, Zero},
-        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
-    };
+    use sp_runtime::{ArithmeticError, DispatchError, DispatchResult, SaturatedConversion, traits::{AccountIdConversion, CheckedSub, Saturating, Zero}};
     use substrate_fixed::{
         traits::{FixedSigned, FixedUnsigned, LossyFrom},
         types::{
@@ -65,7 +62,7 @@ mod pallet {
         constants::BASE,
         traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolProfit, PoolStatus, ResultWithWeightInfo,
             ScoringRule, SerdeWrapper,
         },
     };
@@ -1057,32 +1054,64 @@ mod pallet {
             )
         }
 
+        // TODO: Use apropriate structure as return value
         pub fn pool_profit(
             pool_id: PoolId,
-        ) -> Result<BalanceOf<T>, DispatchError> {
+        ) -> Result<PoolProfit, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
 
             if pool.scoring_rule == ScoringRule::CPMM {
                 // TODO: implement
-                Ok(<BalanceOf<T>>::zero())
+                Ok(PoolProfit::default())
             } else if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                // TODO: Change into best-case / worst-case profit (currently worst-case)
-                // Worst case: Total ZTG in pool - total_subsidy - most bought event outcome asset
-                let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
+                // Worst case: Total ZTG in pool - total_subsidy - total most bought event outcome asset + initial most bought outcome asset
+                let total_subsidy = pool.total_subsidy.ok_or(Error:: <T> ::PoolMissingSubsidy)?;
+                let total_subsidy_u128: u128 = core::convert::TryInto::try_into(total_subsidy).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let total_subsidy_i128: i128 = core::convert::TryInto::try_into(total_subsidy_u128).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
                 let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                 let total_funds = T::Shares::total_balance(base_asset, &pool_account);
+                let total_funds_u128: u128 = core::convert::TryInto::try_into(total_funds).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let total_funds_i128: i128 = core::convert::TryInto::try_into(total_funds_u128).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
                 let mut most_asset = <BalanceOf<T>>::zero();
+                let mut least_asset: BalanceOf<T> = u128::MAX.saturated_into();
+                let num_event_assets = pool.assets.len().saturated_into::<u32>().saturating_sub(1);
 
                 for asset in pool.assets.into_iter() {
                     let amount = T::Shares::total_balance(asset, &pool_account);
 
                     if amount > most_asset {
                         most_asset = amount;
+                    } 
+                    
+                    if amount < least_asset {
+                        least_asset = amount;
                     }
                 }
 
-                Ok(total_funds.saturating_sub(total_subsidy).saturating_sub(most_asset))
+                let most_asset_u128: u128 = core::convert::TryInto::try_into(most_asset).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let most_asset_i128: i128 = core::convert::TryInto::try_into(most_asset_u128).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let least_asset_u128: u128 = core::convert::TryInto::try_into(least_asset).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let least_asset_i128: i128 = core::convert::TryInto::try_into(least_asset_u128).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let initial_assets = T::RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
+                    pool_id,
+                    num_event_assets,
+                    total_subsidy,
+                )?;
+                let initial_assets_u128: u128 = core::convert::TryInto::try_into(initial_assets).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let initial_assets_i128: i128 = core::convert::TryInto::try_into(initial_assets_u128).map_err(|_| DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let common = total_funds_i128
+                    .checked_add(initial_assets_i128)
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?
+                    .checked_sub(total_subsidy_i128)
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                // TODO: Calc min and max
+                let worst_case = common.checked_sub(most_asset_i128)
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+                let best_case = common.checked_sub(least_asset_i128)
+                    .ok_or(DispatchError::Arithmetic(ArithmeticError::Overflow))?;
+
+                Ok(PoolProfit{best_case, worst_case})
             } else {
                 Err(Error::<T>::InvalidScoringRule.into())
             }

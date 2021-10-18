@@ -808,8 +808,8 @@ impl_runtime_apis! {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_profit(pool_id: PoolId) -> SerdeWrapper<Balance> {
-            SerdeWrapper(Swaps::pool_profit(pool_id).unwrap_or(0))
+        fn pool_profit(pool_id: PoolId) -> SerdeWrapper<PoolProfit> {
+            SerdeWrapper(Swaps::pool_profit(pool_id).unwrap_or(PoolProfit::default()))
         }
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {

@@ -11,7 +11,7 @@ use sp_runtime::{
     traits::{Block as BlockT, MaybeDisplay, MaybeFromStr, NumberFor},
 };
 use std::sync::Arc;
-use zeitgeist_primitives::types::{Asset, SerdeWrapper};
+use zeitgeist_primitives::types::{Asset, PoolProfit, SerdeWrapper};
 
 pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 
@@ -44,7 +44,7 @@ where
     fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<AccountId>;
 
     #[rpc(name = "swaps_poolProfit")]
-    fn pool_profit(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<SerdeWrapper<Balance>>;
+    fn pool_profit(&self, pool_id: PoolId, at: Option<BlockHash>) -> Result<SerdeWrapper<PoolProfit>>;
 
     #[rpc(name = "swaps_poolSharesId")]
     fn pool_shares_id(
@@ -162,7 +162,7 @@ where
         })
     }
 
-    fn pool_profit(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<SerdeWrapper<Balance>> {
+    fn pool_profit(&self, pool_id: PoolId, at: Option<<Block as BlockT>::Hash>) -> Result<SerdeWrapper<PoolProfit>> {
         let api = self.client.runtime_api();        
         let at = BlockId::hash(at.unwrap_or_else(||
             //if the block hash is not supplied assume the best block

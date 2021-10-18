@@ -16,7 +16,7 @@ use zeitgeist_primitives::{
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
-        CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
+        CurrencyId, Hash, Index, MarketId, Moment, PoolId, PoolProfit, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -204,9 +204,8 @@ sp_api::mock_impl_runtime_apis! {
             Swaps::pool_account_id(pool_id)
         }
 
-        fn pool_profit(pool_id: PoolId) -> SerdeWrapper<Balance> {
-            // TODO: Insert meaningful logic.
-            SerdeWrapper(pool_id)
+        fn pool_profit(pool_id: PoolId) -> SerdeWrapper<PoolProfit> {
+            SerdeWrapper(Swaps::pool_profit(pool_id).unwrap_or(PoolProfit::default()))
         }
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {

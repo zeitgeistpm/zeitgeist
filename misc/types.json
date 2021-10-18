@@ -189,6 +189,10 @@
     "transferred": "Vec<Balance>"
   },
   "PoolId": "u128",
+  "PoolProfit": {
+    "best_case": "i128",
+    "worst_case": "i128"
+  },
   "PoolStatus": {
     "_enum": {
       "Active": null,
