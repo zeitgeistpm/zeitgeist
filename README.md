@@ -62,7 +62,7 @@ To build the parachain version, execute the following conmmand:
 cargo build --features parachain --release
 ```
 
-Optimized binaries are usually used for development (faster and smaller), 
+Optimized binaries (`--release`) are usually used for production (faster and smaller), 
 but this behavior is optional and up to you.
 
 Our current beta test network [Battery Station][zg-beta] runs as a parachain.
