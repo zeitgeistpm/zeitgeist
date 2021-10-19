@@ -23,6 +23,9 @@ by allowing for traders to create complex financial contracts on virtually _anyt
 - [authorized](./zrml/authorized) - Offers authorized resolution of disputes.
 - [court](./zrml/court) - An implementation of a court mechanism used to resolve
   disputes in a decentralized fashion.
+- [liqudity-mining](./zrml/liquidity-mining) - This pallet implements the
+  time-based incentivization with Zeitgeist tokens for continuously providing
+  liquidity to swap pools.
 - [market-commons](./zrml/market-commons) - Contains common operations on markets
   that are used by multiple pallets.
 - [orderbook-v1](./zrml/orderbook-v1) - A naive orderbook implementation that's
@@ -30,17 +33,17 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   hybrid on-chain and off-chain trading.
 - [prediction-markets](./zrml/prediction-markets) - The core implementation of the
   prediction market logic for creating and resolving markets.
-- [shares](./zrml/shares) - Implementation of tradable and transferrable shares of
-  prediction market outcomes.
 - [simple-disputes](./zrml-simple-disputes) - Simple disputes selects the last dispute
   after a predetermined amount of disputes as the canonical outcome.
 - [swaps](./zrml/swaps) - An implementation of liquidity pools that allows any user
   to provide liquidity to the pool or swap assets in and out of the pool. The market
   maker that is traded against is either a Constant Function Market Maker (CFMM) or
   a Rikiddo Market Maker.
-- [rikiddo](./zrml/rikiddo) - [Rikiddo][rikiddo] is our novel market scoring rule. It 
-  is an extension of the [Liquidity Sensitive Market Scoring Rule (LS-LMSR)][ls-lmsr].
-  it will be used by the market maker to determine the prices for swaps.
+- [primitives](./zrml/primitives) - Contains custom and common types, traits and constants.
+- [rikiddo](./zrml/rikiddo) - The module contains a completely modular implementation
+  of our novel market scoring rule [Rikiddo][rikiddo]. It also offer a pallet,
+  that other pallets can use to utilize the Rikiddo market scoring rule. Rikiddo can
+  be used by the automated market maker to determine swap prices.
 
 ## How to Build Nodes
 
