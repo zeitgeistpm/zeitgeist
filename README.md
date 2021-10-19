@@ -23,7 +23,7 @@ by allowing for traders to create complex financial contracts on virtually _anyt
 - [authorized](./zrml/authorized) - Offers authorized resolution of disputes.
 - [court](./zrml/court) - An implementation of a court mechanism used to resolve
   disputes in a decentralized fashion.
-- [liqudity-mining](./zrml/liquidity-mining) - This pallet implements the
+- [liquidity-mining](./zrml/liquidity-mining) - This pallet implements the
   time-based incentivization with Zeitgeist tokens for continuously providing
   liquidity to swap pools.
 - [market-commons](./zrml/market-commons) - Contains common operations on markets
@@ -45,9 +45,10 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   that other pallets can use to utilize the Rikiddo market scoring rule. Rikiddo can
   be used by the automated market maker to determine swap prices.
 
-## How to Build Nodes
+## How to build and run a Zeitgeist node
 
-Zeitgeist node comes in two flavors, one for standalone self-contained execution and another for Kusama/Polkadot parachain integration.
+Zeitgeist node comes in two flavors, one for standalone self-contained execution
+and another for Kusama/Polkadot parachain integration.
 
 To build the standalone version, simply point to the top directory of this project and type:
 
@@ -55,28 +56,58 @@ To build the standalone version, simply point to the top directory of this proje
 cargo build --release
 ```
 
-For parachain, it is necessary to change the current directory to `node` and then select the appropriated compiler feature flag.
+To build the parachain version, execute the following conmmand:
 
 ```
 cargo build --features parachain --release
 ```
 
-Optimized binaries are usually used for development (faster and smaller) but this behavior is optionally up to you. If desirable, it is also possible to run commands directly with `cargo run` instead of running `./target/(debug|release)/zeitgeist`.
+Optimized binaries are usually used for development (faster and smaller), 
+but this behavior is optional and up to you.
+
+Our current beta test network [Battery Station][zg-beta] runs as a parachain.
+To connect your Zeitgeist parachain node, follow the tutorial at our [documentation site][bs-docs].
+
+Alternatively you can run a non-parachain node, which is usually only necessary for
+testing purposes, by executing the following command:
+
+```
+cargo run --release --bin zeitgeist -- <node-options-and-flags>
+```
+
+A common value for `<node-options-and-flags>` is `--dev --tmp`, which runs a 
+local temporary development node.
 
 ### Using Docker
 
-We publish the latest version to the [Docker Hub](https://hub.docker.com/r/zeitgeistpm/zeitgeist-node) 
-that can be pulled and ran locally to connect to the network. In order to do this first make sure that
-you have Docker installed locally, then type (or paste) the following commands in your terminal:
+We publish the latest standalone and parachain version to the [Docker Hub][zg-docker-hub], 
+from where it can be pulled and ran locally to connect to the network with relatively
+low effort and high compatibility. In order to fetch the latest docker image,
+ensure you have Docker installed locally, then type (or paste) the following
+commands in your terminal.
 
+For parachain Zeitgeist node:
+```
+docker pull zeitgeistpm/zeitgeist-node-parachain
+```
+
+For standalone, non-parachain Zeitgeist node:
 ```
 docker pull zeitgeistpm/zeitgeist-node
-docker run zeitgeistpm/zeitgeist-node --chain battery_park
 ```
 
-This will get you connected to the [Battery Park](https://docs.zeitgeist.pm/battery-park) testnet.
+Our current beta test network [Battery Station][zg-beta] runs as a parachain.
+To connect your Zeitgeist parachain node, follow the tutorial at our [documentation site][bs-docs].
 
+Alternatively you can run a non-parachain node, which is usually only necessary for
+testing purposes, by executing the following command:
 
+```
+docker run zeitgeistpm/zeitgeist-node -- <node-options-and-flags>
+```
 
+[bs-docs]: https://docs.zeitgeist.pm/battery-station
 [ls-lmsr]: https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf
 [rikiddo]: https://blog.zeitgeist.pm/introducing-zeitgeists-rikiddo-scoring-rule/
+[zg-beta]: https://blog.zeitgeist.pm/zeitgeist-beta/
+[zg-docker-hub]: https://hub.docker.com/r/zeitgeistpm/zeitgeist-node
