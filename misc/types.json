@@ -88,12 +88,57 @@
     "by": "AccountId",
     "outcome": "OutcomeReport"
   },
+  "OwnedValuesParams": {
+    "participated_blocks": "BlockNumber",
+    "perpetual_incentives": "Balance",
+    "total_incentives": "Balance",
+    "total_shares": "Balance"
+  },
   "MarketDisputeMechanism": {
     "_enum": {
       "Authorized": "AccountId",
       "Court": null,
       "SimpleDisputes": null
     }
+  },
+  "Nominator2": {
+    "nominations": "Vec<Bond>",
+    "revocations": "Vec<AccountId>",
+    "total": "Balance",
+    "scheduled_revocations_count": "u32",
+    "scheduled_revocations_total": "Balance",
+    "status": "NominatorStatus"
+  },
+  "NominatorStatus": {
+    "_enum": { "Active": null, "Leaving": "RoundIndex" }
+  },
+  "Collator2": {
+    "id": "AccountId",
+    "bond": "Balance",
+    "nominators": "Vec<AccountId>",
+    "top_nominators": "Vec<Bond>",
+    "bottom_nominators": "Vec<Bond>",
+    "total_counted": "Balance",
+    "total_backing": "Balance",
+    "state": "CollatorStatus"
+  },
+  "CollatorStatus": {
+    "_enum": { "Active": null, "Idle": null, "Leaving": "RoundIndex" }
+  },
+  "NominatorAdded": {
+    "_enum": { 
+      "AddedToBottom": null, 
+      "AddedToTop": "Balance" 
+    }
+  },
+  "Juror": {
+    "status": "JurorStatus"
+  },
+  "JurorStatus": {
+    "_enum": [
+      "OK",
+      "Tardy"
+    ]
   },
   "MarketId": "u128",
   "MarketIdOf": "u128",
