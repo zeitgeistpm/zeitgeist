@@ -157,11 +157,8 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
-<<<<<<< HEAD
 	"orml-benchmarking/std",
-=======
 	"log/std",
->>>>>>> 9de5406 (Complete txfilter implementation)
 	"orml-currencies/std",
 	"orml-tokens/std",
 	"orml-traits/std",
