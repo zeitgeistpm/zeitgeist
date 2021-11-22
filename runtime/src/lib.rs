@@ -10,10 +10,10 @@ pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
+#[cfg(feature = "txfilter")]
+mod txfilter;
 #[cfg(feature = "parachain")]
 mod xcm_config;
-// #[cfg(feature = "parachain")]
-mod txfilter;
 
 pub use parameters::*;
 
@@ -24,8 +24,6 @@ use frame_support::{
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
-//#[cfg(feature = "parachain")]
-use parity_scale_codec::Encode;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
@@ -37,11 +35,6 @@ use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
-};
-// #[cfg(feature = "parachain")]
-use sp_runtime::{
-    traits::{Extrinsic as ExtrinsicT, Verify},
-    SaturatedConversion,
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -55,11 +48,21 @@ use {
     parachain_params::*,
 };
 
+#[cfg(feature = "txfilter")]
+use {
+    parity_scale_codec::Encode,
+    sp_runtime::{
+        traits::{Extrinsic as ExtrinsicT, Verify},
+        SaturatedConversion,
+    },
+    txfilter::{IsCallable, TransactionCallFilter},
+};
+
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 24,
+    spec_version: 25,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 7,
@@ -89,9 +92,10 @@ type Executive = frame_executive::Executive<
 >;
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
-#[cfg(feature = "parachain")]
+
+#[cfg(feature = "txfilter")]
 type SignedExtra = (
-    txfilter::TransactionCallFilter<txfilter::IsCallable, Call>,
+    TransactionCallFilter<IsCallable, Call>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -100,9 +104,9 @@ type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
-#[cfg(not(feature = "parachain"))]
+
+#[cfg(not(feature = "txfilter"))]
 type SignedExtra = (
-    txfilter::TransactionCallFilter<txfilter::IsCallable, Call>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -111,14 +115,15 @@ type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
-//#[cfg(feature = "parachain")]
+
+#[cfg(feature = "txfilter")]
 type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 // Transaction filtering
 /// Submits a transaction with the node's public and signature type. Adheres to the signed extension
 /// format of the chain.
-//#[cfg(feature = "parachain")]
+#[cfg(feature = "txfilter")]
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where
     Call: From<LocalCall>,
@@ -140,7 +145,7 @@ where
             .saturating_sub(1);
         let tip = 0;
         let extra: SignedExtra = (
-            <txfilter::TransactionCallFilter<txfilter::IsCallable, Call>>::new(),
+            <TransactionCallFilter<IsCallable, Call>>::new(),
             <frame_system::CheckSpecVersion<Runtime>>::new(),
             <frame_system::CheckTxVersion<Runtime>>::new(),
             <frame_system::CheckGenesis<Runtime>>::new(),
@@ -160,13 +165,13 @@ where
     }
 }
 
-//#[cfg(feature = "parachain")]
+#[cfg(feature = "txfilter")]
 impl frame_system::offchain::SigningTypes for Runtime {
     type Public = <Signature as Verify>::Signer;
     type Signature = Signature;
 }
 
-//#[cfg(feature = "parachain")]
+#[cfg(feature = "txfilter")]
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
 where
     Call: From<C>,
