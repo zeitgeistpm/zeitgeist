@@ -17,6 +17,7 @@ mod txfilter;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
+// #[cfg(feature = "parachain")]
 mod txfilter;
 
 pub use parameters::*;
@@ -28,6 +29,8 @@ use frame_support::{
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
+//#[cfg(feature = "parachain")]
+use parity_scale_codec::Encode;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
@@ -39,6 +42,11 @@ use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
+};
+// #[cfg(feature = "parachain")]
+use sp_runtime::{
+    traits::{Extrinsic as ExtrinsicT, Verify},
+    SaturatedConversion,
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
