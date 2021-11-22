@@ -20,12 +20,12 @@ use core::marker::PhantomData;
 use sp_runtime::{traits::{SignedExtension, DispatchInfoOf},
 	transaction_validity::{TransactionValidityError, TransactionValidity, InvalidTransaction}
 };
+use super::{AccountId, Call};
 use frame_support::{
     dispatch::{Decode, Encode, Input},
     traits::Contains
 };
 use sp_runtime::traits::Dispatchable;
-use super::{AccountId};
 
 /// Custom validity errors used in Polkadot while validating transactions.
 #[repr(u8)]
@@ -107,5 +107,25 @@ impl<F: Contains<Call>, Call> TransactionCallFilter<F, Call> {
 	/// Create a new instance.
 	pub fn new() -> Self {
 		Self(PhantomData)
+	}
+}
+
+
+pub struct IsCallable;
+impl Contains<Call> for IsCallable {
+	fn contains(call: &Call) -> bool {
+        match call {
+            // Allowed calls:
+            Call::System(_) | Call::Sudo(_) => true,
+            
+            // Prohibited calls:
+            Call::Timestamp(_) | Call::ParachainSystem(_) | Call::ParachainStaking(_) |
+            Call::AuthorInherent(_) | Call::AuthorMapping(_) | Call::DmpQueue(_) |
+            Call::PolkadotXcm(_) | Call::XcmpQueue(_) | Call::Crowdloan(_) |
+            Call::Balances(_) | Call::Treasury(_) | Call::AdvisoryCommitteeCollective(_) |
+            Call::AdvisoryCommitteeMembership(_) | Call::Identity(_) | Call::Utility(_) |
+            Call::Currency(_) | Call::Authorized(_) | Call::Court(_) | Call::LiquidityMining(_) |
+            Call::Swaps(_) | Call::PredictionMarkets(_) => false
+        }
 	}
 }
