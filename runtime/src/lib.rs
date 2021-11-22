@@ -12,6 +12,7 @@ mod parachain_params;
 mod parameters;
 #[cfg(feature = "parachain")]
 mod xcm_config;
+// #[cfg(feature = "parachain")]
 mod txfilter;
 
 pub use parameters::*;
@@ -23,6 +24,8 @@ use frame_support::{
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
+//#[cfg(feature = "parachain")]
+use parity_scale_codec::Encode;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
@@ -34,6 +37,11 @@ use sp_runtime::{
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
+};
+// #[cfg(feature = "parachain")]
+use sp_runtime::{
+    traits::{Extrinsic as ExtrinsicT, Verify},
+    SaturatedConversion,
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -81,7 +89,9 @@ type Executive = frame_executive::Executive<
 >;
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
+#[cfg(feature = "parachain")]
 type SignedExtra = (
+    txfilter::TransactionCallFilter<txfilter::IsCallable, Call>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -90,8 +100,82 @@ type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
+#[cfg(not(feature = "parachain"))]
+type SignedExtra = (
+    txfilter::TransactionCallFilter<txfilter::IsCallable, Call>,
+    frame_system::CheckSpecVersion<Runtime>,
+    frame_system::CheckTxVersion<Runtime>,
+    frame_system::CheckGenesis<Runtime>,
+    frame_system::CheckEra<Runtime>,
+    frame_system::CheckNonce<Runtime>,
+    frame_system::CheckWeight<Runtime>,
+    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+);
+//#[cfg(feature = "parachain")]
+type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
+// Transaction filtering
+/// Submits a transaction with the node's public and signature type. Adheres to the signed extension
+/// format of the chain.
+//#[cfg(feature = "parachain")]
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
+where
+    Call: From<LocalCall>,
+{
+    fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+        call: Call,
+        public: <Signature as Verify>::Signer,
+        account: AccountId,
+        nonce: <Runtime as frame_system::Config>::Index,
+    ) -> Option<(Call, <UncheckedExtrinsic as ExtrinsicT>::SignaturePayload)> {
+        // take the biggest period possible.
+        let period =
+            BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
+
+        let current_block = System::block_number()
+            .saturated_into::<u64>()
+            // The `System::block_number` is initialized with `n+1`,
+            // so the actual block number is `n`.
+            .saturating_sub(1);
+        let tip = 0;
+        let extra: SignedExtra = (
+            <txfilter::TransactionCallFilter<txfilter::IsCallable, Call>>::new(),
+            <frame_system::CheckSpecVersion<Runtime>>::new(),
+            <frame_system::CheckTxVersion<Runtime>>::new(),
+            <frame_system::CheckGenesis<Runtime>>::new(),
+            <frame_system::CheckEra<Runtime>>::from(generic::Era::mortal(period, current_block)),
+            <frame_system::CheckNonce<Runtime>>::from(nonce),
+            <frame_system::CheckWeight<Runtime>>::new(),
+            <pallet_transaction_payment::ChargeTransactionPayment<Runtime>>::from(tip),
+        );
+        let raw_payload = SignedPayload::new(call, extra)
+            .map_err(|e| {
+                log::warn!("Unable to create signed payload: {:?}", e);
+            })
+            .ok()?;
+        let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
+        let (call, extra, _) = raw_payload.deconstruct();
+        Some((call, (sp_runtime::MultiAddress::Id(account), signature, extra)))
+    }
+}
+
+//#[cfg(feature = "parachain")]
+impl frame_system::offchain::SigningTypes for Runtime {
+    type Public = <Signature as Verify>::Signer;
+    type Signature = Signature;
+}
+
+//#[cfg(feature = "parachain")]
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+    Call: From<C>,
+{
+    type OverarchingCall = Call;
+    type Extrinsic = UncheckedExtrinsic;
+}
+
+// Construct runtime
 macro_rules! create_zeitgeist_runtime {
     ($($additional_pallets:tt)*) => {
         // Pallets are enumerated based on the dependency graph.
@@ -168,6 +252,7 @@ create_zeitgeist_runtime!(
     Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 51,
 );
 
+// Configure Pallets
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type Event = Event;
@@ -561,6 +646,7 @@ impl zrml_swaps::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
+// Implementation of runtime's apis
 impl_runtime_apis! {
     #[cfg(feature = "parachain")]
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
@@ -854,6 +940,7 @@ pub fn native_version() -> NativeVersion {
     NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }
 
+// Accounts protected from being deleted due to a too low amount of funds.
 pub struct DustRemovalWhitelist;
 
 impl Contains<AccountId> for DustRemovalWhitelist
