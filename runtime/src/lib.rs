@@ -17,6 +17,7 @@ mod txfilter;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
+mod txfilter;
 
 pub use parameters::*;
 
