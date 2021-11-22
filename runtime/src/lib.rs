@@ -12,6 +12,7 @@ mod parachain_params;
 mod parameters;
 #[cfg(feature = "parachain")]
 mod xcm_config;
+mod txfilter;
 
 pub use parameters::*;
 
