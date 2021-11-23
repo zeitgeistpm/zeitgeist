@@ -149,16 +149,16 @@ sudo docker run \
 
 launch_parachain() {
     local container_name=$1
-    local docker_extra_params=$2
-    local parachain_extra_params=$3
+    local parachain_extra_params=$2
+    local relaychain_extra_params=$3
 
     sudo docker run \
         -d \
-        $docker_extra_params \
         -v $DATA_DIR/$LOCAL_CONTAINER_NAME:/zeitgeist/data \
         -v $DATA_DIR/relay-chain-spec.json:/zeitgeist/relay-chain-spec.json \
-        --name $container_name \
-        --restart always \
+        --name=$container_name \
+        --restart=always \
+        --network=host \
         $PARACHAIN_IMAGE \
         --base-path=/zeitgeist/data \
         --chain=$PARACHAIN_CHAIN \
@@ -168,7 +168,8 @@ launch_parachain() {
         --bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR \
         --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR \
         --chain=/zeitgeist/relay-chain-spec.json \
-        --execution=wasm
+        --execution=wasm \
+        $relaychain_extra_params
 }
 
 launch_configured_parachain() {
@@ -176,30 +177,33 @@ launch_configured_parachain() {
     local nimbus_seed=$2
     local nimbus_pk=$3
 
-    LOCAL_CONTAINER_NAME="$PARACHAIN-$idx"
-    LOCAL_PORT=$(($PARACHAIN_PORT + $idx))
-    LOCAL_RPC_PORT=$(($PARACHAIN_RPC_PORT + $idx))
-    LOCAL_WS_PORT=$(($PARACHAIN_WS_PORT + $idx))
+    local container_name="$PARACHAIN-$idx"
+    local para_port=$(($PARACHAIN_PORT + $idx))
+    local para_rpc_port=$(($PARACHAIN_RPC_PORT + $idx))
+    local para_ws_port=$(($PARACHAIN_WS_PORT + $idx))
+    local relay_port=$(($PARACHAIN_RELAY_PORT + $idx))
+    local relay_rpc_port=$(($PARACHAIN_RELAY_RPC_PORT + $idx))
+    local relay_ws_port=$(($PARACHAIN_RELAY_WS_PORT + $idx))
+    local para_port_extra="--port=$para_port --rpc-port=$para_rpc_port --ws-port=$para_ws_port"
+    local relay_port_extra="--port=$relay_port --rpc-port=$relay_rpc_port --ws-port=$relay_ws_port"
 
-    initial_container_configurations $LOCAL_CONTAINER_NAME
-
-    DOCKER_EXTRA_PARAMS="-p $LOCAL_PORT:30333 -p $LOCAL_RPC_PORT:9933 -p $LOCAL_WS_PORT:9944"
+    initial_container_configurations $container_name
 
     if (( $idx <= 0 ))
     then
-        launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --pruning archive --rpc-cors=all --rpc-external --ws-external"
+        launch_parachain "$container_name" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --pruning=archive --rpc-cors=all --rpc-external --ws-external $para_port_extra" "$relay_port_extra"
     else
-        launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--collator --rpc-cors=all --rpc-methods=Unsafe --unsafe-rpc-external"
+        launch_parachain "$container_name" "--collator --rpc-cors=all --rpc-methods=Unsafe --unsafe-rpc-external $para_port_extra" "$relay_port_extra"
         sleep 10
         DATA='{ "id":1, "jsonrpc":"2.0", "method":"author_insertKey", "params":["nmbs", "'"$nimbus_seed"'", "'"$nimbus_pk"'"] }'
-        curl -H 'Content-Type: application/json' --data "$DATA" localhost:$LOCAL_RPC_PORT
-        delete_container "$LOCAL_CONTAINER_NAME"
+        curl -H 'Content-Type: application/json' --data "$DATA" localhost:$para_rpc_port
+        delete_container "$container_name"
 
         if (( $idx == 1 ))
         then
-            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--collator --node-key=$PARACHAIN_FIRST_BOOTNODE_NODE_KEY"
+            launch_parachain "$container_name" "--collator --node-key=$PARACHAIN_FIRST_BOOTNODE_NODE_KEY $para_port_extra" "$relay_port_extra"
         else
-            launch_parachain "$LOCAL_CONTAINER_NAME" "$DOCKER_EXTRA_PARAMS" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --collator"
+            launch_parachain "$container_name" "--bootnodes=$PARACHAIN_FIRST_BOOTNODE_ADDR --collator $para_port_extra" "$relay_port_extra"
         fi
     fi  
 }

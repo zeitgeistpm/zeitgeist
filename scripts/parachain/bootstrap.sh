@@ -26,17 +26,21 @@ export PARACHAIN_NIMBUS_PK="0xe6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b
 export PARACHAIN_PORT="30000"
 export PARACHAIN_RPC_PORT="8000"
 export PARACHAIN_WS_PORT="9000"
-export PARACHAIN="zeitgeist-battery-station-relay-parachain"
+export PARACHAIN_RELAY_PORT="30300"
+export PARACHAIN_RELAY_RPC_PORT="8300"
+export PARACHAIN_RELAY_WS_PORT="9300"
+
+export PARACHAIN="battery-station-parachain"
 
 export VALIDATOR_FIRST_BOOTNODE_ADDR="/ip4/45.33.117.205/tcp/31001/p2p/12D3KooWHgbvdWFwNQiUPbqncwPmGCHKE8gUQLbzbCzaVbkJ1crJ"
 export VALIDATOR_IMAGE="zeitgeistpm/zeitgeist-relay-chain:sha-83c5243"
-export VALIDATOR_PORT="31000"
-export VALIDATOR_RPC_PORT="8100"
+export VALIDATOR_PORT="30600"
+export VALIDATOR_RPC_PORT="8600"
 export VALIDATOR_SECOND_BOOTNODE_ADDR="/ip4/45.33.117.205/tcp/31002/p2p/12D3KooWE5KxMrfJLWCpaJmAPLWDm9rS612VcZg2JP6AYgxrGuuE"
-export VALIDATOR_WS_PORT="9100"
-export VALIDATOR="zeitgeist-battery-station-relay-validator"
+export VALIDATOR_WS_PORT="9600"
+export VALIDATOR="battery-station-relaychain"
 
-export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
+export RELAY_CHAIN_SPEC_FILE="/$DATA_DIR/relay-chain-spec.json"
 curl -o $RELAY_CHAIN_SPEC_FILE https://raw.githubusercontent.com/zeitgeistpm/polkadot/battery-station-relay/node/service/res/battery-station-relay.json
 
 . "$(dirname "$0")/testing-network-commons.sh" --source-only
