@@ -135,6 +135,7 @@ fn generic_genesis(
         },
         treasury: Default::default(),
         tokens: Default::default(),
+        vesting: Default::default(),
     }
 }
 

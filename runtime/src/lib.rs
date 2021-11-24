@@ -62,7 +62,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 25,
+    spec_version: 26,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 7,
@@ -202,6 +202,7 @@ macro_rules! create_zeitgeist_runtime {
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
                 TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
+                Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
 
                 // Other Parity pallets
                 AdvisoryCommitteeCollective: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 20,
@@ -546,6 +547,14 @@ impl pallet_utility::Config for Runtime {
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_vesting::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
+	type MinVestedTransfer = MinVestedTransfer;
+	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
+}
+
 #[cfg(feature = "parachain")]
 impl parachain_info::Config for Runtime {}
 
@@ -698,6 +707,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_utility, Utility);
+            list_benchmark!(list, extra, pallet_vesting, Vesting);
             list_benchmark!(list, extra, zrml_swaps, Swaps);
             list_benchmark!(list, extra, zrml_authorized, Authorized);
             list_benchmark!(list, extra, zrml_court, Court);
@@ -744,6 +754,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_utility, Utility);
+            add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
             add_benchmark!(params, batches, zrml_authorized, Authorized);
             add_benchmark!(params, batches, zrml_court, Court);
