@@ -548,11 +548,11 @@ impl pallet_utility::Config for Runtime {
 }
 
 impl pallet_vesting::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
-	type MinVestedTransfer = MinVestedTransfer;
-	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
+    type Event = Event;
+    type Currency = Balances;
+    type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
+    type MinVestedTransfer = MinVestedTransfer;
+    type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
