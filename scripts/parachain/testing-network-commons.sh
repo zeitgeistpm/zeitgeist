@@ -88,8 +88,10 @@ launch_validator() {
         --network=host \
         --restart=always \
         $VALIDATOR_IMAGE \
+        --allow-private-ipv4 \
         --base-path=/data \
         --chain=/zeitgeist/relay-chain-spec.json \
+        --discover-local \
         --name=$container_name \
         $validator_extra_params
 }
@@ -109,7 +111,7 @@ launch_configured_validator() {
     then
         launch_validator "$container_name" "--bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR --pruning archive --rpc-cors=all --rpc-external --ws-external $relay_port_extra"
     else
-        launch_validator  "--rpc-cors=all --rpc-methods=Unsafe --unsafe-rpc-external --validator $relay_port_extra"
+        launch_validator "$container_name" "--rpc-cors=all --rpc-methods=Unsafe --unsafe-rpc-external --validator $relay_port_extra"
         sleep 10
         inject_keys $idx $relay_rpc_port
         delete_container "$container_name"
@@ -158,14 +160,18 @@ launch_parachain() {
         --restart=always \
         --network=host \
         $PARACHAIN_IMAGE \
+        --allow-private-ipv4 \
         --base-path=/zeitgeist/data \
         --chain=$PARACHAIN_CHAIN \
+        --discover-local \
         --parachain-id=$PARACHAIN_ID \
         $parachain_extra_params \
         -- \
+        --allow-private-ipv4 \
         --bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR \
         --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR \
         --chain=/zeitgeist/relay-chain-spec.json \
+        --discover-local \
         --execution=wasm \
         $relaychain_extra_params
 }

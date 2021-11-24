@@ -8,7 +8,8 @@ set -euxo pipefail
 #
 # Use https://github.com/paritytech/polkadot/blob/master/scripts/prepare-test-net.sh
 # and the subkey tool (either standalone or included as "key" command in zeitgeist binary)
-# to generate the validator keys, node key and the parachain collator nimbus key
+# to generate the validator keys, node key and the parachain collator nimbus key.
+# Don't forget to add them to the genesis storage.
 export OVERALL_SECRET=""
 export PARACHAIN_FIRST_BOOTNODE_NODE_KEY=""
 export PARACHAIN_NIMBUS_SEED=""
@@ -42,7 +43,12 @@ export VALIDATOR_SECOND_BOOTNODE_ADDR="/ip4/127.0.0.1/tcp/30602/p2p/12D3KooWE5Kx
 export VALIDATOR_WS_PORT="9600"
 export VALIDATOR="battery-station-relaychain"
 
-export RELAY_CHAIN_SPEC_FILE="/$DATA_DIR/relay-chain-spec.json"
+if [ ! -d $DATA_DIR ]; then
+    echo -e "\033[0;36m Info: Data directory does not exist, creating: $DATA_DIR \033[0m"
+    mkdir -p $DATA_DIR
+fi
+
+export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
 curl -o $RELAY_CHAIN_SPEC_FILE https://raw.githubusercontent.com/zeitgeistpm/polkadot/battery-station-relay/node/service/res/battery-station-relay.json
 
 . "$(dirname "$0")/testing-network-commons.sh" --source-only
