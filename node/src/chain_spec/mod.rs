@@ -3,6 +3,7 @@ mod additional_chain_spec;
 mod battery_park;
 mod battery_station;
 mod dev;
+mod zeitgeist;
 
 pub use additional_chain_spec::AdditionalChainSpec;
 #[cfg(not(feature = "parachain"))]
@@ -14,6 +15,7 @@ use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
+pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},

@@ -8,7 +8,9 @@ mod rpc;
 mod service;
 
 #[cfg(feature = "parachain")]
-const DEFAULT_PARACHAIN_ID: u32 = 2050;
+const KUSAMA_PARACHAIN_ID: u32 = 2101;
+#[cfg(feature = "parachain")]
+const BATTERY_STATION_PARACHAIN_ID: u32 = 2050;
 
 fn main() -> sc_cli::Result<()> {
     command::run()
