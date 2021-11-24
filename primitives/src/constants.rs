@@ -147,5 +147,5 @@ parameter_types! {
 
 // Vesting
 parameter_types! {
-	pub const MinVestedTransfer: Balance = 1 * CENT;
+    pub const MinVestedTransfer: Balance = 1 * CENT;
 }

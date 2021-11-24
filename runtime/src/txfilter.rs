@@ -142,7 +142,8 @@ impl Contains<Call> for IsCallable {
             | Call::Court(_)
             | Call::LiquidityMining(_)
             | Call::Swaps(_)
-            | Call::PredictionMarkets(_) => false,
+            | Call::PredictionMarkets(_)
+            | Call::Vesting(_) => false,
         }
     }
 }
@@ -166,7 +167,8 @@ impl Contains<Call> for IsCallable {
             | Call::Court(_)
             | Call::LiquidityMining(_)
             | Call::Swaps(_)
-            | Call::PredictionMarkets(_) => false,
+            | Call::PredictionMarkets(_)
+            | Call::Vesting(_) => false,
         }
     }
 }
