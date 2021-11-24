@@ -144,3 +144,8 @@ parameter_types! {
     pub const SpendPeriod: BlockNumber = BLOCKS_PER_DAY;
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 }
+
+// Vesting
+parameter_types! {
+	pub const MinVestedTransfer: Balance = 1 * CENT;
+}
