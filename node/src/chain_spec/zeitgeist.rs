@@ -4,7 +4,6 @@ use crate::chain_spec::{
 };
 use sc_service::ChainType;
 
-// TODO: swap *_testnet with *_mainnet
 pub fn zeitgeist_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {
@@ -20,13 +19,8 @@ pub fn zeitgeist_staging_config(
                     #[cfg(feature = "parachain")]
                     parachain_id,
                 ),
-<<<<<<< HEAD
                 endowed_accounts_staging_mainnet(),
                 root_key_staging_mainnet(),
-=======
-                endowed_accounts_staging_testnet(),
-                root_key_staging_testnet(),
->>>>>>> dfaa692 (Modify generic_genesis() to allow more control over endowed accounts)
                 zeitgeist_wasm,
             )
         },
