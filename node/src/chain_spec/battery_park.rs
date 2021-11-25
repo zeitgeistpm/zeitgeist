@@ -3,7 +3,6 @@ use crate::chain_spec::{
     telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
 };
 use sc_service::ChainType;
-use zeitgeist_primitives::constants::BASE;
 
 pub fn battery_park_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
@@ -21,7 +20,6 @@ pub fn battery_park_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_testnet(),
-                10_000 * BASE,
                 root_key_staging_testnet(),
                 zeitgeist_wasm,
             )

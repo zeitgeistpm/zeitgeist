@@ -108,9 +108,9 @@ impl SubstrateCli for Cli {
             #[cfg(feature = "parachain")]
             match id {
                 "battery_station_staging" => {
-                    self.run.parachain_id.unwrap_or(BATTERY_STATION_PARACHAIN_ID).into()
+                    self.run.parachain_id.unwrap_or(super::BATTERY_STATION_PARACHAIN_ID).into()
                 }
-                _ => self.run.parachain_id.unwrap_or(KUSAMA_PARACHAIN_ID).into(),
+                _ => self.run.parachain_id.unwrap_or(super::KUSAMA_PARACHAIN_ID).into(),
             },
         )
     }

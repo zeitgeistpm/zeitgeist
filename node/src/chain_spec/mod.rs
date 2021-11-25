@@ -85,11 +85,12 @@ const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
 
 
 type AccountPublic = <Signature as Verify>::Signer;
+#[derive(Clone)]
+struct EndowedAccountWithBalance(AccountId, Balance);
 
 fn generic_genesis(
     acs: AdditionalChainSpec,
-    endowed_accounts: Vec<AccountId>,
-    initial_balance: Balance,
+    endowed_accounts: Vec<EndowedAccountWithBalance>,
     root_key: AccountId,
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
@@ -117,7 +118,7 @@ fn generic_genesis(
                 .collect(),
         },
         balances: zeitgeist_runtime::BalancesConfig {
-            balances: endowed_accounts.iter().cloned().map(|k| (k, initial_balance)).collect(),
+            balances: endowed_accounts.iter().cloned().map(|k| (k.0, k.1)).collect(),
         },
         #[cfg(feature = "parachain")]
         crowdloan: zeitgeist_runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
@@ -232,14 +233,24 @@ fn authority_keys_from_seed(
     )
 }
 
-fn endowed_accounts_staging_testnet() -> Vec<AccountId> {
+fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
     vec![
         // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
-        hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
+        EndowedAccountWithBalance(
+            hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
+            DEFAULT_INITIAL_BALANCE_TESTNET
+        ),
         // 5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX
-        hex!["725bb6fd13d52b3d6830e5a9faed1f6499ca0f5e8aa285df09490646e71e831b"].into(),
+        EndowedAccountWithBalance(
+            hex!["725bb6fd13d52b3d6830e5a9faed1f6499ca0f5e8aa285df09490646e71e831b"].into(),
+            DEFAULT_INITIAL_BALANCE_TESTNET
+        ),
         // 5D9tF8w1FMSdz52bpiaQis1pCUZy5Gs6HcHS7gHxEzyq4XzU
-        hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
+        #[cfg(feature = "parachain")]
+        EndowedAccountWithBalance(
+            hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
+            DEFAULT_STAKING_AMOUNT_TESTNET
+        ),
     ]
 }
 

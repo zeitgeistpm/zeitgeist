@@ -3,9 +3,6 @@ use crate::chain_spec::{
     telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
 };
 use sc_service::ChainType;
-use zeitgeist_primitives::{constants::BASE, types::Balance};
-
-const INITIAL_BALANCE: Balance = 10_000 * BASE;
 
 // TODO: swap *_testnet with *_mainnet
 pub fn zeitgeist_staging_config(
@@ -24,7 +21,6 @@ pub fn zeitgeist_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_testnet(),
-                INITIAL_BALANCE,
                 root_key_staging_testnet(),
                 zeitgeist_wasm,
             )

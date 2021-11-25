@@ -6,6 +6,7 @@ use crate::chain_spec::{
 };
 use sc_service::ChainType;
 use sp_core::sr25519;
+use super::EndowedAccountWithBalance;
 use zeitgeist_primitives::types::Balance;
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
@@ -49,8 +50,7 @@ pub fn dev_config(
                     get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-                ],
-                INITIAL_BALANCE,
+                ].into_iter().map(|acc| EndowedAccountWithBalance(acc, INITIAL_BALANCE)).collect(),
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 zeitgeist_wasm,
             )
