@@ -62,6 +62,7 @@
       "Tardy"
     ]
   },
+  "Lookup": "MultiAddress",
   "Market": {
     "creator": "AccountId",
     "creation": "MarketCreation",
