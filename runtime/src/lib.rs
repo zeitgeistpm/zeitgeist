@@ -12,6 +12,7 @@ mod parachain_params;
 mod parameters;
 #[cfg(feature = "txfilter")]
 mod txfilter;
+mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
@@ -697,6 +698,8 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
+            mod benchmarking;
+
             use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
