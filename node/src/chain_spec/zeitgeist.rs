@@ -4,6 +4,7 @@ use crate::chain_spec::{
 };
 use sc_service::ChainType;
 
+// TODO: swap *_testnet with *_mainnet
 pub fn zeitgeist_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {

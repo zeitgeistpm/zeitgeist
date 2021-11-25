@@ -46,12 +46,12 @@ cfg_if::cfg_if! {
             let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
             let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
             let rounds_per_year = millisecs_per_year / round_millisecs;
-
+        
             let annual_inflation = ztg::STAKING_PTD;
             let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
             let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
             let round_inflation = Perbill::from_parts(round_inflation_parts as _);
-
+        
             parachain_staking::InflationInfo {
                 annual: parachain_staking::Range {
                     ideal: annual_inflation,
