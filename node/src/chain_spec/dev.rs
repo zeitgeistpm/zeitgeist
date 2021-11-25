@@ -7,7 +7,6 @@ use crate::chain_spec::{
 };
 use sc_service::ChainType;
 use sp_core::sr25519;
-use super::EndowedAccountWithBalance;
 use zeitgeist_primitives::types::Balance;
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
