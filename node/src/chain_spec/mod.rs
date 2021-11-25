@@ -190,25 +190,26 @@ impl Extensions {
     }
 }
 
+// Testnet configuration
+
 #[cfg(feature = "parachain")]
 fn additional_chain_spec_staging_testnet(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
-    use zeitgeist_primitives::constants::BASE;
-
     AdditionalChainSpec {
         candidates: vec![(
             hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
             hex!["e6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"]
                 .unchecked_into(),
-            crate::chain_spec::DEFAULT_STAKING_AMOUNT_TESTNET,
+            DEFAULT_STAKING_AMOUNT_TESTNET,
         )],
         crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_TESTNET,
-        inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+        inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
         nominations: vec![],
         parachain_id,
     }
 }
+
 #[cfg(not(feature = "parachain"))]
 fn additional_chain_spec_staging_testnet() -> AdditionalChainSpec {
     AdditionalChainSpec {
@@ -256,6 +257,77 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
 
 fn root_key_staging_testnet() -> AccountId {
     hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into()
+}
+
+// Mainnet configuration
+
+fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
+    vec![
+        // dDzt4vaprRfHqGBat44bWD4i36WMDXjsGXmCHoxMom2eQgQCd
+        #[cfg(feature = "parachain")]
+        EndowedAccountWithBalance(
+            hex!["524e9aac979cbb9ecdb7acd1635755c3b15696321a3345ca77f0ab0ae23f675a"].into(),
+            DEFAULT_STAKING_AMOUNT_MAINNET
+        ),
+        // dDy7WSPy4pvWBKsUta8MdWxduWFTpJtv9zgBiVGtqWmMh6bi6
+        #[cfg(feature = "parachain")]
+        EndowedAccountWithBalance(
+            hex!["04163722a7f1f900c1ec502383d4959360e374c8808e13d47b3e553d761a6329"].into(),
+            DEFAULT_STAKING_AMOUNT_MAINNET
+        ),
+        // dE36Y98QpX8hEkLANntbtUvt7figSPGxSrDxU4sscuX989CTJ
+        #[cfg(feature = "parachain")]
+        EndowedAccountWithBalance(
+            hex!["b449a256f73e59602eb742071a07e4d94aaae91e6872f28e161f34982a0bfc0d"].into(),
+            DEFAULT_STAKING_AMOUNT_MAINNET
+        ),
+        // dE2nxuZc5e7xBbU1cGikmtVGws9niNPUayigoDdyqB7hzHQ6X
+        EndowedAccountWithBalance(
+            hex!["a6e29646e15a7440a1a422a5bd985ba67494ea0ba1b44fed4b864b8ccf72db00"].into(),
+            DEFAULT_SUDO_BALANCE_MAINNET
+        ),
+    ]
+}
+
+fn root_key_staging_mainnet() -> AccountId {
+    hex!["a6e29646e15a7440a1a422a5bd985ba67494ea0ba1b44fed4b864b8ccf72db00"].into()
+}
+
+#[cfg(feature = "parachain")]
+fn additional_chain_spec_staging_mainnet(
+    parachain_id: cumulus_primitives_core::ParaId,
+) -> AdditionalChainSpec {
+    AdditionalChainSpec {
+        candidates: vec![
+            (
+                hex!["524e9aac979cbb9ecdb7acd1635755c3b15696321a3345ca77f0ab0ae23f675a"].into(),
+                hex!["e251731d35dd19aeb7db1ffe06227d0b7da3b3eabb5ec1d79da453ac9949e80b"]
+                    .unchecked_into(),
+                DEFAULT_STAKING_AMOUNT_MAINNET,
+            ),
+            (
+                hex!["04163722a7f1f900c1ec502383d4959360e374c8808e13d47b3e553d761a6329"].into(),
+                hex!["76d3384620053d1eb67e0f7fa8af93a8028e5cf74f22a12a5f2393b286463753"]
+                    .unchecked_into(),
+                DEFAULT_STAKING_AMOUNT_MAINNET,
+            ),
+            (
+                hex!["b449a256f73e59602eb742071a07e4d94aaae91e6872f28e161f34982a0bfc0d"].into(),
+                hex!["14a3becfeeb700ff6a41927a2924493717aea238d9c5bea15368d61550f63e44"]
+                    .unchecked_into(),
+                DEFAULT_STAKING_AMOUNT_MAINNET,
+            ),
+        ],
+        crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_MAINNET,
+        inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
+        nominations: vec![],
+        parachain_id,
+    }
+}
+
+#[cfg(not(feature = "parachain"))]
+fn additional_chain_spec_staging_mainnet() -> AdditionalChainSpec {
+    additional_chain_spec_staging_testnet()
 }
 
 fn telemetry_endpoints() -> Option<TelemetryEndpoints> {
