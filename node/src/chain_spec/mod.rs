@@ -19,12 +19,7 @@ pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-<<<<<<< HEAD
         BalanceFractionalDecimals, BASE,
-=======
-        BASE,
-        BalanceFractionalDecimals,
->>>>>>> 362d306 (Add initialization constants & rename key functions)
     },
     types::{AccountId, Balance, Signature},
 };
