@@ -20,8 +20,13 @@ pub fn zeitgeist_staging_config(
                     #[cfg(feature = "parachain")]
                     parachain_id,
                 ),
+<<<<<<< HEAD
                 endowed_accounts_staging_mainnet(),
                 root_key_staging_mainnet(),
+=======
+                endowed_accounts_staging_testnet(),
+                root_key_staging_testnet(),
+>>>>>>> dfaa692 (Modify generic_genesis() to allow more control over endowed accounts)
                 zeitgeist_wasm,
             )
         },
