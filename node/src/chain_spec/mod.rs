@@ -19,8 +19,7 @@ pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BASE,
-        BalanceFractionalDecimals,
+        BalanceFractionalDecimals, BASE,
     },
     types::{AccountId, Balance, Signature},
 };
@@ -47,12 +46,12 @@ cfg_if::cfg_if! {
             let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
             let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
             let rounds_per_year = millisecs_per_year / round_millisecs;
-        
+
             let annual_inflation = ztg::STAKING_PTD;
             let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
             let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
             let round_inflation = Perbill::from_parts(round_inflation_parts as _);
-        
+
             parachain_staking::InflationInfo {
                 annual: parachain_staking::Range {
                     ideal: annual_inflation,
@@ -82,7 +81,6 @@ const DEFAULT_INITIAL_BALANCE_TESTNET: u128 = 10_000 * BASE;
 const DEFAULT_SUDO_BALANCE_MAINNET: u128 = 100 * BASE;
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
-
 
 type AccountPublic = <Signature as Verify>::Signer;
 #[derive(Clone)]
@@ -239,18 +237,18 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
         // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
         EndowedAccountWithBalance(
             hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
-            DEFAULT_INITIAL_BALANCE_TESTNET
+            DEFAULT_INITIAL_BALANCE_TESTNET,
         ),
         // 5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX
         EndowedAccountWithBalance(
             hex!["725bb6fd13d52b3d6830e5a9faed1f6499ca0f5e8aa285df09490646e71e831b"].into(),
-            DEFAULT_INITIAL_BALANCE_TESTNET
+            DEFAULT_INITIAL_BALANCE_TESTNET,
         ),
         // 5D9tF8w1FMSdz52bpiaQis1pCUZy5Gs6HcHS7gHxEzyq4XzU
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
-            DEFAULT_STAKING_AMOUNT_TESTNET
+            DEFAULT_STAKING_AMOUNT_TESTNET,
         ),
     ]
 }
@@ -267,24 +265,24 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["524e9aac979cbb9ecdb7acd1635755c3b15696321a3345ca77f0ab0ae23f675a"].into(),
-            DEFAULT_STAKING_AMOUNT_MAINNET
+            DEFAULT_STAKING_AMOUNT_MAINNET,
         ),
         // dDy7WSPy4pvWBKsUta8MdWxduWFTpJtv9zgBiVGtqWmMh6bi6
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["04163722a7f1f900c1ec502383d4959360e374c8808e13d47b3e553d761a6329"].into(),
-            DEFAULT_STAKING_AMOUNT_MAINNET
+            DEFAULT_STAKING_AMOUNT_MAINNET,
         ),
         // dE36Y98QpX8hEkLANntbtUvt7figSPGxSrDxU4sscuX989CTJ
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["b449a256f73e59602eb742071a07e4d94aaae91e6872f28e161f34982a0bfc0d"].into(),
-            DEFAULT_STAKING_AMOUNT_MAINNET
+            DEFAULT_STAKING_AMOUNT_MAINNET,
         ),
         // dE2nxuZc5e7xBbU1cGikmtVGws9niNPUayigoDdyqB7hzHQ6X
         EndowedAccountWithBalance(
             hex!["a6e29646e15a7440a1a422a5bd985ba67494ea0ba1b44fed4b864b8ccf72db00"].into(),
-            DEFAULT_SUDO_BALANCE_MAINNET
+            DEFAULT_SUDO_BALANCE_MAINNET,
         ),
     ]
 }

@@ -1,6 +1,6 @@
 use crate::chain_spec::{
-    additional_chain_spec_staging_mainnet, endowed_accounts_staging_mainnet, generic_genesis, root_key_staging_mainnet,
-    telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
+    additional_chain_spec_staging_mainnet, endowed_accounts_staging_mainnet, generic_genesis,
+    root_key_staging_mainnet, telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
 };
 use sc_service::ChainType;
 
