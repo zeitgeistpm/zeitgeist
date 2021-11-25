@@ -2,11 +2,13 @@
 substrate-wasm-builder = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
 
 [dependencies]
+cfg-if = { version = "1.0.0" }
 frame-executive = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
 log = { version = "0.4.14", default-features = false, optional = true }
+orml-benchmarking = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, optional = true, git = "https://github.com/PureStake/open-runtime-module-library" }
 orml-currencies = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 orml-tokens = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 orml-traits = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
@@ -127,9 +129,17 @@ runtime-benchmarks = [
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",
     "hex-literal",
+	"orml-tokens/runtime-benchmarks",
+	"orml-benchmarking",
+	"pallet-author-mapping/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
+	"pallet-crowdloan-rewards/runtime-benchmarks",
+	"pallet-grandpa/runtime-benchmarks",
+	"pallet-identity/runtime-benchmarks",
+	"parachain-staking/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
+	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
@@ -147,6 +157,7 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	"orml-benchmarking/std",
 	"orml-currencies/std",
 	"orml-tokens/std",
 	"orml-traits/std",
