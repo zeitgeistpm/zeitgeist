@@ -53,7 +53,15 @@
     "annual": "RangePerbill",
     "round": "RangePerbill"
   },
-  "Lookup": "MultiAddress",
+  "Juror": {
+    "status": "JurorStatus"
+  },
+  "JurorStatus": {
+    "_enum": [
+      "Ok",
+      "Tardy"
+    ]
+  },
   "Market": {
     "creator": "AccountId",
     "creation": "MarketCreation",

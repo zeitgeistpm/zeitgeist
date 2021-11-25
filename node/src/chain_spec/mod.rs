@@ -19,6 +19,7 @@ pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        BASE,
         BalanceFractionalDecimals,
     },
     types::{AccountId, Balance, Signature},
@@ -30,45 +31,58 @@ use {
     zeitgeist_primitives::constants::{ztg, DefaultBlocksPerRound, MILLISECS_PER_BLOCK},
 };
 
-#[cfg(feature = "parachain")]
-const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
-    let hours_per_year = 8766;
-    let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
-    let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
-    let rounds_per_year = millisecs_per_year / round_millisecs;
+cfg_if::cfg_if! {
+    if #[cfg(feature = "parachain")] {
+        // Testnet
+        const DEFAULT_STAKING_AMOUNT_TESTNET: u128 = 2_000 * BASE;
+        const DEFAULT_INITIAL_CROWDLOAN_FUNDS_TESTNET: u128 = 100 * BASE;
 
-    let annual_inflation = ztg::STAKING_PTD;
-    let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
-    let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
-    let round_inflation = Perbill::from_parts(round_inflation_parts as _);
+        // Mainnet
+        const DEFAULT_STAKING_AMOUNT_MAINNET: u128 = 64 * BASE;
+        const DEFAULT_INITIAL_CROWDLOAN_FUNDS_MAINNET: u128 = 100 * BASE;
 
-    parachain_staking::InflationInfo {
-        annual: parachain_staking::Range {
-            ideal: annual_inflation,
-            max: annual_inflation,
-            min: annual_inflation,
-        },
-        expect: parachain_staking::Range {
-            ideal: expected_annual_amount,
-            max: expected_annual_amount,
-            min: expected_annual_amount,
-        },
-        round: parachain_staking::Range {
-            ideal: round_inflation,
-            min: round_inflation,
-            max: round_inflation,
-        },
+        // Common
+        const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
+            let hours_per_year = 8766;
+            let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
+            let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
+            let rounds_per_year = millisecs_per_year / round_millisecs;
+        
+            let annual_inflation = ztg::STAKING_PTD;
+            let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
+            let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
+            let round_inflation = Perbill::from_parts(round_inflation_parts as _);
+        
+            parachain_staking::InflationInfo {
+                annual: parachain_staking::Range {
+                    ideal: annual_inflation,
+                    max: annual_inflation,
+                    min: annual_inflation,
+                },
+                expect: parachain_staking::Range {
+                    ideal: expected_annual_amount,
+                    max: expected_annual_amount,
+                    min: expected_annual_amount,
+                },
+                round: parachain_staking::Range {
+                    ideal: round_inflation,
+                    min: round_inflation,
+                    max: round_inflation,
+                },
+            }
+        };
+
+        pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
+    } else {
+        pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
     }
-};
-#[cfg(feature = "parachain")]
-const DEFAULT_STAKING_AMOUNT: u128 = 2_000 * zeitgeist_primitives::constants::BASE;
+}
+
+const DEFAULT_INITIAL_BALANCE_TESTNET: u128 = 10_000 * BASE;
+const DEFAULT_SUDO_BALANCE_MAINNET: u128 = 100 * BASE;
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
 
-#[cfg(feature = "parachain")]
-pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
-#[cfg(not(feature = "parachain"))]
-pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -176,7 +190,7 @@ impl Extensions {
 }
 
 #[cfg(feature = "parachain")]
-fn additional_chain_spec_staging(
+fn additional_chain_spec_staging_testnet(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
     use zeitgeist_primitives::constants::BASE;
@@ -186,16 +200,16 @@ fn additional_chain_spec_staging(
             hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
             hex!["e6ea0b63b2b5b7247a1e8280350a14c5f9e7745dec2fe3428b68aa4167d48e66"]
                 .unchecked_into(),
-            crate::chain_spec::DEFAULT_STAKING_AMOUNT,
+            crate::chain_spec::DEFAULT_STAKING_AMOUNT_TESTNET,
         )],
-        crowdloan_fund_pot: 100u128.saturating_mul(BASE),
+        crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_TESTNET,
         inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
         nominations: vec![],
         parachain_id,
     }
 }
 #[cfg(not(feature = "parachain"))]
-fn additional_chain_spec_staging() -> AdditionalChainSpec {
+fn additional_chain_spec_staging_testnet() -> AdditionalChainSpec {
     AdditionalChainSpec {
         initial_authorities: vec![(
             // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
@@ -218,7 +232,7 @@ fn authority_keys_from_seed(
     )
 }
 
-fn endowed_accounts_staging() -> Vec<AccountId> {
+fn endowed_accounts_staging_testnet() -> Vec<AccountId> {
     vec![
         // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
         hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
@@ -229,7 +243,7 @@ fn endowed_accounts_staging() -> Vec<AccountId> {
     ]
 }
 
-fn root_key_staging() -> AccountId {
+fn root_key_staging_testnet() -> AccountId {
     hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into()
 }
 

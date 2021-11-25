@@ -1,5 +1,5 @@
 use crate::chain_spec::{
-    additional_chain_spec_staging, endowed_accounts_staging, generic_genesis, root_key_staging,
+    additional_chain_spec_staging_testnet, endowed_accounts_staging_testnet, generic_genesis, root_key_staging_testnet,
     telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
 };
 use sc_service::ChainType;
@@ -7,6 +7,7 @@ use zeitgeist_primitives::{constants::BASE, types::Balance};
 
 const INITIAL_BALANCE: Balance = 10_000 * BASE;
 
+// TODO: swap *_testnet with *_mainnet
 pub fn zeitgeist_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<ChainSpec, String> {
@@ -18,13 +19,13 @@ pub fn zeitgeist_staging_config(
         ChainType::Live,
         move || {
             generic_genesis(
-                additional_chain_spec_staging(
+                additional_chain_spec_staging_testnet(
                     #[cfg(feature = "parachain")]
                     parachain_id,
                 ),
-                endowed_accounts_staging(),
+                endowed_accounts_staging_testnet(),
                 INITIAL_BALANCE,
-                root_key_staging(),
+                root_key_staging_testnet(),
                 zeitgeist_wasm,
             )
         },
