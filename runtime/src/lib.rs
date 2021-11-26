@@ -9,8 +9,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod opaque;
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
