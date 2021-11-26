@@ -1,4 +1,4 @@
-cfg_if::cfg_if!{
+cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         pub mod pallet_author_mapping;
         pub mod parachain_staking;
@@ -6,7 +6,6 @@ cfg_if::cfg_if!{
         pub mod pallet_grandpa;
     }
 }
-
 
 pub mod frame_system;
 pub mod orml_currencies;
