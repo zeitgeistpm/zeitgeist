@@ -322,7 +322,7 @@ impl frame_system::Config for Runtime {
     type Origin = Origin;
     type PalletInfo = PalletInfo;
     type SS58Prefix = SS58Prefix;
-    type SystemWeightInfo = ();
+    type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
     type Version = Version;
 }
 
@@ -347,7 +347,7 @@ impl pallet_author_mapping::Config for Runtime {
     type DepositAmount = CollatorDeposit;
     type DepositCurrency = Balances;
     type Event = Event;
-    type WeightInfo = pallet_author_mapping::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
@@ -378,7 +378,7 @@ impl pallet_grandpa::Config for Runtime {
 
     type HandleEquivocation = ();
 
-    type WeightInfo = ();
+    type WeightInfo = weights::pallet_grandpa::WeightInfo<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
@@ -415,7 +415,7 @@ impl parachain_staking::Config for Runtime {
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
     type RevokeNominationDelay = RevokeNominationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
-    type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -474,7 +474,7 @@ impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime 
     type MotionDuration = AdvisoryCommitteeMotionDuration;
     type Origin = Origin;
     type Proposal = Call;
-    type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 }
 
 impl pallet_identity::Config for Runtime {
@@ -489,7 +489,7 @@ impl pallet_identity::Config for Runtime {
     type RegistrarOrigin = EnsureRoot<AccountId>;
     type Slashed = Treasury;
     type SubAccountDeposit = SubAccountDeposit;
-    type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
 impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
@@ -502,7 +502,7 @@ impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime 
     type RemoveOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
     type ResetOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
     type SwapOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -519,7 +519,7 @@ impl pallet_timestamp::Config for Runtime {
     type OnTimestampSet = ();
     #[cfg(not(feature = "parachain"))]
     type OnTimestampSet = Aura;
-    type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -543,13 +543,13 @@ impl pallet_treasury::Config for Runtime {
     type RejectOrigin = EnsureRoot<AccountId>;
     type SpendFunds = ();
     type SpendPeriod = SpendPeriod;
-    type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
 }
 
 impl pallet_utility::Config for Runtime {
     type Event = Event;
     type Call = Call;
-    type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
 impl pallet_vesting::Config for Runtime {
@@ -557,7 +557,7 @@ impl pallet_vesting::Config for Runtime {
     type Currency = Balances;
     type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
     type MinVestedTransfer = MinVestedTransfer;
-    type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
