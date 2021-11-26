@@ -3,6 +3,8 @@
 # This script benchmarks every pallet that is used within Zeitgeist.
 # Execute from the root of the project.
 
+set -euxo pipefail
+
 # Configuration
 
 FRAME_PALLETS=( frame_system pallet_balances pallet_collective pallet_grandpa pallet_identity \
