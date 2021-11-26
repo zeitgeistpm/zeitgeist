@@ -7,6 +7,8 @@ extern crate alloc;
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod opaque;
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
@@ -433,7 +435,7 @@ impl orml_tokens::Config for Runtime {
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
-    type WeightInfo = ();
+    type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
@@ -698,18 +700,16 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            mod benchmarking;
-
             use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
-            // use orml_benchmarking::list_benchmark as orml_list_benchmark;
+            use orml_benchmarking::list_benchmark as orml_list_benchmark;
 
             let mut list = Vec::<BenchmarkList>::new();
 
             list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
             // orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
-            // orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
+            orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
             list_benchmark!(list, extra, pallet_balances, Balances);
             list_benchmark!(list, extra, pallet_collective, AdvisoryCommitteeCollective);
             list_benchmark!(list, extra, pallet_identity, Identity);
@@ -744,7 +744,7 @@ impl_runtime_apis! {
                 add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
-            // use orml_benchmarking::{add_benchmark as orml_add_benchmark};
+            use orml_benchmarking::{add_benchmark as orml_add_benchmark};
 
             impl frame_system_benchmarking::Config for Runtime {}
 
@@ -773,7 +773,7 @@ impl_runtime_apis! {
 
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             // orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
-            // orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
+            orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_collective, AdvisoryCommitteeCollective);
             add_benchmark!(params, batches, pallet_identity, Identity);
