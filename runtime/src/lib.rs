@@ -423,7 +423,7 @@ impl orml_currencies::Config for Runtime {
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
-    type WeightInfo = ();
+    type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
 }
 
 impl orml_tokens::Config for Runtime {
@@ -708,7 +708,7 @@ impl_runtime_apis! {
             let mut list = Vec::<BenchmarkList>::new();
 
             list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-            // orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
+            orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
             orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
             list_benchmark!(list, extra, pallet_balances, Balances);
             list_benchmark!(list, extra, pallet_collective, AdvisoryCommitteeCollective);
@@ -772,7 +772,7 @@ impl_runtime_apis! {
             let params = (&config, &whitelist);
 
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-            // orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
+            orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
             orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_collective, AdvisoryCommitteeCollective);
