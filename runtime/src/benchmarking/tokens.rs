@@ -1,5 +1,5 @@
 // This file was originally fetched from Acala
-// https://github.com/AcalaNetwork/Acala/blob/6e0dae03040db2a1ef168a2ecba357c7b628874c/runtime/mandala/src/benchmarking/tokens.rs
+// https://github.com/AcalaNetwork/Acala/blob/6e0dae03040db2a1ef168a2ecba357c7b628874c/runtime/mandala/src/benchmarking/currencies.rs
 
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
