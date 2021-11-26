@@ -16,87 +16,84 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use super::utils::{lookup_of_account, set_balance as update_balance};
 use crate::{AccountId, Balance, CurrencyId, Runtime, Tokens};
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrency;
-use super::utils::{lookup_of_account, set_balance as update_balance};
-use zeitgeist_primitives::{
-	constants::BASE,
-	types::Asset
-};
+use zeitgeist_primitives::{constants::BASE, types::Asset};
 
 const SEED: u32 = 0;
-const ASSET: CurrencyId = Asset::CategoricalOutcome(0,0);
+const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
 
 runtime_benchmarks! {
-	{ Runtime, orml_tokens }
+    { Runtime, orml_tokens }
 
-	transfer {
-		let amount: Balance = BASE;
+    transfer {
+        let amount: Balance = BASE;
 
-		let from: AccountId = whitelisted_caller();
-		update_balance(ASSET, &from, amount);
+        let from: AccountId = whitelisted_caller();
+        update_balance(ASSET, &from, amount);
 
-		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to.clone());
-	}: _(RawOrigin::Signed(from), to_lookup, ASSET, amount)
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &to), amount);
-	}
+        let to: AccountId = account("to", 0, SEED);
+        let to_lookup = lookup_of_account(to.clone());
+    }: _(RawOrigin::Signed(from), to_lookup, ASSET, amount)
+    verify {
+        assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &to), amount);
+    }
 
-	transfer_all {
-		let amount: Balance = BASE;
+    transfer_all {
+        let amount: Balance = BASE;
 
-		let from: AccountId = whitelisted_caller();
-		update_balance(ASSET, &from, amount);
+        let from: AccountId = whitelisted_caller();
+        update_balance(ASSET, &from, amount);
 
-		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to);
-	}: _(RawOrigin::Signed(from.clone()), to_lookup, ASSET, false)
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &from), 0);
-	}
+        let to: AccountId = account("to", 0, SEED);
+        let to_lookup = lookup_of_account(to);
+    }: _(RawOrigin::Signed(from.clone()), to_lookup, ASSET, false)
+    verify {
+        assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &from), 0);
+    }
 
-	transfer_keep_alive {
-		let from: AccountId = whitelisted_caller();
-		update_balance(ASSET, &from, 2 * BASE);
+    transfer_keep_alive {
+        let from: AccountId = whitelisted_caller();
+        update_balance(ASSET, &from, 2 * BASE);
 
-		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to.clone());
-	}: _(RawOrigin::Signed(from), to_lookup, ASSET, BASE)
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &to), BASE);
-	}
+        let to: AccountId = account("to", 0, SEED);
+        let to_lookup = lookup_of_account(to.clone());
+    }: _(RawOrigin::Signed(from), to_lookup, ASSET, BASE)
+    verify {
+        assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &to), BASE);
+    }
 
-	force_transfer {
-		let from: AccountId = account("from", 0, SEED);
-		let from_lookup = lookup_of_account(from.clone());
-		update_balance(ASSET, &from, 2 * BASE);
+    force_transfer {
+        let from: AccountId = account("from", 0, SEED);
+        let from_lookup = lookup_of_account(from.clone());
+        update_balance(ASSET, &from, 2 * BASE);
 
-		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to.clone());
-	}: _(RawOrigin::Root, from_lookup, to_lookup, ASSET, BASE)
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &to), BASE);
-	}
+        let to: AccountId = account("to", 0, SEED);
+        let to_lookup = lookup_of_account(to.clone());
+    }: _(RawOrigin::Root, from_lookup, to_lookup, ASSET, BASE)
+    verify {
+        assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &to), BASE);
+    }
 
-	set_balance {
-		let who: AccountId = account("who", 0, SEED);
-		let who_lookup = lookup_of_account(who.clone());
+    set_balance {
+        let who: AccountId = account("who", 0, SEED);
+        let who_lookup = lookup_of_account(who.clone());
 
-	}: _(RawOrigin::Root, who_lookup, ASSET, BASE, BASE)
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &who), 2 * BASE);
-	}
+    }: _(RawOrigin::Root, who_lookup, ASSET, BASE, BASE)
+    verify {
+        assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(ASSET, &who), 2 * BASE);
+    }
 }
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use crate::benchmarking::utils::tests::new_test_ext;
-	use orml_benchmarking::impl_benchmark_test_suite;
+    use super::*;
+    use crate::benchmarking::utils::tests::new_test_ext;
+    use orml_benchmarking::impl_benchmark_test_suite;
 
-	impl_benchmark_test_suite!(new_test_ext(),);
+    impl_benchmark_test_suite!(new_test_ext(),);
 }
