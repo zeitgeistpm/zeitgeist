@@ -16,6 +16,7 @@ ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_liquidity_mining zrml_predic
 
 cargo build --release --features=runtime-benchmarks
 
+
 for pallet in ${FRAME_PALLETS[@]}; do
     ./target/release/zeitgeist benchmark --chain=dev --steps=50 --repeat=20 --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/frame_weight_template.hbs --output=./runtime/src/weights/
 done
@@ -25,7 +26,9 @@ for pallet in ${ORML_PALLETS[@]}; do
 done
 
 for pallet in ${ZEITGEIST_PALLETS[@]}; do
-    ./target/release/zeitgeist benchmark --chain=dev --steps=10 --repeat=1000 --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/${pallet//_/-}/src/weights.rs
+    pallet_folder_name=${pallet//zrml_//}
+    pallet_folder_name=${pallet_folder_name//_/-}
+    ./target/release/zeitgeist benchmark --chain=dev --steps=2 --repeat=2 --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/$pallet_folder_name/src/weights.rs
 done
 
 
