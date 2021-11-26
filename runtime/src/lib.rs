@@ -6,9 +6,9 @@ extern crate alloc;
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod opaque;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
@@ -463,7 +463,7 @@ impl pallet_balances::Config for Runtime {
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
 }
 
 impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime {
