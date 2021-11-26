@@ -9,6 +9,8 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod opaque;
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
@@ -700,8 +702,6 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            mod benchmarking;
-
             use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
