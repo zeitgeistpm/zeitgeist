@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_utility (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> pallet_utility::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo<T> {
 
 	fn batch(c: u32, ) -> Weight {
 		(67_727_000 as Weight)

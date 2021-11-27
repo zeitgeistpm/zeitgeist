@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_vesting (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> pallet_vesting::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo<T> {
 
 	// Storage: Vesting Vesting (r:1 w:0)
 	// Storage: Balances Locks (r:1 w:1)

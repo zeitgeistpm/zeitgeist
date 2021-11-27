@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for parachain_staking (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> parachain_staking::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> parachain_staking::weights::WeightInfo for WeightInfo<T> {
 
 	// Storage: ParachainStaking InflationConfig (r:1 w:1)
 	fn set_staking_expectations() -> Weight {

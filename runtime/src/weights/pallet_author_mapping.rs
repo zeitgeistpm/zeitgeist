@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_author_mapping (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> pallet_author_mapping::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for WeightInfo<T> {
 
 	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
