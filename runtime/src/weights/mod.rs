@@ -3,7 +3,8 @@ cfg_if::cfg_if! {
         pub mod pallet_author_mapping;
         pub mod parachain_staking;
     } else {
-        pub mod pallet_grandpa;
+        // Currently the benchmark does yield an invalid weight implementation
+        // pub mod pallet_grandpa;
     }
 }
 
