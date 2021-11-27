@@ -7,9 +7,11 @@ set -euxo pipefail
 
 # Configuration
 
-FRAME_PALLETS=( frame_system pallet_balances pallet_collective pallet_grandpa pallet_identity \
-                pallet_membership pallet_timestamp pallet_treasury pallet_utility pallet_vesting )
-FRAME_PALLETS_PARACHAIN=( pallet_author_mapping parachain_staking pallet_crowdloan_rewards )
+FRAME_PALLETS=( frame_system pallet_balances pallet_collective pallet_identity pallet_membership \
+                pallet_timestamp pallet_treasury pallet_utility pallet_vesting ) # pallet_grandpa )
+
+# pallet_crowdloan_rewards benchmark lead to an error within the verify function (deprecated)
+FRAME_PALLETS_PARACHAIN=( pallet_author_mapping parachain_staking ) # pallet_crowdloan_rewards )
 ORML_PALLETS=( orml_currencies orml_tokens )
 ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_liquidity_mining zrml_prediction_markets zrml_swaps )
 
@@ -30,7 +32,7 @@ done
 for pallet in ${ZEITGEIST_PALLETS[@]}; do
     pallet_folder_name=${pallet//zrml_//}
     pallet_folder_name=${pallet_folder_name//_/-}
-    ./target/release/zeitgeist benchmark --chain=dev --steps=2 --repeat=2 --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/$pallet_folder_name/src/weights.rs
+    ./target/release/zeitgeist benchmark --chain=dev --steps=10 --repeat=1000 --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/$pallet_folder_name/src/weights.rs
 done
 
 
