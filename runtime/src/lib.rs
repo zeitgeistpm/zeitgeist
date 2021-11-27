@@ -378,7 +378,9 @@ impl pallet_grandpa::Config for Runtime {
 
     type HandleEquivocation = ();
 
-    type WeightInfo = weights::pallet_grandpa::WeightInfo<Runtime>;
+    // Currently the benchmark does yield an invalid weight implementation
+    // type WeightInfo = weights::pallet_grandpa::WeightInfo<Runtime>;
+    type WeightInfo = ();
 }
 
 #[cfg(feature = "parachain")]
