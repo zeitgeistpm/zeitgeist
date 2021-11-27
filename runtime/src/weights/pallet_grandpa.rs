@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_grandpa (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> pallet_grandpa::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_grandpa::weights::WeightInfo for WeightInfo<T> {
 
 	fn check_equivocation_proof(x: u32, ) -> Weight {
 		(206_093_000 as Weight)

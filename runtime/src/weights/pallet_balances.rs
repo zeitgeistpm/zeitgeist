@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_balances (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> pallet_balances::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_balances::weights::WeightInfo for WeightInfo<T> {
 
 	// Storage: System Account (r:1 w:1)
 	fn transfer() -> Weight {

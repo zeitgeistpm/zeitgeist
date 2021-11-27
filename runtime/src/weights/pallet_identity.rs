@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_identity (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> pallet_identity::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInfo<T> {
 
 	// Storage: Identity Registrars (r:1 w:1)
 	fn add_registrar(r: u32, ) -> Weight {

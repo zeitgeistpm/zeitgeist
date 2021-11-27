@@ -28,7 +28,7 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_collective (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 
-impl<T: frame_system::Config> pallet_collective::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightInfo<T> {
 
 	// Storage: Instance1Collective Members (r:1 w:1)
 	// Storage: Instance1Collective Proposals (r:1 w:0)
