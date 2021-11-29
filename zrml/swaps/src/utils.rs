@@ -205,7 +205,7 @@ where
         asset_amount_in,
         asset_amount_out,
         asset_bound: p.asset_bound,
-        asset_in: p.asset_in.into(),
+        asset_in: p.asset_in,
         asset_out: p.asset_out,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         max_price: p.max_price,
