@@ -51,7 +51,7 @@ cfg_if::cfg_if! {
             let expected_annual_amount = ztg::COLLATORS * zeitgeist_primitives::constants::BASE;
             let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
             let round_inflation = Perbill::from_parts(round_inflation_parts as _);
-            
+
             parachain_staking::InflationInfo {
                 annual: parachain_staking::Range {
                     ideal: annual_inflation,
