@@ -97,7 +97,7 @@ mod pallet {
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;
-        
+
         type WeightInfo: WeightInfoZeitgeist;
     }
 
