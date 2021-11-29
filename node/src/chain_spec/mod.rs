@@ -38,7 +38,7 @@ cfg_if::cfg_if! {
 
         // Mainnet
         const DEFAULT_STAKING_AMOUNT_MAINNET: u128 = 64 * BASE;
-        const DEFAULT_INITIAL_CROWDLOAN_FUNDS_MAINNET: u128 = 100 * BASE;
+        const DEFAULT_INITIAL_CROWDLOAN_FUNDS_MAINNET: u128 = 0;
 
         // Common
         const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
@@ -288,7 +288,8 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
 }
 
 fn root_key_staging_mainnet() -> AccountId {
-    hex!["a6e29646e15a7440a1a422a5bd985ba67494ea0ba1b44fed4b864b8ccf72db00"].into()
+    // dDykRtA8VyuVVtWTD5PWst3f33L1NMVKseQEji8e3B4ZCHrjK
+    hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into()
 }
 
 #[cfg(feature = "parachain")]
