@@ -28,7 +28,8 @@ pub struct CommonPoolEventParams<AI> {
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub struct PoolAssetsEvent<AI, B> {
+pub struct PoolAssetsEvent<AI, AS, B> {
+    pub assets: Vec<AS>,
     pub bounds: Vec<B>,
     pub cpep: CommonPoolEventParams<AI>,
     pub transferred: Vec<B>,
@@ -45,7 +46,8 @@ pub struct PoolAssetsEvent<AI, B> {
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub struct PoolAssetEvent<AI, B> {
+pub struct PoolAssetEvent<AI, AS, B> {
+    pub asset: AS,
     pub bound: B,
     pub cpep: CommonPoolEventParams<AI>,
     pub transferred: B,
@@ -62,10 +64,12 @@ pub struct PoolAssetEvent<AI, B> {
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]
-pub struct SwapEvent<AI, B> {
+pub struct SwapEvent<AI, AS, B> {
     pub asset_amount_in: B,
     pub asset_amount_out: B,
     pub asset_bound: B,
+    pub asset_in: AS,
+    pub asset_out: AS,
     pub cpep: CommonPoolEventParams<AI>,
     pub max_price: B,
 }
