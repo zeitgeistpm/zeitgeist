@@ -6,6 +6,7 @@ path = './src/main.rs'
 substrate-build-script-utils = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
 
 [dependencies]
+cfg-if = { version = "1.0.0" }
 hex-literal = { version = "0.2" }
 jsonrpc-core = { version = "15.0" }
 pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.10", git = "https://github.com/purestake/substrate" }
