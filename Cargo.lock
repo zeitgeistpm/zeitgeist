@@ -12267,6 +12267,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.3",
+ "log",
  "nimbus-primitives",
  "orml-currencies",
  "orml-tokens",
