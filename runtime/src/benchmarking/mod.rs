@@ -1,5 +1,5 @@
 #![cfg(feature = "runtime-benchmarks")]
-#![allow(clippy::integer_arithmetic, clippy::indexing_slicing)]
+#![allow(clippy::integer_arithmetic)]
 
 pub mod currencies;
 pub mod tokens;
