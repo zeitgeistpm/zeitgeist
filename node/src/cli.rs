@@ -8,7 +8,7 @@ use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 
 const COPYRIGHT_START_YEAR: i32 = 2021;
 const IMPL_NAME: &str = "Zeitgeist Node";
-const SUPPORT_URL: &str = "support.anonymous.an";
+const SUPPORT_URL: &str = "https://zeitgeistpm.freshdesk.com/";
 
 #[cfg(feature = "parachain")]
 type RunCmd = cumulus_client_cli::RunCmd;
@@ -106,7 +106,12 @@ impl SubstrateCli for Cli {
         load_spec(
             id,
             #[cfg(feature = "parachain")]
-            self.run.parachain_id.unwrap_or(crate::DEFAULT_PARACHAIN_ID).into(),
+            match id {
+                "battery_station_staging" => {
+                    self.run.parachain_id.unwrap_or(super::BATTERY_STATION_PARACHAIN_ID).into()
+                }
+                _ => self.run.parachain_id.unwrap_or(super::KUSAMA_PARACHAIN_ID).into(),
+            },
         )
     }
 
@@ -151,6 +156,10 @@ pub fn load_spec(
             &include_bytes!("../res/bs.json")[..],
         )?),
         "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config(
+            #[cfg(feature = "parachain")]
+            parachain_id,
+        )?),
+        "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),

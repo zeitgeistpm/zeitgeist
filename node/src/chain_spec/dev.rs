@@ -1,3 +1,4 @@
+use super::EndowedAccountWithBalance;
 #[cfg(feature = "parachain")]
 use crate::chain_spec::get_from_seed;
 use crate::chain_spec::{
@@ -25,7 +26,7 @@ pub fn dev_config(
                     candidates: vec![(
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
                         get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
-                        crate::chain_spec::DEFAULT_STAKING_AMOUNT,
+                        crate::chain_spec::DEFAULT_STAKING_AMOUNT_TESTNET,
                     )],
                     crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
@@ -49,8 +50,10 @@ pub fn dev_config(
                     get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-                ],
-                INITIAL_BALANCE,
+                ]
+                .into_iter()
+                .map(|acc| EndowedAccountWithBalance(acc, INITIAL_BALANCE))
+                .collect(),
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 zeitgeist_wasm,
             )
