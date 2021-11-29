@@ -4902,6 +4902,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-benchmarking"
+version = "0.4.1-dev"
+source = "git+https://github.com/PureStake/open-runtime-module-library?branch=moonbeam-polkadot-v0.9.10#08565c3c47bfb8cd4586eaf9e914a3229ee1a903"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "parity-scale-codec",
+ "paste",
+ "serde",
+ "sp-api",
+ "sp-io",
+ "sp-runtime",
+ "sp-runtime-interface",
+ "sp-std",
+ "sp-storage",
+]
+
+[[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
 source = "git+https://github.com/PureStake/open-runtime-module-library?branch=moonbeam-polkadot-v0.9.10#08565c3c47bfb8cd4586eaf9e914a3229ee1a903"
@@ -5241,6 +5259,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
+ "ed25519-dalek",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -5253,6 +5272,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "sp-trie",
 ]
 
 [[package]]
@@ -11348,7 +11368,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if 1.0.0",
- "rand 0.8.4",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
@@ -12254,6 +12274,7 @@ dependencies = [
 name = "zeitgeist-runtime"
 version = "0.2.1"
 dependencies = [
+ "cfg-if 1.0.0",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
@@ -12270,6 +12291,7 @@ dependencies = [
  "hex-literal 0.3.3",
  "log",
  "nimbus-primitives",
+ "orml-benchmarking",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
