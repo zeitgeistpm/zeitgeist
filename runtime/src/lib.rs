@@ -6,12 +6,15 @@ extern crate alloc;
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
 #[cfg(feature = "txfilter")]
 mod txfilter;
+mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
@@ -230,6 +233,7 @@ macro_rules! create_zeitgeist_runtime {
         );
     }
 }
+
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
     // System
@@ -251,6 +255,7 @@ create_zeitgeist_runtime!(
     // Third-party
     Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 80,
 );
+
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
     // Consensus
@@ -418,7 +423,7 @@ impl orml_currencies::Config for Runtime {
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
-    type WeightInfo = ();
+    type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
 }
 
 impl orml_tokens::Config for Runtime {
@@ -430,7 +435,7 @@ impl orml_tokens::Config for Runtime {
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
-    type WeightInfo = ();
+    type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 #[cfg(feature = "parachain")]
@@ -458,7 +463,7 @@ impl pallet_balances::Config for Runtime {
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
 }
 
 impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime {
@@ -698,14 +703,19 @@ impl_runtime_apis! {
             use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
+            use orml_benchmarking::list_benchmark as orml_list_benchmark;
 
             let mut list = Vec::<BenchmarkList>::new();
 
             list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+            orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
+            orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
             list_benchmark!(list, extra, pallet_balances, Balances);
             list_benchmark!(list, extra, pallet_collective, AdvisoryCommitteeCollective);
+            list_benchmark!(list, extra, pallet_identity, Identity);
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+            list_benchmark!(list, extra, pallet_treasury, Treasury);
             list_benchmark!(list, extra, pallet_utility, Utility);
             list_benchmark!(list, extra, pallet_vesting, Vesting);
             list_benchmark!(list, extra, zrml_swaps, Swaps);
@@ -713,6 +723,16 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, zrml_court, Court);
             list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
             list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
+
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "parachain")] {
+                    list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
+                    list_benchmark!(list, extra, parachain_staking, ParachainStaking);
+                    list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
+                } else {
+                    list_benchmark!(list, extra, pallet_grandpa, Grandpa);
+                }
+            }
 
             (list, AllPalletsWithSystem::storage_info())
         }
@@ -724,6 +744,7 @@ impl_runtime_apis! {
                 add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
+            use orml_benchmarking::{add_benchmark as orml_add_benchmark};
 
             impl frame_system_benchmarking::Config for Runtime {}
 
@@ -743,16 +764,22 @@ impl_runtime_apis! {
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7")
                     .to_vec()
                     .into(),
+                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da946c154ffd9992e395af90b5b13cc6f295c77033fce8a9045824a6690bbf99c6db269502f0a8d1d2a008542d5690a0749").to_vec().into(),
+                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
             ];
 
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
+            orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
+            orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_collective, AdvisoryCommitteeCollective);
+            add_benchmark!(params, batches, pallet_identity, Identity);
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+            add_benchmark!(params, batches, pallet_treasury, Treasury);
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, zrml_swaps, Swaps);
@@ -760,6 +787,17 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, zrml_court, Court);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
             add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
+
+
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "parachain")] {
+                    add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
+                    add_benchmark!(params, batches, parachain_staking, ParachainStaking);
+                    add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
+                } else {
+                    add_benchmark!(params, batches, pallet_grandpa, Grandpa);
+                }
+            }
 
             if batches.is_empty() {
                 return Err("Benchmark not found for this pallet.".into());
