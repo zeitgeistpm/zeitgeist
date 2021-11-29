@@ -21,7 +21,7 @@ pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, T>(
 where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     F2: FnMut(BalanceOf<T>) -> DispatchResult,
-    F3: FnMut(PoolAssetEvent<T::AccountId, BalanceOf<T>>),
+    F3: FnMut(PoolAssetEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
@@ -45,6 +45,7 @@ where
     T::Shares::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
+        asset: p.asset,
         bound: p.bound,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred: asset_amount,
@@ -59,7 +60,7 @@ pub(crate) fn pool_join_with_exact_amount<F1, F2, F3, T>(
 ) -> DispatchResult
 where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
-    F2: FnMut(PoolAssetEvent<T::AccountId, BalanceOf<T>>),
+    F2: FnMut(PoolAssetEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     F3: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
@@ -79,6 +80,7 @@ where
     T::Shares::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
+        asset: p.asset,
         bound: p.bound,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred: asset_amount,
@@ -90,7 +92,7 @@ where
 // Common code for `pool_join` and `pool_exit` methods.
 pub(crate) fn pool<F1, F2, F3, T>(mut p: PoolParams<'_, F1, F2, F3, T>) -> DispatchResult
 where
-    F1: FnMut(PoolAssetsEvent<T::AccountId, BalanceOf<T>>),
+    F1: FnMut(PoolAssetsEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     F2: FnMut(BalanceOf<T>, BalanceOf<T>, Asset<T::MarketId>) -> DispatchResult,
     F3: FnMut(Asset<T::MarketId>) -> DispatchResult,
     T: Config,
@@ -117,6 +119,7 @@ where
     (p.transfer_pool)(pool_shares_id)?;
 
     (p.event)(PoolAssetsEvent {
+        assets: p.pool.assets.clone(),
         bounds: p.asset_bounds,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred,
@@ -131,7 +134,7 @@ pub(crate) fn swap_exact_amount<F1, F2, T>(
 ) -> DispatchResult
 where
     F1: FnMut() -> Result<[BalanceOf<T>; 2], DispatchError>,
-    F2: FnMut(SwapEvent<T::AccountId, BalanceOf<T>>),
+    F2: FnMut(SwapEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     T: crate::Config,
 {
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
@@ -202,6 +205,8 @@ where
         asset_amount_in,
         asset_amount_out,
         asset_bound: p.asset_bound,
+        asset_in: p.asset_in.into(),
+        asset_out: p.asset_out,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         max_price: p.max_price,
     });
