@@ -52,6 +52,7 @@ mod pallet {
         >;
 
         /// The pallet identifier.
+        #[pallet::constant]
         type PalletId: Get<PalletId>;
     }
 
