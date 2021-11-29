@@ -652,6 +652,7 @@ mod pallet {
         /// Must be greater than 0, but can be arbitrarily close to 0.
         #[pallet::constant]
         type MinSubsidy: Get<BalanceOf<Self>>;
+        
         #[pallet::constant]
         type MinWeight: Get<u128>;
 
