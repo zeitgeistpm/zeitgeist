@@ -159,6 +159,12 @@ pub fn load_spec(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
+        "zeitgeist" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
+            #[cfg(feature = "parachain")]
+            &include_bytes!("../res/zeitgeist_parachain.json")[..],
+            #[cfg(not(feature = "parachain"))]
+            &include_bytes!("../res/zeitgeist.json")[..],
+        )?),
         "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config(
             #[cfg(feature = "parachain")]
             parachain_id,
