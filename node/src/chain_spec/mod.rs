@@ -35,6 +35,8 @@ cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         // Testnet
         const DEFAULT_STAKING_AMOUNT_TESTNET: u128 = 2_000 * BASE;
+        const DEFAULT_COLLATOR_BALANCE_TESTNET: Option<u128> =
+            DEFAULT_STAKING_AMOUNT_TESTNET.checked_add(CollatorDeposit::get());
         const DEFAULT_INITIAL_CROWDLOAN_FUNDS_TESTNET: u128 = 100 * BASE;
 
         // Mainnet
@@ -251,7 +253,7 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
-            DEFAULT_STAKING_AMOUNT_TESTNET,
+            DEFAULT_COLLATOR_BALANCE_TESTNET.unwrap()
         ),
     ]
 }
