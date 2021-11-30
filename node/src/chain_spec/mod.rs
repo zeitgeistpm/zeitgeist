@@ -253,7 +253,7 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
-            DEFAULT_COLLATOR_BALANCE_TESTNET.unwrap()
+            DEFAULT_COLLATOR_BALANCE_TESTNET.unwrap(),
         ),
     ]
 }
