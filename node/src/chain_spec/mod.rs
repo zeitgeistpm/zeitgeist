@@ -28,16 +28,21 @@ use zeitgeist_runtime::SS58Prefix;
 use {
     sp_runtime::{Perbill, Percent},
     zeitgeist_primitives::constants::{ztg, DefaultBlocksPerRound, MILLISECS_PER_BLOCK},
+    zeitgeist_runtime::{CollatorDeposit, MinCollatorStake},
 };
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         // Testnet
         const DEFAULT_STAKING_AMOUNT_TESTNET: u128 = 2_000 * BASE;
+        const DEFAULT_COLLATOR_BALANCE_TESTNET: Option<u128> =
+            DEFAULT_STAKING_AMOUNT_TESTNET.checked_add(CollatorDeposit::get());
         const DEFAULT_INITIAL_CROWDLOAN_FUNDS_TESTNET: u128 = 100 * BASE;
 
         // Mainnet
-        const DEFAULT_STAKING_AMOUNT_MAINNET: u128 = 64 * BASE;
+        const DEFAULT_STAKING_AMOUNT_MAINNET: u128 = MinCollatorStake::get();
+        const DEFAULT_COLLATOR_BALANCE_MAINNET: Option<u128> =
+            DEFAULT_STAKING_AMOUNT_MAINNET.checked_add(CollatorDeposit::get());
         const DEFAULT_INITIAL_CROWDLOAN_FUNDS_MAINNET: u128 = 0;
 
         // Common
@@ -248,7 +253,7 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["302f6d7467ae2d7e3b9b962bfc3b9d929da9fae5f1e8c977a031ddf721b0790d"].into(),
-            DEFAULT_STAKING_AMOUNT_TESTNET,
+            DEFAULT_COLLATOR_BALANCE_TESTNET.unwrap(),
         ),
     ]
 }
@@ -265,23 +270,23 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["524e9aac979cbb9ecdb7acd1635755c3b15696321a3345ca77f0ab0ae23f675a"].into(),
-            DEFAULT_STAKING_AMOUNT_MAINNET,
+            DEFAULT_COLLATOR_BALANCE_MAINNET.unwrap(),
         ),
         // dDy7WSPy4pvWBKsUta8MdWxduWFTpJtv9zgBiVGtqWmMh6bi6
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["04163722a7f1f900c1ec502383d4959360e374c8808e13d47b3e553d761a6329"].into(),
-            DEFAULT_STAKING_AMOUNT_MAINNET,
+            DEFAULT_COLLATOR_BALANCE_MAINNET.unwrap(),
         ),
         // dE36Y98QpX8hEkLANntbtUvt7figSPGxSrDxU4sscuX989CTJ
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["b449a256f73e59602eb742071a07e4d94aaae91e6872f28e161f34982a0bfc0d"].into(),
-            DEFAULT_STAKING_AMOUNT_MAINNET,
+            DEFAULT_COLLATOR_BALANCE_MAINNET.unwrap(),
         ),
         // dE2nxuZc5e7xBbU1cGikmtVGws9niNPUayigoDdyqB7hzHQ6X
         EndowedAccountWithBalance(
-            hex!["a6e29646e15a7440a1a422a5bd985ba67494ea0ba1b44fed4b864b8ccf72db00"].into(),
+            hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into(),
             DEFAULT_SUDO_BALANCE_MAINNET,
         ),
     ]
