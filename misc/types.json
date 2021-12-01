@@ -58,6 +58,12 @@
   "Currency": "Asset",
   "CurrencyId": "Asset",
   "CurrencyIdOf": "Asset",
+  "DelegatorStatus": {
+    "_enum": { 
+      "Active": null,
+      "Leaving": "RoundIndex" 
+    }
+  },
   "ExitQ": {
     "candidates": "Vec<AccountId>",
     "nominators_leaving": "Vec<AccountId>",
@@ -147,23 +153,17 @@
     }
   },
   "Nominator2": {
-    "nominations": "Vec<Bond>",
+    "delegations": "Vec<Bond>",
     "revocations": "Vec<AccountId>",
     "total": "Balance",
     "scheduled_revocations_count": "u32",
     "scheduled_revocations_total": "Balance",
-    "status": "NominatorStatus"
+    "status": "DelegatorStatus"
   },
   "NominatorAdded": {
     "_enum": { 
-      "AddedToBottom": null, 
-      "AddedToTop": "Balance" 
-    }
-  },
-  "NominatorStatus": {
-    "_enum": { 
-      "Active": null,
-      "Leaving": "RoundIndex"
+      "AddedToTop": "Balance",
+      "AddedToBottom": null
     }
   },
   "Order": {
@@ -244,11 +244,11 @@
   },
   "PoolId": "u128",
   "PoolStatus": {
-    "_enum": {
-      "Active": null,
-      "CollectingSubsidy": null,
-      "Stale": null
-    }
+    "_enum": [
+      "Active",
+      "CollectingSubsidy",
+      "Stale"
+    ]
   },
   "RegistrationInfo": {
     "account": "AccountId",
