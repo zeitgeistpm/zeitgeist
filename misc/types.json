@@ -29,10 +29,27 @@
     "amount": "Balance"
   },
   "CategoryIndex": "u16",
+  "Collator2": {
+    "id": "AccountId",
+    "bond": "Balance",
+    "nominators": "Vec<AccountId>",
+    "top_nominators": "Vec<Bond>",
+    "bottom_nominators": "Vec<Bond>",
+    "total_counted": "Balance",
+    "total_backing": "Balance",
+    "state": "CollatorStatus"
+  },
   "CollatorSnapshot": {
     "bond": "Balance",
-    "nominators": "Vec<Bond>",
+    "delegations": "Vec<Bond>",
     "total": "Balance"
+  },
+  "CollatorStatus": {
+    "_enum": { 
+      "Active": null,
+      "Idle": null,
+      "Leaving": "RoundIndex"
+    }
   },
   "CommonPoolEventParams": {
     "pool_id": "u128",
@@ -41,11 +58,41 @@
   "Currency": "Asset",
   "CurrencyId": "Asset",
   "CurrencyIdOf": "Asset",
+  "DelegatorStatus": {
+    "_enum": { 
+      "Active": null,
+      "Leaving": "RoundIndex" 
+    }
+  },
+  "EmaConfig": {
+    "ema_period": "Timespan",
+    "ema_period_estimate_after": "Option<Timespan>",
+    "smoothing": "u128"
+  },
+  "EmaMarketVolume": {
+    "config": "EmaConfig",
+    "ema": "u128",
+    "multiplier": "u128",
+    "last_time": "UnixTimestamp",
+    "state": "MarketVolumeState",
+    "start_time": "UnixTimestamp",
+    "volumes_per_period": "u128"
+  },
   "ExitQ": {
     "candidates": "Vec<AccountId>",
     "nominators_leaving": "Vec<AccountId>",
     "candidate_schedule": "Vec<(AccountId, RoundIndex)>",
     "nominator_schedule": "Vec<(AccountId, Option<AccountId>, RoundIndex)>"
+  },
+  "FeeSigmoid": {
+    "config": "FeeSigmoidConfig"
+  },
+  "FeeSigmoidConfig": {
+    "m": "i128",
+    "p": "i128",
+    "n": "i128",
+    "initial_fee": "i128",
+    "min_revenue": "i128"
   },
   "Index": "u64",
   "InflationInfo": {
@@ -122,11 +169,32 @@
       "Scalar": "RangeInclusive<u128>"
     }
   },
+  "MarketVolumeState": {
+    "_enum": [
+      "Uninitialized",
+      "DataCollectionStarted",
+      "DataCollected"
+    ]
+  },
   "MaxRuntimeUsize": "u64",
   "Moment": "u64",
   "MultiHash": {
     "_enum": {
       "Sha3_384": "[u8; 50]"
+    }
+  },
+  "Nominator2": {
+    "delegations": "Vec<Bond>",
+    "revocations": "Vec<AccountId>",
+    "total": "Balance",
+    "scheduled_revocations_count": "u32",
+    "scheduled_revocations_total": "Balance",
+    "status": "DelegatorStatus"
+  },
+  "NominatorAdded": {
+    "_enum": { 
+      "AddedToTop": "Balance",
+      "AddedToBottom": null
     }
   },
   "Order": {
@@ -145,6 +213,12 @@
     ]
   },
   "OrderedSet": "Vec<Bond>",
+  "OwnedValuesParams": {
+    "participated_blocks": "BlockNumber",
+    "perpetual_incentives": "Balance",
+    "total_incentives": "Balance",
+    "total_shares": "Balance"
+  },
   "RangeBalance": {
     "min": "Balance",
     "ideal": "Balance",
@@ -159,6 +233,16 @@
   "RewardInfo": {
     "total_reward": "Balance",
     "claimed_reward": "Balance"
+  },
+  "Rikiddo": {
+    "config": "RikiddoConfig",
+    "fees": "FeeSigmoid",
+    "ma_short": "EmaMarketVolume",
+    "ma_long": "EmaMarketVolume"
+  },
+  "RikiddoConfig": {
+    "initial_fee": "i128",
+    "log2_e": "i128"
   },
   "ScoringRule": {
     "_enum": [
@@ -201,11 +285,11 @@
   },
   "PoolId": "u128",
   "PoolStatus": {
-    "_enum": {
-      "Active": null,
-      "CollectingSubsidy": null,
-      "Stale": null
-    }
+    "_enum": [
+      "Active",
+      "CollectingSubsidy",
+      "Stale"
+    ]
   },
   "RegistrationInfo": {
     "account": "AccountId",
@@ -242,10 +326,20 @@
     "cpep": "CommonPoolEventParams<AccountId>",
     "max_price": "Balance"
   },
+  "Timespan": {
+    "_enum": {
+      "Seconds": "u32",
+      "Minutes": "u32",
+      "Hours": "u32",
+      "Days": "u16",
+      "Weeks": "u16"
+    }
+  },
   "TokensAccountData": {
     "free": "Balance",
     "reserved": "Balance",
     "frozen": "Balance"
   },
+  "UnixTimestamp": "u64",
   "VestingBlockNumber": "u32"
 }
