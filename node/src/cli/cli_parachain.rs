@@ -29,7 +29,7 @@ impl RelayChainCli {
         let base_path = para_config
             .base_path
             .as_ref()
-            .map(|x| x.path().join(chain_id.clone().unwrap_or("polkadot".into())));
+            .map(|x| x.path().join(chain_id.clone().unwrap_or_else(|| "polkadot".into())));
         Self { base_path, chain_id, base: polkadot_cli::RunCmd::from_iter(relay_chain_args) }
     }
 }
