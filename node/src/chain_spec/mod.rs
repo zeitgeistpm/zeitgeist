@@ -1,13 +1,9 @@
 mod additional_chain_spec;
-#[cfg(not(feature = "parachain"))]
-mod battery_park;
 mod battery_station;
 mod dev;
 mod zeitgeist;
 
 pub use additional_chain_spec::AdditionalChainSpec;
-#[cfg(not(feature = "parachain"))]
-pub use battery_park::battery_park_staging_config;
 pub use battery_station::battery_station_staging_config;
 pub use dev::dev_config;
 use hex_literal::hex;

@@ -8,7 +8,17 @@ use {
 };
 
 pub fn run() -> sc_cli::Result<()> {
-    let cli = <Cli as SubstrateCli>::from_args();
+    let mut cli = <Cli as SubstrateCli>::from_args();
+
+    // Set default chain on parachain to zeitgeist and on standalone to dev
+    #[cfg(feature = "parachain")]
+    if cli.run.base.shared_params.chain == None {
+        cli.run.base.shared_params.chain = Some("zeitgeist".to_string());
+    }
+    #[cfg(not(feature = "parachain"))]
+    if cli.run.shared_params.chain == None {
+        cli.run.shared_params.dev = true;
+    }
 
     match &cli.subcommand {
         #[cfg(feature = "runtime-benchmarks")]
