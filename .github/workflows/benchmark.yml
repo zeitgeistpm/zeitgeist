@@ -12,7 +12,7 @@ jobs:
   benchmark: 
     name: Benchmark weights
     if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) || github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, benchmarks]
+    runs-on: [self-hosted, benchmark]
     defaults:
       run:
         shell: bash
