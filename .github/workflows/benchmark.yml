@@ -118,7 +118,7 @@ jobs:
             pallet_folder_name=${pallet_folder_name//_/-}
             command="./target/release/zeitgeist benchmark --chain=dev --steps=10 --repeat=1000 "
             command+="--pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled "
-            command+="--heap-pages=4096 --template=./misc/weight_template.hbs ""
+            command+="--heap-pages=4096 --template=./misc/weight_template.hbs "
             command+="--output=./zrml/$pallet_folder_name/src/weights.rs"
             echo "${command} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
             ERROR=$(<benchmark_errors.txt)
