@@ -488,36 +488,31 @@ mod pallet {
             ensure!(amounts.len() == keep.len(), Error::<T>::NotEnoughAssets);
 
             // Create the correct market
-            let weight_market_creation;
-            match assets.clone() {
-                MarketType::Categorical(category_count) => {
-                    weight_market_creation = Self::create_categorical_market(
-                        origin.clone(),
-                        oracle,
-                        period,
-                        metadata,
-                        creation,
-                        category_count,
-                        mdm,
-                        ScoringRule::CPMM,
-                    )?
-                    .actual_weight
-                    .unwrap_or_else(T::WeightInfo::create_categorical_market)
-                }
-                MarketType::Scalar(range) => {
-                    weight_market_creation = Self::create_scalar_market(
-                        origin.clone(),
-                        oracle,
-                        period,
-                        metadata,
-                        creation,
-                        range,
-                        mdm,
-                        ScoringRule::CPMM,
-                    )?
-                    .actual_weight
-                    .unwrap_or_else(T::WeightInfo::create_scalar_market)
-                }
+            let weight_market_creation = match assets.clone() {
+                MarketType::Categorical(category_count) => Self::create_categorical_market(
+                    origin.clone(),
+                    oracle,
+                    period,
+                    metadata,
+                    creation,
+                    category_count,
+                    mdm,
+                    ScoringRule::CPMM,
+                )?
+                .actual_weight
+                .unwrap_or_else(T::WeightInfo::create_categorical_market),
+                MarketType::Scalar(range) => Self::create_scalar_market(
+                    origin.clone(),
+                    oracle,
+                    period,
+                    metadata,
+                    creation,
+                    range,
+                    mdm,
+                    ScoringRule::CPMM,
+                )?
+                .actual_weight
+                .unwrap_or_else(T::WeightInfo::create_scalar_market),
             };
 
             // Buy a complete set of assets based on the highest number to be deployed
@@ -1346,8 +1341,8 @@ mod pallet {
             let market = T::MarketCommons::market(market_id)?;
             if market.status == MarketStatus::Reported {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                MarketIdsPerReportBlock::<T>::mutate(&report.at, |mut ids| {
-                    remove_item::<MarketIdOf<T>>(&mut ids, market_id);
+                MarketIdsPerReportBlock::<T>::mutate(&report.at, |ids| {
+                    remove_item::<MarketIdOf<T>>(ids, market_id);
                 });
             }
             if market.status == MarketStatus::Disputed {
@@ -1356,8 +1351,8 @@ mod pallet {
                     let at = last_dispute.at;
                     let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(&at);
                     remove_item::<MarketIdOf<T>>(&mut old_disputes_per_block, market_id);
-                    MarketIdsPerDisputeBlock::<T>::mutate(&at, |mut ids| {
-                        remove_item::<MarketIdOf<T>>(&mut ids, market_id);
+                    MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
+                        remove_item::<MarketIdOf<T>>(ids, market_id);
                     });
                 }
             }
@@ -1495,20 +1490,18 @@ mod pallet {
         fn ensure_market_start_is_in_time(
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
-            let interval;
-
-            match period {
+            let interval = match period {
                 MarketPeriod::Block(range) => {
                     let interval_blocks: u128 = range
                         .start
                         .saturating_sub(<frame_system::Pallet<T>>::block_number())
                         .saturated_into();
-                    interval = interval_blocks.saturating_mul(MILLISECS_PER_BLOCK.into());
+                    interval_blocks.saturating_mul(MILLISECS_PER_BLOCK.into())
                 }
                 MarketPeriod::Timestamp(range) => {
-                    interval = range.start.saturating_sub(T::MarketCommons::now()).saturated_into();
+                    range.start.saturating_sub(T::MarketCommons::now()).saturated_into()
                 }
-            }
+            };
 
             ensure!(
                 <MomentOf<T>>::saturated_from(interval) >= T::MinSubsidyPeriod::get(),
@@ -1724,17 +1717,10 @@ mod pallet {
 
             let retain_closure =
                 |subsidy_info: &SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>| {
-                    let market_ready;
-
-                    // Determine whether the current market is past it's subsidy phase
-                    match &subsidy_info.period {
-                        MarketPeriod::Block(period) => {
-                            market_ready = period.start <= current_block;
-                        }
-                        MarketPeriod::Timestamp(period) => {
-                            market_ready = period.start <= current_time;
-                        }
-                    }
+                    let market_ready = match &subsidy_info.period {
+                        MarketPeriod::Block(period) => period.start <= current_block,
+                        MarketPeriod::Timestamp(period) => period.start <= current_time,
+                    };
 
                     if market_ready {
                         let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
@@ -1883,8 +1869,8 @@ mod pallet {
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
                 let at = last_dispute.at;
-                MarketIdsPerDisputeBlock::<T>::mutate(&at, |mut ids| {
-                    remove_item::<MarketIdOf<T>>(&mut ids, market_id);
+                MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
+                    remove_item::<MarketIdOf<T>>(ids, market_id);
                 });
             }
             Ok(())

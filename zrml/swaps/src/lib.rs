@@ -1649,9 +1649,7 @@ mod pallet {
 
             let params = SwapExactAmountParams {
                 asset_amounts: || {
-                    let asset_amount_out: BalanceOf<T>;
-
-                    if pool.scoring_rule == ScoringRule::CPMM {
+                    let asset_amount_out = if pool.scoring_rule == ScoringRule::CPMM {
                         let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
                         let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
                         ensure!(
@@ -1663,7 +1661,7 @@ mod pallet {
                                 .saturated_into(),
                             Error::<T>::MaxInRatio
                         );
-                        asset_amount_out = crate::math::calc_out_given_in(
+                        crate::math::calc_out_given_in(
                             balance_in.saturated_into(),
                             Self::pool_weight_rslt(&pool, &asset_in)?,
                             balance_out.saturated_into(),
@@ -1671,7 +1669,7 @@ mod pallet {
                             asset_amount_in.saturated_into(),
                             pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                         )?
-                        .saturated_into();
+                        .saturated_into()
                     } else {
                         let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                         ensure!(asset_out == base_asset, Error::<T>::UnsupportedTrade);
@@ -1698,10 +1696,8 @@ mod pallet {
                             T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
                         let cost_after =
                             T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                        asset_amount_out = cost_before
-                            .checked_sub(&cost_after)
-                            .ok_or(ArithmeticError::Overflow)?;
-                    }
+                        cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
+                    };
                     ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
 
                     Ok([asset_amount_in, asset_amount_out])
@@ -1739,9 +1735,7 @@ mod pallet {
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
-                    let asset_amount_in: BalanceOf<T>;
-
-                    if pool.scoring_rule == ScoringRule::CPMM {
+                    let asset_amount_in = if pool.scoring_rule == ScoringRule::CPMM {
                         ensure!(
                             asset_amount_out
                                 <= bmul(
@@ -1753,7 +1747,7 @@ mod pallet {
                         );
 
                         let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
-                        asset_amount_in = crate::math::calc_in_given_out(
+                        crate::math::calc_in_given_out(
                             balance_in.saturated_into(),
                             Self::pool_weight_rslt(&pool, &asset_in)?,
                             balance_out.saturated_into(),
@@ -1761,7 +1755,7 @@ mod pallet {
                             asset_amount_out.saturated_into(),
                             pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                         )?
-                        .saturated_into();
+                        .saturated_into()
                     } else {
                         let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                         ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
@@ -1787,10 +1781,8 @@ mod pallet {
                             T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
                         let cost_after =
                             T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                        asset_amount_in = cost_after
-                            .checked_sub(&cost_before)
-                            .ok_or(ArithmeticError::Overflow)?;
-                    }
+                        cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
+                    };
 
                     ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
                     Ok([asset_amount_in, asset_amount_out])

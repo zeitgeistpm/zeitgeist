@@ -408,14 +408,13 @@ mod pallet {
                 }
             }
 
-            let mut best_score;
             let mut iter = scores.iter();
 
-            if let Some(first) = iter.next() {
-                best_score = first;
+            let mut best_score = if let Some(first) = iter.next() {
+                first
             } else {
                 return Err(Error::<T>::NoVotes.into());
-            }
+            };
 
             let mut second_best_score = if let Some(second) = iter.next() {
                 if second.1 > best_score.1 {
