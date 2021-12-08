@@ -19,6 +19,6 @@ jobs:
         with:
           override: true
           profile: minimal
-          toolchain: nightly-2021-09-28
+          toolchain: nightly-2021-12-08
 
       - run: ./scripts/runtime-upgrade/test_runtime_upgrade.sh ${{ github.event.inputs.block }}
