@@ -16,13 +16,7 @@ use zeitgeist_primitives::{constants::BASE, types::Asset};
 
 // Takes a `seed` and returns an account. Use None to generate a whitelisted caller
 fn generate_funded_account<T: Config>(seed: Option<u32>) -> Result<T::AccountId, &'static str> {
-    let acc: T::AccountId;
-
-    if let Some(s) = seed {
-        acc = account("AssetHolder", 0, s);
-    } else {
-        acc = whitelisted_caller();
-    }
+    let acc = if let Some(s) = seed { account("AssetHolder", 0, s) } else { whitelisted_caller() };
 
     let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), 0);
     let _ = T::Shares::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
