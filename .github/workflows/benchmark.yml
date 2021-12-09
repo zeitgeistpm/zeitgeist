@@ -43,11 +43,11 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-      #- name: Test runtime-benchmarks
-      #  run: cargo test --release --features runtime-benchmarks
+      - name: Test runtime-benchmarks
+        run: cargo test --release --features runtime-benchmarks
 
-      #- name: Build Zeitgeist chain with runtime-benchmarks feature
-      #  run: cargo build --release --features runtime-benchmarks
+      - name: Build Zeitgeist chain with runtime-benchmarks feature
+        run: cargo build --release --features runtime-benchmarks
 
       - name: Run benchmarks
         id: run_benchmarks
@@ -122,8 +122,7 @@ jobs:
             echo "Executing: $command"
 
             # use temporary log to display contents in github workflow
-            # $command > _temp.log 2> benchmark_errors.txt
-            echo "hey" > _temp.log
+            $command > _temp.log 2> benchmark_errors.txt
 
             if [ $? -ne 0 ]; then
               # Prepare error for github output format
