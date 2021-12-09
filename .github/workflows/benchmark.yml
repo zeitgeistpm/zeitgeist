@@ -120,16 +120,20 @@ jobs:
             command+="--pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled "
             command+="--heap-pages=4096 --template=./misc/weight_template.hbs "
             command+="--output=./zrml/$pallet_folder_name/src/weights.rs"
-            echo "${command} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
-            ERROR=$(<benchmark_errors.txt)
 
-            if [ -n "$ERROR" ]; then
+            # use temporary log to display contents in github workflow
+            $command > _temp.log 2> benchmark_errors.txt
+
+            if [ $? -ne 0 ]; then
               # Prepare error for github output format
+              cat _temp.log
+              ERROR=$(<benchmark_errors.txt)
               prepare_output ERROR
               echo "::set-output name=ERROR::$ERROR"
               exit 0
             fi
 
+            cat _temp.log | tee --append benchmark_log.txt
             check_if_new_commits
           done
 
