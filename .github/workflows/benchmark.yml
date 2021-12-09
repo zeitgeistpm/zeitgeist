@@ -43,11 +43,11 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
 
-      - name: Test runtime-benchmarks
-        run: cargo test --release --features runtime-benchmarks
+      #- name: Test runtime-benchmarks
+      #  run: cargo test --release --features runtime-benchmarks
 
-      - name: Build Zeitgeist chain with runtime-benchmarks feature
-        run: cargo build --release --features runtime-benchmarks
+      #- name: Build Zeitgeist chain with runtime-benchmarks feature
+      #  run: cargo build --release --features runtime-benchmarks
 
       - name: Run benchmarks
         id: run_benchmarks
@@ -113,16 +113,16 @@ jobs:
           # combination with GitHub AE hosted runner (one instance per job)
           for pallet in "${ZEITGEIST_PALLETS[@]}"; do
             # Execute benchmark
-            echo "Executing: ${zg_bench_cmd}"
             pallet_folder_name=${pallet//zrml_//}
             pallet_folder_name=${pallet_folder_name//_/-}
             command="./target/release/zeitgeist benchmark --chain=dev --steps=10 --repeat=1000 "
             command+="--pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled "
             command+="--heap-pages=4096 --template=./misc/weight_template.hbs "
             command+="--output=./zrml/$pallet_folder_name/src/weights.rs"
+            echo "Executing: $command"
 
             # use temporary log to display contents in github workflow
-            $command > _temp.log 2> benchmark_errors.txt
+            # $command > _temp.log 2> benchmark_errors.txt
 
             if [ $? -ne 0 ]; then
               # Prepare error for github output format
