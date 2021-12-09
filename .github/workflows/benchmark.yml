@@ -123,6 +123,7 @@ jobs:
 
             # use temporary log to display contents in github workflow
             # $command > _temp.log 2> benchmark_errors.txt
+            echo "hey" > _temp.log
 
             if [ $? -ne 0 ]; then
               # Prepare error for github output format
