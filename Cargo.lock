@@ -4739,7 +4739,7 @@ dependencies = [
 [[package]]
 name = "nimbus-primitives"
 version = "0.1.0"
-source = "git+https://github.com/purestake/cumulus?branch=moonbeam-polkadot-v0.9.10#1530ae23c52ee8c9f43cf52b307b02b1f3e4a432"
+source = "git+https://github.com/purestake/cumulus?branch=moonbeam-polkadot-v0.9.10#62e18f3d18709c369fc26ac3061dfd636c2e5118"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -5025,7 +5025,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.4"
-source = "git+https://github.com/PureStake/moonbeam?branch=master#a1956695d7eeb83f095908b56cce3b3e69e039c4"
+source = "git+https://github.com/PureStake/moonbeam?rev=feab214e0bb48e04658087deffcf3b52009074c9#feab214e0bb48e04658087deffcf3b52009074c9"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11368,7 +11368,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if 1.0.0",
- "rand 0.3.23",
+ "rand 0.8.4",
  "static_assertions",
 ]
 
