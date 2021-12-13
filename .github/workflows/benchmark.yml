@@ -116,7 +116,8 @@ jobs:
             # Execute benchmark
             pallet_folder_name=${pallet//zrml_//}
             pallet_folder_name=${pallet_folder_name//_/-}
-            command="./target/release/zeitgeist benchmark --chain=dev --steps=10 --repeat=1000 "
+            command="./target/release/zeitgeist benchmark --chain=dev "
+            command+="--steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS "
             command+="--pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled "
             command+="--heap-pages=4096 --template=./misc/weight_template.hbs "
             command+="--output=./zrml/$pallet_folder_name/src/weights.rs"
