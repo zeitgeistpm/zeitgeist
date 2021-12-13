@@ -28,9 +28,9 @@ for pallet in ${ORML_PALLETS[@]}; do
 done
 
 for pallet in ${ZEITGEIST_PALLETS[@]}; do
-    pallet_folder_name=${pallet//zrml_//}
+    pallet_folder_name=${pallet//zrml_/}
     pallet_folder_name=${pallet_folder_name//_/-}
-    ./target/release/zeitgeist benchmark --chain=dev --steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/$pallet_folder_name/src/weights.rs
+    ./target/release/zeitgeist benchmark --chain=dev --steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS --pallet=$pallet --extrinsic=* --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/$pallet_folder_name/src/weights.rs
 done
 
 

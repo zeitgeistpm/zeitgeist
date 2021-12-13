@@ -48,7 +48,7 @@ jobs:
         run: cargo test --release --features runtime-benchmarks
 
       - name: Build Zeitgeist chain with runtime-benchmarks feature
-        run: cargo build --release --features runtime-benchmarks
+        run: cargo build --release --features runtime-benchmarks --bin zeitgeist
 
       - name: Run benchmarks
         id: run_benchmarks
@@ -118,7 +118,7 @@ jobs:
             pallet_folder_name=${pallet_folder_name//_/-}
             command="./target/release/zeitgeist benchmark --chain=dev "
             command+="--steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS "
-            command+="--pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled "
+            command+="--pallet=$pallet --extrinsic=* --execution=wasm --wasm-execution=compiled "
             command+="--heap-pages=4096 --template=./misc/weight_template.hbs "
             command+="--output=./zrml/$pallet_folder_name/src/weights.rs"
             echo "Executing: $command"
