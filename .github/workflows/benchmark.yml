@@ -76,8 +76,7 @@ jobs:
             txt_proc="${txt_proc//'%'/'%25'}"
             txt_proc="${txt_proc//$'\n'/'%0A'}"
             txt_proc="${txt_proc//$'\r'/'%0D'}"
-
-            eval "$1=\"${txt_proc}\""
+            eval "$1=\"${txt_proc//\"/\'}\""
           }
 
           check_if_new_commits() {
@@ -114,7 +113,7 @@ jobs:
           # combination with GitHub AE hosted runner (one instance per job)
           for pallet in "${ZEITGEIST_PALLETS[@]}"; do
             # Execute benchmark
-            pallet_folder_name=${pallet//zrml_//}
+            pallet_folder_name=${pallet//zrml_/}
             pallet_folder_name=${pallet_folder_name//_/-}
             command="./target/release/zeitgeist benchmark --chain=dev "
             command+="--steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS "
