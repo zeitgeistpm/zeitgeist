@@ -8,7 +8,7 @@ use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 
 const COPYRIGHT_START_YEAR: i32 = 2021;
 const IMPL_NAME: &str = "Zeitgeist Node";
-const SUPPORT_URL: &str = "https://zeitgeistpm.freshdesk.com/";
+const SUPPORT_URL: &str = "https://github.com/zeitgeistpm/zeitgeist/issues";
 
 #[cfg(feature = "parachain")]
 type RunCmd = cumulus_client_cli::RunCmd;
