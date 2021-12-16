@@ -2,7 +2,10 @@
   "name": "Zeitgeist",
   "id": "zeitgeist",
   "chainType": "Live",
-  "bootNodes": [],
+  "bootNodes": [
+    "/dns/mainnet.zeitgeist.pm/tcp/30333/p2p/12D3KooWNpDxYCicWvNrR18QvkkAgVvBdsbh2woHfUGmKijj59aR",
+    "/dns/mainnet.zeitgeist.pm/tcp/30333/ws/p2p/12D3KooWNpDxYCicWvNrR18QvkkAgVvBdsbh2woHfUGmKijj59aR"
+  ],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",
