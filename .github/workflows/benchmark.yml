@@ -12,7 +12,7 @@ jobs:
   benchmark: 
     name: Benchmark weights
     if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, runtime-benchmark]
     defaults:
       run:
         shell: bash
@@ -38,6 +38,7 @@ jobs:
         with:
           override: true
           profile: minimal
+          target: wasm32-unknown-unknown
           toolchain: nightly-2021-12-08
 
       - name: Cache dependencies
@@ -47,17 +48,13 @@ jobs:
         run: cargo test --release --features runtime-benchmarks
 
       - name: Build Zeitgeist chain with runtime-benchmarks feature
-        run: cargo build --release --features runtime-benchmarks
+        run: cargo build --release --features runtime-benchmarks --bin zeitgeist
 
       - name: Run benchmarks
         id: run_benchmarks
         run: |
           # define benchmark commands
-          ZG_BENCHMARK_COMMANDS=(
-            "./target/release/zeitgeist benchmark --dev --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-orderbook-v1 --extrinsic '*' --steps 0 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/orderbook-v1/src/weights.rs"
-            "./target/release/zeitgeist benchmark --dev --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-prediction-markets --extrinsic '*' --steps 10 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/prediction-markets/src/weights.rs"
-            "./target/release/zeitgeist benchmark --dev --execution wasm --wasm-execution compiled --heap-pages=4096 --pallet zrml-swaps --extrinsic '*' --steps 9 --repeat 1000 --template ./misc/weight_template.hbs --output ./zrml/swaps/src/weights.rs"
-          )
+          source ./scripts/benchmarks/configuration.sh
 
           echo "Fetching commit hash of HEAD"
           zg_cmt=`git log -n 1 --format="%H"`
@@ -79,8 +76,7 @@ jobs:
             txt_proc="${txt_proc//'%'/'%25'}"
             txt_proc="${txt_proc//$'\n'/'%0A'}"
             txt_proc="${txt_proc//$'\r'/'%0D'}"
-
-            eval "$1=\"${txt_proc}\""
+            eval "$1=\"${txt_proc//\"/\'}\""
           }
 
           check_if_new_commits() {
@@ -115,19 +111,30 @@ jobs:
 
           # Execute benchmark. Note: It's not possible to use a matrix here in
           # combination with GitHub AE hosted runner (one instance per job)
-          for zg_bench_cmd in "${ZG_BENCHMARK_COMMANDS[@]}"; do
+          for pallet in "${ZEITGEIST_PALLETS[@]}"; do
             # Execute benchmark
-            echo "Executing: ${zg_bench_cmd}"
-            echo "${zg_bench_cmd} | tee --append benchmark_log.txt" | sh 2> benchmark_errors.txt
-            ERROR=$(<benchmark_errors.txt)
+            pallet_folder_name=${pallet//zrml_/}
+            pallet_folder_name=${pallet_folder_name//_/-}
+            command="./target/release/zeitgeist benchmark --chain=dev "
+            command+="--steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS "
+            command+="--pallet=$pallet --extrinsic=* --execution=wasm --wasm-execution=compiled "
+            command+="--heap-pages=4096 --template=./misc/weight_template.hbs "
+            command+="--output=./zrml/$pallet_folder_name/src/weights.rs"
+            echo "Executing: $command"
 
-            if [ -n "$ERROR" ]; then
+            # use temporary log to display contents in github workflow
+            $command > _temp.log 2> benchmark_errors.txt
+
+            if [ $? -ne 0 ]; then
               # Prepare error for github output format
+              cat _temp.log
+              ERROR=$(<benchmark_errors.txt)
               prepare_output ERROR
               echo "::set-output name=ERROR::$ERROR"
               exit 0
             fi
 
+            cat _temp.log | tee --append benchmark_log.txt
             check_if_new_commits
           done
 
@@ -171,7 +178,7 @@ jobs:
           type: add
 
       - name: Comment PR (on success)
-        uses: thollander/actions-comment-pull-request@master
+        uses: thollander/actions-comment-pull-request@v1.0.4
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR == ''
         with:
           message: 'Benchmark completed successfully.
@@ -180,7 +187,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment PR (on failure)
-        uses: thollander/actions-comment-pull-request@master
+        uses: thollander/actions-comment-pull-request@v1.0.4
         if: (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 's:benchmark-required')) && steps.run_benchmarks.outputs.ERROR != ''
         with:
           message: 'Benchmark aborted due to an error.
