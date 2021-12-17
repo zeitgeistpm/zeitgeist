@@ -16,7 +16,7 @@
       0
     ]
   ],
-  "protocolId": "battery_station",
+  "protocolId": "battery_station_standalone",
   "properties": {
     "tokenDecimals": 10,
     "tokenSymbol": "ZBP"
