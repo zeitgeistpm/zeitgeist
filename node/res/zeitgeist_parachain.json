@@ -3,8 +3,10 @@
   "id": "zeitgeist",
   "chainType": "Live",
   "bootNodes": [
-    "/dns/mainnet.zeitgeist.pm/tcp/30333/p2p/12D3KooWNpDxYCicWvNrR18QvkkAgVvBdsbh2woHfUGmKijj59aR",
-    "/dns/mainnet.zeitgeist.pm/tcp/30333/ws/p2p/12D3KooWNpDxYCicWvNrR18QvkkAgVvBdsbh2woHfUGmKijj59aR"
+    "/dns/bootnode-0.zeitgeist.pm/tcp/30333/p2p/12D3KooWNpDxYCicWvNrR18QvkkAgVvBdsbh2woHfUGmKijj59aR",
+    "/dns/bootnode-0.zeitgeist.pm/tcp/30333/ws/p2p/12D3KooWNpDxYCicWvNrR18QvkkAgVvBdsbh2woHfUGmKijj59aR",
+    "/dns/bootnode-1.zeitgeist.pm/tcp/30333/p2p/12D3KooWGLidEdRqggqcndA3Nsf6KcL3HbW7BdSGww6QNDkNnYV7",
+    "/dns/bootnode-1.zeitgeist.pm/tcp/30333/ws/p2p/12D3KooWGLidEdRqggqcndA3Nsf6KcL3HbW7BdSGww6QNDkNnYV7"
   ],
   "telemetryEndpoints": [
     [
