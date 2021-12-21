@@ -16,7 +16,7 @@
       0
     ]
   ],
-  "protocolId": "battery_station",
+  "protocolId": "battery_station_v2",
   "properties": {
     "ss58Format": 73,
     "tokenDecimals": 10,
