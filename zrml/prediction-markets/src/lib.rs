@@ -438,10 +438,12 @@ mod pallet {
         /// # Arguments
         ///
         /// * `oracle`: The oracle of the market who will report the correct outcome.
-        /// * `end`: The ending block of the market.
+        /// * `period`: The active period of the market.
         /// * `metadata`: A hash pointer to the metadata of the market.
         /// * `creation`: The creation type of the market (permissionless or advised).
         /// * `assets`: The type and the parameters of an asset (for example 5 categorical assets).
+        /// * `mdm`: The market dispute mechanism.
+        /// * `amount_base_asset`: The amount of the base asset that should be deployed.
         /// * `amounts`: A vector containing the amount of each outcome asset that should be
         ///     deployed. The highest value will be used to buy a complete set, i.e. every outcome
         ///     asset will be bought in quantities specified by the highest value in this vector.
@@ -449,8 +451,8 @@ mod pallet {
         ///     all assets should be deployed. For example, `amounts = [120, 150]` means, that after
         ///     deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `keep`: Specifies how many assets to keep. Any left-over assets that are specified as
-        ///     zero in this vector are sold. Must have the same length as amounts.
+        /// * `keep`: Specifies how many outcome assets to keep. Any left-over assets that are
+        ///     specified as zero in this vector are sold. Must have the same length as amounts.
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into()))
@@ -617,8 +619,8 @@ mod pallet {
         ///
         /// # Arguments
         ///
-        /// * `oracle`: The oracle of the market who will report the correct outcome.
         /// * `market_id`: Id of the market for that the pool should be created and populated.
+        /// * `amount_base_asset`: The amount of the base asset that should be deployed.
         /// * `amounts`: A vector containing the amount of each outcome asset that should be
         ///     deployed. The highest value will be used to buy a complete set, i.e. every outcome
         ///     asset will be bought in quantities specified by the highest value in this vector.
@@ -626,8 +628,8 @@ mod pallet {
         ///     all assets should be deployed. For example, `amounts = [120, 150]` means, that after
         ///     deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `keep`: Specifies how many assets to keep. Any left-over assets that are specified as
-        ///     zero in this vector are sold. Must have the same length as amounts.
+        /// * `keep`: Specifies how many outcome assets to keep. Any left-over assets that are
+        ///     specified as zero in this vector are sold. Must have the same length as amounts.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amounts.len().saturated_into()).into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
