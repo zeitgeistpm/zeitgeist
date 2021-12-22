@@ -489,7 +489,10 @@ mod pallet {
                 ensure!(amount_outcome_assets.len() == 2, Error::<T>::NotEnoughAssets);
             }
 
-            ensure!(amount_outcome_assets.len() == keep_outcome_assets.len(), Error::<T>::NotEnoughAssets);
+            ensure!(
+                amount_outcome_assets.len() == keep_outcome_assets.len(),
+                Error::<T>::NotEnoughAssets
+            );
 
             // Create the correct market
             let weight_market_creation = match assets.clone() {
@@ -532,14 +535,20 @@ mod pallet {
             .actual_weight
             .unwrap_or_else(|| {
                 T::WeightInfo::buy_complete_set(
-                    T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into(),
+                    T::MaxCategories::get()
+                        .min(amount_outcome_assets.len().saturated_into())
+                        .into(),
                 )
                 .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
                     T::MaxCategories::get().min(weights.len().saturated_into()).into(),
                 ))
-                .saturating_add(5_000_000_000.saturating_mul(
-                    T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into(),
-                ))
+                .saturating_add(
+                    5_000_000_000.saturating_mul(
+                        T::MaxCategories::get()
+                            .min(amount_outcome_assets.len().saturated_into())
+                            .into(),
+                    ),
+                )
                 .saturating_add(T::DbWeight::get().reads(2 as Weight))
             });
 
@@ -668,21 +677,24 @@ mod pallet {
             let mut weight_pool_joins_and_sells = 0;
             let mut remaining_sells: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)> =
                 Vec::with_capacity(amount_outcome_assets.len());
-            let mut add_liqudity = |amount: BalanceOf<T>, asset: Asset<MarketIdOf<T>>| -> DispatchResult {
-                let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
-                    who.clone(),
-                    pool_id,
-                    asset,
-                    amount,
-                    zero_balance,
-                )?;
-                weight_pool_joins_and_sells =
-                    weight_pool_joins_and_sells.saturating_add(local_weight);
-                Ok(())
-            };
+            let mut add_liqudity =
+                |amount: BalanceOf<T>, asset: Asset<MarketIdOf<T>>| -> DispatchResult {
+                    let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
+                        who.clone(),
+                        pool_id,
+                        asset,
+                        amount,
+                        zero_balance,
+                    )?;
+                    weight_pool_joins_and_sells =
+                        weight_pool_joins_and_sells.saturating_add(local_weight);
+                    Ok(())
+                };
 
             // Add additional liquidity as specified in amount_outcome_assets
-            for ((idx, asset_amount), keep_amount) in amount_outcome_assets.iter().enumerate().zip(keep_outcome_assets) {
+            for ((idx, asset_amount), keep_amount) in
+                amount_outcome_assets.iter().enumerate().zip(keep_outcome_assets)
+            {
                 if *asset_amount == zero_balance {
                     continue;
                 };
