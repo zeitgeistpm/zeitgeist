@@ -250,6 +250,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
             let mut extra_weight = 0;
+            let mut status = MarketStatus::Active;
 
             T::MarketCommons::mutate_market(&market_id, |m| {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
@@ -258,6 +259,7 @@ mod pallet {
                     m.status = MarketStatus::Active;
                 } else {
                     m.status = MarketStatus::CollectingSubsidy;
+                    status = MarketStatus::CollectingSubsidy;
                     extra_weight = Self::start_subsidy(m, market_id)?;
                 }
 
@@ -265,7 +267,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Self::deposit_event(Event::MarketApproved(market_id));
+            Self::deposit_event(Event::MarketApproved(market_id, status));
             Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
         }
 
@@ -304,7 +306,6 @@ mod pallet {
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
             let market = T::MarketCommons::market(&market_id)?;
             let num_disputes: u32 = disputes.len().saturated_into();
-            let outcome_clone = outcome.clone();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             CurrencyOf::<T>::reserve_named(
                 &RESERVE_ID,
@@ -324,13 +325,18 @@ mod pallet {
             }
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
+            let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
             <Disputes<T>>::mutate(market_id, |disputes| {
-                disputes.push(MarketDispute { at: curr_block_num, by: who, outcome });
+                disputes.push(market_dispute.clone());
             });
             <MarketIdsPerDisputeBlock<T>>::mutate(curr_block_num, |ids| {
                 ids.push(market_id);
             });
-            Self::deposit_event(Event::MarketDisputed(market_id, outcome_clone));
+            Self::deposit_event(Event::MarketDisputed(
+                market_id,
+                MarketStatus::Disputed,
+                market_dispute,
+            ));
             Self::calculate_actual_weight(
                 &T::WeightInfo::dispute,
                 num_disputes,
@@ -408,7 +414,7 @@ mod pallet {
             let market = Market {
                 creation,
                 creator_fee: 0,
-                creator: sender.clone(),
+                creator: sender,
                 market_type: MarketType::Categorical(categories),
                 mdm,
                 metadata: Vec::from(multihash),
@@ -426,7 +432,7 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            Self::deposit_event(Event::MarketCreated(market_id, market, sender));
+            Self::deposit_event(Event::MarketCreated(market_id, market));
 
             Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
@@ -600,7 +606,7 @@ mod pallet {
             let market = Market {
                 creation,
                 creator_fee: 0,
-                creator: sender.clone(),
+                creator: sender,
                 market_type: MarketType::Scalar(outcome_range),
                 mdm,
                 metadata: Vec::from(multihash),
@@ -618,7 +624,7 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            Self::deposit_event(Event::MarketCreated(market_id, market, sender));
+            Self::deposit_event(Event::MarketCreated(market_id, market));
 
             Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
         }
@@ -968,6 +974,7 @@ mod pallet {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
+            let market_report = Report { at: current_block, by: sender.clone(), outcome };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 // TODO make this a conditional check
@@ -1001,8 +1008,7 @@ mod pallet {
                     );
                 }
 
-                market.report =
-                    Some(Report { at: current_block, by: sender, outcome: outcome.clone() });
+                market.report = Some(market_report.clone());
                 market.status = MarketStatus::Reported;
 
                 Ok(())
@@ -1012,7 +1018,11 @@ mod pallet {
                 ids.push(market_id);
             });
 
-            Self::deposit_event(Event::MarketReported(market_id, outcome));
+            Self::deposit_event(Event::MarketReported(
+                market_id,
+                MarketStatus::Reported,
+                market_report,
+            ));
             Ok(())
         }
 
@@ -1259,29 +1269,24 @@ mod pallet {
         BadOnInitialize,
         /// A complete set of shares has been bought \[market_id, buyer\]
         BoughtCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
-        /// A market has been approved \[market_id\]
-        MarketApproved(MarketIdOf<T>),
+        /// A market has been approved \[market_id, new_market_status\]
+        MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, creator\]
-        MarketCreated(
-            MarketIdOf<T>,
-            Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            <T as frame_system::Config>::AccountId,
-        ),
-        /// A market was started after gathering enough subsidy. \[market_id\]
-        MarketStartedWithSubsidy(MarketIdOf<T>),
-        ///A market was discarded after failing to gather enough subsidy. \[market_id\]
-        MarketInsufficientSubsidy(MarketIdOf<T>),
-        /// A pending market has been cancelled. \[market_id, creator\]
+        MarketCreated(MarketIdOf<T>, Market<T::AccountId, T::BlockNumber, MomentOf<T>>),
+        /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
+        MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
+        /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
+        MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
+        /// A pending market has been cancelled. \[market_id\]
         MarketCancelled(MarketIdOf<T>),
-        /// A market has been disputed \[market_id, new_outcome\]
-        MarketDisputed(MarketIdOf<T>, OutcomeReport),
-        /// NOTE: Maybe we should only allow rejections.
+        /// A market has been disputed \[market_id, new_market_status, new_outcome\]
+        MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
-        /// A market has been reported on \[market_id, reported_outcome\]
-        MarketReported(MarketIdOf<T>, OutcomeReport),
-        /// A market has been resolved \[market_id, real_outcome\]
-        MarketResolved(MarketIdOf<T>, u16),
+        /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
+        MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
+        /// A market has been resolved \[market_id, new_market_status, real_outcome\]
+        MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of shares has been sold \[market_id, seller\]
         SoldCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
     }
@@ -1729,9 +1734,14 @@ mod pallet {
 
             T::MarketCommons::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
-                m.resolved_outcome = Some(resolved_outcome);
+                m.resolved_outcome = Some(resolved_outcome.clone());
                 Ok(())
             })?;
+            Self::deposit_event(Event::MarketResolved(
+                *market_id,
+                MarketStatus::Resolved,
+                resolved_outcome,
+            ));
             Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
                 market,
                 total_accounts,
@@ -1801,6 +1811,7 @@ mod pallet {
 
                                 Self::deposit_event(Event::MarketStartedWithSubsidy(
                                     subsidy_info.market_id,
+                                    MarketStatus::Active,
                                 ));
                             } else {
                                 // Insufficient subsidy, cleanly remove pool and close market.
@@ -1867,6 +1878,7 @@ mod pallet {
                                     total_weight.saturating_add(one_read).saturating_add(one_write);
                                 Self::deposit_event(Event::MarketInsufficientSubsidy(
                                     subsidy_info.market_id,
+                                    MarketStatus::InsufficientSubsidy,
                                 ));
                             }
 
