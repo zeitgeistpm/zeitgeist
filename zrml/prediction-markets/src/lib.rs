@@ -306,7 +306,6 @@ mod pallet {
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
             let market = T::MarketCommons::market(&market_id)?;
             let num_disputes: u32 = disputes.len().saturated_into();
-            let outcome_clone = outcome.clone();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             CurrencyOf::<T>::reserve_named(
                 &RESERVE_ID,
@@ -1282,7 +1281,7 @@ mod pallet {
         /// A pending market has been cancelled. \[market_id\]
         MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
-        MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute),
+        MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
