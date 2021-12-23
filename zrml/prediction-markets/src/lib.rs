@@ -414,7 +414,7 @@ mod pallet {
             let market = Market {
                 creation,
                 creator_fee: 0,
-                creator: sender.clone(),
+                creator: sender,
                 market_type: MarketType::Categorical(categories),
                 mdm,
                 metadata: Vec::from(multihash),
@@ -432,7 +432,7 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            Self::deposit_event(Event::MarketCreated(market_id, market, sender));
+            Self::deposit_event(Event::MarketCreated(market_id, market));
 
             Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
@@ -606,7 +606,7 @@ mod pallet {
             let market = Market {
                 creation,
                 creator_fee: 0,
-                creator: sender.clone(),
+                creator: sender,
                 market_type: MarketType::Scalar(outcome_range),
                 mdm,
                 metadata: Vec::from(multihash),
@@ -624,7 +624,7 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            Self::deposit_event(Event::MarketCreated(market_id, market, sender));
+            Self::deposit_event(Event::MarketCreated(market_id, market));
 
             Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
         }
