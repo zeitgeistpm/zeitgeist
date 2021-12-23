@@ -687,35 +687,71 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// The weight of an asset in a CPMM swap pool is greather than the upper weight cap.
         AboveMaximumWeight,
+        /// The weight of an asset in a CPMM swap pool could not be found.
         AssetNotBound,
+        /// The asset in question could not be found within the pool.
         AssetNotInPool,
+        /// The base asset of the swaps pool was None although a value was expected.
         BaseAssetNotFound,
+        /// The spot price of an asset pair was greater than the specified limit.
         BadLimitPrice,
+        /// The weight of an asset in a CPMM swap pool is lower than the upper weight cap.
         BelowMinimumWeight,
+        /// Some funds could not be transferred due to a too low balance.
         InsufficientBalance,
+        /// The market was not started since the subsidy goal was not reached.
         InsufficientSubsidy,
+        /// Could not create CPMM pool since no fee was supplied.
         InvalidFeeArgument,
+        /// A function that is only valid for pools with specific scoring rules was called for a 
+        /// pool with another scoring rule.
         InvalidScoringRule,
+        /// A function was called for a swaps pool that does not fulfill the state requirement.
         InvalidStateTransition,
+        /// Could not create CPMM pool since no weights were supplied.
         InvalidWeightArgument,
+        /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
+        /// A transferal of funds out of a swaps pool was below a threshhold specified by the 
+        /// receiver.
         LimitOut,
+        /// The custom math library yielded an invalid result (most times unexpected zero value).
         MathApproximation,
-        MathApproximationDebug,
+        /// The proportion of an asset added into a pool in comparison to the amount
+        /// of that asset in the pool is above the threshhold specified by a constant.
         MaxInRatio,
+        /// The proportion of an asset taken from a pool in comparison to the amount
+        /// of that asset in the pool is above the threshhold specified by a constant.
         MaxOutRatio,
+        /// The total weight of all assets within a CPMM pool is above a treshhold specified
+        /// by a constant.
         MaxTotalWeight,
+        /// It was tried to remove subsidy from a pool which does not have subsidy provided by
+        /// the address that tried to remove the subsidy.
         NoSubsidyProvided,
+        /// The pool in question does not exist.
         PoolDoesNotExist,
+        /// The pool in question is inactive.
         PoolIsNotActive,
+        /// The CPMM pool in question does not have a fee, although it should.
         PoolMissingFee,
+        /// The Rikiddo pool in question does not have subsidy, although it should.
         PoolMissingSubsidy,
+        /// The CPPM pool in question does not have weights, although it should.
         PoolMissingWeight,
+        /// Two vectors do not have the same length (usually CPMM pool assets and weights).
         ProvidedValuesLenMustEqualAssetsLen,
+        /// Tried to create a pool that has less assets than the lower threshhold specified by
+        /// a constant.
         TooFewAssets,
+        /// Tried to create a pool that has more assets than the upper threshhold specified by
+        /// a constant.
         TooManyAssets,
+        /// The pool does not support swapping the assets in question.
         UnsupportedTrade,
+        /// The outcome asset specified as the winning asset was not found in the pool.
         WinningAssetNotFound,
     }
 
