@@ -1280,7 +1280,6 @@ mod pallet {
         MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
         MarketDisputed(MarketIdOf<T>, MarketStatus, OutcomeReport),
-        /// NOTE: Maybe we should only allow rejections.
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
