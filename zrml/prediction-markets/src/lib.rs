@@ -1268,10 +1268,7 @@ mod pallet {
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, creator\]
-        MarketCreated(
-            MarketIdOf<T>,
-            Market<T::AccountId, T::BlockNumber, MomentOf<T>>
-        ),
+        MarketCreated(MarketIdOf<T>, Market<T::AccountId, T::BlockNumber, MomentOf<T>>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
