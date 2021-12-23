@@ -6,7 +6,7 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use std::{net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
-const BATTERY_STATION_RELAY_ID: &'static str = "battery_station_relay_v3";
+const BATTERY_STATION_RELAY_ID: &str = "battery_station_relay_v3";
 
 #[derive(Debug)]
 pub struct RelayChainCli {
