@@ -604,6 +604,7 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
     let min_liqudity = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
     let amount = min_liqudity + extra_amount;
     let weights = vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 5];
+    let amount_base_asset = amount;
     let amounts = vec![amount - extra_amount, amount, amount, amount];
     let keep = vec![keep_amount, 0, 0, 0];
     let pool_id = 0;
@@ -621,6 +622,7 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             creation.clone(),
             assets,
             MarketDisputeMechanism::SimpleDisputes,
+            amount_base_asset.clone(),
             amounts.clone(),
             weights.clone(),
             keep.clone()
@@ -657,6 +659,14 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
                 0
             ));
         }
+
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            Asset::Ztg,
+            amount_base_asset - min_liqudity,
+            0
+        ));
 
         assert_ok!(Swaps::swap_exact_amount_in(
             Origin::signed(ALICE),
