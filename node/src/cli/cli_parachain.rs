@@ -6,6 +6,8 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use std::{net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
+const BATTERY_STATION_RELAY_ID: &str = "battery_station_relay_v3";
+
 #[derive(Debug)]
 pub struct RelayChainCli {
     /// The actual relay chain cli object.
@@ -30,6 +32,7 @@ impl RelayChainCli {
             .base_path
             .as_ref()
             .map(|x| x.path().join(chain_id.clone().unwrap_or_else(|| "polkadot".into())));
+
         Self { base_path, chain_id, base: polkadot_cli::RunCmd::from_iter(relay_chain_args) }
     }
 }
@@ -178,8 +181,16 @@ impl sc_cli::SubstrateCli for RelayChainCli {
     }
 
     fn load_spec(&self, id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-        <polkadot_cli::Cli as SubstrateCli>::from_iter([RelayChainCli::executable_name()].iter())
+        if id == BATTERY_STATION_RELAY_ID {
+            Ok(Box::new(polkadot_service::RococoChainSpec::from_json_bytes(
+                &include_bytes!("../../res/battery_station_relay.json")[..],
+            )?))
+        } else {
+            <polkadot_cli::Cli as SubstrateCli>::from_iter(
+                [RelayChainCli::executable_name()].iter(),
+            )
             .load_spec(id)
+        }
     }
 
     fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
