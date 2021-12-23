@@ -974,8 +974,7 @@ mod pallet {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
-            let market_report =
-                Report { at: current_block, by: sender.clone(), outcome };
+            let market_report = Report { at: current_block, by: sender.clone(), outcome };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 // TODO make this a conditional check
