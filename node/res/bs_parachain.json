@@ -23,7 +23,7 @@
     "tokenSymbol": "ZBS"
   },
   "parachain_id": 2050,
-  "relay_chain": "rococo",
+  "relay_chain": "battery_station_relay_v3",
   "consensusEngine": null,
   "codeSubstitutes": {},
   "genesis": {
