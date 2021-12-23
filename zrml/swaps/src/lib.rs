@@ -705,7 +705,7 @@ mod pallet {
         InsufficientSubsidy,
         /// Could not create CPMM pool since no fee was supplied.
         InvalidFeeArgument,
-        /// A function that is only valid for pools with specific scoring rules was called for a 
+        /// A function that is only valid for pools with specific scoring rules was called for a
         /// pool with another scoring rule.
         InvalidScoringRule,
         /// A function was called for a swaps pool that does not fulfill the state requirement.
@@ -714,7 +714,7 @@ mod pallet {
         InvalidWeightArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
-        /// A transferal of funds out of a swaps pool was below a threshhold specified by the 
+        /// A transferal of funds out of a swaps pool was below a threshhold specified by the
         /// receiver.
         LimitOut,
         /// The custom math library yielded an invalid result (most times unexpected zero value).
