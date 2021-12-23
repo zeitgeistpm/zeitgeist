@@ -326,8 +326,9 @@ mod pallet {
             }
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
+            let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome }
             <Disputes<T>>::mutate(market_id, |disputes| {
-                disputes.push(MarketDispute { at: curr_block_num, by: who, outcome });
+                disputes.push(market_dispute.clone());
             });
             <MarketIdsPerDisputeBlock<T>>::mutate(curr_block_num, |ids| {
                 ids.push(market_id);
@@ -335,7 +336,7 @@ mod pallet {
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
                 MarketStatus::Disputed,
-                outcome_clone,
+                market_dispute,
             ));
             Self::calculate_actual_weight(
                 &T::WeightInfo::dispute,
@@ -974,6 +975,7 @@ mod pallet {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
+            let market_report = Report { at: current_block, by: sender.clone(), outcome: outcome.clone() };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 // TODO make this a conditional check
@@ -1007,8 +1009,7 @@ mod pallet {
                     );
                 }
 
-                market.report =
-                    Some(Report { at: current_block, by: sender, outcome: outcome.clone() });
+                market.report = Some(market_report.clone());
                 market.status = MarketStatus::Reported;
 
                 Ok(())
@@ -1018,7 +1019,7 @@ mod pallet {
                 ids.push(market_id);
             });
 
-            Self::deposit_event(Event::MarketReported(market_id, MarketStatus::Reported, outcome));
+            Self::deposit_event(Event::MarketReported(market_id, MarketStatus::Reported, market_report));
             Ok(())
         }
 
@@ -1276,11 +1277,11 @@ mod pallet {
         /// A pending market has been cancelled. \[market_id\]
         MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
-        MarketDisputed(MarketIdOf<T>, MarketStatus, OutcomeReport),
+        MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute),
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
-        MarketReported(MarketIdOf<T>, MarketStatus, OutcomeReport),
+        MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of shares has been sold \[market_id, seller\]
