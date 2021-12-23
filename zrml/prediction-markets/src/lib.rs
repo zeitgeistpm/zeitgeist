@@ -326,7 +326,7 @@ mod pallet {
             }
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
-            let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome }
+            let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
             <Disputes<T>>::mutate(market_id, |disputes| {
                 disputes.push(market_dispute.clone());
             });
@@ -975,7 +975,8 @@ mod pallet {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
-            let market_report = Report { at: current_block, by: sender.clone(), outcome: outcome.clone() };
+            let market_report =
+                Report { at: current_block, by: sender.clone(), outcome: outcome.clone() };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 // TODO make this a conditional check
@@ -1019,7 +1020,11 @@ mod pallet {
                 ids.push(market_id);
             });
 
-            Self::deposit_event(Event::MarketReported(market_id, MarketStatus::Reported, market_report));
+            Self::deposit_event(Event::MarketReported(
+                market_id,
+                MarketStatus::Reported,
+                market_report,
+            ));
             Ok(())
         }
 
