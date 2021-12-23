@@ -1270,8 +1270,7 @@ mod pallet {
         /// A market has been created \[market_id, creator\]
         MarketCreated(
             MarketIdOf<T>,
-            Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            <T as frame_system::Config>::AccountId,
+            Market<T::AccountId, T::BlockNumber, MomentOf<T>>
         ),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
