@@ -61,7 +61,9 @@ pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
 
 pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> Result<u128, DispatchError> {
     let a = exp;
-    let (x, xneg) = bsub_sign(base, BASE)?;
+    // Reduce the general case `base^exp` to a computation of the binomial series `(1 + x)^exp`.
+    let (x, xneg) =
+        if base < 2 * BASE { bsub_sign(base, BASE)? } else { (bdiv(base - BASE, base)?, true) };
     let mut term = BASE;
     let mut sum = term;
     let mut negative = false;
@@ -95,7 +97,12 @@ pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> Result<u128, Dispa
         i = i.check_add_rslt(&1)?;
     }
 
-    Ok(sum)
+    // Deduce the correct result from the result of the binomial series.
+    if base < 2 * BASE {
+        Ok(sum)
+    } else {
+        Ok(bdiv(BASE, sum)?) // Reciprocal value
+    }
 }
 
 #[cfg(test)]
@@ -189,5 +196,17 @@ mod tests {
             max_n => Ok(BASE), Ok(u128::MAX), ERR, ERR;
             n_max => ERR, ERR, ERR, ERR;
         );
+    }
+
+    #[test]
+    fn bpow_works_with_some_non_integer_values() {
+        assert_eq!(bpow(3 * BASE / 2, 1 * BASE / 2), Ok(12247448709));
+        assert_eq!(bpow(5 * BASE / 2, 1 * BASE / 2), Ok(15811388287));
+        assert_eq!(bpow(7 * BASE / 2, 1 * BASE / 2), Ok(18708286903));
+        assert_eq!(bpow(9 * BASE / 2, 1 * BASE / 2), Ok(21213203368));
+        assert_eq!(bpow(3 * BASE / 2, 3 * BASE / 2), Ok(18371173064));
+        assert_eq!(bpow(5 * BASE / 2, 3 * BASE / 2), Ok(39528470718));
+        assert_eq!(bpow(7 * BASE / 2, 3 * BASE / 2), Ok(65479004161));
+        assert_eq!(bpow(9 * BASE / 2, 3 * BASE / 2), Ok(95459415156));
     }
 }
