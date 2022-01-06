@@ -37,7 +37,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           override: true
-          profile: minimal
+          profile: default
           target: wasm32-unknown-unknown
           toolchain: nightly-2021-12-08
 
@@ -141,6 +141,10 @@ jobs:
           BENCHMARK_LOG=$(sed -E "s/(Writes\s=\s[0-9]+)/\1\n/g" benchmark_log.txt | sed "s/========/--------/g")
           prepare_output BENCHMARK_LOG
           echo "::set-output name=RESULT::$BENCHMARK_LOG"
+
+      - name: Format code
+        if: steps.run_benchmarks.outputs.ERROR == ''
+        run: cargo fmt
 
       - name: Commit updated weights
         uses: stefanzweifel/git-auto-commit-action@v4
