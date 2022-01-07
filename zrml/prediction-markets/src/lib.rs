@@ -2041,7 +2041,7 @@ mod pallet {
             Self::ensure_can_not_dispute_the_same_outcome(
                 disputes,
                 (&market.report.as_ref()).ok_or(Error::<T>::MarketNotReported)?,
-                outcome
+                outcome,
             )?;
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
             Ok(())
