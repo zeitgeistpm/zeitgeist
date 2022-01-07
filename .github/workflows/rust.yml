@@ -26,12 +26,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          components: clippy, rustfmt
-          override: true
-          profile: minimal
-          toolchain: nightly-2021-12-08
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=none
+          source "$HOME/.cargo/env" 
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustup show
 
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
@@ -47,11 +46,11 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          override: true
-          profile: minimal
-          toolchain: nightly-2021-12-08
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=none
+          source "$HOME/.cargo/env" 
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustup show
 
       - uses: actions-rs/install@v0.1
         with:
