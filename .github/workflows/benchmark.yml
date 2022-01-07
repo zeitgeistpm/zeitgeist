@@ -34,12 +34,11 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          override: true
-          profile: default
-          target: wasm32-unknown-unknown
-          toolchain: nightly-2021-12-08
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=none
+          source "$HOME/.cargo/env" 
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustup show
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
