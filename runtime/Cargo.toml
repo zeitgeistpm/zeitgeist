@@ -2,12 +2,10 @@
 substrate-wasm-builder = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 
 [dependencies]
-cfg-if = { version = "1.0.0" }
 frame-executive = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
-log = { version = "0.4.14", default-features = false, optional = true }
 orml-benchmarking = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, optional = true, git = "https://github.com/PureStake/open-runtime-module-library" }
 orml-currencies = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 orml-tokens = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
@@ -41,7 +39,6 @@ substrate-fixed = { default-features = false, features = ["serde"], git = "https
 
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
 frame-system-benchmarking = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
-hex-literal = { default-features = false, optional = true, version = "0.3" }
 
 # Cumulus
 
@@ -77,6 +74,11 @@ pallet-aura = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, 
 pallet-grandpa = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
+
+# Utility
+cfg-if = { version = "1.0.0" }
+hex-literal = { default-features = false, optional = true, version = "0.3.1" }
+log = { version = "0.4.14", default-features = false, optional = true }
 
 # Zeitgeist
 

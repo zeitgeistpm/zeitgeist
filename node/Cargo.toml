@@ -6,9 +6,6 @@ path = './src/main.rs'
 substrate-build-script-utils = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 
 [dependencies]
-cfg-if = { version = "1.0.0" }
-hex-literal = { version = "0.2" }
-jsonrpc-core = { version = "18.0.0" }
 pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sc-basic-authorship = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sc-cli = { branch = "moonbeam-polkadot-v0.9.11", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
@@ -29,7 +26,6 @@ sp-consensus = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com
 sp-core = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-timestamp = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
-structopt = { version = "0.3" }
 substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 
 # Benchmark
@@ -49,7 +45,6 @@ cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.11", 
 
 # Parachain
 
-log = { optional = true, version = "0.4" }
 nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
@@ -74,6 +69,13 @@ sc-consensus-aura = { branch = "moonbeam-polkadot-v0.9.11", git = "https://githu
 sc-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
+
+# Utility
+cfg-if = { version = "1.0.0" }
+hex-literal = { version = "0.3.1" }
+jsonrpc-core = { version = "18.0.0" }
+log = { optional = true, version = "0.4.14" }
+structopt = { version = "0.3.8" }
 
 # Zeitgeist
 

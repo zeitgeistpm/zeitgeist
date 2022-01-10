@@ -23,7 +23,7 @@ pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
   // Authority
-  pub const MaxAuthorities: u32 = 100;
+  pub const MaxAuthorities: u32 = 32;
 
   // Collective
   pub const AdvisoryCommitteeMaxMembers: u32 = 100;

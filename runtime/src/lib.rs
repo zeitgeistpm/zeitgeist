@@ -876,7 +876,7 @@ impl_runtime_apis! {
     #[cfg(not(feature = "parachain"))]
     impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
         fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-            Aura::authorities().to_vec()
+            Aura::authorities().into_inner()
         }
 
         fn slot_duration() -> sp_consensus_aura::SlotDuration {
