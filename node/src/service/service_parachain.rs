@@ -1,4 +1,4 @@
-use crate::service::Executor;
+use crate::service::ExecutorDispatch;
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
@@ -11,14 +11,14 @@ use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 use std::sync::Arc;
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
-type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
+type FullClient<RuntimeApi, ExecutorDispatch> = TFullClient<Block, RuntimeApi, ExecutorDispatch>;
 
 /// Start a parachain node.
 pub async fn new_full(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
+) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, ExecutorDispatch>>)> {
     do_new_full(parachain_config, parachain_id, polkadot_config).await
 }
 
@@ -26,11 +26,11 @@ pub fn new_partial(
     config: &Configuration,
 ) -> Result<
     PartialComponents<
-        TFullClient<Block, RuntimeApi, Executor>,
+        TFullClient<Block, RuntimeApi, ExecutorDispatch>,
         TFullBackend<Block>,
         (),
-        sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
-        sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
+        sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, ExecutorDispatch>>,
+        sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, ExecutorDispatch>>,
         (Option<Telemetry>, Option<TelemetryWorkerHandle>),
     >,
     sc_service::Error,
@@ -47,7 +47,7 @@ pub fn new_partial(
         .transpose()?;
 
     let (client, backend, keystore_container, task_manager) =
-        sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
+        sc_service::new_full_parts::<Block, RuntimeApi, ExecutorDispatch>(
             config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
         )?;
@@ -100,7 +100,7 @@ async fn do_new_full(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)> {
+) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, ExecutorDispatch>>)> {
     if matches!(parachain_config.role, Role::Light) {
         return Err("Light client not supported!".into());
     }

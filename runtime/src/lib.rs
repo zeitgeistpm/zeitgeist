@@ -330,6 +330,7 @@ impl frame_system::Config for Runtime {
 impl pallet_aura::Config for Runtime {
     type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
     type DisabledValidators = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 #[cfg(feature = "parachain")]
@@ -361,23 +362,19 @@ impl pallet_author_slot_filter::Config for Runtime {
 impl pallet_grandpa::Config for Runtime {
     type Event = Event;
     type Call = Call;
-
     type KeyOwnerProofSystem = ();
-
     type KeyOwnerProof =
         <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
             KeyTypeId,
             pallet_grandpa::AuthorityId,
         )>>::Proof;
-
     type KeyOwnerIdentification =
         <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
             KeyTypeId,
             pallet_grandpa::AuthorityId,
         )>>::IdentificationTuple;
-
     type HandleEquivocation = ();
-
+    type MaxAuthorities = MaxAuthorities;
     // Currently the benchmark does yield an invalid weight implementation
     // type WeightInfo = weights::pallet_grandpa::WeightInfo<Runtime>;
     type WeightInfo = ();
@@ -389,7 +386,7 @@ impl pallet_xcm::Config for Runtime {
     type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type LocationInverter = xcm_builder::LocationInverter<Ancestry>;
     type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-    type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call>;
+    type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     type XcmExecuteFilter = Everything;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
     type XcmReserveTransferFilter = ();
@@ -465,7 +462,7 @@ impl pallet_balances::Config for Runtime {
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
+    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>; // weights::pallet_balances::WeightInfo<Runtime>;
 }
 
 impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime {
@@ -527,6 +524,7 @@ impl pallet_timestamp::Config for Runtime {
 impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = ();
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+    type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
 }
@@ -559,7 +557,11 @@ impl pallet_vesting::Config for Runtime {
     type Currency = Balances;
     type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
     type MinVestedTransfer = MinVestedTransfer;
-    type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
+    type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>; // weights::pallet_vesting::WeightInfo<Runtime>;
+    
+    // `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
+	// highest number of schedules that encodes less than 2^10.
+	const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
 #[cfg(feature = "parachain")]
@@ -844,11 +846,11 @@ impl_runtime_apis! {
         }
     }
 
-    impl sp_api::Metadata<Block> for Runtime {
-        fn metadata() -> OpaqueMetadata {
-            Runtime::metadata().into()
-        }
-    }
+	impl sp_api::Metadata<Block> for Runtime {
+		fn metadata() -> OpaqueMetadata {
+			OpaqueMetadata::new(Runtime::metadata().into())
+		}
+	}
 
     impl sp_block_builder::BlockBuilder<Block> for Runtime {
         fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
@@ -874,7 +876,7 @@ impl_runtime_apis! {
     #[cfg(not(feature = "parachain"))]
     impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
         fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-            Aura::authorities()
+            Aura::authorities().to_vec()
         }
 
         fn slot_duration() -> sp_consensus_aura::SlotDuration {

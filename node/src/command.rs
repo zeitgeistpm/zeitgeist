@@ -27,7 +27,7 @@ pub fn run() -> sc_cli::Result<()> {
                 let runner = cli.create_runner(cmd)?;
 
                 runner.sync_run(|config| {
-                    cmd.run::<zeitgeist_runtime::Block, crate::service::Executor>(config)
+                    cmd.run::<zeitgeist_runtime::Block, crate::service::ExecutorDispatch>(config)
                 })
             } else {
                 Err("Benchmarking wasn't enabled when building the node. You can enable it with \

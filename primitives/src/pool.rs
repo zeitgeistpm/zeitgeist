@@ -1,7 +1,7 @@
 use crate::types::{Asset, PoolStatus};
 use alloc::{collections::BTreeMap, vec::Vec};
 
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Eq,
     PartialEq,
@@ -34,7 +34,7 @@ where
     }
 }
 
-#[derive(
+#[derive(scale_info::TypeInfo,
     Copy,
     Clone,
     Eq,

@@ -6,6 +6,7 @@ use frame_support::{
     dispatch::{Decode, Encode, Input},
     traits::Contains,
 };
+use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{DispatchInfoOf, Dispatchable, SignedExtension},
     transaction_validity::{InvalidTransaction, TransactionValidity, TransactionValidityError},
@@ -31,6 +32,7 @@ impl From<ValidityError> for u8 {
 }
 
 /// Apply a given filter to transactions.
+#[derive(TypeInfo)]
 pub struct TransactionCallFilter<T: Contains<Call>, Call>(PhantomData<(T, Call)>);
 
 impl<F: Contains<Call>, Call> Default for TransactionCallFilter<F, Call> {
@@ -73,7 +75,7 @@ fn validate<F: Contains<Call>, Call>(call: &Call) -> TransactionValidity {
     }
 }
 
-impl<F: Contains<Call> + Send + Sync, Call: Dispatchable + Send + Sync> SignedExtension
+impl<F: Contains<Call> + Send + Sync, Call: Dispatchable + Send + Sync + TypeInfo> SignedExtension
     for TransactionCallFilter<F, Call>
 {
     const IDENTIFIER: &'static str = "TransactionCallFilter";

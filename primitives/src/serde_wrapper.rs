@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 /// # Types
 ///
 /// * `B`: Balance
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Copy,
     Debug,

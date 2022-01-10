@@ -8,19 +8,19 @@ pub use service_parachain::{new_full, new_partial};
 #[cfg(not(feature = "parachain"))]
 pub use service_standalone::{new_full, new_light, new_partial};
 
-use sc_executor::native_executor_instance;
+pub struct ExecutorDispatch;
 
-#[cfg(feature = "runtime-benchmarks")]
-native_executor_instance!(
-  pub Executor,
-  zeitgeist_runtime::api::dispatch,
-  zeitgeist_runtime::native_version,
-  frame_benchmarking::benchmarking::HostFunctions,
-);
+impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
+  #[cfg(feature = "runtime-benchmarks")]
+  type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+  #[cfg(not(features = "runtime-benchmarks"))]
+  type ExtendHostFunctions = ();
 
-#[cfg(not(feature = "runtime-benchmarks"))]
-native_executor_instance!(
-  pub Executor,
-  zeitgeist_runtime::api::dispatch,
-  zeitgeist_runtime::native_version,
-);
+  fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+    zeitgeist_runtime::api::dispatch(method, data)
+  }
+
+  fn native_version() -> sc_executor::NativeVersion {
+    zeitgeist_runtime::native_version()
+  }
+}

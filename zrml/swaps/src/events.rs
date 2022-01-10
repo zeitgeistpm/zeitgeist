@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use zeitgeist_primitives::types::PoolId;
 
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Debug,
     Default,
@@ -17,7 +17,7 @@ pub struct CommonPoolEventParams<AI> {
     pub who: AI,
 }
 
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Debug,
     Default,
@@ -35,7 +35,7 @@ pub struct PoolAssetsEvent<AI, AS, B> {
     pub transferred: Vec<B>,
 }
 
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Debug,
     Default,
@@ -53,7 +53,7 @@ pub struct PoolAssetEvent<AI, AS, B> {
     pub transferred: B,
 }
 
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Debug,
     Default,

@@ -8,7 +8,7 @@ use crate::types::{CategoryIndex, PoolId, SerdeWrapper};
 /// * `MI`: Market Id
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Copy,
     Debug,
@@ -33,7 +33,7 @@ pub enum Asset<MI> {
 /// to the lower bound.
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-#[derive(
+#[derive(scale_info::TypeInfo,
     Clone,
     Copy,
     Debug,

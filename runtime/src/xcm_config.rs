@@ -5,6 +5,7 @@ use crate::{
 use frame_support::weights::IdentityFee;
 use xcm_builder::{FixedWeightBounds, LocationInverter, NativeAsset, UsingComponents};
 use xcm_executor::Config;
+use zeitgeist_primitives::constants::MaxInstructions;
 
 pub struct XcmConfig;
 
@@ -20,6 +21,6 @@ impl Config for XcmConfig {
     type SubscriptionService = PolkadotXcm;
     type Trader =
         UsingComponents<IdentityFee<Balance>, RelayChainLocation, AccountId, Balances, ()>;
-    type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+    type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     type XcmSender = XcmRouter;
 }
