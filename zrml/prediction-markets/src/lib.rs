@@ -1477,10 +1477,13 @@ mod pallet {
 
         fn ensure_can_not_dispute_the_same_outcome(
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
+            report: &Report<T::AccountId, T::BlockNumber>,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
                 ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
+            } else {
+                ensure!(&report.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
             }
             Ok(())
         }
@@ -2035,7 +2038,11 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
             Self::ensure_outcome_matches_market_type(market, outcome)?;
-            Self::ensure_can_not_dispute_the_same_outcome(disputes, outcome)?;
+            Self::ensure_can_not_dispute_the_same_outcome(
+                disputes,
+                (&market.report.as_ref()).ok_or(Error::<T>::MarketNotReported)?,
+                outcome,
+            )?;
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
             Ok(())
         }
