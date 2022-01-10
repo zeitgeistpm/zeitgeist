@@ -18,6 +18,6 @@ std = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2018"
+edition = "2021"
 name = "zrml-market-commons"
 version = "0.2.2"

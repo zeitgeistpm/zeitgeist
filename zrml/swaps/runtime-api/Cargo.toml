@@ -15,6 +15,6 @@ std = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2018"
+edition = "2021"
 name = "zrml-swaps-runtime-api"
 version = "0.2.2"

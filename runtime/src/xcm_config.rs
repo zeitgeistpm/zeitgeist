@@ -6,6 +6,30 @@ use frame_support::weights::IdentityFee;
 use xcm_builder::{FixedWeightBounds, LocationInverter, NativeAsset, UsingComponents};
 use xcm_executor::Config;
 
+/*
+
+pub struct XcmConfig;
+impl xcm_executor::Config for XcmConfig {
+    type Call = Call;
+    type XcmSender = XcmRouter;
+    // How to withdraw and deposit an asset.
+    type AssetTransactor = LocalAssetTransactor;
+    type OriginConverter = XcmOriginToCallOrigin;
+    type IsReserve = MultiNativeAsset;
+    // Teleporting is disabled.
+    type IsTeleporter = ();
+    type LocationInverter = LocationInverter<Ancestry>;
+    type Barrier = Barrier;
+    type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+    type Trader = Trader;
+    type ResponseHandler = PolkadotXcm;
+    type AssetTrap = PolkadotXcm;
+    type AssetClaims = PolkadotXcm;
+    type SubscriptionService = PolkadotXcm;
+}
+
+*/
+
 pub struct XcmConfig;
 
 impl Config for XcmConfig {
