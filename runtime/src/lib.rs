@@ -382,14 +382,18 @@ impl pallet_grandpa::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_xcm::Config for Runtime {
+    const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+    type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    type Call = Call;
     type Event = Event;
     type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type LocationInverter = xcm_builder::LocationInverter<Ancestry>;
+    type Origin = Origin;
     type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     type XcmExecuteFilter = Everything;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-    type XcmReserveTransferFilter = ();
+    type XcmReserveTransferFilter = Everything;
     type XcmRouter = XcmRouter;
     type XcmTeleportFilter = Everything;
 }
@@ -446,6 +450,7 @@ impl pallet_crowdloan_rewards::Config for Runtime {
     type MinimumReward = MinimumReward;
     type RelayChainAccountId = AccountId;
     type RewardCurrency = Balances;
+    type RewardAddressChangeOrigin = frame_system::EnsureSigned<Self::AccountId>;
     type RewardAddressRelayVoteThreshold = RelaySignaturesThreshold;
     type VestingBlockNumber = cumulus_primitives_core::relay_chain::BlockNumber;
     type VestingBlockProvider =

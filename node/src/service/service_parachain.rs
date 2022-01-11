@@ -6,12 +6,16 @@ use cumulus_client_service::{
 use cumulus_primitives_core::ParaId;
 use nimbus_consensus::{build_nimbus_consensus, BuildNimbusConsensusParams};
 use nimbus_primitives::NimbusId;
+use sc_executor::NativeElseWasmExecutor;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 use std::sync::Arc;
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
-type FullClient<RuntimeApi, ExecutorDispatch> = TFullClient<Block, RuntimeApi, ExecutorDispatch>;
+type FullBackend = TFullBackend<Block>;
+type MaybeSelectChain = Option<sc_consensus::LongestChain<FullBackend, Block>>;
+type FullClient<RuntimeApi, ExecutorDispatch> =
+	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 
 /// Start a parachain node.
 pub async fn new_full(
@@ -29,8 +33,8 @@ pub fn new_partial(
         TFullClient<Block, RuntimeApi, ExecutorDispatch>,
         TFullBackend<Block>,
         (),
-        sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, ExecutorDispatch>>,
-        sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, ExecutorDispatch>>,
+        sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (Option<Telemetry>, Option<TelemetryWorkerHandle>),
     >,
     sc_service::Error,
@@ -46,10 +50,17 @@ pub fn new_partial(
         })
         .transpose()?;
 
+    let executor = NativeElseWasmExecutor::<ExecutorDispatch>::new(
+        config.wasm_method,
+        config.default_heap_pages,
+        config.max_runtime_instances,
+    );
+
     let (client, backend, keystore_container, task_manager) =
-        sc_service::new_full_parts::<Block, RuntimeApi, ExecutorDispatch>(
+        sc_service::new_full_parts::<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>(
             config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+            executor,
         )?;
 
     let client = Arc::new(client);

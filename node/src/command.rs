@@ -67,16 +67,16 @@ pub fn run() -> sc_cli::Result<()> {
                     params.parachain_id.into(),
                 )?)?;
             let raw_header = block.header().encode();
-            let output_buf = if params.raw {
+            let buf = if params.raw {
                 raw_header
             } else {
                 format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
             };
 
             if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
+                std::fs::write(output, buf)?;
             } else {
-                std::io::stdout().write_all(&output_buf)?;
+                std::io::stdout().write_all(&buf)?;
             }
 
             Ok(())
@@ -135,7 +135,7 @@ pub fn run() -> sc_cli::Result<()> {
                 let polkadot_config = SubstrateCli::create_configuration(
                     &polkadot_cli,
                     &polkadot_cli,
-                    config.task_executor.clone(),
+                    config.tokio_handle.clone(),
                 )
                 .map_err(|err| format!("Relay chain argument error: {}", err))?;
 
@@ -196,9 +196,9 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 .map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
-        let task_executor = parachain_config.task_executor.clone();
+        let tokio_handle = parachain_config.tokio_handle.clone();
         let polkadot_config =
-            SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
+            SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
                 .map_err(|err| format!("Relay chain argument error: {}", err))?;
 
         log::info!("Parachain id: {:?}", parachain_id);

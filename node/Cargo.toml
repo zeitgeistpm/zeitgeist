@@ -48,7 +48,7 @@ cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.11", 
 nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-parachain-staking = { rev = "1733d8d60a38b9b1a9cad8a1dcf78e2362d68270", git = "https://github.com/PureStake/moonbeam", optional = true }
+parachain-staking = { rev = "663df3da47dba20dda167cb6401895224ab367ca", git = "https://github.com/PureStake/moonbeam", optional = true }
 parity-scale-codec = { optional = true, version = "2.0" }
 sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate", optional = true }
