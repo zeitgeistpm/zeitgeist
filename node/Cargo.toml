@@ -7,6 +7,7 @@ substrate-build-script-utils = { branch = "moonbeam-polkadot-v0.9.11", git = "ht
 
 [dependencies]
 pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
+pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sc-basic-authorship = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sc-cli = { branch = "moonbeam-polkadot-v0.9.11", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
 sc-client-api = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
@@ -24,8 +25,12 @@ sp-block-builder = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github
 sp-blockchain = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-consensus = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-core = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
+sp-offchain = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
+sp-session = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
+sp-storage = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 sp-timestamp = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
+sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
 
 # Benchmark

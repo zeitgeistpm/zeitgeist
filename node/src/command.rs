@@ -1,10 +1,14 @@
-use crate::cli::{Cli, Subcommand};
+use crate::{
+    cli::{Cli, Subcommand},
+    service::{new_partial, ExecutorDispatch}
+};
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 #[cfg(feature = "parachain")]
 use {
     parity_scale_codec::Encode, sp_core::hexdisplay::HexDisplay,
     sp_runtime::traits::Block as BlockT, std::io::Write,
+    zeitgeist_runtime::RuntimeApi,
 };
 
 pub fn run() -> sc_cli::Result<()> {
@@ -27,7 +31,7 @@ pub fn run() -> sc_cli::Result<()> {
                 let runner = cli.create_runner(cmd)?;
 
                 runner.sync_run(|config| {
-                    cmd.run::<zeitgeist_runtime::Block, crate::service::ExecutorDispatch>(config)
+                    cmd.run::<zeitgeist_runtime::Block, ExecutorDispatch>(config)
                 })
             } else {
                 Err("Benchmarking wasn't enabled when building the node. You can enable it with \
@@ -43,7 +47,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, import_queue, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -51,7 +55,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
@@ -107,7 +111,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
@@ -115,7 +119,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, import_queue, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -151,7 +155,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, backend, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, backend), task_manager))
             })
         }
