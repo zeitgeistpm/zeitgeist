@@ -1,7 +1,10 @@
 #![cfg(test)]
 
 use crate::{self as zrml_court};
-use frame_support::construct_runtime;
+use frame_support::{
+    construct_runtime,
+    traits::{Everything}
+};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -52,7 +55,7 @@ impl crate::Config for Runtime {
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
-    type BaseCallFilter = ();
+    type BaseCallFilter = Everything;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
     type BlockNumber = BlockNumber;
