@@ -8,8 +8,9 @@ use sc_service::PartialComponents;
 use {
     parity_scale_codec::Encode, sp_core::hexdisplay::HexDisplay,
     sp_runtime::traits::Block as BlockT, std::io::Write,
-    zeitgeist_runtime::RuntimeApi,
 };
+
+use zeitgeist_runtime::RuntimeApi;
 
 pub fn run() -> sc_cli::Result<()> {
     let mut cli = <Cli as SubstrateCli>::from_args();

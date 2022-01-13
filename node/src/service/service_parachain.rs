@@ -1,4 +1,4 @@
-use crate::service::{ExecutorDispatch, RuntimeApiCollection};
+use crate::service::{ExecutorDispatch, AdditionalRuntimeApiCollection, CommonRuntimeApiCollection};
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
@@ -50,7 +50,9 @@ pub fn new_partial<RuntimeApi, Executor>(
 >
 where
 	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	RuntimeApi::RuntimeApi:
+		CommonRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+		+ AdditionalRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	let telemetry = config
@@ -128,7 +130,9 @@ async fn do_new_full<RuntimeApi, Executor>(
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
 	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	RuntimeApi::RuntimeApi: 
+		CommonRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+		+ AdditionalRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	if matches!(parachain_config.role, Role::Light) {

@@ -3,7 +3,6 @@ mod service_parachain;
 #[cfg(not(feature = "parachain"))]
 mod service_standalone;
 
-#[cfg(feature = "parachain")]
 use {
   sp_runtime::traits::BlakeTwo256,
   zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId},
@@ -20,7 +19,7 @@ pub struct ExecutorDispatch;
 impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
   #[cfg(feature = "runtime-benchmarks")]
   type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-  #[cfg(not(features = "runtime-benchmarks"))]
+  #[cfg(not(feature = "runtime-benchmarks"))]
   type ExtendHostFunctions = ();
 
   fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
@@ -32,11 +31,8 @@ impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
   }
 }
 
-/// A set of APIs that polkadot-like runtimes must implement.
-///
-/// This trait has no methods or associated type. It is a concise marker for all the trait bounds
-/// that it contains.
-pub trait RuntimeApiCollection:
+/// A set of common runtime APIs between standalone an parachain runtimes.
+pub trait CommonRuntimeApiCollection:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_api::ApiExt<Block>
 	+ sp_block_builder::BlockBuilder<Block>
@@ -45,15 +41,13 @@ pub trait RuntimeApiCollection:
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
-	+ nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
-	+ cumulus_primitives_core::CollectCollationInfo<Block>
-  + zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>
+	+ zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
 
-impl<Api> RuntimeApiCollection for Api
+impl<Api> CommonRuntimeApiCollection for Api
 where
 	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::ApiExt<Block>
@@ -63,9 +57,49 @@ where
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
-		+ nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-    + zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
+    	+ zrml_swaps_rpc::SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
+}
+
+cfg_if::cfg_if! {
+	if #[cfg(feature = "parachain")] {
+		/// Additional APIs for parachain runtimes
+		pub trait AdditionalRuntimeApiCollection:
+			sp_api::ApiExt<Block>
+			+ nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
+			+ cumulus_primitives_core::CollectCollationInfo<Block>
+		where
+			<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+		{
+		}
+
+		impl<Api> AdditionalRuntimeApiCollection for Api
+		where
+			Api: sp_api::ApiExt<Block>
+				+ nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
+				+ cumulus_primitives_core::CollectCollationInfo<Block>,
+			<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+		{
+		}
+	} else {
+		/// Additional APIs for standalone runtimes
+		pub trait AdditionalRuntimeApiCollection:
+			sp_api::ApiExt<Block>
+			+ sp_finality_grandpa::GrandpaApi<Block>
+			+ sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>
+		where
+			<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+		{
+		}
+
+		impl<Api> AdditionalRuntimeApiCollection for Api
+		where
+			Api: sp_api::ApiExt<Block>
+				+ sp_finality_grandpa::GrandpaApi<Block>
+				+ sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId>,
+			<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+		{
+		}
+	}
 }
