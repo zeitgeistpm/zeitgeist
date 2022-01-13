@@ -3,12 +3,12 @@
 //! used by Substrate nodes. This file extends those RPC definitions with
 //! capabilities that are specific to this project's runtime configuration.
 
-use sp_api::ProvideRuntimeApi;
-use sp_block_builder::BlockBuilder;
-use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sc_client_api::AuxStore;
 use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
+use sp_api::ProvideRuntimeApi;
+use sp_block_builder::BlockBuilder;
+use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use std::sync::Arc;
 use zeitgeist_primitives::types::{AccountId, Balance, Index as Nonce, MarketId, PoolId};
 use zeitgeist_runtime::opaque::Block;

@@ -3,7 +3,7 @@
 use crate as zrml_liquidity_mining;
 use frame_support::{
     construct_runtime,
-    traits::{Everything, GenesisBuild}
+    traits::{Everything, GenesisBuild},
 };
 use sp_runtime::{
     testing::Header,

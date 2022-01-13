@@ -327,13 +327,13 @@ mod pallet {
     }
 }
 
-#[derive(scale_info::TypeInfo,Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+#[derive(scale_info::TypeInfo, Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub enum OrderSide {
     Bid,
     Ask,
 }
 
-#[derive(scale_info::TypeInfo,Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+#[derive(scale_info::TypeInfo, Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Order<AccountId, Balance, MarketId> {
     side: OrderSide,
     maker: AccountId,

@@ -1,12 +1,16 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use crate::service::{ExecutorDispatch, AdditionalRuntimeApiCollection, CommonRuntimeApiCollection};
+use crate::service::{
+    AdditionalRuntimeApiCollection, CommonRuntimeApiCollection, ExecutorDispatch,
+};
 use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_finality_grandpa::SharedVoterState;
 use sc_keystore::LocalKeystore;
-use sc_service::{error::Error as ServiceError, Configuration, TaskManager, TFullBackend, TFullClient};
+use sc_service::{
+    error::Error as ServiceError, Configuration, TFullBackend, TFullClient, TaskManager,
+};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
@@ -15,7 +19,7 @@ use std::{sync::Arc, time::Duration};
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
 type FullClient<RuntimeApi, Executor> =
-	TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
+    TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -359,13 +363,16 @@ pub fn new_partial<RuntimeApi, Executor>(
         ),
     >,
     ServiceError,
-> 
+>
 where
-	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
-        CommonRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
-        + AdditionalRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	Executor: NativeExecutionDispatch + 'static,
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        > + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
 {
     if config.keystore_remote.is_some() {
         return Err(ServiceError::Other(format!("Remote Keystores are not supported.")));
@@ -387,7 +394,7 @@ where
         config.default_heap_pages,
         config.max_runtime_instances,
     );
-    
+
     let (client, backend, keystore_container, task_manager) =
         sc_service::new_full_parts::<Block, RuntimeApi, _>(
             &config,

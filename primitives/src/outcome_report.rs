@@ -1,7 +1,8 @@
 use crate::types::CategoryIndex;
 
 /// The reported outcome of a market
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     Debug,
     Eq,

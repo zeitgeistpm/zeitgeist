@@ -135,7 +135,7 @@ mod pallet {
     }
 
     #[cfg(feature = "std")]
-    #[derive(scale_info::TypeInfo,Debug)]
+    #[derive(scale_info::TypeInfo, Debug)]
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub initial_balance: BalanceOf<T>,

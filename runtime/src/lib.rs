@@ -563,10 +563,10 @@ impl pallet_vesting::Config for Runtime {
     type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
     type MinVestedTransfer = MinVestedTransfer;
     type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>; // weights::pallet_vesting::WeightInfo<Runtime>;
-    
+
     // `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
-	// highest number of schedules that encodes less than 2^10.
-	const MAX_VESTING_SCHEDULES: u32 = 28;
+    // highest number of schedules that encodes less than 2^10.
+    const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
 #[cfg(feature = "parachain")]
@@ -851,11 +851,11 @@ impl_runtime_apis! {
         }
     }
 
-	impl sp_api::Metadata<Block> for Runtime {
-		fn metadata() -> OpaqueMetadata {
-			OpaqueMetadata::new(Runtime::metadata().into())
-		}
-	}
+    impl sp_api::Metadata<Block> for Runtime {
+        fn metadata() -> OpaqueMetadata {
+            OpaqueMetadata::new(Runtime::metadata().into())
+        }
+    }
 
     impl sp_block_builder::BlockBuilder<Block> for Runtime {
         fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {

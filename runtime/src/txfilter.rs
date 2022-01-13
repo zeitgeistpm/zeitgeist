@@ -75,11 +75,10 @@ fn validate<F: Contains<Call>, Call>(call: &Call) -> TransactionValidity {
     }
 }
 
-impl<F, Call> SignedExtension
-    for TransactionCallFilter<F, Call>
+impl<F, Call> SignedExtension for TransactionCallFilter<F, Call>
 where
     F: 'static + Contains<Call> + Send + Sync + TypeInfo,
-    Call: 'static + Dispatchable + Send + Sync + TypeInfo
+    Call: 'static + Dispatchable + Send + Sync + TypeInfo,
 {
     const IDENTIFIER: &'static str = "TransactionCallFilter";
     type AccountId = AccountId;

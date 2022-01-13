@@ -8,8 +8,7 @@
 use crate::Pallet as Court;
 use crate::{BalanceOf, Call, Config, CurrencyOf, Pallet};
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::dispatch::UnfilteredDispatchable;
-use frame_support::traits::Currency;
+use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Bounded;
 use zeitgeist_primitives::types::OutcomeReport;
@@ -26,7 +25,7 @@ where
     T: Config,
 {
     deposit::<T>(caller);
-    Call::<T>::join_court { }
+    Call::<T>::join_court {}
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())
         .unwrap();
 }

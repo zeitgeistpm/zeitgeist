@@ -1,6 +1,6 @@
 use crate::{
     cli::{Cli, Subcommand},
-    service::{new_partial, ExecutorDispatch}
+    service::{new_partial, ExecutorDispatch},
 };
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;

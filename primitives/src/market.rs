@@ -7,7 +7,8 @@ use core::ops::{Range, RangeInclusive};
 /// * `AI`: Account Id
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     PartialEq,
     parity_scale_codec::Decode,
@@ -53,7 +54,8 @@ impl<AI, BN, M> Market<AI, BN, M> {
 }
 
 /// Defines the type of market creation.
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     Eq,
     PartialEq,
@@ -70,7 +72,8 @@ pub enum MarketCreation {
     Advised,
 }
 
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     PartialEq,
     parity_scale_codec::Encode,
@@ -84,7 +87,8 @@ pub struct MarketDispute<AccountId, BlockNumber> {
 }
 
 /// How a market should resolve disputes
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     PartialEq,
     parity_scale_codec::Decode,
@@ -109,7 +113,8 @@ pub enum MarketDisputeMechanism<AI> {
 /// So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
 /// 3. With inclusive ranges it is not possible to express empty ranges and this feature
 /// mostly conflicts with existent tests and corner cases.
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     Eq,
     PartialEq,
@@ -123,7 +128,8 @@ pub enum MarketPeriod<BN, M> {
 }
 
 /// Defines the state of the market.
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     Copy,
     Eq,
@@ -157,7 +163,8 @@ pub enum MarketStatus {
 
 /// Defines the type of market.
 /// All markets also have themin_assets_out `Invalid` resolution.
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     Eq,
     PartialEq,
@@ -172,7 +179,8 @@ pub enum MarketType {
     Scalar(RangeInclusive<u128>),
 }
 
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     PartialEq,
     parity_scale_codec::Decode,
@@ -190,7 +198,8 @@ pub struct Report<AccountId, BlockNumber> {
 /// * `BN`: Block Number
 /// * `MO`: Moment (Time moment)
 /// * `MI`: Market Id
-#[derive(scale_info::TypeInfo,
+#[derive(
+    scale_info::TypeInfo,
     Clone,
     Eq,
     PartialEq,

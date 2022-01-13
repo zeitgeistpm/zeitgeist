@@ -7,7 +7,7 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{OnFinalize, OnInitialize, Everything},
+    traits::{Everything, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{

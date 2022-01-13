@@ -1,10 +1,7 @@
 #![cfg(test)]
 
 use crate::{self as zrml_authorized};
-use frame_support::{
-    construct_runtime,
-    traits::{Everything}
-};
+use frame_support::{construct_runtime, traits::Everything};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
