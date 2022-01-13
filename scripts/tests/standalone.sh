@@ -9,5 +9,5 @@ set -euxo pipefail
 check_package_with_feature runtime std
 check_package_with_feature runtime std,runtime-benchmarks
 
-check_package_with_feature node default
-check_package_with_feature node default,runtime-benchmarks
+# check_package_with_feature node default
+# check_package_with_feature node default,runtime-benchmarks

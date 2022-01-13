@@ -93,8 +93,8 @@ zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disput
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
 
-[dev-dependencies]
-sp-io = { branch = "moonbeam-polkadot-v0.9.11", git = "https://github.com/purestake/substrate" }
+# [dev-dependencies]
+# sp-io = { branch = "moonbeam-polkadot-v0.9.12", git = "https://github.com/purestake/substrate" }
 
 [features]
 default = ["std"]
@@ -127,6 +127,7 @@ parachain = [
 	"xcm-executor",
 	"xcm",
 ]
+
 runtime-benchmarks = [
 	"pallet-identity/runtime-benchmarks",
 	"pallet-membership/runtime-benchmarks",
@@ -253,7 +254,7 @@ txfilter = [
 
 [package]
 authors = ['Zeitgeist PM <contact@zeitgeist.pm>']
-edition = "2018"
+edition = "2021"
 name = "zeitgeist-runtime"
 version = "0.2.2"
 

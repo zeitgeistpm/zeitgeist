@@ -14,7 +14,7 @@ zrml-simple-disputes = { path = "../../simple-disputes" }
 
 [package]
 authors = ["Automatically generated"]
-edition = "2018"
+edition = "2021"
 name = "zrml-prediction-markets-fuzz"
 publish = false
 version = "0.0.0"

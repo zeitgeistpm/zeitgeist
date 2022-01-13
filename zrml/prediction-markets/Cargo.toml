@@ -69,6 +69,6 @@ std = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2018"
+edition = "2021"
 name = "zrml-prediction-markets"
 version = "0.2.2"
