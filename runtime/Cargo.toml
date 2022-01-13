@@ -254,7 +254,7 @@ txfilter = [
 
 [package]
 authors = ['Zeitgeist PM <contact@zeitgeist.pm>']
-edition = "2021"
+edition = "2018"
 name = "zeitgeist-runtime"
 version = "0.2.2"
 

@@ -12,7 +12,7 @@ zeitgeist-primitives = { path = "../../../primitives" }
 
 [package]
 authors = ["Automatically generated"]
-edition = "2021"
+edition = "2018"
 name = "zrml-swaps-fuzz"
 publish = false
 version = "0.0.0"

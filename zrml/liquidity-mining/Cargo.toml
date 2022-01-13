@@ -34,6 +34,6 @@ std = [
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition = "2018"
 name = "zrml-liquidity-mining"
 version = "0.2.2"
