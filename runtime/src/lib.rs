@@ -65,10 +65,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 30,
+    spec_version: 31,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 8,
+    transaction_version: 9,
 };
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
