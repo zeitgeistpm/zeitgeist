@@ -3,14 +3,14 @@ jsonrpc-core = { default-features = false, version = "18.0.0" }
 jsonrpc-core-client = { default-features = false, version = "18.0.0" }
 jsonrpc-derive = { default-features = false, version = "18.0.0" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
-sp-api = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-blockchain = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.11", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-api = { branch = "moonbeam-polkadot-v0.9.12", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-blockchain = { branch = "moonbeam-polkadot-v0.9.12", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.12", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = '../../../primitives' }
 zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = "../runtime-api" }
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
-edition = "2021"
+edition = "2018"
 name = "zrml-swaps-rpc"
 version = "0.2.2"
