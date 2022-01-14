@@ -52,6 +52,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
     let warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
         backend.clone(),
         grandpa_link.shared_authority_set().clone(),
+        Vec::default(),
     ));
 
     let (network, system_rpc_tx, network_starter) =
@@ -280,6 +281,7 @@ pub fn new_light(mut config: Configuration) -> Result<TaskManager, ServiceError>
     let warp_sync = Arc::new(sc_finality_grandpa::warp_proof::NetworkProvider::new(
         backend.clone(),
         grandpa_link.shared_authority_set().clone(),
+        Vec::default(),
     ));
 
     let (network, system_rpc_tx, network_starter) =
