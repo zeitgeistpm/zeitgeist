@@ -65,7 +65,7 @@ cfg_if::cfg_if! {
         /// Additional APIs for parachain runtimes
         pub trait AdditionalRuntimeApiCollection:
             sp_api::ApiExt<Block>
-            + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
+            + nimbus_primitives::NimbusApi<Block, nimbus_primitives::NimbusId>
             + cumulus_primitives_core::CollectCollationInfo<Block>
         where
             <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
@@ -75,7 +75,7 @@ cfg_if::cfg_if! {
         impl<Api> AdditionalRuntimeApiCollection for Api
         where
             Api: sp_api::ApiExt<Block>
-                + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
+                + nimbus_primitives::NimbusApi<Block, nimbus_primitives::NimbusId>
                 + cumulus_primitives_core::CollectCollationInfo<Block>,
             <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {

@@ -684,7 +684,7 @@ impl_runtime_apis! {
     }
 
     #[cfg(feature = "parachain")]
-    impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
+    impl nimbus_primitives::NimbusApi<Block, NimbusId> for Runtime {
         fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
             // work during block initialization. Therefore we initialize it here to match
