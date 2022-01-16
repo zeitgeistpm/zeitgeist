@@ -216,6 +216,22 @@ fn it_allows_to_buy_a_complete_set() {
 }
 
 #[test]
+fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT),
+            Error::<Runtime>::MarketIsNotActive,
+        );
+    });
+}
+
+#[test]
 fn it_allows_to_deploy_a_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
