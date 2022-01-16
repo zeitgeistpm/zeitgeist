@@ -786,6 +786,9 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
+            // The check below is primarily to ensure that the market is
+            // not a pending advised market.
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             // ensure a swap pool does not already exist
             ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
