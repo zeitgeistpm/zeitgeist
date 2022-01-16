@@ -1497,7 +1497,7 @@ mod pallet {
             Ok(())
         }
 
-        // Must be `MarketStatus::Active` and period within range
+        // Check that the market hasn't reached the end of its period yet.
         fn ensure_market_is_active(
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
@@ -1515,7 +1515,7 @@ mod pallet {
             Ok(())
         }
 
-        // Must NOT be `MarketStatus::Active` and period outside of range
+        // Check that the market has reached the end of its period.
         fn ensure_market_is_closed(
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
