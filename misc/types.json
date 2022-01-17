@@ -121,7 +121,7 @@
     "scoring_rule": "ScoringRule",
     "status": "MarketStatus",
     "report": "Option<Report>",
-    "resolved_outcome": "Option<Outcome>",
+    "resolved_outcome": "Option<OutcomeReport>",
     "mdm": "MarketDisputeMechanism"
   },
   "MarketCreation": {
