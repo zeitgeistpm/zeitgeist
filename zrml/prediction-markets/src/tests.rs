@@ -259,6 +259,27 @@ fn it_allows_to_deploy_a_pool() {
 }
 
 #[test]
+fn it_does_not_allow_to_deploy_a_pool_on_pending_advised_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+
+        assert_noop!(
+            PredictionMarkets::deploy_swap_pool_for_market(
+                Origin::signed(BOB),
+                0,
+                vec![BASE, BASE, BASE]
+            ),
+            Error::<Runtime>::MarketIsNotActive,
+        );
+    });
+}
+
+#[test]
 fn it_allows_to_sell_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
