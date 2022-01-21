@@ -7,7 +7,7 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{OnFinalize, OnInitialize},
+    traits::{Everything, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{
@@ -102,7 +102,7 @@ impl crate::Config for Runtime {
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountIdTest;
-    type BaseCallFilter = ();
+    type BaseCallFilter = Everything;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
     type BlockNumber = BlockNumber;
@@ -137,7 +137,7 @@ impl orml_tokens::Config for Runtime {
     type Amount = Amount;
     type Balance = Balance;
     type CurrencyId = CurrencyId;
-    type DustRemovalWhitelist = ();
+    type DustRemovalWhitelist = Everything;
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();

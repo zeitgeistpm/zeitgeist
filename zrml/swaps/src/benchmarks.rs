@@ -103,7 +103,7 @@ fn bench_create_pool<T: Config>(
     if subsidize {
         let min_subsidy = T::MinSubsidy::get();
         let _ = T::Shares::deposit(base_asset.unwrap(), &caller, min_subsidy).unwrap();
-        let _ = Call::<T>::pool_join_subsidy(pool_id, T::MinSubsidy::get())
+        let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller).into())
             .unwrap();
         let _ = Pallet::<T>::end_subsidy_phase(pool_id).unwrap();
@@ -144,7 +144,7 @@ benchmarks! {
 
         // Join subsidy with each account
         for account in accounts {
-            let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
+            let _ = Call::<T>::pool_join_subsidy { pool_id, amount }
                 .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
         }
     }: { Pallet::<T>::end_subsidy_phase(pool_id)? }
@@ -174,7 +174,7 @@ benchmarks! {
 
         // Join subsidy with each account
         for account in accounts {
-            let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
+            let _ = Call::<T>::pool_join_subsidy { pool_id, amount }
                 .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
         }
     }: { Pallet::<T>::destroy_pool_in_subsidy_phase(pool_id)? }
@@ -205,7 +205,7 @@ benchmarks! {
 
         // Join subsidy with b accounts
         for account in accounts[0..b.saturated_into()].iter() {
-            let _ = Call::<T>::pool_join_subsidy(pool_id, amount)
+            let _ = Call::<T>::pool_join_subsidy { pool_id, amount }
                 .dispatch_bypass_filter(RawOrigin::Signed(account.clone()).into())?;
         }
 
@@ -232,7 +232,7 @@ benchmarks! {
     pool_exit_subsidy {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller.clone(), None, Some(T::MinSubsidy::get()), ScoringRule::RikiddoSigmoidFeeMarketEma, false);
-        let _ = Call::<T>::pool_join_subsidy(pool_id, T::MinSubsidy::get())
+        let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), pool_id, T::MinSubsidy::get())
 

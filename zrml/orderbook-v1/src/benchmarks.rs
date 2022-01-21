@@ -44,8 +44,8 @@ fn create_order<T: Config>(
     order_type: OrderSide,
     seed: Option<u32>,
 ) -> Result<(T::AccountId, Asset<T::MarketId>, T::Hash), &'static str> {
-    let (acc, asset, amt, prc) = order_common_parameters::<T>(seed)?;
-    let _ = Call::<T>::make_order(asset, order_type.clone(), amt, prc)
+    let (acc, asset, amount, price) = order_common_parameters::<T>(seed)?;
+    let _ = Call::<T>::make_order { asset, side: order_type.clone(), amount, price }
         .dispatch_bypass_filter(RawOrigin::Signed(acc.clone()).into())?;
 
     if order_type == OrderSide::Bid {

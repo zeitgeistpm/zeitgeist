@@ -6,6 +6,7 @@ use frame_support::{
     dispatch::{Decode, Encode, Input},
     traits::Contains,
 };
+use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{DispatchInfoOf, Dispatchable, SignedExtension},
     transaction_validity::{InvalidTransaction, TransactionValidity, TransactionValidityError},
@@ -31,7 +32,8 @@ impl From<ValidityError> for u8 {
 }
 
 /// Apply a given filter to transactions.
-pub struct TransactionCallFilter<T: Contains<Call>, Call>(PhantomData<(T, Call)>);
+#[derive(TypeInfo)]
+pub struct TransactionCallFilter<F: Contains<Call>, Call>(PhantomData<(F, Call)>);
 
 impl<F: Contains<Call>, Call> Default for TransactionCallFilter<F, Call> {
     fn default() -> Self {
@@ -73,8 +75,10 @@ fn validate<F: Contains<Call>, Call>(call: &Call) -> TransactionValidity {
     }
 }
 
-impl<F: Contains<Call> + Send + Sync, Call: Dispatchable + Send + Sync> SignedExtension
-    for TransactionCallFilter<F, Call>
+impl<F, Call> SignedExtension for TransactionCallFilter<F, Call>
+where
+    F: 'static + Contains<Call> + Send + Sync + TypeInfo,
+    Call: 'static + Dispatchable + Send + Sync + TypeInfo,
 {
     const IDENTIFIER: &'static str = "TransactionCallFilter";
     type AccountId = AccountId;
@@ -112,6 +116,7 @@ impl<F: Contains<Call>, Call> TransactionCallFilter<F, Call> {
     }
 }
 
+#[derive(TypeInfo)]
 pub struct IsCallable;
 #[cfg(feature = "parachain")]
 impl Contains<Call> for IsCallable {
