@@ -25,7 +25,7 @@ where
     T: Config,
 {
     deposit::<T>(caller);
-    Call::<T>::join_court()
+    Call::<T>::join_court {}
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())
         .unwrap();
 }

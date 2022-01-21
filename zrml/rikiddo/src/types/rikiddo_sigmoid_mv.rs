@@ -32,7 +32,7 @@ use substrate_fixed::{
 use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
 
 /// Configuration values used within the Rikiddo core functions.
-#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct RikiddoConfig<FI: Fixed> {
     /// An initial fee that is used whenever the fee cannot be calculated.
     pub initial_fee: FI,
@@ -125,7 +125,7 @@ where
 }
 
 /// Configuration values used within the Rikiddo core functions.
-#[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,

@@ -114,10 +114,10 @@ pub mod pallet {
         type BalanceFractionalDecimals: Get<u8>;
 
         /// Type that's used as an id for pools.
-        type PoolId: Copy + Decode + FullEncode;
+        type PoolId: Copy + Decode + FullEncode + scale_info::TypeInfo;
 
         /// Rikiddo variant.
-        type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec;
+        type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec + scale_info::TypeInfo;
     }
 
     /// Potential errors within the Rikiddo pallet.

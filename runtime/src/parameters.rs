@@ -22,6 +22,9 @@ pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
+  // Authority
+  pub const MaxAuthorities: u32 = 32;
+
   // Collective
   pub const AdvisoryCommitteeMaxMembers: u32 = 100;
   pub const AdvisoryCommitteeMaxProposals: u32 = 64;
@@ -72,5 +75,9 @@ parameter_types! {
     .build_or_panic();
 
   // Transaction payment
+  pub const OperationalFeeMultiplier: u8 = 5;
   pub const TransactionByteFee: Balance = 100 * MICRO;
+
+  // XCM
+  pub const MaxInstructions: u32 = 100;
 }

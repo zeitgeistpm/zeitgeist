@@ -1,19 +1,26 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use crate::service::Executor;
+use crate::service::{
+    AdditionalRuntimeApiCollection, CommonRuntimeApiCollection, ExecutorDispatch,
+};
 use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
+use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
 use sc_finality_grandpa::SharedVoterState;
 use sc_keystore::LocalKeystore;
-use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
+use sc_service::{
+    error::Error as ServiceError, Configuration, TFullBackend, TFullClient, TaskManager,
+};
 use sc_telemetry::{Telemetry, TelemetryWorker};
+use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
-type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
-type FullBackend = sc_service::TFullBackend<Block>;
+type FullClient<RuntimeApi, Executor> =
+    TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
+type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 /// Builds a new service for a full client.
@@ -27,7 +34,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         select_chain,
         transaction_pool,
         other: (block_import, grandpa_link, mut telemetry),
-    } = new_partial(&config)?;
+    } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
 
     if let Some(url) = &config.keystore_remote {
         match remote_keystore(url) {
@@ -209,10 +216,17 @@ pub fn new_light(mut config: Configuration) -> Result<TaskManager, ServiceError>
         })
         .transpose()?;
 
+    let executor = NativeElseWasmExecutor::<ExecutorDispatch>::new(
+        config.wasm_method,
+        config.default_heap_pages,
+        config.max_runtime_instances,
+    );
+
     let (client, backend, keystore_container, mut task_manager, on_demand) =
-        sc_service::new_light_parts::<Block, RuntimeApi, Executor>(
+        sc_service::new_light_parts::<Block, RuntimeApi, _>(
             &config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+            executor,
         )?;
 
     let mut telemetry = telemetry.map(|(worker, telemetry)| {
@@ -328,28 +342,38 @@ pub fn new_light(mut config: Configuration) -> Result<TaskManager, ServiceError>
     Ok(task_manager)
 }
 
-pub fn new_partial(
+pub fn new_partial<RuntimeApi, Executor>(
     config: &Configuration,
 ) -> Result<
     sc_service::PartialComponents<
-        FullClient,
+        FullClient<RuntimeApi, Executor>,
         FullBackend,
         FullSelectChain,
-        sc_consensus::DefaultImportQueue<Block, FullClient>,
-        sc_transaction_pool::FullPool<Block, FullClient>,
+        sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
+        sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
         (
             sc_finality_grandpa::GrandpaBlockImport<
                 FullBackend,
                 Block,
-                FullClient,
+                FullClient<RuntimeApi, Executor>,
                 FullSelectChain,
             >,
-            sc_finality_grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
+            sc_finality_grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
             Option<Telemetry>,
         ),
     >,
     ServiceError,
-> {
+>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        > + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
+{
     if config.keystore_remote.is_some() {
         return Err(ServiceError::Other(format!("Remote Keystores are not supported.")));
     }
@@ -365,10 +389,17 @@ pub fn new_partial(
         })
         .transpose()?;
 
+    let executor = NativeElseWasmExecutor::<Executor>::new(
+        config.wasm_method,
+        config.default_heap_pages,
+        config.max_runtime_instances,
+    );
+
     let (client, backend, keystore_container, task_manager) =
-        sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
+        sc_service::new_full_parts::<Block, RuntimeApi, _>(
             &config,
             telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+            executor,
         )?;
     let client = Arc::new(client);
 

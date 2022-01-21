@@ -6,6 +6,7 @@
 /// * `BN`: Block Number
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[derive(
+    scale_info::TypeInfo,
     Clone,
     Debug,
     Default,

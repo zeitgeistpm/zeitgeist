@@ -35,7 +35,7 @@ pub type CategoryIndex = u16;
 /// The multicodec encoding the hash algorithm uses only 1 byte,
 /// effecitvely limiting the number of available hash types.
 /// HashType (1B) + DigestSize (1B) + Hash (48B).
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(scale_info::TypeInfo, Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub enum MultiHash {
     Sha3_384([u8; 50]),
 }
@@ -92,6 +92,7 @@ pub type BlockTest<R> = frame_system::mocking::MockBlock<R>;
 pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrinsic<R>;
 
 #[derive(
+    scale_info::TypeInfo,
     Clone,
     Eq,
     PartialEq,
