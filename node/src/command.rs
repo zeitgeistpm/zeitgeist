@@ -6,9 +6,8 @@ use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 #[cfg(feature = "parachain")]
 use {
-    parity_scale_codec::Encode, sp_core::hexdisplay::HexDisplay,
-    sc_client_api::client::BlockBackend,
-    sp_runtime::traits::Block as BlockT, std::io::Write,
+    parity_scale_codec::Encode, sc_client_api::client::BlockBackend,
+    sp_core::hexdisplay::HexDisplay, sp_runtime::traits::Block as BlockT, std::io::Write,
 };
 
 use zeitgeist_runtime::RuntimeApi;
