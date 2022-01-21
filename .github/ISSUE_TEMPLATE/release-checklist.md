@@ -24,7 +24,9 @@ The following checks can be performed after we have forked off to the release-ca
 
 - [ ] Verify the new migrations complete successfully, and the runtime state is correctly updated for any public (non-private/test) networks.
 - [ ] Verify the SDK is up-to-date with the latest changes.
-- [ ] Push runtime upgrade to Battery Park and ensure network stability.
+- [ ] Push runtime upgrade to local clone of Battery Station and ensure the upgrade is executed without errors.
+- [ ] Push runtime upgrade to Battery Station and ensure network stability for 24 hours.
+- [ ] Push runtime upgrade to Zeitgeist mainnet.
 
 ## All Releases
 - [ ] Check that the new client versions have run on the network without issue for 12 hours.
@@ -79,9 +81,9 @@ of a breaking change, increase `transaction_version`.
 
 To verify the order has not changed:
 
-1. Build the Zeitgeist client from source: `git clone https://github.com/zeitgeistpm/zeitgeist.git zeitgeist-release && pushd zeitgeist-release > /dev/null && cargo build`
-2. Run the release-candidate binary using a local chain: `./target/debug/zeitgeist --chain=dev --tmp`
-3. Use [`polkadot-js-tools`](https://github.com/polkadot-js/tools) to compare the metadata: `docker run --network host jacogr/polkadot-js-tools metadata wss://bp-rpc.zeitgeist.pm ws://localhost:9944`
+1. Build the Zeitgeist client from source: `git clone https://github.com/zeitgeistpm/zeitgeist.git zeitgeist-release && pushd zeitgeist-release > /dev/null && cargo build --features=parachain`
+2. Run the release-candidate binary using a local chain: `./target/debug/zeitgeist --chain=battery_station --tmp`
+3. Use [`polkadot-js-tools`](https://github.com/polkadot-js/tools) to compare the metadata: `docker run --network host jacogr/polkadot-js-tools metadata wss://bsr.zeitgeist.pm ws://localhost:9944`
 
 4. Things to look for in the output are lines like:
   - `[Identity] idx 28 -> 25 (calls 15)` - indicates the index for `Identity` has changed
