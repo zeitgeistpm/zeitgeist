@@ -35,6 +35,7 @@ export PARACHAIN_RELAY_RPC_PORT="8300"
 export PARACHAIN_RELAY_WS_PORT="9300"
 export PARACHAIN="battery-station-parachain"
 
+export VALIDATOR_CHAIN="battery_station_relay" 
 export VALIDATOR_FIRST_BOOTNODE_ADDR="/ip4/127.0.0.1/tcp/30601/p2p/12D3KooWBn6wRSVFW3ir2pVBg1TGbG4utihTS479T8uVEsiZSnBd"
 export VALIDATOR_IMAGE="zeitgeistpm/zeitgeist-relay-chain:sha-6d85246"
 export VALIDATOR_PORT="30600"
@@ -42,13 +43,5 @@ export VALIDATOR_RPC_PORT="8600"
 export VALIDATOR_SECOND_BOOTNODE_ADDR="/ip4/127.0.0.1/tcp/30602/p2p/12D3KooWMt1dB8xqLZn71vCTR5qNsdGiWnM38vSSyS4BmCrxSUJ7"
 export VALIDATOR_WS_PORT="9600"
 export VALIDATOR="battery-station-relaychain"
-
-if [ ! -d $DATA_DIR ]; then
-    echo -e "\033[0;36m Info: Data directory does not exist, creating: $DATA_DIR \033[0m"
-    mkdir -p $DATA_DIR
-fi
-
-export RELAY_CHAIN_SPEC_FILE="/tmp/relay-chain-spec.json"
-curl -o $RELAY_CHAIN_SPEC_FILE https://raw.githubusercontent.com/zeitgeistpm/polkadot/battery-station-relay/node/service/res/battery-station-relay.json
 
 . "$(dirname "$0")/testing-network-commons.sh" --source-only

@@ -3,7 +3,8 @@
 # Not meant to be called directly.
 #
 # Common script used by live testing networks (Rococo, Chachacha, Battery Station Relay, etc). Spin-ups
-# 3 validators and 2 parachains using Docker.
+# 2 relay chain validator node, 1 relay chain rpc node, 1 parachain collator node and 1 collator
+# rpc node.
 #
 # First parachain and relay chain nodes will always be a light node while the remaining nodes will be actual validators.
 
@@ -45,6 +46,15 @@ initial_container_configurations() {
 }
 
 # Init
+if [ -z $DATA_DIR ]; then
+    echo -e "\033[0;31m ERROR: DATA_DIR not set. Please execute \"bootstrap.sh\".\033[0m"
+    exit 1
+fi
+
+if [ ! -d $DATA_DIR ]; then
+    echo -e "\033[0;36m Info: Data directory does not exist, creating: $DATA_DIR \033[0m"
+    mkdir -p $DATA_DIR
+fi
 
 sudo apt update
 sudo apt install -y curl docker.io
@@ -56,10 +66,6 @@ sudo docker container stop $(sudo docker container ls -aq --filter name=$VALIDAT
 
 sudo docker container rm $(sudo docker container ls -aq --filter name=$PARACHAIN*) &> /dev/null || true
 sudo docker container rm $(sudo docker container ls -aq --filter name=$VALIDATOR*) &> /dev/null || true
-
-mkdir -p $DATA_DIR
-
-cp $RELAY_CHAIN_SPEC_FILE $DATA_DIR/relay-chain-spec.json
 
 # Validators
 
@@ -82,7 +88,6 @@ launch_validator() {
 
     sudo docker run \
         -d \
-        -v $DATA_DIR/relay-chain-spec.json:/zeitgeist/relay-chain-spec.json \
         -v $DATA_DIR/$container_name:/data \
         --name=$container_name \
         --network=host \
@@ -90,7 +95,7 @@ launch_validator() {
         $VALIDATOR_IMAGE \
         --allow-private-ipv4 \
         --base-path=/data \
-        --chain=/zeitgeist/relay-chain-spec.json \
+        --chain=$VALIDATOR_CHAIN
         --discover-local \
         --name=$container_name \
         $validator_extra_params
@@ -155,7 +160,6 @@ launch_parachain() {
     sudo docker run \
         -d \
         -v $DATA_DIR/$container_name:/zeitgeist/data \
-        -v $DATA_DIR/relay-chain-spec.json:/zeitgeist/relay-chain-spec.json \
         --name=$container_name \
         --restart=always \
         --network=host \
@@ -170,7 +174,7 @@ launch_parachain() {
         --allow-private-ipv4 \
         --bootnodes=$VALIDATOR_FIRST_BOOTNODE_ADDR \
         --bootnodes=$VALIDATOR_SECOND_BOOTNODE_ADDR \
-        --chain=/zeitgeist/relay-chain-spec.json \
+        --chain=$VALIDATOR_CHAIN \
         --discover-local \
         --execution=wasm \
         $relaychain_extra_params
