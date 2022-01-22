@@ -37,7 +37,7 @@ export PARACHAIN="battery-station-parachain"
 
 export VALIDATOR_CHAIN="battery_station_relay" 
 export VALIDATOR_FIRST_BOOTNODE_ADDR="/ip4/127.0.0.1/tcp/30601/p2p/12D3KooWBn6wRSVFW3ir2pVBg1TGbG4utihTS479T8uVEsiZSnBd"
-export VALIDATOR_IMAGE="zeitgeistpm/zeitgeist-relay-chain:sha-6d85246"
+export VALIDATOR_IMAGE="zeitgeistpm/zeitgeist-relay-chain:latest"
 export VALIDATOR_PORT="30600"
 export VALIDATOR_RPC_PORT="8600"
 export VALIDATOR_SECOND_BOOTNODE_ADDR="/ip4/127.0.0.1/tcp/30602/p2p/12D3KooWMt1dB8xqLZn71vCTR5qNsdGiWnM38vSSyS4BmCrxSUJ7"
