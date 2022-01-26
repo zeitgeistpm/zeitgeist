@@ -23,7 +23,7 @@ by allowing for traders to create complex financial contracts on virtually _anyt
 - [Modules](#Modules)
 - [How to run a Zeitgeist node](#How-to-run-a-Zeitgeist-node)
   - [From source code](#From-source-code)
-  - [Using service file in Ubuntu](#Using-service-file-in-Ubuntu)
+  - [Using a service file in Ubuntu](#Using-a-service-file-in-Ubuntu)
   - [Using Docker in Ubuntu](#Using-Docker-in-Ubuntu)
   - [Using Docker in other OS](#Using-Docker-in-other-OS)
 
