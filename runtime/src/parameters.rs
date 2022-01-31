@@ -49,7 +49,7 @@ parameter_types! {
   pub const MinBlocksPerRound: u32 = (BLOCKS_PER_DAY / 6) as _;
   pub const MinCollatorStake: u128 = 64 * BASE;
   pub const MinNominatorStake: u128 = BASE / 2;
-  pub const MinSelectedCandidates: u32 = 1;
+  pub const MinSelectedCandidates: u32 = 8;
   pub const RevokeNominationDelay: u32 = 2;
   pub const RewardPaymentDelay: u32 = 2;
 
