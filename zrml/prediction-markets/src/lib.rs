@@ -143,7 +143,7 @@ mod pallet {
             Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketDestroyed(market_id));
-            
+
             let mut outcome_assets_iter = outcome_assets.into_iter();
 
             // Delete of this market's outcome assets.
