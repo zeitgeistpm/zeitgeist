@@ -65,7 +65,10 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
 
             runner.sync_run(|config| {
-                let PartialComponents { client, .. }: crate::service::ParachainPartialComponents<ExecutorDispatch, RuntimeApi> = crate::service::new_partial(&config)?;
+                let PartialComponents { client, .. }: crate::service::ParachainPartialComponents<
+                    ExecutorDispatch,
+                    RuntimeApi,
+                > = crate::service::new_partial(&config)?;
 
                 match client.block(&cmd.input.parse()?) {
                     Ok(Some(block)) => {

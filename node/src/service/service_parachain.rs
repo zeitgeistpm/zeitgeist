@@ -45,10 +45,7 @@ pub async fn new_full(
 #[allow(clippy::type_complexity)]
 pub fn new_partial<RuntimeApi, Executor>(
     config: &Configuration,
-) -> Result<
-    ParachainPartialComponents<Executor, RuntimeApi>,
-    sc_service::error::Error,
->
+) -> Result<ParachainPartialComponents<Executor, RuntimeApi>, sc_service::error::Error>
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
