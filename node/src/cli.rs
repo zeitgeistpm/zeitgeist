@@ -31,6 +31,10 @@ pub enum Subcommand {
     /// Export blocks.
     ExportBlocks(sc_cli::ExportBlocksCmd),
 
+    /// Export block header in hex format.
+    #[cfg(feature = "parachain")]
+    ExportHeader(sc_cli::CheckBlockCmd),
+
     /// Export the genesis state of the parachain.
     #[cfg(feature = "parachain")]
     #[structopt(name = "export-genesis-state")]

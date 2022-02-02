@@ -34,4 +34,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zrml-authorized"
-version = "0.2.2"
+version = "0.2.3"

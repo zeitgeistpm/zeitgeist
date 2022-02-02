@@ -6,8 +6,8 @@ use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 #[cfg(feature = "parachain")]
 use {
-    parity_scale_codec::Encode, sp_core::hexdisplay::HexDisplay,
-    sp_runtime::traits::Block as BlockT, std::io::Write,
+    parity_scale_codec::Encode, sc_client_api::client::BlockBackend,
+    sp_core::hexdisplay::HexDisplay, sp_runtime::traits::Block as BlockT, std::io::Write,
 };
 
 use zeitgeist_runtime::RuntimeApi;
@@ -58,6 +58,26 @@ pub fn run() -> sc_cli::Result<()> {
                 let PartialComponents { client, task_manager, .. } =
                     new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, config.database), task_manager))
+            })
+        }
+        #[cfg(feature = "parachain")]
+        Some(Subcommand::ExportHeader(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+
+            runner.sync_run(|config| {
+                let PartialComponents { client, .. }: crate::service::ParachainPartialComponents<
+                    ExecutorDispatch,
+                    RuntimeApi,
+                > = crate::service::new_partial(&config)?;
+
+                match client.block(&cmd.input.parse()?) {
+                    Ok(Some(block)) => {
+                        println!("0x{:?}", HexDisplay::from(&block.block.header.encode()));
+                        Ok(())
+                    }
+                    Ok(None) => Err("Unknown block".into()),
+                    Err(e) => Err(format!("Error reading block: {:?}", e).into()),
+                }
             })
         }
         #[cfg(feature = "parachain")]

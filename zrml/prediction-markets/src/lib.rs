@@ -119,12 +119,12 @@ mod pallet {
         /// in for production
         #[pallet::weight(
             T::WeightInfo::admin_destroy_reported_market(
-                4_500,
-                4_500,
+                900,
+                900,
                 T::MaxCategories::get().into()
             ).max(T::WeightInfo::admin_destroy_disputed_market(
-                4_500,
-                4_500,
+                900,
+                900,
                 T::MaxCategories::get().into()
             ))
         )]
@@ -142,6 +142,7 @@ mod pallet {
             let outcome_assets_amount = outcome_assets.len();
             Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
+            Self::deposit_event(Event::MarketDestroyed(market_id));
 
             let mut outcome_assets_iter = outcome_assets.into_iter();
 
@@ -365,6 +366,7 @@ mod pallet {
             CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketCancelled(market_id));
+            Self::deposit_event(Event::MarketDestroyed(market_id));
             Ok(())
         }
 
@@ -960,6 +962,7 @@ mod pallet {
             T::Slash::on_unbalanced(imbalance);
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketRejected(market_id));
+            Self::deposit_event(Event::MarketDestroyed(market_id));
             Ok(())
         }
 
@@ -1273,6 +1276,8 @@ mod pallet {
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, creator\]
         MarketCreated(MarketIdOf<T>, Market<T::AccountId, T::BlockNumber, MomentOf<T>>),
+        /// A market has been created \[market_id, creator\]
+        MarketDestroyed(MarketIdOf<T>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
