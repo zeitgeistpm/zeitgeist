@@ -7,8 +7,8 @@
   "AccountData": {
     "free": "Balance",
     "reserved": "Balance",
-    "misc_frozen": "Balance",
-    "fee_frozen": "Balance"
+    "miscFrozen": "Balance",
+    "feeFrozen": "Balance"
   },
   "Address": "MultiAddress",
   "Amount": "i128",
@@ -52,7 +52,7 @@
     }
   },
   "CommonPoolEventParams": {
-    "pool_id": "u128",
+    "poolId": "u128",
     "who": "AccountId"
   },
   "Currency": "Asset",
@@ -113,15 +113,15 @@
   "Market": {
     "creator": "AccountId",
     "creation": "MarketCreation",
-    "creator_fee": "u8",
+    "creatorFee": "u8",
     "oracle": "AccountId",
     "metadata": "Vec<u8>",
-    "market_type": "MarketType",
+    "marketType": "MarketType",
     "period": "MarketPeriod",
-    "scoring_rule": "ScoringRule",
+    "scoringRule": "ScoringRule",
     "status": "MarketStatus",
     "report": "Option<Report>",
-    "resolved_outcome": "Option<OutcomeReport>",
+    "resolvedOutcome": "Option<OutcomeReport>",
     "mdm": "MarketDisputeMechanism"
   },
   "MarketCreation": {
@@ -262,13 +262,13 @@
   },
   "Pool": {
     "assets": "Vec<Asset>",
-    "base_asset": "Option<Asset>",
-    "market_id": "MarketId",
-    "pool_status": "PoolStatus",
-    "scoring_rule": "ScoringRule",
-    "swap_fee": "Option<Balance>",
-    "total_subsidy": "Option<Balance>",
-    "total_weight": "Option<u128>",
+    "baseAsset": "Option<Asset>",
+    "marketId": "MarketId",
+    "poolStatus": "PoolStatus",
+    "scoringRule": "ScoringRule",
+    "swapFee": "Option<Balance>",
+    "totalSubsidy": "Option<Balance>",
+    "totalWeight": "Option<u128>",
     "weights": "Option<BTreeMap<Asset, u128>>"
   },
   "PoolAssetEvent": {
