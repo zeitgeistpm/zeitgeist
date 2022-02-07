@@ -65,10 +65,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 32,
+    spec_version: 33,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 9,
+    transaction_version: 10,
 };
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -684,7 +684,7 @@ impl_runtime_apis! {
     }
 
     #[cfg(feature = "parachain")]
-    impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
+    impl nimbus_primitives::NimbusApi<Block, NimbusId> for Runtime {
         fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
             // work during block initialization. Therefore we initialize it here to match
