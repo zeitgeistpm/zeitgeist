@@ -71,4 +71,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2018"
 name = "zrml-prediction-markets"
-version = "0.2.3"
+version = "0.2.4"
