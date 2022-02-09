@@ -18,6 +18,7 @@ mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
+#[cfg(feature = "parachain")]
 pub use parachain_params::*;
 pub use parameters::*;
 
