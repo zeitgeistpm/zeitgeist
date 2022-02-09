@@ -77,7 +77,7 @@ sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.13", default-features =
 
 # Utility
 cfg-if = { version = "1.0.0" }
-hex-literal = { default-features = false, optional = true, version = "0.3.3" }
+hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.14", default-features = false, optional = true }
 
 # Zeitgeist
@@ -92,9 +92,6 @@ zrml-rikiddo = { default-features = false, path = "../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
-
-# [dev-dependencies]
-# sp-io = { branch = "moonbeam-polkadot-v0.9.13", git = "https://github.com/purestake/substrate" }
 
 [features]
 default = ["std"]
@@ -131,7 +128,7 @@ parachain = [
 runtime-benchmarks = [
 	"pallet-identity/runtime-benchmarks",
 	"pallet-membership/runtime-benchmarks",
-    "frame-benchmarking",
+    "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking",
     "frame-system/runtime-benchmarks",

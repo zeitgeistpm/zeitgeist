@@ -77,10 +77,10 @@ sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.13", git = "https://git
 
 # Utility
 cfg-if = { version = "1.0.0" }
-hex-literal = { version = "0.3.3" }
+hex-literal = { version = "0.3.4" }
 jsonrpc-core = { version = "18.0.0" }
 log = { optional = true, version = "0.4.14" }
-structopt = { version = "0.3.8" }
+structopt = { version = "0.3.25" }
 
 # Zeitgeist
 
