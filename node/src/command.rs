@@ -209,7 +209,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         );
 
         let parachain_id = cumulus_primitives_core::ParaId::from(
-            cli.run.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
+            cli.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
         );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<

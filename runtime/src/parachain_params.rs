@@ -1,5 +1,6 @@
 use crate::{
-    AccountId, BASE, BLOCKS_PER_MINUTE, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue, MAXIMUM_BLOCK_WEIGHT,
+    AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue, BASE,
+    BLOCKS_PER_MINUTE, MAXIMUM_BLOCK_WEIGHT,
 };
 use frame_support::{match_type, parameter_types, traits::Everything, weights::Weight};
 use polkadot_parachain::primitives::Sibling;
@@ -43,7 +44,7 @@ parameter_types! {
 
     // Staking
     /// Rounds before the candidate bond increase/decrease can be executed
-	pub const CandidateBondLessDelay: u32 = 2;
+    pub const CandidateBondLessDelay: u32 = 2;
     /// Default fixed percent a collator takes off the top of due rewards
     pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
     /// Blocks per round

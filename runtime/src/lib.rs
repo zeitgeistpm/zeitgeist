@@ -18,6 +18,7 @@ mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
+pub use parachain_params::*;
 pub use parameters::*;
 
 use alloc::{boxed::Box, vec, vec::Vec};
@@ -49,7 +50,6 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use {
     frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
-    parachain_params::*,
 };
 
 #[cfg(feature = "txfilter")]
@@ -240,19 +240,16 @@ create_zeitgeist_runtime!(
     // System
     ParachainSystem: cumulus_pallet_parachain_system = 50,
     ParachainInfo: parachain_info = 51,
-
     // Consensus
     ParachainStaking: parachain_staking = 60,
     AuthorInherent: pallet_author_inherent = 61,
     AuthorFilter: pallet_author_slot_filter = 62,
     AuthorMapping: pallet_author_mapping = 63,
-
     // XCM
     CumulusXcm: cumulus_pallet_xcm = 70,
     DmpQueue: cumulus_pallet_dmp_queue = 71,
     PolkadotXcm: pallet_xcm = 72,
     XcmpQueue: cumulus_pallet_xcmp_queue = 73,
-
     // Third-party
     Crowdloan: pallet_crowdloan_rewards = 80,
 );
@@ -685,6 +682,14 @@ impl_runtime_apis! {
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
         fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
             ParachainSystem::collect_collation_info()
+        }
+    }
+
+    #[cfg(feature = "parachain")]
+    // Required to satisify trait bounds at the client implementation.
+    impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
+        fn can_author(_: NimbusId, _: u32, _: &<Block as BlockT>::Header) -> bool {
+            panic!("AuthorFilterAPI is no longer supported. Please update your client.")
         }
     }
 
