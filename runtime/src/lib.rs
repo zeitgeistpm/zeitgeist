@@ -197,36 +197,36 @@ macro_rules! create_zeitgeist_runtime {
                 UncheckedExtrinsic = UncheckedExtrinsic,
             {
                 // System
-                System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
-                Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
-                RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+                System: frame_system = 0,
+                Timestamp: pallet_timestamp = 1,
+                RandomnessCollectiveFlip: pallet_randomness_collective_flip = 2,
 
                 // Money
-                Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
-                Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
-                Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
+                Balances: pallet_balances = 10,
+                TransactionPayment: pallet_transaction_payment = 11,
+                Treasury: pallet_treasury = 12,
+                Vesting: pallet_vesting = 13,
 
                 // Other Parity pallets
-                AdvisoryCommitteeCollective: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 20,
-                AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 21,
-                Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 22,
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 23,
-                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 24,
+                AdvisoryCommitteeCollective: pallet_collective::<Instance1> = 20,
+                AdvisoryCommitteeMembership: pallet_membership::<Instance1> = 21,
+                Identity: pallet_identity = 22,
+                Sudo: pallet_sudo = 23,
+                Utility: pallet_utility = 24,
 
                 // Third-party
-                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
-                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
+                Currency: orml_currencies = 30,
+                Tokens: orml_tokens = 31,
 
                 // Zeitgeist
-                MarketCommons: zrml_market_commons::{Pallet, Storage} = 40,
-                Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 41,
-                Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 42,
-                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 43,
-                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 44,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 46,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
+                MarketCommons: zrml_market_commons = 40,
+                Authorized: zrml_authorized = 41,
+                Court: zrml_court = 42,
+                LiquidityMining: zrml_liquidity_mining = 43,
+                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1> = 44,
+                SimpleDisputes: zrml_simple_disputes = 45,
+                Swaps: zrml_swaps = 46,
+                PredictionMarkets: zrml_prediction_markets = 47,
 
                 $($additional_pallets)*
             }
@@ -237,30 +237,30 @@ macro_rules! create_zeitgeist_runtime {
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
     // System
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 50,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 51,
+    ParachainSystem: cumulus_pallet_parachain_system = 50,
+    ParachainInfo: parachain_info = 51,
 
     // Consensus
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 60,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 61,
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 62,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 63,
+    ParachainStaking: parachain_staking = 60,
+    AuthorInherent: pallet_author_inherent = 61,
+    AuthorFilter: pallet_author_slot_filter = 62,
+    AuthorMapping: pallet_author_mapping = 63,
 
     // XCM
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 70,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
-    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
+    CumulusXcm: cumulus_pallet_xcm = 70,
+    DmpQueue: cumulus_pallet_dmp_queue = 71,
+    PolkadotXcm: pallet_xcm = 72,
+    XcmpQueue: cumulus_pallet_xcmp_queue = 73,
 
     // Third-party
-    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 80,
+    Crowdloan: pallet_crowdloan_rewards = 80,
 );
 
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
     // Consensus
-    Aura: pallet_aura::{Config<T>, Pallet, Storage} = 50,
-    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 51,
+    Aura: pallet_aura = 50,
+    Grandpa: pallet_grandpa = 51,
 );
 
 // Configure Pallets
@@ -554,7 +554,8 @@ impl pallet_treasury::Config for Runtime {
 impl pallet_utility::Config for Runtime {
     type Event = Event;
     type Call = Call;
-    type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
+    type PalletsOrigin = OriginCaller;
+    type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_vesting::Config for Runtime {
@@ -709,13 +710,14 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_benchmarking::{list_benchmark, baseline::Pallet as BaselineBench, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use orml_benchmarking::list_benchmark as orml_list_benchmark;
 
             let mut list = Vec::<BenchmarkList>::new();
 
+            list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
             list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
             orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
             orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
@@ -750,12 +752,13 @@ impl_runtime_apis! {
             config: frame_benchmarking::BenchmarkConfig,
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
             use frame_benchmarking::{
-                add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
+                add_benchmark, baseline::{Pallet as BaselineBench, Config as BaselineConfig}, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
             use orml_benchmarking::{add_benchmark as orml_add_benchmark};
 
             impl frame_system_benchmarking::Config for Runtime {}
+            impl BaselineConfig for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac")
@@ -780,6 +783,7 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
+            add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
             orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
