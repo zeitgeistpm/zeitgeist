@@ -47,6 +47,7 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
+    frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
     parachain_params::*,
 };
@@ -336,7 +337,6 @@ impl pallet_aura::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl pallet_author_inherent::Config for Runtime {
     type AccountLookup = AuthorMapping;
-    type AuthorId = NimbusId;
     type CanAuthor = AuthorFilter;
     type EventHandler = ParachainStaking;
     type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
@@ -344,7 +344,6 @@ impl pallet_author_inherent::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_author_mapping::Config for Runtime {
-    type AuthorId = NimbusId;
     type DepositAmount = CollatorDeposit;
     type DepositCurrency = Balances;
     type Event = Event;
@@ -400,25 +399,28 @@ impl pallet_xcm::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl parachain_staking::Config for Runtime {
+    type CandidateBondLessDelay = CandidateBondLessDelay;
     type Currency = Balances;
     type DefaultBlocksPerRound = DefaultBlocksPerRound;
     type DefaultCollatorCommission = DefaultCollatorCommission;
     type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
+    type DelegationBondLessDelay = DelegationBondLessDelay;
     type Event = Event;
     type LeaveCandidatesDelay = LeaveCandidatesDelay;
-    type LeaveNominatorsDelay = LeaveNominatorsDelay;
-    type MaxCollatorsPerNominator = MaxCollatorsPerNominator;
-    type MaxNominatorsPerCollator = MaxNominatorsPerCollator;
+    type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
+    type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
+    type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+    type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
     type MinBlocksPerRound = MinBlocksPerRound;
-    type MinCollatorCandidateStk = MinCollatorStake;
-    type MinCollatorStk = MinCollatorStake;
-    type MinNomination = MinNominatorStake;
-    type MinNominatorStk = MinNominatorStake;
+    type MinCandidateStk = MinCollatorStk;
+    type MinCollatorStk = MinCollatorStk;
+    type MinDelegation = MinDelegatorStk;
+    type MinDelegatorStk = MinDelegatorStk;
     type MinSelectedCandidates = MinSelectedCandidates;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
-    type RevokeNominationDelay = RevokeNominationDelay;
+    type RevokeDelegationDelay = RevokeDelegationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
-    type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
+    type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -450,8 +452,10 @@ impl pallet_crowdloan_rewards::Config for Runtime {
     type MinimumReward = MinimumReward;
     type RelayChainAccountId = AccountId;
     type RewardCurrency = Balances;
+    type RewardAddressAssociateOrigin = EnsureSigned<Self::AccountId>;
     type RewardAddressChangeOrigin = frame_system::EnsureSigned<Self::AccountId>;
     type RewardAddressRelayVoteThreshold = RelaySignaturesThreshold;
+    type SignatureNetworkIdentifier = SignatureNetworkIdentifier;
     type VestingBlockNumber = cumulus_primitives_core::relay_chain::BlockNumber;
     type VestingBlockProvider =
         cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
@@ -685,7 +689,7 @@ impl_runtime_apis! {
     }
 
     #[cfg(feature = "parachain")]
-    impl nimbus_primitives::NimbusApi<Block, NimbusId> for Runtime {
+    impl nimbus_primitives::NimbusApi<Block> for Runtime {
         fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
             // work during block initialization. Therefore we initialize it here to match

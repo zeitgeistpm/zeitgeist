@@ -1,7 +1,7 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         pub mod pallet_author_mapping;
-        pub mod parachain_staking;
+        // pub mod parachain_staking;
         // Currently the benchmark does fail at the verification at least one function (deprecated)
         // pub mod pallet_crowdloan_rewards
     } else {
