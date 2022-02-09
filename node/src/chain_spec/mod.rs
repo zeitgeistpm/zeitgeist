@@ -147,9 +147,9 @@ fn generic_genesis(
         sudo: zeitgeist_runtime::SudoConfig { key: root_key },
         system: zeitgeist_runtime::SystemConfig {
             code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
         },
         treasury: Default::default(),
+        transaction_payment: Default::default(),
         tokens: Default::default(),
         vesting: Default::default(),
     }

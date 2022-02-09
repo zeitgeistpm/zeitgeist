@@ -10,7 +10,7 @@ use zeitgeist_runtime::opaque::Block;
 #[cfg(feature = "parachain")]
 pub use service_parachain::{new_full, new_partial, ParachainPartialComponents};
 #[cfg(not(feature = "parachain"))]
-pub use service_standalone::{new_full, new_light, new_partial};
+pub use service_standalone::{new_full, new_partial};
 
 pub struct ExecutorDispatch;
 
