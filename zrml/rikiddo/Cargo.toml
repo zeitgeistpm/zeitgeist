@@ -1,18 +1,18 @@
 [dependencies]
 arbitrary = { version = "1.0.1", features = ["derive"], optional = true }
 cfg-if = { version = "1.0.0", default-features = false }
-frame-support = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive"], version = "2.0" }
-sp-core = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-core = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 hashbrown = { default-features = true, version = "0.11"}
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.15-1", git = "https://github.com/purestake/substrate", optional = true }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.15-1", git = "https://github.com/purestake/substrate", optional = true }
-sp-io = { branch = "moonbeam-polkadot-v0.9.15-1", git = "https://github.com/purestake/substrate", optional = true }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
+sp-io = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 
 [dev-dependencies]
 zrml-rikiddo = { features = ["mock"], path = "." }
