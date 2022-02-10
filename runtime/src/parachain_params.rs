@@ -1,3 +1,9 @@
+#![allow(
+    // Constants parameters inside `parameter_types!` already check
+    // arithmetic operations at compile time
+    clippy::integer_arithmetic
+)]
+
 use crate::{
     AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue, BASE,
     BLOCKS_PER_MINUTE, MAXIMUM_BLOCK_WEIGHT,

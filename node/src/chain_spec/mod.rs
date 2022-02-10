@@ -146,6 +146,7 @@ fn generic_genesis(
         },
         #[cfg(feature = "parachain")]
         parachain_system: Default::default(),
+        #[cfg(feature = "parachain")]
         // Default should use the pallet configuration
         polkadot_xcm: PolkadotXcmConfig::default(),
         sudo: zeitgeist_runtime::SudoConfig { key: root_key },
