@@ -7,8 +7,8 @@
   "AccountData": {
     "free": "Balance",
     "reserved": "Balance",
-    "misc_frozen": "Balance",
-    "fee_frozen": "Balance"
+    "miscFrozen": "Balance",
+    "feeFrozen": "Balance"
   },
   "Address": "MultiAddress",
   "Amount": "i128",
@@ -33,10 +33,10 @@
     "id": "AccountId",
     "bond": "Balance",
     "nominators": "Vec<AccountId>",
-    "top_nominators": "Vec<Bond>",
-    "bottom_nominators": "Vec<Bond>",
-    "total_counted": "Balance",
-    "total_backing": "Balance",
+    "topNominators": "Vec<Bond>",
+    "bottomNominators": "Vec<Bond>",
+    "totalCounted": "Balance",
+    "totalBacking": "Balance",
     "state": "CollatorStatus"
   },
   "CollatorSnapshot": {
@@ -52,7 +52,7 @@
     }
   },
   "CommonPoolEventParams": {
-    "pool_id": "u128",
+    "poolId": "u128",
     "who": "AccountId"
   },
   "Currency": "Asset",
@@ -65,24 +65,24 @@
     }
   },
   "EmaConfig": {
-    "ema_period": "Timespan",
-    "ema_period_estimate_after": "Option<Timespan>",
+    "emaPeriod": "Timespan",
+    "emaPeriodEstimateAfter": "Option<Timespan>",
     "smoothing": "u128"
   },
   "EmaMarketVolume": {
     "config": "EmaConfig",
     "ema": "u128",
     "multiplier": "u128",
-    "last_time": "UnixTimestamp",
+    "lastTime": "UnixTimestamp",
     "state": "MarketVolumeState",
-    "start_time": "UnixTimestamp",
-    "volumes_per_period": "u128"
+    "startTime": "UnixTimestamp",
+    "volumesPerPeriod": "u128"
   },
   "ExitQ": {
     "candidates": "Vec<AccountId>",
-    "nominators_leaving": "Vec<AccountId>",
-    "candidate_schedule": "Vec<(AccountId, RoundIndex)>",
-    "nominator_schedule": "Vec<(AccountId, Option<AccountId>, RoundIndex)>"
+    "nominatorsLeaving": "Vec<AccountId>",
+    "candidateSchedule": "Vec<(AccountId, RoundIndex)>",
+    "nominatorSchedule": "Vec<(AccountId, Option<AccountId>, RoundIndex)>"
   },
   "FeeSigmoid": {
     "config": "FeeSigmoidConfig"
@@ -91,8 +91,8 @@
     "m": "i128",
     "p": "i128",
     "n": "i128",
-    "initial_fee": "i128",
-    "min_revenue": "i128"
+    "initialFee": "i128",
+    "minRevenue": "i128"
   },
   "Index": "u64",
   "InflationInfo": {
@@ -113,15 +113,15 @@
   "Market": {
     "creator": "AccountId",
     "creation": "MarketCreation",
-    "creator_fee": "u8",
+    "creatorFee": "u8",
     "oracle": "AccountId",
     "metadata": "Vec<u8>",
-    "market_type": "MarketType",
+    "marketType": "MarketType",
     "period": "MarketPeriod",
-    "scoring_rule": "ScoringRule",
+    "scoringRule": "ScoringRule",
     "status": "MarketStatus",
     "report": "Option<Report>",
-    "resolved_outcome": "Option<OutcomeReport>",
+    "resolvedOutcome": "Option<OutcomeReport>",
     "mdm": "MarketDisputeMechanism"
   },
   "MarketCreation": {
@@ -187,8 +187,8 @@
     "delegations": "Vec<Bond>",
     "revocations": "Vec<AccountId>",
     "total": "Balance",
-    "scheduled_revocations_count": "u32",
-    "scheduled_revocations_total": "Balance",
+    "scheduledRevocationsCount": "u32",
+    "scheduledRevocationsTotal": "Balance",
     "status": "DelegatorStatus"
   },
   "NominatorAdded": {
@@ -214,10 +214,10 @@
   },
   "OrderedSet": "Vec<Bond>",
   "OwnedValuesParams": {
-    "participated_blocks": "BlockNumber",
-    "perpetual_incentives": "Balance",
-    "total_incentives": "Balance",
-    "total_shares": "Balance"
+    "participatedBlocks": "BlockNumber",
+    "perpetualIncentives": "Balance",
+    "totalIncentives": "Balance",
+    "totalShares": "Balance"
   },
   "RangeBalance": {
     "min": "Balance",
@@ -231,18 +231,18 @@
   },
   "RelayChainAccountId": "AccountId32",
   "RewardInfo": {
-    "total_reward": "Balance",
-    "claimed_reward": "Balance"
+    "totalReward": "Balance",
+    "claimedReward": "Balance"
   },
   "Rikiddo": {
     "config": "RikiddoConfig",
     "fees": "FeeSigmoid",
-    "ma_short": "EmaMarketVolume",
-    "ma_long": "EmaMarketVolume"
+    "maShort": "EmaMarketVolume",
+    "maLong": "EmaMarketVolume"
   },
   "RikiddoConfig": {
-    "initial_fee": "i128",
-    "log2_e": "i128"
+    "initialFee": "i128",
+    "log2E": "i128"
   },
   "ScoringRule": {
     "_enum": [
@@ -262,13 +262,13 @@
   },
   "Pool": {
     "assets": "Vec<Asset>",
-    "base_asset": "Option<Asset>",
-    "market_id": "MarketId",
-    "pool_status": "PoolStatus",
-    "scoring_rule": "ScoringRule",
-    "swap_fee": "Option<Balance>",
-    "total_subsidy": "Option<Balance>",
-    "total_weight": "Option<u128>",
+    "baseAsset": "Option<Asset>",
+    "marketId": "MarketId",
+    "poolStatus": "PoolStatus",
+    "scoringRule": "ScoringRule",
+    "swapFee": "Option<Balance>",
+    "totalSubsidy": "Option<Balance>",
+    "totalWeight": "Option<u128>",
     "weights": "Option<BTreeMap<Asset, u128>>"
   },
   "PoolAssetEvent": {
@@ -314,17 +314,17 @@
   },
   "SerdeWrapper": "Balance",
   "SubsidyUntil": {
-    "market_id": "MarketId",
+    "marketId": "MarketId",
     "period": "MarketPeriod"
   },
   "SwapEvent": {
-    "asset_amount_in": "Balance",
-    "asset_amount_out": "Balance",
-    "asset_bound": "Balance",
-    "asset_in": "Asset",
-    "asset_out": "Asset",
+    "assetAmountIn": "Balance",
+    "assetAmountOut": "Balance",
+    "assetBound": "Balance",
+    "assetIn": "Asset",
+    "assetOut": "Asset",
     "cpep": "CommonPoolEventParams<AccountId>",
-    "max_price": "Balance"
+    "maxPrice": "Balance"
   },
   "Timespan": {
     "_enum": {
