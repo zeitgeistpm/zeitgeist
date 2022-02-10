@@ -53,7 +53,7 @@ cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.15", 
 nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-parachain-staking = { rev = "99e2470518bea47c95c40e6fd0f2884a1c45de45", git = "https://github.com/PureStake/moonbeam", optional = true }
+parachain-staking = { branch = "moonbeam-polkadot-v0.9.15-1", git = "https://github.com/PureStake/moonbeam", optional = true }
 parity-scale-codec = { optional = true, version = "2.0" }
 sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.15-1", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.15-1", git = "https://github.com/purestake/substrate", optional = true }
@@ -126,7 +126,7 @@ parachain = [
     "polkadot-test-service",
 ]
 runtime-benchmarks = [
-    "frame-benchmarking",
+    "frame-benchmarking/runtime-benchmarks",
     "frame-benchmarking-cli",
     "polkadot-service?/runtime-benchmarks",
     "zeitgeist-runtime/runtime-benchmarks"
