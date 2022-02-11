@@ -53,8 +53,8 @@ cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.16", 
 nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-parachain-staking = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/PureStake/moonbeam", optional = true }
-parity-scale-codec = { optional = true, version = "2.0" }
+parachain-staking = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", git = "https://github.com/PureStake/moonbeam", optional = true }
+parity-scale-codec = { optional = true, version = "3.0.0" }
 sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.132" }

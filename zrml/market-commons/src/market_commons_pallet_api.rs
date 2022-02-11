@@ -5,6 +5,7 @@ use frame_support::{
     traits::NamedReservableCurrency,
     Parameter,
 };
+use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::traits::AtLeast32Bit;
 use zeitgeist_primitives::types::{Market, PoolId, Report};
 
@@ -13,8 +14,8 @@ pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber: AtLeast32Bit;
     type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
-    type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + Member + Parameter;
-    type Moment: AtLeast32Bit + Copy + Default + Parameter;
+    type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + MaxEncodedLen + Member + Parameter;
+    type Moment: AtLeast32Bit + Copy + Default + Parameter + MaxEncodedLen;
 
     // Market
 

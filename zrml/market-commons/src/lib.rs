@@ -23,6 +23,7 @@ mod pallet {
         traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
+    use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
         traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member},
         ArithmeticError, DispatchError,
@@ -48,6 +49,7 @@ mod pallet {
         type MarketId: AtLeast32Bit
             + Copy
             + Default
+            + MaxEncodedLen
             + MaybeSerializeDeserialize
             + Member
             + Parameter;
@@ -100,6 +102,7 @@ mod pallet {
     impl<T> MarketCommonsPalletApi for Pallet<T>
     where
         T: Config,
+        <T as Config>::Timestamp: Time
     {
         type AccountId = T::AccountId;
         type BlockNumber = T::BlockNumber;
