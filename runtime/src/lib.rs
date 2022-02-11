@@ -60,6 +60,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 10,
+    state_version: 1,
 };
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -301,6 +302,7 @@ impl frame_system::Config for Runtime {
     type Header = generic::Header<BlockNumber, BlakeTwo256>;
     type Index = Index;
     type Lookup = AccountIdLookup<AccountId, ()>;
+    type MaxConsumers = frame_support::traits::ConstU32<16>
     type OnKilledAccount = ();
     type OnNewAccount = ();
     #[cfg(feature = "parachain")]

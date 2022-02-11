@@ -11,6 +11,7 @@ use crate::types::CategoryIndex;
     PartialOrd,
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
 )]
 pub enum OutcomeReport {
     Categorical(CategoryIndex),
