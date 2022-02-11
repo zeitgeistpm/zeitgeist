@@ -6,6 +6,7 @@ use crate::JurorStatus;
     Clone,
     Debug,
     PartialEq,
+    parity_scale_codec::MaxEncodedLen,
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
 )]

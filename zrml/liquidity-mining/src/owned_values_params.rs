@@ -16,8 +16,12 @@
     PartialOrd,
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
 )]
-pub struct OwnedValuesParams<BA, BN> {
+pub struct OwnedValuesParams<BA, BN> where
+    BA: parity_scale_codec::MaxEncodedLen,
+    BN: parity_scale_codec::MaxEncodedLen
+{
     /// The number of blocks an account participated in a market period.
     pub participated_blocks: BN,
     /// Owned amount of perpetual incentives. Won't go away when accounts exist early and is not
