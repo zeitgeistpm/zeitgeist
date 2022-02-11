@@ -56,6 +56,7 @@ impl<AI, BN, M> Market<AI, BN, M> {
     }
 }
 
+
 impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M> where
     AI: MaxEncodedLen,
     BN: MaxEncodedLen,
@@ -101,6 +102,7 @@ pub enum MarketCreation {
     Clone,
     Decode,
     Encode,
+    MaxEncodedLen,
     PartialEq,
     RuntimeDebug,
     TypeInfo,
@@ -246,6 +248,7 @@ pub struct Report<AccountId, BlockNumber> {
     PartialEq,
     Decode,
     Encode,
+    MaxEncodedLen,
     RuntimeDebug,
 )]
 pub struct SubsidyUntil<BN, MO, MI> {

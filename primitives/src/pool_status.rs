@@ -2,7 +2,6 @@
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    scale_info::TypeInfo,
     Clone,
     Copy,
     Debug,
@@ -12,6 +11,8 @@
     PartialOrd,
     parity_scale_codec::Decode,
     parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
+    scale_info::TypeInfo,
 )]
 pub enum PoolStatus {
     /// Shares can be normally negotiated.
