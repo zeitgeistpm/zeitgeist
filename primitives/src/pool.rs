@@ -1,16 +1,20 @@
 use crate::types::{Asset, PoolStatus};
 use alloc::{collections::BTreeMap, vec::Vec};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
+use sp_runtime::RuntimeDebug;
 
 #[derive(
-    scale_info::TypeInfo,
+    TypeInfo,
     Clone,
+    Encode,
     Eq,
+    Decode,
     PartialEq,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    sp_runtime::RuntimeDebug,
+    RuntimeDebug,
 )]
-pub struct Pool<Balance, MarketId> {
+pub struct Pool<Balance, MarketId>
+{
     pub assets: Vec<Asset<MarketId>>,
     pub base_asset: Option<Asset<MarketId>>,
     pub market_id: MarketId,
@@ -24,7 +28,7 @@ pub struct Pool<Balance, MarketId> {
 
 impl<Balance, MarketId> Pool<Balance, MarketId>
 where
-    MarketId: Ord,
+    MarketId: Ord
 {
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
         if let Some(weights) = &self.weights {
@@ -35,16 +39,32 @@ where
     }
 }
 
+impl<Balance, MarketId> MaxEncodedLen for Pool<Balance, MarketId> where
+    Balance: MaxEncodedLen,
+    MarketId: MaxEncodedLen,
+{
+    fn max_encoded_len() -> usize {
+        <Vec<Asset<MarketId>>>::max_encoded_len()
+            .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
+            .saturating_add(MarketId::max_encoded_len())
+            .saturating_add(PoolStatus::max_encoded_len())
+            // We assume that at max. a 512 bit hash function is used
+            .saturating_add(ScoringRule::max_encoded_len().saturating_mul(66))
+            .saturating_add(<Option<Balance>>::max_encoded_len()).saturating_mul(2)
+            .saturating_add(<Option<u128>>::max_encoded_len())
+            .saturating_add(<Option<BTreeMap<Asset<MarketId>, u128>>>::max_encoded_len())
+    }
+}
+
 #[derive(
-    scale_info::TypeInfo,
-    Copy,
+    TypeInfo,
     Clone,
+    Encode,
     Eq,
+    Decode,
+    MaxEncodedLen,
     PartialEq,
-    parity_scale_codec::MaxEncodedLen,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    sp_runtime::RuntimeDebug,
+    RuntimeDebug,
 )]
 pub enum ScoringRule {
     CPMM,
