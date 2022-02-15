@@ -1,8 +1,11 @@
-use crate::types::{Asset, PoolStatus};
+use crate::{
+    constants::MaxAssets,
+    types::{Asset, PoolStatus}
+};
 use alloc::{collections::BTreeMap, vec::Vec};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
 #[derive(
     TypeInfo,
@@ -13,7 +16,8 @@ use sp_runtime::RuntimeDebug;
     PartialEq,
     RuntimeDebug,
 )]
-pub struct Pool<Balance, MarketId>
+pub struct Pool<Balance, MarketId> where
+    MarketId: MaxEncodedLen
 {
     pub assets: Vec<Asset<MarketId>>,
     pub base_asset: Option<Asset<MarketId>>,
@@ -28,7 +32,7 @@ pub struct Pool<Balance, MarketId>
 
 impl<Balance, MarketId> Pool<Balance, MarketId>
 where
-    MarketId: Ord
+    MarketId: MaxEncodedLen + Ord
 {
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
         if let Some(weights) = &self.weights {
@@ -44,21 +48,28 @@ impl<Balance, MarketId> MaxEncodedLen for Pool<Balance, MarketId> where
     MarketId: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
-        <Vec<Asset<MarketId>>>::max_encoded_len()
+        let b_tree_map_size = 2usize.saturating_add(
+            MaxAssets::get().saturated_into::<usize>().saturating_mul(
+                <Asset<MarketId>>::max_encoded_len()
+                    .saturating_add(u128::max_encoded_len())
+            )
+        );
+
+        <Asset<MarketId>>::max_encoded_len().saturating_mul(MaxAssets::get().into())
             .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
             .saturating_add(MarketId::max_encoded_len())
             .saturating_add(PoolStatus::max_encoded_len())
-            // We assume that at max. a 512 bit hash function is used
-            .saturating_add(ScoringRule::max_encoded_len().saturating_mul(66))
+            .saturating_add(ScoringRule::max_encoded_len())
             .saturating_add(<Option<Balance>>::max_encoded_len()).saturating_mul(2)
             .saturating_add(<Option<u128>>::max_encoded_len())
-            .saturating_add(<Option<BTreeMap<Asset<MarketId>, u128>>>::max_encoded_len())
+            .saturating_add(b_tree_map_size)
     }
 }
 
 #[derive(
     TypeInfo,
     Clone,
+    Copy,
     Encode,
     Eq,
     Decode,
