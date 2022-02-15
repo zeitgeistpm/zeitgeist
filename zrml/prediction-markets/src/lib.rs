@@ -70,9 +70,10 @@ mod pallet {
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData, ops::RangeInclusive};
     use frame_support::{
+        BoundedVec,
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
@@ -300,6 +301,7 @@ mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::dispute(T::MaxDisputes::get()))]
+        #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
@@ -330,12 +332,12 @@ mod pallet {
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
             let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
-            <Disputes<T>>::mutate(market_id, |disputes| {
-                disputes.push(market_dispute.clone());
-            });
-            <MarketIdsPerDisputeBlock<T>>::mutate(curr_block_num, |ids| {
-                ids.push(market_id);
-            });
+            <Disputes<T>>::try_mutate(market_id, |disputes| {
+                disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
+            })?;
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
+                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+            })?;
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
                 MarketStatus::Disputed,
@@ -947,10 +949,7 @@ mod pallet {
         }
 
         /// Rejects a market that is waiting for approval from the advisory
-        /// committee.
-        ///
-        /// NOTE: Will slash the reserved `AdvisoryBond` from the market creator.
-        ///
+        /// committee.frame_support::BoundedVec
         #[pallet::weight(T::WeightInfo::reject_market())]
         pub fn reject_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
@@ -973,6 +972,7 @@ mod pallet {
         /// Reports the outcome of a market.
         ///
         #[pallet::weight(T::WeightInfo::report())]
+        #[transactional]
         pub fn report(
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
@@ -1021,9 +1021,9 @@ mod pallet {
                 Ok(())
             })?;
 
-            MarketIdsPerReportBlock::<T>::mutate(&current_block, |ids| {
-                ids.push(market_id);
-            });
+            MarketIdsPerReportBlock::<T>::try_mutate(&current_block, |ids| {
+                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+            })?;
 
             Self::deposit_event(Event::MarketReported(
                 market_id,
@@ -1263,6 +1263,8 @@ mod pallet {
         OutcomeMismatch,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
+        /// It was tried to append an item to storage beyond the boundaries.
+        StorageOverflow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
         /// Too many categories for a categorical market
@@ -1341,7 +1343,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
-        Vec<MarketDispute<T::AccountId, T::BlockNumber>>,
+        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
         ValueQuery,
     >;
 
@@ -1349,19 +1351,19 @@ mod pallet {
     /// A market only ends up here if it was disputed.
     #[pallet::storage]
     pub type MarketIdsPerDisputeBlock<T: Config> =
-        StorageMap<_, Twox64Concat, T::BlockNumber, Vec<MarketIdOf<T>>, ValueQuery>;
+        StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<MarketIdOf<T>, ConstU32<1024>>, ValueQuery>;
 
     /// A mapping of market identifiers to the block that they were reported on.
     #[pallet::storage]
     pub type MarketIdsPerReportBlock<T: Config> =
-        StorageMap<_, Twox64Concat, T::BlockNumber, Vec<MarketIdOf<T>>, ValueQuery>;
+        StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<MarketIdOf<T>, ConstU32<1024>>, ValueQuery>;
 
     /// Contains a list of all markets that are currently collecting subsidy and the deadline.
     // All the values are "cached" here. Results in data duplication, but speeds up the iteration
     // over every market significantly (otherwise 25µs per relevant market per block).
     #[pallet::storage]
     pub type MarketsCollectingSubsidy<T: Config> =
-        StorageValue<_, Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>, ValueQuery>;
+        StorageValue<_, BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<{ u32::MAX }>>, ValueQuery>;
 
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
@@ -1395,7 +1397,7 @@ mod pallet {
             if market.status == MarketStatus::Reported {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
                 MarketIdsPerReportBlock::<T>::mutate(&report.at, |ids| {
-                    remove_item::<MarketIdOf<T>>(ids, market_id);
+                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
             if market.status == MarketStatus::Disputed {
@@ -1403,9 +1405,9 @@ mod pallet {
                 if let Some(last_dispute) = disputes.last() {
                     let at = last_dispute.at;
                     let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(&at);
-                    remove_item::<MarketIdOf<T>>(&mut old_disputes_per_block, market_id);
+                    remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
                     MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
-                        remove_item::<MarketIdOf<T>>(ids, market_id);
+                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
                     });
                 }
             }
@@ -1918,7 +1920,7 @@ mod pallet {
 
             let mut weight_basis = 0;
             <MarketsCollectingSubsidy<T>>::mutate(
-                |e: &mut Vec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>>| {
+                |e: &mut BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, _>| {
                     weight_basis = T::WeightInfo::process_subsidy_collecting_markets_raw(
                         e.len().saturated_into(),
                     );
@@ -1936,7 +1938,7 @@ mod pallet {
             if let Some(last_dispute) = disputes.last() {
                 let at = last_dispute.at;
                 MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
-                    remove_item::<MarketIdOf<T>>(ids, market_id);
+                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
             Ok(())
@@ -1957,8 +1959,7 @@ mod pallet {
             let block = now.saturating_sub(dispute_period);
 
             // Resolve all regularly reported markets.
-            let reported_ids = MarketIdsPerReportBlock::<T>::get(&block);
-            for id in &reported_ids {
+            for id in MarketIdsPerReportBlock::<T>::get(&block).iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
@@ -1966,8 +1967,7 @@ mod pallet {
             }
 
             // Resolve any disputed markets.
-            let disputed_ids = MarketIdsPerDisputeBlock::<T>::get(&block);
-            for id in &disputed_ids {
+            for id in MarketIdsPerDisputeBlock::<T>::get(&block).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
@@ -2039,9 +2039,9 @@ mod pallet {
             )?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
-            <MarketsCollectingSubsidy<T>>::mutate(|markets| {
-                markets.push(SubsidyUntil { market_id, period: market.period.clone() })
-            });
+            <MarketsCollectingSubsidy<T>>::try_mutate(|markets| {
+                markets.try_push(SubsidyUntil { market_id, period: market.period.clone() }).map_err(|_| <Error<T>>::StorageOverflow)
+            })?;
 
             Ok(T::WeightInfo::start_subsidy(total_assets.saturated_into()))
         }
@@ -2074,7 +2074,7 @@ mod pallet {
         )
     }
 
-    fn remove_item<I: cmp::PartialEq>(items: &mut Vec<I>, item: &I) {
+    fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
         if let Some(pos) = items.iter().position(|i| i == item) {
             items.swap_remove(pos);
         }

@@ -28,7 +28,7 @@ pub struct Market<AI, BN, M> {
     /// Oracle that reports the outcome of this market.
     pub oracle: AI,
     /// Metadata for the market, usually a content address of IPFS
-    /// hosted JSON.
+    /// hosted JSON. Currently limited to 66 bytes (see `MaxEncodedLen` implenmentation)
     pub metadata: Vec<u8>,
     /// The type of the market.
     pub market_type: MarketType,

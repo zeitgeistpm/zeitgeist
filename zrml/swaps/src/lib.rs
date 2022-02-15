@@ -93,7 +93,7 @@ mod pallet {
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            Self::set_pool_as_stale(&market_type, pool_id, &outcome_report, &Default::default())?;
+            Self::set_pool_as_stale(&market_type, pool_id, &outcome_report, &Self::pool_account_id(pool_id))?;
             Ok(())
         }
 
