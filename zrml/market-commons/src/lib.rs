@@ -55,7 +55,7 @@ mod pallet {
             + Parameter;
 
         /// Time tracker
-        type Timestamp: Time;
+        type Timestamp: Time<Moment = u64>;
     }
 
     #[pallet::error]

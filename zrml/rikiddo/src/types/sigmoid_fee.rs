@@ -7,6 +7,8 @@ use crate::{
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 #[cfg(feature = "arbitrary")]
 use core::mem;
 use frame_support::dispatch::{Decode, Encode};
@@ -32,7 +34,7 @@ use substrate_fixed::{
 /// function if uncertain about which values to take.
 ///
 /// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct FeeSigmoidConfig<FS: FixedSigned> {
     /// Parameter to fine tune the fee calcultation (refer to example in paper).
     pub m: FS,
@@ -108,7 +110,7 @@ where
 /// [configuration values](struct@FeeSigmoidConfig)
 ///
 /// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,

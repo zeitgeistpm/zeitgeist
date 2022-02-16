@@ -190,16 +190,18 @@ pub(crate) fn market_mock<T>(
 where
     T: crate::Config,
 {
+    use frame_support::traits::Get;
+    use sp_runtime::traits::AccountIdConversion;
     use zeitgeist_primitives::types::ScoringRule;
 
     zeitgeist_primitives::types::Market {
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
-        creator: T::AccountId::default(),
+        creator: T::PalletId::get().into_account(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
         mdm: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
         metadata: Default::default(),
-        oracle: T::AccountId::default(),
+        oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
         report: None,
         resolved_outcome: None,

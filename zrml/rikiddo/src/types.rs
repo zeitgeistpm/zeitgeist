@@ -6,6 +6,8 @@ use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, Into
 use alloc::{borrow::ToOwned, string::ToString};
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 #[cfg(feature = "arbitrary")]
 use core::mem;
 use core::{cmp::Ordering, convert::TryFrom};
@@ -34,7 +36,7 @@ pub use sigmoid_fee::*;
 pub type UnixTimestamp = u64;
 
 /// A 2-tuple containing an unix timestamp and a volume.
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TimestampedVolume<F: Fixed> {
     /// The timestamp of the volume.
     pub timestamp: UnixTimestamp,
@@ -86,9 +88,7 @@ cfg_if::cfg_if! {
 
 /// A enum that wrappes an amount of time in different units.
 /// An enum that wrappes an amount of time in different units.
-#[derive(
-    scale_info::TypeInfo, Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd,
-)]
+#[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, PartialOrd, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Timespan {
     /// Contains seconds.
