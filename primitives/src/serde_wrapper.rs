@@ -22,7 +22,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 )]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub struct SerdeWrapper<B: parity_scale_codec::MaxEncodedLen> (
+pub struct SerdeWrapper<B: parity_scale_codec::MaxEncodedLen>(
     #[cfg_attr(feature = "std", serde(bound(serialize = "B: std::fmt::Display")))]
     #[cfg_attr(feature = "std", serde(serialize_with = "serialize_as_string"))]
     #[cfg_attr(feature = "std", serde(bound(deserialize = "B: std::str::FromStr")))]

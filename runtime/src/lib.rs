@@ -25,10 +25,10 @@ pub use parameters::*;
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, Everything},
+    traits::{Contains, EnsureOneOf, Everything},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
-use frame_system::{EnsureOneOf, EnsureRoot};
+use frame_system::{EnsureRoot};
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
@@ -80,7 +80,6 @@ type Address = sp_runtime::MultiAddress<AccountId, ()>;
 type AdvisoryCommitteeCollectiveInstance = pallet_collective::Instance1;
 type AdvisoryCommitteeMembershipInstance = pallet_membership::Instance1;
 type EnsureRootOrMoreThanHalfOfAdvisoryCommittee = EnsureOneOf<
-    AccountId,
     EnsureRoot<AccountId>,
     pallet_collective::EnsureProportionMoreThan<
         _1,
@@ -316,7 +315,7 @@ impl frame_system::Config for Runtime {
     type Header = generic::Header<BlockNumber, BlakeTwo256>;
     type Index = Index;
     type Lookup = AccountIdLookup<AccountId, ()>;
-    type MaxConsumers = frame_support::traits::ConstU32<16>
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
     #[cfg(feature = "parachain")]

@@ -1,23 +1,16 @@
 use crate::{
     constants::MaxAssets,
-    types::{Asset, PoolStatus}
+    types::{Asset, PoolStatus},
 };
 use alloc::{collections::BTreeMap, vec::Vec};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
-#[derive(
-    TypeInfo,
-    Clone,
-    Encode,
-    Eq,
-    Decode,
-    PartialEq,
-    RuntimeDebug,
-)]
-pub struct Pool<Balance, MarketId> where
-    MarketId: MaxEncodedLen
+#[derive(TypeInfo, Clone, Encode, Eq, Decode, PartialEq, RuntimeDebug)]
+pub struct Pool<Balance, MarketId>
+where
+    MarketId: MaxEncodedLen,
 {
     pub assets: Vec<Asset<MarketId>>,
     pub base_asset: Option<Asset<MarketId>>,
@@ -32,7 +25,7 @@ pub struct Pool<Balance, MarketId> where
 
 impl<Balance, MarketId> Pool<Balance, MarketId>
 where
-    MarketId: MaxEncodedLen + Ord
+    MarketId: MaxEncodedLen + Ord,
 {
     pub fn bound(&self, asset: &Asset<MarketId>) -> bool {
         if let Some(weights) = &self.weights {
@@ -43,40 +36,31 @@ where
     }
 }
 
-impl<Balance, MarketId> MaxEncodedLen for Pool<Balance, MarketId> where
+impl<Balance, MarketId> MaxEncodedLen for Pool<Balance, MarketId>
+where
     Balance: MaxEncodedLen,
     MarketId: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
-        let b_tree_map_size = 2usize.saturating_add(
-            MaxAssets::get().saturated_into::<usize>().saturating_mul(
-                <Asset<MarketId>>::max_encoded_len()
-                    .saturating_add(u128::max_encoded_len())
-            )
-        );
+        let b_tree_map_size =
+            2usize.saturating_add(MaxAssets::get().saturated_into::<usize>().saturating_mul(
+                <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len()),
+            ));
 
-        <Asset<MarketId>>::max_encoded_len().saturating_mul(MaxAssets::get().into())
+        <Asset<MarketId>>::max_encoded_len()
+            .saturating_mul(MaxAssets::get().saturated_into::<usize>())
             .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
             .saturating_add(MarketId::max_encoded_len())
             .saturating_add(PoolStatus::max_encoded_len())
             .saturating_add(ScoringRule::max_encoded_len())
-            .saturating_add(<Option<Balance>>::max_encoded_len()).saturating_mul(2)
+            .saturating_add(<Option<Balance>>::max_encoded_len())
+            .saturating_mul(2)
             .saturating_add(<Option<u128>>::max_encoded_len())
             .saturating_add(b_tree_map_size)
     }
 }
 
-#[derive(
-    TypeInfo,
-    Clone,
-    Copy,
-    Encode,
-    Eq,
-    Decode,
-    MaxEncodedLen,
-    PartialEq,
-    RuntimeDebug,
-)]
+#[derive(TypeInfo, Clone, Copy, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug)]
 pub enum ScoringRule {
     CPMM,
     RikiddoSigmoidFeeMarketEma,

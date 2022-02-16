@@ -1,6 +1,6 @@
 //! RPC interface for the Swaps pallet.
 
-use core::{fmt, str::FromStr};
+use core::{fmt::Display, str::FromStr};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
 use parity_scale_codec::Codec;
@@ -18,9 +18,9 @@ pub use zrml_swaps_runtime_api::SwapsApi as SwapsRuntimeApi;
 #[rpc]
 pub trait SwapsApi<BlockHash, BlockNumber, PoolId, AccountId, Balance, MarketId>
 where
-    Balance: FromStr + fmt::Display,
-    MarketId: FromStr + fmt::Display,
-    PoolId: FromStr + fmt::Display,
+    Balance: FromStr + Display + parity_scale_codec::MaxEncodedLen,
+    MarketId: FromStr + Display + parity_scale_codec::MaxEncodedLen,
+    PoolId: FromStr + Display,
 {
     #[rpc(name = "swaps_poolSharesId")]
     fn pool_shares_id(
@@ -103,8 +103,8 @@ where
     C::Api: SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>,
     PoolId: Clone + Codec + MaybeDisplay + MaybeFromStr,
     AccountId: Codec,
-    Balance: Codec + MaybeDisplay + MaybeFromStr,
-    MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr,
+    Balance: Codec + MaybeDisplay + MaybeFromStr + parity_scale_codec::MaxEncodedLen,
+    MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr + parity_scale_codec::MaxEncodedLen,
 {
     fn pool_shares_id(
         &self,
