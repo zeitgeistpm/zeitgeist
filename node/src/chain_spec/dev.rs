@@ -61,6 +61,7 @@ pub fn dev_config(
         vec![],
         None,
         None,
+        None,
         Some(token_properties("DEV")),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {

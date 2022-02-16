@@ -28,7 +28,7 @@ use frame_support::{
     traits::{Contains, EnsureOneOf, Everything},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
-use frame_system::{EnsureRoot};
+use frame_system::EnsureRoot;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
@@ -101,7 +101,7 @@ type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 #[cfg(feature = "txfilter")]
 type SignedExtra = (
     TransactionCallFilter<IsCallable, Call>,
-    frame_system::CheckNonZeroSender::<Runtime>,
+    frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -113,7 +113,7 @@ type SignedExtra = (
 
 #[cfg(not(feature = "txfilter"))]
 type SignedExtra = (
-    frame_system::CheckNonZeroSender::<Runtime>,
+    frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -153,7 +153,7 @@ where
         let tip = 0;
         let extra: SignedExtra = (
             <TransactionCallFilter<IsCallable, Call>>::new(),
-            <frame_system::CheckNonZeroSender::<Runtime>>::new(),
+            <frame_system::CheckNonZeroSender<Runtime>>::new(),
             <frame_system::CheckSpecVersion<Runtime>>::new(),
             <frame_system::CheckTxVersion<Runtime>>::new(),
             <frame_system::CheckGenesis<Runtime>>::new(),
