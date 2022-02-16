@@ -10,6 +10,8 @@ use crate::{
 use alloc::vec::Vec;
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use frame_support::dispatch::{Decode, Encode};
 use hashbrown::HashMap;
@@ -33,7 +35,7 @@ use substrate_fixed::{
 use super::TimestampedVolume;
 
 /// Configuration values used within the Rikiddo core functions.
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct RikiddoConfig<FI: Fixed> {
     /// An initial fee that is used whenever the fee cannot be calculated.
     pub initial_fee: FI,
@@ -125,7 +127,7 @@ where
 }
 
 /// Configuration values used within the Rikiddo core functions.
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct RikiddoSigmoidMV<FU, FS, FE, MA>
 where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>>,

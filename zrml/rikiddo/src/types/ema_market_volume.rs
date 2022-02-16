@@ -6,6 +6,8 @@ use crate::{
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbitraryResult, Unstructured};
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 #[cfg(feature = "arbitrary")]
 use core::mem;
 use frame_support::dispatch::{Decode, Encode};
@@ -22,7 +24,7 @@ use substrate_fixed::{
 };
 
 /// Configuration values used during the calculation of the exponenial moving average.
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct EmaConfig<FI: Fixed> {
     /// The duration of one ema period.
     pub ema_period: Timespan,
@@ -113,7 +115,7 @@ impl<FU: FixedUnsigned + LossyFrom<FixedU32<U24>>> Default for EmaConfig<FU> {
 }
 
 /// The current state of an instance of the [`EmaMarketVolume`](struct@EmaMarketVolume) struct.
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub enum MarketVolumeState {
     /// The first state before any data was received.
@@ -126,7 +128,7 @@ pub enum MarketVolumeState {
 
 /// The EmaMarketVolume `struct` offers functionality to collect and evaluate market volume data
 /// into an exponential moving average value.
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct EmaMarketVolume<FU: FixedUnsigned> {
     /// See [`EmaConfig`](struct@EmaConfig).
     pub config: EmaConfig<FU>,
