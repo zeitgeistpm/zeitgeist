@@ -45,13 +45,6 @@ impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
-	// Storage: System Digest (r:1 w:1)
-	// Storage: unknown [0x3a6368616e6765735f74726965] (r:0 w:1)
-	fn set_changes_trie_config() -> Weight {
-		(15_640_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
 	// Storage: Skipped Metadata (r:0 w:0)
 	fn set_storage(i: u32, ) -> Weight {
 		(884_000 as Weight)

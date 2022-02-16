@@ -10,14 +10,7 @@ use sp_runtime::RuntimeDebug;
 /// * `AI`: Account Id
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
-#[derive(
-    Clone,
-    Decode,
-    Encode,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Decode, Encode, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Market<AI, BN, M> {
     /// Creator of this market.
     pub creator: AI,
@@ -28,7 +21,7 @@ pub struct Market<AI, BN, M> {
     /// Oracle that reports the outcome of this market.
     pub oracle: AI,
     /// Metadata for the market, usually a content address of IPFS
-    /// hosted JSON. Currently limited to 66 bytes (see `MaxEncodedLen` implenmentation)
+    /// hosted JSON. Currently limited to 66 bytes (see `MaxEncodedLen` implementation)
     pub metadata: Vec<u8>,
     /// The type of the market.
     pub market_type: MarketType,
@@ -56,11 +49,11 @@ impl<AI, BN, M> Market<AI, BN, M> {
     }
 }
 
-
-impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M> where
+impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M>
+where
     AI: MaxEncodedLen,
     BN: MaxEncodedLen,
-    M: MaxEncodedLen
+    M: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
         AI::max_encoded_len()
@@ -80,15 +73,7 @@ impl<AI, BN, M> MaxEncodedLen for Market<AI, BN, M> where
 }
 
 /// Defines the type of market creation.
-#[derive(
-    Clone,
-    Decode,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketCreation {
     // A completely permissionless market that requires a higher
     // validity bond. May resolve as `Invalid`.
@@ -98,15 +83,7 @@ pub enum MarketCreation {
     Advised,
 }
 
-#[derive(
-    Clone,
-    Decode,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
@@ -114,15 +91,7 @@ pub struct MarketDispute<AccountId, BlockNumber> {
 }
 
 /// How a market should resolve disputes
-#[derive(
-    Clone,
-    Decode,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketDisputeMechanism<AI> {
     Authorized(AI),
     Court,
@@ -141,15 +110,7 @@ pub enum MarketDisputeMechanism<AI> {
 /// So 1..5 correctly outputs 4 (`5 - 1`) while 1..=5 would incorrectly output the same 4.
 /// 3. With inclusive ranges it is not possible to express empty ranges and this feature
 /// mostly conflicts with existent tests and corner cases.
-#[derive(
-    Clone,
-    Decode,
-    Encode,
-    Eq,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketPeriod<BN, M> {
     Block(Range<BN>),
     Timestamp(Range<M>),
@@ -163,17 +124,7 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
 }
 
 /// Defines the state of the market.
-#[derive(
-    Clone,
-    Copy,
-    Decode,
-    Encode,
-    Eq,
-    MaxEncodedLen,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketStatus {
     /// The market has been proposed and is either waiting for approval
     /// from the governing committee, or hasn't reach its delay yet.
@@ -199,14 +150,7 @@ pub enum MarketStatus {
 
 /// Defines the type of market.
 /// All markets also have themin_assets_out `Invalid` resolution.
-#[derive(
-    Clone,
-    Decode,
-    Encode,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Decode, Encode, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketType {
     /// A market with a number of categorical outcomes.
     Categorical(u16),
@@ -214,22 +158,13 @@ pub enum MarketType {
     Scalar(RangeInclusive<u128>),
 }
 
-impl MaxEncodedLen for MarketType
-{
+impl MaxEncodedLen for MarketType {
     fn max_encoded_len() -> usize {
         u128::max_encoded_len().saturating_mul(2)
     }
 }
 
-#[derive(
-    Clone,
-    Decode,
-    Encode,
-    MaxEncodedLen,
-    PartialEq,
-    RuntimeDebug,
-    TypeInfo,
-)]
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
@@ -241,16 +176,7 @@ pub struct Report<AccountId, BlockNumber> {
 /// * `BN`: Block Number
 /// * `MO`: Moment (Time moment)
 /// * `MI`: Market Id
-#[derive(
-    TypeInfo,
-    Clone,
-    Eq,
-    PartialEq,
-    Decode,
-    Encode,
-    MaxEncodedLen,
-    RuntimeDebug,
-)]
+#[derive(TypeInfo, Clone, Eq, PartialEq, Decode, Encode, MaxEncodedLen, RuntimeDebug)]
 pub struct SubsidyUntil<BN, MO, MI> {
     /// Market id of associated market.
     pub market_id: MI,

@@ -11,6 +11,12 @@ pub trait MarketId:
 }
 
 impl<T> MarketId for T where
-    T: AtLeast32Bit + Copy + Default + MaxEncodedLen + MaybeSerializeDeserialize + Member + Parameter
+    T: AtLeast32Bit
+        + Copy
+        + Default
+        + MaxEncodedLen
+        + MaybeSerializeDeserialize
+        + Member
+        + Parameter
 {
 }
