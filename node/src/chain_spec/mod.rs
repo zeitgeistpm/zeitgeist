@@ -23,8 +23,10 @@ use zeitgeist_runtime::SS58Prefix;
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::{Perbill, Percent},
-    zeitgeist_primitives::constants::{ztg, DefaultBlocksPerRound, MILLISECS_PER_BLOCK},
-    zeitgeist_runtime::{CollatorDeposit, MinCollatorStake},
+    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
+    zeitgeist_runtime::{
+        CollatorDeposit, DefaultBlocksPerRound, MinCollatorStk, PolkadotXcmConfig,
+    },
 };
 
 cfg_if::cfg_if! {
@@ -36,7 +38,7 @@ cfg_if::cfg_if! {
         const DEFAULT_INITIAL_CROWDLOAN_FUNDS_TESTNET: u128 = 100 * BASE;
 
         // Mainnet
-        const DEFAULT_STAKING_AMOUNT_MAINNET: u128 = MinCollatorStake::get();
+        const DEFAULT_STAKING_AMOUNT_MAINNET: u128 = MinCollatorStk::get();
         const DEFAULT_COLLATOR_BALANCE_MAINNET: Option<u128> =
             DEFAULT_STAKING_AMOUNT_MAINNET.checked_add(CollatorDeposit::get());
         const DEFAULT_INITIAL_CROWDLOAN_FUNDS_MAINNET: u128 = 0;
@@ -140,16 +142,17 @@ fn generic_genesis(
                 .map(|(account, _, bond)| (account, bond))
                 .collect(),
             inflation_config: acs.inflation_info,
-            nominations: acs.nominations,
+            delegations: acs.nominations,
         },
         #[cfg(feature = "parachain")]
         parachain_system: Default::default(),
+        #[cfg(feature = "parachain")]
+        // Default should use the pallet configuration
+        polkadot_xcm: PolkadotXcmConfig::default(),
         sudo: zeitgeist_runtime::SudoConfig { key: root_key },
-        system: zeitgeist_runtime::SystemConfig {
-            code: wasm_binary.to_vec(),
-            changes_trie_config: Default::default(),
-        },
+        system: zeitgeist_runtime::SystemConfig { code: wasm_binary.to_vec() },
         treasury: Default::default(),
+        transaction_payment: Default::default(),
         tokens: Default::default(),
         vesting: Default::default(),
     }

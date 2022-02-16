@@ -209,7 +209,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         );
 
         let parachain_id = cumulus_primitives_core::ParaId::from(
-            cli.run.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
+            cli.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
         );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<
@@ -242,7 +242,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
         match config.role {
-            sc_cli::Role::Light => crate::service::new_light(config),
+            sc_cli::Role::Light => return Err("Light client not supported!".into()),
             _ => crate::service::new_full(config),
         }
         .map_err(sc_cli::Error::Service)

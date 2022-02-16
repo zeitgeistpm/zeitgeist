@@ -18,6 +18,8 @@ mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
+#[cfg(feature = "parachain")]
+pub use parachain_params::*;
 pub use parameters::*;
 
 use alloc::{boxed::Box, vec, vec::Vec};
@@ -47,8 +49,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
+    frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
-    parachain_params::*,
 };
 
 #[cfg(feature = "txfilter")]
@@ -203,7 +205,7 @@ macro_rules! create_zeitgeist_runtime {
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+                TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
 
@@ -249,7 +251,7 @@ create_zeitgeist_runtime!(
     // XCM
     CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 70,
     DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
-    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
+    PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 72,
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
 
     // Third-party
@@ -336,7 +338,6 @@ impl pallet_aura::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl pallet_author_inherent::Config for Runtime {
     type AccountLookup = AuthorMapping;
-    type AuthorId = NimbusId;
     type CanAuthor = AuthorFilter;
     type EventHandler = ParachainStaking;
     type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
@@ -344,7 +345,6 @@ impl pallet_author_inherent::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_author_mapping::Config for Runtime {
-    type AuthorId = NimbusId;
     type DepositAmount = CollatorDeposit;
     type DepositCurrency = Balances;
     type Event = Event;
@@ -400,25 +400,28 @@ impl pallet_xcm::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl parachain_staking::Config for Runtime {
+    type CandidateBondLessDelay = CandidateBondLessDelay;
     type Currency = Balances;
     type DefaultBlocksPerRound = DefaultBlocksPerRound;
     type DefaultCollatorCommission = DefaultCollatorCommission;
     type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
+    type DelegationBondLessDelay = DelegationBondLessDelay;
     type Event = Event;
     type LeaveCandidatesDelay = LeaveCandidatesDelay;
-    type LeaveNominatorsDelay = LeaveNominatorsDelay;
-    type MaxCollatorsPerNominator = MaxCollatorsPerNominator;
-    type MaxNominatorsPerCollator = MaxNominatorsPerCollator;
+    type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
+    type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
+    type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+    type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
     type MinBlocksPerRound = MinBlocksPerRound;
-    type MinCollatorCandidateStk = MinCollatorStake;
-    type MinCollatorStk = MinCollatorStake;
-    type MinNomination = MinNominatorStake;
-    type MinNominatorStk = MinNominatorStake;
+    type MinCandidateStk = MinCollatorStk;
+    type MinCollatorStk = MinCollatorStk;
+    type MinDelegation = MinDelegatorStk;
+    type MinDelegatorStk = MinDelegatorStk;
     type MinSelectedCandidates = MinSelectedCandidates;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
-    type RevokeNominationDelay = RevokeNominationDelay;
+    type RevokeDelegationDelay = RevokeDelegationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
-    type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
+    type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -450,8 +453,10 @@ impl pallet_crowdloan_rewards::Config for Runtime {
     type MinimumReward = MinimumReward;
     type RelayChainAccountId = AccountId;
     type RewardCurrency = Balances;
+    type RewardAddressAssociateOrigin = EnsureSigned<Self::AccountId>;
     type RewardAddressChangeOrigin = frame_system::EnsureSigned<Self::AccountId>;
     type RewardAddressRelayVoteThreshold = RelaySignaturesThreshold;
+    type SignatureNetworkIdentifier = SignatureNetworkIdentifier;
     type VestingBlockNumber = cumulus_primitives_core::relay_chain::BlockNumber;
     type VestingBlockProvider =
         cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
@@ -554,6 +559,7 @@ impl pallet_treasury::Config for Runtime {
 impl pallet_utility::Config for Runtime {
     type Event = Event;
     type Call = Call;
+    type PalletsOrigin = OriginCaller;
     type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
@@ -684,7 +690,15 @@ impl_runtime_apis! {
     }
 
     #[cfg(feature = "parachain")]
-    impl nimbus_primitives::NimbusApi<Block, NimbusId> for Runtime {
+    // Required to satisify trait bounds at the client implementation.
+    impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
+        fn can_author(_: NimbusId, _: u32, _: &<Block as BlockT>::Header) -> bool {
+            panic!("AuthorFilterAPI is no longer supported. Please update your client.")
+        }
+    }
+
+    #[cfg(feature = "parachain")]
+    impl nimbus_primitives::NimbusApi<Block> for Runtime {
         fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
             // work during block initialization. Therefore we initialize it here to match
@@ -709,13 +723,14 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_benchmarking::{list_benchmark, baseline::Pallet as BaselineBench, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use orml_benchmarking::list_benchmark as orml_list_benchmark;
 
             let mut list = Vec::<BenchmarkList>::new();
 
+            list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
             list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
             orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
             orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
@@ -750,12 +765,13 @@ impl_runtime_apis! {
             config: frame_benchmarking::BenchmarkConfig,
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
             use frame_benchmarking::{
-                add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
+                add_benchmark, baseline::{Pallet as BaselineBench, Config as BaselineConfig}, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
             use orml_benchmarking::{add_benchmark as orml_add_benchmark};
 
             impl frame_system_benchmarking::Config for Runtime {}
+            impl BaselineConfig for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac")
@@ -780,6 +796,7 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
+            add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
             orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);

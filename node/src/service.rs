@@ -10,7 +10,7 @@ use zeitgeist_runtime::opaque::Block;
 #[cfg(feature = "parachain")]
 pub use service_parachain::{new_full, new_partial, ParachainPartialComponents};
 #[cfg(not(feature = "parachain"))]
-pub use service_standalone::{new_full, new_light, new_partial};
+pub use service_standalone::{new_full, new_partial};
 
 pub struct ExecutorDispatch;
 
@@ -65,7 +65,8 @@ cfg_if::cfg_if! {
         /// Additional APIs for parachain runtimes
         pub trait AdditionalRuntimeApiCollection:
             sp_api::ApiExt<Block>
-            + nimbus_primitives::NimbusApi<Block, nimbus_primitives::NimbusId>
+            + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
+            + nimbus_primitives::NimbusApi<Block>
             + cumulus_primitives_core::CollectCollationInfo<Block>
         where
             <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
@@ -75,7 +76,8 @@ cfg_if::cfg_if! {
         impl<Api> AdditionalRuntimeApiCollection for Api
         where
             Api: sp_api::ApiExt<Block>
-                + nimbus_primitives::NimbusApi<Block, nimbus_primitives::NimbusId>
+                + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
+                + nimbus_primitives::NimbusApi<Block>
                 + cumulus_primitives_core::CollectCollationInfo<Block>,
             <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {

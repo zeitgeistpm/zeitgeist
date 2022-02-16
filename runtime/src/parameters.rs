@@ -13,7 +13,7 @@ use frame_support::{
     },
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-use sp_runtime::{Perbill, Percent};
+use sp_runtime::Perbill;
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
@@ -37,21 +37,6 @@ parameter_types! {
   pub const MaxRegistrars: u32 = 8;
   pub const MaxSubAccounts: u32 = 64;
   pub const SubAccountDeposit: Balance = 2 * BASE;
-
-  // Staking
-  pub const CollatorDeposit: Balance = 2 * BASE;
-  pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
-  pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
-  pub const LeaveCandidatesDelay: u32 = 2;
-  pub const LeaveNominatorsDelay: u32 = 2;
-  pub const MaxCollatorsPerNominator: u32 = 16;
-  pub const MaxNominatorsPerCollator: u32 = 32;
-  pub const MinBlocksPerRound: u32 = (BLOCKS_PER_DAY / 6) as _;
-  pub const MinCollatorStake: u128 = 64 * BASE;
-  pub const MinNominatorStake: u128 = BASE / 2;
-  pub const MinSelectedCandidates: u32 = 8;
-  pub const RevokeNominationDelay: u32 = 2;
-  pub const RewardPaymentDelay: u32 = 2;
 
   // System
   pub const SS58Prefix: u8 = 73;
