@@ -28,6 +28,7 @@ pub fn zeitgeist_staging_config(
         telemetry_endpoints(),
         Some("zeitgeist"),
         Some(token_properties("ZTG")),
+        None,
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "kusama".into(),

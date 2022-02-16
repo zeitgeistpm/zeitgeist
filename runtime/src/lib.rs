@@ -26,7 +26,7 @@ use frame_support::{
     traits::Contains,
     weights::{constants::RocksDbWeight, IdentityFee},
 };
-use frame_system::{EnsureRoot};
+use frame_system::EnsureRoot;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,

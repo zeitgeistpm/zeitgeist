@@ -9,6 +9,7 @@ use super::*;
 use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
+    BoundedVec,
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin, Get, Hooks},
 };
@@ -422,7 +423,7 @@ benchmarks! {
             period: MarketPeriod::Block(T::BlockNumber::one()..T::BlockNumber::one())
         };
 
-        let markets = vec![market_info; a as usize];
+        let markets = BoundedVec::try_from(vec![market_info; a as usize]).unwrap();
         <MarketsCollectingSubsidy<T>>::put(markets);
     }: {
         Pallet::<T>::process_subsidy_collecting_markets(
