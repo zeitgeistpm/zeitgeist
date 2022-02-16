@@ -82,12 +82,13 @@ type Executive = frame_executive::Executive<
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
-    AllPallets,
+    AllPalletsWithSystem,
 >;
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 
 type SignedExtra = (
+    frame_system::CheckNonZeroSender::<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -191,7 +192,7 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 impl cumulus_pallet_parachain_system::Config for Runtime {
     type DmpMessageHandler = DmpQueue;
     type Event = Event;
-    type OnValidationData = ();
+    type OnSystemEvent = ();
     type OutboundXcmpMessageSource = XcmpQueue;
     type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
     type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
@@ -209,6 +210,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
     type Event = Event;
+    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
     type VersionWrapper = ();
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
@@ -537,6 +539,7 @@ impl pallet_treasury::Config for Runtime {
     type PalletId = TreasuryPalletId;
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ProposalBondMaximum;
     type RejectOrigin = EnsureRoot<AccountId>;
     type SpendFunds = ();
     type SpendPeriod = SpendPeriod;
@@ -671,8 +674,10 @@ impl zrml_swaps::Config for Runtime {
 impl_runtime_apis! {
     #[cfg(feature = "parachain")]
     impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-        fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-            ParachainSystem::collect_collation_info()
+        fn collect_collation_info(
+            header: &<Block as BlockT>::Header
+        ) -> cumulus_primitives_core::CollationInfo {
+            ParachainSystem::collect_collation_info(header)
         }
     }
 
@@ -686,21 +691,47 @@ impl_runtime_apis! {
 
     #[cfg(feature = "parachain")]
     impl nimbus_primitives::NimbusApi<Block> for Runtime {
-        fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
+        fn can_author(
+            author: nimbus_primitives::NimbusId,
+            slot: u32,
+            parent_header: &<Block as BlockT>::Header
+        ) -> bool {
+            let block_number = parent_header.number + 1;
+
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
             // work during block initialization. Therefore we initialize it here to match
             // the state it will be in when the next block is being executed.
             use frame_support::traits::OnInitialize;
             System::initialize(
-                &parent_header.number.saturating_add(1),
+                &block_number,
                 &parent_header.hash(),
                 &parent_header.digest,
-                frame_system::InitKind::Inspection
             );
-            RandomnessCollectiveFlip::on_initialize(System::block_number());
+            RandomnessCollectiveFlip::on_initialize(block_number);
 
-            // And now the actual prediction call
-            AuthorInherent::can_author(&author, &slot)
+            // Because the staking solution calculates the next staking set at the beginning
+            // of the first block in the new round, the only way to accurately predict the
+            // authors is to compute the selection during prediction.
+            if parachain_staking::Pallet::<Self>::round().should_update(block_number) {
+                // get author account id
+                use nimbus_primitives::AccountLookup;
+                let author_account_id = if let Some(account) =
+                    pallet_author_mapping::Pallet::<Self>::lookup_account(&author) {
+                    account
+                } else {
+                    // return false if author mapping not registered like in can_author impl
+                    return false
+                };
+                // predict eligibility post-selection by computing selection results now
+                let (eligible, _) =
+                    pallet_author_slot_filter::compute_pseudo_random_subset::<Self>(
+                        parachain_staking::Pallet::<Self>::compute_top_candidates(),
+                        &slot
+                    );
+                eligible.contains(&author_account_id)
+            } else {
+                AuthorInherent::can_author(&author, &slot)
+            }
         }
     }
 
