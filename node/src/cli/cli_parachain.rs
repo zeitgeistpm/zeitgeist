@@ -68,9 +68,15 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         self.base.base.import_params()
     }
 
-    fn init<C>(&self) -> sc_cli::Result<()>
+    fn init<F>(
+        &self,
+        _support_url: &String,
+        _impl_version: &String,
+        _logger_hook: F,
+        _config: &sc_service::Configuration,
+    ) -> sc_cli::Result<()>
     where
-        C: SubstrateCli,
+        F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
     {
         unreachable!("PolkadotCli is never initialized; qed");
     }
@@ -87,12 +93,15 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         self.base.base.network_params()
     }
 
-    fn prometheus_config(
-        &self,
-        default_listen_port: u16,
-    ) -> sc_cli::Result<Option<PrometheusConfig>> {
-        self.base.base.prometheus_config(default_listen_port)
-    }
+	fn prometheus_config(
+		&self,
+		default_listen_port: u16,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> sc_cli::Result<Option<PrometheusConfig>> {
+		self.base
+			.base
+			.prometheus_config(default_listen_port, chain_spec)
+	}
 
     fn role(&self, is_dev: bool) -> sc_cli::Result<sc_service::Role> {
         self.base.base.role(is_dev)
