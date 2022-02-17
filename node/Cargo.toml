@@ -42,11 +42,14 @@ frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.16", git = "https://
 
 cumulus-client-cli = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
 cumulus-client-collator = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-consensus-common = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
 cumulus-client-consensus-relay-chain = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
 cumulus-client-network = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
 cumulus-client-service = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
 cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
 cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-relay-chain-interface = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-relay-chain-local = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
 
 # Parachain
 
@@ -56,9 +59,12 @@ pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.16", default-feature
 parachain-staking = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", git = "https://github.com/PureStake/moonbeam", optional = true }
 parity-scale-codec = { optional = true, version = "3.0.0" }
 sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
+sc-network = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.132" }
 sp-trie = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
+sp-keystore = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
+substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 
 # Polkadot
 
@@ -98,11 +104,15 @@ parachain = [
 
     "cumulus-client-cli",
     "cumulus-client-collator",
+    "cumulus-client-consensus-common",
     "cumulus-client-consensus-relay-chain",
     "cumulus-client-network",
     "cumulus-client-service",
     "cumulus-primitives-core",
     "cumulus-primitives-parachain-inherent",
+    "cumulus-relay-chain-interface",
+    "cumulus-relay-chain-local",
+    
 
     # Parachain
 
@@ -113,9 +123,12 @@ parachain = [
     "parachain-staking",
     "parity-scale-codec",
     "sc-chain-spec",
+    "sc-network",
     "sc-tracing",
     "serde",
+    "sp-keystore",
     "sp-trie",
+    "substrate-prometheus-endpoint",
 
     # Polkadot
 
