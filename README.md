@@ -17,20 +17,22 @@ resolution. Additionally, Zeitgeist is a protocol for efficient trading of predi
 market shares and will one day become the backbone of the decentralized finance ecosystem
 by allowing for traders to create complex financial contracts on virtually _anything_.
 
+---
 ## Content
 
 
 - [Modules](#Modules)
 - [Launching](#Launching)
-  - [From source code](#From-source-code)
   - [Using a service file in Ubuntu](#Using-a-service-file-in-Ubuntu)
   - [Using Docker in Ubuntu](#Using-Docker-in-Ubuntu)
+  - [From source code](#From-source-code)
   - [Using Docker in other OS](#Using-Docker-in-other-OS)
 - [Updating](#Updating)
   - [A service file in Ubuntu](#A-service-file-in-Ubuntu)
   - [Docker in Ubuntu](#Docker-in-Ubuntu)
 
 
+---
 ## Modules
 
 
@@ -59,40 +61,10 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   that other pallets can use to utilize the Rikiddo market scoring rule. Rikiddo can
   be used by the automated market maker to determine swap prices.
 
+
+---
 ## Launching
 
-### From source code
-
-⠀Zeitgeist node comes in two flavors, one for standalone self-contained execution
-and another for Kusama/Polkadot parachain integration.
-
-⠀To build the standalone version, simply point to the top directory of this project and type:
-
-```bash
-cargo build --release
-```
-
-⠀To build the parachain version, execute the following conmmand:
-
-```
-cargo build --features parachain --release
-```
-
-⠀Optimized binaries (`--release`) are usually used for production (faster and smaller), 
-but this behavior is optional and up to you.
-
-⠀Our current beta test network [Battery Station][zg-beta] runs as a parachain.
-To connect your Zeitgeist parachain node, follow the tutorial at our [documentation site][bs-docs].
-
-⠀Alternatively you can run a non-parachain node, which is usually only necessary for
-testing purposes, by executing the following command:
-
-```
-cargo run --release --bin zeitgeist -- <node-options-and-flags>
-```
-
-⠀A common value for `<node-options-and-flags>` is `--dev --tmp`, which runs a 
-local temporary development node.
 
 ### Using a service file in Ubuntu
 
@@ -209,6 +181,7 @@ echo /services/zeitgeist/battery_station/chains/battery_station_mainnet/network/
 
 ### :exclamation::exclamation::exclamation:
 
+
 ### Using Docker in Ubuntu
 
 ⠀Install Docker
@@ -224,7 +197,7 @@ docker_version=`apt-cache madison docker-ce | grep -oPm1 "(?<=docker-ce \| )([^_
 sudo apt install docker-ce="$docker_version" docker-ce-cli="$docker_version" containerd.io -y
 ```
 
-⠀Create a folder for node
+⠀Create a folder for a node
 ```sh
 mkdir $HOME/zeitgeist
 ```
@@ -279,10 +252,46 @@ docker run -dit \
 
 ⠀Save the file in a safe place (the command displays the path)
 ```sh
-echo /services/zeitgeist/battery_station/chains/battery_station_mainnet/network/secret_ed25519
+docker cp zeitgeist_node:/zeitgeist/data/chains/battery_station_mainnet/network/secret_ed25519 $HOME/secret_ed25519; \
+echo $HOME/secret_ed25519
 ```
 
 ### :exclamation::exclamation::exclamation:
+
+
+### From source code
+
+⠀Zeitgeist node comes in two flavors, one for standalone self-contained execution
+and another for Kusama/Polkadot parachain integration.
+
+⠀To build the standalone version, simply point to the top directory of this project and type:
+
+```bash
+cargo build --release
+```
+
+⠀To build the parachain version, execute the following conmmand:
+
+```
+cargo build --features parachain --release
+```
+
+⠀Optimized binaries (`--release`) are usually used for production (faster and smaller), 
+but this behavior is optional and up to you.
+
+⠀Our current beta test network [Battery Station][zg-beta] runs as a parachain.
+To connect your Zeitgeist parachain node, follow the tutorial at our [documentation site][bs-docs].
+
+⠀Alternatively you can run a non-parachain node, which is usually only necessary for
+testing purposes, by executing the following command:
+
+```
+cargo run --release --bin zeitgeist -- <node-options-and-flags>
+```
+
+⠀A common value for `<node-options-and-flags>` is `--dev --tmp`, which runs a 
+local temporary development node.
+
 
 ### Using Docker in other OS
 
@@ -312,7 +321,10 @@ testing purposes, by executing the following command:
 docker run zeitgeistpm/zeitgeist-node -- <node-options-and-flags>
 ```
 
+
+---
 ## Updating
+
 
 ### A service file in Ubuntu
 
@@ -345,6 +357,7 @@ systemctl restart zeitgeistd
 ```sh
 zeitgeist_log
 ```
+
 
 ### Docker in Ubuntu
 
