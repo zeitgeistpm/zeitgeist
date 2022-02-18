@@ -21,11 +21,14 @@ by allowing for traders to create complex financial contracts on virtually _anyt
 
 
 - [Modules](#Modules)
-- [How to run a Zeitgeist node](#How-to-run-a-Zeitgeist-node)
+- [Launching](#Launching)
   - [From source code](#From-source-code)
   - [Using a service file in Ubuntu](#Using-a-service-file-in-Ubuntu)
   - [Using Docker in Ubuntu](#Using-Docker-in-Ubuntu)
   - [Using Docker in other OS](#Using-Docker-in-other-OS)
+- [Updating](#Updating)
+  - [A service file in Ubuntu](#A-service-file-in-Ubuntu)
+  - [Docker in Ubuntu](#Docker-in-Ubuntu)
 
 
 ## Modules
@@ -56,7 +59,7 @@ by allowing for traders to create complex financial contracts on virtually _anyt
   that other pallets can use to utilize the Rikiddo market scoring rule. Rikiddo can
   be used by the automated market maker to determine swap prices.
 
-## How to run a Zeitgeist node
+## Launching
 
 ### From source code
 
@@ -290,12 +293,12 @@ ensure you have Docker installed locally, then type (or paste) the following
 commands in your terminal.
 
 ⠀For parachain Zeitgeist node:
-```
+```sh
 docker pull zeitgeistpm/zeitgeist-node-parachain
 ```
 
 ⠀For standalone, non-parachain Zeitgeist node:
-```
+```sh
 docker pull zeitgeistpm/zeitgeist-node
 ```
 
@@ -305,9 +308,78 @@ To connect your Zeitgeist parachain node, follow the tutorial at our [documentat
 ⠀Alternatively you can run a non-parachain node, which is usually only necessary for
 testing purposes, by executing the following command:
 
-```
+```sh
 docker run zeitgeistpm/zeitgeist-node -- <node-options-and-flags>
 ```
+
+## Updating
+
+### A service file in Ubuntu
+
+⠀Stop a service file
+```sh
+systemctl stop zeitgeistd
+```
+
+⠀Download the latest version of binary
+```sh
+cd; \
+zeitgeist_version=`wget -qO- https://api.github.com/repos/zeitgeistpm/zeitgeist/releases/latest | jq -r ".tag_name"`; \
+wget -qO /services/zeitgeist/bin/zeitgeist "https://github.com/zeitgeistpm/zeitgeist/releases/download/${zeitgeist_version}/zeitgeist_parachain"; \
+wget -qO /services/zeitgeist/battery_station/battery-station-relay.json "https://raw.githubusercontent.com/zeitgeistpm/polkadot/battery-station-relay/node/service/res/battery-station-relay.json"; \
+chmod +x /services/zeitgeist/bin/zeitgeist; \
+cp /services/zeitgeist/bin/zeitgeist /usr/bin/
+```
+
+⠀Give permission to execute it
+```sh
+sudo chown -R zeitgeist:zeitgeist /services/zeitgeist
+```
+
+⠀Restart the service file
+```sh
+systemctl restart zeitgeistd
+```
+
+⠀Check the logs
+```sh
+zeitgeist_log
+```
+
+### Docker in Ubuntu
+
+⠀Update an image
+```sh
+docker pull zeitgeistpm/zeitgeist-node-parachain:latest
+```
+
+⠀Stop the node
+```sh
+docker stop zeitgeist_node
+```
+
+⠀Delete the node
+```sh
+docker rm zeitgeist_node
+```
+
+⠀Create a new container
+```sh
+docker run -dit \
+    --name zeitgeist_node \
+    --restart always \
+    -p 30333:30333 \
+    -p 9933:9933 \
+    -p 9944:9944 \
+    -v $HOME/zeitgeist/secret_ed25519:/zeitgeist/data/secret_ed25519 \
+    zeitgeistpm/zeitgeist-node-parachain:latest \
+    --base-path /zeitgeist/data \
+    --node-key-file /zeitgeist/data/secret_ed25519 \
+    --chain battery_station \
+    --name "$zeitgeist_moniker" \
+    --pruning archive
+```
+
 
 [bs-docs]: https://docs.zeitgeist.pm/battery-station
 [ls-lmsr]: https://www.eecs.harvard.edu/cs286r/courses/fall12/papers/OPRS10.pdf
