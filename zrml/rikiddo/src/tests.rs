@@ -76,9 +76,22 @@ fn fixed_point_decimal_to_fixed_type_returns_correct_result() {
         (9_999, 2),
         (736_101, 2),
         (133_733_333_333, 8),
+        (1, 1),
+        (55, 11), // Rounding behavior
+        (34, 11), // Rounding behavior
     ];
-    let test_vector_correct_number: Vec<f64> =
-        vec![0.0, 1.0, 0.0_000_000_001, 0.0_123_456_789, 99.99, 7_361.01, 1_337.33_333_333];
+    let test_vector_correct_number: Vec<f64> = vec![
+        0.0,
+        1.0,
+        0.0_000_000_001,
+        0.0_123_456_789,
+        99.99,
+        7_361.01,
+        1_337.33_333_333,
+        0.1,
+        0.0_000_000_006,
+        0.0_000_000_003,
+    ];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
         let converted: FixedU128<U33> = tv.0.to_fixed_from_fixed_decimal(tv.1).unwrap();
@@ -98,9 +111,11 @@ fn fixed_point_decimal_from_fixed_type_returns_correct_result() {
         (200.1234f64.to_fixed(), 2),
         (200.1254f64.to_fixed(), 2),
         (123.456f64.to_fixed(), 3),
+        (123.to_fixed(), 0),  // No decimal places in float, and places = 0
+        (0.to_fixed(), 0),
     ];
     let test_vector_correct_number: Vec<u128> =
-        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456];
+        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456, 123, 0];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
         let converted: u128 = u128::from_fixed_to_fixed_decimal(tv.0, tv.1).unwrap();
@@ -120,9 +135,11 @@ fn fixed_type_to_fixed_point_decimal_returns_correct_result() {
         (200.1234f64.to_fixed(), 2),
         (200.1254f64.to_fixed(), 2),
         (123.456f64.to_fixed(), 3),
+        (123.to_fixed(), 0),  // No decimal places, and places = 0
+        (0.to_fixed(), 0),
     ];
     let test_vector_correct_number: Vec<u128> =
-        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456];
+        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456, 123, 0];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
         let converted: u128 = tv.0.to_fixed_decimal(tv.1).unwrap();
@@ -141,9 +158,22 @@ fn fixed_type_from_fixed_point_decimal_returns_correct_result() {
         (9_999, 2),
         (736_101, 2),
         (133_733_333_333, 8),
+        (1, 1),
+        (55, 11), // Rounding behavior
+        (34, 11), // Rounding behavior
     ];
-    let test_vector_correct_number: Vec<f64> =
-        vec![0.0, 1.0, 0.0_000_000_001, 0.0_123_456_789, 99.99, 7_361.01, 1_337.33_333_333];
+    let test_vector_correct_number: Vec<f64> = vec![
+        0.0,
+        1.0,
+        0.0_000_000_001,
+        0.0_123_456_789,
+        99.99,
+        7_361.01,
+        1_337.33_333_333,
+        0.1,
+        0.0_000_000_006,
+        0.0_000_000_003,
+    ];
 
     for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
         let converted = <FixedU128<U33>>::from_fixed_decimal(tv.0, tv.1).unwrap();
