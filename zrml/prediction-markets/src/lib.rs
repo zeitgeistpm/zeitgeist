@@ -78,7 +78,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
-        transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
+        transactional, Blake2_128Concat, WeakBoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -946,8 +946,7 @@ mod pallet {
             Ok(None.into())
         }
 
-        /// Rejects a market that is waiting for approval from the advisory
-        /// committee.frame_support::BoundedVec
+        /// Rejects a market that is waiting for approval from the advisory committee.
         #[pallet::weight(T::WeightInfo::reject_market())]
         pub fn reject_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
@@ -1338,7 +1337,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
-        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
+        WeakBoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
         ValueQuery,
     >;
 
@@ -1349,7 +1348,8 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        // Does not work with ConstU16 due to unsatisfied trait bounds (polkadot-v0.9.16)
+        WeakBoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
     >;
 
@@ -1359,7 +1359,8 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        // Does not work with ConstU16 due to unsatisfied trait bounds (polkadot-v0.9.16)
+        WeakBoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
     >;
 
@@ -1369,9 +1370,9 @@ mod pallet {
     #[pallet::storage]
     pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
         _,
-        BoundedVec<
+        WeakBoundedVec<
             SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
-            ConstU32<{ u32::MAX }>,
+            frame_support::traits::ConstU32<1_048_576>,
         >,
         ValueQuery,
     >;
@@ -1928,7 +1929,7 @@ mod pallet {
 
             let mut weight_basis = 0;
             <MarketsCollectingSubsidy<T>>::mutate(
-                |e: &mut BoundedVec<
+                |e: &mut WeakBoundedVec<
                     SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
                     _,
                 >| {
@@ -2087,7 +2088,7 @@ mod pallet {
         )
     }
 
-    fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
+    fn remove_item<I: cmp::PartialEq, G>(items: &mut WeakBoundedVec<I, G>, item: &I) {
         if let Some(pos) = items.iter().position(|i| i == item) {
             items.swap_remove(pos);
         }
