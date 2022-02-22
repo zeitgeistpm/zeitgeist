@@ -23,5 +23,5 @@ members = [
 resolver = "2"
 
 [patch."https://github.com/purestake/nimbus"]
-nimbus-consensus = { path = "./nimbus/nimbus-consensus" }
-nimbus-primitives = { path = "./nimbus/nimbus-primitives" }
+nimbus-consensus = { git = "https://github.com/zeitgeistpm/nimbus", branch = "moonbeam-polkadot-v0.9.16" }
+nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "moonbeam-polkadot-v0.9.16" }

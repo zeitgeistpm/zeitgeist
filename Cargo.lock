@@ -4586,6 +4586,7 @@ dependencies = [
 [[package]]
 name = "nimbus-consensus"
 version = "0.9.0"
+source = "git+https://github.com/zeitgeistpm/nimbus?branch=moonbeam-polkadot-v0.9.16#24f7c50ed1e8652f7f68342c9cb12f52df985079"
 dependencies = [
  "async-trait",
  "cumulus-client-consensus-common",
@@ -4617,6 +4618,7 @@ dependencies = [
 [[package]]
 name = "nimbus-primitives"
 version = "0.9.0"
+source = "git+https://github.com/zeitgeistpm/nimbus?branch=moonbeam-polkadot-v0.9.16#24f7c50ed1e8652f7f68342c9cb12f52df985079"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -10943,7 +10945,7 @@ dependencies = [
  "chrono",
  "lazy_static",
  "matchers",
- "parking_lot 0.10.2",
+ "parking_lot 0.9.0",
  "regex",
  "serde",
  "serde_json",
