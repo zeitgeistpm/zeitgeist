@@ -36,7 +36,7 @@ pub use sigmoid_fee::*;
 pub type UnixTimestamp = u64;
 
 /// A 2-tuple containing an unix timestamp and a volume.
-#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TimestampedVolume<F: Fixed> {
     /// The timestamp of the volume.
     pub timestamp: UnixTimestamp,
