@@ -78,7 +78,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
-        transactional, Blake2_128Concat, WeakBoundedVec, PalletId, Twox64Concat,
+        transactional, Blake2_128Concat, PalletId, Twox64Concat, WeakBoundedVec,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
