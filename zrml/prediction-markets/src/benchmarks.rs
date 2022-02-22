@@ -9,9 +9,9 @@ use super::*;
 use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
-    BoundedVec,
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin, Get, Hooks},
+    BoundedVec,
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;

@@ -150,9 +150,9 @@ authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 build = "build.rs"
 description = "An evolving blockchain for prediction markets and futarchy."
 edition = "2021"
-homepage = 'https://zeitgeist.market'
-name = 'zeitgeist-node'
-version = '0.2.4'
+homepage = "https://zeitgeist.pm"
+name = "zeitgeist-node"
+version = "0.2.4"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

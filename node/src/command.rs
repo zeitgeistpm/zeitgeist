@@ -4,12 +4,12 @@ use crate::{
 };
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
+use zeitgeist_runtime::RuntimeApi;
 #[cfg(feature = "parachain")]
 use {
-    sc_client_api::client::BlockBackend, sp_core::Encode,
-    sp_core::hexdisplay::HexDisplay, sp_runtime::traits::Block as BlockT, std::io::Write,
+    sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
+    sp_runtime::traits::Block as BlockT, std::io::Write,
 };
-use zeitgeist_runtime::RuntimeApi;
 
 pub fn run() -> sc_cli::Result<()> {
     let mut cli = <Cli as SubstrateCli>::from_args();

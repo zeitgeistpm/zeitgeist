@@ -41,68 +41,66 @@ pub async fn new_full(
     parachain_id: ParaId,
     polkadot_config: Configuration,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, ExecutorDispatch>>)> {
-	do_new_full(
-		parachain_config,
-		polkadot_config,
-		parachain_id,
-		|
-			client,
-			prometheus_registry,
-			telemetry,
-			task_manager,
-			relay_chain_interface,
-			transaction_pool,
-			_sync_oracle,
-			keystore,
-			force_authoring
-		| {
-			let mut proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
-				task_manager.spawn_handle(),
-				client.clone(),
-				transaction_pool,
-				prometheus_registry,
-				telemetry.clone(),
-			);
-			proposer_factory.set_soft_deadline(SOFT_DEADLINE_PERCENT);
+    do_new_full(
+        parachain_config,
+        polkadot_config,
+        parachain_id,
+        |client,
+         prometheus_registry,
+         telemetry,
+         task_manager,
+         relay_chain_interface,
+         transaction_pool,
+         _sync_oracle,
+         keystore,
+         force_authoring| {
+            let mut proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
+                task_manager.spawn_handle(),
+                client.clone(),
+                transaction_pool,
+                prometheus_registry,
+                telemetry.clone(),
+            );
+            proposer_factory.set_soft_deadline(SOFT_DEADLINE_PERCENT);
 
-			let provider = move |_, (relay_parent, validation_data, author_id)| {
-				let relay_chain_interface = relay_chain_interface.clone();
-				async move {
-					let parachain_inherent =
-						cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
-							relay_parent,
-							&relay_chain_interface,
-							&validation_data,
-							parachain_id,
-						)
-						.await;
+            let provider = move |_, (relay_parent, validation_data, author_id)| {
+                let relay_chain_interface = relay_chain_interface.clone();
+                async move {
+                    let parachain_inherent =
+                        cumulus_primitives_parachain_inherent::ParachainInherentData::create_at(
+                            relay_parent,
+                            &relay_chain_interface,
+                            &validation_data,
+                            parachain_id,
+                        )
+                        .await;
 
-					let time = sp_timestamp::InherentDataProvider::from_system_time();
+                    let time = sp_timestamp::InherentDataProvider::from_system_time();
 
-					let parachain_inherent = parachain_inherent.ok_or_else(|| {
-						Box::<dyn std::error::Error + Send + Sync>::from(
-							"Failed to create parachain inherent",
-						)
-					})?;
+                    let parachain_inherent = parachain_inherent.ok_or_else(|| {
+                        Box::<dyn std::error::Error + Send + Sync>::from(
+                            "Failed to create parachain inherent",
+                        )
+                    })?;
 
-					let author = nimbus_primitives::InherentDataProvider::<NimbusId>(author_id);
+                    let author = nimbus_primitives::InherentDataProvider::<NimbusId>(author_id);
 
-					Ok((time, parachain_inherent, author))
-				}
-			};
+                    Ok((time, parachain_inherent, author))
+                }
+            };
 
-			Ok(NimbusConsensus::build(BuildNimbusConsensusParams {
-				para_id: parachain_id,
-				proposer_factory,
-				block_import: client.clone(),
-				parachain_client: client.clone(),
-				keystore,
-				skip_prediction: force_authoring,
-				create_inherent_data_providers: provider,
-			}))
-		},
-	)
-	.await
+            Ok(NimbusConsensus::build(BuildNimbusConsensusParams {
+                para_id: parachain_id,
+                proposer_factory,
+                block_import: client.clone(),
+                parachain_client: client.clone(),
+                keystore,
+                skip_prediction: force_authoring,
+                create_inherent_data_providers: provider,
+            }))
+        },
+    )
+    .await
 }
 
 /// Builds the PartialComponents for a parachain or development service
@@ -209,21 +207,16 @@ where
         >,
     Executor: NativeExecutionDispatch + 'static,
     BIC: FnOnce(
-		Arc<FullClient<RuntimeApi, Executor>>,
-		Option<&Registry>,
-		Option<TelemetryHandle>,
-		&TaskManager,
-		Arc<dyn RelayChainInterface>,
-		Arc<
-			sc_transaction_pool::FullPool<
-				Block,
-				FullClient<RuntimeApi, Executor>,
-			>,
-		>,
-		Arc<NetworkService<Block, Hash>>,
-		SyncCryptoStorePtr,
-		bool,
-	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>
+        Arc<FullClient<RuntimeApi, Executor>>,
+        Option<&Registry>,
+        Option<TelemetryHandle>,
+        &TaskManager,
+        Arc<dyn RelayChainInterface>,
+        Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
+        Arc<NetworkService<Block, Hash>>,
+        SyncCryptoStorePtr,
+        bool,
+    ) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
     if matches!(parachain_config.role, Role::Light) {
         return Err("Light client not supported!".into());
@@ -234,16 +227,16 @@ where
     let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
     let (mut telemetry, telemetry_worker_handle) = params.other;
 
-	let client = params.client.clone();
-	let backend = params.backend.clone();
-	let mut task_manager = params.task_manager;
+    let client = params.client.clone();
+    let backend = params.backend.clone();
+    let mut task_manager = params.task_manager;
 
-	let (relay_chain_interface, collator_key) =
-		build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
-			.map_err(|e| match e {
-				polkadot_service::Error::Sub(x) => x,
-				s => format!("{}", s).into(),
-			})?;
+    let (relay_chain_interface, collator_key) =
+        build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
+            .map_err(|e| match e {
+                polkadot_service::Error::Sub(x) => x,
+                s => format!("{}", s).into(),
+            })?;
 
     let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 
@@ -259,9 +252,9 @@ where
             transaction_pool: transaction_pool.clone(),
             spawn_handle: task_manager.spawn_handle(),
             import_queue: import_queue.clone(),
-			block_announce_validator_builder: Some(Box::new(|_| {
-				Box::new(block_announce_validator)
-			})),
+            block_announce_validator_builder: Some(Box::new(|_| {
+                Box::new(block_announce_validator)
+            })),
             warp_sync: None,
         })?;
 
@@ -298,50 +291,50 @@ where
     let relay_chain_slot_duration = KUSAMA_BLOCK_DURATION;
 
     if collator {
-		let parachain_consensus = build_consensus(
-			client.clone(),
-			prometheus_registry.as_ref(),
-			telemetry.as_ref().map(|t| t.handle()),
-			&task_manager,
-			relay_chain_interface.clone(),
-			transaction_pool,
-			network,
-			params.keystore_container.sync_keystore(),
-			force_authoring,
-		)?;
+        let parachain_consensus = build_consensus(
+            client.clone(),
+            prometheus_registry.as_ref(),
+            telemetry.as_ref().map(|t| t.handle()),
+            &task_manager,
+            relay_chain_interface.clone(),
+            transaction_pool,
+            network,
+            params.keystore_container.sync_keystore(),
+            force_authoring,
+        )?;
 
-		let spawner = task_manager.spawn_handle();
+        let spawner = task_manager.spawn_handle();
 
-		let params = StartCollatorParams {
-			para_id: id,
-			block_status: client.clone(),
-			announce_block,
-			client: client.clone(),
-			task_manager: &mut task_manager,
-			relay_chain_interface,
-			spawner,
-			parachain_consensus,
-			import_queue,
-			collator_key,
-			relay_chain_slot_duration,
-		};
+        let params = StartCollatorParams {
+            para_id: id,
+            block_status: client.clone(),
+            announce_block,
+            client: client.clone(),
+            task_manager: &mut task_manager,
+            relay_chain_interface,
+            spawner,
+            parachain_consensus,
+            import_queue,
+            collator_key,
+            relay_chain_slot_duration,
+        };
 
-		start_collator(params).await?;
-	} else {
-		let params = StartFullNodeParams {
-			client: client.clone(),
-			announce_block,
-			task_manager: &mut task_manager,
-			para_id: id,
-			relay_chain_interface,
-			relay_chain_slot_duration,
-			import_queue,
-		};
+        start_collator(params).await?;
+    } else {
+        let params = StartFullNodeParams {
+            client: client.clone(),
+            announce_block,
+            task_manager: &mut task_manager,
+            para_id: id,
+            relay_chain_interface,
+            relay_chain_slot_duration,
+            import_queue,
+        };
 
-		start_full_node(params)?;
-	}
+        start_full_node(params)?;
+    }
 
-	start_network.start_network();
+    start_network.start_network();
 
-	Ok((task_manager, client))
+    Ok((task_manager, client))
 }

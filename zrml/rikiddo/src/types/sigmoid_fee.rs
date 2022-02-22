@@ -7,11 +7,11 @@ use crate::{
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
-use parity_scale_codec::MaxEncodedLen;
-use scale_info::TypeInfo;
 #[cfg(feature = "arbitrary")]
 use core::mem;
 use frame_support::dispatch::{Decode, Encode};
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 use substrate_fixed::{
     traits::{FixedSigned, LossyFrom, LossyInto},

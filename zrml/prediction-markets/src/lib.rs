@@ -70,7 +70,6 @@ mod pallet {
     use alloc::{vec, vec::Vec};
     use core::{cmp, marker::PhantomData, ops::RangeInclusive};
     use frame_support::{
-        BoundedVec,
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
@@ -79,7 +78,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
-        transactional, Blake2_128Concat, PalletId, Twox64Concat,
+        transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -1346,20 +1345,36 @@ mod pallet {
     /// A mapping of market identifiers to the block they were disputed at.
     /// A market only ends up here if it was disputed.
     #[pallet::storage]
-    pub type MarketIdsPerDisputeBlock<T: Config> =
-        StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<MarketIdOf<T>, ConstU32<1024>>, ValueQuery>;
+    pub type MarketIdsPerDisputeBlock<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        T::BlockNumber,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        ValueQuery,
+    >;
 
     /// A mapping of market identifiers to the block that they were reported on.
     #[pallet::storage]
-    pub type MarketIdsPerReportBlock<T: Config> =
-        StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<MarketIdOf<T>, ConstU32<1024>>, ValueQuery>;
+    pub type MarketIdsPerReportBlock<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        T::BlockNumber,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        ValueQuery,
+    >;
 
     /// Contains a list of all markets that are currently collecting subsidy and the deadline.
     // All the values are "cached" here. Results in data duplication, but speeds up the iteration
     // over every market significantly (otherwise 25µs per relevant market per block).
     #[pallet::storage]
-    pub type MarketsCollectingSubsidy<T: Config> =
-        StorageValue<_, BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<{ u32::MAX }>>, ValueQuery>;
+    pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
+        _,
+        BoundedVec<
+            SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
+            ConstU32<{ u32::MAX }>,
+        >,
+        ValueQuery,
+    >;
 
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
@@ -1913,7 +1928,10 @@ mod pallet {
 
             let mut weight_basis = 0;
             <MarketsCollectingSubsidy<T>>::mutate(
-                |e: &mut BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, _>| {
+                |e: &mut BoundedVec<
+                    SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
+                    _,
+                >| {
                     weight_basis = T::WeightInfo::process_subsidy_collecting_markets_raw(
                         e.len().saturated_into(),
                     );
@@ -2033,7 +2051,9 @@ mod pallet {
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             <MarketsCollectingSubsidy<T>>::try_mutate(|markets| {
-                markets.try_push(SubsidyUntil { market_id, period: market.period.clone() }).map_err(|_| <Error<T>>::StorageOverflow)
+                markets
+                    .try_push(SubsidyUntil { market_id, period: market.period.clone() })
+                    .map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
             Ok(T::WeightInfo::start_subsidy(total_assets.saturated_into()))

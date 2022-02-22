@@ -68,8 +68,8 @@ pub mod pallet {
         Twox64Concat,
     };
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode, MaxEncodedLen};
-    use sp_runtime::DispatchError;
     use scale_info::TypeInfo;
+    use sp_runtime::DispatchError;
     use substrate_fixed::{
         traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, ToFixed},
         types::{
@@ -121,7 +121,11 @@ pub mod pallet {
         type PoolId: Copy + Decode + FullEncode + MaxEncodedLen + TypeInfo;
 
         /// Rikiddo variant.
-        type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec + MaxEncodedLen + TypeInfo;
+        type Rikiddo: RikiddoMV<FU = Self::FixedTypeU>
+            + Decode
+            + FullCodec
+            + MaxEncodedLen
+            + TypeInfo;
     }
 
     /// Potential errors within the Rikiddo pallet.

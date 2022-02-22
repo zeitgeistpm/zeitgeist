@@ -6,12 +6,12 @@ use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, Into
 use alloc::{borrow::ToOwned, string::ToString};
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
-use parity_scale_codec::MaxEncodedLen;
-use scale_info::TypeInfo;
 #[cfg(feature = "arbitrary")]
 use core::mem;
 use core::{cmp::Ordering, convert::TryFrom};
 use frame_support::dispatch::{Decode, Encode};
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 use substrate_fixed::{
     traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, LossyInto, ToFixed},
@@ -88,7 +88,9 @@ cfg_if::cfg_if! {
 
 /// A enum that wrappes an amount of time in different units.
 /// An enum that wrappes an amount of time in different units.
-#[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, PartialOrd, RuntimeDebug, TypeInfo)]
+#[derive(
+    Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, PartialOrd, RuntimeDebug, TypeInfo,
+)]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Timespan {
     /// Contains seconds.
