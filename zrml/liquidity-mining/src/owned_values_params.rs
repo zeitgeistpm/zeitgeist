@@ -18,9 +18,10 @@
     parity_scale_codec::Encode,
     parity_scale_codec::MaxEncodedLen,
 )]
-pub struct OwnedValuesParams<BA, BN> where
+pub struct OwnedValuesParams<BA, BN>
+where
     BA: parity_scale_codec::MaxEncodedLen,
-    BN: parity_scale_codec::MaxEncodedLen
+    BN: parity_scale_codec::MaxEncodedLen,
 {
     /// The number of blocks an account participated in a market period.
     pub participated_blocks: BN,

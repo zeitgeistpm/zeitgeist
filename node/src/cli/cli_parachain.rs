@@ -93,15 +93,13 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         self.base.base.network_params()
     }
 
-	fn prometheus_config(
-		&self,
-		default_listen_port: u16,
-		chain_spec: &Box<dyn ChainSpec>,
-	) -> sc_cli::Result<Option<PrometheusConfig>> {
-		self.base
-			.base
-			.prometheus_config(default_listen_port, chain_spec)
-	}
+    fn prometheus_config(
+        &self,
+        default_listen_port: u16,
+        chain_spec: &Box<dyn ChainSpec>,
+    ) -> sc_cli::Result<Option<PrometheusConfig>> {
+        self.base.base.prometheus_config(default_listen_port, chain_spec)
+    }
 
     fn role(&self, is_dev: bool) -> sc_cli::Result<sc_service::Role> {
         self.base.base.role(is_dev)

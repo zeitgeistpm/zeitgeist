@@ -14,7 +14,13 @@ pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber: AtLeast32Bit;
     type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
-    type MarketId: AtLeast32Bit + Copy + Default + MaybeSerializeDeserialize + MaxEncodedLen + Member + Parameter;
+    type MarketId: AtLeast32Bit
+        + Copy
+        + Default
+        + MaybeSerializeDeserialize
+        + MaxEncodedLen
+        + Member
+        + Parameter;
     type Moment: AtLeast32Bit + Copy + Default + Parameter + MaxEncodedLen;
 
     // Market

@@ -43,7 +43,7 @@ mod pallet {
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, StorageVersion,
             WithdrawReasons,
         },
-        Blake2_128Concat, Identity, BoundedVec, transactional,
+        transactional, Blake2_128Concat, BoundedVec, Identity,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -300,13 +300,23 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn asks)]
-    pub type Asks<T: Config> =
-        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, BoundedVec<T::Hash, ConstU32<{ u32::MAX }>>, ValueQuery>;
+    pub type Asks<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        Asset<T::MarketId>,
+        BoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn bids)]
-    pub type Bids<T: Config> =
-        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, BoundedVec<T::Hash, ConstU32<{ u32::MAX }>>, ValueQuery>;
+    pub type Bids<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        Asset<T::MarketId>,
+        BoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn nonce)]
@@ -355,9 +365,10 @@ pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
     filled: Balance,
 }
 
-impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId> where
+impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId>
+where
     Balance: CheckedSub + CheckedMul,
-    MarketId: MaxEncodedLen
+    MarketId: MaxEncodedLen,
 {
     pub fn cost(&self) -> Result<Balance, DispatchError> {
         match self.total.checked_sub(&self.filled) {

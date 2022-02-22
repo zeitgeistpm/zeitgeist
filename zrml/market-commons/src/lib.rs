@@ -102,7 +102,7 @@ mod pallet {
     impl<T> MarketCommonsPalletApi for Pallet<T>
     where
         T: Config,
-        <T as Config>::Timestamp: Time
+        <T as Config>::Timestamp: Time,
     {
         type AccountId = T::AccountId;
         type BlockNumber = T::BlockNumber;

@@ -10,11 +10,11 @@ use crate::{
 use alloc::vec::Vec;
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
-use parity_scale_codec::MaxEncodedLen;
-use scale_info::TypeInfo;
 use core::ops::{AddAssign, BitOrAssign, ShlAssign};
 use frame_support::dispatch::{Decode, Encode};
 use hashbrown::HashMap;
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 use substrate_fixed::{
     consts::LOG2_E,
