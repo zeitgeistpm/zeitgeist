@@ -244,7 +244,8 @@ where
 
         let fee = self.fee()?;
         formula_components.fee = convert_to_signed(fee)?;
-        let mut total_balance = FU::from_num(0u8);
+        let mut total_balance = FU::checked_from_num(0u8)
+            .ok_or("Unexpectedly failed to convert zero to fixed point number")?;
 
         for elem in asset_balances {
             if let Some(res) = total_balance.checked_add(*elem) {
@@ -266,7 +267,8 @@ where
         formula_components.sum_times_fee = convert_to_signed(denominator)?;
 
         let mut exponents: Vec<FS> = Vec::with_capacity(asset_balances.len());
-        let mut biggest_exponent: FS = FS::from_num(0u8);
+        let mut biggest_exponent: FS = FS::checked_from_num(0u8)
+            .ok_or("Unexpectedly failed to convert zero to fixed point number")?;
 
         for elem in asset_balances {
             let exponent = if let Some(res) = elem.checked_div(denominator) {
@@ -292,7 +294,11 @@ where
 
         formula_components.emax = biggest_exponent;
 
-        if FS::max_value().int().to_num::<u128>() < asset_balances.len() as u128 {
+        let max_value: u128 = FS::max_value()
+            .int()
+            .checked_to_num()
+            .ok_or("Converting fixed point numerical limit to u128 failed unexpectedly")?;
+        if max_value < asset_balances.len() as u128 {
             return Err("[RikidoSigmoidMV] Number of assets does not fit in FS");
         }
 
@@ -333,7 +339,9 @@ where
                             question in RikiddoFormulaComponents HashMap");
             };
 
-        let mut sum: FS = 0.to_fixed();
+        let mut sum: FS = 0
+            .checked_to_fixed()
+            .ok_or("Unexpectedly failed to convert zero to fixed point number")?;
         let mut skipped = false;
 
         for elem in asset_balances {
@@ -363,7 +371,8 @@ where
             } else {
                 // In that case the final result will not fit into the fractional bits
                 // and therefore is approximated to zero. Cannot panic.
-                0.to_fixed()
+                0.checked_to_fixed()
+                    .ok_or("Unexpectedly failed to convert zero to fixed point number")?
             };
 
             sum = if let Some(res) = sum.checked_add(exponential_result) {
@@ -371,7 +380,9 @@ where
             } else {
                 // In that case the final result will not fit into the fractional bits
                 // and therefore is approximated to zero. Cannot panic.
-                return Ok(0.to_fixed());
+                return 0
+                    .checked_to_fixed()
+                    .ok_or("Unexpectedly failed to convert zero to fixed point number");
             };
         }
 
@@ -380,13 +391,15 @@ where
         } else {
             // In that case the final result will not fit into the fractional bits
             // and therefore is approximated to zero. Cannot panic.
-            return Ok(0.to_fixed());
+            return 0
+                .checked_to_fixed()
+                .ok_or("Unexpectedly failed to convert zero to fixed point number");
         };
 
         if let Some(res) = formula_components.one.checked_div(sum) {
             Ok(res)
         } else {
-            Ok(0.to_fixed())
+            0.checked_to_fixed().ok_or("Unexpectedly failed to convert zero to fixed point number")
         }
     }
 
@@ -396,7 +409,9 @@ where
         asset_balances: &[FS],
         formula_components: &RikiddoFormulaComponents<FS>,
     ) -> Result<FS, &'static str> {
-        let mut numerator: FS = 0.to_fixed();
+        let mut numerator: FS = 0
+            .checked_to_fixed()
+            .ok_or("Unexpectedly failed to convert zero to fixed point number")?;
         let mut skipped = false;
 
         for elem in asset_balances {
@@ -491,7 +506,11 @@ where
     ) -> Result<FS, &'static str> {
         let mut biggest_exponent_used = false;
 
-        if FS::max_value().int().to_num::<u128>() < 1u128 {
+        let max_value: u128 = FS::max_value()
+            .int()
+            .checked_to_num()
+            .ok_or("Converting fixed point numerical limit to u64 failed unexpectedly")?;
+        if max_value < 1u128 {
             // Impossible due to trait bounds (at least 1 sign bit and 8 integer bits)
             return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
         }
@@ -636,7 +655,9 @@ where
             return convert_to_unsigned(self.config.initial_fee);
         };
 
-        if mal == FU::from_num(0u8) {
+        let zero = FU::checked_from_num(0u8)
+            .ok_or("Unexpectedly failed to convert zero to fixed point number")?;
+        if mal == zero {
             return Err(
                 "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
             );
@@ -699,7 +720,9 @@ where
     ) -> Result<Self::FU, &'static str> {
         let mut formula_components = RikiddoFormulaComponents::default();
         let mut asset_balances_signed = Vec::with_capacity(asset_balances.len());
-        let mut asset_in_question_balance_signed = 0.to_fixed();
+        let mut asset_in_question_balance_signed = 0
+            .checked_to_fixed()
+            .ok_or("Unexpectedly failed to convert zero to fixed point number")?;
         let mut asset_in_question_found = false;
 
         for asset_balance in asset_balances {
@@ -762,7 +785,10 @@ where
 
         if let Some(mas) = mas {
             if let Some(mal) = mal {
-                if mal != 0u32.to_fixed::<FU>() {
+                let zero = 0u32
+                    .checked_to_fixed::<FU>()
+                    .ok_or("Unexpectedly failed to convert zero to fixed point number")?;
+                if mal != zero {
                     return Ok(Some(mas.saturating_div(mal)));
                 }
             };

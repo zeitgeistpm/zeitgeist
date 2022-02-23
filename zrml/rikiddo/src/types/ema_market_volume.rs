@@ -237,7 +237,9 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
         };
 
         // Overflow is impossible here.
-        let one_minus_multiplier = if let Some(res) = FU::from_num(1).checked_sub(self.multiplier) {
+        let one = FU::checked_from_num(1)
+            .ok_or("Unexpectedly failed to convert 1 to fixed point number")?;
+        let one_minus_multiplier = if let Some(res) = one.checked_sub(self.multiplier) {
             res
         } else {
             return Err("[EmaMarketVolume] Overflow during calculation: 1 - multiplier");
@@ -284,8 +286,10 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
             };
 
         // This can't overflow.
-        self.ema = if let Some(res) = sma_times_vpp_plus_volume
-            .checked_div(self.volumes_per_period.saturating_add(FU::from_num(1)))
+        let one = FU::checked_from_num(1)
+            .ok_or("Unexpectedly failed to convert 1 to fixed point number")?;
+        self.ema = if let Some(res) =
+            sma_times_vpp_plus_volume.checked_div(self.volumes_per_period.saturating_add(one))
         {
             res
         } else {
@@ -416,14 +420,11 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                         // Overflow impossible
                         let estimate_ratio = mature_time_fixed.saturating_div(premature_time_fixed);
 
-                        if estimate_ratio.int() > FU::max_value().to_num::<u64>() {
-                            // Cannot occur as long as the From<U32> trait is required for FU and
-                            // Timespan::to_seconds() returns u32.
-                            return Err("[EmaMarketVolume] Estimate ratio does not fit in FU");
-                        }
-
-                        // Can't panic due to the previous check
-                        let estimate_ratio_fu: FU = estimate_ratio.to_fixed();
+                        // Cannot occur as long as the From<U32> trait is required for FU and
+                        // Timespan::to_seconds() returns u32.
+                        let estimate_ratio_fu: FU = estimate_ratio
+                            .checked_to_fixed()
+                            .ok_or("[EmaMarketVolume] Estimate ratio does not fit in FU")?;
 
                         self.volumes_per_period = if let Some(res) =
                             self.volumes_per_period.checked_mul(estimate_ratio_fu)
