@@ -67,116 +67,90 @@ fn convert_signed_to_unsigned_returns_correct_result() -> Result<(), &'static st
 
 #[test]
 fn fixed_point_decimal_to_fixed_type_returns_correct_result() {
-    // This vector contains tuples of (fixed_point_decimal, fractional_decimal_places)
-    let test_vector: Vec<(u128, u8)> = vec![
-        (0, 0),
-        (10_000_000_000, 10),
-        (1, 10),
-        (123_456_789, 10),
-        (9_999, 2),
-        (736_101, 2),
-        (133_733_333_333, 8),
-        (1, 1),
-        (55, 11), // Rounding behavior
-        (34, 11), // Rounding behavior
-    ];
-    let test_vector_correct_number: Vec<f64> = vec![
-        0.0,
-        1.0,
-        0.0_000_000_001,
-        0.0_123_456_789,
-        99.99,
-        7_361.01,
-        1_337.33_333_333,
-        0.1,
-        0.0_000_000_006,
-        0.0_000_000_003,
+    // This vector contains tuples of (fixed_point_decimal, fractional_decimal_places, correct_number)
+    let test_vector: Vec<(u128, u8, f64)> = vec![
+        (0, 0, 0.0),
+        (10_000_000_000, 10, 1.0),
+        (1, 10, 0.0_000_000_001),
+        (123_456_789, 10, 0.0_123_456_789),
+        (9_999, 2, 99.99),
+        (736_101, 2, 7_361.01),
+        (133_733_333_333, 8, 1_337.33_333_333),
+        (1, 1, 0.1),
+        (55, 11, 0.0_000_000_006), // Rounding behavior
+        (34, 11, 0.0_000_000_003), // Rounding behavior
     ];
 
-    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
-        let converted: FixedU128<U33> = tv.0.to_fixed_from_fixed_decimal(tv.1).unwrap();
-        assert_eq!(converted, <FixedU128<U33>>::from_num(tvc));
+    for (fixed_point_decimal, places, expected) in test_vector.iter() {
+        let converted: FixedU128<U33> =
+            fixed_point_decimal.to_fixed_from_fixed_decimal(*places).unwrap();
+        assert_eq!(converted, <FixedU128<U33>>::from_num(*expected));
     }
 }
 
 #[test]
 fn fixed_point_decimal_from_fixed_type_returns_correct_result() {
-    // This vector contains tuples of (Fixed type, places)
+    // This vector contains tuples of (Fixed type, places, expected)
     // The tuples tests every logical path
-    let test_vector: Vec<(FixedU128<U33>, u8)> = vec![
-        (32.5f64.to_fixed(), 0),
-        (32.25f64.to_fixed(), 0),
-        (200.to_fixed(), 8),
-        (200.1234f64.to_fixed(), 8),
-        (200.1234f64.to_fixed(), 2),
-        (200.1254f64.to_fixed(), 2),
-        (123.456f64.to_fixed(), 3),
-        (123.to_fixed(), 0),  // No decimal places in float, and places = 0
-        (0.to_fixed(), 0),
+    let test_vector: Vec<(FixedU128<U33>, u8, u128)> = vec![
+        (32.5f64.to_fixed(), 0, 33),
+        (32.25f64.to_fixed(), 0, 32),
+        (200.to_fixed(), 8, 20_000_000_000),
+        (200.1234f64.to_fixed(), 8, 20_012_340_000),
+        (200.1234f64.to_fixed(), 2, 20_012),
+        (200.1254f64.to_fixed(), 2, 20_013),
+        (123.456f64.to_fixed(), 3, 123_456),
+        (123.to_fixed(), 0, 123), // No decimal places in float, and places = 0
+        (0.to_fixed(), 0, 0),
     ];
-    let test_vector_correct_number: Vec<u128> =
-        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456, 123, 0];
 
-    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
-        let converted: u128 = u128::from_fixed_to_fixed_decimal(tv.0, tv.1).unwrap();
-        assert_eq!(converted, tvc);
+    for (fixed, places, expected) in test_vector.iter() {
+        let converted: u128 = u128::from_fixed_to_fixed_decimal(*fixed, *places).unwrap();
+        assert_eq!(converted, *expected);
     }
 }
 
 #[test]
 fn fixed_type_to_fixed_point_decimal_returns_correct_result() {
-    // This vector contains tuples of (Fixed type, places)
+    // This vector contains tuples of (Fixed type, places, expected)
     // The tuples tests every logical path
-    let test_vector: Vec<(FixedU128<U33>, u8)> = vec![
-        (32.5f64.to_fixed(), 0),
-        (32.25f64.to_fixed(), 0),
-        (200.to_fixed(), 8),
-        (200.1234f64.to_fixed(), 8),
-        (200.1234f64.to_fixed(), 2),
-        (200.1254f64.to_fixed(), 2),
-        (123.456f64.to_fixed(), 3),
-        (123.to_fixed(), 0),  // No decimal places, and places = 0
-        (0.to_fixed(), 0),
+    let test_vector: Vec<(FixedU128<U33>, u8, u128)> = vec![
+        (32.5f64.to_fixed(), 0, 33),
+        (32.25f64.to_fixed(), 0, 32),
+        (200.to_fixed(), 8, 20_000_000_000),
+        (200.1234f64.to_fixed(), 8, 20_012_340_000),
+        (200.1234f64.to_fixed(), 2, 20_012),
+        (200.1254f64.to_fixed(), 2, 20_013),
+        (123.456f64.to_fixed(), 3, 123_456),
+        (123.to_fixed(), 0, 123), // No decimal places in float, and places = 0
+        (0.to_fixed(), 0, 0),
     ];
-    let test_vector_correct_number: Vec<u128> =
-        vec![33, 32, 20_000_000_000, 20_012_340_000, 20_012, 20_013, 123_456, 123, 0];
 
-    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
-        let converted: u128 = tv.0.to_fixed_decimal(tv.1).unwrap();
-        assert_eq!(converted, tvc);
+    for (fixed, places, expected) in test_vector.iter() {
+        let converted: u128 = fixed.to_fixed_decimal(*places).unwrap();
+        assert_eq!(converted, *expected);
     }
 }
 
 #[test]
 fn fixed_type_from_fixed_point_decimal_returns_correct_result() {
-    // This vector contains tuples of (fixed_point_decimal, fractional_decimal_places)
-    let test_vector: Vec<(u128, u8)> = vec![
-        (0, 0),
-        (10_000_000_000, 10),
-        (1, 10),
-        (123_456_789, 10),
-        (9_999, 2),
-        (736_101, 2),
-        (133_733_333_333, 8),
-        (1, 1),
-        (55, 11), // Rounding behavior
-        (34, 11), // Rounding behavior
-    ];
-    let test_vector_correct_number: Vec<f64> = vec![
-        0.0,
-        1.0,
-        0.0_000_000_001,
-        0.0_123_456_789,
-        99.99,
-        7_361.01,
-        1_337.33_333_333,
-        0.1,
-        0.0_000_000_006,
-        0.0_000_000_003,
+    // This vector contains tuples of (fixed_point_decimal, fractional_decimal_places, correct_number)
+    let test_vector: Vec<(u128, u8, f64)> = vec![
+        (0, 0, 0.0),
+        (10_000_000_000, 10, 1.0),
+        (1, 10, 0.0_000_000_001),
+        (123_456_789, 10, 0.0_123_456_789),
+        (9_999, 2, 99.99),
+        (736_101, 2, 7_361.01),
+        (133_733_333_333, 8, 1_337.33_333_333),
+        (1, 1, 0.1),
+        (55, 11, 0.0_000_000_006), // Rounding behavior
+        (34, 11, 0.0_000_000_003), // Rounding behavior
     ];
 
-    for (tv, tvc) in test_vector.iter().zip(test_vector_correct_number) {
-        let converted = <FixedU128<U33>>::from_fixed_decimal(tv.0, tv.1).unwrap();
-        assert_eq!(converted, <FixedU128<U33>>::from_num(tvc));
+    for (fixed_point_decimal, places, expected) in test_vector.iter() {
+        let converted =
+            <FixedU128<U33>>::from_fixed_decimal(*fixed_point_decimal, *places).unwrap();
+        assert_eq!(converted, <FixedU128<U33>>::from_num(*expected));
     }
 }
