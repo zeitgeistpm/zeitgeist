@@ -127,18 +127,27 @@ impl Timespan {
 /// Returns integer part of `FROM`, if the msb is not set and and num does it into `FROM`.
 fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str> {
     // Check if number is negatie
-    if num < FROM::from_num(0u8) {
+    let zero = FROM::checked_from_num(0u8)
+        .ok_or("Unexpectedly failed to convert 0u8 to fixed point number")?;
+    if num < zero {
         return Err("Cannot convert negative signed number into unsigned number");
     }
 
     // PartialOrd is bugged, therefore the workaround
     // https://github.com/encointer/substrate-fixed/issues/9
-    let num_u128: u128 = num.int().to_num();
-    if TO::max_value().int().to_num::<u128>() < num_u128 {
+    let num_u128: u128 = num.int().checked_to_num().ok_or("Conversion from FROM to u128 failed")?;
+    let max_value: u128 = TO::max_value()
+        .int()
+        .checked_to_num()
+        .ok_or("Converting fixed point numerical limit to u128 failed uexpectedly")?;
+    if max_value < num_u128 {
         return Err("Fixed point conversion failed: FROM type does not fit in TO type");
     }
 
-    Ok(num_u128.to_fixed())
+    let fixed = num_u128
+        .checked_to_fixed()
+        .ok_or("Integer part of fixed point number does not fit into u128")?;
+    Ok(fixed)
 }
 
 /// Converts an unsigned fixed point number into a signed fixed point number (fallible).
@@ -146,7 +155,10 @@ pub fn convert_to_signed<FROM: FixedUnsigned, TO: FixedSigned + LossyFrom<FixedI
     num: FROM,
 ) -> Result<TO, &'static str> {
     let integer_part: TO = convert_common(num)?;
-    let fractional_part: FixedI128<U127> = num.frac().to_fixed();
+    let fractional_part: FixedI128<U127> = num
+        .frac()
+        .checked_to_fixed()
+        .ok_or("Fraction of fixed point number unexpectedly does not fit into FixedI128<U127>")?;
 
     if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
         Ok(res)
@@ -162,7 +174,10 @@ pub fn convert_to_unsigned<FROM: FixedSigned, TO: FixedUnsigned + LossyFrom<Fixe
 ) -> Result<TO, &'static str> {
     // We can safely cast because until here we know that the msb is not set.
     let integer_part: TO = convert_common(num)?;
-    let fractional_part: FixedU128<U128> = num.frac().to_fixed();
+    let fractional_part: FixedU128<U128> = num
+        .frac()
+        .checked_to_fixed()
+        .ok_or("Fraction of fixed point number unexpectedly does not fit into FixedU128<U128>")?;
     if let Some(res) = integer_part.checked_add(fractional_part.lossy_into()) {
         Ok(res)
     } else {
@@ -206,17 +221,26 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
     /// Craft a fixed point decimal number from a `Fixed` type (e.g. `Fixed` -> `Balance`).
     fn from_fixed_to_fixed_decimal(fixed: F, places: u8) -> Result<N, &'static str> {
         if places == 0 {
-            let mut result = fixed.to_num::<u128>();
+            let mut result = fixed
+                .checked_to_num::<u128>()
+                .ok_or("The fixed point number does not fit into a u128")?;
 
             // Arithmetic rounding (+1 if >= 0.5)
             if F::frac_nbits() > 0 {
                 if let Some(two) = F::checked_from_num(2) {
-                    // `from_num(1)` cannot panic if `from_num(2)` succeeded
-                    if let Some(res) = F::from_num(1).checked_div(two) {
-                        if fixed.frac() >= res {
-                            result = result.saturating_add(1);
+                    if let Some(one) = F::checked_from_num(1) {
+                        if let Some(res) = one.checked_div(two) {
+                            if fixed.frac() >= res {
+                                result = result.saturating_add(1);
+                            }
+                        } else {
+                            return Err("Unexpected overflow when dividing one by two");
                         }
+                    } else {
+                        return Err("Unexpectedly failed to convert 1 to fixed point number");
                     }
+                } else {
+                    return Err("Unexpectedly failed to convert 2 to fixed point number");
                 }
             }
 
