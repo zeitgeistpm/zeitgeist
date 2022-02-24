@@ -206,7 +206,7 @@ cfg_if::cfg_if! {
     }
 }
 
-impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
+impl<FU: FixedUnsigned + From<u32>> EmaMarketVolume<FU> {
     /// Initialize the structure based on a configuration.
     ///
     /// # Arguments
@@ -215,12 +215,12 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
     pub fn new(config: EmaConfig<FU>) -> Self {
         Self {
             config,
-            ema: FU::from_num(0),
+            ema: 0u32.into(),
             state: MarketVolumeState::Uninitialized,
             start_time: 0,
             last_time: 0,
-            volumes_per_period: FU::from_num(0),
-            multiplier: FU::from_num(0),
+            volumes_per_period: 0u32.into(),
+            multiplier: 0u32.into(),
         }
     }
 
@@ -237,9 +237,7 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
         };
 
         // Overflow is impossible here.
-        let one = FU::checked_from_num(1)
-            .ok_or("Unexpectedly failed to convert 1 to fixed point number")?;
-        let one_minus_multiplier = if let Some(res) = one.checked_sub(self.multiplier) {
+        let one_minus_multiplier = if let Some(res) = FU::from(1u32).checked_sub(self.multiplier) {
             res
         } else {
             return Err("[EmaMarketVolume] Overflow during calculation: 1 - multiplier");
@@ -286,10 +284,8 @@ impl<FU: FixedUnsigned> EmaMarketVolume<FU> {
             };
 
         // This can't overflow.
-        let one = FU::checked_from_num(1)
-            .ok_or("Unexpectedly failed to convert 1 to fixed point number")?;
-        self.ema = if let Some(res) =
-            sma_times_vpp_plus_volume.checked_div(self.volumes_per_period.saturating_add(one))
+        self.ema = if let Some(res) = sma_times_vpp_plus_volume
+            .checked_div(self.volumes_per_period.saturating_add(FU::from(1u32)))
         {
             res
         } else {
@@ -349,12 +345,12 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
 
     /// Clear market data.
     fn clear(&mut self) {
-        self.ema = FU::from_num(0);
-        self.multiplier = FU::from_num(0);
+        self.ema = 0u32.into();
+        self.multiplier = 0u32.into();
         self.last_time = 0;
         self.state = MarketVolumeState::Uninitialized;
         self.start_time = 0;
-        self.volumes_per_period = FU::from_num(0);
+        self.volumes_per_period = 0u32.into();
     }
 
     /// Update market data. This implementation will count the

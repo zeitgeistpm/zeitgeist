@@ -2,7 +2,10 @@
 //! functionality, as well as the Rikiddo core functionality itself.
 
 extern crate alloc;
-use super::traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal};
+use super::{
+    traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal},
+    utils::fixed_zero,
+};
 use alloc::{borrow::ToOwned, string::ToString};
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
@@ -127,9 +130,7 @@ impl Timespan {
 /// Returns integer part of `FROM`, if the msb is not set and and num does it into `FROM`.
 fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str> {
     // Check if number is negatie
-    let zero = FROM::checked_from_num(0u8)
-        .ok_or("Unexpectedly failed to convert 0u8 to fixed point number")?;
-    if num < zero {
+    if num < fixed_zero::<FROM>()? {
         return Err("Cannot convert negative signed number into unsigned number");
     }
 
@@ -139,7 +140,7 @@ fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str>
     let max_value: u128 = TO::max_value()
         .int()
         .checked_to_num()
-        .ok_or("Converting fixed point numerical limit to u128 failed uexpectedly")?;
+        .ok_or("Converting fixed point numerical limit to u128 failed unexpectedly")?;
     if max_value < num_u128 {
         return Err("Fixed point conversion failed: FROM type does not fit in TO type");
     }
