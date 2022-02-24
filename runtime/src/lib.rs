@@ -12,8 +12,6 @@ pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
-#[cfg(feature = "txfilter")]
-mod txfilter;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
@@ -25,7 +23,7 @@ pub use parameters::*;
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, Everything},
+    traits::Contains,
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
@@ -49,18 +47,9 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
+    frame_support::traits::Everything,
     frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
-};
-
-#[cfg(feature = "txfilter")]
-use {
-    parity_scale_codec::Encode,
-    sp_runtime::{
-        traits::{Extrinsic as ExtrinsicT, Verify},
-        SaturatedConversion,
-    },
-    txfilter::{IsCallable, TransactionCallFilter},
 };
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -98,19 +87,6 @@ type Executive = frame_executive::Executive<
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 
-#[cfg(feature = "txfilter")]
-type SignedExtra = (
-    TransactionCallFilter<IsCallable, Call>,
-    frame_system::CheckSpecVersion<Runtime>,
-    frame_system::CheckTxVersion<Runtime>,
-    frame_system::CheckGenesis<Runtime>,
-    frame_system::CheckEra<Runtime>,
-    frame_system::CheckNonce<Runtime>,
-    frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-);
-
-#[cfg(not(feature = "txfilter"))]
 type SignedExtra = (
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
@@ -121,69 +97,7 @@ type SignedExtra = (
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 
-#[cfg(feature = "txfilter")]
-type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
-
-// Transaction filtering
-/// Submits a transaction with the node's public and signature type. Adheres to the signed extension
-/// format of the chain.
-#[cfg(feature = "txfilter")]
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-where
-    Call: From<LocalCall>,
-{
-    fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
-        public: <Signature as Verify>::Signer,
-        account: AccountId,
-        nonce: <Runtime as frame_system::Config>::Index,
-    ) -> Option<(Call, <UncheckedExtrinsic as ExtrinsicT>::SignaturePayload)> {
-        // take the biggest period possible.
-        let period =
-            BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
-
-        let current_block = System::block_number()
-            .saturated_into::<u64>()
-            // The `System::block_number` is initialized with `n+1`,
-            // so the actual block number is `n`.
-            .saturating_sub(1);
-        let tip = 0;
-        let extra: SignedExtra = (
-            <TransactionCallFilter<IsCallable, Call>>::new(),
-            <frame_system::CheckSpecVersion<Runtime>>::new(),
-            <frame_system::CheckTxVersion<Runtime>>::new(),
-            <frame_system::CheckGenesis<Runtime>>::new(),
-            <frame_system::CheckEra<Runtime>>::from(generic::Era::mortal(period, current_block)),
-            <frame_system::CheckNonce<Runtime>>::from(nonce),
-            <frame_system::CheckWeight<Runtime>>::new(),
-            <pallet_transaction_payment::ChargeTransactionPayment<Runtime>>::from(tip),
-        );
-        let raw_payload = SignedPayload::new(call, extra)
-            .map_err(|e| {
-                log::warn!("Unable to create signed payload: {:?}", e);
-            })
-            .ok()?;
-        let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
-        let (call, extra, _) = raw_payload.deconstruct();
-        Some((call, (sp_runtime::MultiAddress::Id(account), signature, extra)))
-    }
-}
-
-#[cfg(feature = "txfilter")]
-impl frame_system::offchain::SigningTypes for Runtime {
-    type Public = <Signature as Verify>::Signer;
-    type Signature = Signature;
-}
-
-#[cfg(feature = "txfilter")]
-impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-where
-    Call: From<C>,
-{
-    type OverarchingCall = Call;
-    type Extrinsic = UncheckedExtrinsic;
-}
 
 // Construct runtime
 macro_rules! create_zeitgeist_runtime {
@@ -299,10 +213,84 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
 
+#[derive(scale_info::TypeInfo)]
+pub struct IsCallable;
+
+cfg_if::cfg_if! {
+    if #[cfg(all(feature = "parachain", feature = "txfilter"))] {
+        impl Contains<Call> for IsCallable {
+            fn contains(call: &Call) -> bool {
+                match call {
+                    // Allowed calls:
+                    Call::System(_)
+                    | Call::Sudo(_)
+                    | Call::Timestamp(_)
+                    | Call::AuthorInherent(_)
+                    | Call::AuthorMapping(_)
+                    | Call::DmpQueue(_)
+                    | Call::ParachainSystem(_)
+                    | Call::PolkadotXcm(_)
+                    | Call::XcmpQueue(_) => true,
+
+                    // Prohibited calls:
+                    Call::ParachainStaking(_)
+                    | Call::Crowdloan(_)
+                    | Call::Balances(_)
+                    | Call::Treasury(_)
+                    | Call::AdvisoryCommitteeCollective(_)
+                    | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Identity(_)
+                    | Call::Utility(_)
+                    | Call::Currency(_)
+                    | Call::Authorized(_)
+                    | Call::Court(_)
+                    | Call::LiquidityMining(_)
+                    | Call::Swaps(_)
+                    | Call::PredictionMarkets(_)
+                    | Call::Vesting(_) => false,
+                }
+            }
+        }
+    } else if #[cfg(all(feature = "txfilter", not(feature = "parachain")))] {
+        impl Contains<Call> for IsCallable {
+            fn contains(call: &Call) -> bool {
+                match call {
+                    // Allowed calls:
+                    Call::System(_) | Call::Grandpa(_) | Call::Sudo(_) | Call::Timestamp(_) => true,
+
+                    // Prohibited calls:
+                    Call::Balances(_)
+                    | Call::Treasury(_)
+                    | Call::AdvisoryCommitteeCollective(_)
+                    | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Identity(_)
+                    | Call::Utility(_)
+                    | Call::Currency(_)
+                    | Call::Authorized(_)
+                    | Call::Court(_)
+                    | Call::LiquidityMining(_)
+                    | Call::Swaps(_)
+                    | Call::PredictionMarkets(_)
+                    | Call::Vesting(_) => false,
+                }
+            }
+        }
+    } else {
+        impl Contains<Call> for IsCallable {
+            fn contains(call: &Call) -> bool {
+                match call {
+                    // Every call is allowed
+                    _ => true
+                }
+            }
+        }
+    }
+}
+
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountId;
-    type BaseCallFilter = Everything;
+    type BaseCallFilter = IsCallable;
     type BlockHashCount = BlockHashCount;
     type BlockLength = RuntimeBlockLength;
     type BlockNumber = BlockNumber;
