@@ -11,12 +11,3 @@ pub fn fixed_zero<FixedType: Fixed>() -> Result<FixedType, &'static str> {
         Err("Unexpectedly failed to convert zero to fixed point type")
     }
 }
-
-/// Create a fixed point number that represents 0 (zero).
-pub fn fixed_one<FixedType: Fixed>() -> Result<FixedType, &'static str> {
-    if let Some(res) = FixedType::checked_from_num(1) {
-        Ok(res)
-    } else {
-        Err("Unexpectedly failed to convert zero to fixed point type")
-    }
-}
