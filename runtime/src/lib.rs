@@ -277,11 +277,9 @@ cfg_if::cfg_if! {
         }
     } else {
         impl Contains<Call> for IsCallable {
-            fn contains(call: &Call) -> bool {
-                match call {
-                    // Every call is allowed
-                    _ => true
-                }
+            fn contains(_call: &Call) -> bool {
+                // Every call is allowed
+                true
             }
         }
     }
