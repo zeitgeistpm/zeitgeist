@@ -5,7 +5,7 @@ extern crate alloc;
 use crate::{
     constants::INITIAL_FEE,
     traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
-    utils::{fixed_zero},
+    utils::{fixed_zero, max_value_u128},
 };
 use alloc::vec::Vec;
 #[cfg(feature = "arbitrary")]
@@ -294,11 +294,7 @@ where
 
         formula_components.emax = biggest_exponent;
 
-        let max_value: u128 = FS::max_value()
-            .int()
-            .checked_to_num()
-            .ok_or("Converting fixed point numerical limit to u128 failed unexpectedly")?;
-        if max_value < asset_balances.len() as u128 {
+        if max_value_u128::<FS>()? < asset_balances.len() as u128 {
             return Err("[RikidoSigmoidMV] Number of assets does not fit in FS");
         }
 
@@ -497,11 +493,7 @@ where
     ) -> Result<FS, &'static str> {
         let mut biggest_exponent_used = false;
 
-        let max_value: u128 = FS::max_value()
-            .int()
-            .checked_to_num()
-            .ok_or("Converting fixed point numerical limit to u64 failed unexpectedly")?;
-        if max_value < 1u128 {
+        if max_value_u128::<FS>()? < 1u128 {
             // Impossible due to trait bounds (at least 1 sign bit and 8 integer bits)
             return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
         }
