@@ -416,7 +416,7 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
                         // Overflow impossible
                         let estimate_ratio = mature_time_fixed.saturating_div(premature_time_fixed);
 
-                        // Cannot occur as long as the From<U32> trait is required for FU and
+                        // Cannot fail as long as the From<U32> trait is required for FU and
                         // Timespan::to_seconds() returns u32.
                         let estimate_ratio_fu: FU = estimate_ratio
                             .checked_to_fixed()
