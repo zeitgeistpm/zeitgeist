@@ -43,7 +43,7 @@ mod pallet {
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, StorageVersion,
             WithdrawReasons,
         },
-        transactional, Blake2_128Concat, BoundedVec, Identity,
+        transactional, Blake2_128Concat, WeakBoundedVec, Identity,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -209,7 +209,7 @@ mod pallet {
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Bids<T>>::try_mutate(asset, |b: &mut BoundedVec<T::Hash, _>| {
+                    <Bids<T>>::try_mutate(asset, |b: &mut WeakBoundedVec<T::Hash, _>| {
                         b.try_push(hash).map_err(|_| <Error<T>>::StorageOverflow)
                     })?;
 
@@ -304,7 +304,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         Asset<T::MarketId>,
-        BoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
+        WeakBoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
         ValueQuery,
     >;
 
@@ -314,7 +314,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         Asset<T::MarketId>,
-        BoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
+        WeakBoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
         ValueQuery,
     >;
 
@@ -342,7 +342,7 @@ mod pallet {
         }
     }
 
-    fn remove_item<I: cmp::PartialEq + Copy, G>(items: &mut BoundedVec<I, G>, item: I) {
+    fn remove_item<I: cmp::PartialEq + Copy, G>(items: &mut WeakBoundedVec<I, G>, item: I) {
         let pos = items.iter().position(|&i| i == item).unwrap();
         items.swap_remove(pos);
     }
