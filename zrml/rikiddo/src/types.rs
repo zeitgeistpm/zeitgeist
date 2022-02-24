@@ -4,7 +4,7 @@
 extern crate alloc;
 use super::{
     traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal},
-    utils::fixed_zero,
+    utils::{fixed_zero, max_value_u128},
 };
 use alloc::{borrow::ToOwned, string::ToString};
 #[cfg(feature = "arbitrary")]
@@ -137,18 +137,15 @@ fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str>
     // PartialOrd is bugged, therefore the workaround
     // https://github.com/encointer/substrate-fixed/issues/9
     let num_u128: u128 = num.int().checked_to_num().ok_or("Conversion from FROM to u128 failed")?;
-    let max_value: u128 = TO::max_value()
-        .int()
-        .checked_to_num()
-        .ok_or("Converting fixed point numerical limit to u128 failed unexpectedly")?;
-    if max_value < num_u128 {
+    if max_value_u128::<TO>()? < num_u128 {
         return Err("Fixed point conversion failed: FROM type does not fit in TO type");
     }
 
-    let fixed = num_u128
-        .checked_to_fixed()
-        .ok_or("Integer part of fixed point number does not fit into u128")?;
-    Ok(fixed)
+    if let Some(res) = num_u128.checked_to_fixed() {
+        Ok(res)
+    } else {
+        Err("Integer part of fixed point number does not fit into u128")
+    }
 }
 
 /// Converts an unsigned fixed point number into a signed fixed point number (fallible).
