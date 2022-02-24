@@ -108,18 +108,16 @@ where
 
 impl<FS> Default for RikiddoFormulaComponents<FS>
 where
-    FS: FixedSigned + From<I9F23> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
+    FS: FixedSigned + From<I9F23> + From<i32> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
 {
     fn default() -> Self {
-        // TODO
-        let zero = 0.to_fixed();
         Self {
-            one: 1i32.to_fixed(),
-            fee: zero,
-            sum_balances: zero,
-            sum_times_fee: zero,
-            emax: zero,
-            sum_exp: zero,
+            one: 1i32.into(),
+            fee: 0i32.into(),
+            sum_balances: 0i32.into(),
+            sum_times_fee: 0i32.into(),
+            emax: 0i32.into(),
+            sum_exp: 0i32.into(),
             exponents: HashMap::new(),
             reduced_exponential_results: HashMap::new(),
         }
@@ -211,6 +209,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
+        + From<i32>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
@@ -559,6 +558,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
+        + From<i32>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
@@ -736,6 +736,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
+        + From<i32>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
