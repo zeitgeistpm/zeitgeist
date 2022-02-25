@@ -108,16 +108,16 @@ where
 
 impl<FS> Default for RikiddoFormulaComponents<FS>
 where
-    FS: FixedSigned + From<I9F23> + From<i32> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
+    FS: FixedSigned + From<I9F23> + From<i8> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
 {
     fn default() -> Self {
         Self {
-            one: 1i32.into(),
-            fee: 0i32.into(),
-            sum_balances: 0i32.into(),
-            sum_times_fee: 0i32.into(),
-            emax: 0i32.into(),
-            sum_exp: 0i32.into(),
+            one: 1i8.into(),
+            fee: 0i8.into(),
+            sum_balances: 0i8.into(),
+            sum_times_fee: 0i8.into(),
+            emax: 0i8.into(),
+            sum_exp: 0i8.into(),
             exponents: HashMap::new(),
             reduced_exponential_results: HashMap::new(),
         }
@@ -156,7 +156,7 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
             $tu<FracU>: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
             $ts<FracS>: FixedSigned
                 + From<I9F23>
-                + From<i32>
+                + From<i8>
                 + LossyFrom<FixedI32<U31>>
                 + LossyFrom<U1F127>
                 + LossyFrom<FixedI128<U127>>
@@ -210,7 +210,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
-        + From<i32>
+        + From<i8>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
@@ -559,7 +559,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
-        + From<i32>
+        + From<i8>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
@@ -737,7 +737,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
-        + From<i32>
+        + From<i8>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>

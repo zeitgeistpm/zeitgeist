@@ -145,7 +145,7 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
         impl<'a, Frac> Arbitrary<'a> for EmaMarketVolume<$t<Frac>>
         where
             Frac: $LeEqU,
-            $t<Frac>: FixedUnsigned + From<u32>,
+            $t<Frac>: FixedUnsigned + From<u8>,
         {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
                 Ok(EmaMarketVolume::<$t<Frac>>::new(
@@ -206,7 +206,7 @@ cfg_if::cfg_if! {
     }
 }
 
-impl<FU: FixedUnsigned + From<u32>> EmaMarketVolume<FU> {
+impl<FU: FixedUnsigned + From<u8>> EmaMarketVolume<FU> {
     /// Initialize the structure based on a configuration.
     ///
     /// # Arguments
@@ -215,12 +215,12 @@ impl<FU: FixedUnsigned + From<u32>> EmaMarketVolume<FU> {
     pub fn new(config: EmaConfig<FU>) -> Self {
         Self {
             config,
-            ema: 0u32.into(),
+            ema: 0u8.into(),
             state: MarketVolumeState::Uninitialized,
             start_time: 0,
             last_time: 0,
-            volumes_per_period: 0u32.into(),
-            multiplier: 0u32.into(),
+            volumes_per_period: 0u8.into(),
+            multiplier: 0u8.into(),
         }
     }
 
@@ -237,7 +237,7 @@ impl<FU: FixedUnsigned + From<u32>> EmaMarketVolume<FU> {
         };
 
         // Overflow is impossible here.
-        let one_minus_multiplier = if let Some(res) = FU::from(1u32).checked_sub(self.multiplier) {
+        let one_minus_multiplier = if let Some(res) = FU::from(1u8).checked_sub(self.multiplier) {
             res
         } else {
             return Err("[EmaMarketVolume] Overflow during calculation: 1 - multiplier");
@@ -285,7 +285,7 @@ impl<FU: FixedUnsigned + From<u32>> EmaMarketVolume<FU> {
 
         // This can't overflow.
         self.ema = if let Some(res) = sma_times_vpp_plus_volume
-            .checked_div(self.volumes_per_period.saturating_add(FU::from(1u32)))
+            .checked_div(self.volumes_per_period.saturating_add(FU::from(1u8)))
         {
             res
         } else {
@@ -323,13 +323,13 @@ impl<FU: FixedUnsigned + From<u32>> EmaMarketVolume<FU> {
     }
 }
 
-impl<FU: FixedUnsigned + From<u32> + LossyFrom<FixedU32<U24>>> Default for EmaMarketVolume<FU> {
+impl<FU: FixedUnsigned + From<u8> + LossyFrom<FixedU32<U24>>> Default for EmaMarketVolume<FU> {
     fn default() -> Self {
         EmaMarketVolume::new(EmaConfig::default())
     }
 }
 
-impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
+impl<FU: FixedUnsigned + From<u8>> MarketAverage for EmaMarketVolume<FU> {
     type FU = FU;
 
     /// Get the ema value if available, otherwise `None`. Using this function is prefered in most
@@ -345,12 +345,12 @@ impl<FU: FixedUnsigned + From<u32>> MarketAverage for EmaMarketVolume<FU> {
 
     /// Clear market data.
     fn clear(&mut self) {
-        self.ema = 0u32.into();
-        self.multiplier = 0u32.into();
+        self.ema = 0u8.into();
+        self.multiplier = 0u8.into();
         self.last_time = 0;
         self.state = MarketVolumeState::Uninitialized;
         self.start_time = 0;
-        self.volumes_per_period = 0u32.into();
+        self.volumes_per_period = 0u8.into();
     }
 
     /// Update market data. This implementation will count the
