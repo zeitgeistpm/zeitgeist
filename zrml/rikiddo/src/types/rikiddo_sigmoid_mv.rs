@@ -156,6 +156,7 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
             $tu<FracU>: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
             $ts<FracS>: FixedSigned
                 + From<I9F23>
+                + From<i32>
                 + LossyFrom<FixedI32<U31>>
                 + LossyFrom<U1F127>
                 + LossyFrom<FixedI128<U127>>

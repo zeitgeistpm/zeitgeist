@@ -145,7 +145,7 @@ macro_rules! impl_arbitrary_for_ema_market_volume {
         impl<'a, Frac> Arbitrary<'a> for EmaMarketVolume<$t<Frac>>
         where
             Frac: $LeEqU,
-            $t<Frac>: FixedUnsigned,
+            $t<Frac>: FixedUnsigned + From<u32>,
         {
             fn arbitrary(u: &mut Unstructured<'a>) -> ArbitraryResult<Self> {
                 Ok(EmaMarketVolume::<$t<Frac>>::new(
