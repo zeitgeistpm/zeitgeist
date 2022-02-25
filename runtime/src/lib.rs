@@ -710,9 +710,6 @@ impl_runtime_apis! {
                 panic!("ERROR: No block numbers left")
             };
 
-            // The Moonbeam runtimes use an entropy source that needs to do some accounting
-            // work during block initialization. Therefore we initialize it here to match
-            // the state it will be in when the next block is being executed.
             use frame_support::traits::OnInitialize;
             System::initialize(
                 &block_number,

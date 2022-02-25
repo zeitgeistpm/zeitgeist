@@ -78,7 +78,7 @@ sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.16", default-features =
 # Utility
 cfg-if = { version = "1.0.0" }
 hex-literal = { default-features = false, optional = true, version = "0.3.4" }
-log = { version = "0.4.14", default-features = false, optional = true }
+log = { version = "0.4.8", default-features = false, optional = true }
 
 # Zeitgeist
 
@@ -123,6 +123,10 @@ parachain = [
 	"xcm-builder",
 	"xcm-executor",
 	"xcm",
+
+	# Misc
+
+	"log"
 ]
 
 runtime-benchmarks = [
