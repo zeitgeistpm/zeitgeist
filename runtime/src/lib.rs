@@ -23,7 +23,7 @@ pub use parameters::*;
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::Contains,
+    traits::{Contains, EnsureOneOf},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -35,7 +35,9 @@ use sp_core::{
 };
 use sp_runtime::{
     create_runtime_str, generic,
-    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
+    traits::{
+        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Header as HeaderT,
+    },
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -88,7 +90,7 @@ type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 
 type SignedExtra = (
-    frame_system::CheckNonZeroSender::<Runtime>,
+    frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -696,7 +698,17 @@ impl_runtime_apis! {
             slot: u32,
             parent_header: &<Block as BlockT>::Header
         ) -> bool {
-            let block_number = parent_header.number + 1;
+
+            // Ensure that an update is enforced when we are close to maximum block number
+            let block_number = if let Some(bn) = parent_header.number.checked_add(1) {
+                if bn < <<Block as BlockT>::Header as HeaderT>::Number::from(1_000_000u32) {
+                    log::warn!("CAUTION: Only {} block numbers left. Update to bigger type", bn);
+                }
+
+                bn
+            } else {
+                panic!("ERROR: No block numbers left")
+            };
 
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
             // work during block initialization. Therefore we initialize it here to match

@@ -43,7 +43,7 @@ mod pallet {
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, StorageVersion,
             WithdrawReasons,
         },
-        transactional, Blake2_128Concat, WeakBoundedVec, Identity,
+        transactional, Blake2_128Concat, Identity, WeakBoundedVec,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};

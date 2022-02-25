@@ -59,7 +59,7 @@ pub async fn new_full(
                 client.clone(),
                 transaction_pool,
                 prometheus_registry,
-                telemetry.clone(),
+                telemetry,
             );
             proposer_factory.set_soft_deadline(SOFT_DEADLINE_PERCENT);
 
@@ -93,7 +93,7 @@ pub async fn new_full(
                 para_id: parachain_id,
                 proposer_factory,
                 block_import: client.clone(),
-                parachain_client: client.clone(),
+                parachain_client: client,
                 keystore,
                 skip_prediction: force_authoring,
                 create_inherent_data_providers: provider,

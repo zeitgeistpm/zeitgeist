@@ -88,7 +88,7 @@ pub fn run() -> sc_cli::Result<()> {
                 &params.chain.clone().unwrap_or_default(),
                 params.parachain_id.into(),
             )?;
-            let state_version = Cli::native_runtime_version(&chain_spec).state_version();
+            let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
             let block: zeitgeist_runtime::Block =
                 cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)?;
