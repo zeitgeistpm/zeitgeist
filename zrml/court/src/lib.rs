@@ -35,6 +35,7 @@ mod pallet {
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
+            StorageVersion,
         },
         Blake2_128Concat, PalletId,
     };
@@ -56,6 +57,8 @@ mod pallet {
     // Number of jurors for an initial market dispute
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
@@ -185,6 +188,7 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     impl<T> Pallet<T>

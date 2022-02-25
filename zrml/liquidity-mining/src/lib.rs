@@ -50,7 +50,9 @@ mod pallet {
             types::{StorageDoubleMap, StorageValue, ValueQuery},
             with_transaction,
         },
-        traits::{Currency, ExistenceRequirement, Get, Hooks, IsType, WithdrawReasons},
+        traits::{
+            Currency, ExistenceRequirement, Get, Hooks, IsType, StorageVersion, WithdrawReasons,
+        },
         Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
@@ -63,6 +65,9 @@ mod pallet {
         types::{MarketPeriod, MaxRuntimeUsize},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -182,6 +187,7 @@ mod pallet {
     }
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     impl<T> Pallet<T>

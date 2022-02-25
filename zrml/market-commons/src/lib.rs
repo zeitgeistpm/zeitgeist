@@ -20,7 +20,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
-        traits::{Hooks, NamedReservableCurrency, Time},
+        traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
     use sp_runtime::{
@@ -28,6 +28,9 @@ mod pallet {
         ArithmeticError, DispatchError,
     };
     use zeitgeist_primitives::types::{Market, PoolId, Report};
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
@@ -70,6 +73,7 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     impl<T> Pallet<T>

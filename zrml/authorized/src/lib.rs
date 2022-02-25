@@ -20,7 +20,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         pallet_prelude::StorageDoubleMap,
-        traits::{Currency, Get, Hooks, IsType},
+        traits::{Currency, Get, Hooks, IsType, StorageVersion},
         Blake2_128Concat, PalletId,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -30,6 +30,9 @@ mod pallet {
         types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -114,6 +117,7 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     impl<T> Pallet<T> where T: Config {}

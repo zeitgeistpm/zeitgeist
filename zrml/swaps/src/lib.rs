@@ -43,7 +43,7 @@ mod pallet {
         ensure, log,
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{Get, IsType},
+        traits::{Get, IsType, StorageVersion},
         Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
@@ -75,6 +75,9 @@ mod pallet {
         traits::RikiddoMVPallet,
         types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV},
     };
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -845,6 +848,7 @@ mod pallet {
     }
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(PhantomData<T>);
 
