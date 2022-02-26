@@ -55,11 +55,11 @@ pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
         return Ok(whole_pow);
     }
 
-    let partial_result = bpow_approx(base, remain, BPOW_PRECISION)?;
+    let partial_result = bpow_approx(base, remain)?;
     bmul(whole_pow, partial_result)
 }
 
-pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> Result<u128, DispatchError> {
+pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
     let a = exp;
     let (x, xneg) = bsub_sign(base, BASE)?;
     let mut term = BASE;
@@ -71,7 +71,7 @@ pub fn bpow_approx(base: u128, exp: u128, precision: u128) -> Result<u128, Dispa
     // each iteration, multiply previous term by (a-(k-1)) * x / k
     // continue until term is less than precision
     let mut i = 1;
-    while term >= precision {
+    while term >= BPOW_PRECISION {
         let big_k = i.check_mul_rslt(&BASE)?;
         let (c, cneg) = bsub_sign(a, big_k.check_sub_rslt(&BASE)?)?;
         term = bmul(term, bmul(c, x)?)?;
