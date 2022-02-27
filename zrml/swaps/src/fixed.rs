@@ -1,4 +1,7 @@
-use crate::{check_arithm_rslt::CheckArithmRslt, consts::BPOW_PRECISION};
+use crate::{
+    check_arithm_rslt::CheckArithmRslt,
+    consts::{BPOW_APPROX_BASE_MAX, BPOW_APPROX_BASE_MIN, BPOW_PRECISION},
+};
 use frame_support::dispatch::DispatchError;
 use zeitgeist_primitives::constants::BASE;
 
@@ -60,6 +63,16 @@ pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
 }
 
 pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
+    if exp > BASE {
+        return Err(DispatchError::Other("[bpow_approx]: expected exp <= BASE"));
+    }
+    if base < BPOW_APPROX_BASE_MIN {
+        return Err(DispatchError::Other("[bpow_approx]: expected base >= BASE / 4"));
+    }
+    if base > BPOW_APPROX_BASE_MAX {
+        return Err(DispatchError::Other("[bpow_approx]: expected base <= 7 * BASE / 4"));
+    }
+
     let a = exp;
     let (x, xneg) = bsub_sign(base, BASE)?;
     let mut term = BASE;
@@ -175,19 +188,6 @@ mod tests {
             3 => Ok(0), Ok(3 * BASE), Ok(6 * BASE), Ok(9 * BASE);
             max_n => Ok(0), ERR, ERR, ERR;
             n_max => Ok(0), ERR, ERR, ERR;
-        );
-    }
-
-    #[test]
-    fn bpow_has_minimum_set_of_correct_values() {
-        create_tests!(
-            bpow;
-            0 => Ok(BASE), Ok(0), Ok(0), Ok(0);
-            1 => Ok(BASE), Ok(BASE), Ok(BASE), Ok(BASE);
-            2 => Ok(BASE), Ok(2 * BASE), Ok(4 * BASE), Ok(8 * BASE);
-            3 => Ok(BASE), Ok(3 * BASE), Ok(9 * BASE), Ok(27 * BASE);
-            max_n => Ok(BASE), Ok(u128::MAX), ERR, ERR;
-            n_max => ERR, ERR, ERR, ERR;
         );
     }
 
