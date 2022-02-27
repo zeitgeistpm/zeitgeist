@@ -48,6 +48,17 @@ pub fn bpowi(a: u128, n: u128) -> Result<u128, DispatchError> {
     Ok(z)
 }
 
+/// Compute the power `base ** exp`.
+///
+/// # Arguments
+///
+/// * `base`: The base, a number between `BASE / 4` and `7 * BASE / 4`
+/// * `exp`: The exponent
+///
+/// # Errors
+///
+/// If this function encounters an arithmetic over/underflow, or if the numerical limits
+/// for `base` (specified above) are violated, a `DispatchError::Other` is returned.
 pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
     let whole = bfloor(exp)?;
     let remain = exp.check_sub_rslt(&whole)?;
@@ -62,7 +73,23 @@ pub fn bpow(base: u128, exp: u128) -> Result<u128, DispatchError> {
     bmul(whole_pow, partial_result)
 }
 
+/// Compute an estimate of the power `base ** exp`.
+///
+/// # Arguments
+///
+/// * `base`: The base, an element of `[BASE / 4, 7 * BASE / 4]`
+/// * `exp`: The exponent, an element of `[0, BASE]`
+///
+/// # Errors
+///
+/// If this function encounters an arithmetic over/underflow, or if the numerical limits
+/// for `base` or `exp` (specified above) are violated, a `DispatchError::Other` is
+/// returned.
 pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
+    // We use the binomial power series for this calculation. We stop adding terms to
+    // the result as soon as one term is smaller than `BPOW_PRECISION`. (Thanks to the
+    // limits on `base` and `exp`, this means that the total error should not exceed
+    // 4*BPOW_PRECISION`.)
     if exp > BASE {
         return Err(DispatchError::Other("[bpow_approx]: expected exp <= BASE"));
     }
@@ -100,6 +127,8 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
             negative = !negative;
         }
         if negative {
+            // Never underflows. In fact, the absolute value of the terms is strictly
+            // decreasing thanks to the numerical limits.
             sum = sum.check_sub_rslt(&term)?;
         } else {
             sum = sum.check_add_rslt(&term)?;
@@ -193,7 +222,7 @@ mod tests {
 
     #[test]
     fn bpow_approx_has_minimum_set_of_correct_values() {
-        let precision = 100 * BPOW_PRECISION;
+        let precision = 4 * BPOW_PRECISION;
         let test_vector: Vec<(u128, u128, u128)> = vec![
             (2500000000, 0, 10000000000),
             (2500000000, 1000000000, 8705505632),
@@ -275,7 +304,12 @@ mod tests {
         ];
         for (base, exp, expected) in test_vector.iter() {
             let result = bpow_approx(*base, *exp).unwrap();
-            assert_eq!(result / precision, *expected / precision);
+            let diff = if result > *expected {
+                result - *expected
+            } else {
+                *expected - result
+            };
+            assert_le!(diff, precision);
         }
     }
 }
