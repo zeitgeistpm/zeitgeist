@@ -102,7 +102,7 @@ mod pallet {
     pub(crate) const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -1323,6 +1323,10 @@ mod pallet {
             });
 
             total_weight
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            crate::migrations::convert_vec_to_weak_bounded_vec::migrate::<T>()
         }
     }
 
