@@ -112,7 +112,7 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
     //         = (product(a - i - 1, i=1-->k) * x^k) / (k!)
     // each iteration, multiply previous term by (a-(k-1)) * x / k
     // continue until term is less than precision
-    for i in 1..1 + BPOW_APPROX_MAX_ITERATIONS {
+    for i in 1..BPOW_APPROX_MAX_ITERATIONS.check_add_rslt(&1)? {
         if term < BPOW_PRECISION {
             break;
         }
