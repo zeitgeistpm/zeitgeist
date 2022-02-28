@@ -221,6 +221,62 @@ mod tests {
     }
 
     #[test]
+    fn bpow_has_minimum_set_of_correct_values() {
+        let precision = 4 * BPOW_PRECISION;
+        let test_vector: Vec<(u128, u128, u128)> = vec![
+            (2500000000, 0, 10000000000),
+            (2500000000, 10000000000, 2500000000),
+            (2500000000, 33333333333, 98431332),
+            (2500000000, 200000000, 9726549474),
+            (2500000000, 500000000000, 0),
+            (5000000000, 0, 10000000000),
+            (5000000000, 10000000000, 5000000000),
+            (5000000000, 33333333333, 992125657),
+            (5000000000, 200000000, 9862327044),
+            (5000000000, 500000000000, 0),
+            (7500000000, 0, 10000000000),
+            (7500000000, 10000000000, 7500000000),
+            (7500000000, 33333333333, 3832988750),
+            (7500000000, 200000000, 9942628790),
+            (7500000000, 500000000000, 5663),
+            (10000000000, 0, 10000000000),
+            (10000000000, 10000000000, 10000000000),
+            (10000000000, 33333333333, 10000000000),
+            (10000000000, 200000000, 10000000000),
+            (10000000000, 500000000000, 10000000000),
+            (12500000000, 0, 10000000000),
+            (12500000000, 10000000000, 12500000000),
+            (12500000000, 33333333333, 21039401269),
+            (12500000000, 200000000, 10044728444),
+            // (12500000000, 500000000000, 700649232162408),
+            (15000000000, 0, 10000000000),
+            (15000000000, 10000000000, 15000000000),
+            (15000000000, 33333333333, 38634105686),
+            (15000000000, 200000000, 10081422716),
+            // (15000000000, 500000000000, 6376215002140495869),
+            (17500000000, 0, 10000000000),
+            (17500000000, 10000000000, 17500000000),
+            (17500000000, 33333333333, 64584280985),
+            (17500000000, 200000000, 10112551840),
+            // (17500000000, 500000000000, 14187387615511831479362),
+        ];
+        for (base, exp, expected) in test_vector.iter() {
+            let result = bpow(*base, *exp).unwrap();
+            let diff = if result > *expected { result - *expected } else { *expected - result };
+            assert_le!(diff, precision);
+        }
+    }
+
+    #[test]
+    fn bpow_returns_error_when_parameters_are_outside_of_specified_limits() {
+        let test_vector: Vec<(u128, u128)> =
+            vec![(BASE / 10, 3 * BASE / 2), (2 * BASE - BASE / 10, 3 * BASE / 2)];
+        for (base, exp) in test_vector.iter() {
+            assert!(bpow(*base, *exp).is_err());
+        }
+    }
+
+    #[test]
     fn bpow_approx_has_minimum_set_of_correct_values() {
         let precision = 4 * BPOW_PRECISION;
         let test_vector: Vec<(u128, u128, u128)> = vec![
@@ -304,12 +360,21 @@ mod tests {
         ];
         for (base, exp, expected) in test_vector.iter() {
             let result = bpow_approx(*base, *exp).unwrap();
-            let diff = if result > *expected {
-                result - *expected
-            } else {
-                *expected - result
-            };
+            let diff = if result > *expected { result - *expected } else { *expected - result };
             assert_le!(diff, precision);
+        }
+    }
+
+    #[test]
+    fn bpow_approx_returns_error_when_parameters_are_outside_of_specified_limits() {
+        let test_vector: Vec<(u128, u128)> =
+            vec![
+                (BASE / 10, 3 * BASE / 2),
+                (2 * BASE - BASE / 10, 3 * BASE / 2),
+                (BASE, 11 * BASE / 10),
+            ];
+        for (base, exp) in test_vector.iter() {
+            assert!(bpow_approx(*base, *exp).is_err());
         }
     }
 }
