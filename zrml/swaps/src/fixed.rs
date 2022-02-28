@@ -1,6 +1,8 @@
 use crate::{
     check_arithm_rslt::CheckArithmRslt,
-    consts::{BPOW_APPROX_BASE_MAX, BPOW_APPROX_BASE_MIN, BPOW_PRECISION},
+    consts::{
+        BPOW_APPROX_BASE_MAX, BPOW_APPROX_BASE_MIN, BPOW_APPROX_MAX_ITERATIONS, BPOW_PRECISION,
+    },
 };
 use frame_support::dispatch::DispatchError;
 use zeitgeist_primitives::constants::BASE;
@@ -110,8 +112,18 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
     //         = (product(a - i - 1, i=1-->k) * x^k) / (k!)
     // each iteration, multiply previous term by (a-(k-1)) * x / k
     // continue until term is less than precision
-    let mut i = 1;
-    while term >= BPOW_PRECISION {
+    for i in 1..1 + BPOW_APPROX_MAX_ITERATIONS {
+        if term < BPOW_PRECISION {
+            break;
+        }
+
+        if i == BPOW_APPROX_MAX_ITERATIONS {
+            // Unreachable with the current limits.
+            return Err(DispatchError::Other(
+                "[bpow_approx] Maximum number of iterations exceeded",
+            ));
+        }
+
         let big_k = i.check_mul_rslt(&BASE)?;
         let (c, cneg) = bsub_sign(a, big_k.check_sub_rslt(&BASE)?)?;
         term = bmul(term, bmul(c, x)?)?;
@@ -133,8 +145,6 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
         } else {
             sum = sum.check_add_rslt(&term)?;
         }
-
-        i = i.check_add_rslt(&1)?;
     }
 
     Ok(sum)
@@ -367,12 +377,11 @@ mod tests {
 
     #[test]
     fn bpow_approx_returns_error_when_parameters_are_outside_of_specified_limits() {
-        let test_vector: Vec<(u128, u128)> =
-            vec![
-                (BASE / 10, 3 * BASE / 2),
-                (2 * BASE - BASE / 10, 3 * BASE / 2),
-                (BASE, 11 * BASE / 10),
-            ];
+        let test_vector: Vec<(u128, u128)> = vec![
+            (BASE / 10, 3 * BASE / 2),
+            (2 * BASE - BASE / 10, 3 * BASE / 2),
+            (BASE, 11 * BASE / 10),
+        ];
         for (base, exp) in test_vector.iter() {
             assert!(bpow_approx(*base, *exp).is_err());
         }
