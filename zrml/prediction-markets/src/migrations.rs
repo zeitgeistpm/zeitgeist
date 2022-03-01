@@ -138,42 +138,55 @@ pub mod convert_vec_to_weak_bounded_vec {
     #[cfg(test)]
     mod test {
         use super::*;
-        use crate::{
-            mock::{ExtBuilder, Runtime},
-            Disputes,
-        };
-        use frame_support::storage::PrefixIterator;
+        use crate::mock::{ExtBuilder, Runtime};
+        use core::{cmp::PartialEq, fmt::Debug, ops::Deref};
+        use parity_scale_codec::Decode;
 
         type AccountId = <Runtime as frame_system::Config>::AccountId;
         type BlockNumber = <Runtime as frame_system::Config>::BlockNumber;
 
-        // TODO :)
-        // Collect every element, compare length and contents
         #[test]
-        fn data_is_consistent_after_disputes_migration() {
+        fn disputes() {
+            check_vec_to_weak_bounded_vec_migration::<
+                Vec<MarketDispute<AccountId, BlockNumber>>,
+                WeakBoundedVec<MarketDispute<AccountId, BlockNumber>, ConstU32<1024>>,
+            >(PM, DISPUTES);
+        }
+
+        #[test]
+        fn market_id_per_dispute_block() {
+            check_vec_to_weak_bounded_vec_migration::<
+                Vec<MarketIdOf<Runtime>>,
+                WeakBoundedVec<MarketIdOf<Runtime>, ConstU32<1024>>,
+            >(PM, MARKET_IDS_PER_DISPUTE_BLOCK);
+        }
+
+        #[test]
+        fn market_id_per_report_block() {
+            check_vec_to_weak_bounded_vec_migration::<
+                Vec<MarketIdOf<Runtime>>,
+                WeakBoundedVec<MarketIdOf<Runtime>, ConstU32<1024>>,
+            >(PM, MARKET_IDS_PER_REPORT_BLOCK);
+        }
+
+        fn check_vec_to_weak_bounded_vec_migration<B, A>(pallet: &[u8], prefix: &[u8])
+        where
+            B: Decode + PartialEq + Debug,
+            A: Decode + PartialEq + Debug + Deref<Target = B>,
+        {
             ExtBuilder::default().build().execute_with(|| {
-                let disputes_old = migration::storage_iter::<
-                    Vec<MarketDispute<AccountId, BlockNumber>>,
-                >(PM, DISPUTES)
-                .map(|v| v.1);
-
+                let mut data_old = migration::storage_iter::<B>(pallet, prefix).map(|v| v.1);
                 migrate::<Runtime>();
+                let mut data_new = migration::storage_iter::<A>(pallet, prefix).map(|v| v.1);
 
-                let disputes_new = migration::storage_iter::<
-                    WeakBoundedVec<MarketDispute<AccountId, BlockNumber>, ConstU32<1024>>,
-                >(PM, DISPUTES)
-                .map(|v| v.1);
-
-                for (before, after) in disputes_old.zip(disputes_new) {
-                    assert!(before == after.to_vec());
+                for (before, after) in data_old.by_ref().zip(data_new.by_ref()) {
+                    assert_eq!(before, *after);
                 }
+
+                // Both storages have the same size.
+                assert_eq!(data_old.next(), None);
+                assert_eq!(data_new.next(), None);
             });
         }
-
-        fn gather_data<T>(pallet: &[u8], prefix: &[u8]) -> T {
-            todo!()
-        }
-
-        //fn compare()
     }
 }
