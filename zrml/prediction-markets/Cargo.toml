@@ -2,7 +2,7 @@
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
-log = { version = "0.4.8", default-features = false, optional = true }
+log = { version = "0.4.8", default-features = false }
 orml-traits = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "2.0.0" }
 sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
