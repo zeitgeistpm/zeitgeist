@@ -2,7 +2,10 @@ pub mod convert_vec_to_weak_bounded_vec {
     use crate::{Config, MarketIdOf, MomentOf, Pallet};
     use alloc::vec::Vec;
     use frame_support::{
-        dispatch::Weight, migration, pallet_prelude::ConstU32, traits::{Get, StorageVersion},
+        dispatch::Weight,
+        migration,
+        pallet_prelude::ConstU32,
+        traits::{Get, StorageVersion},
         WeakBoundedVec,
     };
     use zeitgeist_primitives::types::{MarketDispute, SubsidyUntil};
@@ -30,10 +33,12 @@ pub mod convert_vec_to_weak_bounded_vec {
             StorageVersion::new(NEXT_STORAGE_VERSION).put::<Pallet<T>>();
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
-            log::info!("Completed migrations: Vec -> WeakBoundedVec. Total weight consumed: {}", total_weight);
+            log::info!(
+                "Completed migrations: Vec -> WeakBoundedVec. Total weight consumed: {}",
+                total_weight
+            );
         }
 
-        
         total_weight
     }
 
@@ -62,7 +67,8 @@ pub mod convert_vec_to_weak_bounded_vec {
         log::info!("Started MarketIdsPerDisputeBlock Migration: Vec -> WeakBoundedVec");
         let mut weight: Weight = 0;
 
-        for (k, v) in migration::storage_iter::<Vec<MarketIdOf<T>>>(PM, MARKET_IDS_PER_DISPUTE_BLOCK)
+        for (k, v) in
+            migration::storage_iter::<Vec<MarketIdOf<T>>>(PM, MARKET_IDS_PER_DISPUTE_BLOCK)
         {
             let new_value: WeakBoundedVec<MarketIdOf<T>, ConstU32<1024>> =
                 WeakBoundedVec::force_from(
@@ -124,26 +130,48 @@ pub mod convert_vec_to_weak_bounded_vec {
         } else {
             weight = weight.saturating_add(T::DbWeight::get().reads(1));
         }
-        
+
         log::info!("Completed MarketsCollectingSubsidy Migration. Consumed weight: {}", weight);
         weight
     }
 
     #[cfg(test)]
     mod test {
-        use crate::mock::{ExtBuilder, Runtime};
         use super::*;
+        use crate::{
+            mock::{ExtBuilder, Runtime},
+            Disputes,
+        };
+        use frame_support::storage::PrefixIterator;
+
+        type AccountId = <Runtime as frame_system::Config>::AccountId;
+        type BlockNumber = <Runtime as frame_system::Config>::BlockNumber;
 
         // TODO :)
         // Collect every element, compare length and contents
         #[test]
-        fn data_is_consistent_after_migrations() {
+        fn data_is_consistent_after_disputes_migration() {
             ExtBuilder::default().build().execute_with(|| {
-                // let disputes_old: Vec<MarketDispute<<Runtime as frame_system::Config>::AccountId, <Runtime as frame_system::Config>::BlockNumber>> = <Disputes<Runtime>>::iter().collect();
+                let disputes_old = migration::storage_iter::<
+                    Vec<MarketDispute<AccountId, BlockNumber>>,
+                >(PM, DISPUTES)
+                .map(|v| v.1);
+
                 migrate::<Runtime>();
-                // let disputes_new = <Disputes<Runtime>>::iter().collect();
-                // assert!(disputes_old.len() == disputes_new.len());
+
+                let disputes_new = migration::storage_iter::<
+                    WeakBoundedVec<MarketDispute<AccountId, BlockNumber>, ConstU32<1024>>,
+                >(PM, DISPUTES)
+                .map(|v| v.1);
+
+                for (before, after) in disputes_old.zip(disputes_new) {
+                    assert!(before == after.to_vec());
+                }
             });
+        }
+
+        fn gather_data<T>(pallet: &[u8], prefix: &[u8]) -> T {
+            todo!()
         }
 
         //fn compare()
