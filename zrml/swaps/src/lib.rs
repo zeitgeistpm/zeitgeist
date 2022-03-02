@@ -292,11 +292,9 @@ mod pallet {
             let params = PoolExitWithExactAmountParams {
                 asset,
                 asset_amount: |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
-                    let mul: BalanceOf<T> = bmul(
-                        total_supply.saturated_into(),
-                        T::MaxInRatio::get().saturated_into(),
-                    )?
-                    .saturated_into();
+                    let mul: BalanceOf<T> =
+                        bmul(total_supply.saturated_into(), T::MaxInRatio::get().saturated_into())?
+                            .saturated_into();
                     ensure!(pool_amount <= mul, Error::<T>::MaxInRatio);
                     let asset_amount: BalanceOf<T> = crate::math::calc_single_out_given_pool_in(
                         asset_balance.saturated_into(),
