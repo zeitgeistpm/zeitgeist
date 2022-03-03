@@ -141,11 +141,7 @@ fn convert_common<FROM: Fixed, TO: Fixed>(num: FROM) -> Result<TO, &'static str>
         return Err("Fixed point conversion failed: FROM type does not fit in TO type");
     }
 
-    if let Some(res) = num_u128.checked_to_fixed() {
-        Ok(res)
-    } else {
-        Err("Integer part of fixed point number does not fit into u128")
-    }
+    num_u128.checked_to_fixed().ok_or("Integer part of fixed point number does not fit into u128")
 }
 
 /// Converts an unsigned fixed point number into a signed fixed point number (fallible).
@@ -225,20 +221,15 @@ impl<F: Fixed, N: TryFrom<u128>> FromFixedToDecimal<F> for N {
 
             // Arithmetic rounding (+1 if >= 0.5)
             if F::frac_nbits() > 0 {
-                if let Some(two) = F::checked_from_num(2) {
-                    if let Some(one) = F::checked_from_num(1) {
-                        if let Some(res) = one.checked_div(two) {
-                            if fixed.frac() >= res {
-                                result = result.saturating_add(1);
-                            }
-                        } else {
-                            return Err("Unexpected overflow when dividing one by two");
-                        }
-                    } else {
-                        return Err("Unexpectedly failed to convert 1 to fixed point number");
-                    }
-                } else {
-                    return Err("Unexpectedly failed to convert 2 to fixed point number");
+                let two = F::checked_from_num(2)
+                    .ok_or("Unexpectedly failed to convert 2 to fixed point number")?;
+                let one = F::checked_from_num(1)
+                    .ok_or("Unexpectedly failed to convert 1 to fixed point number")?;
+                let half =
+                    one.checked_div(two).ok_or("Unexpected overflow when dividing one by two")?;
+
+                if fixed.frac() >= half {
+                    result = result.saturating_add(1);
                 }
             }
 
