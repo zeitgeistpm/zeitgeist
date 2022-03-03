@@ -7,7 +7,7 @@
 
 use libfuzzer_sys::fuzz_target;
 use substrate_fixed::{types::extra::U33, FixedU128};
-use zrml_rikiddo::types::convert_to_unsigned;
+use zrml_rikiddo::utils::convert_to_unsigned;
 
 mod shared;
 use shared::fixed_from_i128;

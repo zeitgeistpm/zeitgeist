@@ -9,7 +9,7 @@ use substrate_fixed::{
 
 use crate::{
     traits::{FromFixedDecimal, FromFixedToDecimal, IntoFixedDecimal, IntoFixedFromDecimal},
-    types::{convert_to_signed, convert_to_unsigned},
+    utils::{convert_to_signed, convert_to_unsigned},
 };
 
 mod ema_market_volume;

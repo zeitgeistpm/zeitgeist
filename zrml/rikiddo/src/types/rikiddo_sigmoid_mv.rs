@@ -5,7 +5,7 @@ extern crate alloc;
 use crate::{
     constants::INITIAL_FEE,
     traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
-    utils::{fixed_zero, max_value_u128},
+    utils::{convert_to_signed, convert_to_unsigned, fixed_zero, max_value_u128},
 };
 use alloc::vec::Vec;
 #[cfg(feature = "arbitrary")]
@@ -30,7 +30,7 @@ use substrate_fixed::{
     FixedI64, FixedU64,
 };
 
-use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
+use super::TimestampedVolume;
 
 /// Configuration values used within the Rikiddo core functions.
 #[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]

@@ -3,10 +3,7 @@ use hashbrown::HashMap;
 use substrate_fixed::{traits::ToFixed, types::extra::U64, FixedI128, FixedU128};
 
 use super::{cost, max_allowed_error, Rikiddo};
-use crate::{
-    traits::Lmsr,
-    types::{convert_to_signed, RikiddoFormulaComponents},
-};
+use crate::{traits::Lmsr, types::RikiddoFormulaComponents, utils::convert_to_signed};
 
 #[test]
 fn rikiddo_cost_function_rejects_empty_list() {
