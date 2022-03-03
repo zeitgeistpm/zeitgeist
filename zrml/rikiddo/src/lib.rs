@@ -64,7 +64,7 @@ pub mod pallet {
         debug,
         dispatch::DispatchResult,
         pallet_prelude::StorageMap,
-        traits::{Get, Hooks, Time},
+        traits::{Get, Hooks, StorageVersion, Time},
         Twox64Concat,
     };
     use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
@@ -77,6 +77,9 @@ pub mod pallet {
         },
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
@@ -140,6 +143,7 @@ pub mod pallet {
     impl<T: Config<I>, I: 'static> Hooks<T::BlockNumber> for Pallet<T, I> {}
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T, I = ()>(PhantomData<T>, PhantomData<I>);
 
     #[pallet::call]

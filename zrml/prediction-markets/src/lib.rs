@@ -76,7 +76,7 @@ mod pallet {
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced,
+            NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
@@ -100,6 +100,9 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     pub(crate) const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -1324,6 +1327,7 @@ mod pallet {
     }
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     /// For each market, this holds the dispute information for each dispute that's

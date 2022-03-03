@@ -40,7 +40,8 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{
-            Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, WithdrawReasons,
+            Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, StorageVersion,
+            WithdrawReasons,
         },
         Blake2_128Concat, Identity,
     };
@@ -52,6 +53,9 @@ mod pallet {
         ArithmeticError, DispatchError,
     };
     use zeitgeist_primitives::{traits::MarketId, types::Asset};
+
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -285,6 +289,7 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
