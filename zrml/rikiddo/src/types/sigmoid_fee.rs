@@ -1,9 +1,9 @@
 //! This module contains the structures used to calculate the fee based on a sigmoid curve.
 
-use super::convert_to_signed;
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Fee,
+    utils::convert_to_signed,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};

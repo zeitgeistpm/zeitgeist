@@ -5,6 +5,7 @@ extern crate alloc;
 use crate::{
     constants::INITIAL_FEE,
     traits::{Fee, Lmsr, MarketAverage, RikiddoMV},
+    utils::{convert_to_signed, convert_to_unsigned, fixed_zero, max_value_u128},
 };
 use alloc::vec::Vec;
 #[cfg(feature = "arbitrary")]
@@ -29,7 +30,7 @@ use substrate_fixed::{
     FixedI64, FixedU64,
 };
 
-use super::{convert_to_signed, convert_to_unsigned, TimestampedVolume};
+use super::TimestampedVolume;
 
 /// Configuration values used within the Rikiddo core functions.
 #[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
@@ -107,17 +108,16 @@ where
 
 impl<FS> Default for RikiddoFormulaComponents<FS>
 where
-    FS: FixedSigned + From<I9F23> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
+    FS: FixedSigned + From<I9F23> + From<i8> + LossyFrom<FixedI32<U31>> + LossyFrom<U1F127>,
 {
     fn default() -> Self {
-        let zero = 0.to_fixed();
         Self {
-            one: 1i32.to_fixed(),
-            fee: zero,
-            sum_balances: zero,
-            sum_times_fee: zero,
-            emax: zero,
-            sum_exp: zero,
+            one: 1i8.into(),
+            fee: 0i8.into(),
+            sum_balances: 0i8.into(),
+            sum_times_fee: 0i8.into(),
+            emax: 0i8.into(),
+            sum_exp: 0i8.into(),
             exponents: HashMap::new(),
             reduced_exponential_results: HashMap::new(),
         }
@@ -156,6 +156,7 @@ macro_rules! impl_arbitrary_for_rikiddo_sigmoid_mv {
             $tu<FracU>: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
             $ts<FracS>: FixedSigned
                 + From<I9F23>
+                + From<i8>
                 + LossyFrom<FixedI32<U31>>
                 + LossyFrom<U1F127>
                 + LossyFrom<FixedI128<U127>>
@@ -209,6 +210,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
+        + From<i8>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
@@ -244,7 +246,7 @@ where
 
         let fee = self.fee()?;
         formula_components.fee = convert_to_signed(fee)?;
-        let mut total_balance = FU::from_num(0u8);
+        let mut total_balance = fixed_zero::<FU>()?;
 
         for elem in asset_balances {
             if let Some(res) = total_balance.checked_add(*elem) {
@@ -266,7 +268,7 @@ where
         formula_components.sum_times_fee = convert_to_signed(denominator)?;
 
         let mut exponents: Vec<FS> = Vec::with_capacity(asset_balances.len());
-        let mut biggest_exponent: FS = FS::from_num(0u8);
+        let mut biggest_exponent: FS = fixed_zero::<FS>()?;
 
         for elem in asset_balances {
             let exponent = if let Some(res) = elem.checked_div(denominator) {
@@ -292,7 +294,7 @@ where
 
         formula_components.emax = biggest_exponent;
 
-        if FS::max_value().int().to_num::<u128>() < asset_balances.len() as u128 {
+        if max_value_u128::<FS>()? < asset_balances.len() as u128 {
             return Err("[RikidoSigmoidMV] Number of assets does not fit in FS");
         }
 
@@ -333,7 +335,7 @@ where
                             question in RikiddoFormulaComponents HashMap");
             };
 
-        let mut sum: FS = 0.to_fixed();
+        let mut sum = fixed_zero::<FS>()?;
         let mut skipped = false;
 
         for elem in asset_balances {
@@ -363,7 +365,7 @@ where
             } else {
                 // In that case the final result will not fit into the fractional bits
                 // and therefore is approximated to zero. Cannot panic.
-                0.to_fixed()
+                fixed_zero::<FS>()?
             };
 
             sum = if let Some(res) = sum.checked_add(exponential_result) {
@@ -371,7 +373,7 @@ where
             } else {
                 // In that case the final result will not fit into the fractional bits
                 // and therefore is approximated to zero. Cannot panic.
-                return Ok(0.to_fixed());
+                return fixed_zero::<FS>();
             };
         }
 
@@ -380,13 +382,13 @@ where
         } else {
             // In that case the final result will not fit into the fractional bits
             // and therefore is approximated to zero. Cannot panic.
-            return Ok(0.to_fixed());
+            return fixed_zero::<FS>();
         };
 
         if let Some(res) = formula_components.one.checked_div(sum) {
             Ok(res)
         } else {
-            Ok(0.to_fixed())
+            fixed_zero::<FS>()
         }
     }
 
@@ -396,7 +398,7 @@ where
         asset_balances: &[FS],
         formula_components: &RikiddoFormulaComponents<FS>,
     ) -> Result<FS, &'static str> {
-        let mut numerator: FS = 0.to_fixed();
+        let mut numerator = fixed_zero::<FS>()?;
         let mut skipped = false;
 
         for elem in asset_balances {
@@ -491,7 +493,7 @@ where
     ) -> Result<FS, &'static str> {
         let mut biggest_exponent_used = false;
 
-        if FS::max_value().int().to_num::<u128>() < 1u128 {
+        if max_value_u128::<FS>()? < 1u128 {
             // Impossible due to trait bounds (at least 1 sign bit and 8 integer bits)
             return Err("[RikiddoSigmoidMV] Error, cannot initialize FS with one");
         }
@@ -557,6 +559,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
+        + From<i8>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
@@ -636,7 +639,7 @@ where
             return convert_to_unsigned(self.config.initial_fee);
         };
 
-        if mal == FU::from_num(0u8) {
+        if mal == fixed_zero::<FU>()? {
             return Err(
                 "[RikiddoSigmoidMV] Zero division error during calculation: ma_short / ma_long"
             );
@@ -699,7 +702,7 @@ where
     ) -> Result<Self::FU, &'static str> {
         let mut formula_components = RikiddoFormulaComponents::default();
         let mut asset_balances_signed = Vec::with_capacity(asset_balances.len());
-        let mut asset_in_question_balance_signed = 0.to_fixed();
+        let mut asset_in_question_balance_signed = fixed_zero()?;
         let mut asset_in_question_found = false;
 
         for asset_balance in asset_balances {
@@ -734,6 +737,7 @@ where
     FU: FixedUnsigned + LossyFrom<FixedU32<U32>> + LossyFrom<FixedU128<U128>>,
     FS: FixedSigned
         + From<I9F23>
+        + From<i8>
         + LossyFrom<FixedI32<U31>>
         + LossyFrom<U1F127>
         + LossyFrom<FixedI128<U127>>
@@ -762,7 +766,7 @@ where
 
         if let Some(mas) = mas {
             if let Some(mal) = mal {
-                if mal != 0u32.to_fixed::<FU>() {
+                if mal != fixed_zero::<FU>()? {
                     return Ok(Some(mas.saturating_div(mal)));
                 }
             };

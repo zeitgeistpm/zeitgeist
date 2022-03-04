@@ -24,6 +24,7 @@ pub mod mock;
 mod tests;
 pub mod traits;
 pub mod types;
+pub mod utils;
 pub use pallet::*;
 
 /// The pallet that bridges Rikiddo instances to pools.

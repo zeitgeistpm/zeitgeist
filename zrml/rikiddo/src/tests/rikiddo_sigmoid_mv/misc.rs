@@ -5,9 +5,8 @@ use super::{initial_outstanding_assets, ln_exp_sum, Rikiddo};
 use crate::{
     constants::INITIAL_FEE,
     traits::{Fee, Lmsr},
-    types::{
-        convert_to_signed, EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoFormulaComponents,
-    },
+    types::{EmaMarketVolume, FeeSigmoid, RikiddoConfig, RikiddoFormulaComponents},
+    utils::convert_to_signed,
 };
 
 #[test]

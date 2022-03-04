@@ -601,7 +601,7 @@ mod pallet {
         type FixedTypeU: Decode
             + Encode
             + FixedUnsigned
-            + From<u32>
+            + From<u8>
             + LossyFrom<FixedU32<U24>>
             + LossyFrom<FixedU32<U32>>
             + LossyFrom<FixedU128<U128>>;
