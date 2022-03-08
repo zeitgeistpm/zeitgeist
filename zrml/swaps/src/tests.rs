@@ -39,6 +39,7 @@ const _99: u128 = 99 * BASE;
 const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
+const _10000: u128 = 10000 * BASE;
 
 #[test]
 fn allows_the_full_user_lifecycle() {
@@ -465,6 +466,43 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
                 1
             ),
             crate::Error::<Runtime>::MaxInRatio
+        );
+
+        assert_noop!(
+            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _100, 0),
+            crate::Error::<Runtime>::MaxInRatio
+        );
+    });
+}
+
+#[test]
+fn pool_join_amount_satisfies_max_in_ratio_constraints() {
+    ExtBuilder::default().build().execute_with(|| {
+        // We want a special set of weights for this test!
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            ASSETS.iter().cloned().collect(),
+            Some(ASSETS.last().unwrap().clone()),
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(vec!(_2, _2, _2, _5)) // Asset weights don't divide total weight.
+        ));
+
+        assert_ok!(Currencies::deposit(ASSET_D, &ALICE, u64::MAX.into()));
+
+        assert_noop!(
+            Swaps::pool_join_with_exact_pool_amount(
+                alice_signed(),
+                0,
+                ASSET_A,
+                _100,
+                _10000 // Don't care how much we have to pay!
+            ),
+            crate::Error::<Runtime>::MaxOutRatio
         );
     });
 }
