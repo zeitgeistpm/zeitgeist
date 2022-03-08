@@ -115,7 +115,7 @@ parameter_types! {
     pub const ExitFee: Balance = 0;
     pub const MinAssets: u16 = 2;
     pub const MaxAssets: u16 = MaxCategories::get() + 1;
-    pub const MaxInRatio: Balance = BASE / 2;
+    pub const MaxInRatio: Balance = (BASE / 3) + 1;
     pub const MaxOutRatio: Balance = (BASE / 3) + 1;
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
