@@ -92,15 +92,7 @@ pub type BlockTest<R> = frame_system::mocking::MockBlock<R>;
 #[cfg(feature = "std")]
 pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrinsic<R>;
 
-#[derive(
-    sp_runtime::RuntimeDebug,
-    Clone,
-    Decode,
-    Encode,
-    Eq,
-    PartialEq,
-    TypeInfo,
-)]
+#[derive(sp_runtime::RuntimeDebug, Clone, Decode, Encode, Eq, PartialEq, TypeInfo)]
 pub struct ResultWithWeightInfo<R> {
     pub result: R,
     pub weight: Weight,

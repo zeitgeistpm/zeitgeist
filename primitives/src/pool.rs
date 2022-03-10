@@ -43,14 +43,11 @@ where
 {
     fn max_encoded_len() -> usize {
         let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();
-        let b_tree_map_size = 
-                1usize
-                .saturating_add(
-                    MaxAssets::get().saturated_into::<usize>().saturating_mul(
-                        <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len())
-                    )
-                )
-                .saturating_add(max_encoded_length_bytes);
+        let b_tree_map_size = 1usize
+            .saturating_add(MaxAssets::get().saturated_into::<usize>().saturating_mul(
+                <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len()),
+            ))
+            .saturating_add(max_encoded_length_bytes);
 
         <Asset<MarketId>>::max_encoded_len()
             .saturating_mul(MaxAssets::get().saturated_into::<usize>())
