@@ -279,7 +279,7 @@ benchmarks! {
     buy_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Advised,
+            MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
             ScoringRule::CPMM
         )?;
@@ -468,7 +468,7 @@ benchmarks! {
     sell_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Advised,
+            MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
             ScoringRule::CPMM
         )?;

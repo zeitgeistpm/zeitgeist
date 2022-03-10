@@ -442,16 +442,15 @@ mod pallet {
             Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
 
-        /// This function combines the creation of a market, the buying of a complete set of
-        /// outcome assets, the deployment of the minimum amount of outcome assets and
-        /// the optional deployment of additional outcome asset.
+        /// This function combines the creation of a permissionless market, the buying of a
+        /// complete set of outcome assets, the deployment of the minimum amount of outcome assets
+        /// and the optional deployment of additional outcome asset.
         ///
         /// # Arguments
         ///
         /// * `oracle`: The oracle of the market who will report the correct outcome.
         /// * `period`: The active period of the market.
         /// * `metadata`: A hash pointer to the metadata of the market.
-        /// * `creation`: The creation type of the market (permissionless or advised).
         /// * `assets`: The type and the parameters of an asset (for example 5 categorical assets).
         /// * `mdm`: The market dispute mechanism.
         /// * `amount_base_asset`: The amount of the base asset that should be deployed.
@@ -481,7 +480,6 @@ mod pallet {
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
-            creation: MarketCreation,
             assets: MarketType,
             mdm: MarketDisputeMechanism<T::AccountId>,
             amount_base_asset: BalanceOf<T>,
@@ -512,7 +510,7 @@ mod pallet {
                     oracle,
                     period,
                     metadata,
-                    creation,
+                    MarketCreation::Permissionless,
                     category_count,
                     mdm,
                     ScoringRule::CPMM,
@@ -524,7 +522,7 @@ mod pallet {
                     oracle,
                     period,
                     metadata,
-                    creation,
+                    MarketCreation::Permissionless,
                     range,
                     mdm,
                     ScoringRule::CPMM,
@@ -791,6 +789,9 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
+            // The check below is primarily to ensure that the market is
+            // not a pending advised market.
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             // ensure a swap pool does not already exist
             ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
@@ -1047,6 +1048,9 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
+            // The check below is primarily to ensure that the market is
+            // not a pending advised market.
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             let market_account = Self::market_account(market_id);
             ensure!(
@@ -1419,6 +1423,9 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market.period)?;
+            // The check below is primarily to ensure that the market is
+            // not a pending advised market.
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             let market_account = Self::market_account(market_id);
             CurrencyOf::<T>::transfer(
@@ -1503,7 +1510,7 @@ mod pallet {
             Ok(())
         }
 
-        // Must be `MarketStatus::Active` and period within range
+        // Check that the market hasn't reached the end of its period yet.
         fn ensure_market_is_active(
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
@@ -1521,7 +1528,7 @@ mod pallet {
             Ok(())
         }
 
-        // Must NOT be `MarketStatus::Active` and period outside of range
+        // Check that the market has reached the end of its period.
         fn ensure_market_is_closed(
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
