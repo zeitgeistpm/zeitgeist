@@ -6,14 +6,14 @@ use core::ops::Deref;
 ///
 /// As stated by the name, this struct is only valid in a runtime environment.
 #[derive(
+    parity_scale_codec::CompactAs,
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
     scale_info::TypeInfo,
     Clone,
     Debug,
     Eq,
     PartialEq,
-    parity_scale_codec::CompactAs,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
 )]
 pub struct MaxRuntimeUsize(u64);
 

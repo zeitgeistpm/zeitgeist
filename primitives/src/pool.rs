@@ -3,7 +3,7 @@ use crate::{
     types::{Asset, PoolStatus},
 };
 use alloc::{collections::BTreeMap, vec::Vec};
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Compact, Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 
@@ -42,19 +42,24 @@ where
     MarketId: MaxEncodedLen,
 {
     fn max_encoded_len() -> usize {
-        let b_tree_map_size =
-            2usize.saturating_add(MaxAssets::get().saturated_into::<usize>().saturating_mul(
-                <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len()),
-            ));
+        let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();
+        let b_tree_map_size = 
+                1usize
+                .saturating_add(
+                    MaxAssets::get().saturated_into::<usize>().saturating_mul(
+                        <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len())
+                    )
+                )
+                .saturating_add(max_encoded_length_bytes);
 
         <Asset<MarketId>>::max_encoded_len()
             .saturating_mul(MaxAssets::get().saturated_into::<usize>())
+            .saturating_add(max_encoded_length_bytes)
             .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
             .saturating_add(MarketId::max_encoded_len())
             .saturating_add(PoolStatus::max_encoded_len())
             .saturating_add(ScoringRule::max_encoded_len())
-            .saturating_add(<Option<Balance>>::max_encoded_len())
-            .saturating_mul(2)
+            .saturating_add(<Option<Balance>>::max_encoded_len().saturating_mul(2))
             .saturating_add(<Option<u128>>::max_encoded_len())
             .saturating_add(b_tree_map_size)
     }

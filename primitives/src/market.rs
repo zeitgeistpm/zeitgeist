@@ -61,7 +61,7 @@ where
             .saturating_add(u8::max_encoded_len())
             .saturating_add(AI::max_encoded_len())
             // We assume that at max. a 512 bit hash function is used
-            .saturating_add(u8::max_encoded_len().saturating_mul(66))
+            .saturating_add(u8::max_encoded_len().saturating_mul(68))
             .saturating_add(MarketType::max_encoded_len())
             .saturating_add(<MarketPeriod<BN, M>>::max_encoded_len())
             .saturating_add(ScoringRule::max_encoded_len())
