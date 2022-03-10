@@ -6,6 +6,7 @@ use core::ops::Deref;
 ///
 /// As stated by the name, this struct is only valid in a runtime environment.
 #[derive(
+    scale_info::TypeInfo,
     Clone,
     Debug,
     Eq,

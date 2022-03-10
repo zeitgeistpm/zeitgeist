@@ -1,11 +1,16 @@
-use crate::cli::{Cli, Subcommand};
+use crate::{
+    cli::{Cli, Subcommand},
+    service::{new_partial, ExecutorDispatch},
+};
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 #[cfg(feature = "parachain")]
 use {
-    parity_scale_codec::Encode, sp_core::hexdisplay::HexDisplay,
-    sp_runtime::traits::Block as BlockT, std::io::Write,
+    parity_scale_codec::Encode, sc_client_api::client::BlockBackend,
+    sp_core::hexdisplay::HexDisplay, sp_runtime::traits::Block as BlockT, std::io::Write,
 };
+
+use zeitgeist_runtime::RuntimeApi;
 
 pub fn run() -> sc_cli::Result<()> {
     let mut cli = <Cli as SubstrateCli>::from_args();
@@ -27,7 +32,7 @@ pub fn run() -> sc_cli::Result<()> {
                 let runner = cli.create_runner(cmd)?;
 
                 runner.sync_run(|config| {
-                    cmd.run::<zeitgeist_runtime::Block, crate::service::Executor>(config)
+                    cmd.run::<zeitgeist_runtime::Block, ExecutorDispatch>(config)
                 })
             } else {
                 Err("Benchmarking wasn't enabled when building the node. You can enable it with \
@@ -43,7 +48,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, import_queue, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -51,8 +56,28 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, config.database), task_manager))
+            })
+        }
+        #[cfg(feature = "parachain")]
+        Some(Subcommand::ExportHeader(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+
+            runner.sync_run(|config| {
+                let PartialComponents { client, .. }: crate::service::ParachainPartialComponents<
+                    ExecutorDispatch,
+                    RuntimeApi,
+                > = crate::service::new_partial(&config)?;
+
+                match client.block(&cmd.input.parse()?) {
+                    Ok(Some(block)) => {
+                        println!("0x{:?}", HexDisplay::from(&block.block.header.encode()));
+                        Ok(())
+                    }
+                    Ok(None) => Err("Unknown block".into()),
+                    Err(e) => Err(format!("Error reading block: {:?}", e).into()),
+                }
             })
         }
         #[cfg(feature = "parachain")]
@@ -67,16 +92,16 @@ pub fn run() -> sc_cli::Result<()> {
                     params.parachain_id.into(),
                 )?)?;
             let raw_header = block.header().encode();
-            let output_buf = if params.raw {
+            let buf = if params.raw {
                 raw_header
             } else {
                 format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
             };
 
             if let Some(output) = &params.output {
-                std::fs::write(output, output_buf)?;
+                std::fs::write(output, buf)?;
             } else {
-                std::io::stdout().write_all(&output_buf)?;
+                std::io::stdout().write_all(&buf)?;
             }
 
             Ok(())
@@ -107,7 +132,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
@@ -115,7 +140,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, import_queue, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -135,7 +160,7 @@ pub fn run() -> sc_cli::Result<()> {
                 let polkadot_config = SubstrateCli::create_configuration(
                     &polkadot_cli,
                     &polkadot_cli,
-                    config.task_executor.clone(),
+                    config.tokio_handle.clone(),
                 )
                 .map_err(|err| format!("Relay chain argument error: {}", err))?;
 
@@ -151,7 +176,7 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, backend, .. } =
-                    crate::service::new_partial(&config)?;
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
                 Ok((cmd.run(client, backend), task_manager))
             })
         }
@@ -184,7 +209,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         );
 
         let parachain_id = cumulus_primitives_core::ParaId::from(
-            cli.run.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
+            cli.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
         );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<
@@ -196,9 +221,9 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 .map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
-        let task_executor = parachain_config.task_executor.clone();
+        let tokio_handle = parachain_config.tokio_handle.clone();
         let polkadot_config =
-            SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
+            SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
                 .map_err(|err| format!("Relay chain argument error: {}", err))?;
 
         log::info!("Parachain id: {:?}", parachain_id);
@@ -217,7 +242,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
         match config.role {
-            sc_cli::Role::Light => crate::service::new_light(config),
+            sc_cli::Role::Light => return Err("Light client not supported!".into()),
             _ => crate::service::new_full(config),
         }
         .map_err(sc_cli::Error::Service)

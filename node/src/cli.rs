@@ -31,6 +31,10 @@ pub enum Subcommand {
     /// Export blocks.
     ExportBlocks(sc_cli::ExportBlocksCmd),
 
+    /// Export block header in hex format.
+    #[cfg(feature = "parachain")]
+    ExportHeader(sc_cli::CheckBlockCmd),
+
     /// Export the genesis state of the parachain.
     #[cfg(feature = "parachain")]
     #[structopt(name = "export-genesis-state")]
@@ -79,6 +83,11 @@ pub struct Cli {
     #[cfg(feature = "parachain")]
     #[structopt(raw = true)]
     pub relaychain_args: Vec<String>,
+
+    /// Id of the parachain this collator collates for.
+    #[cfg(feature = "parachain")]
+    #[structopt(long)]
+    pub parachain_id: Option<u32>,
 }
 
 impl SubstrateCli for Cli {
@@ -108,9 +117,9 @@ impl SubstrateCli for Cli {
             #[cfg(feature = "parachain")]
             match id {
                 "battery_station_staging" => {
-                    self.run.parachain_id.unwrap_or(super::BATTERY_STATION_PARACHAIN_ID).into()
+                    self.parachain_id.unwrap_or(super::BATTERY_STATION_PARACHAIN_ID).into()
                 }
-                _ => self.run.parachain_id.unwrap_or(super::KUSAMA_PARACHAIN_ID).into(),
+                _ => self.parachain_id.unwrap_or(super::KUSAMA_PARACHAIN_ID).into(),
             },
         )
     }

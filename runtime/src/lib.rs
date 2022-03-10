@@ -12,18 +12,18 @@ pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
-#[cfg(feature = "txfilter")]
-mod txfilter;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
+#[cfg(feature = "parachain")]
+pub use parachain_params::*;
 pub use parameters::*;
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, Everything},
+    traits::Contains,
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::{EnsureOneOf, EnsureRoot};
@@ -47,28 +47,19 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
+    frame_support::traits::Everything,
+    frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
-    parachain_params::*,
-};
-
-#[cfg(feature = "txfilter")]
-use {
-    parity_scale_codec::Encode,
-    sp_runtime::{
-        traits::{Extrinsic as ExtrinsicT, Verify},
-        SaturatedConversion,
-    },
-    txfilter::{IsCallable, TransactionCallFilter},
 };
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 30,
+    spec_version: 33,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 8,
+    transaction_version: 10,
 };
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -96,19 +87,6 @@ type Executive = frame_executive::Executive<
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 
-#[cfg(feature = "txfilter")]
-type SignedExtra = (
-    TransactionCallFilter<IsCallable, Call>,
-    frame_system::CheckSpecVersion<Runtime>,
-    frame_system::CheckTxVersion<Runtime>,
-    frame_system::CheckGenesis<Runtime>,
-    frame_system::CheckEra<Runtime>,
-    frame_system::CheckNonce<Runtime>,
-    frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-);
-
-#[cfg(not(feature = "txfilter"))]
 type SignedExtra = (
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
@@ -119,69 +97,7 @@ type SignedExtra = (
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 
-#[cfg(feature = "txfilter")]
-type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
-
-// Transaction filtering
-/// Submits a transaction with the node's public and signature type. Adheres to the signed extension
-/// format of the chain.
-#[cfg(feature = "txfilter")]
-impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-where
-    Call: From<LocalCall>,
-{
-    fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-        call: Call,
-        public: <Signature as Verify>::Signer,
-        account: AccountId,
-        nonce: <Runtime as frame_system::Config>::Index,
-    ) -> Option<(Call, <UncheckedExtrinsic as ExtrinsicT>::SignaturePayload)> {
-        // take the biggest period possible.
-        let period =
-            BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
-
-        let current_block = System::block_number()
-            .saturated_into::<u64>()
-            // The `System::block_number` is initialized with `n+1`,
-            // so the actual block number is `n`.
-            .saturating_sub(1);
-        let tip = 0;
-        let extra: SignedExtra = (
-            <TransactionCallFilter<IsCallable, Call>>::new(),
-            <frame_system::CheckSpecVersion<Runtime>>::new(),
-            <frame_system::CheckTxVersion<Runtime>>::new(),
-            <frame_system::CheckGenesis<Runtime>>::new(),
-            <frame_system::CheckEra<Runtime>>::from(generic::Era::mortal(period, current_block)),
-            <frame_system::CheckNonce<Runtime>>::from(nonce),
-            <frame_system::CheckWeight<Runtime>>::new(),
-            <pallet_transaction_payment::ChargeTransactionPayment<Runtime>>::from(tip),
-        );
-        let raw_payload = SignedPayload::new(call, extra)
-            .map_err(|e| {
-                log::warn!("Unable to create signed payload: {:?}", e);
-            })
-            .ok()?;
-        let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
-        let (call, extra, _) = raw_payload.deconstruct();
-        Some((call, (sp_runtime::MultiAddress::Id(account), signature, extra)))
-    }
-}
-
-#[cfg(feature = "txfilter")]
-impl frame_system::offchain::SigningTypes for Runtime {
-    type Public = <Signature as Verify>::Signer;
-    type Signature = Signature;
-}
-
-#[cfg(feature = "txfilter")]
-impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
-where
-    Call: From<C>,
-{
-    type OverarchingCall = Call;
-    type Extrinsic = UncheckedExtrinsic;
-}
 
 // Construct runtime
 macro_rules! create_zeitgeist_runtime {
@@ -203,7 +119,7 @@ macro_rules! create_zeitgeist_runtime {
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+                TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
 
@@ -249,7 +165,7 @@ create_zeitgeist_runtime!(
     // XCM
     CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 70,
     DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
-    PolkadotXcm: pallet_xcm::{Call, Event<T>, Origin, Pallet} = 72,
+    PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 72,
     XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
 
     // Third-party
@@ -297,10 +213,82 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
 
+#[derive(scale_info::TypeInfo)]
+pub struct IsCallable;
+
+cfg_if::cfg_if! {
+    if #[cfg(all(feature = "parachain", feature = "txfilter"))] {
+        impl Contains<Call> for IsCallable {
+            fn contains(call: &Call) -> bool {
+                match call {
+                    // Allowed calls:
+                    Call::System(_)
+                    | Call::Sudo(_)
+                    | Call::Timestamp(_)
+                    | Call::AuthorInherent(_)
+                    | Call::AuthorMapping(_)
+                    | Call::DmpQueue(_)
+                    | Call::ParachainSystem(_)
+                    | Call::PolkadotXcm(_)
+                    | Call::XcmpQueue(_) => true,
+
+                    // Prohibited calls:
+                    Call::ParachainStaking(_)
+                    | Call::Crowdloan(_)
+                    | Call::Balances(_)
+                    | Call::Treasury(_)
+                    | Call::AdvisoryCommitteeCollective(_)
+                    | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Identity(_)
+                    | Call::Utility(_)
+                    | Call::Currency(_)
+                    | Call::Authorized(_)
+                    | Call::Court(_)
+                    | Call::LiquidityMining(_)
+                    | Call::Swaps(_)
+                    | Call::PredictionMarkets(_)
+                    | Call::Vesting(_) => false,
+                }
+            }
+        }
+    } else if #[cfg(all(feature = "txfilter", not(feature = "parachain")))] {
+        impl Contains<Call> for IsCallable {
+            fn contains(call: &Call) -> bool {
+                match call {
+                    // Allowed calls:
+                    Call::System(_) | Call::Grandpa(_) | Call::Sudo(_) | Call::Timestamp(_) => true,
+
+                    // Prohibited calls:
+                    Call::Balances(_)
+                    | Call::Treasury(_)
+                    | Call::AdvisoryCommitteeCollective(_)
+                    | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Identity(_)
+                    | Call::Utility(_)
+                    | Call::Currency(_)
+                    | Call::Authorized(_)
+                    | Call::Court(_)
+                    | Call::LiquidityMining(_)
+                    | Call::Swaps(_)
+                    | Call::PredictionMarkets(_)
+                    | Call::Vesting(_) => false,
+                }
+            }
+        }
+    } else {
+        impl Contains<Call> for IsCallable {
+            fn contains(_call: &Call) -> bool {
+                // Every call is allowed
+                true
+            }
+        }
+    }
+}
+
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     type AccountId = AccountId;
-    type BaseCallFilter = Everything;
+    type BaseCallFilter = IsCallable;
     type BlockHashCount = BlockHashCount;
     type BlockLength = RuntimeBlockLength;
     type BlockNumber = BlockNumber;
@@ -330,12 +318,12 @@ impl frame_system::Config for Runtime {
 impl pallet_aura::Config for Runtime {
     type AuthorityId = sp_consensus_aura::sr25519::AuthorityId;
     type DisabledValidators = ();
+    type MaxAuthorities = MaxAuthorities;
 }
 
 #[cfg(feature = "parachain")]
 impl pallet_author_inherent::Config for Runtime {
     type AccountLookup = AuthorMapping;
-    type AuthorId = NimbusId;
     type CanAuthor = AuthorFilter;
     type EventHandler = ParachainStaking;
     type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
@@ -343,7 +331,6 @@ impl pallet_author_inherent::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_author_mapping::Config for Runtime {
-    type AuthorId = NimbusId;
     type DepositAmount = CollatorDeposit;
     type DepositCurrency = Balances;
     type Event = Event;
@@ -361,23 +348,19 @@ impl pallet_author_slot_filter::Config for Runtime {
 impl pallet_grandpa::Config for Runtime {
     type Event = Event;
     type Call = Call;
-
     type KeyOwnerProofSystem = ();
-
     type KeyOwnerProof =
         <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
             KeyTypeId,
             pallet_grandpa::AuthorityId,
         )>>::Proof;
-
     type KeyOwnerIdentification =
         <Self::KeyOwnerProofSystem as frame_support::traits::KeyOwnerProofSystem<(
             KeyTypeId,
             pallet_grandpa::AuthorityId,
         )>>::IdentificationTuple;
-
     type HandleEquivocation = ();
-
+    type MaxAuthorities = MaxAuthorities;
     // Currently the benchmark does yield an invalid weight implementation
     // type WeightInfo = weights::pallet_grandpa::WeightInfo<Runtime>;
     type WeightInfo = ();
@@ -385,39 +368,46 @@ impl pallet_grandpa::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_xcm::Config for Runtime {
+    const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+    type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    type Call = Call;
     type Event = Event;
     type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type LocationInverter = xcm_builder::LocationInverter<Ancestry>;
+    type Origin = Origin;
     type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-    type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call>;
+    type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     type XcmExecuteFilter = Everything;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-    type XcmReserveTransferFilter = ();
+    type XcmReserveTransferFilter = Everything;
     type XcmRouter = XcmRouter;
     type XcmTeleportFilter = Everything;
 }
 
 #[cfg(feature = "parachain")]
 impl parachain_staking::Config for Runtime {
+    type CandidateBondLessDelay = CandidateBondLessDelay;
     type Currency = Balances;
     type DefaultBlocksPerRound = DefaultBlocksPerRound;
     type DefaultCollatorCommission = DefaultCollatorCommission;
     type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
+    type DelegationBondLessDelay = DelegationBondLessDelay;
     type Event = Event;
     type LeaveCandidatesDelay = LeaveCandidatesDelay;
-    type LeaveNominatorsDelay = LeaveNominatorsDelay;
-    type MaxCollatorsPerNominator = MaxCollatorsPerNominator;
-    type MaxNominatorsPerCollator = MaxNominatorsPerCollator;
+    type LeaveDelegatorsDelay = LeaveDelegatorsDelay;
+    type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
+    type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+    type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
     type MinBlocksPerRound = MinBlocksPerRound;
-    type MinCollatorCandidateStk = MinCollatorStake;
-    type MinCollatorStk = MinCollatorStake;
-    type MinNomination = MinNominatorStake;
-    type MinNominatorStk = MinNominatorStake;
+    type MinCandidateStk = MinCollatorStk;
+    type MinCollatorStk = MinCollatorStk;
+    type MinDelegation = MinDelegatorStk;
+    type MinDelegatorStk = MinDelegatorStk;
     type MinSelectedCandidates = MinSelectedCandidates;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
-    type RevokeNominationDelay = RevokeNominationDelay;
+    type RevokeDelegationDelay = RevokeDelegationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
-    type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
+    type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
 impl orml_currencies::Config for Runtime {
@@ -449,7 +439,10 @@ impl pallet_crowdloan_rewards::Config for Runtime {
     type MinimumReward = MinimumReward;
     type RelayChainAccountId = AccountId;
     type RewardCurrency = Balances;
+    type RewardAddressAssociateOrigin = EnsureSigned<Self::AccountId>;
+    type RewardAddressChangeOrigin = frame_system::EnsureSigned<Self::AccountId>;
     type RewardAddressRelayVoteThreshold = RelaySignaturesThreshold;
+    type SignatureNetworkIdentifier = SignatureNetworkIdentifier;
     type VestingBlockNumber = cumulus_primitives_core::relay_chain::BlockNumber;
     type VestingBlockProvider =
         cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
@@ -465,7 +458,7 @@ impl pallet_balances::Config for Runtime {
     type MaxLocks = MaxLocks;
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
+    type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>; // weights::pallet_balances::WeightInfo<Runtime>;
 }
 
 impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime {
@@ -527,6 +520,7 @@ impl pallet_timestamp::Config for Runtime {
 impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = ();
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+    type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
 }
@@ -551,6 +545,7 @@ impl pallet_treasury::Config for Runtime {
 impl pallet_utility::Config for Runtime {
     type Event = Event;
     type Call = Call;
+    type PalletsOrigin = OriginCaller;
     type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
@@ -559,7 +554,11 @@ impl pallet_vesting::Config for Runtime {
     type Currency = Balances;
     type BlockNumberToBalance = sp_runtime::traits::ConvertInto;
     type MinVestedTransfer = MinVestedTransfer;
-    type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
+    type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>; // weights::pallet_vesting::WeightInfo<Runtime>;
+
+    // `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
+    // highest number of schedules that encodes less than 2^10.
+    const MAX_VESTING_SCHEDULES: u32 = 28;
 }
 
 #[cfg(feature = "parachain")]
@@ -677,7 +676,15 @@ impl_runtime_apis! {
     }
 
     #[cfg(feature = "parachain")]
+    // Required to satisify trait bounds at the client implementation.
     impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
+        fn can_author(_: NimbusId, _: u32, _: &<Block as BlockT>::Header) -> bool {
+            panic!("AuthorFilterAPI is no longer supported. Please update your client.")
+        }
+    }
+
+    #[cfg(feature = "parachain")]
+    impl nimbus_primitives::NimbusApi<Block> for Runtime {
         fn can_author(author: NimbusId, slot: u32, parent_header: &<Block as BlockT>::Header) -> bool {
             // The Moonbeam runtimes use an entropy source that needs to do some accounting
             // work during block initialization. Therefore we initialize it here to match
@@ -702,13 +709,14 @@ impl_runtime_apis! {
             Vec<frame_benchmarking::BenchmarkList>,
             Vec<frame_support::traits::StorageInfo>,
         ) {
-            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_benchmarking::{list_benchmark, baseline::Pallet as BaselineBench, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
             use orml_benchmarking::list_benchmark as orml_list_benchmark;
 
             let mut list = Vec::<BenchmarkList>::new();
 
+            list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
             list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
             orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
             orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
@@ -743,12 +751,13 @@ impl_runtime_apis! {
             config: frame_benchmarking::BenchmarkConfig,
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
             use frame_benchmarking::{
-                add_benchmark, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
+                add_benchmark, baseline::{Pallet as BaselineBench, Config as BaselineConfig}, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
             };
             use frame_system_benchmarking::Pallet as SystemBench;
             use orml_benchmarking::{add_benchmark as orml_add_benchmark};
 
             impl frame_system_benchmarking::Config for Runtime {}
+            impl BaselineConfig for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
                 hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac")
@@ -773,6 +782,7 @@ impl_runtime_apis! {
             let mut batches = Vec::<BenchmarkBatch>::new();
             let params = (&config, &whitelist);
 
+            add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
             orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
@@ -846,7 +856,7 @@ impl_runtime_apis! {
 
     impl sp_api::Metadata<Block> for Runtime {
         fn metadata() -> OpaqueMetadata {
-            Runtime::metadata().into()
+            OpaqueMetadata::new(Runtime::metadata().into())
         }
     }
 
@@ -874,7 +884,7 @@ impl_runtime_apis! {
     #[cfg(not(feature = "parachain"))]
     impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
         fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-            Aura::authorities()
+            Aura::authorities().into_inner()
         }
 
         fn slot_duration() -> sp_consensus_aura::SlotDuration {

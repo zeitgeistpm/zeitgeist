@@ -130,12 +130,6 @@ impl sc_cli::CliConfiguration<Self> for RelayChainCli {
         self.base.base.state_cache_child_ratio()
     }
 
-    fn telemetry_external_transport(
-        &self,
-    ) -> sc_cli::Result<Option<sc_service::config::ExtTransport>> {
-        self.base.base.telemetry_external_transport()
-    }
-
     fn transaction_pool(&self) -> sc_cli::Result<sc_service::config::TransactionPoolOptions> {
         self.base.base.transaction_pool()
     }

@@ -1,9 +1,9 @@
 //! This module contains the structures used to calculate the fee based on a sigmoid curve.
 
-use super::convert_to_signed;
 use crate::{
     constants::{INITIAL_FEE, M, MINIMAL_REVENUE, N, P},
     traits::Fee,
+    utils::convert_to_signed,
 };
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
@@ -32,7 +32,7 @@ use substrate_fixed::{
 /// function if uncertain about which values to take.
 ///
 /// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
-#[derive(Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
+#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq)]
 pub struct FeeSigmoidConfig<FS: FixedSigned> {
     /// Parameter to fine tune the fee calcultation (refer to example in paper).
     pub m: FS,
@@ -108,7 +108,7 @@ where
 /// [configuration values](struct@FeeSigmoidConfig)
 ///
 /// [Dynamic Automated Market Making]: https://files.kyber.network/DMM-Feb21.pdf
-#[derive(Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
 pub struct FeeSigmoid<FS>
 where
     FS: FixedSigned + LossyFrom<FixedI32<U24>> + LossyFrom<FixedI128<U127>>,

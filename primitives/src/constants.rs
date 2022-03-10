@@ -110,11 +110,6 @@ parameter_types! {
     pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
 }
 
-// Staking parameters
-parameter_types! {
-    pub const DefaultBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
-}
-
 // Swaps parameters
 parameter_types! {
     pub const ExitFee: Balance = 0;

@@ -6,14 +6,14 @@ test = false
 
 [dependencies]
 arbitrary = { features = ["derive"], version = "1.0" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.10", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.15-1", default-features = false, git = "https://github.com/purestake/substrate" }
 libfuzzer-sys = "0.4"
 zrml-orderbook-v1 = { features = ["mock"], path = ".." }
 zeitgeist-primitives = { path = "../../../primitives" }
 
 [package]
 authors = ["Automatically generated"]
-edition = "2018"
+edition = "2021"
 name = "zrml-orderbook-v1-fuzz"
 publish = false
 version = "0.0.0"

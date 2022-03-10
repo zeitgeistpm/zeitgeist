@@ -13,7 +13,7 @@ use frame_support::{
     },
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-use sp_runtime::{Perbill, Percent};
+use sp_runtime::Perbill;
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
@@ -22,6 +22,9 @@ pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
+  // Authority
+  pub const MaxAuthorities: u32 = 32;
+
   // Collective
   pub const AdvisoryCommitteeMaxMembers: u32 = 100;
   pub const AdvisoryCommitteeMaxProposals: u32 = 64;
@@ -34,21 +37,6 @@ parameter_types! {
   pub const MaxRegistrars: u32 = 8;
   pub const MaxSubAccounts: u32 = 64;
   pub const SubAccountDeposit: Balance = 2 * BASE;
-
-  // Staking
-  pub const CollatorDeposit: Balance = 2 * BASE;
-  pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
-  pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
-  pub const LeaveCandidatesDelay: u32 = 2;
-  pub const LeaveNominatorsDelay: u32 = 2;
-  pub const MaxCollatorsPerNominator: u32 = 16;
-  pub const MaxNominatorsPerCollator: u32 = 32;
-  pub const MinBlocksPerRound: u32 = (BLOCKS_PER_DAY / 6) as _;
-  pub const MinCollatorStake: u128 = 64 * BASE;
-  pub const MinNominatorStake: u128 = BASE / 2;
-  pub const MinSelectedCandidates: u32 = 1;
-  pub const RevokeNominationDelay: u32 = 2;
-  pub const RewardPaymentDelay: u32 = 2;
 
   // System
   pub const SS58Prefix: u8 = 73;
@@ -72,5 +60,9 @@ parameter_types! {
     .build_or_panic();
 
   // Transaction payment
+  pub const OperationalFeeMultiplier: u8 = 5;
   pub const TransactionByteFee: Balance = 100 * MICRO;
+
+  // XCM
+  pub const MaxInstructions: u32 = 100;
 }
