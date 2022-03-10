@@ -1,17 +1,19 @@
 use alloc::vec::Vec;
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
 use zeitgeist_primitives::types::PoolId;
 
 #[derive(
-    scale_info::TypeInfo,
     Clone,
     Debug,
+    Decode,
     Default,
+    Encode,
     Eq,
     Ord,
     PartialEq,
     PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
+    TypeInfo,
 )]
 pub struct CommonPoolEventParams<AI> {
     pub pool_id: PoolId,
@@ -19,16 +21,16 @@ pub struct CommonPoolEventParams<AI> {
 }
 
 #[derive(
-    scale_info::TypeInfo,
     Clone,
     Debug,
+    Decode,
     Default,
+    Encode,
     Eq,
     Ord,
     PartialEq,
     PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
+    TypeInfo,
 )]
 pub struct PoolAssetsEvent<AI, AS, B> {
     pub assets: Vec<AS>,
@@ -38,16 +40,16 @@ pub struct PoolAssetsEvent<AI, AS, B> {
 }
 
 #[derive(
-    scale_info::TypeInfo,
     Clone,
     Debug,
+    Decode,
     Default,
+    Encode,
     Eq,
     Ord,
     PartialEq,
     PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
+    TypeInfo,
 )]
 pub struct PoolAssetEvent<AI, AS, B> {
     pub asset: AS,
@@ -57,16 +59,16 @@ pub struct PoolAssetEvent<AI, AS, B> {
 }
 
 #[derive(
-    scale_info::TypeInfo,
     Clone,
     Debug,
+    Decode,
     Default,
+    Encode,
     Eq,
     Ord,
     PartialEq,
     PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
+    TypeInfo,
 )]
 pub struct SwapEvent<AI, AS, B> {
     pub asset_amount_in: B,

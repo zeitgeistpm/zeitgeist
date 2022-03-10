@@ -2,7 +2,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use parity_scale_codec::Codec;
+use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 
@@ -10,8 +10,8 @@ sp_api::decl_runtime_apis! {
     pub trait SwapsApi<PoolId, AccountId, Balance, MarketId> where
         PoolId: Codec,
         AccountId: Codec,
-        Balance: Codec + MaybeDisplay + MaybeFromStr + parity_scale_codec::MaxEncodedLen,
-        MarketId: Codec + parity_scale_codec::MaxEncodedLen,
+        Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen,
+        MarketId: Codec + MaxEncodedLen,
     {
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>>;
         fn pool_account_id(pool_id: PoolId) -> AccountId;

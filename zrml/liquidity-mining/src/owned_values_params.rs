@@ -1,3 +1,5 @@
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+
 /// Parameters used by the `OwnedValues` storage.
 ///
 /// # Types
@@ -9,19 +11,19 @@
     scale_info::TypeInfo,
     Clone,
     Debug,
+    Decode,
     Default,
+    Encode,
     Eq,
+    MaxEncodedLen,
     Ord,
     PartialEq,
     PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    parity_scale_codec::MaxEncodedLen,
 )]
 pub struct OwnedValuesParams<BA, BN>
 where
-    BA: parity_scale_codec::MaxEncodedLen,
-    BN: parity_scale_codec::MaxEncodedLen,
+    BA: MaxEncodedLen,
+    BN: MaxEncodedLen,
 {
     /// The number of blocks an account participated in a market period.
     pub participated_blocks: BN,

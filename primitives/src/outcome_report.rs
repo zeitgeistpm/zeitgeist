@@ -2,6 +2,9 @@ use crate::types::CategoryIndex;
 
 /// The reported outcome of a market
 #[derive(
+    parity_scale_codec::Decode,
+    parity_scale_codec::Encode,
+    parity_scale_codec::MaxEncodedLen,
     scale_info::TypeInfo,
     Clone,
     Debug,
@@ -9,9 +12,6 @@ use crate::types::CategoryIndex;
     Ord,
     PartialEq,
     PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    parity_scale_codec::MaxEncodedLen,
 )]
 pub enum OutcomeReport {
     Categorical(CategoryIndex),
