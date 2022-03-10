@@ -437,16 +437,15 @@ mod pallet {
             Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
 
-        /// This function combines the creation of a market, the buying of a complete set of
-        /// outcome assets, the deployment of the minimum amount of outcome assets and
-        /// the optional deployment of additional outcome asset.
+        /// This function combines the creation of a permissionless market, the buying of a
+        /// complete set of outcome assets, the deployment of the minimum amount of outcome assets
+        /// and the optional deployment of additional outcome asset.
         ///
         /// # Arguments
         ///
         /// * `oracle`: The oracle of the market who will report the correct outcome.
         /// * `period`: The active period of the market.
         /// * `metadata`: A hash pointer to the metadata of the market.
-        /// * `creation`: The creation type of the market (permissionless or advised).
         /// * `assets`: The type and the parameters of an asset (for example 5 categorical assets).
         /// * `mdm`: The market dispute mechanism.
         /// * `amount_base_asset`: The amount of the base asset that should be deployed.
@@ -476,7 +475,6 @@ mod pallet {
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
-            creation: MarketCreation,
             assets: MarketType,
             mdm: MarketDisputeMechanism<T::AccountId>,
             amount_base_asset: BalanceOf<T>,
@@ -507,7 +505,7 @@ mod pallet {
                     oracle,
                     period,
                     metadata,
-                    creation,
+                    MarketCreation::Permissionless,
                     category_count,
                     mdm,
                     ScoringRule::CPMM,
@@ -519,7 +517,7 @@ mod pallet {
                     oracle,
                     period,
                     metadata,
-                    creation,
+                    MarketCreation::Permissionless,
                     range,
                     mdm,
                     ScoringRule::CPMM,

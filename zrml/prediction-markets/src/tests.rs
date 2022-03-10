@@ -656,7 +656,6 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             oracle,
             period.clone(),
             metadata.clone(),
-            creation.clone(),
             assets,
             MarketDisputeMechanism::SimpleDisputes,
             amount_base_asset.clone(),
