@@ -38,7 +38,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         traits::{
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, StorageVersion,
             WithdrawReasons,
