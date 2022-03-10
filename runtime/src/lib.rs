@@ -35,9 +35,7 @@ use sp_core::{
 };
 use sp_runtime::{
     create_runtime_str, generic,
-    traits::{
-        AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Header as HeaderT,
-    },
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -701,13 +699,10 @@ impl_runtime_apis! {
 
             // Ensure that an update is enforced when we are close to maximum block number
             let block_number = if let Some(bn) = parent_header.number.checked_add(1) {
-                if bn < <<Block as BlockT>::Header as HeaderT>::Number::from(1_000_000u32) {
-                    log::warn!("CAUTION: Only {} block numbers left. Update to bigger type", bn);
-                }
-
                 bn
             } else {
-                panic!("ERROR: No block numbers left")
+                log::error!("ERROR: No block numbers left");
+                return false;
             };
 
             use frame_support::traits::OnInitialize;
