@@ -304,7 +304,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         Asset<T::MarketId>,
-        WeakBoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
+        WeakBoundedVec<T::Hash, ConstU32<1_048_576>>,
         ValueQuery,
     >;
 
@@ -314,7 +314,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         Asset<T::MarketId>,
-        WeakBoundedVec<T::Hash, ConstU32<{ u32::MAX }>>,
+        WeakBoundedVec<T::Hash, ConstU32<1_048_576>>,
         ValueQuery,
     >;
 

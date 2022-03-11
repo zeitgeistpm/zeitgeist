@@ -1374,7 +1374,7 @@ mod pallet {
         _,
         WeakBoundedVec<
             SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
-            ConstU32<{ u32::MAX }>,
+            ConstU32<1_048_576>,
         >,
         ValueQuery,
     >;
