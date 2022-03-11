@@ -149,7 +149,7 @@ fn generic_genesis(
         #[cfg(feature = "parachain")]
         // Default should use the pallet configuration
         polkadot_xcm: PolkadotXcmConfig::default(),
-        sudo: zeitgeist_runtime::SudoConfig { key: root_key },
+        sudo: zeitgeist_runtime::SudoConfig { key: Some(root_key) },
         system: zeitgeist_runtime::SystemConfig { code: wasm_binary.to_vec() },
         treasury: Default::default(),
         transaction_payment: Default::default(),

@@ -27,6 +27,7 @@ pub fn zeitgeist_staging_config(
         vec![],
         telemetry_endpoints(),
         Some("zeitgeist"),
+        None,
         Some(token_properties("ZTG")),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {

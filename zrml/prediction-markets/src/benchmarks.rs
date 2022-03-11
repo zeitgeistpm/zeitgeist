@@ -11,6 +11,7 @@ use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, wh
 use frame_support::{
     dispatch::UnfilteredDispatchable,
     traits::{Currency, EnsureOrigin, Get, Hooks},
+    WeakBoundedVec,
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -422,7 +423,7 @@ benchmarks! {
             period: MarketPeriod::Block(T::BlockNumber::one()..T::BlockNumber::one())
         };
 
-        let markets = vec![market_info; a as usize];
+        let markets = WeakBoundedVec::try_from(vec![market_info; a as usize]).unwrap();
         <MarketsCollectingSubsidy<T>>::put(markets);
     }: {
         Pallet::<T>::process_subsidy_collecting_markets(

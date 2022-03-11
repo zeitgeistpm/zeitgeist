@@ -5,6 +5,7 @@ pub use crate::{
 #[cfg(feature = "arbitrary")]
 use arbitrary::{Arbitrary, Result, Unstructured};
 use frame_support::dispatch::{Decode, Encode, Weight};
+use scale_info::TypeInfo;
 use sp_runtime::{
     generic,
     traits::{IdentifyAccount, Verify},
@@ -35,7 +36,7 @@ pub type CategoryIndex = u16;
 /// The multicodec encoding the hash algorithm uses only 1 byte,
 /// effecitvely limiting the number of available hash types.
 /// HashType (1B) + DigestSize (1B) + Hash (48B).
-#[derive(scale_info::TypeInfo, Clone, Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(TypeInfo, Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub enum MultiHash {
     Sha3_384([u8; 50]),
 }
@@ -91,15 +92,7 @@ pub type BlockTest<R> = frame_system::mocking::MockBlock<R>;
 #[cfg(feature = "std")]
 pub type UncheckedExtrinsicTest<R> = frame_system::mocking::MockUncheckedExtrinsic<R>;
 
-#[derive(
-    scale_info::TypeInfo,
-    Clone,
-    Eq,
-    PartialEq,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
-    sp_runtime::RuntimeDebug,
-)]
+#[derive(sp_runtime::RuntimeDebug, Clone, Decode, Encode, Eq, PartialEq, TypeInfo)]
 pub struct ResultWithWeightInfo<R> {
     pub result: R,
     pub weight: Weight,

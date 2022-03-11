@@ -1,4 +1,6 @@
 use crate::types::{CategoryIndex, PoolId, SerdeWrapper};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
 
 /// The `Asset` enum represents all types of assets available in the Zeitgeist
 /// system.
@@ -9,18 +11,9 @@ use crate::types::{CategoryIndex, PoolId, SerdeWrapper};
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    scale_info::TypeInfo,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
+    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
 )]
-pub enum Asset<MI> {
+pub enum Asset<MI: MaxEncodedLen> {
     CategoricalOutcome(MI, CategoryIndex),
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
@@ -35,16 +28,7 @@ pub enum Asset<MI> {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 #[derive(
-    scale_info::TypeInfo,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
+    Clone, Copy, Debug, Decode, Eq, Encode, MaxEncodedLen, Ord, PartialEq, PartialOrd, TypeInfo,
 )]
 pub enum ScalarPosition {
     Long,

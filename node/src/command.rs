@@ -4,13 +4,12 @@ use crate::{
 };
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
+use zeitgeist_runtime::RuntimeApi;
 #[cfg(feature = "parachain")]
 use {
-    parity_scale_codec::Encode, sc_client_api::client::BlockBackend,
-    sp_core::hexdisplay::HexDisplay, sp_runtime::traits::Block as BlockT, std::io::Write,
+    sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
+    sp_runtime::traits::Block as BlockT, std::io::Write,
 };
-
-use zeitgeist_runtime::RuntimeApi;
 
 pub fn run() -> sc_cli::Result<()> {
     let mut cli = <Cli as SubstrateCli>::from_args();
@@ -85,12 +84,14 @@ pub fn run() -> sc_cli::Result<()> {
             let mut builder = sc_cli::LoggerBuilder::new("");
             builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
             let _ = builder.init();
+            let chain_spec = &crate::cli::load_spec(
+                &params.chain.clone().unwrap_or_default(),
+                params.parachain_id.into(),
+            )?;
+            let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
             let block: zeitgeist_runtime::Block =
-                cumulus_client_service::genesis::generate_genesis_block(&crate::cli::load_spec(
-                    &params.chain.clone().unwrap_or_default(),
-                    params.parachain_id.into(),
-                )?)?;
+                cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)?;
             let raw_header = block.header().encode();
             let buf = if params.raw {
                 raw_header
@@ -199,9 +200,9 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run.normalize())?;
 
     runner.run_node_until_exit(|parachain_config| async move {
+        let chain_spec = &parachain_config.chain_spec;
         let parachain_id_extension =
-            crate::chain_spec::Extensions::try_get(&*parachain_config.chain_spec)
-                .map(|e| e.parachain_id);
+            crate::chain_spec::Extensions::try_get(&**chain_spec).map(|e| e.parachain_id);
 
         let polkadot_cli = crate::cli::RelayChainCli::new(
             &parachain_config,
@@ -216,8 +217,9 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             polkadot_primitives::v0::AccountId,
         >::into_account(&parachain_id);
 
+        let state_version = Cli::native_runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
-            cumulus_client_service::genesis::generate_genesis_block(&parachain_config.chain_spec)
+            cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)
                 .map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 

@@ -68,7 +68,8 @@ pub mod pallet {
         traits::{Get, Hooks, StorageVersion, Time},
         Twox64Concat,
     };
-    use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode};
+    use parity_scale_codec::{Decode, Encode, FullCodec, FullEncode, MaxEncodedLen};
+    use scale_info::TypeInfo;
     use sp_runtime::DispatchError;
     use substrate_fixed::{
         traits::{Fixed, FixedSigned, FixedUnsigned, LossyFrom, ToFixed},
@@ -118,10 +119,14 @@ pub mod pallet {
         type BalanceFractionalDecimals: Get<u8>;
 
         /// Type that's used as an id for pools.
-        type PoolId: Copy + Decode + FullEncode + scale_info::TypeInfo;
+        type PoolId: Copy + Decode + FullEncode + MaxEncodedLen + TypeInfo;
 
         /// Rikiddo variant.
-        type Rikiddo: RikiddoMV<FU = Self::FixedTypeU> + Decode + FullCodec + scale_info::TypeInfo;
+        type Rikiddo: RikiddoMV<FU = Self::FixedTypeU>
+            + Decode
+            + FullCodec
+            + MaxEncodedLen
+            + TypeInfo;
     }
 
     /// Potential errors within the Rikiddo pallet.

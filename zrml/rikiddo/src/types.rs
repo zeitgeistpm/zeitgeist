@@ -7,6 +7,8 @@ use arbitrary::{Arbitrary, Result as ArbiraryResult, Unstructured};
 #[cfg(feature = "arbitrary")]
 use core::mem;
 use frame_support::dispatch::{Decode, Encode};
+use parity_scale_codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 use sp_core::RuntimeDebug;
 use substrate_fixed::traits::Fixed;
 #[cfg(feature = "arbitrary")]
@@ -28,7 +30,7 @@ pub use sigmoid_fee::*;
 pub type UnixTimestamp = u64;
 
 /// A 2-tuple containing an unix timestamp and a volume.
-#[derive(scale_info::TypeInfo, Clone, RuntimeDebug, Decode, Default, Encode, Eq, PartialEq)]
+#[derive(Clone, Decode, Default, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TimestampedVolume<F: Fixed> {
     /// The timestamp of the volume.
     pub timestamp: UnixTimestamp,
@@ -81,7 +83,7 @@ cfg_if::cfg_if! {
 /// A enum that wrappes an amount of time in different units.
 /// An enum that wrappes an amount of time in different units.
 #[derive(
-    scale_info::TypeInfo, Copy, Clone, RuntimeDebug, Decode, Encode, Eq, PartialEq, PartialOrd,
+    Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, PartialOrd, RuntimeDebug, TypeInfo,
 )]
 #[cfg_attr(feature = "arbitrary", derive(Arbitrary))]
 pub enum Timespan {

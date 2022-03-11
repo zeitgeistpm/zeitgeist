@@ -27,6 +27,7 @@ pub fn battery_station_staging_config(
         vec![],
         telemetry_endpoints(),
         Some("battery_station"),
+        None,
         Some(token_properties("ZBS")),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {

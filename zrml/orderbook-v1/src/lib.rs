@@ -16,7 +16,8 @@
 extern crate alloc;
 
 pub use pallet::*;
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{CheckedMul, CheckedSub},
     ArithmeticError, DispatchError, RuntimeDebug,
@@ -33,17 +34,16 @@ pub mod weights;
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::*, Order, OrderSide};
-    use alloc::vec::Vec;
     use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         ensure,
-        pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         traits::{
             Currency, ExistenceRequirement, Hooks, IsType, ReservableCurrency, StorageVersion,
             WithdrawReasons,
         },
-        Blake2_128Concat, Identity,
+        transactional, Blake2_128Concat, Identity, WeakBoundedVec,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -82,13 +82,13 @@ mod pallet {
                         let cost = order_data.cost()?;
                         T::Currency::unreserve(&maker, cost);
                         let mut bids = Self::bids(asset);
-                        remove_item::<T::Hash>(&mut bids, order_hash);
+                        remove_item::<T::Hash, _>(&mut bids, order_hash);
                         <Bids<T>>::insert(asset, bids);
                     }
                     OrderSide::Ask => {
                         T::Shares::unreserve(order_data.asset, &maker, order_data.total);
                         let mut asks = Self::asks(asset);
-                        remove_item::<T::Hash>(&mut asks, order_hash);
+                        remove_item::<T::Hash, _>(&mut asks, order_hash);
                         <Asks<T>>::insert(asset, asks);
                         bid = false;
                     }
@@ -174,6 +174,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::make_order_ask().max(T::WeightInfo::make_order_bid())
         )]
+        #[transactional]
         pub fn make_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
@@ -208,9 +209,9 @@ mod pallet {
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Bids<T>>::mutate(asset, |b: &mut Vec<T::Hash>| {
-                        b.push(hash);
-                    });
+                    <Bids<T>>::try_mutate(asset, |b: &mut WeakBoundedVec<T::Hash, _>| {
+                        b.try_push(hash).map_err(|_| <Error<T>>::StorageOverflow)
+                    })?;
 
                     T::Currency::reserve(&sender, cost)?;
                 }
@@ -220,9 +221,9 @@ mod pallet {
                         Error::<T>::InsufficientBalance,
                     );
 
-                    <Asks<T>>::mutate(asset, |a| {
-                        a.push(hash);
-                    });
+                    <Asks<T>>::try_mutate(asset, |a| {
+                        a.try_push(hash).map_err(|_| <Error<T>>::StorageOverflow)
+                    })?;
 
                     T::Shares::reserve(asset, &sender, amount)?;
                     bid = false;
@@ -263,10 +264,15 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Insufficient balance.
         InsufficientBalance,
         NotOrderCreator,
+        /// The order was already taken.
         OrderAlreadyTaken,
+        /// The order does not exist.
         OrderDoesNotExist,
+        /// It was tried to append an item to storage beyond the boundaries.
+        StorageOverflow,
     }
 
     #[pallet::event]
@@ -294,13 +300,23 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn asks)]
-    pub type Asks<T: Config> =
-        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, Vec<T::Hash>, ValueQuery>;
+    pub type Asks<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        Asset<T::MarketId>,
+        WeakBoundedVec<T::Hash, ConstU32<1_048_576>>,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn bids)]
-    pub type Bids<T: Config> =
-        StorageMap<_, Blake2_128Concat, Asset<T::MarketId>, Vec<T::Hash>, ValueQuery>;
+    pub type Bids<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        Asset<T::MarketId>,
+        WeakBoundedVec<T::Hash, ConstU32<1_048_576>>,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
     #[pallet::getter(fn nonce)]
@@ -326,20 +342,20 @@ mod pallet {
         }
     }
 
-    fn remove_item<I: cmp::PartialEq + Copy>(items: &mut Vec<I>, item: I) {
+    fn remove_item<I: cmp::PartialEq + Copy, G>(items: &mut WeakBoundedVec<I, G>, item: I) {
         let pos = items.iter().position(|&i| i == item).unwrap();
         items.swap_remove(pos);
     }
 }
 
-#[derive(scale_info::TypeInfo, Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
+#[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum OrderSide {
     Bid,
     Ask,
 }
 
-#[derive(scale_info::TypeInfo, Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug)]
-pub struct Order<AccountId, Balance, MarketId> {
+#[derive(Clone, Encode, Eq, Decode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Order<AccountId, Balance, MarketId: MaxEncodedLen> {
     side: OrderSide,
     maker: AccountId,
     taker: Option<AccountId>,
@@ -349,7 +365,11 @@ pub struct Order<AccountId, Balance, MarketId> {
     filled: Balance,
 }
 
-impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId> {
+impl<AccountId, Balance: CheckedSub + CheckedMul, MarketId> Order<AccountId, Balance, MarketId>
+where
+    Balance: CheckedSub + CheckedMul,
+    MarketId: MaxEncodedLen,
+{
     pub fn cost(&self) -> Result<Balance, DispatchError> {
         match self.total.checked_sub(&self.filled) {
             Some(subtotal) => match subtotal.checked_mul(&self.price) {

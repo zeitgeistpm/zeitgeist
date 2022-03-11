@@ -7,12 +7,10 @@ use crate::{
     },
     Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes, RESERVE_ID,
 };
-use core::ops::Range;
 use frame_support::{
     assert_noop, assert_ok,
     traits::{Hooks, NamedReservableCurrency},
 };
-use sp_runtime::traits::Header;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::DisputeApi,
@@ -134,7 +132,7 @@ fn on_resolution_denies_non_court_markets() {
 #[test]
 fn on_dispute_stores_jurors_that_should_vote() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..123);
+        setup_blocks(123);
         let _ = Court::join_court(Origin::signed(ALICE));
         let _ = Court::join_court(Origin::signed(BOB));
         Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
@@ -150,7 +148,7 @@ fn on_dispute_stores_jurors_that_should_vote() {
 #[test]
 fn on_resolution_awards_winners_and_slashes_losers() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..2);
+        setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
@@ -171,7 +169,7 @@ fn on_resolution_awards_winners_and_slashes_losers() {
 #[test]
 fn on_resolution_decides_market_outcome_based_on_the_majority() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..2);
+        setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
@@ -187,7 +185,7 @@ fn on_resolution_decides_market_outcome_based_on_the_majority() {
 #[test]
 fn on_resolution_sets_late_jurors_as_tardy() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..2);
+        setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)).unwrap();
@@ -201,7 +199,7 @@ fn on_resolution_sets_late_jurors_as_tardy() {
 #[test]
 fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tardy() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..2);
+        setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
@@ -217,7 +215,7 @@ fn on_resolution_sets_jurors_that_voted_on_the_second_most_voted_outcome_as_tard
 #[test]
 fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..2);
+        setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::set_stored_juror_as_tardy(&BOB).unwrap();
@@ -235,7 +233,7 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
 #[test]
 fn on_resolution_removes_requested_jurors_and_votes() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..2);
+        setup_blocks(2);
         Court::join_court(Origin::signed(ALICE)).unwrap();
         Court::join_court(Origin::signed(BOB)).unwrap();
         Court::join_court(Origin::signed(CHARLIE)).unwrap();
@@ -252,17 +250,14 @@ fn on_resolution_removes_requested_jurors_and_votes() {
 #[test]
 fn random_jurors_returns_an_unique_different_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
-        let mut block: u64 = 123;
-        setup_blocks(1..block);
+        setup_blocks(123);
 
         let mut rng = Court::rng();
         let random_jurors = Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
-            let next_block = block + 1;
-            setup_blocks(block..next_block);
-            block = next_block;
+            setup_blocks(1);
 
             let another_set_of_random_jurors =
                 Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
@@ -289,7 +284,7 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
 #[test]
 fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(1..123);
+        setup_blocks(123);
         let mut rng = Court::rng();
         let random_jurors = Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
         for (_, juror) in random_jurors {
@@ -317,15 +312,15 @@ fn vote_will_stored_outcome_from_a_juror() {
     });
 }
 
-fn setup_blocks(range: Range<u64>) {
-    let mut parent_hash = System::parent_hash();
+fn setup_blocks(num_blocks: u32) {
+    for _ in 0..num_blocks {
+        let current_block_number = System::block_number() + 1;
+        let parent_block_hash = System::parent_hash();
+        let current_digest = System::digest();
 
-    for i in range {
-        System::initialize(&i, &parent_hash, &Default::default(), frame_system::InitKind::Full);
-        RandomnessCollectiveFlip::on_initialize(i);
-
-        let header = System::finalize();
-        parent_hash = header.hash();
-        System::set_block_number(*header.number());
+        System::initialize(&current_block_number, &parent_block_hash, &current_digest);
+        RandomnessCollectiveFlip::on_initialize(current_block_number);
+        System::finalize();
+        System::set_block_number(current_block_number);
     }
 }

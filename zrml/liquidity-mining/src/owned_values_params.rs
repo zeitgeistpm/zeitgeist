@@ -1,3 +1,5 @@
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+
 /// Parameters used by the `OwnedValues` storage.
 ///
 /// # Types
@@ -9,15 +11,20 @@
     scale_info::TypeInfo,
     Clone,
     Debug,
+    Decode,
     Default,
+    Encode,
     Eq,
+    MaxEncodedLen,
     Ord,
     PartialEq,
     PartialOrd,
-    parity_scale_codec::Decode,
-    parity_scale_codec::Encode,
 )]
-pub struct OwnedValuesParams<BA, BN> {
+pub struct OwnedValuesParams<BA, BN>
+where
+    BA: MaxEncodedLen,
+    BN: MaxEncodedLen,
+{
     /// The number of blocks an account participated in a market period.
     pub participated_blocks: BN,
     /// Owned amount of perpetual incentives. Won't go away when accounts exist early and is not

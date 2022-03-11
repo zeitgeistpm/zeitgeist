@@ -136,7 +136,8 @@ parameter_types! {
     pub const MaxApprovals: u32 = 100;
     pub const ProposalBond: Permill = Permill::from_percent(5);
     pub const ProposalBondMinimum: Balance = 10 * BASE;
-    pub const SpendPeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const ProposalBondMaximum: Balance = 500 * BASE;
+    pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 }
 
