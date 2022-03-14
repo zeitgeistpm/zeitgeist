@@ -143,9 +143,7 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
     // If term is still large, then MAX_ITERATIONS was violated (can't happen with the current
     // limits).
     if term >= BPOW_PRECISION {
-        return Err(DispatchError::Other(
-            "[bpow_approx] Maximum number of iterations exceeded",
-        ));
+        return Err(DispatchError::Other("[bpow_approx] Maximum number of iterations exceeded"));
     }
 
     Ok(sum)
@@ -378,13 +376,21 @@ mod tests {
 
     #[test]
     fn bpow_approx_returns_error_when_parameters_are_outside_of_specified_limits() {
-        let test_vector: Vec<(u128, u128)> = vec![
-            (BASE / 10, 3 * BASE / 2),
-            (2 * BASE - BASE / 10, 3 * BASE / 2),
-            (BASE, 11 * BASE / 10),
+        let test_vector: Vec<(u128, u128, DispatchError)> = vec![
+            (BASE, BASE + 1, DispatchError::Other("[bpow_approx]: expected exp <= BASE")),
+            (
+                BASE / 10,
+                1 * BASE / 2,
+                DispatchError::Other("[bpow_approx]: expected base >= BASE / 4"),
+            ),
+            (
+                2 * BASE - BASE / 10,
+                1 * BASE / 2,
+                DispatchError::Other("[bpow_approx]: expected base <= 7 * BASE / 4"),
+            ),
         ];
-        for (base, exp) in test_vector.iter() {
-            assert!(bpow_approx(*base, *exp).is_err());
+        for (base, exp, err) in test_vector.iter() {
+            assert_eq!(bpow_approx(*base, *exp).unwrap_err(), *err);
         }
     }
 }
