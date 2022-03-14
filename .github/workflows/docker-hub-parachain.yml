@@ -1,6 +1,9 @@
 name: Publish features parachain to Docker Hub
 
 on:
+  push:
+    tags:
+    - '*'
   workflow_dispatch:
 
 jobs:
