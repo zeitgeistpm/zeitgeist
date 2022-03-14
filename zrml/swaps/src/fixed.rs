@@ -112,16 +112,9 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
     //         = (product(a - i - 1, i=1-->k) * x^k) / (k!)
     // each iteration, multiply previous term by (a-(k-1)) * x / k
     // continue until term is less than precision
-    for i in 1..BPOW_APPROX_MAX_ITERATIONS.check_add_rslt(&1)? {
+    for i in 1..=BPOW_APPROX_MAX_ITERATIONS {
         if term < BPOW_PRECISION {
             break;
-        }
-
-        if i == BPOW_APPROX_MAX_ITERATIONS {
-            // Unreachable with the current limits.
-            return Err(DispatchError::Other(
-                "[bpow_approx] Maximum number of iterations exceeded",
-            ));
         }
 
         let big_k = i.check_mul_rslt(&BASE)?;
@@ -145,6 +138,14 @@ pub fn bpow_approx(base: u128, exp: u128) -> Result<u128, DispatchError> {
         } else {
             sum = sum.check_add_rslt(&term)?;
         }
+    }
+
+    // If term is still large, then MAX_ITERATIONS was violated (can't happen with the current
+    // limits).
+    if term >= BPOW_PRECISION {
+        return Err(DispatchError::Other(
+            "[bpow_approx] Maximum number of iterations exceeded",
+        ));
     }
 
     Ok(sum)
