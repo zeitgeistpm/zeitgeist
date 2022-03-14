@@ -156,8 +156,8 @@ mod tests {
         fixed::{bdiv, bmul, bpow, bpow_approx},
     };
     use frame_support::dispatch::DispatchError;
-    use zeitgeist_primitives::constants::BASE;
     use more_asserts::assert_le;
+    use zeitgeist_primitives::constants::BASE;
 
     pub const ERR: Result<u128, DispatchError> = Err(ARITHM_OF);
 
