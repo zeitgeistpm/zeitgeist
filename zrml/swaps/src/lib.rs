@@ -7,9 +7,6 @@
 
 extern crate alloc;
 
-#[cfg(test)]
-#[macro_use]
-extern crate more_asserts;
 #[macro_use]
 mod utils;
 

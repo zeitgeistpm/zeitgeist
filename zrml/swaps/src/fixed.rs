@@ -157,6 +157,7 @@ mod tests {
     };
     use frame_support::dispatch::DispatchError;
     use zeitgeist_primitives::constants::BASE;
+    use more_asserts::assert_le;
 
     pub const ERR: Result<u128, DispatchError> = Err(ARITHM_OF);
 
