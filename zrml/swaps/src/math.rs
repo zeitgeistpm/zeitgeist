@@ -34,7 +34,7 @@ pub fn calc_spot_price(
     spot_price
 }
 
-/// Calculate the amount of assets obtained for swapping a specified amount of tokens in, including
+/// Calculate the amount of tokens obtained for swapping a specified amount of tokens in, including
 /// trading fees.
 ///
 /// # Arguments
@@ -173,7 +173,7 @@ pub fn calc_single_in_given_pool_out(
     asset_amount_in
 }
 
-/// Calculate the amount of a single asset received when exiting the pool with a specified amount of
+/// Calculate the amount of tokens received when exiting the pool with a specified amount of
 /// pool tokens.
 ///
 /// See _Single-Asset Deposit/Withdrawal_ for details.
@@ -213,7 +213,7 @@ pub fn calc_single_out_given_pool_in(
     asset_amount_out
 }
 
-/// Calculate the amount of pool tokens required to obtain the specified amount of a single asset
+/// Calculate the amount of pool tokens required to obtain the specified number of tokens for a single asset
 /// when exiting the pool.
 ///
 /// See _Single-Asset Deposit/Withdrawal_ for details.
