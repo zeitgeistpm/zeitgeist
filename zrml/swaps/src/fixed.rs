@@ -155,7 +155,7 @@ mod tests {
         consts::{ARITHM_OF, BPOW_PRECISION},
         fixed::{bdiv, bmul, bpow, bpow_approx},
     };
-    use frame_support::dispatch::DispatchError;
+    use frame_support::{assert_err, dispatch::DispatchError};
     use more_asserts::assert_le;
     use zeitgeist_primitives::constants::BASE;
 
@@ -391,7 +391,7 @@ mod tests {
             ),
         ];
         for (base, exp, err) in test_vector.iter() {
-            assert_eq!(bpow_approx(*base, *exp).unwrap_err(), *err);
+            assert_err!(bpow_approx(*base, *exp), *err);
         }
     }
 }
