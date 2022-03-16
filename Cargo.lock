@@ -12292,6 +12292,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "more-asserts",
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
