@@ -6,6 +6,19 @@ use crate::{
 use frame_support::dispatch::DispatchError;
 use zeitgeist_primitives::constants::BASE;
 
+/// Calculate the spot price of one asset in terms of another, including trading fees.
+///
+/// # Arguments
+///
+/// * `asset_balance_in` - The pool balance of the ingoing asset
+/// * `asset_weight_in` - The weight of the ingoing asset
+/// * `asset_balance_out` - The pool balance of the outgoing asset
+/// * `asset_weight_out` - The weight of the outgoing asset
+/// * `swap_fee` - The swap fee of the pool
+///
+/// # Errors
+///
+/// Returns `DispatchError::Other` if `swap_fee >= BASE`.
 pub fn calc_spot_price(
     asset_balance_in: u128,
     asset_weight_in: u128,
@@ -21,6 +34,21 @@ pub fn calc_spot_price(
     spot_price
 }
 
+/// Calculate the amount of tokens received from the pool for swapping the specified amount of tokens in, including
+/// trading fees.
+///
+/// # Arguments
+///
+/// * `asset_balance_in` - The pool balance of the ingoing asset
+/// * `asset_weight_in` - The weight of the ingoing asset
+/// * `asset_balance_out` - The pool balance of the outgoing asset
+/// * `asset_weight_out` - The weight of the outgoing asset
+/// * `asset_amount_in` - The amount of the ingoing asset to swap in
+/// * `swap_fee` - The swap fee of the pool
+///
+/// # Errors
+///
+/// Returns `DispatchError::Other` if `swap_fee >= BASE`.
 pub fn calc_out_given_in(
     asset_balance_in: u128,
     asset_weight_in: u128,
@@ -39,6 +67,21 @@ pub fn calc_out_given_in(
     asset_amount_out
 }
 
+/// Calculate the required amount of tokens to swap in to receive a specified amount of tokens
+/// from the pool, including trading fees.
+///
+/// # Arguments
+///
+/// * `asset_balance_in` - The pool balance of the ingoing asset
+/// * `asset_weight_in` - The weight of the ingoing asset
+/// * `asset_balance_out` - The pool balance of the outgoing asset
+/// * `asset_weight_out` - The weight of the outgoing asset
+/// * `asset_amount_out` - The amount of tokens of the outgoing asset to receive
+/// * `swap_fee` - The swap fee of the pool
+///
+/// # Errors
+///
+/// Returns `DispatchError::Other` if `swap_fee >= BASE`.
 pub fn calc_in_given_out(
     asset_balance_in: u128,
     asset_weight_in: u128,
@@ -55,6 +98,22 @@ pub fn calc_in_given_out(
     asset_amount_in
 }
 
+/// Calculate the amount of pool tokens received when joining the pool with a specified amount of
+/// tokens of a single asset.
+///
+/// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
+/// (https://balancer.fi/whitepaper.pdf) for details.
+///
+/// * `asset_balance_in` - The pool balance of the ingoing asset
+/// * `asset_weight_in` - The weight of the ingoing asset
+/// * `pool_supply` - The total supply of pool tokens
+/// * `total_weight` - The total weight of the pool (sum of all weights)
+/// * `asset_amount_in` - The amount of the ingoing asset to add to the pool
+/// * `swap_fee` - The swap fee of the pool
+///
+/// # Errors
+///
+/// Returns `DispatchError::Other` if `swap_fee >= BASE`
 pub fn calc_pool_out_given_single_in(
     asset_balance_in: u128,
     asset_weight_in: u128,
@@ -79,6 +138,22 @@ pub fn calc_pool_out_given_single_in(
     pool_amount_out
 }
 
+/// Calculate the required amount of tokens of a single asset to join the pool with to receive the
+/// specified amount of pool tokens.
+///
+/// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
+/// (https://balancer.fi/whitepaper.pdf) for details.
+///
+/// * `asset_balance_in` - The pool balance of the ingoing asset
+/// * `asset_weight_in` - The weight of the ingoing asset
+/// * `pool_supply` - The total supply of pool tokens
+/// * `total_weight` - The total weight of the pool (sum of all weights)
+/// * `pool_amount_out` - The expected amount of pool tokens to receive
+/// * `swap_fee` - The swap fee of the pool
+///
+/// # Errors
+///
+/// Returns `DispatchError::Other` if `swap_fee >= BASE`
 pub fn calc_single_in_given_pool_out(
     asset_balance_in: u128,
     asset_weight_in: u128,
@@ -101,6 +176,22 @@ pub fn calc_single_in_given_pool_out(
     asset_amount_in
 }
 
+/// Calculate the amount of tokens of a single asset received when exiting the pool with a specified amount of
+/// pool tokens.
+///
+/// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
+/// (https://balancer.fi/whitepaper.pdf) for details.
+///
+/// * `asset_balance_in` - The pool balance of the ingoing asset
+/// * `asset_weight_in` - The weight of the ingoing asset
+/// * `pool_supply` - The total supply of pool tokens
+/// * `total_weight` - The total weight of the pool (sum of all weights)
+/// * `pool_amount_in` - The amount of pool tokens to burn
+/// * `swap_fee` - The swap fee of the pool
+///
+/// # Errors
+///
+/// Returns `DispatchError::Other` if `swap_fee >= BASE`
 pub fn calc_single_out_given_pool_in(
     asset_balance_out: u128,
     asset_weight_out: u128,
@@ -126,6 +217,21 @@ pub fn calc_single_out_given_pool_in(
     asset_amount_out
 }
 
+/// Calculate the required amount of pool tokens to exit the pool with to receive the specified number of tokens of a single asset.
+///
+/// See _Single-Asset Deposit/Withdrawal_ of Martinelli-Mushegian: Balancer Whitepaper v2019-09-19
+/// (https://balancer.fi/whitepaper.pdf) for details.
+///
+/// * `asset_balance_in` - The pool balance of the ingoing asset
+/// * `asset_weight_in` - The weight of the ingoing asset
+/// * `pool_supply` - The total supply of pool tokens
+/// * `total_weight` - The total weight of the pool (sum of all weights)
+/// * `asset_amount_out` - The expected amount of the outgoing asset to receive
+/// * `swap_fee` - The swap fee of the pool
+///
+/// # Errors
+///
+/// Returns `DispatchError::Other` if `swap_fee >= BASE`
 pub fn calc_pool_in_given_single_out(
     asset_balance_out: u128,
     asset_weight_out: u128,
