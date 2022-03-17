@@ -5879,7 +5879,7 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
- "substrate-fixed",
+ "substrate-fixed 0.5.8 (git+https://github.com/encointer/substrate-fixed)",
 ]
 
 [[package]]
@@ -10515,11 +10515,21 @@ dependencies = [
 [[package]]
 name = "substrate-fixed"
 version = "0.5.8"
-source = "git+https://github.com/encointer/substrate-fixed#5984ba9b9433d5007597c7f03f65ea5bf6d08601"
+source = "git+https://github.com/encointer/substrate-fixed?rev=5984ba9b9433d5007597c7f03f65ea5bf6d08601#5984ba9b9433d5007597c7f03f65ea5bf6d08601"
 dependencies = [
  "parity-scale-codec 2.3.1",
  "scale-info",
  "serde",
+ "typenum 1.15.0 (git+https://github.com/encointer/typenum?tag=v1.15.0)",
+]
+
+[[package]]
+name = "substrate-fixed"
+version = "0.5.8"
+source = "git+https://github.com/encointer/substrate-fixed#5984ba9b9433d5007597c7f03f65ea5bf6d08601"
+dependencies = [
+ "parity-scale-codec 2.3.1",
+ "scale-info",
  "typenum 1.15.0 (git+https://github.com/encointer/typenum?tag=v1.15.0)",
 ]
 
@@ -12047,7 +12057,7 @@ dependencies = [
  "sp-session",
  "sp-transaction-pool",
  "sp-version",
- "substrate-fixed",
+ "substrate-fixed 0.5.8 (git+https://github.com/encointer/substrate-fixed?rev=5984ba9b9433d5007597c7f03f65ea5bf6d08601)",
  "substrate-wasm-builder",
  "xcm",
  "xcm-builder",
@@ -12201,7 +12211,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
+ "substrate-fixed 0.5.8 (git+https://github.com/encointer/substrate-fixed?rev=5984ba9b9433d5007597c7f03f65ea5bf6d08601)",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
@@ -12251,7 +12261,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
+ "substrate-fixed 0.5.8 (git+https://github.com/encointer/substrate-fixed?rev=5984ba9b9433d5007597c7f03f65ea5bf6d08601)",
  "zeitgeist-primitives",
  "zrml-rikiddo",
 ]
@@ -12264,7 +12274,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "libfuzzer-sys",
- "substrate-fixed",
+ "substrate-fixed 0.5.8 (git+https://github.com/encointer/substrate-fixed?rev=5984ba9b9433d5007597c7f03f65ea5bf6d08601)",
  "zrml-rikiddo",
 ]
 
@@ -12303,7 +12313,7 @@ dependencies = [
  "sp-api",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
+ "substrate-fixed 0.5.8 (git+https://github.com/encointer/substrate-fixed?rev=5984ba9b9433d5007597c7f03f65ea5bf6d08601)",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
