@@ -1277,7 +1277,7 @@ mod pallet {
     {
         /// Custom addition block initialization logic wasn't successful
         BadOnInitialize,
-        /// A complete set of shares has been bought \[market_id, buyer\]
+        /// A complete set of assets has been bought \[market_id, amount_per_asset, buyer\]
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
@@ -1299,7 +1299,7 @@ mod pallet {
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
-        /// A complete set of shares has been sold \[market_id, seller\]
+        /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
     }
 
