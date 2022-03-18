@@ -4943,7 +4943,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=parachain-staking-migrations-3#3fbd882f551e629d5a29791b302d80dd4e4b4364"
+source = "git+https://github.com/purestake/moonbeam?rev=45257659f04b28dd4927b5dc611fac6f9e8905fd#45257659f04b28dd4927b5dc611fac6f9e8905fd"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
