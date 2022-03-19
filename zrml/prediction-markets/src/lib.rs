@@ -1080,7 +1080,7 @@ mod pallet {
                 ExistenceRequirement::AllowDeath,
             )?;
 
-            Self::deposit_event(Event::SoldCompleteSet(market_id, sender));
+            Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
             Self::calculate_actual_weight(&T::WeightInfo::sell_complete_set, assets_len, max_cats)
@@ -1277,8 +1277,8 @@ mod pallet {
     {
         /// Custom addition block initialization logic wasn't successful
         BadOnInitialize,
-        /// A complete set of shares has been bought \[market_id, buyer\]
-        BoughtCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
+        /// A complete set of assets has been bought \[market_id, amount_per_asset, buyer\]
+        BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, creator\]
@@ -1299,8 +1299,8 @@ mod pallet {
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
-        /// A complete set of shares has been sold \[market_id, seller\]
-        SoldCompleteSet(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
+        /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
+        SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
     }
 
     #[pallet::hooks]
@@ -1456,7 +1456,7 @@ mod pallet {
                 T::Shares::deposit(*asset, &who, amount)?;
             }
 
-            Self::deposit_event(Event::BoughtCompleteSet(market_id, who));
+            Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
 
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
