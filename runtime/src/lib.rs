@@ -146,13 +146,14 @@ macro_rules! create_zeitgeist_runtime {
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
 
-                // Collectives & Memberships
-                AdvisoryCommittee: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 20,
-                AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 21,
-                Council: pallet_collective::<Instance2>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 22,
-                CouncilMembership: pallet_membership::<Instance2>::{Call, Config<T>, Event<T>, Pallet, Storage} = 23,
-                TechnicalCommittee: pallet_collective::<Instance3>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 24,
-                TechnicalCommitteeMembership: pallet_membership::<Instance3>::{Call, Config<T>, Event<T>, Pallet, Storage} = 25,
+                // Governance
+                Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
+                AdvisoryCommittee: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 21,
+                AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 22,
+                Council: pallet_collective::<Instance2>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 23,
+                CouncilMembership: pallet_membership::<Instance2>::{Call, Config<T>, Event<T>, Pallet, Storage} = 24,
+                TechnicalCommittee: pallet_collective::<Instance3>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 25,
+                TechnicalCommitteeMembership: pallet_membership::<Instance3>::{Call, Config<T>, Event<T>, Pallet, Storage} = 26,
 
                 // Other Parity pallets
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
@@ -277,7 +278,8 @@ cfg_if::cfg_if! {
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
                     | Call::PredictionMarkets(_)
-                    | Call::Vesting(_) => false,
+                    | Call::Vesting(_)
+                    | Call::Democracy(_) => false,
                 }
             }
         }
@@ -301,7 +303,8 @@ cfg_if::cfg_if! {
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
                     | Call::PredictionMarkets(_)
-                    | Call::Vesting(_) => false,
+                    | Call::Vesting(_)
+                    | Call::Democracy(_) => false,
                 }
             }
         }
@@ -525,6 +528,39 @@ impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
     type Origin = Origin;
     type Proposal = Call;
     type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
+}
+
+// TODO configure origins
+impl pallet_democracy::Config for Runtime {
+	type Proposal = Call;
+	type Event = Event;
+	type Currency = Balances;
+	type EnactmentPeriod = EnactmentPeriod;
+	type LaunchPeriod = LaunchPeriod;
+	type VotingPeriod = VotingPeriod;
+	type VoteLockingPeriod = VoteLockingPeriod;
+	type MinimumDeposit = MinimumDeposit;
+	type ExternalOrigin = EnsureRoot<AccountId>;
+	type ExternalMajorityOrigin = EnsureRoot<AccountId>;
+	type ExternalDefaultOrigin = EnsureRoot<AccountId>;
+	type FastTrackOrigin = EnsureRoot<AccountId>;
+	type InstantOrigin = EnsureRoot<AccountId>;
+	type InstantAllowed = InstantAllowed;
+	type FastTrackVotingPeriod = FastTrackVotingPeriod;
+	type CancellationOrigin = EnsureRoot<AccountId>;
+	type BlacklistOrigin = EnsureRoot<AccountId>;
+	type CancelProposalOrigin = EnsureRoot<AccountId>;
+	type VetoOrigin = EnsureRoot<AccountId>;
+	type CooloffPeriod = CooloffPeriod;
+	type PreimageByteDeposit = PreimageByteDeposit;
+	type OperationalPreimageOrigin = EnsureRoot<AccountId>;
+	type Slash = Treasury;
+	type Scheduler = Scheduler;
+	type PalletsOrigin = OriginCaller;
+	type MaxVotes = MaxVotes;
+	// Add custom weight
+	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
+	type MaxProposals = MaxProposals;
 }
 
 impl pallet_identity::Config for Runtime {
@@ -838,6 +874,7 @@ impl_runtime_apis! {
             orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
             list_benchmark!(list, extra, pallet_balances, Balances);
             list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
+            list_benchmark!(list, extra, pallet_democracy, Democracy);
             list_benchmark!(list, extra, pallet_identity, Identity);
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
@@ -904,6 +941,7 @@ impl_runtime_apis! {
             orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
+            add_benchmark!(params, batches, pallet_democracy, Democracy);
             add_benchmark!(params, batches, pallet_identity, Identity);
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);

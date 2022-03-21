@@ -12,6 +12,7 @@ orml-tokens = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, 
 orml-traits = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-democracy = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-identity = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-membership = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -143,6 +144,7 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
 	"pallet-crowdloan-rewards/runtime-benchmarks",
+	"pallet-democracy/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-identity/runtime-benchmarks",
 	"parachain-staking/runtime-benchmarks",
@@ -173,6 +175,7 @@ std = [
 	"orml-traits/std",
 	"pallet-balances/std",
 	"pallet-collective/std",
+	"pallet-democracy/std",
 	"pallet-identity/std",
 	"pallet-membership/std",
 	"pallet-randomness-collective-flip/std",

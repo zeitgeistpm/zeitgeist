@@ -30,6 +30,21 @@ parameter_types! {
   pub const AdvisoryCommitteeMaxProposals: u32 = 64;
   pub const AdvisoryCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
+  // Democracy
+  pub const LaunchPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
+	pub const VotingPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
+	pub const FastTrackVotingPeriod: BlockNumber = 3 * BLOCKS_PER_HOUR;
+	pub MinimumDeposit: Balance = 100 * BASE;
+  pub const PreimageMaxSize: u32 = 4096 * 1024;
+	pub PreimageBaseDeposit: Balance = deposit(2, 64);
+	pub PreimageByteDeposit: Balance = deposit(0, 1);
+	pub const EnactmentPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
+	pub const VoteLockingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+	pub const CooloffPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+	pub const InstantAllowed: bool = true;
+	pub const MaxVotes: u32 = 100;
+	pub const MaxProposals: u32 = 100;
+
   // Identity
   pub const BasicDeposit: Balance = 8 * BASE;
   pub const FieldDeposit: Balance = 256 * CENT;

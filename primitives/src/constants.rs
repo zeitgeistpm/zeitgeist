@@ -26,6 +26,10 @@ pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
 
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+    items as Balance * 20 * BASE + (bytes as Balance) * 100 * MILLI
+}
+
 // Rikiddo and TokensConfig
 parameter_types! {
     pub const BalanceFractionalDecimals: u8 = {
