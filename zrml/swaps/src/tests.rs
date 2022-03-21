@@ -709,6 +709,27 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
 }
 
 #[test]
+fn pool_exit_is_not_allowed_with_insufficient_funds() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+
+        // Alice has no pool shares!
+        assert_noop!(
+            Swaps::pool_exit(alice_signed(), 0, _1, vec!(0, 0, 0, 0)),
+            crate::Error::<Runtime>::InsufficientBalance,
+        );
+
+        // Now Alice has 25 pool shares!
+        let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
+        assert_noop!(
+            Swaps::pool_exit(alice_signed(), 0, _26, vec!(0, 0, 0, 0)),
+            crate::Error::<Runtime>::InsufficientBalance,
+        );
+    })
+}
+
+#[test]
 fn pool_join_increases_correct_pool_parameters() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
