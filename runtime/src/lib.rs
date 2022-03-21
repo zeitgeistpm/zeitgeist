@@ -20,6 +20,9 @@ mod xcm_config;
 pub use parachain_params::*;
 pub use parameters::*;
 
+#[cfg(feature = "parachain")]
+use parachain_staking::migrations::{PurgeStaleStorage, RemoveExitQueue};
+
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
@@ -77,6 +80,18 @@ type EnsureRootOrMoreThanHalfOfAdvisoryCommittee = EnsureOneOf<
         AdvisoryCommitteeCollectiveInstance,
     >,
 >;
+
+#[cfg(feature = "parachain")]
+type Executive = frame_executive::Executive<
+    Runtime,
+    Block,
+    frame_system::ChainContext<Runtime>,
+    Runtime,
+    AllPalletsWithSystem,
+    (PurgeStaleStorage<Runtime>, RemoveExitQueue<Runtime>),
+>;
+
+#[cfg(not(feature = "parachain"))]
 type Executive = frame_executive::Executive<
     Runtime,
     Block,
@@ -84,6 +99,7 @@ type Executive = frame_executive::Executive<
     Runtime,
     AllPalletsWithSystem,
 >;
+
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 

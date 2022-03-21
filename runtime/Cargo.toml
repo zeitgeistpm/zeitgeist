@@ -33,7 +33,7 @@ sp-runtime = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, g
 sp-session = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-version = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
-substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
+substrate-fixed = { rev = "5984ba9b9433d5007597c7f03f65ea5bf6d08601", default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 
 # Benchmark
 
@@ -55,10 +55,10 @@ parachain-info = { branch = "moonbeam-polkadot-v0.9.16", default-features = fals
 
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-author-mapping = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
+pallet-author-mapping = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/PureStake/crowdloan-rewards", optional = true }
-parachain-staking = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", default-features = false, git = "https://github.com/PureStake/moonbeam", optional = true }
+parachain-staking = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 
 # Polkadot
 

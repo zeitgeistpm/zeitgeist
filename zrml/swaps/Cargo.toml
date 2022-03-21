@@ -5,7 +5,7 @@ frame-system = { branch = "moonbeam-polkadot-v0.9.16", default-features = false,
 orml-traits = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "2.0.0" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
-substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
+substrate-fixed = { rev = "5984ba9b9433d5007597c7f03f65ea5bf6d08601", default-features = false, git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
