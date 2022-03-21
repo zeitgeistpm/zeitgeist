@@ -1033,6 +1033,51 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
     });
 }
 
+#[test]
+fn create_pool_fails_on_too_many_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        let length = 12;
+        let assets: Vec<Asset<MarketId>> =
+            (0..length).map(|x| Asset::CategoricalOutcome(0, x)).collect::<Vec<_>>();
+        let weights = vec![_2; length.into()];
+
+        assets.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                assets,
+                None,
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(weights),
+            ),
+            crate::Error::<Runtime>::TooManyAssets
+        );
+    });
+}
+
+#[test]
+fn create_pool_fails_on_too_few_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                vec!(ASSET_A),
+                None,
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec!(_2, _2, _2, _2)),
+            ),
+            crate::Error::<Runtime>::TooFewAssets
+        );
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
