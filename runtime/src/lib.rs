@@ -804,6 +804,8 @@ impl zrml_prediction_markets::Config for Runtime {
     type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Authorized = Authorized;
     type Court = Court;
+    type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
+    type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -818,6 +820,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
+    type ResolveOrigin = EnsureRoot<AccountId>;
     type Shares = Tokens;
     type SimpleDisputes = SimpleDisputes;
     type Slash = ();
