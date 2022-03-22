@@ -30,7 +30,7 @@ use frame_support::{
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
-use pallet_collective::EnsureProportionAtLeast;
+use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
@@ -552,7 +552,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl pallet_collective::Config<AdvisoryCommitteeInstance> for Runtime {
-    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type DefaultVote = PrimeDefaultVote;
     type Event = Event;
     type MaxMembers = AdvisoryCommitteeMaxMembers;
     type MaxProposals = AdvisoryCommitteeMaxProposals;
@@ -562,31 +562,29 @@ impl pallet_collective::Config<AdvisoryCommitteeInstance> for Runtime {
     type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 }
 
-// TODO add config values
 impl pallet_collective::Config<CouncilInstance> for Runtime {
-    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type DefaultVote = PrimeDefaultVote;
     type Event = Event;
-    type MaxMembers = AdvisoryCommitteeMaxMembers;
-    type MaxProposals = AdvisoryCommitteeMaxProposals;
-    type MotionDuration = AdvisoryCommitteeMotionDuration;
+    type MaxMembers = CouncilMaxMembers;
+    type MaxProposals = CouncilMaxProposals;
+    type MotionDuration = CouncilMotionDuration;
     type Origin = Origin;
     type Proposal = Call;
     type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 }
 
-// TODO add config values
 impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
-    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type DefaultVote = PrimeDefaultVote;
     type Event = Event;
-    type MaxMembers = AdvisoryCommitteeMaxMembers;
-    type MaxProposals = AdvisoryCommitteeMaxProposals;
-    type MotionDuration = AdvisoryCommitteeMotionDuration;
+    type MaxMembers = TechnicalCommitteeMaxMembers;
+    type MaxProposals = TechnicalCommitteeMaxProposals;
+    type MotionDuration = TechnicalCommitteeMotionDuration;
     type Origin = Origin;
     type Proposal = Call;
     type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 }
 
-// TODO configure origins
+// TODO configure origins + Add custom weight
 impl pallet_democracy::Config for Runtime {
 	type Proposal = Call;
 	type Event = Event;
@@ -614,7 +612,7 @@ impl pallet_democracy::Config for Runtime {
 	type Scheduler = Scheduler;
 	type PalletsOrigin = OriginCaller;
 	type MaxVotes = MaxVotes;
-	// Add custom weight
+	// TODO Add custom weight
 	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
 	type MaxProposals = MaxProposals;
 }
@@ -634,6 +632,7 @@ impl pallet_identity::Config for Runtime {
     type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
+// TODO add origins
 impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
     type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Event = Event;
@@ -649,9 +648,9 @@ impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime 
 
 // TODO add config values
 impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
-    type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type AddOrigin = EnsureRootOrThreeFourthsCouncil;
     type Event = Event;
-    type MaxMembers = AdvisoryCommitteeMaxMembers;
+    type MaxMembers = CouncilMaxMembers;
     type MembershipChanged = AdvisoryCommittee;
     type MembershipInitialized = AdvisoryCommittee;
     type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
@@ -665,9 +664,9 @@ impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
 impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
     type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Event = Event;
-    type MaxMembers = AdvisoryCommitteeMaxMembers;
-    type MembershipChanged = AdvisoryCommittee;
-    type MembershipInitialized = AdvisoryCommittee;
+    type MaxMembers = TechnicalCommitteeMaxMembers;
+    type MembershipChanged = TechnicalCommittee;
+    type MembershipInitialized = TechnicalCommittee;
     type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type RemoveOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type ResetOrigin = EnsureRootOrHalfAdvisoryCommittee;

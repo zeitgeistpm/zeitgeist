@@ -26,15 +26,22 @@ parameter_types! {
   pub const MaxAuthorities: u32 = 32;
 
   // Collective
+  // Note: MaxMembers does not influence the pallet logic, but the worst-case weight estimation.
   pub const AdvisoryCommitteeMaxMembers: u32 = 100;
-  pub const AdvisoryCommitteeMaxProposals: u32 = 64;
-  pub const AdvisoryCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+  pub const AdvisoryCommitteeMaxProposals: u32 = 300;
+  pub const AdvisoryCommitteeMotionDuration: BlockNumber = 3 * BLOCKS_PER_DAY;
+  pub const CouncilMaxMembers: u32 = 100;
+  pub const CouncilMaxProposals: u32 = 100;
+  pub const CouncilMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+  pub const TechnicalCommitteeMaxMembers: u32 = 100;
+  pub const TechnicalCommitteeMaxProposals: u32 = 64;
+  pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
   // Democracy
   pub const LaunchPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
 	pub const VotingPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * BLOCKS_PER_HOUR;
-	pub MinimumDeposit: Balance = 100 * BASE;
+	pub const MinimumDeposit: Balance = 100 * BASE;
 	pub const EnactmentPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
 	pub const VoteLockingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
 	pub const CooloffPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
