@@ -26,7 +26,7 @@ use parachain_staking::migrations::{PurgeStaleStorage, RemoveExitQueue};
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, EnsureOneOf},
+    traits::{Contains, EnsureOneOf, EqualPrivilegeOnly},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -139,6 +139,8 @@ macro_rules! create_zeitgeist_runtime {
                 System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
                 RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+                Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
+                Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -619,7 +621,34 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
+
+// Todo set weightinfo
+impl pallet_preimage::Config for Runtime {
+	type WeightInfo = ();
+	type Event = Event;
+	type Currency = Balances;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+	type MaxSize = PreimageMaxSize;
+	type BaseDeposit = PreimageBaseDeposit;
+	type ByteDeposit = PreimageByteDeposit;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
+
+// Todo set weightinfo
+impl pallet_scheduler::Config for Runtime {
+	type Event = Event;
+	type Origin = Origin;
+	type PalletsOrigin = OriginCaller;
+	type Call = Call;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type ScheduleOrigin = EnsureRoot<AccountId>;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type WeightInfo = ();
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
+	type PreimageProvider = Preimage;
+	type NoPreimagePostponement = NoPreimagePostponement;
+}
 
 impl pallet_sudo::Config for Runtime {
     type Call = Call;

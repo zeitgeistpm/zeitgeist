@@ -35,9 +35,6 @@ parameter_types! {
 	pub const VotingPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * BLOCKS_PER_HOUR;
 	pub MinimumDeposit: Balance = 100 * BASE;
-  pub const PreimageMaxSize: u32 = 4096 * 1024;
-	pub PreimageBaseDeposit: Balance = deposit(2, 64);
-	pub PreimageByteDeposit: Balance = deposit(0, 1);
 	pub const EnactmentPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
 	pub const VoteLockingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
 	pub const CooloffPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
@@ -52,6 +49,16 @@ parameter_types! {
   pub const MaxRegistrars: u32 = 8;
   pub const MaxSubAccounts: u32 = 64;
   pub const SubAccountDeposit: Balance = 2 * BASE;
+
+  // Preimage
+  pub const PreimageMaxSize: u32 = 4096 * 1024;
+	pub PreimageBaseDeposit: Balance = deposit(2, 64);
+	pub PreimageByteDeposit: Balance = deposit(0, 1);
+
+  // Scheduler
+  pub MaximumSchedulerWeight: Weight = Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
+	pub const MaxScheduledPerBlock: u32 = 10;
+	pub const NoPreimagePostponement: Option<u64> = Some(5 * BLOCKS_PER_MINUTE);
 
   // System
   pub const SS58Prefix: u8 = 73;
