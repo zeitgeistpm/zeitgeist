@@ -139,6 +139,7 @@ type EnsureRootOrAllCouncil = EnsureOneOf<
 
 // Technical committee vote proportions
 // At least 50%
+#[cfg(feature = "parachain")]
 type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
     EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCommitteeInstance>,
@@ -269,7 +270,7 @@ create_zeitgeist_runtime!(
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type Event = Event;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+    type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
 
@@ -295,7 +296,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
     type Event = Event;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+    type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type VersionWrapper = ();
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
@@ -594,16 +595,16 @@ impl pallet_democracy::Config for Runtime {
 	type VotingPeriod = VotingPeriod;
 	type VoteLockingPeriod = VoteLockingPeriod;
 	type MinimumDeposit = MinimumDeposit;
-	type ExternalOrigin = EnsureRoot<AccountId>;
-	type ExternalMajorityOrigin = EnsureRoot<AccountId>;
-	type ExternalDefaultOrigin = EnsureRoot<AccountId>;
-	type FastTrackOrigin = EnsureRoot<AccountId>;
-	type InstantOrigin = EnsureRoot<AccountId>;
+	type ExternalOrigin = EnsureRootOrHalfCouncil;
+	type ExternalMajorityOrigin = EnsureRootOrHalfCouncil;
+	type ExternalDefaultOrigin = EnsureRootOrAllCouncil;
+	type FastTrackOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+	type InstantOrigin = EnsureRootOrAllTechnicalCommittee;
 	type InstantAllowed = InstantAllowed;
 	type FastTrackVotingPeriod = FastTrackVotingPeriod;
-	type CancellationOrigin = EnsureRoot<AccountId>;
-	type BlacklistOrigin = EnsureRoot<AccountId>;
-	type CancelProposalOrigin = EnsureRoot<AccountId>;
+	type CancellationOrigin = EnsureRootOrThreeFourthsCouncil;
+	type BlacklistOrigin = EnsureRootOrAllCouncil;
+	type CancelProposalOrigin = EnsureRootOrAllTechnicalCommittee;
 	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
 	type CooloffPeriod = CooloffPeriod;
 	type PreimageByteDeposit = PreimageByteDeposit;
@@ -622,11 +623,11 @@ impl pallet_identity::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
     type FieldDeposit = FieldDeposit;
-    type ForceOrigin = EnsureRoot<AccountId>;
+    type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
     type MaxAdditionalFields = MaxAdditionalFields;
     type MaxRegistrars = MaxRegistrars;
     type MaxSubAccounts = MaxSubAccounts;
-    type RegistrarOrigin = EnsureRoot<AccountId>;
+    type RegistrarOrigin = EnsureRootOrHalfCouncil;
     type Slashed = Treasury;
     type SubAccountDeposit = SubAccountDeposit;
     type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
@@ -634,15 +635,15 @@ impl pallet_identity::Config for Runtime {
 
 // TODO add origins
 impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
-    type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type AddOrigin = EnsureRootOrTwoThirdsCouncil;
     type Event = Event;
     type MaxMembers = AdvisoryCommitteeMaxMembers;
     type MembershipChanged = AdvisoryCommittee;
     type MembershipInitialized = AdvisoryCommittee;
-    type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type RemoveOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type ResetOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type SwapOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrTwoThirdsCouncil;
+    type RemoveOrigin = EnsureRootOrTwoThirdsCouncil;
+    type ResetOrigin = EnsureRootOrTwoThirdsCouncil;
+    type SwapOrigin = EnsureRootOrTwoThirdsCouncil;
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
@@ -653,24 +654,24 @@ impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
     type MaxMembers = CouncilMaxMembers;
     type MembershipChanged = AdvisoryCommittee;
     type MembershipInitialized = AdvisoryCommittee;
-    type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type RemoveOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type ResetOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type SwapOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrThreeFourthsCouncil;
+    type RemoveOrigin = EnsureRootOrThreeFourthsCouncil;
+    type ResetOrigin = EnsureRootOrThreeFourthsCouncil;
+    type SwapOrigin = EnsureRootOrThreeFourthsCouncil;
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 // TODO add config values
 impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
-    type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type AddOrigin = EnsureRootOrTwoThirdsCouncil;
     type Event = Event;
     type MaxMembers = TechnicalCommitteeMaxMembers;
     type MembershipChanged = TechnicalCommittee;
     type MembershipInitialized = TechnicalCommittee;
-    type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type RemoveOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type ResetOrigin = EnsureRootOrHalfAdvisoryCommittee;
-    type SwapOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrTwoThirdsCouncil;
+    type RemoveOrigin = EnsureRootOrTwoThirdsCouncil;
+    type ResetOrigin = EnsureRootOrTwoThirdsCouncil;
+    type SwapOrigin = EnsureRootOrTwoThirdsCouncil;
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
@@ -727,7 +728,7 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 impl pallet_treasury::Config for Runtime {
-    type ApproveOrigin = EnsureRoot<AccountId>;
+    type ApproveOrigin = EnsureRootOrTwoThirdsCouncil;
     type Burn = Burn;
     type BurnDestination = ();
     type Currency = Balances;
@@ -738,7 +739,7 @@ impl pallet_treasury::Config for Runtime {
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
     type ProposalBondMaximum = ProposalBondMaximum;
-    type RejectOrigin = EnsureRoot<AccountId>;
+    type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
     type SpendFunds = ();
     type SpendPeriod = SpendPeriod;
     type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
