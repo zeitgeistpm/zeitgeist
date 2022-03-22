@@ -71,9 +71,9 @@ parameter_types! {
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
-    pub const MinSubsidyPeriod: Moment = BLOCKS_PER_MINUTE;
+    pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
-    pub const MaxSubsidyPeriod: Moment = 31 * BLOCKS_PER_DAY;
+    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
