@@ -30,10 +30,11 @@ use frame_support::{
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
+use pallet_collective::EnsureProportionAtLeast;
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
-    u32_trait::{_1, _2},
+    u32_trait::{_1, _2, _3, _4},
     OpaqueMetadata,
 };
 use sp_runtime::{
@@ -70,23 +71,6 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-type AdvisoryCommitteeInstance = pallet_collective::Instance1;
-type AdvisoryCommitteeMembershipInstance = pallet_membership::Instance1;
-type CouncilInstance = pallet_collective::Instance2;
-type CouncilMembershipInstance = pallet_membership::Instance2;
-type TechnicalCommitteeInstance = pallet_collective::Instance3;
-type TechnicalCommitteeMembershipInstance = pallet_membership::Instance3;
-
-type EnsureRootOrMoreThanHalfOfAdvisoryCommittee = EnsureOneOf<
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionMoreThan<
-        _1,
-        _2,
-        AccountId,
-        AdvisoryCommitteeInstance,
-    >,
->;
-
 #[cfg(feature = "parachain")]
 type Executive = frame_executive::Executive<
     Runtime,
@@ -108,7 +92,6 @@ type Executive = frame_executive::Executive<
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
-
 type SignedExtra = (
     frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
@@ -119,8 +102,79 @@ type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
-
 type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+
+// Governance
+type AdvisoryCommitteeInstance = pallet_collective::Instance1;
+type AdvisoryCommitteeMembershipInstance = pallet_membership::Instance1;
+type CouncilInstance = pallet_collective::Instance2;
+type CouncilMembershipInstance = pallet_membership::Instance2;
+type TechnicalCommitteeInstance = pallet_collective::Instance3;
+type TechnicalCommitteeMembershipInstance = pallet_membership::Instance3;
+
+// Council vote proportions
+// At least 50%
+type EnsureRootOrHalfCouncil = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>,
+>;
+
+// At least 66%
+type EnsureRootOrTwoThirdsCouncil = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>,
+>;
+
+// At least 75%
+type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_3, _4, AccountId, CouncilInstance>,
+>;
+
+// At least 100%
+type EnsureRootOrAllCouncil = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>,
+>;
+
+// Technical committee vote proportions
+// At least 50%
+type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCommitteeInstance>,
+>;
+
+// At least 66%
+type EnsureRootOrTwoThirdsTechnicalCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCommitteeInstance>,
+>;
+
+// At least 100%
+type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCommitteeInstance>,
+>;
+
+// Advisory committee vote proportions
+// At least 50%
+type EnsureRootOrHalfAdvisoryCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _2, AccountId, AdvisoryCommitteeInstance>,
+>;
+
+// Technical committee vote proportions
+// At least 66%
+type EnsureRootOrTwoThirdsAdvisoryCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_2, _3, AccountId, AdvisoryCommitteeInstance>,
+>;
+
+// At least 100%
+type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _1, AccountId, AdvisoryCommitteeInstance>,
+>;
 
 // Construct runtime
 macro_rules! create_zeitgeist_runtime {
@@ -552,10 +606,10 @@ impl pallet_democracy::Config for Runtime {
 	type CancellationOrigin = EnsureRoot<AccountId>;
 	type BlacklistOrigin = EnsureRoot<AccountId>;
 	type CancelProposalOrigin = EnsureRoot<AccountId>;
-	type VetoOrigin = EnsureRoot<AccountId>;
+	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
 	type CooloffPeriod = CooloffPeriod;
 	type PreimageByteDeposit = PreimageByteDeposit;
-	type OperationalPreimageOrigin = EnsureRoot<AccountId>;
+	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
 	type Slash = Treasury;
 	type Scheduler = Scheduler;
 	type PalletsOrigin = OriginCaller;
@@ -581,43 +635,43 @@ impl pallet_identity::Config for Runtime {
 }
 
 impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
-    type AddOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Event = Event;
     type MaxMembers = AdvisoryCommitteeMaxMembers;
     type MembershipChanged = AdvisoryCommittee;
     type MembershipInitialized = AdvisoryCommittee;
-    type PrimeOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type RemoveOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type ResetOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type SwapOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type RemoveOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type ResetOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type SwapOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 // TODO add config values
 impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
-    type AddOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Event = Event;
     type MaxMembers = AdvisoryCommitteeMaxMembers;
     type MembershipChanged = AdvisoryCommittee;
     type MembershipInitialized = AdvisoryCommittee;
-    type PrimeOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type RemoveOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type ResetOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type SwapOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type RemoveOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type ResetOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type SwapOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
 // TODO add config values
 impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
-    type AddOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type AddOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Event = Event;
     type MaxMembers = AdvisoryCommitteeMaxMembers;
     type MembershipChanged = AdvisoryCommittee;
     type MembershipInitialized = AdvisoryCommittee;
-    type PrimeOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type RemoveOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type ResetOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type SwapOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type RemoveOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type ResetOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type SwapOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
@@ -747,7 +801,7 @@ impl zrml_market_commons::Config for Runtime {
 
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
-    type ApprovalOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Authorized = Authorized;
     type Court = Court;
     type DisputeBond = DisputeBond;
