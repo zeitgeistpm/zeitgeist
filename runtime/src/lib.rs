@@ -114,28 +114,20 @@ type TechnicalCommitteeMembershipInstance = pallet_membership::Instance3;
 
 // Council vote proportions
 // At least 50%
-type EnsureRootOrHalfCouncil = EnsureOneOf<
-    EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>,
->;
+type EnsureRootOrHalfCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>>;
 
 // At least 66%
-type EnsureRootOrTwoThirdsCouncil = EnsureOneOf<
-    EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>,
->;
+type EnsureRootOrTwoThirdsCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>>;
 
 // At least 75%
-type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<
-    EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_3, _4, AccountId, CouncilInstance>,
->;
+type EnsureRootOrThreeFourthsCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_3, _4, AccountId, CouncilInstance>>;
 
 // At least 100%
-type EnsureRootOrAllCouncil = EnsureOneOf<
-    EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>,
->;
+type EnsureRootOrAllCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>>;
 
 // Technical committee vote proportions
 // At least 50%
@@ -587,35 +579,35 @@ impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
 
 // TODO configure origins + Add custom weight
 impl pallet_democracy::Config for Runtime {
-	type Proposal = Call;
-	type Event = Event;
-	type Currency = Balances;
-	type EnactmentPeriod = EnactmentPeriod;
-	type LaunchPeriod = LaunchPeriod;
-	type VotingPeriod = VotingPeriod;
-	type VoteLockingPeriod = VoteLockingPeriod;
-	type MinimumDeposit = MinimumDeposit;
-	type ExternalOrigin = EnsureRootOrHalfCouncil;
-	type ExternalMajorityOrigin = EnsureRootOrHalfCouncil;
-	type ExternalDefaultOrigin = EnsureRootOrAllCouncil;
-	type FastTrackOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
-	type InstantOrigin = EnsureRootOrAllTechnicalCommittee;
-	type InstantAllowed = InstantAllowed;
-	type FastTrackVotingPeriod = FastTrackVotingPeriod;
-	type CancellationOrigin = EnsureRootOrThreeFourthsCouncil;
-	type BlacklistOrigin = EnsureRootOrAllCouncil;
-	type CancelProposalOrigin = EnsureRootOrAllTechnicalCommittee;
-	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
-	type CooloffPeriod = CooloffPeriod;
-	type PreimageByteDeposit = PreimageByteDeposit;
-	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
-	type Slash = Treasury;
-	type Scheduler = Scheduler;
-	type PalletsOrigin = OriginCaller;
-	type MaxVotes = MaxVotes;
-	// TODO Add custom weight
-	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
-	type MaxProposals = MaxProposals;
+    type Proposal = Call;
+    type Event = Event;
+    type Currency = Balances;
+    type EnactmentPeriod = EnactmentPeriod;
+    type LaunchPeriod = LaunchPeriod;
+    type VotingPeriod = VotingPeriod;
+    type VoteLockingPeriod = VoteLockingPeriod;
+    type MinimumDeposit = MinimumDeposit;
+    type ExternalOrigin = EnsureRootOrHalfCouncil;
+    type ExternalMajorityOrigin = EnsureRootOrHalfCouncil;
+    type ExternalDefaultOrigin = EnsureRootOrAllCouncil;
+    type FastTrackOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+    type InstantOrigin = EnsureRootOrAllTechnicalCommittee;
+    type InstantAllowed = InstantAllowed;
+    type FastTrackVotingPeriod = FastTrackVotingPeriod;
+    type CancellationOrigin = EnsureRootOrThreeFourthsCouncil;
+    type BlacklistOrigin = EnsureRootOrAllCouncil;
+    type CancelProposalOrigin = EnsureRootOrAllTechnicalCommittee;
+    type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
+    type CooloffPeriod = CooloffPeriod;
+    type PreimageByteDeposit = PreimageByteDeposit;
+    type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
+    type Slash = Treasury;
+    type Scheduler = Scheduler;
+    type PalletsOrigin = OriginCaller;
+    type MaxVotes = MaxVotes;
+    // TODO Add custom weight
+    type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
+    type MaxProposals = MaxProposals;
 }
 
 impl pallet_identity::Config for Runtime {
@@ -675,33 +667,32 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
-
 // Todo set weightinfo
 impl pallet_preimage::Config for Runtime {
-	type WeightInfo = ();
-	type Event = Event;
-	type Currency = Balances;
-	type ManagerOrigin = EnsureRoot<AccountId>;
-	type MaxSize = PreimageMaxSize;
-	type BaseDeposit = PreimageBaseDeposit;
-	type ByteDeposit = PreimageByteDeposit;
+    type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
+    type Event = Event;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type MaxSize = PreimageMaxSize;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 // Todo set weightinfo
 impl pallet_scheduler::Config for Runtime {
-	type Event = Event;
-	type Origin = Origin;
-	type PalletsOrigin = OriginCaller;
-	type Call = Call;
-	type MaximumWeight = MaximumSchedulerWeight;
-	type ScheduleOrigin = EnsureRoot<AccountId>;
-	type MaxScheduledPerBlock = MaxScheduledPerBlock;
-	type WeightInfo = ();
-	type OriginPrivilegeCmp = EqualPrivilegeOnly;
-	type PreimageProvider = Preimage;
-	type NoPreimagePostponement = NoPreimagePostponement;
+    type Event = Event;
+    type Origin = Origin;
+    type PalletsOrigin = OriginCaller;
+    type Call = Call;
+    type MaximumWeight = MaximumSchedulerWeight;
+    type ScheduleOrigin = EnsureRoot<AccountId>;
+    type MaxScheduledPerBlock = MaxScheduledPerBlock;
+    type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
+    type OriginPrivilegeCmp = EqualPrivilegeOnly;
+    type PreimageProvider = Preimage;
+    type NoPreimagePostponement = NoPreimagePostponement;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -963,6 +954,8 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_democracy, Democracy);
             list_benchmark!(list, extra, pallet_identity, Identity);
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
+            list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_treasury, Treasury);
             list_benchmark!(list, extra, pallet_utility, Utility);
@@ -1030,6 +1023,8 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_democracy, Democracy);
             add_benchmark!(params, batches, pallet_identity, Identity);
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
+            add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);
             add_benchmark!(params, batches, pallet_utility, Utility);

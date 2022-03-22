@@ -7,9 +7,11 @@
 pub mod ztg;
 
 use crate::{
-    types::{Balance, BlockNumber, Moment},
+    asset::Asset,
+    types::{Balance, BlockNumber, CurrencyId, Moment},
 };
 use frame_support::{parameter_types, PalletId};
+use orml_traits::parameter_type_with_key;
 
 // Definitions for time
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
@@ -96,4 +98,38 @@ parameter_types! {
     pub const MinSubsidy: Balance = MinLiquidity::get();
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
+}
+
+// Shared within tests
+// Balance
+parameter_types! {
+    pub const ExistentialDeposit: u128 = CENT;
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
+}
+
+// ORML
+parameter_types! {
+    // ORML
+    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
+}
+
+parameter_type_with_key! {
+  // Well, not every asset is a currency ¯\_(ツ)_/¯
+  pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+      match currency_id {
+          Asset::Ztg => ExistentialDeposit::get(),
+          _ => 0
+      }
+  };
+}
+
+// System
+parameter_types! {
+    pub const BlockHashCount: u64 = 250;
+}
+
+// Time
+parameter_types! {
+    pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
 }
