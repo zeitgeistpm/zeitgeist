@@ -319,6 +319,13 @@ cfg_if::cfg_if! {
                     | Call::Treasury(_)
                     | Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Council(_)
+                    | Call::CouncilMembership(_)
+                    | Call::TechnicalCommittee(_)
+                    | Call::TechnicalCommitteeMembership(_)
+                    | Call::Democracy(_)
+                    | Call::Scheduler(_)
+                    | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
                     | Call::Currency(_)
@@ -327,8 +334,7 @@ cfg_if::cfg_if! {
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
                     | Call::PredictionMarkets(_)
-                    | Call::Vesting(_)
-                    | Call::Democracy(_) => false,
+                    | Call::Vesting(_) => false,
                 }
             }
         }
@@ -344,6 +350,13 @@ cfg_if::cfg_if! {
                     | Call::Treasury(_)
                     | Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Council(_)
+                    | Call::CouncilMembership(_)
+                    | Call::TechnicalCommittee(_)
+                    | Call::TechnicalCommitteeMembership(_)
+                    | Call::Democracy(_)
+                    | Call::Scheduler(_)
+                    | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
                     | Call::Currency(_)
@@ -352,8 +365,7 @@ cfg_if::cfg_if! {
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
                     | Call::PredictionMarkets(_)
-                    | Call::Vesting(_)
-                    | Call::Democracy(_) => false,
+                    | Call::Vesting(_) => false,
                 }
             }
         }
