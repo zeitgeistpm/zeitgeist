@@ -1036,9 +1036,9 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
 #[test]
 fn create_pool_fails_on_too_many_assets() {
     ExtBuilder::default().build().execute_with(|| {
-        let length = 12;
+        let length = <Runtime as crate::Config>::MaxAssets::get();
         let assets: Vec<Asset<MarketId>> =
-            (0..length).map(|x| Asset::CategoricalOutcome(0, x)).collect::<Vec<_>>();
+            (0..=length).map(|x| Asset::CategoricalOutcome(0, x)).collect::<Vec<_>>();
         let weights = vec![_2; length.into()];
 
         assets.iter().cloned().for_each(|asset| {
