@@ -637,7 +637,6 @@ impl pallet_identity::Config for Runtime {
     type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
-// TODO add origins
 impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
     type AddOrigin = EnsureRootOrTwoThirdsCouncil;
     type Event = Event;
