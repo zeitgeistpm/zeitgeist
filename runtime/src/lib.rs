@@ -688,7 +688,6 @@ impl pallet_preimage::Config for Runtime {
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
-// Todo set weightinfo
 impl pallet_scheduler::Config for Runtime {
     type Event = Event;
     type Origin = Origin;
