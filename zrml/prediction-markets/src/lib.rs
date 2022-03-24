@@ -44,7 +44,7 @@
 //! - `admin_move_market_to_closed` - Immediately moves a market that is an `Active` state to closed.
 //! - `admin_move_market_to_resolved` - Immediately moves a market that is `Reported` or `Disputed` to resolved.
 //!
-//! #### `ApprovalOrigin`, `CancelOrigin`, `DestroyOrigin` and `ResolveOrigin` Dispatches
+//! #### `ApprovalOrigin`, `CloseOrigin`, `DestroyOrigin` and `ResolveOrigin` Dispatches
 //!
 //! Those origins are mainly minimum vote proportions from the advisory committee, the on-chain governing body of Zeitgeist
 //! that is responsible for maintaining a list of high quality markets and slash low quality markets.
