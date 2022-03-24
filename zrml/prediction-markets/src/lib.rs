@@ -78,7 +78,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
-        transactional, Blake2_128Concat, PalletId, Twox64Concat, BoundedVec,
+        transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -1372,10 +1372,7 @@ mod pallet {
     #[pallet::storage]
     pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
         _,
-        BoundedVec<
-            SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
-            ConstU32<1_048_576>,
-        >,
+        BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<1_048_576>>,
         ValueQuery,
     >;
 
