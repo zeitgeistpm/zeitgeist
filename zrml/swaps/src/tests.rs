@@ -1046,15 +1046,7 @@ fn create_pool_fails_on_too_many_assets() {
         });
 
         assert_noop!(
-            Swaps::create_pool(
-                BOB,
-                assets,
-                None,
-                0,
-                ScoringRule::CPMM,
-                Some(0),
-                Some(weights),
-            ),
+            Swaps::create_pool(BOB, assets, None, 0, ScoringRule::CPMM, Some(0), Some(weights),),
             crate::Error::<Runtime>::TooManyAssets
         );
     });
