@@ -616,7 +616,6 @@ impl pallet_democracy::Config for Runtime {
     type Scheduler = Scheduler;
     type PalletsOrigin = OriginCaller;
     type MaxVotes = MaxVotes;
-    // TODO Add custom weight
     type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
     type MaxProposals = MaxProposals;
 }
