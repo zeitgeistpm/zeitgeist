@@ -1105,10 +1105,8 @@ mod pallet {
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
             // Check that the account has at least as many free shares as we wish to burn!
-            ensure!(
-                T::Shares::ensure_can_withdraw(shares_id, from, amount).is_ok(),
-                Error::<T>::InsufficientBalance
-            );
+            T::Shares::ensure_can_withdraw(shares_id, from, amount)
+                .map_err(|_| Error::<T>::InsufficientBalance)?;
             T::Shares::slash(shares_id, from, amount);
             Ok(())
         }
