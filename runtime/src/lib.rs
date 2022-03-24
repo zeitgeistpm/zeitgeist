@@ -676,7 +676,6 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
-// Todo set weightinfo
 impl pallet_preimage::Config for Runtime {
     type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
     type Event = Event;
