@@ -589,7 +589,6 @@ impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
     type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 }
 
-// TODO configure origins + Add custom weight
 impl pallet_democracy::Config for Runtime {
     type Proposal = Call;
     type Event = Event;
