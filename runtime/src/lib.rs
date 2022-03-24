@@ -650,7 +650,6 @@ impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime 
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
-// TODO add config values
 impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
     type AddOrigin = EnsureRootOrThreeFourthsCouncil;
     type Event = Event;
