@@ -38,7 +38,7 @@
 //! #### Admin Dispatches
 //!
 //! The administrative dispatches are used to perform admin functions on chain. Currently, the
-//! admin functions can only be called by the `ApprovalOrigin`, `CancelOrigin`, `DestroyOrigin` and `ResolveOrigin`
+//! admin functions can only be called by the `ApprovalOrigin`, `CloseOrigin`, `DestroyOrigin` and `ResolveOrigin`
 //!
 //! - `admin_destroy_market` - Destroys a market and all related assets, regardless of its state.
 //! - `admin_move_market_to_closed` - Immediately moves a market that is an `Active` state to closed.
