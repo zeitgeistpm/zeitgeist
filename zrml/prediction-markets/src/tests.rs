@@ -951,7 +951,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         ));
 
         run_to_block(150);
-        assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, BASE * 100, vec![0, 0]));
+        assert_ok!(Swaps::pool_exit(Origin::signed(FRED), 0, BASE * 100, vec![0, 0]));
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
     })
 }

@@ -25,6 +25,7 @@ pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
 
 pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
+const _1_2: u128 = BASE / 2;
 const _1: u128 = BASE;
 const _2: u128 = 2 * BASE;
 const _3: u128 = 3 * BASE;
@@ -348,6 +349,10 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
     ExtBuilder::default().build().execute_with(|| {
         use zeitgeist_primitives::traits::Swaps as _;
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        // For this test, we need to give Alice some pool shares, as well. We don't do this in
+        // `create_initial_pool_...` so that there are exacly 100 pool shares, making computations
+        // in other tests easier.
+        let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
         assert_ok!(Swaps::set_pool_as_stale(
@@ -361,9 +366,9 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
             &Default::default()
         ));
 
-        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1)));
-        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _1, _1));
-        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _1));
+        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1_2, _1_2)));
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _1, _2));
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _1_2));
         assert_noop!(
             Swaps::pool_join(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
             crate::Error::<Runtime>::PoolIsNotActive
@@ -701,6 +706,27 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             1000000000100,
         )
     });
+}
+
+#[test]
+fn pool_exit_is_not_allowed_with_insufficient_funds() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+
+        // Alice has no pool shares!
+        assert_noop!(
+            Swaps::pool_exit(alice_signed(), 0, _1, vec!(0, 0, 0, 0)),
+            crate::Error::<Runtime>::InsufficientBalance,
+        );
+
+        // Now Alice has 25 pool shares!
+        let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
+        assert_noop!(
+            Swaps::pool_exit(alice_signed(), 0, _26, vec!(0, 0, 0, 0)),
+            crate::Error::<Runtime>::InsufficientBalance,
+        );
+    })
 }
 
 #[test]
