@@ -1,6 +1,6 @@
 #![allow(
-  // Constants parameters inside `parameter_types!` already check
-  // arithmetic operations at compile time
+    // Constants parameters inside `parameter_types!` already check
+    // arithmetic operations at compile time
     clippy::integer_arithmetic
 )]
 
@@ -115,13 +115,13 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-  // Well, not every asset is a currency ¯\_(ツ)_/¯
-  pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-      match currency_id {
-          Asset::Ztg => ExistentialDeposit::get(),
-          _ => 0
-      }
-  };
+    // Well, not every asset is a currency ¯\_(ツ)_/¯
+    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+        match currency_id {
+            Asset::Ztg => ExistentialDeposit::get(),
+            _ => 0
+        }
+    };
 }
 
 // System
