@@ -632,7 +632,6 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
     let oracle = ALICE;
     let period = MarketPeriod::Block(0..42);
     let metadata = gen_metadata(42);
-    let creation = MarketCreation::Permissionless;
     let category_count = 4;
     let assets = MarketType::Categorical(category_count);
     let extra_amount = 10 * BASE;
