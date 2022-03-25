@@ -247,7 +247,6 @@ fn it_allows_to_deploy_a_pool() {
             <Runtime as crate::Config>::PalletId::get().into_account(),
             100 * BASE
         ));
-        assert_ok!(Tokens::deposit(Asset::Ztg, &BOB, 100 * BASE));
 
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
@@ -702,7 +701,6 @@ fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
         let min_subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get();
 
         // Give alice enough funds and subsidize one market
-        assert_ok!(Tokens::deposit(Asset::Ztg, &ALICE, min_subsidy));
         assert_ok!(Swaps::pool_join_subsidy(
             Origin::signed(ALICE),
             market_enough_subsidy,
