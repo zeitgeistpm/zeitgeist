@@ -598,16 +598,28 @@ impl pallet_democracy::Config for Runtime {
     type VotingPeriod = VotingPeriod;
     type VoteLockingPeriod = VoteLockingPeriod;
     type MinimumDeposit = MinimumDeposit;
+    /// Origin that can decide what their next motion is.
     type ExternalOrigin = EnsureRootOrHalfCouncil;
+    /// Origin that can have the next scheduled referendum be a straight majority-carries vote.
     type ExternalMajorityOrigin = EnsureRootOrHalfCouncil;
+    /// Origina that can have the next scheduled referendum be a straight default-carries
+    /// (NTB) vote.
     type ExternalDefaultOrigin = EnsureRootOrAllCouncil;
+    /// Origin that can have an ExternalMajority/ExternalDefault vote
+    /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+    /// Origin from which the next majority-carries (or more permissive) referendum may be tabled 
+    /// to vote immediately and asynchronously in a similar manner to the emergency origin.
     type InstantOrigin = EnsureRootOrAllTechnicalCommittee;
     type InstantAllowed = InstantAllowed;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
+    /// Origin from which any referendum may be cancelled in an emergency.
     type CancellationOrigin = EnsureRootOrThreeFourthsCouncil;
+    /// Origin from which proposals may be blacklisted.
     type BlacklistOrigin = EnsureRootOrAllCouncil;
+    /// Origin from which a proposal may be cancelled and its backers slashed.
     type CancelProposalOrigin = EnsureRootOrAllTechnicalCommittee;
+    /// Origin for anyone able to veto proposals.
     type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
     type CooloffPeriod = CooloffPeriod;
     type PreimageByteDeposit = PreimageByteDeposit;

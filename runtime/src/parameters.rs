@@ -39,15 +39,31 @@ parameter_types! {
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Democracy
+    /// How often (in blocks) new public referenda are launched.
     pub const LaunchPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
+    /// How often (in blocks) to check for new votes.
     pub const VotingPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
+    /// Minimum voting period allowed for a fast-track referendum.
     pub const FastTrackVotingPeriod: BlockNumber = 3 * BLOCKS_PER_HOUR;
+    /// The minimum amount to be used as a deposit for a public referendum proposal.
     pub const MinimumDeposit: Balance = 100 * BASE;
+    /// The period between a proposal being approved and enacted.
+    /// It should generally be a little more than the unstake period to ensure that voting stakers
+    /// have an opportunity to remove themselves from the system in the case where they are on the
+    /// losing side of a vote.
     pub const EnactmentPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
-    pub const VoteLockingPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// The minimum period of vote locking.
+    /// It should be no shorter than enactment period to ensure that in the case of an approval, 
+    /// those successful voters are locked into the consequences that their votes entail.
+    pub const VoteLockingPeriod: BlockNumber = VotingPeriod::get() + EnactmentPeriod::get();
+    /// Period in blocks where an external proposal may not be re-submitted after being vetoed.
     pub const CooloffPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    /// Indicator for whether an emergency origin is even allowed to happen. 
     pub const InstantAllowed: bool = true;
+    /// The maximum number of votes for an account. Also used to compute weight, an overly big value
+    /// can lead to extrinsic with very big weight: see delegate for instance.
     pub const MaxVotes: u32 = 100;
+    /// The maximum number of public proposals that can exist at any time.
     pub const MaxProposals: u32 = 100;
 
     // Identity
