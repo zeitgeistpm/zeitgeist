@@ -608,7 +608,7 @@ impl pallet_democracy::Config for Runtime {
     /// Origin that can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
-    /// Origin from which the next majority-carries (or more permissive) referendum may be tabled 
+    /// Origin from which the next majority-carries (or more permissive) referendum may be tabled
     /// to vote immediately and asynchronously in a similar manner to the emergency origin.
     type InstantOrigin = EnsureRootOrAllTechnicalCommittee;
     type InstantAllowed = InstantAllowed;

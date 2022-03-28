@@ -53,12 +53,12 @@ parameter_types! {
     /// losing side of a vote.
     pub const EnactmentPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
     /// The minimum period of vote locking.
-    /// It should be no shorter than enactment period to ensure that in the case of an approval, 
+    /// It should be no shorter than enactment period to ensure that in the case of an approval,
     /// those successful voters are locked into the consequences that their votes entail.
     pub const VoteLockingPeriod: BlockNumber = VotingPeriod::get() + EnactmentPeriod::get();
     /// Period in blocks where an external proposal may not be re-submitted after being vetoed.
     pub const CooloffPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
-    /// Indicator for whether an emergency origin is even allowed to happen. 
+    /// Indicator for whether an emergency origin is even allowed to happen.
     pub const InstantAllowed: bool = true;
     /// The maximum number of votes for an account. Also used to compute weight, an overly big value
     /// can lead to extrinsic with very big weight: see delegate for instance.
