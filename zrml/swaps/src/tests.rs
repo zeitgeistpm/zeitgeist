@@ -555,7 +555,7 @@ fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
 }
 
 #[test]
-fn pool_amount_must_not_be_zero() {
+fn pool_join_or_exit_raises_on_zero_value() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
 
@@ -566,6 +566,26 @@ fn pool_amount_must_not_be_zero() {
 
         assert_noop!(
             Swaps::pool_exit(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, 0, 0),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 0, 0),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, 0, 0),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 0, 0),
             crate::Error::<Runtime>::MathApproximation
         );
     });
