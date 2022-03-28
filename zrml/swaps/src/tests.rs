@@ -1147,6 +1147,48 @@ fn join_pool_exit_pool_does_not_create_extra_tokens() {
     });
 }
 
+#[test]
+fn create_pool_fails_on_weight_below_minimum_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.iter().cloned().collect(),
+                Some(ASSETS.last().unwrap().clone()),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec!(_2, <Runtime as crate::Config>::MinWeight::get() - 1, _2, _2))
+            ),
+            crate::Error::<Runtime>::BelowMinimumWeight,
+        );
+    });
+}
+
+#[test]
+fn create_pool_fails_on_weight_above_maximum_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.iter().cloned().collect(),
+                Some(ASSETS.last().unwrap().clone()),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec!(_2, <Runtime as crate::Config>::MaxWeight::get() + 1, _2, _2))
+            ),
+            crate::Error::<Runtime>::AboveMaximumWeight,
+        );
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
