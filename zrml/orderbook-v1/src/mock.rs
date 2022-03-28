@@ -8,8 +8,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, DustAccountTest, ExistentialDeposit, ExistentialDeposits, MaxLocks,
-        MaxReserves, BASE,
+        BlockHashCount, ExistentialDeposit, ExistentialDeposits, MaxLocks, MaxReserves, BASE,
     },
     types::{
         AccountIdTest, Amount, Balance, BlockNumber, BlockTest, CurrencyId, Hash, Index, MarketId,
@@ -77,7 +76,7 @@ impl orml_tokens::Config for Runtime {
     type Event = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
-    type OnDust = orml_tokens::TransferDust<Runtime, DustAccountTest>;
+    type OnDust = ();
     type WeightInfo = ();
 }
 

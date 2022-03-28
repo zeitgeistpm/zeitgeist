@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use crate::{self as zrml_court};
-use frame_support::{construct_runtime, traits::Everything};
+use frame_support::{construct_runtime, parameter_types, traits::Everything, PalletId};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -9,7 +9,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{
         BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, StakeWeight,
-        TreasuryPalletId, BASE,
+        BASE,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
@@ -21,6 +21,10 @@ pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
 pub const INITIAL_BALANCE: u128 = 1000 * BASE;
+
+parameter_types! {
+    pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
+}
 
 construct_runtime!(
     pub enum Runtime
