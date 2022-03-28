@@ -1189,6 +1189,28 @@ fn create_pool_fails_on_weight_above_maximum_weight() {
     });
 }
 
+#[test]
+fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        let weight = <Runtime as crate::Config>::MaxTotalWeight::get() / 4 + 100;
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.iter().cloned().collect(),
+                Some(ASSETS.last().unwrap().clone()),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec![weight; 4]),
+            ),
+            crate::Error::<Runtime>::MaxTotalWeight,
+        );
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
