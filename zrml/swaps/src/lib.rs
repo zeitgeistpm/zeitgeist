@@ -1592,7 +1592,7 @@ mod pallet {
                 pool_id,
                 pool: pool_ref,
             };
-            let weight = T::WeightInfo::pool_exit_with_exact_asset_amount();
+            let weight = T::WeightInfo::pool_join_with_exact_asset_amount();
             pool_join_with_exact_amount::<_, _, _, T>(params).map(|_| weight)
         }
 
