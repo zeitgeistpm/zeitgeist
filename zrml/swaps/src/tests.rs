@@ -1096,6 +1096,57 @@ fn create_pool_fails_on_too_few_assets() {
     });
 }
 
+// Macro for comparing fixed point u128.
+macro_rules! assert_approx {
+    ($left:expr, $right:expr, $precision:expr $(,)?) => {
+        match (&$left, &$right, &$precision) {
+            (left_val, right_val, precision_val) => {
+                let diff = if *left_val > *right_val {
+                    *left_val - *right_val
+                } else {
+                    *right_val - *left_val
+                };
+                if diff > $precision {
+                    panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
+                }
+            }
+        }
+    };
+}
+
+#[test]
+fn join_pool_exit_pool_does_not_create_extra_tokens() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &CHARLIE, _100);
+        });
+
+        let amount = 123_456_789_123; // Strange number to force rounding errors!
+        assert_ok!(Swaps::pool_join(
+            Origin::signed(CHARLIE),
+            0,
+            amount,
+            vec![_10000, _10000, _10000, _10000]
+        ));
+        assert_ok!(Swaps::pool_exit(Origin::signed(CHARLIE), 0, amount, vec![0, 0, 0, 0]));
+
+        // It's not true that the balances are _exactly_ the same. But they only vary up to
+        // negligible precision!
+        let pool_account_id = Swaps::pool_account_id(0);
+        let precision = 30;
+        assert_approx!(Currencies::free_balance(ASSET_A, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_B, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_C, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_D, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_A, &CHARLIE), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_B, &CHARLIE), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_C, &CHARLIE), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_D, &CHARLIE), _100, precision);
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
