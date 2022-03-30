@@ -1633,7 +1633,7 @@ mod pallet {
                     Err(Error::<T>::WinningAssetNotFound.into());
 
                 if let MarketType::Categorical(_) = market_type {
-                    let base_asset_or_default = base_asset.unwrap_or(Asset::Ztg);
+                    let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
 
                     if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
                         pool.assets.retain(|el| {
@@ -1644,7 +1644,7 @@ mod pallet {
                                 };
                             }
 
-                            *el == base_asset_or_default
+                            *el == base_asset
                         });
                     }
 
