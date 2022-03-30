@@ -1085,13 +1085,31 @@ fn create_pool_fails_on_too_few_assets() {
             Swaps::create_pool(
                 BOB,
                 vec!(ASSET_A),
-                None,
+                Some(ASSET_A),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
                 Some(vec!(_2, _2, _2, _2)),
             ),
             crate::Error::<Runtime>::TooFewAssets
+        );
+    });
+}
+
+#[test]
+fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                vec!(ASSET_A, ASSET_B, ASSET_C),
+                Some(ASSET_D),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec!(_2, _2, _2)),
+            ),
+            crate::Error::<Runtime>::BaseAssetNotFound
         );
     });
 }
