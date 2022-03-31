@@ -198,7 +198,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_rikiddo() {
         let pool = Swaps::pools(0).unwrap();
 
         assert_eq!(pool.assets, ASSETS.iter().cloned().collect::<Vec<_>>());
-        assert_eq!(pool.base_asset.unwrap(), ASSET_D);
+        assert_eq!(pool.base_asset, ASSET_D);
         assert_eq!(pool.pool_status, PoolStatus::CollectingSubsidy);
         assert_eq!(pool.scoring_rule, ScoringRule::RikiddoSigmoidFeeMarketEma);
         assert_eq!(pool.swap_fee, None);
@@ -242,7 +242,7 @@ fn distribute_pool_share_rewards() {
         let pool_id = 0;
         let subsidy_per_acc = <Runtime as crate::Config>::MinSubsidy::get();
         let asset_per_acc = subsidy_per_acc / 10;
-        let base_asset = Swaps::pool_by_id(pool_id).unwrap().base_asset.unwrap();
+        let base_asset = Swaps::pool_by_id(pool_id).unwrap().base_asset;
         let winning_asset = ASSET_A;
 
         // Join subsidy with some providers

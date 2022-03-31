@@ -13,7 +13,7 @@ where
     MarketId: MaxEncodedLen,
 {
     pub assets: Vec<Asset<MarketId>>,
-    pub base_asset: Option<Asset<MarketId>>,
+    pub base_asset: Asset<MarketId>,
     pub market_id: MarketId,
     pub pool_status: PoolStatus,
     pub scoring_rule: ScoringRule,
