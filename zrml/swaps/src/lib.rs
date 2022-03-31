@@ -1688,13 +1688,13 @@ mod pallet {
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = 0;
-            weight += Self::_set_pool_as_stale_common(pool_id)?;
+            weight = weight.saturating_add(Self::_set_pool_as_stale_common(pool_id)?);
             if let MarketType::Categorical(_) = market_type {
-                weight += Self::_set_pool_as_stale_categorical(
+                weight = weight.saturating_add(Self::_set_pool_as_stale_categorical(
                     pool_id,
                     outcome_report,
                     winner_payout_account,
-                )?;
+                )?);
             }
             // (No extra work required for scalar markets!)
             Ok(weight)
