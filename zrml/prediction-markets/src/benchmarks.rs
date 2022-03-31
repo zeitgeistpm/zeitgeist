@@ -126,7 +126,7 @@ fn generate_accounts_with_assets<T: Config>(
     Ok(())
 }
 
-// Setup a categorical market for fn `internal_resolve`
+// Setup a reported categorical market and create accounts with outcome assets.
 fn setup_resolve_common_categorical<T: Config>(
     acc_total: u32,
     acc_asset: u32,
@@ -145,7 +145,7 @@ fn setup_resolve_common_categorical<T: Config>(
     Ok((caller, market_id))
 }
 
-// Setup a disputed categorical market for fn `internal_resolve`
+// Setup a disputed categorical market and create accounts with outcome assets.
 fn setup_resolve_common_categorical_after_dispute<T: Config>(
     acc_total: u32,
     acc_asset: u32,
@@ -192,7 +192,7 @@ fn setup_redeem_shares_common<T: Config>(
     Ok((caller, market_id))
 }
 
-// Setup a scalar market for fn `internal_resolve`
+// Setup a reported scalar market and create accounts with outcome assets.
 fn setup_resolve_common_scalar<T: Config>(
     acc_total: u32,
     acc_asset: u32,
@@ -210,7 +210,7 @@ fn setup_resolve_common_scalar<T: Config>(
     Ok((caller, market_id))
 }
 
-// Setup a scalar market for fn `internal_resolve`
+// Setup a disputed scalar market and create accounts with outcome assets.
 fn setup_resolve_common_scalar_after_dispute<T: Config>(
     acc_total: u32,
     acc_asset: u32,
