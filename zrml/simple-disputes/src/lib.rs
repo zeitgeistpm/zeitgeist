@@ -103,17 +103,14 @@ mod pallet {
             if market.mdm != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
             }
-            Ok(match market.status {
-                MarketStatus::Reported => T::MarketCommons::report(market)?.outcome.clone(),
-                MarketStatus::Disputed => {
-                    if let Some(last_dispute) = disputes.last() {
-                        last_dispute.outcome.clone()
-                    } else {
-                        return Err(Error::<T>::InvalidMarketStatus.into());
-                    }
-                }
-                _ => return Err(Error::<T>::InvalidMarketStatus.into()),
-            })
+            if market.status != MarketStatus::Disputed {
+                return Err(Error::<T>::InvalidMarketStatus.into());
+            }
+            if let Some(last_dispute) = disputes.last() {
+                Ok(last_dispute.outcome.clone())
+            } else {
+                return Err(Error::<T>::InvalidMarketStatus.into());
+            }
         }
     }
 
