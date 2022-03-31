@@ -21,7 +21,9 @@ pub use parachain_params::*;
 pub use parameters::*;
 
 #[cfg(feature = "parachain")]
-use parachain_staking::migrations::{PurgeStaleStorage, RemoveExitQueue};
+use parachain_staking::migrations::{
+    PurgeStaleStorage, RemoveExitQueue, SplitCandidateStateToDecreasePoV,
+};
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
@@ -78,7 +80,11 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (PurgeStaleStorage<Runtime>, RemoveExitQueue<Runtime>),
+    (
+        PurgeStaleStorage<Runtime>,
+        RemoveExitQueue<Runtime>,
+        SplitCandidateStateToDecreasePoV<Runtime>,
+    ),
 >;
 
 #[cfg(not(feature = "parachain"))]
