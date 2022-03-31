@@ -86,12 +86,12 @@ fn bench_create_pool<T: Config>(
     let market_id = T::MarketId::from(0u8);
     let assets = generate_assets::<T>(&caller, asset_count_unwrapped, asset_amount);
     let weights = vec![T::MinWeight::get(); asset_count_unwrapped];
-    let base_asset = Some(*assets.last().unwrap());
+    let base_asset = *assets.last().unwrap();
 
     let _ = Pallet::<T>::create_pool(
         caller.clone(),
         assets.clone(),
-        base_asset,
+        Some(base_asset),
         market_id,
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
@@ -102,7 +102,7 @@ fn bench_create_pool<T: Config>(
 
     if subsidize {
         let min_subsidy = T::MinSubsidy::get();
-        let _ = T::Shares::deposit(base_asset.unwrap(), &caller, min_subsidy).unwrap();
+        let _ = T::Shares::deposit(base_asset, &caller, min_subsidy).unwrap();
         let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller).into())
             .unwrap();
@@ -215,7 +215,7 @@ benchmarks! {
         Pallet::<T>::distribute_pool_share_rewards(
             &pool,
             pool_id,
-            pool.base_asset.unwrap(),
+            pool.base_asset,
             Asset::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into()),
             &account("ScrapCollector", 0, 0)
         );
