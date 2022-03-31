@@ -1696,6 +1696,7 @@ mod pallet {
                     winner_payout_account,
                 )?;
             }
+            // (No extra work required for scalar markets!)
             Ok(weight)
         }
 
