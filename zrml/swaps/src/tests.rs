@@ -32,10 +32,13 @@ const _3: u128 = 3 * BASE;
 const _4: u128 = 4 * BASE;
 const _5: u128 = 5 * BASE;
 const _8: u128 = 8 * BASE;
+const _9: u128 = 9 * BASE;
+const _10: u128 = 10 * BASE;
 const _20: u128 = 20 * BASE;
 const _24: u128 = 24 * BASE;
 const _25: u128 = 25 * BASE;
 const _26: u128 = 26 * BASE;
+const _90: u128 = 90 * BASE;
 const _99: u128 = 99 * BASE;
 const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
@@ -594,6 +597,36 @@ fn pool_exit_decreases_correct_pool_parameters() {
             [_100 - 1, _100 - 1, _100 - 1, _100 - 1],
             _100,
         );
+    })
+}
+
+#[test]
+fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+
+        assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, _10, vec!(_1, _1, _1, _1),));
+
+        let pool_account = Swaps::pool_account_id(0);
+        let pool_shares_id = Swaps::pool_shares_id(0);
+        assert_eq!(Currencies::free_balance(ASSET_A, &BOB), _9);
+        assert_eq!(Currencies::free_balance(ASSET_B, &BOB), _9);
+        assert_eq!(Currencies::free_balance(ASSET_C, &BOB), _9);
+        assert_eq!(Currencies::free_balance(ASSET_D, &BOB), _9);
+        assert_eq!(Currencies::free_balance(pool_shares_id, &BOB), _100 - _10);
+        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account), _100 - _9);
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account), _100 - _9);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account), _100 - _9);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account), _100 - _9);
+        assert_eq!(Currencies::total_issuance(pool_shares_id), _100 - _10);
+
+        assert!(event_exists(crate::Event::PoolExit(PoolAssetsEvent {
+            assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+            bounds: vec!(_1, _1, _1, _1),
+            cpep: CommonPoolEventParams { pool_id: 0, who: BOB },
+            transferred: vec!(_9, _9, _9, _9),
+        })));
     })
 }
 

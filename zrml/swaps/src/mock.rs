@@ -31,7 +31,7 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 
 // Mocked exit fee for easier calculations
 parameter_types! {
-    pub storage ExitFeeMock: Balance = BASE / 1000;
+    pub storage ExitFeeMock: Balance = BASE / 10;
 }
 
 construct_runtime!(
