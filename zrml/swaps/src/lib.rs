@@ -311,6 +311,7 @@ mod pallet {
                         pool.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
@@ -1517,6 +1518,7 @@ mod pallet {
                             .saturated_into(),
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
