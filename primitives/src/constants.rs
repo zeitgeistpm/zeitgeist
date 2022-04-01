@@ -1,6 +1,6 @@
 #![allow(
-  // Constants parameters inside `parameter_types!` already check
-  // arithmetic operations at compile time
+    // Constants parameters inside `parameter_types!` already check
+    // arithmetic operations at compile time
     clippy::integer_arithmetic
 )]
 
@@ -8,11 +8,10 @@ pub mod ztg;
 
 use crate::{
     asset::Asset,
-    types::{AccountId, AccountIdTest, Balance, BlockNumber, CurrencyId, Moment},
+    types::{Balance, BlockNumber, CurrencyId, Moment},
 };
 use frame_support::{parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;
-use sp_runtime::{traits::AccountIdConversion, Permill};
 
 // Definitions for time
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
@@ -25,6 +24,10 @@ pub const BASE: u128 = 10_000_000_000;
 pub const CENT: Balance = BASE / 100; // 100_000_000
 pub const MILLI: Balance = CENT / 10; //  10_000_000
 pub const MICRO: Balance = MILLI / 1000; // 10_000
+
+pub const fn deposit(items: u32, bytes: u32) -> Balance {
+    items as Balance * 20 * BASE + (bytes as Balance) * 100 * MILLI
+}
 
 // Rikiddo and TokensConfig
 parameter_types! {
@@ -46,13 +49,6 @@ parameter_types! {
     pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
 }
 
-// Balance
-parameter_types! {
-    pub const ExistentialDeposit: u128 = CENT;
-    pub const MaxLocks: u32 = 50;
-    pub const MaxReserves: u32 = 50;
-}
-
 // Court
 parameter_types! {
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
@@ -60,30 +56,9 @@ parameter_types! {
     pub const StakeWeight: u128 = 2 * BASE;
 }
 
-// General
-parameter_types! {
-    pub const BlockHashCount: u64 = 250;
-}
-
 // Liquidity Mining parameters
 parameter_types! {
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
-}
-
-// ORML
-parameter_type_with_key! {
-    // Well, not every asset is a currency ¯\_(ツ)_/¯
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-        match currency_id {
-            Asset::Ztg => ExistentialDeposit::get(),
-            _ => 0
-        }
-    };
-}
-parameter_types! {
-    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
-    pub DustAccountTest: AccountIdTest = PalletId(*b"orml/dst").into_account();
 }
 
 // Prediction Market parameters
@@ -125,23 +100,36 @@ parameter_types! {
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
 }
 
+// Shared within tests
+// Balance
+parameter_types! {
+    pub const ExistentialDeposit: u128 = CENT;
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
+}
+
+// ORML
+parameter_types! {
+    // ORML
+    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
+}
+
+parameter_type_with_key! {
+    // Well, not every asset is a currency ¯\_(ツ)_/¯
+    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+        match currency_id {
+            Asset::Ztg => ExistentialDeposit::get(),
+            _ => 0
+        }
+    };
+}
+
+// System
+parameter_types! {
+    pub const BlockHashCount: u64 = 250;
+}
+
 // Time
 parameter_types! {
     pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
-}
-
-// Treasury
-parameter_types! {
-    pub const Burn: Permill = Permill::from_percent(50);
-    pub const MaxApprovals: u32 = 100;
-    pub const ProposalBond: Permill = Permill::from_percent(5);
-    pub const ProposalBondMinimum: Balance = 10 * BASE;
-    pub const ProposalBondMaximum: Balance = 500 * BASE;
-    pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
-    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
-}
-
-// Vesting
-parameter_types! {
-    pub const MinVestedTransfer: Balance = CENT;
 }

@@ -8,6 +8,7 @@ use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{Everything, OnFinalize, OnInitialize},
+    PalletId,
 };
 use frame_system::EnsureSignedBy;
 use sp_runtime::{
@@ -18,13 +19,12 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
         AdvisoryBond, AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount,
-        CourtCaseDuration, CourtPalletId, DisputeBond, DisputeFactor, DustAccountTest,
-        ExistentialDeposit, ExistentialDeposits, ExitFee, GetNativeCurrencyId,
-        LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio,
-        MaxReserves, MaxSubsidyPeriod, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
-        MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, OracleBond,
-        PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
-        TreasuryPalletId, ValidityBond, BASE,
+        CourtCaseDuration, CourtPalletId, DisputeBond, DisputeFactor, ExistentialDeposit,
+        ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
+        MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxSubsidyPeriod,
+        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod,
+        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, ValidityBond, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -46,6 +46,7 @@ ord_parameter_types! {
 }
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
+    pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
 }
 
 construct_runtime!(
@@ -76,7 +77,9 @@ impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Authorized = Authorized;
+    type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
+    type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -90,6 +93,7 @@ impl crate::Config for Runtime {
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
+    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
     type SimpleDisputes = SimpleDisputes;
@@ -142,7 +146,7 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
-    type OnDust = orml_tokens::TransferDust<Runtime, DustAccountTest>;
+    type OnDust = ();
     type WeightInfo = ();
 }
 
