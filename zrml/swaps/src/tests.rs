@@ -3,7 +3,7 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    SubsidyProviders,
+    Config, SubsidyProviders,
 };
 use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -574,6 +574,7 @@ fn pool_amount_must_not_be_zero() {
 #[test]
 fn pool_exit_decreases_correct_pool_parameters() {
     ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0u128);
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
 
@@ -656,6 +657,7 @@ fn pool_exit_subsidy_unreserves_correct_values() {
 #[test]
 fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0u128);
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _5, 0));
@@ -680,6 +682,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
 #[test]
 fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0u128);
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         let asset_before_join = Currencies::free_balance(ASSET_A, &ALICE);
