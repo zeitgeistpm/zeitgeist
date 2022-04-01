@@ -6,6 +6,7 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
+use fixed::bmul;
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -226,7 +227,15 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize), None, ScoringRule::CPMM, false);
         let pool_amount = T::MinLiquidity::get();
-        let min_assets_out = vec![T::MinLiquidity::get(); a as usize];
+        let min_assets_out = vec![
+            T::MinLiquidity::get()
+                - bmul(
+                    T::ExitFee::get().saturated_into(),
+                    T::MinLiquidity::get().saturated_into()
+                )?
+                .saturated_into();
+            a as usize
+        ];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, min_assets_out)
 
     pool_exit_subsidy {
