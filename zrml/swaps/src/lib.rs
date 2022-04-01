@@ -133,19 +133,20 @@ mod pallet {
                 pool_amount,
                 pool_id,
                 pool: &pool,
-                transfer_asset: |amount, amount_bound, asset| {
+                transfer_asset: |amount: BalanceOf<T>, amount_bound, asset| {
+                    // If `amount` is != 0 and `exit_fee` is less than 50%, then
+                    // `amount_minus_exit_fee` is != 0.
+                    let exit_fee =
+                        bmul(amount.saturated_into(), T::ExitFee::get().saturated_into())?
+                            .saturated_into();
+                    let amount_minus_exit_fee = amount.check_sub_rslt(&exit_fee)?;
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
-                    T::Shares::transfer(asset, &pool_account_id, &who, amount)?;
+                    T::Shares::transfer(asset, &pool_account_id, &who, amount_minus_exit_fee)?;
                     Ok(())
                 },
-                transfer_pool: |pool_shares_id| {
-                    let exit_fee_pct = T::ExitFee::get().saturated_into();
-                    let exit_fee =
-                        bmul(pool_amount.saturated_into(), exit_fee_pct)?.saturated_into();
-                    let pool_amount_minus_exit_fee = pool_amount.check_sub_rslt(&exit_fee)?;
-                    T::Shares::transfer(pool_shares_id, &who, &pool_account_id, exit_fee)?;
-                    Self::burn_pool_shares(pool_id, &who, pool_amount_minus_exit_fee)?;
+                transfer_pool: || {
+                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
                     Ok(())
                 },
                 who: who_clone,
@@ -375,7 +376,7 @@ mod pallet {
                     T::LiquidityMining::add_shares(who.clone(), pool.market_id, amount);
                     Ok(())
                 },
-                transfer_pool: |_| Self::mint_pool_shares(pool_id, &who, pool_amount),
+                transfer_pool: || Self::mint_pool_shares(pool_id, &who, pool_amount),
                 who: who.clone(),
             };
 

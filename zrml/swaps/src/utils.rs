@@ -94,7 +94,7 @@ pub(crate) fn pool<F1, F2, F3, T>(mut p: PoolParams<'_, F1, F2, F3, T>) -> Dispa
 where
     F1: FnMut(PoolAssetsEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     F2: FnMut(BalanceOf<T>, BalanceOf<T>, Asset<T::MarketId>) -> DispatchResult,
-    F3: FnMut(Asset<T::MarketId>) -> DispatchResult,
+    F3: FnMut() -> DispatchResult,
     T: Config,
 {
     ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
@@ -116,7 +116,7 @@ where
         (p.transfer_asset)(amount, amount_bound, asset)?;
     }
 
-    (p.transfer_pool)(pool_shares_id)?;
+    (p.transfer_pool)()?;
 
     (p.event)(PoolAssetsEvent {
         assets: p.pool.assets.clone(),
