@@ -90,11 +90,12 @@ where
 }
 
 // Common code for `pool_join` and `pool_exit` methods.
-pub(crate) fn pool<F1, F2, F3, T>(mut p: PoolParams<'_, F1, F2, F3, T>) -> DispatchResult
+pub(crate) fn pool<F1, F2, F3, F4, T>(mut p: PoolParams<'_, F1, F2, F3, F4, T>) -> DispatchResult
 where
     F1: FnMut(PoolAssetsEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     F2: FnMut(BalanceOf<T>, BalanceOf<T>, Asset<T::MarketId>) -> DispatchResult,
     F3: FnMut() -> DispatchResult,
+    F4: FnMut(BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
     ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
@@ -111,9 +112,11 @@ where
     for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
         let balance = T::Shares::free_balance(asset, p.pool_account_id);
         let amount = bmul(ratio.saturated_into(), balance.saturated_into())?.saturated_into();
-        transferred.push(amount);
-        ensure!(amount != Zero::zero(), Error::<T>::MathApproximation);
-        (p.transfer_asset)(amount, amount_bound, asset)?;
+        let fee = (p.fee)(amount)?;
+        let amount_minus_fee = amount.check_sub_rslt(&fee)?;
+        transferred.push(amount_minus_fee);
+        ensure!(amount_minus_fee != Zero::zero(), Error::<T>::MathApproximation);
+        (p.transfer_asset)(amount_minus_fee, amount_bound, asset)?;
     }
 
     (p.transfer_pool)()?;
@@ -244,7 +247,7 @@ where
     pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
 }
 
-pub(crate) struct PoolParams<'a, F1, F2, F3, T>
+pub(crate) struct PoolParams<'a, F1, F2, F3, F4, T>
 where
     T: Config,
 {
@@ -256,6 +259,7 @@ where
     pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
     pub(crate) transfer_asset: F2,
     pub(crate) transfer_pool: F3,
+    pub(crate) fee: F4,
     pub(crate) who: T::AccountId,
 }
 

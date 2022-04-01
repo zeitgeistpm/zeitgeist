@@ -133,25 +133,25 @@ mod pallet {
                 pool_amount,
                 pool_id,
                 pool: &pool,
-                transfer_asset: |amount: BalanceOf<T>, amount_bound, asset| {
-                    // If `amount` is != 0 and `exit_fee` is less than 50%, then
-                    // `amount_minus_exit_fee` is != 0.
-                    let exit_fee =
-                        bmul(amount.saturated_into(), T::ExitFee::get().saturated_into())?
-                            .saturated_into();
-                    let amount_minus_exit_fee = amount.check_sub_rslt(&exit_fee)?;
+                transfer_asset: |amount, amount_bound, asset| {
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
-                    T::Shares::transfer(asset, &pool_account_id, &who, amount_minus_exit_fee)?;
+                    T::Shares::transfer(asset, &pool_account_id, &who, amount)?;
                     Ok(())
                 },
                 transfer_pool: || {
                     Self::burn_pool_shares(pool_id, &who, pool_amount)?;
                     Ok(())
                 },
+                fee: |amount: BalanceOf<T>| {
+                    let exit_fee =
+                        bmul(amount.saturated_into(), T::ExitFee::get().saturated_into())?
+                            .saturated_into();
+                    Ok(exit_fee)
+                },
                 who: who_clone,
             };
-            crate::utils::pool::<_, _, _, T>(params)
+            crate::utils::pool::<_, _, _, _, T>(params)
         }
 
         /// Pool - Remove subsidty from a pool that uses the Rikiddo scoring rule.
@@ -377,10 +377,11 @@ mod pallet {
                     Ok(())
                 },
                 transfer_pool: || Self::mint_pool_shares(pool_id, &who, pool_amount),
+                fee: |_| Ok(0u128.saturated_into()),
                 who: who.clone(),
             };
 
-            let _ = crate::utils::pool::<_, _, _, T>(params)?;
+            let _ = crate::utils::pool::<_, _, _, _, T>(params)?;
             Ok(Some(T::WeightInfo::pool_join(pool.assets.len().saturated_into())).into())
         }
 
