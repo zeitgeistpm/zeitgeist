@@ -850,6 +850,10 @@ mod pallet {
                 BalanceOf<T>,
             >,
         ),
+        /// Pool shares minted. \[pool_id, who, amount\]
+        PoolSharesMinted(PoolId, <T as frame_system::Config>::AccountId, BalanceOf<T>),
+        /// Pool shares burned. \[pool_id, who, amount\]
+        PoolSharesBurned(PoolId, <T as frame_system::Config>::AccountId, BalanceOf<T>),
         /// Total subsidy collected for a pool. \[pool_id, subsidy\]
         SubsidyCollected(PoolId, BalanceOf<T>),
         /// An exact amount of an asset is entering the pool. \[SwapEvent\]
@@ -1108,6 +1112,7 @@ mod pallet {
             T::Shares::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
             T::Shares::slash(shares_id, from, amount);
+            Self::deposit_event(Event::PoolSharesBurned(pool_id, from.clone(), amount));
             Ok(())
         }
 
@@ -1141,7 +1146,9 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
-            T::Shares::deposit(shares_id, to, amount)
+            T::Shares::deposit(shares_id, to, amount)?;
+            Self::deposit_event(Event::PoolSharesMinted(pool_id, to.clone(), amount));
+            Ok(())
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<T::MarketId> {
