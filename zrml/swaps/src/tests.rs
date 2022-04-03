@@ -597,6 +597,26 @@ fn pool_exit_decreases_correct_pool_parameters() {
 }
 
 #[test]
+fn pool_join_emits_correct_events() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
+        assert!(event_exists(crate::Event::PoolSharesMinted(0, ALICE, _1)));
+    });
+}
+
+#[test]
+fn pool_exit_emits_correct_events() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, _1, vec!(123, 456, 789, 123),));
+        assert!(event_exists(crate::Event::PoolSharesBurned(0, BOB, _1)));
+    });
+}
+
+#[test]
 fn pool_exit_subsidy_unreserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
