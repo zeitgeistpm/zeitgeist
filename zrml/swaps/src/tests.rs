@@ -832,6 +832,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
             pool_amount,
             _4
         ));
+        assert!(event_exists(crate::Event::PoolSharesBurned(0, ALICE, pool_shares)));
         assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
             asset: ASSET_A,
             bound: _4,
@@ -1095,6 +1096,7 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
             pool_amount: alice_sent,
         })));
         let alice_received = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
+        assert!(event_exists(crate::Event::PoolSharesMinted(0, ALICE, alice_sent)));
         assert_eq!(alice_received, 40604010000);
         assert_all_parameters(
             [_25 - alice_received, _25, _25, _25],
