@@ -144,10 +144,12 @@ mod pallet {
                     Ok(())
                 },
                 fee: |amount: BalanceOf<T>| {
-                    let exit_fee =
-                        bmul(amount.saturated_into(), T::ExitFee::get().saturated_into())?
-                            .saturated_into();
-                    Ok(exit_fee)
+                    let exit_fee_amount = bmul(
+                        amount.saturated_into(),
+                        Self::_calc_exit_fee(&pool).saturated_into(),
+                    )?
+                    .saturated_into();
+                    Ok(exit_fee_amount)
                 },
                 who: who_clone,
             };
@@ -1194,6 +1196,17 @@ mod pallet {
                 .get(asset)
                 .cloned()
                 .ok_or(Error::<T>::AssetNotBound)
+        }
+
+        /// Calculate the exit fee percentage for `pool`.
+        fn _calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
+            // We don't charge exit fees on stale pools (no need to punish LPs for leaving the
+            // pool)!
+            if pool.pool_status == PoolStatus::Stale {
+                0u128.saturated_into()
+            } else {
+                T::ExitFee::get().saturated_into()
+            }
         }
     }
 
