@@ -5,7 +5,7 @@ use crate::{
     BalanceOf, Config, Error, Pallet,
 };
 use alloc::vec::Vec;
-use frame_support::{dispatch::DispatchResult, ensure, traits::Get};
+use frame_support::{dispatch::DispatchResult, ensure};
 use orml_traits::MultiCurrency;
 use sp_runtime::{
     traits::{Saturating, Zero},
