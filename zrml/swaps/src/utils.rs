@@ -39,10 +39,7 @@ where
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
-    let exit_fee =
-        bmul(pool_amount.saturated_into(), T::ExitFee::get().saturated_into())?.saturated_into();
-    Pallet::<T>::burn_pool_shares(p.pool_id, &p.who, pool_amount.check_sub_rslt(&exit_fee)?)?;
-    // todo do something with exit fee
+    Pallet::<T>::burn_pool_shares(p.pool_id, &p.who, pool_amount)?;
     T::Shares::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
