@@ -752,6 +752,36 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
 }
 
 #[test]
+fn pool_exit_with_exact_pool_amount_exchanges_correct_values_with_fee() {
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&(BASE / 10));
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _5, 0));
+        let pool_shares = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+            alice_signed(),
+            0,
+            ASSET_A,
+            pool_shares,
+            _4
+        ));
+        assert_all_parameters(
+            [245_082_061_850, _25, _25, _25],
+            0,
+            [1001227223430, _100, _100, _100],
+            _100,
+        );
+        assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
+            asset: ASSET_A,
+            bound: _4,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: 45_082_061_850,
+        })));
+    });
+}
+
+#[test]
 fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         <Runtime as Config>::ExitFee::set(&0u128);
