@@ -631,6 +631,39 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
 }
 
 #[test]
+fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
+    // Test is the same as
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+
+        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
+        assert_ok!(Swaps::admin_set_pool_as_stale(
+            Origin::root(),
+            MarketType::Categorical(4),
+            0,
+            OutcomeReport::Categorical(65),
+        ));
+        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1),));
+
+        assert!(event_exists(crate::Event::PoolExit(PoolAssetsEvent {
+            assets: vec![ASSET_A, ASSET_D],
+            bounds: vec!(_1, _1),
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: vec!(_1 + 1, _1 + 1),
+        })));
+        assert_all_parameters(
+            [_25 + 1, _24, _24, _25 + 1],
+            0,
+            // Note: Although the asset is deleted from the pool, the assets B/C still remain on the
+            // pool account.
+            [_100 - 1, _101, _101, _100 - 1],
+            _100,
+        );
+    })
+}
+
+#[test]
 fn pool_exit_subsidy_unreserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
