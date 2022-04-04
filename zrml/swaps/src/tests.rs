@@ -370,8 +370,14 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         ));
 
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1_2, _1_2)));
-        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _1, _2));
-        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _1_2));
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _1, _2),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _1_2),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
         assert_noop!(
             Swaps::pool_join(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
             crate::Error::<Runtime>::PoolIsNotActive

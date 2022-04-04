@@ -25,6 +25,7 @@ where
     F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
+    Pallet::<T>::check_if_pool_is_active(p.pool)?;
     ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(p.pool_id);
