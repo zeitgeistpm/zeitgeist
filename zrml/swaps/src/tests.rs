@@ -814,6 +814,41 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
 }
 
 #[test]
+fn pool_exit_with_exact_asset_amount_exchanges_correct_values_with_fee() {
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&(BASE / 10));
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let asset_before_join = Currencies::free_balance(ASSET_A, &ALICE);
+        assert_ok!(Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _5));
+        let asset_after_join = asset_before_join - Currencies::free_balance(ASSET_A, &ALICE);
+        let exit_amount = (asset_after_join * 9) / 10;
+        let amount_left_behind_in_pool = asset_after_join - exit_amount;
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
+            alice_signed(),
+            0,
+            ASSET_A,
+            exit_amount,
+            _1
+        ));
+        assert!(event_exists(crate::Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
+            asset: ASSET_A,
+            bound: _1,
+            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+            transferred: exit_amount,
+        })));
+        assert_eq!(asset_after_join, 40604010000);
+        let shares_remaining = _1 - 9_984_935_413; // shares_after_join - pool_amount_in
+        assert_all_parameters(
+            [_25 - amount_left_behind_in_pool, _25, _25, _25],
+            shares_remaining,
+            [_100 + amount_left_behind_in_pool, _100, _100, _100],
+            _100 + shares_remaining,
+        )
+    });
+}
+
+#[test]
 fn pool_exit_is_not_allowed_with_insufficient_funds() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
