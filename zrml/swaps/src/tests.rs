@@ -769,7 +769,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values_with_fee() {
         assert_all_parameters(
             [245_082_061_850, _25, _25, _25],
             0,
-            [1001227223430, _100, _100, _100],
+            [1_004_917_938_150, _100, _100, _100],
             _100,
         );
         assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
