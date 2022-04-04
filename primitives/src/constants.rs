@@ -87,7 +87,7 @@ parameter_types! {
 
 // Swaps parameters
 parameter_types! {
-    pub const ExitFee: Balance = BASE / 10; // TODO Change this to something realistic!
+    pub const ExitFee: Balance = 3 * BASE / 1000; // 0.3%
     pub const MinAssets: u16 = 2;
     pub const MaxAssets: u16 = MaxCategories::get() + 1;
     pub const MaxInRatio: Balance = (BASE / 3) + 1;
