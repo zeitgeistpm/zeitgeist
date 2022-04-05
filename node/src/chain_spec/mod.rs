@@ -96,7 +96,7 @@ fn generic_genesis(
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
-        advisory_committee_collective: Default::default(),
+        advisory_committee: Default::default(),
         advisory_committee_membership: zeitgeist_runtime::AdvisoryCommitteeMembershipConfig {
             members: vec![],
             phantom: Default::default(),
@@ -121,8 +121,14 @@ fn generic_genesis(
         balances: zeitgeist_runtime::BalancesConfig {
             balances: endowed_accounts.iter().cloned().map(|k| (k.0, k.1)).collect(),
         },
+        council: Default::default(),
+        council_membership: zeitgeist_runtime::CouncilMembershipConfig {
+            members: vec![],
+            phantom: Default::default(),
+        },
         #[cfg(feature = "parachain")]
         crowdloan: zeitgeist_runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
+        democracy: Default::default(),
         #[cfg(not(feature = "parachain"))]
         grandpa: zeitgeist_runtime::GrandpaConfig {
             authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
@@ -151,6 +157,11 @@ fn generic_genesis(
         polkadot_xcm: PolkadotXcmConfig::default(),
         sudo: zeitgeist_runtime::SudoConfig { key: Some(root_key) },
         system: zeitgeist_runtime::SystemConfig { code: wasm_binary.to_vec() },
+        technical_committee: Default::default(),
+        technical_committee_membership: zeitgeist_runtime::TechnicalCommitteeMembershipConfig {
+            members: vec![],
+            phantom: Default::default(),
+        },
         treasury: Default::default(),
         transaction_payment: Default::default(),
         tokens: Default::default(),
