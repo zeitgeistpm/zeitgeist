@@ -20,11 +20,6 @@ mod xcm_config;
 pub use parachain_params::*;
 pub use parameters::*;
 
-#[cfg(feature = "parachain")]
-use parachain_staking::migrations::{
-    PurgeStaleStorage, RemoveExitQueue, SplitCandidateStateToDecreasePoV,
-};
-
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
