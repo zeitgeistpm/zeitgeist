@@ -686,7 +686,9 @@ fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
             weights
         ));
 
-        for (idx, amount) in amounts.into_iter().enumerate() {
+        for (idx, amount) in
+            amounts.into_iter().enumerate().filter(|(_, amount)| *amount > min_liqudity)
+        {
             assert_ok!(Swaps::pool_join_with_exact_asset_amount(
                 Origin::signed(ALICE),
                 pool_id,
