@@ -646,13 +646,13 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             oracle,
-            period.clone(),
-            metadata.clone(),
+            period,
+            metadata,
             assets,
             MarketDisputeMechanism::SimpleDisputes,
-            amount_base_asset.clone(),
-            amounts.clone(),
-            weights.clone(),
+            amount_base_asset,
+            amounts,
+            weights,
         ));
 
         let pool_account = Swaps::pool_account_id(pool_id);
