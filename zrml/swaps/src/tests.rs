@@ -555,7 +555,7 @@ fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
 }
 
 #[test]
-fn pool_amount_must_not_be_zero() {
+fn pool_join_or_exit_raises_on_zero_value() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
 
@@ -566,6 +566,26 @@ fn pool_amount_must_not_be_zero() {
 
         assert_noop!(
             Swaps::pool_exit(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, 0, 0),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 0, 0),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, 0, 0),
+            crate::Error::<Runtime>::MathApproximation
+        );
+
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 0, 0),
             crate::Error::<Runtime>::MathApproximation
         );
     });
@@ -1092,6 +1112,121 @@ fn create_pool_fails_on_too_few_assets() {
                 Some(vec!(_2, _2, _2, _2)),
             ),
             crate::Error::<Runtime>::TooFewAssets
+        );
+    });
+}
+
+// Macro for comparing fixed point u128.
+macro_rules! assert_approx {
+    ($left:expr, $right:expr, $precision:expr $(,)?) => {
+        match (&$left, &$right, &$precision) {
+            (left_val, right_val, precision_val) => {
+                let diff = if *left_val > *right_val {
+                    *left_val - *right_val
+                } else {
+                    *right_val - *left_val
+                };
+                if diff > $precision {
+                    panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
+                }
+            }
+        }
+    };
+}
+
+#[test]
+fn join_pool_exit_pool_does_not_create_extra_tokens() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &CHARLIE, _100);
+        });
+
+        let amount = 123_456_789_123; // Strange number to force rounding errors!
+        assert_ok!(Swaps::pool_join(
+            Origin::signed(CHARLIE),
+            0,
+            amount,
+            vec![_10000, _10000, _10000, _10000]
+        ));
+        assert_ok!(Swaps::pool_exit(Origin::signed(CHARLIE), 0, amount, vec![0, 0, 0, 0]));
+
+        // It's not true that the balances are _exactly_ the same. But they only vary up to
+        // negligible precision!
+        let pool_account_id = Swaps::pool_account_id(0);
+        let precision = 30;
+        assert_approx!(Currencies::free_balance(ASSET_A, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_B, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_C, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_D, &pool_account_id), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_A, &CHARLIE), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_B, &CHARLIE), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_C, &CHARLIE), _100, precision);
+        assert_approx!(Currencies::free_balance(ASSET_D, &CHARLIE), _100, precision);
+    });
+}
+
+#[test]
+fn create_pool_fails_on_weight_below_minimum_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.iter().cloned().collect(),
+                Some(ASSETS.last().unwrap().clone()),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec!(_2, <Runtime as crate::Config>::MinWeight::get() - 1, _2, _2))
+            ),
+            crate::Error::<Runtime>::BelowMinimumWeight,
+        );
+    });
+}
+
+#[test]
+fn create_pool_fails_on_weight_above_maximum_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.iter().cloned().collect(),
+                Some(ASSETS.last().unwrap().clone()),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec!(_2, <Runtime as crate::Config>::MaxWeight::get() + 1, _2, _2))
+            ),
+            crate::Error::<Runtime>::AboveMaximumWeight,
+        );
+    });
+}
+
+#[test]
+fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        let weight = <Runtime as crate::Config>::MaxTotalWeight::get() / 4 + 100;
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.iter().cloned().collect(),
+                Some(ASSETS.last().unwrap().clone()),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(vec![weight; 4]),
+            ),
+            crate::Error::<Runtime>::MaxTotalWeight,
         );
     });
 }

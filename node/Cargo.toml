@@ -56,7 +56,7 @@ cumulus-relay-chain-local = { branch = "moonbeam-polkadot-v0.9.16", git = "https
 nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-parachain-staking = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", git = "https://github.com/purestake/moonbeam", optional = true }
+parachain-staking = { rev = "30b955354981b6d11808c10d728e1b93fa919f33", git = "https://github.com/purestake/moonbeam", optional = true }
 parity-scale-codec = { optional = true, version = "3.0.0" }
 sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 sc-network = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
@@ -152,7 +152,7 @@ description = "An evolving blockchain for prediction markets and futarchy."
 edition = "2021"
 homepage = "https://zeitgeist.pm"
 name = "zeitgeist-node"
-version = "0.2.4"
+version = "0.3.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

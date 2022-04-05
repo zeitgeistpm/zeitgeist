@@ -81,6 +81,9 @@ parameter_types! {
     pub const RevokeDelegationDelay: u32 = 2;
     /// Rounds before the reward is paid
     pub const RewardPaymentDelay: u32 = 2;
+
+    // XCM
+    pub const MaxInstructions: u32 = 100;
 }
 
 pub type Barrier = (

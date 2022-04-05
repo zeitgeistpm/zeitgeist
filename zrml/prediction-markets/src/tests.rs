@@ -656,7 +656,6 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
         ));
 
         let pool_account = Swaps::pool_account_id(pool_id);
-
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), extra_amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);

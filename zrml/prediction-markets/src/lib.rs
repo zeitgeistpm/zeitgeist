@@ -38,15 +38,15 @@
 //! #### Admin Dispatches
 //!
 //! The administrative dispatches are used to perform admin functions on chain. Currently, the
-//! admin functions can only be called by the `ApprovalOrigin` origin.
+//! admin functions can only be called by the `ApprovalOrigin`, `CloseOrigin`, `DestroyOrigin` and `ResolveOrigin`
 //!
 //! - `admin_destroy_market` - Destroys a market and all related assets, regardless of its state.
 //! - `admin_move_market_to_closed` - Immediately moves a market that is an `Active` state to closed.
 //! - `admin_move_market_to_resolved` - Immediately moves a market that is `Reported` or `Disputed` to resolved.
 //!
-//! #### `ApprovalOrigin` Dispatches
+//! #### `ApprovalOrigin`, `CloseOrigin`, `DestroyOrigin` and `ResolveOrigin` Dispatches
 //!
-//! The `ApprovalOrigin` is meant to be the advisory committee, the on-chain governing body of Zeitgeist
+//! Those origins are mainly minimum vote proportions from the advisory committee, the on-chain governing body of Zeitgeist
 //! that is responsible for maintaining a list of high quality markets and slash low quality markets.
 //!
 //! - `approve_market` - Approves a `Proposed` market that is waiting approval from the Advisory Committee.
@@ -78,7 +78,7 @@ mod pallet {
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
             NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
-        transactional, Blake2_128Concat, PalletId, Twox64Concat, WeakBoundedVec,
+        transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
@@ -116,7 +116,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Allows the `ApprovalOrigin` to immediately destroy a market.
+        /// Allows the `DestroyOrigin` to immediately destroy a market.
         ///
         /// todo: this should check if there's any outstanding funds reserved if it stays
         /// in for production
@@ -135,7 +135,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+            T::DestroyOrigin::ensure_origin(origin)?;
 
             let mut total_accounts = 0usize;
             let mut share_accounts = 0usize;
@@ -184,7 +184,7 @@ mod pallet {
             }
         }
 
-        /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
+        /// Allows the `CloseOrigin` to immediately move an open market to closed.
         //
         // ***** IMPORTANT *****
         //
@@ -195,7 +195,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+            T::CloseOrigin::ensure_origin(origin)?;
             T::MarketCommons::mutate_market(&market_id, |m| {
                 m.period = match m.period {
                     MarketPeriod::Block(ref range) => {
@@ -212,7 +212,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Allows the `ApprovalOrigin` to immediately move a reported or disputed
+        /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
         ////
         #[pallet::weight(T::WeightInfo::admin_move_market_to_resolved_overhead()
@@ -226,7 +226,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+            T::ResolveOrigin::ensure_origin(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(
@@ -963,7 +963,7 @@ mod pallet {
 
                 if should_check_origin {
                     let sender_is_oracle = sender == market.oracle;
-                    let origin_has_permission = T::ApprovalOrigin::ensure_origin(origin).is_ok();
+                    let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
                     ensure!(
                         sender_is_oracle || origin_has_permission,
                         Error::<T>::ReporterNotOracle
@@ -1051,6 +1051,7 @@ mod pallet {
         #[pallet::constant]
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
+        /// The origin that is allowed to approve / reject pending advised markets.
         type ApprovalOrigin: EnsureOrigin<Self::Origin>;
 
         /// See [`AuthorizedPalletApi`].
@@ -1063,6 +1064,9 @@ mod pallet {
             Origin = Self::Origin,
         >;
 
+        /// The origin that is allowed to close markets.
+        type CloseOrigin: EnsureOrigin<Self::Origin>;
+
         /// See [`CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
             AccountId = Self::AccountId,
@@ -1072,6 +1076,9 @@ mod pallet {
             Moment = MomentOf<Self>,
             Origin = Self::Origin,
         >;
+
+        /// The origin that is allowed to destroy markets.
+        type DestroyOrigin: EnsureOrigin<Self::Origin>;
 
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
@@ -1141,6 +1148,9 @@ mod pallet {
         /// The number of blocks the reporting period remains open.
         #[pallet::constant]
         type ReportingPeriod: Get<u32>;
+
+        /// The origin that is allowed to resolve markets.
+        type ResolveOrigin: EnsureOrigin<Self::Origin>;
 
         /// See [`SimpleDisputesPalletApi`].
         type SimpleDisputes: DisputeApi<
@@ -1298,7 +1308,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
-        WeakBoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
+        BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
         ValueQuery,
     >;
 
@@ -1309,7 +1319,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        WeakBoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
     >;
 
@@ -1319,7 +1329,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        WeakBoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
     >;
 
@@ -1329,10 +1339,7 @@ mod pallet {
     #[pallet::storage]
     pub type MarketsCollectingSubsidy<T: Config> = StorageValue<
         _,
-        WeakBoundedVec<
-            SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
-            ConstU32<1_048_576>,
-        >,
+        BoundedVec<SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>, ConstU32<1_048_576>>,
         ValueQuery,
     >;
 
@@ -1891,7 +1898,7 @@ mod pallet {
 
             let mut weight_basis = 0;
             <MarketsCollectingSubsidy<T>>::mutate(
-                |e: &mut WeakBoundedVec<
+                |e: &mut BoundedVec<
                     SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>,
                     _,
                 >| {
@@ -2050,7 +2057,7 @@ mod pallet {
         )
     }
 
-    fn remove_item<I: cmp::PartialEq, G>(items: &mut WeakBoundedVec<I, G>, item: &I) {
+    fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
         if let Some(pos) = items.iter().position(|i| i == item) {
             items.swap_remove(pos);
         }

@@ -12,9 +12,12 @@ orml-tokens = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, 
 orml-traits = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-democracy = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-identity = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-membership = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-preimage = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-sudo = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -55,10 +58,10 @@ parachain-info = { branch = "moonbeam-polkadot-v0.9.16", default-features = fals
 
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-author-mapping = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
+pallet-author-mapping = { rev = "30b955354981b6d11808c10d728e1b93fa919f33", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/PureStake/crowdloan-rewards", optional = true }
-parachain-staking = { rev = "45257659f04b28dd4927b5dc611fac6f9e8905fd", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
+parachain-staking = { rev = "30b955354981b6d11808c10d728e1b93fa919f33", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 
 # Polkadot
 
@@ -143,14 +146,17 @@ runtime-benchmarks = [
     "pallet-balances/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
 	"pallet-crowdloan-rewards/runtime-benchmarks",
+	"pallet-democracy/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
 	"pallet-identity/runtime-benchmarks",
-	"parachain-staking/runtime-benchmarks",
+	"pallet-preimage/runtime-benchmarks",
+	"pallet-scheduler/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
+	"parachain-staking/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "zrml-authorized/runtime-benchmarks",
@@ -173,9 +179,12 @@ std = [
 	"orml-traits/std",
 	"pallet-balances/std",
 	"pallet-collective/std",
+	"pallet-democracy/std",
 	"pallet-identity/std",
 	"pallet-membership/std",
+	"pallet-preimage/std",
 	"pallet-randomness-collective-flip/std",
+	"pallet-scheduler/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
@@ -257,7 +266,7 @@ txfilter = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.2.4"
+version = "0.3.0"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

@@ -4943,7 +4943,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/purestake/moonbeam?rev=45257659f04b28dd4927b5dc611fac6f9e8905fd#45257659f04b28dd4927b5dc611fac6f9e8905fd"
+source = "git+https://github.com/purestake/moonbeam?rev=30b955354981b6d11808c10d728e1b93fa919f33#30b955354981b6d11808c10d728e1b93fa919f33"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5875,7 +5875,7 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=parachain-staking-migrations-3#3fbd882f551e629d5a29791b302d80dd4e4b4364"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=parachain-staking-migrations-3#916f2748e4caa3c384ea9e9de2c471e6abca3ed5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -11903,7 +11903,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "cfg-if 1.0.0",
  "cumulus-client-cli",
@@ -11978,7 +11978,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -11995,7 +11995,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "cfg-if 1.0.0",
  "cumulus-pallet-dmp-queue",
@@ -12025,10 +12025,13 @@ dependencies = [
  "pallet-balances",
  "pallet-collective",
  "pallet-crowdloan-rewards",
+ "pallet-democracy",
  "pallet-grandpa",
  "pallet-identity",
  "pallet-membership",
+ "pallet-preimage",
  "pallet-randomness-collective-flip",
+ "pallet-scheduler",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -12093,7 +12096,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12110,7 +12113,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "arrayvec 0.7.2",
  "frame-benchmarking",
@@ -12130,7 +12133,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12148,7 +12151,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -12161,7 +12164,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook-v1"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12190,7 +12193,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12234,7 +12237,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "parity-scale-codec 2.3.1",
  "sp-api",
@@ -12243,7 +12246,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "arbitrary",
  "cfg-if 1.0.0",
@@ -12276,7 +12279,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12293,7 +12296,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12330,7 +12333,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -12345,7 +12348,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "parity-scale-codec 2.3.1",
  "sp-api",
