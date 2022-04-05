@@ -1133,7 +1133,7 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
         );
     });
 }
-  
+
 // Macro for comparing fixed point u128.
 macro_rules! assert_approx {
     ($left:expr, $right:expr, $precision:expr $(,)?) => {
