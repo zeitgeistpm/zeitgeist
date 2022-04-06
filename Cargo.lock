@@ -12327,6 +12327,7 @@ version = "0.0.0"
 dependencies = [
  "arbitrary",
  "libfuzzer-sys",
+ "sp-runtime",
  "zeitgeist-primitives",
  "zrml-swaps",
 ]

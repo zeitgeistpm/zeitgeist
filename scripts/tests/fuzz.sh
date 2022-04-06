@@ -25,7 +25,15 @@ RIKIDDO_PALLET_FACT=1000
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/prediction-markets/fuzz pm_full_workflow -- -runs=$RUNS
 
 # --- Swaps Pallet fuzz tests ---
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz swaps_full_workflow -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_creation -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_joining -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_joining -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_joining -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz input_swap_exact_amount_pool_joining -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz output_swap_exact_amount_pool_joining -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_exiting -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_exiting -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_exiting -- -runs=$RUNS
 
 # --- Orderbook-v1 Pallet fuzz tests ---
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/orderbook-v1/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
