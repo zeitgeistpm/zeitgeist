@@ -16,7 +16,7 @@ fuzz_target!(|data: PoolCreation| {
             data.assets.into_iter().map(asset).collect(),
             data.base_asset.map(asset),
             data.market_id.into(),
-            scoring_rule(data.scoring_rule),
+            ScoringRule::CPMM,
             data.swap_fee.into(),
             data.weights.into(),
         );
@@ -30,7 +30,6 @@ struct PoolCreation {
     assets: Vec<(u128, u16)>,
     base_asset: Option<(u128, u16)>,
     market_id: u128,
-    scoring_rule: u128,
     swap_fee: Option<u128>,
     weights: Option<Vec<u128>>,
 }
@@ -123,13 +122,5 @@ pub fn asset(seed: (u128, u16)) -> Asset<u128> {
         2 => Asset::CombinatorialOutcome,
         3 => Asset::PoolShare(SerdeWrapper(seed0)),
         _ => Asset::Ztg,
-    }
-}
-
-pub fn scoring_rule(seed: u128) -> ScoringRule {
-    let module = seed % 2;
-    match module {
-        0 => ScoringRule::CPMM,
-        _ => ScoringRule::RikiddoSigmoidFeeMarketEma,
     }
 }

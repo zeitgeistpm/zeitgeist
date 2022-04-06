@@ -12326,6 +12326,7 @@ name = "zrml-swaps-fuzz"
 version = "0.0.0"
 dependencies = [
  "arbitrary",
+ "frame-support",
  "libfuzzer-sys",
  "sp-runtime",
  "zeitgeist-primitives",

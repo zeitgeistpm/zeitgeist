@@ -58,6 +58,7 @@ libfuzzer-sys = "0.4"
 zrml-swaps = { features = ["mock"], path = ".." }
 zeitgeist-primitives = { path = "../../../primitives" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/substrate" }
 
 [package]
 authors = ["Automatically generated"]
