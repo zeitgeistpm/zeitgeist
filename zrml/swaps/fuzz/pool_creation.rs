@@ -2,11 +2,14 @@
 
 use libfuzzer_sys::fuzz_target;
 
-use zeitgeist_primitives::types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper};
+use sp_runtime::traits::CheckedAdd;
+use zeitgeist_primitives::{
+    constants::{MaxAssets, MaxTotalWeight, MaxWeight, MinAssets, MinWeight},
+    traits::Swaps as SwapsTrait,
+    types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
+};
 
 use zrml_swaps::mock::{ExtBuilder, Swaps};
-
-use zeitgeist_primitives::traits::Swaps as SwapsTrait;
 
 fuzz_target!(|data: PoolCreation| {
     let mut ext = ExtBuilder::default().build();
@@ -25,7 +28,7 @@ fuzz_target!(|data: PoolCreation| {
 });
 
 #[derive(Debug, arbitrary::Arbitrary)]
-struct PoolCreation {
+pub struct PoolCreation {
     origin: u8,
     assets: Vec<(u128, u16)>,
     base_asset: Option<(u128, u16)>,
@@ -34,9 +37,84 @@ struct PoolCreation {
     weights: Option<Vec<u128>>,
 }
 
+pub fn get_valid_pool_id(data: PoolCreation) -> Option<PoolId> {
+    let assets = data.assets;
+    let weights = data.weights;
+    let swap_fee = data.swap_fee;
+
+    if assets.len() < usize::from(MinAssets::get()) {
+        // below bound
+        return None;
+    }
+
+    if assets.len() > usize::from(MaxAssets::get()) {
+        // above bound
+        return None;
+    }
+
+    if swap_fee.is_none() {
+        // swap fee not present
+        return None;
+    }
+
+    if weights.clone().is_none() {
+        // weights not present
+        return None;
+    }
+
+    let weights_unwrapped = weights.clone().unwrap();
+
+    if assets.len() != weights.clone().unwrap().len() {
+        // assets length and weights length not equal
+        return None;
+    }
+
+    let mut weight_sum = 0;
+    for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
+        /*
+        let free_balance = T::Shares::free_balance(asset, &data.origin);
+        if free_balance < MinLiquidity::get() {
+            // insufficient balance
+            return None;
+        }
+        */
+        if weight < MinWeight::get() {
+            return None;
+        }
+        if weight > MaxWeight::get() {
+            return None;
+        }
+        let weight_sum_opt = weight_sum.checked_add(&weight);
+        if weight_sum_opt.is_none() {
+            return None;
+        }
+        weight_sum = weight_sum_opt.unwrap();
+    }
+
+    if weight_sum > MaxTotalWeight::get() {
+        return None;
+    }
+
+    let pool_id_result = Swaps::create_pool(
+        data.origin.into(),
+        assets.into_iter().map(asset).collect(),
+        data.base_asset.map(asset),
+        data.market_id.into(),
+        ScoringRule::CPMM,
+        data.swap_fee.into(),
+        weights.into(),
+    );
+
+    if pool_id_result.is_err() {
+        return None;
+    }
+
+    Some(pool_id_result.unwrap())
+}
+
 pub fn get_sample_pool_id() -> PoolId {
     0
-    /* 
+    /*
     fuzz_target!(|data: PoolCreation| {
         let mut ext = ExtBuilder::default().build();
         let pool_id_opt = ext.execute_with(|| {
