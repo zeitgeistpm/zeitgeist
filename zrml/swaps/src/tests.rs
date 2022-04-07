@@ -16,6 +16,7 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_rikiddo::traits::RikiddoMVPallet;
+use more_asserts::{assert_le, assert_ge};
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
@@ -1292,18 +1293,17 @@ fn join_pool_exit_pool_does_not_create_extra_tokens() {
         ));
         assert_ok!(Swaps::pool_exit(Origin::signed(CHARLIE), 0, amount, vec![0, 0, 0, 0]));
 
-        // It's not true that the balances are _exactly_ the same. But they only vary up to
-        // negligible precision!
+        // Check that the pool retains more tokens than before, and that Charlie loses some tokens
+        // due to fees.
         let pool_account_id = Swaps::pool_account_id(0);
-        let precision = 30;
-        assert_approx!(Currencies::free_balance(ASSET_A, &pool_account_id), _100, precision);
-        assert_approx!(Currencies::free_balance(ASSET_B, &pool_account_id), _100, precision);
-        assert_approx!(Currencies::free_balance(ASSET_C, &pool_account_id), _100, precision);
-        assert_approx!(Currencies::free_balance(ASSET_D, &pool_account_id), _100, precision);
-        assert_approx!(Currencies::free_balance(ASSET_A, &CHARLIE), _100, precision);
-        assert_approx!(Currencies::free_balance(ASSET_B, &CHARLIE), _100, precision);
-        assert_approx!(Currencies::free_balance(ASSET_C, &CHARLIE), _100, precision);
-        assert_approx!(Currencies::free_balance(ASSET_D, &CHARLIE), _100, precision);
+        assert_ge!(Currencies::free_balance(ASSET_A, &pool_account_id), _100);
+        assert_ge!(Currencies::free_balance(ASSET_B, &pool_account_id), _100);
+        assert_ge!(Currencies::free_balance(ASSET_C, &pool_account_id), _100);
+        assert_ge!(Currencies::free_balance(ASSET_D, &pool_account_id), _100);
+        assert_le!(Currencies::free_balance(ASSET_A, &CHARLIE), _100);
+        assert_le!(Currencies::free_balance(ASSET_B, &CHARLIE), _100);
+        assert_le!(Currencies::free_balance(ASSET_C, &CHARLIE), _100);
+        assert_le!(Currencies::free_balance(ASSET_D, &CHARLIE), _100);
     });
 }
 
