@@ -144,11 +144,9 @@ mod pallet {
                     Ok(())
                 },
                 fee: |amount: BalanceOf<T>| {
-                    let exit_fee_amount = bmul(
-                        amount.saturated_into(),
-                        Self::calc_exit_fee(&pool).saturated_into(),
-                    )?
-                    .saturated_into();
+                    let exit_fee_amount =
+                        bmul(amount.saturated_into(), Self::calc_exit_fee(&pool).saturated_into())?
+                            .saturated_into();
                     Ok(exit_fee_amount)
                 },
                 who: who_clone,
