@@ -96,6 +96,9 @@ zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disput
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
 
+[dev-dependencies]
+sp-io = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
+
 [features]
 default = ["std"]
 parachain = [

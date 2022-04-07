@@ -20,11 +20,6 @@ mod xcm_config;
 pub use parachain_params::*;
 pub use parameters::*;
 
-#[cfg(feature = "parachain")]
-use parachain_staking::migrations::{
-    PurgeStaleStorage, RemoveExitQueue, SplitCandidateStateToDecreasePoV,
-};
-
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
@@ -73,21 +68,6 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-#[cfg(feature = "parachain")]
-type Executive = frame_executive::Executive<
-    Runtime,
-    Block,
-    frame_system::ChainContext<Runtime>,
-    Runtime,
-    AllPalletsWithSystem,
-    (
-        PurgeStaleStorage<Runtime>,
-        RemoveExitQueue<Runtime>,
-        SplitCandidateStateToDecreasePoV<Runtime>,
-    ),
->;
-
-#[cfg(not(feature = "parachain"))]
 type Executive = frame_executive::Executive<
     Runtime,
     Block,
