@@ -6,6 +6,7 @@ use crate::{
     Config, SubsidyProviders,
 };
 use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
+use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::{
@@ -16,7 +17,6 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_rikiddo::traits::RikiddoMVPallet;
-use more_asserts::{assert_le, assert_ge};
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
