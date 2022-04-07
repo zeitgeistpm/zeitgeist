@@ -3,7 +3,7 @@
 use libfuzzer_sys::fuzz_target;
 use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 mod pool_creation;
-use pool_creation::{get_valid_pool_id, PoolCreation};
+use pool_creation::{get_valid_pool_id, ValidPoolCreation};
 
 fuzz_target!(|data: GeneralPoolExiting| {
     let mut ext = ExtBuilder::default().build();
@@ -26,5 +26,5 @@ struct GeneralPoolExiting {
     origin: u8,
     pool_amount: u128,
     min_assets_out: Vec<u128>,
-    pool_creation: PoolCreation,
+    pool_creation: ValidPoolCreation,
 }

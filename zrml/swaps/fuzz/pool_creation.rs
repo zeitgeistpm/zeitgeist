@@ -11,6 +11,8 @@ use zeitgeist_primitives::{
 
 use zrml_swaps::mock::{ExtBuilder, Swaps};
 
+use arbitrary::{Result, Unstructured};
+
 fuzz_target!(|data: PoolCreation| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
@@ -37,72 +39,91 @@ pub struct PoolCreation {
     weights: Option<Vec<u128>>,
 }
 
-pub fn get_valid_pool_id(data: PoolCreation) -> Option<PoolId> {
-    let assets = data.assets;
-    let weights = data.weights;
-    let swap_fee = data.swap_fee;
+#[derive(Debug)]
+pub struct ValidPoolCreation {
+    origin: u8,
+    assets: Vec<(u128, u16)>,
+    base_asset: (u128, u16),
+    market_id: u128,
+    swap_fee: u128,
+    weights: Vec<u128>,
+}
 
-    if assets.len() < usize::from(MinAssets::get()) {
-        // below bound
-        return None;
-    }
+impl<'a> arbitrary::Arbitrary<'a> for ValidPoolCreation {
+    fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
+        let origin = u8::arbitrary(u)?;
 
-    if assets.len() > usize::from(MaxAssets::get()) {
-        // above bound
-        return None;
-    }
-
-    if swap_fee.is_none() {
-        // swap fee not present
-        return None;
-    }
-
-    if weights.clone().is_none() {
-        // weights not present
-        return None;
-    }
-
-    let weights_unwrapped = weights.clone().unwrap();
-
-    if assets.len() != weights.clone().unwrap().len() {
-        // assets length and weights length not equal
-        return None;
-    }
-
-    let mut weight_sum = 0;
-    for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
-        /*
-        let free_balance = T::Shares::free_balance(asset, &data.origin);
-        if free_balance < MinLiquidity::get() {
-            // insufficient balance
-            return None;
+        let asset_iter = u.arbitrary_iter::<(u128, u16)>()?;
+        let mut assets: Vec<(u128, u16)> = Vec::new();
+        for (index, elem_result) in asset_iter.enumerate() {
+            let elem = elem_result?;
+            assets.insert(index, elem);
         }
-        */
-        if weight < MinWeight::get() {
-            return None;
-        }
-        if weight > MaxWeight::get() {
-            return None;
-        }
-        let weight_sum_opt = weight_sum.checked_add(&weight);
-        if weight_sum_opt.is_none() {
-            return None;
-        }
-        weight_sum = weight_sum_opt.unwrap();
-    }
 
-    if weight_sum > MaxTotalWeight::get() {
-        return None;
-    }
+        let base_asset = (u128::arbitrary(u)?, u16::arbitrary(u)?);
+        let market_id = u128::arbitrary(u)?;
+        let swap_fee = u128::arbitrary(u)?;
 
+        let weight_iter = u.arbitrary_iter::<u128>()?;
+        let mut weights: Vec<u128> = Vec::new();
+        for (index, elem_result) in weight_iter.enumerate() {
+            let elem = elem_result?;
+            weights.insert(index, elem);
+        }
+
+        if assets.len() < usize::from(MinAssets::get()) {
+            // below bound
+            return Err(<arbitrary::Error>::IncorrectFormat.into());
+        }
+        if assets.len() > usize::from(MaxAssets::get()) {
+            // above bound
+            return Err(<arbitrary::Error>::IncorrectFormat.into());
+        }
+
+        if assets.len() != weights.clone().len() {
+            // assets length and weights length not equal
+            return Err(<arbitrary::Error>::IncorrectFormat.into());
+        }
+
+        let mut weight_sum = 0;
+        for (asset, weight) in assets.iter().copied().zip(weights.clone()) {
+            /*
+            let free_balance = T::Shares::free_balance(asset, &data.origin);
+            if free_balance < MinLiquidity::get() {
+                // insufficient balance
+                return Err(<arbitrary::Error>::IncorrectFormat.into());
+            }
+            */
+            if weight < MinWeight::get() {
+                return Err(<arbitrary::Error>::IncorrectFormat.into());
+            }
+            if weight > MaxWeight::get() {
+                return Err(<arbitrary::Error>::IncorrectFormat.into());
+            }
+            let weight_sum_opt = weight_sum.checked_add(&weight);
+            if weight_sum_opt.is_none() {
+                return Err(<arbitrary::Error>::IncorrectFormat.into());
+            }
+            weight_sum = weight_sum_opt.unwrap();
+        }
+
+        if weight_sum > MaxTotalWeight::get() {
+            return Err(<arbitrary::Error>::IncorrectFormat.into());
+        }
+
+        Ok(ValidPoolCreation { origin, assets, base_asset, market_id, swap_fee, weights })
+    }
+}
+
+pub fn get_valid_pool_id(data: ValidPoolCreation) -> Option<PoolId> {
     let pool_id_result = Swaps::create_pool(
         data.origin.into(),
-        assets.into_iter().map(asset).collect(),
-        data.base_asset.map(asset),
+        data.assets.into_iter().map(asset).collect(),
+        Some(data.base_asset).map(asset),
         data.market_id.into(),
         ScoringRule::CPMM,
-        data.swap_fee.into(),
-        weights.into(),
+        Some(data.swap_fee).into(),
+        Some(data.weights).into(),
     );
 
     if pool_id_result.is_err() {
@@ -110,81 +131,6 @@ pub fn get_valid_pool_id(data: PoolCreation) -> Option<PoolId> {
     }
 
     Some(pool_id_result.unwrap())
-}
-
-pub fn get_sample_pool_id() -> PoolId {
-    0
-    /*
-    fuzz_target!(|data: PoolCreation| {
-        let mut ext = ExtBuilder::default().build();
-        let pool_id_opt = ext.execute_with(|| {
-            let pool_id_result = Swaps::create_pool(
-                data.origin.into(),
-                data.assets.into_iter().map(asset).collect(),
-                data.base_asset.map(asset),
-                data.market_id.into(),
-                scoring_rule(data.scoring_rule),
-                data.swap_fee.into(),
-                data.weights.into(),
-            );
-            match pool_id_result {
-                Ok(pool_id) => {
-                    return Some(pool_id);
-                }
-                Err(_) => None,
-            }
-        });
-        match pool_id_opt {
-            Some(pool_id) => return pool_id,
-            None =>
-            /*repeat the fuzz_target with other data*/
-            {
-                continue;
-            }
-        }
-        let _ = ext.commit_all();
-    });
-    */
-
-    /*
-    specific self selected pool id
-
-    use sp_runtime::DispatchError;
-    use zeitgeist_primitives::{constants::BASE};
-    use zeitgeist_primitives::types::{MarketId};
-    use zrml_swaps::mock::{BOB};
-
-    const _2: u128 = 2 * BASE;
-
-    pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
-    pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
-    pub const ASSET_C: Asset<MarketId> = Asset::CategoricalOutcome(0, 67);
-    pub const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 68);
-    pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
-
-    pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
-
-    ExtBuilder::default().build().execute_with(|| {
-        // TODO this should be the first random (with fuzz target), but valid and created pool
-        let pool_id_result: Result<PoolId, DispatchError> = Swaps::create_pool(
-            BOB,
-            ASSETS.iter().cloned().collect(),
-            Some(ASSETS.last().unwrap().clone()),
-            0,
-            ScoringRule::CPMM,
-            Some(0),
-            Some(vec![_2, _2, _2, _2]),
-        );
-        // TODO hand over the valid pool id to the other fuzz_target tests (dispatch calls)
-        match pool_id_result {
-            Ok(pool_id) => {
-                return pool_id;
-            }
-            Err(_) => panic!("Failed Swaps::create_pool"),
-        }
-    });
-    panic!("Pool id not generated!");
-    */
 }
 
 pub fn asset(seed: (u128, u16)) -> Asset<u128> {

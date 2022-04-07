@@ -4,7 +4,7 @@ use libfuzzer_sys::fuzz_target;
 use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 
 mod pool_creation;
-use pool_creation::{asset, get_valid_pool_id, PoolCreation};
+use pool_creation::{asset, get_valid_pool_id, ValidPoolCreation};
 
 fuzz_target!(|data: ExactAmountPoolJoining| {
     let mut ext = ExtBuilder::default().build();
@@ -29,5 +29,5 @@ struct ExactAmountPoolJoining {
     asset: (u128, u16),
     pool_amount: u128,
     max_asset_amount: u128,
-    pool_creation: PoolCreation,
+    pool_creation: ValidPoolCreation,
 }
