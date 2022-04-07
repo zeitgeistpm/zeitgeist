@@ -57,7 +57,14 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolCreation {
         let mut assets: Vec<(u128, u16)> = Vec::new();
         for (index, elem_result) in asset_iter.enumerate() {
             let elem = elem_result?;
-            assets.insert(index, elem);
+            if assets.len() <= usize::from(MaxAssets::get()) {
+                // in the bound
+                assets.insert(index, elem);
+            }
+        }
+        if assets.len() < usize::from(MinAssets::get()) {
+            // below bound
+            return Err(<arbitrary::Error>::IncorrectFormat.into());
         }
 
         let base_asset = (u128::arbitrary(u)?, u16::arbitrary(u)?);
@@ -66,18 +73,19 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolCreation {
 
         let weight_iter = u.arbitrary_iter::<u128>()?;
         let mut weights: Vec<u128> = Vec::new();
-        for (index, elem_result) in weight_iter.enumerate() {
+        let mut weight_sum = 0;
+        for elem_result in weight_iter {
             let elem = elem_result?;
-            weights.insert(index, elem);
-        }
-
-        if assets.len() < usize::from(MinAssets::get()) {
-            // below bound
-            return Err(<arbitrary::Error>::IncorrectFormat.into());
-        }
-        if assets.len() > usize::from(MaxAssets::get()) {
-            // above bound
-            return Err(<arbitrary::Error>::IncorrectFormat.into());
+            let weight_sum_opt = weight_sum.checked_add(&elem);
+            if let Some(weight_sum_value) = weight_sum_opt {
+                if elem <= MaxWeight::get()
+                    && elem >= MinWeight::get()
+                    && weight_sum_value <= MaxTotalWeight::get()
+                {
+                    weights.push(elem);
+                    weight_sum = weight_sum_value;
+                }
+            }
         }
 
         if assets.len() != weights.clone().len() {
@@ -85,7 +93,6 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolCreation {
             return Err(<arbitrary::Error>::IncorrectFormat.into());
         }
 
-        let mut weight_sum = 0;
         for (asset, weight) in assets.iter().copied().zip(weights.clone()) {
             /*
             let free_balance = T::Shares::free_balance(asset, &data.origin);
@@ -94,21 +101,6 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolCreation {
                 return Err(<arbitrary::Error>::IncorrectFormat.into());
             }
             */
-            if weight < MinWeight::get() {
-                return Err(<arbitrary::Error>::IncorrectFormat.into());
-            }
-            if weight > MaxWeight::get() {
-                return Err(<arbitrary::Error>::IncorrectFormat.into());
-            }
-            let weight_sum_opt = weight_sum.checked_add(&weight);
-            if weight_sum_opt.is_none() {
-                return Err(<arbitrary::Error>::IncorrectFormat.into());
-            }
-            weight_sum = weight_sum_opt.unwrap();
-        }
-
-        if weight_sum > MaxTotalWeight::get() {
-            return Err(<arbitrary::Error>::IncorrectFormat.into());
         }
 
         Ok(ValidPoolCreation { origin, assets, base_asset, market_id, swap_fee, weights })
