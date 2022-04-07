@@ -146,7 +146,7 @@ mod pallet {
                 fee: |amount: BalanceOf<T>| {
                     let exit_fee_amount = bmul(
                         amount.saturated_into(),
-                        Self::_calc_exit_fee(&pool).saturated_into(),
+                        Self::calc_exit_fee(&pool).saturated_into(),
                     )?
                     .saturated_into();
                     Ok(exit_fee_amount)
@@ -1199,7 +1199,7 @@ mod pallet {
         }
 
         /// Calculate the exit fee percentage for `pool`.
-        fn _calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
+        fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
             // We don't charge exit fees on stale pools (no need to punish LPs for leaving the
             // pool)!
             if pool.pool_status == PoolStatus::Stale {
