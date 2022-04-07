@@ -75,6 +75,11 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolCreation {
         let mut weights: Vec<u128> = Vec::new();
         let mut weight_sum = 0;
         for elem_result in weight_iter {
+            if weights.clone().len() == assets.len() {
+                // weights length and assets length need to be equal to get a valid pool creation
+                // enough weights generated
+                break;
+            }
             let elem = elem_result?;
             let weight_sum_opt = weight_sum.checked_add(&elem);
             if let Some(weight_sum_value) = weight_sum_opt {
@@ -85,14 +90,16 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolCreation {
                     weights.push(elem);
                     weight_sum = weight_sum_value;
                 }
+            } else {
+                break;
             }
         }
 
         if assets.len() != weights.clone().len() {
-            // assets length and weights length not equal
             return Err(<arbitrary::Error>::IncorrectFormat.into());
         }
 
+        // TODO add last checks to generate a valid pool
         for (asset, weight) in assets.iter().copied().zip(weights.clone()) {
             /*
             let free_balance = T::Shares::free_balance(asset, &data.origin);
