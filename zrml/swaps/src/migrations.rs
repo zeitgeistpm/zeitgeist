@@ -99,14 +99,38 @@ mod tests {
     fn test_on_runtime_upgrade() {
         ExtBuilder::default().build().execute_with(|| {
             // TODO Put both vectors into `test_data`!
-            let old_pools: Vec<Option<PoolDeprecated<Balance, MarketId>>> = vec![];
-            let expected_pools: Vec<Pool<Balance, MarketId>> = vec![];
+            let old_pools: Vec<Option<PoolDeprecated<Balance, MarketId>>> = vec![
+                Some(PoolDeprecated{
+                    assets: vec![Asset::CategoricalOutcome(0, 0), Asset::CategoricalOutcome(0, 1)],
+                    base_asset: None,
+                    market_id: 0,
+                    pool_status: PoolStatus::Active,
+                    scoring_rule: ScoringRule::CPMM,
+                    swap_fee: None,
+                    total_subsidy: None,
+                    total_weight: None,
+                    weights: None,
+                })
+            ];
             populate_test_data::<Blake2_128Concat, PoolId, Option<PoolDeprecated<Balance, MarketId>>>(
                 &SWAPS, &POOLS, old_pools,
             );
+            let expected_pools: Vec<Pool<Balance, MarketId>> = vec![
+                Pool{
+                    assets: vec![Asset::CategoricalOutcome(0, 0), Asset::CategoricalOutcome(0, 1)],
+                    base_asset: Asset::Ztg,
+                    market_id: 0,
+                    pool_status: PoolStatus::Active,
+                    scoring_rule: ScoringRule::CPMM,
+                    swap_fee: None,
+                    total_subsidy: None,
+                    total_weight: None,
+                    weights: None,
+                }
+            ];
             MigratePoolBaseAsset::<Runtime>::on_runtime_upgrade();
             for (key, pool_expected) in expected_pools.iter().enumerate() {
-                let storage_hash = key_to_hash::<Blake2_128Concat, u32>(key);
+                let storage_hash = key_to_hash::<Blake2_128Concat, PoolId>(key);
                 let pool_actual = get_storage_value::<Option<Pool<Balance, MarketId>>>(
                     &SWAPS,
                     &POOLS,
