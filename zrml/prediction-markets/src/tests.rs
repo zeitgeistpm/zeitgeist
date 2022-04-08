@@ -1,6 +1,6 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{mock::*, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
+use crate::{mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
 use core::ops::Range;
 use frame_support::{
     assert_err, assert_noop, assert_ok,
@@ -623,6 +623,12 @@ fn it_allows_to_redeem_shares() {
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
+        assert!(event_exists(Event::TokensRedeemed(
+            0,
+            Asset::CategoricalOutcome(0, 1),
+            CENT,
+            CHARLIE
+        )));
     });
 }
 
@@ -915,4 +921,9 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
         0,
         (0..outcome_assets_len + 1).map(|_| BASE).collect(),
     )
+}
+
+fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
+    let evt = crate::mock::Event::PredictionMarkets(raw_evt);
+    frame_system::Pallet::<Runtime>::events().iter().any(|e| e.event == evt)
 }

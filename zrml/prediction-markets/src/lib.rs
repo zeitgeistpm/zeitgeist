@@ -885,13 +885,20 @@ mod pallet {
 
                 // Pay out the winner.
                 let remaining_bal = CurrencyOf::<T>::free_balance(&market_account);
+                let actual_payout = payout.min(remaining_bal);
 
                 CurrencyOf::<T>::transfer(
                     &market_account,
                     &sender,
-                    payout.min(remaining_bal),
+                    actual_payout,
                     ExistenceRequirement::AllowDeath,
                 )?;
+                Self::deposit_event(Event::TokensRedeemed(
+                    market_id,
+                    currency_id,
+                    actual_payout,
+                    sender.clone(),
+                ));
             }
 
             // Weight correction
@@ -1268,6 +1275,13 @@ mod pallet {
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount, who\]
+        TokensRedeemed(
+            MarketIdOf<T>,
+            Asset<MarketIdOf<T>>,
+            BalanceOf<T>,
+            <T as frame_system::Config>::AccountId,
+        ),
     }
 
     #[pallet::hooks]
