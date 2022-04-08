@@ -893,12 +893,17 @@ mod pallet {
                     actual_payout,
                     ExistenceRequirement::AllowDeath,
                 )?;
-                Self::deposit_event(Event::TokensRedeemed(
-                    market_id,
-                    currency_id,
-                    actual_payout,
-                    sender.clone(),
-                ));
+                // The if-check prevents scalar markets to emit events even if sender only owns one
+                // of the outcome tokens.
+                if balance != <BalanceOf<T>>::zero() {
+                    Self::deposit_event(Event::TokensRedeemed(
+                        market_id,
+                        currency_id,
+                        balance,
+                        actual_payout,
+                        sender.clone(),
+                    ));
+                }
             }
 
             // Weight correction
@@ -1275,10 +1280,11 @@ mod pallet {
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount, who\]
+        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount_redeemed, payout, who\]
         TokensRedeemed(
             MarketIdOf<T>,
             Asset<MarketIdOf<T>>,
+            BalanceOf<T>,
             BalanceOf<T>,
             <T as frame_system::Config>::AccountId,
         ),
