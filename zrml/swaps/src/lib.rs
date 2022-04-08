@@ -1151,7 +1151,6 @@ mod pallet {
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
             T::Shares::deposit(shares_id, to, amount)?;
-            Self::deposit_event(Event::PoolSharesMinted(pool_id, to.clone(), amount));
             Ok(())
         }
 
