@@ -90,7 +90,7 @@ mod tests {
     use core::fmt::Debug;
     use frame_support::{storage::migration::get_storage_value, Blake2_128Concat, StorageHasher};
     use parity_scale_codec::Encode;
-    use zeitgeist_primitives::types::PoolId;
+    use zeitgeist_primitives::types::{PoolId, ScalarPosition};
 
     type Balance = BalanceOf<Runtime>;
     type MarketId = <Runtime as Config>::MarketId;
@@ -98,36 +98,10 @@ mod tests {
     #[test]
     fn test_on_runtime_upgrade() {
         ExtBuilder::default().build().execute_with(|| {
-            // TODO Put both vectors into `test_data`!
-            let old_pools: Vec<Option<PoolDeprecated<Balance, MarketId>>> = vec![
-                Some(PoolDeprecated{
-                    assets: vec![Asset::CategoricalOutcome(0, 0), Asset::CategoricalOutcome(0, 1)],
-                    base_asset: None,
-                    market_id: 0,
-                    pool_status: PoolStatus::Active,
-                    scoring_rule: ScoringRule::CPMM,
-                    swap_fee: None,
-                    total_subsidy: None,
-                    total_weight: None,
-                    weights: None,
-                })
-            ];
+            let (old_pools, expected_pools) = create_test_data();
             populate_test_data::<Blake2_128Concat, PoolId, Option<PoolDeprecated<Balance, MarketId>>>(
                 SWAPS, POOLS, old_pools,
             );
-            let expected_pools: Vec<Pool<Balance, MarketId>> = vec![
-                Pool{
-                    assets: vec![Asset::CategoricalOutcome(0, 0), Asset::CategoricalOutcome(0, 1)],
-                    base_asset: Asset::Ztg,
-                    market_id: 0,
-                    pool_status: PoolStatus::Active,
-                    scoring_rule: ScoringRule::CPMM,
-                    swap_fee: None,
-                    total_subsidy: None,
-                    total_weight: None,
-                    weights: None,
-                }
-            ];
             MigratePoolBaseAsset::<Runtime>::on_runtime_upgrade();
             for (key, pool_expected) in expected_pools.iter().enumerate() {
                 let storage_hash = key_to_hash::<Blake2_128Concat, PoolId>(key);
@@ -163,5 +137,67 @@ mod tests {
         <K as TryFrom<usize>>::Error: Debug,
     {
         K::try_from(key).unwrap().using_encoded(H::hash).as_ref().to_vec()
+    }
+
+    fn create_test_data()
+    -> (Vec<Option<PoolDeprecated<Balance, MarketId>>>, Vec<Pool<Balance, MarketId>>) {
+        let mut weights = BTreeMap::new();
+        weights.insert(Asset::ScalarOutcome(1, ScalarPosition::Long), 567);
+        weights.insert(Asset::ScalarOutcome(1, ScalarPosition::Short), 678);
+        let old_pools: Vec<Option<PoolDeprecated<Balance, MarketId>>> = vec![
+            Some(PoolDeprecated {
+                assets: vec![Asset::CategoricalOutcome(0, 0), Asset::CategoricalOutcome(0, 1)],
+                base_asset: None,
+                market_id: 0,
+                pool_status: PoolStatus::Active,
+                scoring_rule: ScoringRule::CPMM,
+                swap_fee: None,
+                total_subsidy: None,
+                total_weight: None,
+                weights: None,
+            }),
+            Some(PoolDeprecated {
+                assets: vec![
+                    Asset::ScalarOutcome(1, ScalarPosition::Long),
+                    Asset::ScalarOutcome(1, ScalarPosition::Short),
+                ],
+                base_asset: Some(Asset::CombinatorialOutcome),
+                market_id: 123,
+                pool_status: PoolStatus::Stale,
+                scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma,
+                swap_fee: Some(234),
+                total_subsidy: Some(345),
+                total_weight: Some(456),
+                weights: Some(weights.clone()),
+            }),
+        ];
+        let expected_pools: Vec<Pool<Balance, MarketId>> = vec![
+            Pool {
+                assets: vec![Asset::CategoricalOutcome(0, 0), Asset::CategoricalOutcome(0, 1)],
+                base_asset: Asset::Ztg,
+                market_id: 0,
+                pool_status: PoolStatus::Active,
+                scoring_rule: ScoringRule::CPMM,
+                swap_fee: None,
+                total_subsidy: None,
+                total_weight: None,
+                weights: None,
+            },
+            Pool {
+                assets: vec![
+                    Asset::ScalarOutcome(1, ScalarPosition::Long),
+                    Asset::ScalarOutcome(1, ScalarPosition::Short),
+                ],
+                base_asset: Asset::CombinatorialOutcome,
+                market_id: 123,
+                pool_status: PoolStatus::Stale,
+                scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma,
+                swap_fee: Some(234),
+                total_subsidy: Some(345),
+                total_weight: Some(456),
+                weights: Some(weights.clone()),
+            },
+        ];
+        (old_pools, expected_pools)
     }
 }
