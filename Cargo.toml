@@ -22,9 +22,5 @@ members = [
 ]
 resolver = "2"
 
-[patch."https://github.com/purestake/nimbus"]
-nimbus-consensus = { git = "https://github.com/zeitgeistpm/nimbus", branch = "moonbeam-polkadot-v0.9.16" }
-nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "moonbeam-polkadot-v0.9.16" }
-
 [patch."https://github.com/purestake/moonbeam"]
 parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "parachain-staking-migrations-3" }

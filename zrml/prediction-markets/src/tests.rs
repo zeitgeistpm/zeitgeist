@@ -1,11 +1,10 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{mock::*, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
-use core::{cell::RefCell, ops::Range};
+use core::ops::Range;
 use frame_support::{
     assert_err, assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
-    storage_root,
     traits::Get,
 };
 
@@ -248,7 +247,6 @@ fn it_allows_to_deploy_a_pool() {
             <Runtime as crate::Config>::PalletId::get().into_account(),
             100 * BASE
         ));
-        assert_ok!(Tokens::deposit(Asset::Ztg, &BOB, 100 * BASE));
 
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
@@ -629,102 +627,49 @@ fn it_allows_to_redeem_shares() {
 }
 
 #[test]
-fn create_market_and_deploy_assets_is_identical_to_sequential_calls() {
+fn create_market_and_deploy_assets_results_in_expected_balances() {
     let oracle = ALICE;
     let period = MarketPeriod::Block(0..42);
     let metadata = gen_metadata(42);
-    let creation = MarketCreation::Permissionless;
     let category_count = 4;
     let assets = MarketType::Categorical(category_count);
-    let extra_amount = 20 * BASE;
-    let keep_amount = 10 * BASE;
+    let extra_amount = 10 * BASE;
     let min_liqudity = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
-    let amount = min_liqudity + extra_amount;
+    let amount = min_liqudity + 2 * extra_amount;
     let weights = vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 5];
     let amount_base_asset = amount;
     let amounts = vec![amount - extra_amount, amount, amount, amount];
-    let keep = vec![keep_amount, 0, 0, 0];
     let pool_id = 0;
-
-    let first_state: RefCell<Vec<u8>> = RefCell::new(vec![]);
-    let second_state = RefCell::new(vec![]);
 
     // Execute the combined convenience function
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             oracle,
-            period.clone(),
-            metadata.clone(),
+            period,
+            metadata,
             assets,
             MarketDisputeMechanism::SimpleDisputes,
-            amount_base_asset.clone(),
-            amounts.clone(),
-            weights.clone(),
-            keep.clone()
+            amount_base_asset,
+            amounts,
+            weights,
         ));
 
-        *first_state.borrow_mut() = storage_root();
-    });
-
-    // Execute every command included in the convencience function one-by-one
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
-            Origin::signed(ALICE),
-            oracle,
-            period.clone(),
-            metadata,
-            creation,
-            category_count,
-            MarketDisputeMechanism::SimpleDisputes,
-            ScoringRule::CPMM
-        ));
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, amount));
-        assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
-            Origin::signed(ALICE),
-            pool_id,
-            weights
-        ));
-
-        for (idx, amount) in
-            amounts.into_iter().enumerate().filter(|(_, amount)| *amount > min_liqudity)
-        {
-            assert_ok!(Swaps::pool_join_with_exact_asset_amount(
-                Origin::signed(ALICE),
-                pool_id,
-                Asset::CategoricalOutcome(0, idx as u16),
-                amount - min_liqudity,
-                0
-            ));
-        }
-
-        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
-            Origin::signed(ALICE),
-            pool_id,
-            Asset::Ztg,
-            amount_base_asset - min_liqudity,
-            0
-        ));
-
-        assert_ok!(Swaps::swap_exact_amount_in(
-            Origin::signed(ALICE),
-            pool_id,
-            Asset::CategoricalOutcome(0, 0),
-            amount - min_liqudity - keep[0],
-            Asset::Ztg,
-            0,
-            u128::MAX,
-        ));
-
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), keep_amount);
+        let pool_account = Swaps::pool_account_id(pool_id);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), extra_amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &ALICE), 0);
-        *second_state.borrow_mut() = storage_root();
-    });
 
-    // Compare resulting state
-    assert_eq!(*first_state.borrow(), *second_state.borrow());
+        assert_eq!(
+            Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account),
+            amount - extra_amount
+        );
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), amount);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
+        assert_eq!(System::account(&pool_account).data.free, amount);
+    });
 }
 
 #[test]
@@ -755,7 +700,6 @@ fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
         let min_subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get();
 
         // Give alice enough funds and subsidize one market
-        assert_ok!(Tokens::deposit(Asset::Ztg, &ALICE, min_subsidy));
         assert_ok!(Swaps::pool_join_subsidy(
             Origin::signed(ALICE),
             market_enough_subsidy,
