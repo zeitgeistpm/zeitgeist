@@ -939,10 +939,8 @@ mod pallet {
             let market_report = Report { at: current_block, by: sender.clone(), outcome };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
-                // TODO make this a conditional check
-                // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-
+                Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
                 Self::ensure_market_is_closed(&market.period)?;
 
                 let mut should_check_origin = false;
