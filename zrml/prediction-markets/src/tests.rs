@@ -869,7 +869,7 @@ fn full_scalar_market_lifecycle() {
         // check payouts is right for each CHARLIE and EVE
         let ztg_bal_charlie = Balances::free_balance(&CHARLIE);
         let ztg_bal_eve = Balances::free_balance(&EVE);
-        assert_eq!(ztg_bal_charlie, 98750 * CENT);  // 75 (LONG) + 12.5 (SHORT) + 900 (balance)
+        assert_eq!(ztg_bal_charlie, 98750 * CENT); // 75 (LONG) + 12.5 (SHORT) + 900 (balance)
         assert_eq!(ztg_bal_eve, 1000 * BASE);
         assert!(event_exists(Event::TokensRedeemed(
             0,
@@ -882,13 +882,13 @@ fn full_scalar_market_lifecycle() {
             0,
             Asset::ScalarOutcome(0, ScalarPosition::Short),
             50 * BASE,
-            1250 * CENT,  // 12.5
+            1250 * CENT, // 12.5
             CHARLIE
         )));
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
         let ztg_bal_eve_after = Balances::free_balance(&EVE);
-        assert_eq!(ztg_bal_eve_after, 101250 * CENT);  // 12.5 (SHORT) + 1000 (balance)
+        assert_eq!(ztg_bal_eve_after, 101250 * CENT); // 12.5 (SHORT) + 1000 (balance)
         assert!(!event_exists(Event::TokensRedeemed(
             0,
             Asset::ScalarOutcome(0, ScalarPosition::Long),
@@ -900,7 +900,7 @@ fn full_scalar_market_lifecycle() {
             0,
             Asset::ScalarOutcome(0, ScalarPosition::Short),
             50 * BASE,
-            1250 * CENT,  // 12.5
+            1250 * CENT, // 12.5
             EVE
         )));
     })
