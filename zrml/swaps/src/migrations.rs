@@ -48,7 +48,7 @@ impl<T: Config> OnRuntimeUpgrade for MigratePoolBaseAsset<T> {
         );
 
         for (key, value) in
-            storage_iter::<Option<PoolDeprecated<BalanceOf<T>, T::MarketId>>>(&SWAPS, &POOLS)
+            storage_iter::<Option<PoolDeprecated<BalanceOf<T>, T::MarketId>>>(SWAPS, POOLS)
         {
             if let Some(old_pool) = value {
                 let new_pool = Pool {
@@ -63,8 +63,8 @@ impl<T: Config> OnRuntimeUpgrade for MigratePoolBaseAsset<T> {
                     weights: old_pool.weights,
                 };
                 put_storage_value::<Option<Pool<BalanceOf<T>, T::MarketId>>>(
-                    &SWAPS,
-                    &POOLS,
+                    SWAPS,
+                    POOLS,
                     &key,
                     Some(new_pool),
                 );
@@ -113,7 +113,7 @@ mod tests {
                 })
             ];
             populate_test_data::<Blake2_128Concat, PoolId, Option<PoolDeprecated<Balance, MarketId>>>(
-                &SWAPS, &POOLS, old_pools,
+                SWAPS, POOLS, old_pools,
             );
             let expected_pools: Vec<Pool<Balance, MarketId>> = vec![
                 Pool{
@@ -132,8 +132,8 @@ mod tests {
             for (key, pool_expected) in expected_pools.iter().enumerate() {
                 let storage_hash = key_to_hash::<Blake2_128Concat, PoolId>(key);
                 let pool_actual = get_storage_value::<Option<Pool<Balance, MarketId>>>(
-                    &SWAPS,
-                    &POOLS,
+                    SWAPS,
+                    POOLS,
                     &storage_hash,
                 )
                 .unwrap()
