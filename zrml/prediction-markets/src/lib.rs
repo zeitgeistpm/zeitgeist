@@ -1562,15 +1562,11 @@ mod pallet {
                     return Err(Error::<T>::OutcomeMismatch.into());
                 }
             }
-            if let OutcomeReport::Scalar(ref inner) = outcome {
-                if let MarketType::Scalar(ref outcome_range) = market.market_type {
-                    ensure!(
-                        inner >= outcome_range.start() && inner <= outcome_range.end(),
-                        Error::<T>::OutcomeOutOfRange
-                    );
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
+            if let OutcomeReport::Scalar(_) = outcome {
+                ensure!(
+                    matches!(&market.market_type, MarketType::Scalar(_)),
+                    Error::<T>::OutcomeMismatch
+                );
             }
             Ok(())
         }
