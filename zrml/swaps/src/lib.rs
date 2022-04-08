@@ -16,7 +16,7 @@ mod consts;
 mod events;
 mod fixed;
 mod math;
-mod migrations;
+pub mod migrations;
 pub mod mock;
 mod tests;
 pub mod weights;
