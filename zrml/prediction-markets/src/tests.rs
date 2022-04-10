@@ -11,7 +11,10 @@ use frame_support::{
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::{AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT},
+    constants::{
+        AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT,
+        MILLISECS_PER_BLOCK,
+    },
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
@@ -677,8 +680,10 @@ fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
     ExtBuilder::default().build().execute_with(|| {
         // Create permissionless categorical market using Rikiddo.
         // One will have enough subsidy, one insufficient and the last not ready for activation.
-        let min_sub_period = <Runtime as crate::Config>::MinSubsidyPeriod::get();
-        let max_sub_period = <Runtime as crate::Config>::MaxSubsidyPeriod::get();
+        let min_sub_period =
+            <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
+        let max_sub_period =
+            <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
         for _ in 0..2 {
             simple_create_categorical_market::<Runtime>(
