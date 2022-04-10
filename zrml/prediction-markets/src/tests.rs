@@ -257,7 +257,7 @@ fn it_allows_to_deploy_a_pool() {
             ScoringRule::CPMM,
         );
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE));
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
@@ -884,7 +884,7 @@ fn full_scalar_market_lifecycle() {
             ScoringRule::CPMM
         ));
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
 
         // check balances
         let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
@@ -956,7 +956,7 @@ fn scalar_market_correctly_resolves_on_out_of_range_outcomes_below_threshold() {
             0..100,
             ScoringRule::CPMM,
         );
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
         assert_ok!(Tokens::transfer(
             Origin::signed(CHARLIE),
             EVE,
@@ -1003,7 +1003,7 @@ fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
             0..100,
             ScoringRule::CPMM,
         );
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
         assert_ok!(Tokens::transfer(
             Origin::signed(CHARLIE),
             EVE,
@@ -1074,7 +1074,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
 }
 
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
-    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE,));
+    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
         <Runtime as crate::Config>::PalletId::get().into_account(),
