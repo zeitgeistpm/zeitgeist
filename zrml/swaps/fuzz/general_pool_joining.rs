@@ -4,13 +4,12 @@ use libfuzzer_sys::fuzz_target;
 
 use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 mod pool_creation;
-use pool_creation::{get_valid_pool_id, ValidPoolCreation};
+use pool_creation::{get_valid_pool_id, ValidPoolData};
 
-fuzz_target!(|data: GeneralPoolJoining| {
+fuzz_target!(|data: GeneralPoolJoiningData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
-        let pool_id_opt = get_valid_pool_id(data.pool_creation);
-        if let Some(pool_id) = pool_id_opt {
+        if let Ok(pool_id) = get_valid_pool_id(data.pool_creation) {
             // join a pool with a valid pool id
             let _ = Swaps::pool_join(
                 Origin::signed(data.origin.into()),
@@ -25,9 +24,9 @@ fuzz_target!(|data: GeneralPoolJoining| {
 });
 
 #[derive(Debug, arbitrary::Arbitrary)]
-struct GeneralPoolJoining {
+struct GeneralPoolJoiningData {
     origin: u8,
     pool_amount: u128,
     max_assets_in: Vec<u128>,
-    pool_creation: ValidPoolCreation,
+    pool_creation: ValidPoolData,
 }

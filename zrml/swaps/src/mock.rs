@@ -171,8 +171,17 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
+        let min_create_pool_liquidity = MinLiquidity::get();
+        // just to ensure there is enough for the extrinsic fees
+        let liquidity = min_create_pool_liquidity + BASE;
         Self {
-            balances: vec![(ALICE, BASE), (BOB, BASE), (CHARLIE, BASE), (DAVE, BASE), (EVE, BASE)],
+            balances: vec![
+                (ALICE, liquidity),
+                (BOB, liquidity),
+                (CHARLIE, liquidity),
+                (DAVE, liquidity),
+                (EVE, liquidity),
+            ],
         }
     }
 }
