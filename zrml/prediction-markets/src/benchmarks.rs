@@ -287,14 +287,6 @@ benchmarks! {
         let amount = BASE * 1_000;
     }: _(RawOrigin::Signed(caller), market_id, amount.saturated_into())
 
-    cancel_pending_market {
-        let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
-        )?;
-    }: _(RawOrigin::Signed(caller), market_id)
-
     create_categorical_market {
         let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
