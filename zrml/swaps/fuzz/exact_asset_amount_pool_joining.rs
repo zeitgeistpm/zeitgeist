@@ -17,7 +17,6 @@ fuzz_target!(|data: ExactAssetAmountPoolJoiningData| {
                 data.min_pool_amount,
             );
         }
-
     });
     let _ = ext.commit_all();
 });

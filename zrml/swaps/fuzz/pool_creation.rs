@@ -1,12 +1,13 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-
 use zeitgeist_primitives::{
     constants::{MaxAssets, MaxTotalWeight, MaxWeight, MinAssets, MinWeight},
     traits::Swaps as SwapsTrait,
     types::{Asset, PoolId, ScalarPosition, ScoringRule, SerdeWrapper},
 };
+
+use sp_runtime::traits::One;
 
 use frame_support::ensure;
 
@@ -42,10 +43,20 @@ pub struct PoolCreationData {
 
 impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
-        let assets_len = u.arbitrary_len::<(u128, u16)>()?;
-         // not in bounds checks
-        ensure!(assets_len <= usize::from(MaxAssets::get()), <arbitrary::Error>::IncorrectFormat);
-        ensure!(assets_len >= usize::from(MinAssets::get()), <arbitrary::Error>::IncorrectFormat);
+        let min_assets_len = usize::from(MinAssets::get());
+        ensure!(min_assets_len > 0usize, <arbitrary::Error>::IncorrectFormat);
+
+        let mut assets_len = 0usize;
+
+        // if assets_len == MaxAssets then search for random usize modulo (MaxAssets + 1)
+        // MaxAssets modulo MaxAssets = 0 => therefore MaxAssets modulo (MaxAssets + 1) = MaxAssets
+        // upper bound is a possibility now
+        let max_assets = usize::from(MaxAssets::get()).saturating_add(One::one());
+        while assets_len < min_assets_len {
+            // as long as under lower bound find another assets_len
+            assets_len = u.arbitrary_len::<(u128, u16)>()?;
+            assets_len = assets_len % max_assets;
+        }
 
         // create a weight collection with the capacity of assets length
         let mut weights: Vec<u128> = Vec::with_capacity(assets_len);
@@ -71,8 +82,8 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         For example: if MinLiquidity = 100 * BASE,
         then balance of 0 (or 1, 2, 3, 4) needs to be greater than 100 * BASE.
         */
-        let origin: u8 =
-            u.int_in_range(0..=4).expect("First should be smaller than second of range.");
+        // u8 number modulo 5 is in the range [0, 1, 2, 3, 4]
+        let origin: u8 = u8::arbitrary(u)? % 5;
 
         let mut assets: Vec<(u128, u16)> = Vec::with_capacity(assets_len);
         for _ in 0..assets_len {
