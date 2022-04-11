@@ -139,18 +139,19 @@ mod pallet {
                     T::Shares::transfer(asset, &pool_account_id, &who, amount)?;
                     Ok(())
                 },
-                transfer_pool: |pool_shares_id| {
-                    let exit_fee_pct = T::ExitFee::get().saturated_into();
-                    let exit_fee =
-                        bmul(pool_amount.saturated_into(), exit_fee_pct)?.saturated_into();
-                    let pool_amount_minus_exit_fee = pool_amount.check_sub_rslt(&exit_fee)?;
-                    T::Shares::transfer(pool_shares_id, &who, &pool_account_id, exit_fee)?;
-                    Self::burn_pool_shares(pool_id, &who, pool_amount_minus_exit_fee)?;
+                transfer_pool: || {
+                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
                     Ok(())
+                },
+                fee: |amount: BalanceOf<T>| {
+                    let exit_fee_amount =
+                        bmul(amount.saturated_into(), Self::calc_exit_fee(&pool).saturated_into())?
+                            .saturated_into();
+                    Ok(exit_fee_amount)
                 },
                 who: who_clone,
             };
-            crate::utils::pool::<_, _, _, T>(params)
+            crate::utils::pool::<_, _, _, _, T>(params)
         }
 
         /// Pool - Remove subsidty from a pool that uses the Rikiddo scoring rule.
@@ -292,6 +293,7 @@ mod pallet {
             pool_amount: BalanceOf<T>,
             min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
+            ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
             let pool = Self::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let who = ensure_signed(origin)?;
@@ -311,8 +313,10 @@ mod pallet {
                         pool.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
+                    ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
                     ensure!(
                         asset_amount
@@ -374,11 +378,12 @@ mod pallet {
                     T::LiquidityMining::add_shares(who.clone(), pool.market_id, amount);
                     Ok(())
                 },
-                transfer_pool: |_| Self::mint_pool_shares(pool_id, &who, pool_amount),
+                transfer_pool: || Self::mint_pool_shares(pool_id, &who, pool_amount),
+                fee: |_| Ok(0u128.saturated_into()),
                 who: who.clone(),
             };
 
-            let _ = crate::utils::pool::<_, _, _, T>(params)?;
+            let _ = crate::utils::pool::<_, _, _, _, T>(params)?;
             Ok(Some(T::WeightInfo::pool_join(pool.assets.len().saturated_into())).into())
         }
 
@@ -1196,6 +1201,17 @@ mod pallet {
                 .cloned()
                 .ok_or(Error::<T>::AssetNotBound)
         }
+
+        /// Calculate the exit fee percentage for `pool`.
+        fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
+            // We don't charge exit fees on stale pools (no need to punish LPs for leaving the
+            // pool)!
+            if pool.pool_status == PoolStatus::Stale {
+                0u128.saturated_into()
+            } else {
+                T::ExitFee::get().saturated_into()
+            }
+        }
     }
 
     impl<T> Swaps<T::AccountId> for Pallet<T>
@@ -1521,6 +1537,7 @@ mod pallet {
                             .saturated_into(),
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
@@ -1558,6 +1575,7 @@ mod pallet {
             asset_amount: BalanceOf<T>,
             min_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
+            ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
@@ -1596,7 +1614,7 @@ mod pallet {
                 pool_id,
                 pool: pool_ref,
             };
-            let weight = T::WeightInfo::pool_exit_with_exact_asset_amount();
+            let weight = T::WeightInfo::pool_join_with_exact_asset_amount();
             pool_join_with_exact_amount::<_, _, _, T>(params).map(|_| weight)
         }
 

@@ -1,6 +1,5 @@
 use crate::{
     check_arithm_rslt::CheckArithmRslt,
-    consts::EXIT_FEE,
     fixed::{bdiv, bmul, bpow},
 };
 use frame_support::dispatch::DispatchError;
@@ -199,10 +198,11 @@ pub fn calc_single_out_given_pool_in(
     total_weight: u128,
     pool_amount_in: u128,
     swap_fee: u128,
+    exit_fee: u128,
 ) -> Result<u128, DispatchError> {
     let normalized_weight = bdiv(asset_weight_out, total_weight)?;
 
-    let pool_amount_in_after_exit_fee = bmul(pool_amount_in, BASE.check_sub_rslt(&EXIT_FEE)?)?;
+    let pool_amount_in_after_exit_fee = bmul(pool_amount_in, BASE.check_sub_rslt(&exit_fee)?)?;
     let new_pool_supply = pool_supply.check_sub_rslt(&pool_amount_in_after_exit_fee)?;
     let pool_ratio = bdiv(new_pool_supply, pool_supply)?;
 
@@ -239,6 +239,7 @@ pub fn calc_pool_in_given_single_out(
     total_weight: u128,
     asset_amount_out: u128,
     swap_fee: u128,
+    exit_fee: u128,
 ) -> Result<u128, DispatchError> {
     let normalized_weight = bdiv(asset_weight_out, total_weight)?;
     let zoo = BASE.check_sub_rslt(&normalized_weight)?;
@@ -253,6 +254,6 @@ pub fn calc_pool_in_given_single_out(
     let new_pool_supply = bmul(pool_ratio, pool_supply)?;
 
     let pool_amount_in_after_exit_fee = pool_supply.check_sub_rslt(&new_pool_supply)?;
-    let pool_amount_in = bdiv(pool_amount_in_after_exit_fee, BASE.check_sub_rslt(&EXIT_FEE)?);
+    let pool_amount_in = bdiv(pool_amount_in_after_exit_fee, BASE.check_sub_rslt(&exit_fee)?);
     pool_amount_in
 }

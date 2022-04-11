@@ -1,7 +1,7 @@
 #![cfg(feature = "mock")]
 
 use crate as zrml_swaps;
-use frame_support::{construct_runtime, traits::Everything};
+use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -9,10 +9,10 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
-        BalanceFractionalDecimals, BlockHashCount, DustAccountTest, ExistentialDeposit,
-        ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
-        MaxInRatio, MaxLocks, MaxOutRatio, MaxReserves, MaxTotalWeight, MaxWeight, MinAssets,
-        MinLiquidity, MinSubsidy, MinWeight, MinimumPeriod, SwapsPalletId, BASE,
+        BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
+        MaxReserves, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy, MinWeight,
+        MinimumPeriod, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -28,6 +28,11 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 
 pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
+
+// Mocked exit fee for easier calculations
+parameter_types! {
+    pub storage ExitFeeMock: Balance = BASE / 10;
+}
 
 construct_runtime!(
     pub enum Runtime
@@ -50,7 +55,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type Event = Event;
-    type ExitFee = ExitFee;
+    type ExitFee = ExitFeeMock;
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
@@ -113,7 +118,7 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
-    type OnDust = orml_tokens::TransferDust<Runtime, DustAccountTest>;
+    type OnDust = ();
     type WeightInfo = ();
 }
 
