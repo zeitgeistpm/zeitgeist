@@ -2,30 +2,33 @@
 
 use libfuzzer_sys::fuzz_target;
 use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
-mod pool_creation;
-use pool_creation::{asset, get_valid_pool_id, ValidPoolData};
 
-fuzz_target!(|data: ExactAssetAmountPoolExitingData| {
+mod data_structs;
+use data_structs::ExactAssetAmountData;
+mod helper_functions;
+use helper_functions::asset;
+use zeitgeist_primitives::{traits::Swaps as SwapsTrait, types::ScoringRule};
+
+fuzz_target!(|data: ExactAssetAmountData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
-        if let Ok(pool_id) = get_valid_pool_id(data.pool_creation) {
+        if let Ok(pool_id) = Swaps::create_pool(
+            data.pool_creation.origin.into(),
+            data.pool_creation.assets.into_iter().map(asset).collect(),
+            Some(data.pool_creation.base_asset).map(asset),
+            data.pool_creation.market_id.into(),
+            ScoringRule::CPMM,
+            Some(data.pool_creation.swap_fee).into(),
+            Some(data.pool_creation.weights).into(),
+        ) {
             let _ = Swaps::pool_exit_with_exact_asset_amount(
                 Origin::signed(data.origin.into()),
                 pool_id,
                 asset(data.asset),
                 data.asset_amount,
-                data.max_pool_amount,
+                data.pool_amount,
             );
         }
     });
     let _ = ext.commit_all();
 });
-
-#[derive(Debug, arbitrary::Arbitrary)]
-struct ExactAssetAmountPoolExitingData {
-    origin: u8,
-    asset: (u128, u16),
-    asset_amount: u128,
-    max_pool_amount: u128,
-    pool_creation: ValidPoolData,
-}
