@@ -83,18 +83,23 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         // create a weight collection with the capacity of assets length
         let mut weights: Vec<u128> = Vec::with_capacity(assets_len);
         let mut weight_sum = 0u128;
-        while weights.len() != assets_len {
+
+        let mut assets: Vec<(u128, u16)> = Vec::with_capacity(assets_len);
+        for _ in 0..assets_len {
             // create inclusive range for the u128 weight
             // assume, that MinWeight < MaxWeight, if not then panic!
-            let elem: u128 = u
+            let weight: u128 = u
                 .int_in_range(MinWeight::get()..=MaxWeight::get())
                 .expect("MinWeight should be smaller than MaxWeight");
-            match weight_sum.checked_add(elem) {
+            match weight_sum.checked_add(weight) {
                 Some(sum) if sum <= MaxTotalWeight::get() => weight_sum = sum,
                 // if sum > MaxTotalWeight or u128 Overflow (None case)
                 _ => return Err(<arbitrary::Error>::IncorrectFormat.into()),
             }
-            weights.push(elem);
+            let asset = <(u128, u16)>::arbitrary(u)?;
+
+            weights.push(weight);
+            assets.push(asset);
         }
 
         /*
@@ -106,12 +111,6 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         */
         // u8 number modulo 5 is in the range [0, 1, 2, 3, 4]
         let origin: u8 = u8::arbitrary(u)? % 5;
-
-        let mut assets: Vec<(u128, u16)> = Vec::with_capacity(assets_len);
-        for _ in 0..assets_len {
-            let elem = <(u128, u16)>::arbitrary(u)?;
-            assets.push(elem);
-        }
 
         let base_asset = <(u128, u16)>::arbitrary(u)?;
         let market_id = u128::arbitrary(u)?;
