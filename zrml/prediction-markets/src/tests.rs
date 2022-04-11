@@ -1,6 +1,6 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{mock::*, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
+use crate::{mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
 use core::ops::Range;
 use frame_support::{
     assert_err, assert_noop, assert_ok,
@@ -623,6 +623,13 @@ fn it_allows_to_redeem_shares() {
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
+        assert!(event_exists(Event::TokensRedeemed(
+            0,
+            Asset::CategoricalOutcome(0, 1),
+            CENT,
+            CENT,
+            CHARLIE
+        )));
     });
 }
 
@@ -831,7 +838,7 @@ fn full_scalar_market_lifecycle() {
         assert_eq!(report.outcome, OutcomeReport::Scalar(100));
 
         // dispute
-        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(20)));
+        assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(25)));
         let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 1);
 
@@ -845,12 +852,12 @@ fn full_scalar_market_lifecycle() {
             Origin::signed(CHARLIE),
             EVE,
             Asset::ScalarOutcome(0, ScalarPosition::Short),
-            100 * BASE
+            50 * BASE
         ));
 
         assert_eq!(
             Tokens::free_balance(Asset::ScalarOutcome(0, ScalarPosition::Short), &CHARLIE),
-            0
+            50 * BASE
         );
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
@@ -862,12 +869,40 @@ fn full_scalar_market_lifecycle() {
         // check payouts is right for each CHARLIE and EVE
         let ztg_bal_charlie = Balances::free_balance(&CHARLIE);
         let ztg_bal_eve = Balances::free_balance(&EVE);
-        assert_eq!(ztg_bal_charlie, 950 * BASE);
+        assert_eq!(ztg_bal_charlie, 98750 * CENT); // 75 (LONG) + 12.5 (SHORT) + 900 (balance)
         assert_eq!(ztg_bal_eve, 1000 * BASE);
+        assert!(event_exists(Event::TokensRedeemed(
+            0,
+            Asset::ScalarOutcome(0, ScalarPosition::Long),
+            100 * BASE,
+            75 * BASE,
+            CHARLIE
+        )));
+        assert!(event_exists(Event::TokensRedeemed(
+            0,
+            Asset::ScalarOutcome(0, ScalarPosition::Short),
+            50 * BASE,
+            1250 * CENT, // 12.5
+            CHARLIE
+        )));
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
         let ztg_bal_eve_after = Balances::free_balance(&EVE);
-        assert_eq!(ztg_bal_eve_after, 1050 * BASE);
+        assert_eq!(ztg_bal_eve_after, 101250 * CENT); // 12.5 (SHORT) + 1000 (balance)
+        assert!(!event_exists(Event::TokensRedeemed(
+            0,
+            Asset::ScalarOutcome(0, ScalarPosition::Long),
+            0,
+            0,
+            EVE
+        )));
+        assert!(event_exists(Event::TokensRedeemed(
+            0,
+            Asset::ScalarOutcome(0, ScalarPosition::Short),
+            50 * BASE,
+            1250 * CENT, // 12.5
+            EVE
+        )));
     })
 }
 
@@ -915,4 +950,9 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
         0,
         (0..outcome_assets_len + 1).map(|_| BASE).collect(),
     )
+}
+
+fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
+    let evt = crate::mock::Event::PredictionMarkets(raw_evt);
+    frame_system::Pallet::<Runtime>::events().iter().any(|e| e.event == evt)
 }
