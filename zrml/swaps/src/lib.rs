@@ -1390,7 +1390,7 @@ mod pallet {
                                 &pool_account,
                                 subsidy,
                             )?;
-                            total_balance = subsidy;
+                            total_balance = total_balance.saturating_add(subsidy);
                             T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
                             account_created = true;
                             continue;
@@ -1418,7 +1418,7 @@ mod pallet {
                         }
 
                         T::Shares::deposit(pool_shares_id, &provider_address, transfered)?;
-                        total_balance.saturating_add(transfered);
+                        total_balance = total_balance.saturating_add(transfered);
                     }
 
                     ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
