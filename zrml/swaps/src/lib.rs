@@ -422,7 +422,6 @@ mod pallet {
                     pool.total_subsidy = Some(total_subsidy + amount);
                 });
 
-                Self::deposit_event(Event::PoolSharesBurned(pool_id, who.clone(), amount));
                 Self::deposit_event(Event::PoolJoinSubsidy(
                     base_asset,
                     amount,
@@ -849,8 +848,6 @@ mod pallet {
                 BalanceOf<T>,
             >,
         ),
-        /// Pool shares burned. \[pool_id, who, amount\]
-        PoolSharesBurned(PoolId, <T as frame_system::Config>::AccountId, BalanceOf<T>),
         /// Total subsidy collected for a pool. \[pool_id, [(provider, subsidy), ...], total_subsidy\]
         SubsidyCollected(
             PoolId,
@@ -1113,7 +1110,6 @@ mod pallet {
             T::Shares::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
             T::Shares::slash(shares_id, from, amount);
-            Self::deposit_event(Event::PoolSharesBurned(pool_id, from.clone(), amount));
             Ok(())
         }
 
