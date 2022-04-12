@@ -1116,7 +1116,6 @@ mod pallet {
             T::Shares::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
             T::Shares::slash(shares_id, from, amount);
-            Self::deposit_event(Event::PoolSharesBurned(pool_id, from.clone(), amount));
             Ok(())
         }
 
