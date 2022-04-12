@@ -1,8 +1,11 @@
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
+
 use zeitgeist_primitives::constants::{MaxAssets, MaxTotalWeight, MaxWeight, MinAssets, MinWeight};
 
 use sp_runtime::traits::One;
-
-use frame_support::ensure;
 
 use arbitrary::{Arbitrary, Result, Unstructured};
 
@@ -65,20 +68,23 @@ pub struct ValidPoolData {
 
 impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
     fn arbitrary(u: &mut Unstructured<'a>) -> Result<Self> {
-        let min_assets_len = usize::from(MinAssets::get());
-        ensure!(min_assets_len > 0usize, <arbitrary::Error>::IncorrectFormat);
-
-        let mut assets_len = 0usize;
-
         // if assets_len == MaxAssets then search for random usize modulo (MaxAssets + 1)
         // MaxAssets modulo MaxAssets = 0 => therefore MaxAssets modulo (MaxAssets + 1) = MaxAssets
         // upper bound is a possibility now
         let max_assets = usize::from(MaxAssets::get()).saturating_add(One::one());
-        while assets_len < min_assets_len {
-            // as long as under lower bound find another assets_len
-            assets_len = u.arbitrary_len::<(u128, u16)>()?;
-            assets_len = assets_len % max_assets;
-        }
+
+        let mut assets_len: Option<usize> = None;
+        let assets_len: usize = loop {
+            match assets_len {
+                // assets length is above or equal lower bound
+                Some(len) if len >= usize::from(MinAssets::get()) => break len,
+                _ => {
+                    // as long as under lower bound find another assets_len
+                    let assets_len_raw = u.arbitrary_len::<(u128, u16)>()?;
+                    assets_len = Some(assets_len_raw % max_assets);
+                }
+            }
+        };
 
         // create a weight collection with the capacity of assets length
         let mut weights: Vec<u128> = Vec::with_capacity(assets_len);
@@ -94,13 +100,23 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
             match weight_sum.checked_add(weight) {
                 Some(sum) if sum <= MaxTotalWeight::get() => weight_sum = sum,
                 // if sum > MaxTotalWeight or u128 Overflow (None case)
-                _ => return Err(<arbitrary::Error>::IncorrectFormat.into()),
+                _ => return Err(<arbitrary::Error>::IncorrectFormat),
             }
             let asset = <(u128, u16)>::arbitrary(u)?;
 
             weights.push(weight);
             assets.push(asset);
         }
+
+        // the base_assets needs to be in the assets
+        let base_asset: (u128, u16) = {
+            // minus one, because of the inclusive length to get a valid index
+            let asset_index: usize = u.int_in_range(0..=(assets_len - 1)).expect("First in range should be smaller than second.");
+            match assets.get(asset_index) {
+                Some(a) => *a,
+                None => return Err(<arbitrary::Error>::IncorrectFormat),
+            }
+        };
 
         /*
         Mock default balances in the range [0, 1, 2, 3, 4] are defined and greater than zero.
@@ -111,8 +127,6 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         */
         // u8 number modulo 5 is in the range [0, 1, 2, 3, 4]
         let origin: u8 = u8::arbitrary(u)? % 5;
-
-        let base_asset = <(u128, u16)>::arbitrary(u)?;
         let market_id = u128::arbitrary(u)?;
         let swap_fee = u128::arbitrary(u)?;
 

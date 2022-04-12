@@ -18,10 +18,10 @@ fuzz_target!(|data: PoolCreationData| {
             data.origin.into(),
             data.assets.into_iter().map(asset).collect(),
             data.base_asset.map(asset),
-            data.market_id.into(),
+            data.market_id,
             ScoringRule::CPMM,
-            data.swap_fee.into(),
-            data.weights.into(),
+            data.swap_fee,
+            data.weights,
         );
     });
     let _ = ext.commit_all();

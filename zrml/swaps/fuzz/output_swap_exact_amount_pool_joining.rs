@@ -16,10 +16,10 @@ fuzz_target!(|data: SwapExactAmountData| {
             data.pool_creation.origin.into(),
             data.pool_creation.assets.into_iter().map(asset).collect(),
             Some(data.pool_creation.base_asset).map(asset),
-            data.pool_creation.market_id.into(),
+            data.pool_creation.market_id,
             ScoringRule::CPMM,
-            Some(data.pool_creation.swap_fee).into(),
-            Some(data.pool_creation.weights).into(),
+            Some(data.pool_creation.swap_fee),
+            Some(data.pool_creation.weights),
         ) {
             let _ = Swaps::swap_exact_amount_out(
                 Origin::signed(data.origin.into()),
@@ -30,6 +30,8 @@ fuzz_target!(|data: SwapExactAmountData| {
                 data.asset_amount_out,
                 data.max_price,
             );
+        } else {
+            panic!("There needs to be a valid pool creation! This Swaps::create_pool call returns an error, but should be ok.");
         }
     });
     let _ = ext.commit_all();

@@ -16,10 +16,10 @@ fuzz_target!(|data: GeneralPoolData| {
             data.pool_creation.origin.into(),
             data.pool_creation.assets.into_iter().map(asset).collect(),
             Some(data.pool_creation.base_asset).map(asset),
-            data.pool_creation.market_id.into(),
+            data.pool_creation.market_id,
             ScoringRule::CPMM,
-            Some(data.pool_creation.swap_fee).into(),
-            Some(data.pool_creation.weights).into(),
+            Some(data.pool_creation.swap_fee),
+            Some(data.pool_creation.weights),
         ) {
             // join a pool with a valid pool id
             let _ = Swaps::pool_join(
@@ -28,6 +28,8 @@ fuzz_target!(|data: GeneralPoolData| {
                 data.pool_amount,
                 data.assets,
             );
+        } else {
+            panic!("There needs to be a valid pool creation! This Swaps::create_pool call returns an error, but should be ok.");
         }
     });
 
