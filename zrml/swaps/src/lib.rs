@@ -1466,7 +1466,7 @@ mod pallet {
                                 &pool_account,
                                 subsidy,
                             )?;
-                            total_balance = subsidy;
+                            total_balance = total_balance.saturating_add(subsidy);
                             T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
                             account_created = true;
                             providers_and_pool_shares.push((provider_address, subsidy));
