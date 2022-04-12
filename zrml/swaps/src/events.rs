@@ -16,7 +16,7 @@ pub struct PoolAssetsEvent<AI, AS, B> {
     pub bounds: Vec<B>,
     pub cpep: CommonPoolEventParams<AI>,
     pub transferred: Vec<B>,
-    // pub pool_shares: B,
+    pub pool_amount: B,
 }
 
 /// Common parameters of Balancer single-asset events.
@@ -26,7 +26,7 @@ pub struct PoolAssetEvent<AI, AS, B> {
     pub bound: B,
     pub cpep: CommonPoolEventParams<AI>,
     pub transferred: B,
-    // pub pool_shares: B,
+    pub pool_amount: B,
 }
 
 #[derive(Clone, Debug, Decode, Default, Encode, Eq, Ord, PartialEq, PartialOrd, TypeInfo)]

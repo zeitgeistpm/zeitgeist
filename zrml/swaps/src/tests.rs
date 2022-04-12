@@ -634,6 +634,7 @@ fn pool_exit_decreases_correct_pool_parameters() {
             bounds: vec!(_1, _1, _1, _1),
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: vec!(_1 + 1, _1 + 1, _1 + 1, _1 + 1),
+            pool_amount: _1,
         })));
         assert_all_parameters(
             [_25 + 1, _25 + 1, _25 + 1, _25 + 1],
@@ -680,6 +681,7 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
             bounds: vec!(_1, _1, _1, _1),
             cpep: CommonPoolEventParams { pool_id: 0, who: BOB },
             transferred: vec!(_9, _9, _9, _9),
+            pool_amount: _10,
         })));
     })
 }
@@ -705,6 +707,7 @@ fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
             bounds: vec!(_1, _1),
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: vec!(_1 + 1, _1 + 1),
+            pool_amount: _1,
         })));
         assert_all_parameters(
             [_25 + 1, _24, _24, _25 + 1],
@@ -797,20 +800,21 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _5, 0));
-        let pool_shares = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             alice_signed(),
             0,
             ASSET_A,
-            pool_shares,
+            pool_amount,
             _4
         ));
-        assert!(event_exists(crate::Event::PoolSharesBurned(0, ALICE, pool_shares)));
+        assert!(event_exists(crate::Event::PoolSharesBurned(0, ALICE, pool_amount)));
         assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
             asset: ASSET_A,
             bound: _4,
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: _5 - 335,
+            pool_amount,
         })));
         assert_all_parameters([_25 - 335, _25, _25, _25], 0, [_100 + 335, _100, _100, _100], _100)
     });
@@ -823,12 +827,12 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values_with_fee() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _5, 0));
-        let pool_shares = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             alice_signed(),
             0,
             ASSET_A,
-            pool_shares,
+            pool_amount,
             _4
         ));
         assert_all_parameters(
@@ -842,6 +846,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values_with_fee() {
             bound: _4,
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: 45_082_061_850,
+            pool_amount,
         })));
     });
 }
@@ -854,7 +859,7 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         let asset_before_join = Currencies::free_balance(ASSET_A, &ALICE);
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _5));
-        let pool_shares_before_exit = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        let pool_amount_before_exit = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         let asset_after_join = asset_before_join - Currencies::free_balance(ASSET_A, &ALICE);
         assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
             alice_signed(),
@@ -863,14 +868,15 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
             asset_after_join - 1000,
             _1
         ));
-        let pool_shares_after_exit = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
-        let pool_shares = pool_shares_before_exit - pool_shares_after_exit;
-        assert!(event_exists(crate::Event::PoolSharesBurned(0, ALICE, pool_shares)));
+        let pool_amount_after_exit = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        let pool_amount = pool_amount_before_exit - pool_amount_after_exit;
+        assert!(event_exists(crate::Event::PoolSharesBurned(0, ALICE, pool_amount)));
         assert!(event_exists(crate::Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
             asset: ASSET_A,
             bound: _1,
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: asset_after_join - 1000,
+            pool_amount,
         })));
         assert_eq!(asset_after_join, 40604010000);
         assert_all_parameters(
@@ -900,14 +906,16 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values_with_fee() {
             exit_amount,
             _1
         ));
+        let pool_amount = 9_984_935_413;
         assert!(event_exists(crate::Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
             asset: ASSET_A,
             bound: _1,
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: exit_amount,
+            pool_amount,
         })));
         assert_eq!(asset_after_join, 40604010000);
-        let shares_remaining = _1 - 9_984_935_413; // shares_after_join - pool_amount_in
+        let shares_remaining = _1 - pool_amount; // shares_after_join - pool_amount_in
         assert_all_parameters(
             [_25 - amount_left_behind_in_pool, _25, _25, _25],
             shares_remaining,
@@ -950,6 +958,7 @@ fn pool_join_increases_correct_pool_parameters() {
             bounds: vec!(_25, _25, _25, _25),
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: vec!(_5, _5, _5, _5),
+            pool_amount: _5,
         })));
         assert_all_parameters([_20, _20, _20, _20], _5, [_105, _105, _105, _105], _105);
     })
@@ -1018,13 +1027,14 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
             alice_sent,
             0
         ));
+        let alice_received = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         assert!(event_exists(crate::Event::PoolJoinWithExactAssetAmount(PoolAssetEvent {
             asset: ASSET_A,
             bound: 0,
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: alice_sent
+            transferred: alice_sent,
+            pool_amount: alice_received,
         })));
-        let alice_received = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         // assert!(event_exists(crate::Event::PoolSharesMinted(0, ALICE, alice_received)));
         assert_all_parameters(
             [_25 - alice_sent, _25, _25, _25],
@@ -1055,6 +1065,7 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
             bound: _5,
             cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
             transferred: asset_amount,
+            pool_amount: alice_sent,
         })));
         let alice_received = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
         // assert!(event_exists(crate::Event::PoolSharesMinted(0, ALICE, alice_sent)));
