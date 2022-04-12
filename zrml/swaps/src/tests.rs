@@ -832,7 +832,7 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
             pool_amount,
             _4
         ));
-        assert!(event_exists(crate::Event::PoolSharesBurned(0, ALICE, pool_shares)));
+        assert!(event_exists(crate::Event::PoolSharesBurned(0, ALICE, pool_amount)));
         assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
             asset: ASSET_A,
             bound: _4,
