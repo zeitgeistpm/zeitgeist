@@ -228,12 +228,12 @@ mod pallet {
                     return Err(Error::<T>::NoSubsidyProvided.into());
                 }
 
-                Self::deposit_event(Event::<T>::PoolExitSubsidy(PoolAssetEvent {
-                    asset: base_asset,
-                    bound: upper_bound,
-                    cpep: CommonPoolEventParams { pool_id, who },
+                Self::deposit_event(Event::<T>::PoolExitSubsidy(
+                    base_asset,
+                    upper_bound,
+                    CommonPoolEventParams { pool_id, who },
                     transferred,
-                }));
+                ));
 
                 Ok(())
             })
@@ -425,12 +425,12 @@ mod pallet {
                     pool.total_subsidy = Some(total_subsidy + amount);
                 });
 
-                Self::deposit_event(Event::<T>::PoolJoinSubsidy(PoolAssetEvent {
-                    asset: base_asset,
-                    bound: amount,
-                    cpep: CommonPoolEventParams { pool_id, who },
-                    transferred: amount,
-                }));
+                Self::deposit_event(Event::PoolSharesBurned(pool_id, who.clone(), amount));
+                Self::deposit_event(Event::PoolJoinSubsidy(
+                    base_asset,
+                    amount,
+                    CommonPoolEventParams { pool_id, who },
+                ));
 
                 Ok(())
             })
@@ -799,13 +799,12 @@ mod pallet {
                 BalanceOf<T>,
             >,
         ),
-        /// Someone has (partially) exited a pool by removing subsidy. \[PoolAssetEvent, amount\]
+        /// Someone has (partially) exited a pool by removing subsidy. \[asset, bound, pool_id, who, amount\]
         PoolExitSubsidy(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
-                BalanceOf<T>,
-            >,
+            Asset<T::MarketId>,
+            BalanceOf<T>,
+            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
+            BalanceOf<T>,
         ),
         /// Exits a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolExitWithExactAssetAmount(
@@ -831,13 +830,11 @@ mod pallet {
                 BalanceOf<T>,
             >,
         ),
-        /// Someone has joined a pool by providing subsidy. \[PoolAssetEvent, amount\]
+        /// Someone has joined a pool by providing subsidy. \[asset, amount, pool_id, who\]
         PoolJoinSubsidy(
-            PoolAssetEvent<
-                <T as frame_system::Config>::AccountId,
-                Asset<T::MarketId>,
-                BalanceOf<T>,
-            >,
+            Asset<T::MarketId>,
+            BalanceOf<T>,
+            CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
         ),
         /// Joins a pool given an exact amount of an asset. \[PoolAssetEvent\]
         PoolJoinWithExactAssetAmount(

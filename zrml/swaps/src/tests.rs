@@ -215,6 +215,9 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_rikiddo() {
 #[test]
 fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
     ExtBuilder::default().build().execute_with(|| {
+        // Events cannot be emitted on block zero...
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+
         // Errors trigger correctly.
         assert_noop!(
             Swaps::destroy_pool_in_subsidy_phase(0),
@@ -230,6 +233,12 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
         // Reserve some funds for subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), _25);
+        assert!(event_exists(crate::Event::PoolJoinSubsidy(
+            ASSET_D,
+            _25,
+            CommonPoolEventParams { pool_id, who: ALICE },
+        )));
+
         assert_ok!(Swaps::destroy_pool_in_subsidy_phase(pool_id));
         // Rserved balanced was returned and all storage cleared.
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
