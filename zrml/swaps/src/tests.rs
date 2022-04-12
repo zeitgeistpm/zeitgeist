@@ -747,8 +747,9 @@ fn pool_exit_subsidy_unreserves_correct_values() {
             _5,
         )));
 
-        // Exit the remaining subsidy and see if the storage is consistent
-        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _20));
+        // Exit the remaining subsidy (in fact, we attempt to exit with more than remaining!) and
+        // see if the storage is consistent
+        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _25));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
         assert!(<SubsidyProviders<Runtime>>::get(pool_id, &ALICE).is_none());
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
@@ -756,7 +757,7 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         assert_eq!(reserved, total_subsidy);
         assert!(event_exists(crate::Event::PoolExitSubsidy(
             ASSET_D,
-            _20,
+            _25,
             CommonPoolEventParams { pool_id, who: ALICE },
             _20,
         )));
