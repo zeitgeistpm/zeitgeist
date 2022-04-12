@@ -851,8 +851,12 @@ mod pallet {
         ),
         /// Pool shares burned. \[pool_id, who, amount\]
         PoolSharesBurned(PoolId, <T as frame_system::Config>::AccountId, BalanceOf<T>),
-        /// Total subsidy collected for a pool. \[pool_id, subsidy\]
-        SubsidyCollected(PoolId, BalanceOf<T>),
+        /// Total subsidy collected for a pool. \[pool_id, [(provider, subsidy), ...], total_subsidy\]
+        SubsidyCollected(
+            PoolId,
+            Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
+            BalanceOf<T>,
+        ),
         /// An exact amount of an asset is entering the pool. \[SwapEvent\]
         SwapExactAmountIn(
             SwapEvent<<T as frame_system::Config>::AccountId, Asset<T::MarketId>, BalanceOf<T>>,
@@ -1375,6 +1379,7 @@ mod pallet {
                     let mut account_created = false;
                     let mut total_balance = <BalanceOf<T>>::zero();
                     total_assets = pool.assets.len();
+                    let mut providers_and_pool_shares: Vec<_> = vec![];
 
                     // Transfer all reserved funds to the pool account and distribute pool shares.
                     for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
@@ -1393,6 +1398,7 @@ mod pallet {
                             total_balance = total_balance.saturating_add(subsidy);
                             T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
                             account_created = true;
+                            providers_and_pool_shares.push((provider_address, subsidy));
                             continue;
                         }
 
@@ -1403,22 +1409,23 @@ mod pallet {
                             subsidy,
                             BalanceStatus::Free,
                         )?;
-                        let transfered = subsidy.saturating_sub(remaining);
+                        let transferred = subsidy.saturating_sub(remaining);
 
-                        if transfered != subsidy {
+                        if transferred != subsidy {
                             log::warn!(
                                 "[Swaps] Data inconsistency: In end_subsidy_phase - More subsidy \
                                  provided than currently reserved.
                             Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                                 pool_id,
                                 provider_address,
-                                transfered,
+                                transferred,
                                 subsidy
                             );
                         }
 
-                        T::Shares::deposit(pool_shares_id, &provider_address, transfered)?;
-                        total_balance = total_balance.saturating_add(transfered);
+                        T::Shares::deposit(pool_shares_id, &provider_address, transferred)?;
+                        total_balance = total_balance.saturating_add(transferred);
+                        providers_and_pool_shares.push((provider_address, transferred));
                     }
 
                     ensure!(total_balance >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
@@ -1437,7 +1444,11 @@ mod pallet {
                     }
 
                     pool.pool_status = PoolStatus::Active;
-                    Self::deposit_event(Event::SubsidyCollected(pool_id, total_balance));
+                    Self::deposit_event(Event::SubsidyCollected(
+                        pool_id,
+                        providers_and_pool_shares,
+                        total_balance,
+                    ));
                     Ok(())
                 });
 

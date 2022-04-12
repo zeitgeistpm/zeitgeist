@@ -314,6 +314,7 @@ fn distribute_pool_share_rewards() {
 #[test]
 fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool(ScoringRule::CPMM, true);
         assert_noop!(Swaps::end_subsidy_phase(0), crate::Error::<Runtime>::InvalidStateTransition);
         assert_noop!(Swaps::end_subsidy_phase(1), crate::Error::<Runtime>::PoolDoesNotExist);
@@ -344,6 +345,11 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         let total_subsidy = Currencies::total_balance(ASSET_D, &pool_account_id);
         let total_subsidy_expected = subsidy_alice + subsidy_bob;
         assert_eq!(total_subsidy, total_subsidy_expected);
+        assert!(event_exists(crate::Event::SubsidyCollected(
+            pool_id,
+            vec![(BOB, subsidy_bob), (ALICE, subsidy_alice),],
+            total_subsidy_expected,
+        )));
         let initial_outstanding_assets = RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
             pool_id,
             (ASSETS.len() - 1).saturated_into::<u32>(),
