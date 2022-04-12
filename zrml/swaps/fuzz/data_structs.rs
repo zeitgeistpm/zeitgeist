@@ -111,7 +111,9 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         // the base_assets needs to be in the assets
         let base_asset: (u128, u16) = {
             // minus one, because of the inclusive length to get a valid index
-            let asset_index: usize = u.int_in_range(0..=(assets_len - 1)).expect("First in range should be smaller than second.");
+            let asset_index: usize = u
+                .int_in_range(0..=(assets_len - 1))
+                .expect("First in range should be smaller than second.");
             match assets.get(asset_index) {
                 Some(a) => *a,
                 None => return Err(<arbitrary::Error>::IncorrectFormat),

@@ -29,7 +29,10 @@ fuzz_target!(|data: ExactAmountData| {
                 data.asset_amount,
             );
         } else {
-            panic!("There needs to be a valid pool creation! This Swaps::create_pool call returns an error, but should be ok.");
+            panic!(
+                "There needs to be a valid pool creation! This Swaps::create_pool call returns an \
+                 error, but should be ok."
+            );
         }
     });
     let _ = ext.commit_all();
