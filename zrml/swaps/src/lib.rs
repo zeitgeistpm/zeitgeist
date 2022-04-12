@@ -36,7 +36,7 @@ mod pallet {
         },
         weights::*,
     };
-    use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+    use alloc::{collections::btree_map::BTreeMap, vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
