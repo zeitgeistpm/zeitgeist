@@ -323,18 +323,27 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
 
         // Reserve some funds for subsidy
         let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
-        subsidize_and_start_rikiddo_pool(pool_id, &ALICE, 0);
+        let subsidy_alice = min_subsidy;
+        let subsidy_bob = min_subsidy + _25;
+        assert_ok!(Currencies::deposit(ASSET_D, &ALICE, subsidy_alice));
+        assert_ok!(Currencies::deposit(ASSET_D, &BOB, subsidy_bob));
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), pool_id, min_subsidy));
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), pool_id, subsidy_bob));
+        assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
 
         // Check that subsidy was deposited, shares were distributed in exchange, the initial
         // outstanding event outcome assets are assigned to the pool account and pool is active.
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
+        assert_eq!(Currencies::reserved_balance(ASSET_D, &BOB), 0);
 
         let pool_shares_id = Swaps::pool_shares_id(pool_id);
-        assert_eq!(Currencies::total_balance(pool_shares_id, &ALICE), min_subsidy);
+        assert_eq!(Currencies::total_balance(pool_shares_id, &ALICE), subsidy_alice);
+        assert_eq!(Currencies::total_balance(pool_shares_id, &BOB), subsidy_bob);
 
         let pool_account_id = Swaps::pool_account_id(pool_id);
         let total_subsidy = Currencies::total_balance(ASSET_D, &pool_account_id);
-        assert_eq!(total_subsidy, min_subsidy);
+        let total_subsidy_expected = subsidy_alice + subsidy_bob;
+        assert_eq!(total_subsidy, total_subsidy_expected);
         let initial_outstanding_assets = RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
             pool_id,
             (ASSETS.len() - 1).saturated_into::<u32>(),
