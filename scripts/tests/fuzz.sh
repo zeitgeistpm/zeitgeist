@@ -8,6 +8,17 @@ set -euxo pipefail
 # a hardware- and fuzz target specific run count.
 BASE=1000
 RUNS="${RUNS:-50000}"
+
+POOL_CREATION=1902
+GENERAL_POOL_JOINING=1000
+EXACT_AMOUNT_POOL_JOINING=1000
+EXACT_ASSET_AMOUNT_POOL_JOINING=1000
+INPUT_SWAP_EXACT_AMOUNT_POOL_JOINING=1000
+OUTPUT_SWAP_EXACT_AMOUNT_POOL_JOINING=1000
+EXACT_ASSET_AMOUNT_POOL_EXITING=1000
+EXACT_AMOUNT_POOL_EXITING=1000
+GENERAL_POOL_EXITING=1000
+
 FEE_SIGMOID_FACT=50000
 FIXEDI_TO_FIXEDU_FACT=100000
 FIXEDU_TO_FIXEDI_FACT=100000
@@ -25,15 +36,15 @@ RIKIDDO_PALLET_FACT=1000
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/prediction-markets/fuzz pm_full_workflow -- -runs=$RUNS
 
 # --- Swaps Pallet fuzz tests ---
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_creation -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_joining -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_joining -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_joining -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz input_swap_exact_amount_pool_joining -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz output_swap_exact_amount_pool_joining -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_exiting -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_exiting -- -runs=$RUNS
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_exiting -- -runs=$RUNS
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_creation -- -runs=$POOL_CREATION
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_joining -- -runs=$GENERAL_POOL_JOINING
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_joining -- -runs=$EXACT_AMOUNT_POOL_JOINING
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_joining -- -runs=$EXACT_ASSET_AMOUNT_POOL_JOINING
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz input_swap_exact_amount_pool_joining -- -runs=$INPUT_SWAP_EXACT_AMOUNT_POOL_JOINING
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz output_swap_exact_amount_pool_joining -- -runs=$OUTPUT_SWAP_EXACT_AMOUNT_POOL_JOINING
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_exiting -- -runs=$EXACT_ASSET_AMOUNT_POOL_EXITING
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_exiting -- -runs=$EXACT_AMOUNT_POOL_EXITING
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_exiting -- -runs=$GENERAL_POOL_EXITING
 
 # --- Orderbook-v1 Pallet fuzz tests ---
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/orderbook-v1/fuzz orderbook_v1_full_workflow -- -runs=$RUNS
