@@ -215,9 +215,6 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_rikiddo() {
 #[test]
 fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
     ExtBuilder::default().build().execute_with(|| {
-        // Events cannot be emitted on block zero...
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-
         // Errors trigger correctly.
         assert_noop!(
             Swaps::destroy_pool_in_subsidy_phase(0),
@@ -228,16 +225,12 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
             Swaps::destroy_pool_in_subsidy_phase(0),
             crate::Error::<Runtime>::InvalidStateTransition
         );
+
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 1;
         // Reserve some funds for subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), _25);
-        assert!(event_exists(crate::Event::PoolJoinSubsidy(
-            ASSET_D,
-            _25,
-            CommonPoolEventParams { pool_id, who: ALICE },
-        )));
 
         assert_ok!(Swaps::destroy_pool_in_subsidy_phase(pool_id));
         // Rserved balanced was returned and all storage cleared.
@@ -944,6 +937,9 @@ fn pool_join_emits_correct_events() {
 #[test]
 fn pool_join_subsidy_reserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
+        // Events cannot be emitted on block zero...
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+
         create_initial_pool(ScoringRule::CPMM, true);
         assert_noop!(
             Swaps::pool_join_subsidy(alice_signed(), 0, 42),
@@ -957,6 +953,12 @@ fn pool_join_subsidy_reserves_correct_values() {
         assert_eq!(reserved, _20);
         assert_eq!(reserved, noted);
         assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
+        assert!(event_exists(crate::Event::PoolJoinSubsidy(
+            ASSET_D,
+            _20,
+            CommonPoolEventParams { pool_id, who: ALICE },
+        )));
+
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
         noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
@@ -964,6 +966,11 @@ fn pool_join_subsidy_reserves_correct_values() {
         assert_eq!(reserved, noted);
         assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
         assert_storage_noop!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5).unwrap_or(()));
+        assert!(event_exists(crate::Event::PoolJoinSubsidy(
+            ASSET_D,
+            _5,
+            CommonPoolEventParams { pool_id, who: ALICE },
+        )));
     });
 }
 
