@@ -705,6 +705,9 @@ fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
 #[test]
 fn pool_exit_subsidy_unreserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
+        // Events cannot be emitted on block zero...
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+
         create_initial_pool(ScoringRule::CPMM, true);
         assert_noop!(
             Swaps::pool_exit_subsidy(alice_signed(), 0, 42),
@@ -737,6 +740,12 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, noted);
         assert_eq!(reserved, total_subsidy);
+        assert!(event_exists(crate::Event::PoolExitSubsidy(
+            ASSET_D,
+            _5,
+            CommonPoolEventParams { pool_id, who: ALICE },
+            _5,
+        )));
 
         // Exit the remaining subsidy and see if the storage is consistent
         assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _20));
@@ -745,6 +754,12 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert_eq!(reserved, total_subsidy);
+        assert!(event_exists(crate::Event::PoolExitSubsidy(
+            ASSET_D,
+            _20,
+            CommonPoolEventParams { pool_id, who: ALICE },
+            _20,
+        )));
 
         // Add some subsidy, manually remove some reserved balance (create inconsistency)
         // and check if the internal values are adjusted to the inconsistency.

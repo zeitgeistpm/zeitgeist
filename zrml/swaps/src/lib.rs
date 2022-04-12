@@ -182,12 +182,9 @@ mod pallet {
                 );
                 let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
                 let mut real_amount = amount;
-                let upper_bound;
                 let transferred;
 
                 if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
-                    upper_bound = subsidy;
-
                     if amount > subsidy {
                         real_amount = subsidy;
                     }
@@ -230,7 +227,7 @@ mod pallet {
 
                 Self::deposit_event(Event::<T>::PoolExitSubsidy(
                     base_asset,
-                    upper_bound,
+                    amount,
                     CommonPoolEventParams { pool_id, who },
                     transferred,
                 ));
