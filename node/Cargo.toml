@@ -61,7 +61,7 @@ parity-scale-codec = { optional = true, version = "3.0.0" }
 sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 sc-network = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
-serde = { features = ["derive"], optional = true, version = "1.0.132" }
+serde = { features = ["derive"], optional = true, version = "1.0.136" }
 sp-trie = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 sp-keystore = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
 substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }

@@ -1,6 +1,6 @@
 use crate::{
     AccountId, Ancestry, Balance, Balances, Barrier, Call, LocalAssetTransactor, MaxInstructions,
-    PolkadotXcm, RelayChainLocation, UnitWeightCost, XcmOriginToTransactDispatchOrigin, XcmRouter,
+    PolkadotXcm, RelayLocation, UnitWeightCost, XcmOriginToTransactDispatchOrigin, XcmRouter,
 };
 use frame_support::weights::IdentityFee;
 use xcm_builder::{FixedWeightBounds, LocationInverter, NativeAsset, UsingComponents};
@@ -21,7 +21,8 @@ impl Config for XcmConfig {
     type ResponseHandler = PolkadotXcm;
     type SubscriptionService = PolkadotXcm;
     type Trader =
-        UsingComponents<IdentityFee<Balance>, RelayChainLocation, AccountId, Balances, ()>;
+        UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     type XcmSender = XcmRouter;
 }
+
