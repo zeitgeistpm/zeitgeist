@@ -52,6 +52,8 @@ construct_runtime!(
     }
 );
 
+pub type Shares = Currencies;
+
 impl crate::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFee;
@@ -70,7 +72,7 @@ impl crate::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currencies;
+    type Shares = Shares;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -175,17 +177,8 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
     fn default() -> Self {
-        let min_create_pool_liquidity = MinLiquidity::get();
-        // just to ensure there is enough for the extrinsic fees
-        let liquidity = min_create_pool_liquidity + BASE;
         Self {
-            balances: vec![
-                (ALICE, liquidity),
-                (BOB, liquidity),
-                (CHARLIE, liquidity),
-                (DAVE, liquidity),
-                (EVE, liquidity),
-            ],
+            balances: vec![(ALICE, BASE), (BOB, BASE), (CHARLIE, BASE), (DAVE, BASE), (EVE, BASE)],
         }
     }
 }
