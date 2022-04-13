@@ -15,7 +15,7 @@ fuzz_target!(|data: PoolCreationData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
         let _ = Swaps::create_pool(
-            data.origin.into(),
+            data.origin,
             data.assets.into_iter().map(asset).collect(),
             data.base_asset.map(asset),
             data.market_id,

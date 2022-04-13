@@ -22,7 +22,7 @@ fuzz_target!(|data: ExactAmountData| {
             let _ = Shares::deposit(asset(a), &data.pool_creation.origin, MinLiquidity::get());
         }
         match Swaps::create_pool(
-            data.pool_creation.origin.into(),
+            data.pool_creation.origin,
             data.pool_creation.assets.into_iter().map(asset).collect(),
             Some(data.pool_creation.base_asset).map(asset),
             data.pool_creation.market_id,
@@ -32,7 +32,7 @@ fuzz_target!(|data: ExactAmountData| {
         ) {
             Ok(pool_id) => {
                 let _ = Swaps::pool_join_with_exact_pool_amount(
-                    Origin::signed(data.origin.into()),
+                    Origin::signed(data.origin),
                     pool_id,
                     asset(data.asset),
                     data.pool_amount,
