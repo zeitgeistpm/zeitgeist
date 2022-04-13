@@ -68,8 +68,10 @@ impl<T: Config> OnRuntimeUpgrade for MigratePoolBaseAsset<T> {
                     &key,
                     Some(new_pool),
                 );
-                total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             }
+        
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
         }
 
         StorageVersion::new(NEXT_STORAGE_VERSION).put::<Pallet<T>>();
