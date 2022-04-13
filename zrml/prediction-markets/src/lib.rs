@@ -117,9 +117,6 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Allows the `DestroyOrigin` to immediately destroy a market.
-        ///
-        /// todo: this should check if there's any outstanding funds reserved if it stays
-        /// in for production
         #[pallet::weight(
             T::WeightInfo::admin_destroy_reported_market(
                 900,
@@ -135,6 +132,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#486)
             T::DestroyOrigin::ensure_origin(origin)?;
 
             let mut total_accounts = 0usize;
