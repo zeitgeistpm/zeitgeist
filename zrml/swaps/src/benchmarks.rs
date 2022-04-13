@@ -91,7 +91,7 @@ fn bench_create_pool<T: Config>(
     let _ = Pallet::<T>::create_pool(
         caller.clone(),
         assets.clone(),
-        Some(base_asset),
+        base_asset,
         market_id,
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
