@@ -275,13 +275,14 @@ mod pallet {
             Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
         }
 
-        /// Buys the complete set of outcome shares of a market. For example, when calling this
-        /// function on a categorical market with five different outcomes, five different shares
-        /// will be transferred to the callee.
+        /// Buy a complete set of outcome shares of a market.
         ///
-        /// The amount of each share will equal the provided `amount` parameter.
+        /// The cost of a full set is exactly one unit of the market's base asset. For example,
+        /// when calling `buy_complete_set(origin, 1, 2)` on a categorical market with five
+        /// different outcomes, the caller pays `2` of the base asset and receives `2` of each of
+        /// the five outcome tokens.
         ///
-        /// NOTE: This is the only way to create new shares.
+        /// NOTE: This is the only way to create new shares of outcome tokens.
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
@@ -761,7 +762,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 sender,
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 ScoringRule::CPMM,
                 Some(Zero::zero()),
@@ -1000,8 +1001,9 @@ mod pallet {
             Ok(())
         }
 
-        /// Destroys a complete set of outcomes shares for a market.
+        /// Sells a complete set of outcomes shares for a market.
         ///
+        /// Each complete set is sold for one unit of the market's base asset.
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
@@ -1011,6 +1013,7 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
@@ -1198,7 +1201,7 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
-        /// An invalid Hash was included in a multihash parameter
+        /// An invalid Hash was included in a multihash parameter.
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
@@ -1232,11 +1235,11 @@ mod pallet {
         MaxDisputesReached,
         /// The number of assets specified in a parameter does not match the total asset count.
         NotEnoughAssets,
-        /// The number of categories for a categorical market is too low
+        /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
-        /// Submitted outcome does not match market type
+        /// Submitted outcome does not match market type.
         OutcomeMismatch,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
@@ -1244,8 +1247,10 @@ mod pallet {
         StorageOverflow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
-        /// Too many categories for a categorical market
+        /// Too many categories for a categorical market.
         TooManyCategories,
+        /// An amount was illegally specified as zero.
+        ZeroAmount,
     }
 
     #[pallet::event]
@@ -1418,6 +1423,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance);
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -2032,7 +2038,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 market.creator.clone(),
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 market.scoring_rule,
                 None,
