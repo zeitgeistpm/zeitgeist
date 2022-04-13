@@ -1143,8 +1143,7 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
-            T::Shares::deposit(shares_id, to, amount)?;
-            Ok(())
+            T::Shares::deposit(shares_id, to, amount)
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<T::MarketId> {
