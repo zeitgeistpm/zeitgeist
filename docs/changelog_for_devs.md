@@ -16,9 +16,10 @@
   - `PoolJoinWithExactPoolAmount` (pool shares minted)
   - `PoolJoinWithExactAssetAmount` (pool shares minted)
 
-- The `PoolJoinSubsidy` and `PoolExitSubsidy` now have the following fields:
-  `[asset, amount, pool_id, who]`. The amount refers to the amount of subsidy
-  provided. When joining, the subsidy provider does _not_ immediately receive
+- [Rikiddo-related] `PoolExitSubsidy` now has the following fields:
+  `[asset, bound, pool_id, who, amount]`. The `bound` refers to the amount of
+  subsidy the user is trying to withdraw, the `amount` is the amount actually
+  withdrawn. When joining, the subsidy provider does _not_ immediately receive
   pool tokens, but the subsidy amount is reserved. When exiting, the subsidy
   amount is unreserved.
 
