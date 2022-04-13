@@ -1136,7 +1136,11 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
     // (Eve now has 100 SHORT, Charlie has 100 LONG)
 
     run_to_block(100);
-    assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(reported_value)));
+    assert_ok!(PredictionMarkets::report(
+        Origin::signed(BOB),
+        0,
+        OutcomeReport::Scalar(reported_value)
+    ));
     let market_after_report = MarketCommons::market(&0).unwrap();
     assert_eq!(market_after_report.report.is_some(), true);
     let report = market_after_report.report.unwrap();
