@@ -1375,7 +1375,7 @@ mod pallet {
                     let mut account_created = false;
                     let mut total_balance = <BalanceOf<T>>::zero();
                     total_assets = pool.assets.len();
-                    let mut providers_and_pool_shares: Vec<_> = vec![];
+                    let mut providers_and_pool_shares = vec![];
 
                     // Transfer all reserved funds to the pool account and distribute pool shares.
                     for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
