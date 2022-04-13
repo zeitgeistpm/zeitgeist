@@ -1198,7 +1198,7 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        fn _set_pool_as_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
+        fn set_pool_as_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
                 if pool.pool_status == PoolStatus::Stale {
                     return Ok(());
@@ -1210,7 +1210,7 @@ mod pallet {
             Ok(0) // TODO Needs benchmark!
         }
 
-        fn _set_pool_as_stale_categorical(
+        fn set_pool_as_stale_categorical(
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
@@ -1684,9 +1684,9 @@ mod pallet {
         ///
         /// # Arguments
         ///
-        /// * `market_type`: Type of the market
+        /// * `market_type`: Type of the market.
         /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
-        /// * `outcome_report`: The resulting outcome.
+        /// * `outcome_report`: The reported outcome.
         /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
         ///
         /// # Errors
@@ -1704,9 +1704,9 @@ mod pallet {
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = 0;
-            weight = weight.saturating_add(Self::_set_pool_as_stale_common(pool_id)?);
+            weight = weight.saturating_add(Self::set_pool_as_stale_common(pool_id)?);
             if let MarketType::Categorical(_) = market_type {
-                weight = weight.saturating_add(Self::_set_pool_as_stale_categorical(
+                weight = weight.saturating_add(Self::set_pool_as_stale_categorical(
                     pool_id,
                     outcome_report,
                     winner_payout_account,
