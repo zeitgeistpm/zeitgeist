@@ -249,6 +249,21 @@ fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
 }
 
 #[test]
+fn it_does_not_allow_buying_complete_sets_with_insufficient_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 10000 * BASE),
+            Error::<Runtime>::NotEnoughBalance
+        );
+    });
+}
+
+#[test]
 fn it_allows_to_deploy_a_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
@@ -335,6 +350,23 @@ fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
         assert_noop!(
             PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 0),
             Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * CENT));
+        assert_eq!(Currency::slash(Asset::CategoricalOutcome(0, 1), &BOB, CENT), 0);
+        assert_noop!(
+            PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 2 * CENT),
+            Error::<Runtime>::InsufficientShareBalance
         );
     });
 }
