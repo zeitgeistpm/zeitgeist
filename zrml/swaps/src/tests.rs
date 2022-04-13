@@ -490,7 +490,7 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.iter().cloned().collect(),
-            Some(ASSETS.last().unwrap().clone()),
+            ASSETS.last().unwrap().clone(),
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -1092,7 +1092,15 @@ fn create_pool_fails_on_too_many_assets() {
         });
 
         assert_noop!(
-            Swaps::create_pool(BOB, assets, None, 0, ScoringRule::CPMM, Some(0), Some(weights),),
+            Swaps::create_pool(
+                BOB,
+                assets.clone(),
+                assets.last().unwrap().clone(),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(weights),
+            ),
             crate::Error::<Runtime>::TooManyAssets
         );
     });
@@ -1105,7 +1113,7 @@ fn create_pool_fails_on_too_few_assets() {
             Swaps::create_pool(
                 BOB,
                 vec!(ASSET_A),
-                Some(ASSET_A),
+                ASSET_A,
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1123,7 +1131,7 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
             Swaps::create_pool(
                 BOB,
                 vec!(ASSET_A, ASSET_B, ASSET_C),
-                Some(ASSET_D),
+                ASSET_D,
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1195,7 +1203,7 @@ fn create_pool_fails_on_weight_below_minimum_weight() {
             Swaps::create_pool(
                 BOB,
                 ASSETS.iter().cloned().collect(),
-                Some(ASSETS.last().unwrap().clone()),
+                ASSETS.last().unwrap().clone(),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1216,7 +1224,7 @@ fn create_pool_fails_on_weight_above_maximum_weight() {
             Swaps::create_pool(
                 BOB,
                 ASSETS.iter().cloned().collect(),
-                Some(ASSETS.last().unwrap().clone()),
+                ASSETS.last().unwrap().clone(),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1238,7 +1246,7 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
             Swaps::create_pool(
                 BOB,
                 ASSETS.iter().cloned().collect(),
-                Some(ASSETS.last().unwrap().clone()),
+                ASSETS.last().unwrap().clone(),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1263,7 +1271,7 @@ fn create_initial_pool(scoring_rule: ScoringRule, deposit: bool) {
     assert_ok!(Swaps::create_pool(
         BOB,
         ASSETS.iter().cloned().collect(),
-        Some(ASSETS.last().unwrap().clone()),
+        ASSETS.last().unwrap().clone(),
         0,
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(0) } else { None },

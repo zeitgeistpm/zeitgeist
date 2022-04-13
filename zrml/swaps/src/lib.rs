@@ -1211,7 +1211,6 @@ mod pallet {
         /// funds for each of the assets to cover the `MinLiqudity`.
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
-        ///   Default is `Asset::Ztg`.
         /// * `market_id`: The market id of the market the pool belongs to.
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
         /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
@@ -1220,7 +1219,7 @@ mod pallet {
         fn create_pool(
             who: T::AccountId,
             mut assets: Vec<Asset<T::MarketId>>,
-            base_asset: Option<Asset<T::MarketId>>,
+            base_asset: Asset<T::MarketId>,
             market_id: Self::MarketId,
             scoring_rule: ScoringRule,
             swap_fee: Option<BalanceOf<T>>,
@@ -1234,7 +1233,6 @@ mod pallet {
             let pool_account = Self::pool_account_id(next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
-            let base_asset = base_asset.unwrap_or(Asset::Ztg);
             ensure!(assets.contains(&base_asset), Error::<T>::BaseAssetNotFound);
 
             if scoring_rule == ScoringRule::CPMM {
