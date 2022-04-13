@@ -38,15 +38,15 @@
 //! #### Admin Dispatches
 //!
 //! The administrative dispatches are used to perform admin functions on chain. Currently, the
-//! admin functions can only be called by the `ApprovalOrigin` origin.
+//! admin functions can only be called by the `ApprovalOrigin`, `CloseOrigin`, `DestroyOrigin` and `ResolveOrigin`
 //!
 //! - `admin_destroy_market` - Destroys a market and all related assets, regardless of its state.
 //! - `admin_move_market_to_closed` - Immediately moves a market that is an `Active` state to closed.
 //! - `admin_move_market_to_resolved` - Immediately moves a market that is `Reported` or `Disputed` to resolved.
 //!
-//! #### `ApprovalOrigin` Dispatches
+//! #### `ApprovalOrigin`, `CloseOrigin`, `DestroyOrigin` and `ResolveOrigin` Dispatches
 //!
-//! The `ApprovalOrigin` is meant to be the advisory committee, the on-chain governing body of Zeitgeist
+//! Those origins are mainly minimum vote proportions from the advisory committee, the on-chain governing body of Zeitgeist
 //! that is responsible for maintaining a list of high quality markets and slash low quality markets.
 //!
 //! - `approve_market` - Approves a `Proposed` market that is waiting approval from the Advisory Committee.
@@ -116,7 +116,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Allows the `ApprovalOrigin` to immediately destroy a market.
+        /// Allows the `DestroyOrigin` to immediately destroy a market.
         ///
         /// todo: this should check if there's any outstanding funds reserved if it stays
         /// in for production
@@ -135,7 +135,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+            T::DestroyOrigin::ensure_origin(origin)?;
 
             let mut total_accounts = 0usize;
             let mut share_accounts = 0usize;
@@ -184,7 +184,7 @@ mod pallet {
             }
         }
 
-        /// Allows the `ApprovalOrigin` to immediately move an open market to closed.
+        /// Allows the `CloseOrigin` to immediately move an open market to closed.
         //
         // ***** IMPORTANT *****
         //
@@ -195,7 +195,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResult {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+            T::CloseOrigin::ensure_origin(origin)?;
             T::MarketCommons::mutate_market(&market_id, |m| {
                 m.period = match m.period {
                     MarketPeriod::Block(ref range) => {
@@ -212,7 +212,7 @@ mod pallet {
             Ok(())
         }
 
-        /// Allows the `ApprovalOrigin` to immediately move a reported or disputed
+        /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
         ////
         #[pallet::weight(T::WeightInfo::admin_move_market_to_resolved_overhead()
@@ -226,7 +226,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+            T::ResolveOrigin::ensure_origin(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(
@@ -275,13 +275,14 @@ mod pallet {
             Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
         }
 
-        /// Buys the complete set of outcome shares of a market. For example, when calling this
-        /// function on a categorical market with five different outcomes, five different shares
-        /// will be transferred to the callee.
+        /// Buy a complete set of outcome shares of a market.
         ///
-        /// The amount of each share will equal the provided `amount` parameter.
+        /// The cost of a full set is exactly one unit of the market's base asset. For example,
+        /// when calling `buy_complete_set(origin, 1, 2)` on a categorical market with five
+        /// different outcomes, the caller pays `2` of the base asset and receives `2` of each of
+        /// the five outcome tokens.
         ///
-        /// NOTE: This is the only way to create new shares.
+        /// NOTE: This is the only way to create new shares of outcome tokens.
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
@@ -462,9 +463,6 @@ mod pallet {
         ///     all assets should be deployed. For example, `amount_outcome_assets = [120, 150]`
         ///     means, that after deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `keep_outcome_assets`: Specifies how many outcome assets to keep. Any left-over
-        ///     assets that are specified as zero in this vector are sold. Must have the same
-        ///     length as `amount_outcome_assets`.
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into()))
@@ -486,7 +484,6 @@ mod pallet {
             amount_base_asset: BalanceOf<T>,
             amount_outcome_assets: Vec<BalanceOf<T>>,
             weights: Vec<u128>,
-            keep_outcome_assets: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin.clone())?;
 
@@ -498,11 +495,6 @@ mod pallet {
             } else if let MarketType::Scalar(_) = assets {
                 ensure!(amount_outcome_assets.len() == 2, Error::<T>::NotEnoughAssets);
             }
-
-            ensure!(
-                amount_outcome_assets.len() == keep_outcome_assets.len(),
-                Error::<T>::NotEnoughAssets
-            );
 
             // Create the correct market
             let weight_market_creation = match assets.clone() {
@@ -540,7 +532,6 @@ mod pallet {
                 amount_base_asset,
                 amount_outcome_assets.clone(),
                 weights.clone(),
-                keep_outcome_assets,
             )?
             .actual_weight
             .unwrap_or_else(|| {
@@ -648,9 +639,6 @@ mod pallet {
         ///     all assets should be deployed. For example, `amount_outcome_assets = [120, 150]
         ///     means, that after deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `keep_outcome_assets`: Specifies how many outcome assets to keep. Any left-over
-        ///     assets that are specified as zero in this vector are sold. Must have the same
-        ///     length as `amount_outcome_assets`.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
@@ -667,7 +655,6 @@ mod pallet {
             amount_base_asset: BalanceOf<T>,
             amount_outcome_assets: Vec<BalanceOf<T>>,
             weights: Vec<u128>,
-            keep_outcome_assets: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
             // Buy a complete set of assets based on the highest number to be deployed
@@ -685,8 +672,6 @@ mod pallet {
             let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins_and_sells = 0;
-            let mut remaining_sells: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)> =
-                Vec::with_capacity(amount_outcome_assets.len());
             let mut add_liqudity =
                 |amount: BalanceOf<T>, asset: Asset<MarketIdOf<T>>| -> DispatchResult {
                     let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
@@ -702,9 +687,7 @@ mod pallet {
                 };
 
             // Add additional liquidity as specified in amount_outcome_assets
-            for ((idx, asset_amount), keep_amount) in
-                amount_outcome_assets.iter().enumerate().zip(keep_outcome_assets)
-            {
+            for (idx, asset_amount) in amount_outcome_assets.iter().enumerate() {
                 if *asset_amount == zero_balance {
                     continue;
                 };
@@ -727,11 +710,6 @@ mod pallet {
                 if remaining_amount > zero_balance {
                     add_liqudity(remaining_amount, asset_in)?;
                 }
-
-                remaining_sells.push((
-                    asset_in,
-                    max_assets.saturating_sub(*asset_amount).saturating_sub(keep_amount),
-                ));
             }
 
             // Add additional liquidity for the base asset
@@ -740,26 +718,6 @@ mod pallet {
 
             if remaining_amount > zero_balance {
                 add_liqudity(remaining_amount, Asset::Ztg)?;
-            }
-
-            // If desired, sell remaining assets. An additional loop is used because the
-            // sell prices change after all additional liquidity was added.
-            for (asset, amount) in remaining_sells.into_iter() {
-                if amount == zero_balance {
-                    continue;
-                }
-
-                let local_weight = T::Swaps::swap_exact_amount_in(
-                    who.clone(),
-                    pool_id,
-                    asset,
-                    amount,
-                    Asset::Ztg,
-                    zero_balance,
-                    u128::MAX.saturated_into(),
-                )?;
-                weight_pool_joins_and_sells =
-                    weight_pool_joins_and_sells.saturating_add(local_weight);
             }
 
             Ok(Some(
@@ -804,7 +762,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 sender,
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 ScoringRule::CPMM,
                 Some(Zero::zero()),
@@ -928,13 +886,25 @@ mod pallet {
 
                 // Pay out the winner.
                 let remaining_bal = CurrencyOf::<T>::free_balance(&market_account);
+                let actual_payout = payout.min(remaining_bal);
 
                 CurrencyOf::<T>::transfer(
                     &market_account,
                     &sender,
-                    payout.min(remaining_bal),
+                    actual_payout,
                     ExistenceRequirement::AllowDeath,
                 )?;
+                // The if-check prevents scalar markets to emit events even if sender only owns one
+                // of the outcome tokens.
+                if balance != <BalanceOf<T>>::zero() {
+                    Self::deposit_event(Event::TokensRedeemed(
+                        market_id,
+                        currency_id,
+                        balance,
+                        actual_payout,
+                        sender.clone(),
+                    ));
+                }
             }
 
             // Weight correction
@@ -1006,7 +976,7 @@ mod pallet {
 
                 if should_check_origin {
                     let sender_is_oracle = sender == market.oracle;
-                    let origin_has_permission = T::ApprovalOrigin::ensure_origin(origin).is_ok();
+                    let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
                     ensure!(
                         sender_is_oracle || origin_has_permission,
                         Error::<T>::ReporterNotOracle
@@ -1031,8 +1001,9 @@ mod pallet {
             Ok(())
         }
 
-        /// Destroys a complete set of outcomes shares for a market.
+        /// Sells a complete set of outcomes shares for a market.
         ///
+        /// Each complete set is sold for one unit of the market's base asset.
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
@@ -1042,6 +1013,7 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
@@ -1094,6 +1066,7 @@ mod pallet {
         #[pallet::constant]
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
+        /// The origin that is allowed to approve / reject pending advised markets.
         type ApprovalOrigin: EnsureOrigin<Self::Origin>;
 
         /// See [`AuthorizedPalletApi`].
@@ -1106,6 +1079,9 @@ mod pallet {
             Origin = Self::Origin,
         >;
 
+        /// The origin that is allowed to close markets.
+        type CloseOrigin: EnsureOrigin<Self::Origin>;
+
         /// See [`CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
             AccountId = Self::AccountId,
@@ -1115,6 +1091,9 @@ mod pallet {
             Moment = MomentOf<Self>,
             Origin = Self::Origin,
         >;
+
+        /// The origin that is allowed to destroy markets.
+        type DestroyOrigin: EnsureOrigin<Self::Origin>;
 
         /// The base amount of currency that must be bonded in order to create a dispute.
         #[pallet::constant]
@@ -1185,6 +1164,9 @@ mod pallet {
         #[pallet::constant]
         type ReportingPeriod: Get<u32>;
 
+        /// The origin that is allowed to resolve markets.
+        type ResolveOrigin: EnsureOrigin<Self::Origin>;
+
         /// See [`SimpleDisputesPalletApi`].
         type SimpleDisputes: DisputeApi<
             AccountId = Self::AccountId,
@@ -1219,7 +1201,7 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
-        /// An invalid Hash was included in a multihash parameter
+        /// An invalid Hash was included in a multihash parameter.
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
@@ -1253,11 +1235,11 @@ mod pallet {
         MaxDisputesReached,
         /// The number of assets specified in a parameter does not match the total asset count.
         NotEnoughAssets,
-        /// The number of categories for a categorical market is too low
+        /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
-        /// Submitted outcome does not match market type
+        /// Submitted outcome does not match market type.
         OutcomeMismatch,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
@@ -1265,10 +1247,12 @@ mod pallet {
         StorageOverflow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
-        /// Too many categories for a categorical market
+        /// Too many categories for a categorical market.
         TooManyCategories,
         /// Catch-all error for invalid market status
         InvalidMarketStatus,
+        /// An amount was illegally specified as zero.
+        ZeroAmount,
     }
 
     #[pallet::event]
@@ -1303,6 +1287,14 @@ mod pallet {
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount_redeemed, payout, who\]
+        TokensRedeemed(
+            MarketIdOf<T>,
+            Asset<MarketIdOf<T>>,
+            BalanceOf<T>,
+            BalanceOf<T>,
+            <T as frame_system::Config>::AccountId,
+        ),
     }
 
     #[pallet::hooks]
@@ -1433,6 +1425,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance);
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -2052,7 +2045,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 market.creator.clone(),
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 market.scoring_rule,
                 None,

@@ -6,6 +6,7 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
+use fixed::bmul;
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -86,7 +87,7 @@ fn bench_create_pool<T: Config>(
     let market_id = T::MarketId::from(0u8);
     let assets = generate_assets::<T>(&caller, asset_count_unwrapped, asset_amount);
     let weights = vec![T::MinWeight::get(); asset_count_unwrapped];
-    let base_asset = Some(*assets.last().unwrap());
+    let base_asset = *assets.last().unwrap();
 
     let _ = Pallet::<T>::create_pool(
         caller.clone(),
@@ -102,7 +103,7 @@ fn bench_create_pool<T: Config>(
 
     if subsidize {
         let min_subsidy = T::MinSubsidy::get();
-        let _ = T::Shares::deposit(base_asset.unwrap(), &caller, min_subsidy).unwrap();
+        let _ = T::Shares::deposit(base_asset, &caller, min_subsidy).unwrap();
         let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller).into())
             .unwrap();
@@ -215,7 +216,7 @@ benchmarks! {
         Pallet::<T>::distribute_pool_share_rewards(
             &pool,
             pool_id,
-            pool.base_asset.unwrap(),
+            pool.base_asset,
             Asset::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into()),
             &account("ScrapCollector", 0, 0)
         );
@@ -226,7 +227,15 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize), None, ScoringRule::CPMM, false);
         let pool_amount = T::MinLiquidity::get();
-        let min_assets_out = vec![T::MinLiquidity::get(); a as usize];
+        let min_assets_out = vec![
+            T::MinLiquidity::get()
+                - bmul(
+                    T::ExitFee::get().saturated_into(),
+                    T::MinLiquidity::get().saturated_into()
+                )?
+                .saturated_into();
+            a as usize
+        ];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, min_assets_out)
 
     pool_exit_subsidy {

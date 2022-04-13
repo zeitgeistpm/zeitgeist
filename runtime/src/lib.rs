@@ -20,20 +20,18 @@ mod xcm_config;
 pub use parachain_params::*;
 pub use parameters::*;
 
-#[cfg(feature = "parachain")]
-use parachain_staking::migrations::{PurgeStaleStorage, RemoveExitQueue};
-
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, EnsureOneOf},
+    traits::{Contains, EnsureOneOf, EqualPrivilegeOnly},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
+use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
-    u32_trait::{_1, _2},
+    u32_trait::{_1, _2, _3, _4},
     OpaqueMetadata,
 };
 use sp_runtime::{
@@ -48,6 +46,7 @@ use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
+use zrml_swaps::migrations::MigratePoolBaseAsset;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::Everything,
@@ -59,7 +58,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 34,
+    spec_version: 35,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 11,
@@ -69,40 +68,18 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 type Address = sp_runtime::MultiAddress<AccountId, ()>;
-type AdvisoryCommitteeCollectiveInstance = pallet_collective::Instance1;
-type AdvisoryCommitteeMembershipInstance = pallet_membership::Instance1;
-type EnsureRootOrMoreThanHalfOfAdvisoryCommittee = EnsureOneOf<
-    EnsureRoot<AccountId>,
-    pallet_collective::EnsureProportionMoreThan<
-        _1,
-        _2,
-        AccountId,
-        AdvisoryCommitteeCollectiveInstance,
-    >,
->;
 
-#[cfg(feature = "parachain")]
 type Executive = frame_executive::Executive<
     Runtime,
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (PurgeStaleStorage<Runtime>, RemoveExitQueue<Runtime>),
->;
-
-#[cfg(not(feature = "parachain"))]
-type Executive = frame_executive::Executive<
-    Runtime,
-    Block,
-    frame_system::ChainContext<Runtime>,
-    Runtime,
-    AllPalletsWithSystem,
+    MigratePoolBaseAsset<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
-
 type SignedExtra = (
     frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
@@ -113,8 +90,72 @@ type SignedExtra = (
     frame_system::CheckWeight<Runtime>,
     pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
-
 type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+
+// Governance
+type AdvisoryCommitteeInstance = pallet_collective::Instance1;
+type AdvisoryCommitteeMembershipInstance = pallet_membership::Instance1;
+type CouncilInstance = pallet_collective::Instance2;
+type CouncilMembershipInstance = pallet_membership::Instance2;
+type TechnicalCommitteeInstance = pallet_collective::Instance3;
+type TechnicalCommitteeMembershipInstance = pallet_membership::Instance3;
+
+// Council vote proportions
+// At least 50%
+type EnsureRootOrHalfCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>>;
+
+// At least 66%
+type EnsureRootOrTwoThirdsCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>>;
+
+// At least 75%
+type EnsureRootOrThreeFourthsCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_3, _4, AccountId, CouncilInstance>>;
+
+// At least 100%
+type EnsureRootOrAllCouncil =
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>>;
+
+// Technical committee vote proportions
+// At least 50%
+#[cfg(feature = "parachain")]
+type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCommitteeInstance>,
+>;
+
+// At least 66%
+type EnsureRootOrTwoThirdsTechnicalCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCommitteeInstance>,
+>;
+
+// At least 100%
+type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCommitteeInstance>,
+>;
+
+// Advisory committee vote proportions
+// At least 50%
+type EnsureRootOrHalfAdvisoryCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _2, AccountId, AdvisoryCommitteeInstance>,
+>;
+
+// Technical committee vote proportions
+// At least 66%
+type EnsureRootOrTwoThirdsAdvisoryCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_2, _3, AccountId, AdvisoryCommitteeInstance>,
+>;
+
+// At least 100%
+type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
+    EnsureRoot<AccountId>,
+    EnsureProportionAtLeast<_1, _1, AccountId, AdvisoryCommitteeInstance>,
+>;
 
 // Construct runtime
 macro_rules! create_zeitgeist_runtime {
@@ -133,6 +174,8 @@ macro_rules! create_zeitgeist_runtime {
                 System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
                 Timestamp: pallet_timestamp::{Call, Pallet, Storage, Inherent} = 1,
                 RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+                Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 3,
+                Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 4,
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
@@ -140,26 +183,33 @@ macro_rules! create_zeitgeist_runtime {
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
 
+                // Governance
+                Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
+                AdvisoryCommittee: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 21,
+                AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 22,
+                Council: pallet_collective::<Instance2>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 23,
+                CouncilMembership: pallet_membership::<Instance2>::{Call, Config<T>, Event<T>, Pallet, Storage} = 24,
+                TechnicalCommittee: pallet_collective::<Instance3>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 25,
+                TechnicalCommitteeMembership: pallet_membership::<Instance3>::{Call, Config<T>, Event<T>, Pallet, Storage} = 26,
+
                 // Other Parity pallets
-                AdvisoryCommitteeCollective: pallet_collective::<Instance1>::{Call, Config<T>, Event<T>, Origin<T>, Pallet, Storage} = 20,
-                AdvisoryCommitteeMembership: pallet_membership::<Instance1>::{Call, Config<T>, Event<T>, Pallet, Storage} = 21,
-                Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 22,
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 23,
-                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 24,
+                Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
+                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 31,
+                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 32,
 
                 // Third-party
-                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 30,
-                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 31,
+                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 40,
+                Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
 
                 // Zeitgeist
-                MarketCommons: zrml_market_commons::{Pallet, Storage} = 40,
-                Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 41,
-                Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 42,
-                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 43,
-                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 44,
-                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 45,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 46,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 47,
+                MarketCommons: zrml_market_commons::{Pallet, Storage} = 50,
+                Authorized: zrml_authorized::{Call, Event<T>, Pallet, Storage} = 51,
+                Court: zrml_court::{Call, Event<T>, Pallet, Storage} = 52,
+                LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 53,
+                RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
+                SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
 
                 $($additional_pallets)*
             }
@@ -170,37 +220,37 @@ macro_rules! create_zeitgeist_runtime {
 #[cfg(feature = "parachain")]
 create_zeitgeist_runtime!(
     // System
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 50,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 51,
+    ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
 
     // Consensus
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 60,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 61,
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 62,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 63,
+    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
+    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
+    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 112,
+    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
 
     // XCM
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 70,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 71,
-    PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 72,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 73,
+    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
+    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
+    PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 122,
+    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
 
     // Third-party
-    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 80,
+    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
 );
 
 #[cfg(not(feature = "parachain"))]
 create_zeitgeist_runtime!(
     // Consensus
-    Aura: pallet_aura::{Config<T>, Pallet, Storage} = 50,
-    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 51,
+    Aura: pallet_aura::{Config<T>, Pallet, Storage} = 100,
+    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 101,
 );
 
 // Configure Pallets
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type Event = Event;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+    type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
 
@@ -226,7 +276,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
     type Event = Event;
-    type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+    type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type VersionWrapper = ();
     type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
 }
@@ -255,8 +305,15 @@ cfg_if::cfg_if! {
                     | Call::Crowdloan(_)
                     | Call::Balances(_)
                     | Call::Treasury(_)
-                    | Call::AdvisoryCommitteeCollective(_)
+                    | Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Council(_)
+                    | Call::CouncilMembership(_)
+                    | Call::TechnicalCommittee(_)
+                    | Call::TechnicalCommitteeMembership(_)
+                    | Call::Democracy(_)
+                    | Call::Scheduler(_)
+                    | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
                     | Call::Currency(_)
@@ -279,8 +336,15 @@ cfg_if::cfg_if! {
                     // Prohibited calls:
                     Call::Balances(_)
                     | Call::Treasury(_)
-                    | Call::AdvisoryCommitteeCollective(_)
+                    | Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Council(_)
+                    | Call::CouncilMembership(_)
+                    | Call::TechnicalCommittee(_)
+                    | Call::TechnicalCommitteeMembership(_)
+                    | Call::Democracy(_)
+                    | Call::Scheduler(_)
+                    | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
                     | Call::Currency(_)
@@ -480,8 +544,8 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>; // weights::pallet_balances::WeightInfo<Runtime>;
 }
 
-impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime {
-    type DefaultVote = pallet_collective::PrimeDefaultVote;
+impl pallet_collective::Config<AdvisoryCommitteeInstance> for Runtime {
+    type DefaultVote = PrimeDefaultVote;
     type Event = Event;
     type MaxMembers = AdvisoryCommitteeMaxMembers;
     type MaxProposals = AdvisoryCommitteeMaxProposals;
@@ -491,35 +555,150 @@ impl pallet_collective::Config<AdvisoryCommitteeCollectiveInstance> for Runtime 
     type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 }
 
+impl pallet_collective::Config<CouncilInstance> for Runtime {
+    type DefaultVote = PrimeDefaultVote;
+    type Event = Event;
+    type MaxMembers = CouncilMaxMembers;
+    type MaxProposals = CouncilMaxProposals;
+    type MotionDuration = CouncilMotionDuration;
+    type Origin = Origin;
+    type Proposal = Call;
+    type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
+}
+
+impl pallet_collective::Config<TechnicalCommitteeInstance> for Runtime {
+    type DefaultVote = PrimeDefaultVote;
+    type Event = Event;
+    type MaxMembers = TechnicalCommitteeMaxMembers;
+    type MaxProposals = TechnicalCommitteeMaxProposals;
+    type MotionDuration = TechnicalCommitteeMotionDuration;
+    type Origin = Origin;
+    type Proposal = Call;
+    type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
+}
+
+impl pallet_democracy::Config for Runtime {
+    type Proposal = Call;
+    type Event = Event;
+    type Currency = Balances;
+    type EnactmentPeriod = EnactmentPeriod;
+    type LaunchPeriod = LaunchPeriod;
+    type VotingPeriod = VotingPeriod;
+    type VoteLockingPeriod = VoteLockingPeriod;
+    type MinimumDeposit = MinimumDeposit;
+    /// Origin that can decide what their next motion is.
+    type ExternalOrigin = EnsureRootOrHalfCouncil;
+    /// Origin that can have the next scheduled referendum be a straight majority-carries vote.
+    type ExternalMajorityOrigin = EnsureRootOrHalfCouncil;
+    /// Origina that can have the next scheduled referendum be a straight default-carries
+    /// (NTB) vote.
+    type ExternalDefaultOrigin = EnsureRootOrAllCouncil;
+    /// Origin that can have an ExternalMajority/ExternalDefault vote
+    /// be tabled immediately and with a shorter voting/enactment period.
+    type FastTrackOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+    /// Origin from which the next majority-carries (or more permissive) referendum may be tabled
+    /// to vote immediately and asynchronously in a similar manner to the emergency origin.
+    type InstantOrigin = EnsureRootOrAllTechnicalCommittee;
+    type InstantAllowed = InstantAllowed;
+    type FastTrackVotingPeriod = FastTrackVotingPeriod;
+    /// Origin from which any referendum may be cancelled in an emergency.
+    type CancellationOrigin = EnsureRootOrThreeFourthsCouncil;
+    /// Origin from which proposals may be blacklisted.
+    type BlacklistOrigin = EnsureRootOrAllCouncil;
+    /// Origin from which a proposal may be cancelled and its backers slashed.
+    type CancelProposalOrigin = EnsureRootOrAllTechnicalCommittee;
+    /// Origin for anyone able to veto proposals.
+    type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
+    type CooloffPeriod = CooloffPeriod;
+    type PreimageByteDeposit = PreimageByteDeposit;
+    type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
+    type Slash = Treasury;
+    type Scheduler = Scheduler;
+    type PalletsOrigin = OriginCaller;
+    type MaxVotes = MaxVotes;
+    type WeightInfo = weights::pallet_democracy::WeightInfo<Runtime>;
+    type MaxProposals = MaxProposals;
+}
+
 impl pallet_identity::Config for Runtime {
     type BasicDeposit = BasicDeposit;
     type Currency = Balances;
     type Event = Event;
     type FieldDeposit = FieldDeposit;
-    type ForceOrigin = EnsureRoot<AccountId>;
+    type ForceOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
     type MaxAdditionalFields = MaxAdditionalFields;
     type MaxRegistrars = MaxRegistrars;
     type MaxSubAccounts = MaxSubAccounts;
-    type RegistrarOrigin = EnsureRoot<AccountId>;
+    type RegistrarOrigin = EnsureRootOrHalfCouncil;
     type Slashed = Treasury;
     type SubAccountDeposit = SubAccountDeposit;
     type WeightInfo = weights::pallet_identity::WeightInfo<Runtime>;
 }
 
 impl pallet_membership::Config<AdvisoryCommitteeMembershipInstance> for Runtime {
-    type AddOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type AddOrigin = EnsureRootOrTwoThirdsCouncil;
     type Event = Event;
     type MaxMembers = AdvisoryCommitteeMaxMembers;
-    type MembershipChanged = AdvisoryCommitteeCollective;
-    type MembershipInitialized = AdvisoryCommitteeCollective;
-    type PrimeOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type RemoveOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type ResetOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
-    type SwapOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type MembershipChanged = AdvisoryCommittee;
+    type MembershipInitialized = AdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrTwoThirdsCouncil;
+    type RemoveOrigin = EnsureRootOrTwoThirdsCouncil;
+    type ResetOrigin = EnsureRootOrTwoThirdsCouncil;
+    type SwapOrigin = EnsureRootOrTwoThirdsCouncil;
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
+impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
+    type AddOrigin = EnsureRootOrThreeFourthsCouncil;
+    type Event = Event;
+    type MaxMembers = CouncilMaxMembers;
+    type MembershipChanged = AdvisoryCommittee;
+    type MembershipInitialized = AdvisoryCommittee;
+    type PrimeOrigin = EnsureRootOrThreeFourthsCouncil;
+    type RemoveOrigin = EnsureRootOrThreeFourthsCouncil;
+    type ResetOrigin = EnsureRootOrThreeFourthsCouncil;
+    type SwapOrigin = EnsureRootOrThreeFourthsCouncil;
+    type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
+}
+
+impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime {
+    type AddOrigin = EnsureRootOrTwoThirdsCouncil;
+    type Event = Event;
+    type MaxMembers = TechnicalCommitteeMaxMembers;
+    type MembershipChanged = TechnicalCommittee;
+    type MembershipInitialized = TechnicalCommittee;
+    type PrimeOrigin = EnsureRootOrTwoThirdsCouncil;
+    type RemoveOrigin = EnsureRootOrTwoThirdsCouncil;
+    type ResetOrigin = EnsureRootOrTwoThirdsCouncil;
+    type SwapOrigin = EnsureRootOrTwoThirdsCouncil;
+    type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
+}
+
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
+    type Event = Event;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type MaxSize = PreimageMaxSize;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
+
+impl pallet_scheduler::Config for Runtime {
+    type Event = Event;
+    type Origin = Origin;
+    type PalletsOrigin = OriginCaller;
+    type Call = Call;
+    type MaximumWeight = MaximumSchedulerWeight;
+    type ScheduleOrigin = EnsureRoot<AccountId>;
+    type MaxScheduledPerBlock = MaxScheduledPerBlock;
+    type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
+    type OriginPrivilegeCmp = EqualPrivilegeOnly;
+    type PreimageProvider = Preimage;
+    type NoPreimagePostponement = NoPreimagePostponement;
+}
 
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
@@ -545,7 +724,7 @@ impl pallet_transaction_payment::Config for Runtime {
 }
 
 impl pallet_treasury::Config for Runtime {
-    type ApproveOrigin = EnsureRoot<AccountId>;
+    type ApproveOrigin = EnsureRootOrTwoThirdsCouncil;
     type Burn = Burn;
     type BurnDestination = ();
     type Currency = Balances;
@@ -556,7 +735,7 @@ impl pallet_treasury::Config for Runtime {
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
     type ProposalBondMaximum = ProposalBondMaximum;
-    type RejectOrigin = EnsureRoot<AccountId>;
+    type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
     type SpendFunds = ();
     type SpendPeriod = SpendPeriod;
     type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
@@ -618,9 +797,11 @@ impl zrml_market_commons::Config for Runtime {
 
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
-    type ApprovalOrigin = EnsureRootOrMoreThanHalfOfAdvisoryCommittee;
+    type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type Authorized = Authorized;
     type Court = Court;
+    type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
+    type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
@@ -635,6 +816,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
+    type ResolveOrigin = EnsureRoot<AccountId>;
     type Shares = Tokens;
     type SimpleDisputes = SimpleDisputes;
     type Slash = ();
@@ -773,9 +955,12 @@ impl_runtime_apis! {
             orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
             orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
             list_benchmark!(list, extra, pallet_balances, Balances);
-            list_benchmark!(list, extra, pallet_collective, AdvisoryCommitteeCollective);
+            list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
+            list_benchmark!(list, extra, pallet_democracy, Democracy);
             list_benchmark!(list, extra, pallet_identity, Identity);
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
+            list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_treasury, Treasury);
             list_benchmark!(list, extra, pallet_utility, Utility);
@@ -839,9 +1024,12 @@ impl_runtime_apis! {
             orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
             orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
             add_benchmark!(params, batches, pallet_balances, Balances);
-            add_benchmark!(params, batches, pallet_collective, AdvisoryCommitteeCollective);
+            add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
+            add_benchmark!(params, batches, pallet_democracy, Democracy);
             add_benchmark!(params, batches, pallet_identity, Identity);
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
+            add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);
             add_benchmark!(params, batches, pallet_utility, Utility);
