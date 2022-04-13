@@ -43,7 +43,7 @@ impl<T: Config> OnRuntimeUpgrade for MigratePoolBaseAsset<T> {
         }
         let mut total_weight: Weight = 0;
         log::info!(
-            "Starting migration of Pool::base_asset from Optional<Asset<MarketId>> to \
+            "Starting migration of Pool::base_asset from Option<Asset<MarketId>> to \
              Asset<MarketId>"
         );
 
@@ -78,7 +78,7 @@ impl<T: Config> OnRuntimeUpgrade for MigratePoolBaseAsset<T> {
         total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
         log::info!(
-            "Completed migration of Pool::base_asset from Optional<Asset<MarketId>> to \
+            "Completed migration of Pool::base_asset from Option<Asset<MarketId>> to \
              Asset<MarketId>"
         );
         total_weight
