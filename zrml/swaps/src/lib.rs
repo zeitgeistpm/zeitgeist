@@ -1260,6 +1260,7 @@ mod pallet {
                 total_assets.saturated_into(),
             )
             .saturating_add(extra_weight))
+        }
 
         /// Calculate the exit fee percentage for `pool`.
         fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
