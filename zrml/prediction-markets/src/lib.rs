@@ -275,13 +275,14 @@ mod pallet {
             Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
         }
 
-        /// Buys the complete set of outcome shares of a market. For example, when calling this
-        /// function on a categorical market with five different outcomes, five different shares
-        /// will be transferred to the callee.
+        /// Buy a complete set of outcome shares of a market.
         ///
-        /// The amount of each share will equal the provided `amount` parameter.
+        /// The cost of a full set is exactly one unit of the market's base asset. For example,
+        /// when calling `buy_complete_set(origin, 1, 2)` on a categorical market with five
+        /// different outcomes, the caller pays `2` of the base asset and receives `2` of each of
+        /// the five outcome tokens.
         ///
-        /// NOTE: This is the only way to create new shares.
+        /// NOTE: This is the only way to create new shares of outcome tokens.
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
@@ -1000,8 +1001,9 @@ mod pallet {
             Ok(())
         }
 
-        /// Destroys a complete set of outcomes shares for a market.
+        /// Sells a complete set of outcomes shares for a market.
         ///
+        /// Each complete set is sold for one unit of the market's base asset.
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
