@@ -762,7 +762,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 sender,
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 ScoringRule::CPMM,
                 Some(Zero::zero()),
@@ -2038,7 +2038,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 market.creator.clone(),
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 market.scoring_rule,
                 None,

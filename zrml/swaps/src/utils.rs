@@ -156,7 +156,7 @@ where
         T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
         T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
     } else {
-        let base_asset = p.pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+        let base_asset = p.pool.base_asset;
 
         if p.asset_in == base_asset {
             T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
@@ -197,7 +197,7 @@ where
     if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
         // Currently the only allowed trades are base_currency <-> event asset. We count the
         // volume in base_currency.
-        let base_asset = p.pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+        let base_asset = p.pool.base_asset;
         let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
         T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
     }

@@ -46,6 +46,7 @@ use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
+use zrml_swaps::migrations::MigratePoolBaseAsset;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::Everything,
@@ -57,7 +58,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 34,
+    spec_version: 35,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 11,
@@ -74,6 +75,7 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    MigratePoolBaseAsset<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
