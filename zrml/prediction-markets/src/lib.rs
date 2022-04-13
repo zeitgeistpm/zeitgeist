@@ -778,7 +778,7 @@ mod pallet {
         pub fn global_dispute(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
             let _sender = ensure_signed(origin)?;
             let _market = T::MarketCommons::market(&market_id)?;
-            // TODO: implement global disputes
+            // TODO(#489): Implement global disputes!
             Ok(())
         }
 
