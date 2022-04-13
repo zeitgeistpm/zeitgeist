@@ -234,6 +234,21 @@ fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
 }
 
 #[test]
+fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 0),
+            Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
 fn it_allows_to_deploy_a_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
@@ -306,6 +321,21 @@ fn it_allows_to_sell_a_complete_set() {
         // also check native balance
         let bal = Balances::free_balance(&BOB);
         assert_eq!(bal, 1_000 * BASE);
+    });
+}
+
+#[test]
+fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 0),
+            Error::<Runtime>::ZeroAmount
+        );
     });
 }
 

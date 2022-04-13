@@ -1011,6 +1011,7 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
@@ -1198,7 +1199,7 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
-        /// An invalid Hash was included in a multihash parameter
+        /// An invalid Hash was included in a multihash parameter.
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
@@ -1232,11 +1233,11 @@ mod pallet {
         MaxDisputesReached,
         /// The number of assets specified in a parameter does not match the total asset count.
         NotEnoughAssets,
-        /// The number of categories for a categorical market is too low
+        /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
-        /// Submitted outcome does not match market type
+        /// Submitted outcome does not match market type.
         OutcomeMismatch,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
@@ -1244,8 +1245,10 @@ mod pallet {
         StorageOverflow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
-        /// Too many categories for a categorical market
+        /// Too many categories for a categorical market.
         TooManyCategories,
+        /// An amount was illegally specified as zero.
+        ZeroAmount,
     }
 
     #[pallet::event]
@@ -1418,6 +1421,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance);
 
             let market = T::MarketCommons::market(&market_id)?;
