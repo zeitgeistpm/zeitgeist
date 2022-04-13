@@ -8,10 +8,20 @@ use data_structs::GeneralPoolData;
 use zeitgeist_primitives::{traits::Swaps as SwapsTrait, types::ScoringRule};
 mod helper_functions;
 use helper_functions::asset;
+use zeitgeist_primitives::constants::MinLiquidity;
+use zrml_swaps::mock::Shares;
+
+use orml_traits::MultiCurrency;
 
 fuzz_target!(|data: GeneralPoolData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
+        // ensure that the account origin has a sufficient balance
+        // use orml_traits::MultiCurrency; required for this
+        for a in data.pool_creation.assets.clone() {
+            let _ = Shares::deposit(asset(a), &data.pool_creation.origin, MinLiquidity::get());
+        }
+
         match Swaps::create_pool(
             data.pool_creation.origin.into(),
             data.pool_creation.assets.into_iter().map(asset).collect(),

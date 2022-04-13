@@ -3,21 +3,11 @@
     clippy::integer_arithmetic
 )]
 
-use zeitgeist_primitives::constants::{
-    MaxAssets, MaxTotalWeight, MinAssets, MinLiquidity, MinWeight,
-};
-
-use zrml_swaps::mock::ExtBuilder;
+use zeitgeist_primitives::constants::{MaxAssets, MaxTotalWeight, MinAssets, MinWeight};
 
 use arbitrary::{Arbitrary, Result, Unstructured};
 
-use zrml_swaps::mock::Shares;
-
-use orml_traits::MultiCurrency;
-
 use rand::Rng;
-
-use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
 
 #[derive(Debug)]
 pub struct ValidPoolData {
@@ -31,33 +21,7 @@ pub struct ValidPoolData {
 
 impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
     fn arbitrary(_: &mut Unstructured<'a>) -> Result<Self> {
-        let get_asset = |seed: (u128, u16)| {
-            let (seed0, seed1) = seed;
-            let module = seed0 % 4;
-            match module {
-                0 => Asset::CategoricalOutcome(seed0, seed1),
-                1 => {
-                    let scalar_position =
-                        if seed1 % 2 == 0 { ScalarPosition::Long } else { ScalarPosition::Short };
-                    Asset::ScalarOutcome(seed0, scalar_position)
-                }
-                2 => Asset::CombinatorialOutcome,
-                3 => Asset::PoolShare(SerdeWrapper(seed0)),
-                _ => Asset::Ztg,
-            }
-        };
-
         let mut rng = rand::thread_rng();
-
-        /*
-        Mock default balances in the range [0, 1, 2, 3, 4] are defined and greater than zero.
-        This is required to reach the MinLiquidity check in create_pool,
-        where the balance needs to be greater than MinLiquidity.
-        For example: if MinLiquidity = 100 * BASE,
-        then balance of 0 (or 1, 2, 3, 4) needs to be greater than 100 * BASE.
-        */
-        // u8 number modulo 5 is in the range [0, 1, 2, 3, 4]
-        let origin = rng.gen::<u128>() % 5;
 
         let assets_len: u16 = rng.gen_range(MinAssets::get()..=MaxAssets::get());
 
@@ -81,37 +45,17 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
             }
             let asset = (rng.gen::<u128>(), rng.gen::<u16>());
 
-            let mut ext = ExtBuilder::default().build();
-            let _ = ext.execute_with(|| {
-                // ensure that the account origin has a sufficient balance
-                // use orml_traits::MultiCurrency; required for this
-                let a = get_asset(asset);
-                let _ = Shares::deposit(a, &origin, MinLiquidity::get());
-            });
-            let _ = ext.commit_all();
-
             weights.push(weight);
             assets.push(asset);
         }
 
+        let origin = rng.gen::<u128>();
         // the base_assets needs to be in the assets
         let base_asset = *assets
             .get(rng.gen::<usize>() % assets_len)
             .ok_or(<arbitrary::Error>::IncorrectFormat)?;
         let market_id = rng.gen::<u128>();
         let swap_fee = rng.gen::<u128>();
-
-        println!(
-            "ValidPoolData={:#?}",
-            ValidPoolData {
-                origin,
-                assets: assets.clone(),
-                base_asset,
-                market_id,
-                swap_fee,
-                weights: weights.clone()
-            }
-        );
 
         Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, weights })
     }
