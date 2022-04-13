@@ -951,45 +951,7 @@ fn full_scalar_market_lifecycle() {
 #[test]
 fn scalar_market_correctly_resolves_on_out_of_range_outcomes_below_threshold() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_scalar_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..100,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
-        assert_ok!(Tokens::transfer(
-            Origin::signed(CHARLIE),
-            EVE,
-            Asset::ScalarOutcome(0, ScalarPosition::Short),
-            100 * BASE
-        ));
-        // (Eve now has 100 SHORT, Charlie has 100 LONG)
-
-        run_to_block(100);
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(50)));
-        let market_after_report = MarketCommons::market(&0).unwrap();
-        assert_eq!(market_after_report.report.is_some(), true);
-        let report = market_after_report.report.unwrap();
-        assert_eq!(report.at, 100);
-        assert_eq!(report.by, BOB);
-        assert_eq!(report.outcome, OutcomeReport::Scalar(50));
-
-        run_to_block(150);
-        let market_after_resolve = MarketCommons::market(&0).unwrap();
-        assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
-
-        // Check balances before redeeming (just to make sure that our tests are based on correct
-        // assumptions)!
-        assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
-        assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
-
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
-        let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
-        for asset in assets.iter() {
-            assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
-            assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
-        }
+        scalar_market_correctly_resolves_common(50);
         assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
         assert_eq!(Balances::free_balance(&EVE), 1100 * BASE);
     })
@@ -998,45 +960,7 @@ fn scalar_market_correctly_resolves_on_out_of_range_outcomes_below_threshold() {
 #[test]
 fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_scalar_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..100,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
-        assert_ok!(Tokens::transfer(
-            Origin::signed(CHARLIE),
-            EVE,
-            Asset::ScalarOutcome(0, ScalarPosition::Short),
-            100 * BASE
-        ));
-        // (Eve now has 100 SHORT, Charlie has 100 LONG)
-
-        run_to_block(100);
-        assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(250)));
-        let market_after_report = MarketCommons::market(&0).unwrap();
-        assert_eq!(market_after_report.report.is_some(), true);
-        let report = market_after_report.report.unwrap();
-        assert_eq!(report.at, 100);
-        assert_eq!(report.by, BOB);
-        assert_eq!(report.outcome, OutcomeReport::Scalar(250));
-
-        run_to_block(150);
-        let market_after_resolve = MarketCommons::market(&0).unwrap();
-        assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
-
-        // Check balances before redeeming (just to make sure that our tests are based on correct
-        // assumptions)!
-        assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
-        assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
-
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
-        let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
-        for asset in assets.iter() {
-            assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
-            assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
-        }
+        scalar_market_correctly_resolves_common(250);
         assert_eq!(Balances::free_balance(&CHARLIE), 1000 * BASE);
         assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
     })
@@ -1086,4 +1010,47 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
         0,
         (0..outcome_assets_len + 1).map(|_| BASE).collect(),
     )
+}
+
+// Common code of `scalar_market_correctly_resolves_*`
+fn scalar_market_correctly_resolves_common(reported_value: u128) {
+    simple_create_scalar_market::<Runtime>(
+        MarketCreation::Permissionless,
+        0..100,
+        ScoringRule::CPMM,
+    );
+    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
+    assert_ok!(Tokens::transfer(
+        Origin::signed(CHARLIE),
+        EVE,
+        Asset::ScalarOutcome(0, ScalarPosition::Short),
+        100 * BASE
+    ));
+    // (Eve now has 100 SHORT, Charlie has 100 LONG)
+
+    run_to_block(100);
+    assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(reported_value)));
+    let market_after_report = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after_report.report.is_some(), true);
+    let report = market_after_report.report.unwrap();
+    assert_eq!(report.at, 100);
+    assert_eq!(report.by, BOB);
+    assert_eq!(report.outcome, OutcomeReport::Scalar(reported_value));
+
+    run_to_block(150);
+    let market_after_resolve = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
+
+    // Check balances before redeeming (just to make sure that our tests are based on correct
+    // assumptions)!
+    assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
+    assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
+
+    assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+    assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
+    let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
+    for asset in assets.iter() {
+        assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
+        assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
+    }
 }
