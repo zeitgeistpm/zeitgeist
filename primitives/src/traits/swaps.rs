@@ -24,7 +24,7 @@ pub trait Swaps<AccountId> {
     fn create_pool(
         creator: AccountId,
         assets: Vec<Asset<Self::MarketId>>,
-        base_asset: Option<Asset<Self::MarketId>>,
+        base_asset: Asset<Self::MarketId>,
         market_id: Self::MarketId,
         scoring_rule: ScoringRule,
         swap_fee: Option<Self::Balance>,

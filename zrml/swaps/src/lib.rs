@@ -16,7 +16,7 @@ mod consts;
 mod events;
 mod fixed;
 mod math;
-mod migrations;
+pub mod migrations;
 pub mod mock;
 mod tests;
 pub mod weights;
@@ -139,18 +139,19 @@ mod pallet {
                     T::Shares::transfer(asset, &pool_account_id, &who, amount)?;
                     Ok(())
                 },
-                transfer_pool: |pool_shares_id| {
-                    let exit_fee_pct = T::ExitFee::get().saturated_into();
-                    let exit_fee =
-                        bmul(pool_amount.saturated_into(), exit_fee_pct)?.saturated_into();
-                    let pool_amount_minus_exit_fee = pool_amount.check_sub_rslt(&exit_fee)?;
-                    T::Shares::transfer(pool_shares_id, &who, &pool_account_id, exit_fee)?;
-                    Self::burn_pool_shares(pool_id, &who, pool_amount_minus_exit_fee)?;
+                transfer_pool: || {
+                    Self::burn_pool_shares(pool_id, &who, pool_amount)?;
                     Ok(())
+                },
+                fee: |amount: BalanceOf<T>| {
+                    let exit_fee_amount =
+                        bmul(amount.saturated_into(), Self::calc_exit_fee(&pool).saturated_into())?
+                            .saturated_into();
+                    Ok(exit_fee_amount)
                 },
                 who: who_clone,
             };
-            crate::utils::pool::<_, _, _, T>(params)
+            crate::utils::pool::<_, _, _, _, T>(params)
         }
 
         /// Pool - Remove subsidty from a pool that uses the Rikiddo scoring rule.
@@ -179,7 +180,7 @@ mod pallet {
                     pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
                     Error::<T>::InvalidScoringRule
                 );
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let base_asset = pool.base_asset;
                 let mut real_amount = amount;
                 let upper_bound;
                 let transferred;
@@ -312,6 +313,7 @@ mod pallet {
                         pool.total_weight.ok_or(Error::<T>::PoolMissingWeight)?.saturated_into(),
                         pool_amount.saturated_into(),
                         pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
@@ -376,11 +378,12 @@ mod pallet {
                     T::LiquidityMining::add_shares(who.clone(), pool.market_id, amount);
                     Ok(())
                 },
-                transfer_pool: |_| Self::mint_pool_shares(pool_id, &who, pool_amount),
+                transfer_pool: || Self::mint_pool_shares(pool_id, &who, pool_amount),
+                fee: |_| Ok(0u128.saturated_into()),
                 who: who.clone(),
             };
 
-            let _ = crate::utils::pool::<_, _, _, T>(params)?;
+            let _ = crate::utils::pool::<_, _, _, _, T>(params)?;
             Ok(Some(T::WeightInfo::pool_join(pool.assets.len().saturated_into())).into())
         }
 
@@ -408,7 +411,7 @@ mod pallet {
                     pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma,
                     Error::<T>::InvalidScoringRule
                 );
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let base_asset = pool.base_asset;
                 T::Shares::reserve(base_asset, &who, amount)?;
 
                 let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
@@ -1043,7 +1046,7 @@ mod pallet {
             // Price when using Rikiddo.
             ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::PoolIsNotActive);
             let mut balances = Vec::new();
-            let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+            let base_asset = pool.base_asset;
 
             // Fees are estimated here. The error scales with the fee. For the future, we'll have
             // to figure out how to extract the fee out of the price when using Rikiddo.
@@ -1217,7 +1220,7 @@ mod pallet {
 
             Self::mutate_pool(pool_id, |pool| {
                 // Find winning asset, remove losing assets from pool
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let base_asset = pool.base_asset;
                 let mut winning_asset: Result<_, DispatchError> =
                     Err(Error::<T>::WinningAssetNotFound.into());
                 if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
@@ -1257,6 +1260,16 @@ mod pallet {
                 total_assets.saturated_into(),
             )
             .saturating_add(extra_weight))
+
+        /// Calculate the exit fee percentage for `pool`.
+        fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
+            // We don't charge exit fees on stale pools (no need to punish LPs for leaving the
+            // pool)!
+            if pool.pool_status == PoolStatus::Stale {
+                0u128.saturated_into()
+            } else {
+                T::ExitFee::get().saturated_into()
+            }
         }
     }
 
@@ -1275,7 +1288,6 @@ mod pallet {
         /// funds for each of the assets to cover the `MinLiqudity`.
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
-        ///   Default is `Asset::Ztg`.
         /// * `market_id`: The market id of the market the pool belongs to.
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
         /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
@@ -1284,7 +1296,7 @@ mod pallet {
         fn create_pool(
             who: T::AccountId,
             mut assets: Vec<Asset<T::MarketId>>,
-            base_asset: Option<Asset<T::MarketId>>,
+            base_asset: Asset<T::MarketId>,
             market_id: Self::MarketId,
             scoring_rule: ScoringRule,
             swap_fee: Option<BalanceOf<T>>,
@@ -1298,8 +1310,7 @@ mod pallet {
             let pool_account = Self::pool_account_id(next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
-            let base_asset_unwrapped = base_asset.unwrap_or(Asset::Ztg);
-            ensure!(assets.contains(&base_asset_unwrapped), Error::<T>::BaseAssetNotFound);
+            ensure!(assets.contains(&base_asset), Error::<T>::BaseAssetNotFound);
 
             if scoring_rule == ScoringRule::CPMM {
                 let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
@@ -1382,7 +1393,7 @@ mod pallet {
                     return Err(Error::<T>::InvalidStateTransition.into());
                 }
 
-                let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                let base_asset = pool.base_asset;
 
                 for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
                     T::Shares::unreserve(base_asset, &provider.0, provider.1);
@@ -1421,7 +1432,7 @@ mod pallet {
 
                     let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
                     ensure!(total_subsidy >= T::MinSubsidy::get(), Error::<T>::InsufficientSubsidy);
-                    let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                    let base_asset = pool.base_asset;
                     let pool_account = Pallet::<T>::pool_account_id(pool_id);
                     let pool_shares_id = Self::pool_shares_id(pool_id);
                     let mut account_created = false;
@@ -1583,6 +1594,7 @@ mod pallet {
                             .saturated_into(),
                         asset_amount.saturated_into(),
                         pool_ref.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                        T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
                     ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
@@ -1756,7 +1768,7 @@ mod pallet {
                         )?
                         .saturated_into()
                     } else {
-                        let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                        let base_asset = pool.base_asset;
                         ensure!(asset_out == base_asset, Error::<T>::UnsupportedTrade);
                         ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
@@ -1842,7 +1854,7 @@ mod pallet {
                         )?
                         .saturated_into()
                     } else {
-                        let base_asset = pool.base_asset.ok_or(Error::<T>::BaseAssetNotFound)?;
+                        let base_asset = pool.base_asset;
                         ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
                         ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 

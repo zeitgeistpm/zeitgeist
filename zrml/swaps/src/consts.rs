@@ -11,5 +11,3 @@ pub const BPOW_APPROX_BASE_MIN: u128 = BASE / 4;
 pub const BPOW_APPROX_BASE_MAX: u128 = 7 * BASE / 4;
 /// The maximum number of terms from the binomial series used to calculate bpow_approx.
 pub const BPOW_APPROX_MAX_ITERATIONS: u128 = 100;
-/// The exit fee for removing liquidity from swaps.
-pub const EXIT_FEE: u128 = 0;
