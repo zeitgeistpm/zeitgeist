@@ -276,7 +276,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
     type ControllerOrigin = EnsureRoot<AccountId>;
-	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+    type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type VersionWrapper = ();
@@ -427,6 +427,7 @@ impl pallet_author_slot_filter::Config for Runtime {
     type Event = Event;
     type RandomnessSource = RandomnessCollectiveFlip;
     type PotentialAuthors = ParachainStaking;
+    type WeightInfo = weights::pallet_author_slot_filter::WeightInfo<Runtime>;
 }
 
 #[cfg(not(feature = "parachain"))]
@@ -453,24 +454,24 @@ impl pallet_grandpa::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_xcm::Config for Runtime {
-	type Event = Event;
-	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmRouter = XcmRouter;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmExecuteFilter = Nothing;
-	// ^ Disable dispatchable execute on the XCM pallet.
-	// Needs to be `Everything` for local testing.
-	type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = Everything;
-	type XcmReserveTransferFilter = Nothing;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type LocationInverter = LocationInverter<Ancestry>;
-	type Origin = Origin;
-	type Call = Call;
+    type Event = Event;
+    type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+    type XcmRouter = XcmRouter;
+    type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+    type XcmExecuteFilter = Nothing;
+    // ^ Disable dispatchable execute on the XCM pallet.
+    // Needs to be `Everything` for local testing.
+    type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
+    type XcmTeleportFilter = Everything;
+    type XcmReserveTransferFilter = Nothing;
+    type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+    type LocationInverter = LocationInverter<Ancestry>;
+    type Origin = Origin;
+    type Call = Call;
 
-	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-	// ^ Override for AdvertisedXcmVersion default
-	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+    const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+    // ^ Override for AdvertisedXcmVersion default
+    type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 }
 
 #[cfg(feature = "parachain")]
