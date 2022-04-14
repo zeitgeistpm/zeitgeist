@@ -49,9 +49,11 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use zrml_swaps::migrations::MigratePoolBaseAsset;
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::Everything,
+    frame_support::traits::{Everything, Nothing},
     frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
+    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
+    xcm_config::XcmConfig,
 };
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -251,7 +253,7 @@ create_zeitgeist_runtime!(
 impl cumulus_pallet_dmp_queue::Config for Runtime {
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
-    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
+    type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
 
 #[cfg(feature = "parachain")]
@@ -269,16 +271,18 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_xcm::Config for Runtime {
     type Event = Event;
-    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
+    type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
 
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
+    type ControllerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
+    type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type VersionWrapper = ();
-    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
+    type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
 
 #[derive(scale_info::TypeInfo)]
@@ -425,6 +429,7 @@ impl pallet_author_slot_filter::Config for Runtime {
     type Event = Event;
     type RandomnessSource = RandomnessCollectiveFlip;
     type PotentialAuthors = ParachainStaking;
+    type WeightInfo = weights::pallet_author_slot_filter::WeightInfo<Runtime>;
 }
 
 #[cfg(not(feature = "parachain"))]
@@ -451,20 +456,24 @@ impl pallet_grandpa::Config for Runtime {
 
 #[cfg(feature = "parachain")]
 impl pallet_xcm::Config for Runtime {
-    const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-    type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
-    type Call = Call;
     type Event = Event;
-    type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-    type LocationInverter = xcm_builder::LocationInverter<Ancestry>;
-    type Origin = Origin;
-    type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-    type Weigher = xcm_builder::FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-    type XcmExecuteFilter = Everything;
-    type XcmExecutor = xcm_executor::XcmExecutor<xcm_config::XcmConfig>;
-    type XcmReserveTransferFilter = Everything;
+    type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmRouter = XcmRouter;
+    type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+    type XcmExecuteFilter = Nothing;
+    // ^ Disable dispatchable execute on the XCM pallet.
+    // Needs to be `Everything` for local testing.
+    type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
     type XcmTeleportFilter = Everything;
+    type XcmReserveTransferFilter = Nothing;
+    type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+    type LocationInverter = LocationInverter<Ancestry>;
+    type Origin = Origin;
+    type Call = Call;
+
+    const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+    // ^ Override for AdvertisedXcmVersion default
+    type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 }
 
 #[cfg(feature = "parachain")]
@@ -974,6 +983,7 @@ impl_runtime_apis! {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
                     list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
+                    list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                     list_benchmark!(list, extra, parachain_staking, ParachainStaking);
                     list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
                 } else {
@@ -1044,6 +1054,7 @@ impl_runtime_apis! {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
                     add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
+                    add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                     add_benchmark!(params, batches, parachain_staking, ParachainStaking);
                     add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
                 } else {
