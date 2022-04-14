@@ -5,39 +5,36 @@
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("dev"), DB CACHE: 1024
 
 // Executed Command:// ./target/release/zeitgeist// benchmark// --chain=dev// --steps=50// --repeat=20// --pallet=pallet_utility// --extrinsic=*// --execution=wasm// --wasm-execution=compiled// --heap-pages=4096// --template=./misc/frame_weight_template.hbs// --output=./runtime/src/weights/
-#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_utility (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo<T> {
+    fn batch(c: u32) -> Weight {
+        (78_660_000 as Weight)
+            // Standard Error: 24_000
+            .saturating_add((6_253_000 as Weight).saturating_mul(c as Weight))
+    }
 
-	fn batch(c: u32, ) -> Weight {
-		(78_660_000 as Weight)		
-		// Standard Error: 24_000
+    fn as_derivative() -> Weight {
+        (4_210_000 as Weight)
+    }
 
-			.saturating_add((6_253_000 as Weight).saturating_mul(c as Weight))	
+    fn batch_all(c: u32) -> Weight {
+        (95_725_000 as Weight)
+            // Standard Error: 26_000
+            .saturating_add((6_720_000 as Weight).saturating_mul(c as Weight))
+    }
 
-	}
-
-	fn as_derivative() -> Weight {
-		(4_210_000 as Weight)	
-
-	}
-
-	fn batch_all(c: u32, ) -> Weight {
-		(95_725_000 as Weight)		
-		// Standard Error: 26_000
-
-			.saturating_add((6_720_000 as Weight).saturating_mul(c as Weight))	
-
-	}
-
-	fn dispatch_as() -> Weight {
-		(25_780_000 as Weight)
-	}
+    fn dispatch_as() -> Weight {
+        (25_780_000 as Weight)
+    }
 }

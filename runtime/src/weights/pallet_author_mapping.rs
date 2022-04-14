@@ -5,34 +5,37 @@
 //! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("dev"), DB CACHE: 1024
 
 // Executed Command:// ./target/release/zeitgeist// benchmark// --chain=dev// --steps=50// --repeat=20// --pallet=pallet_author_mapping// --extrinsic=*// --execution=wasm// --wasm-execution=compiled// --heap-pages=4096// --template=./misc/frame_weight_template.hbs// --output=./runtime/src/weights/
-#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_author_mapping (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for WeightInfo<T> {
-		// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-		// Storage: System Account (r:1 w:1)
-	fn add_association() -> Weight {
-		(69_550_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-		// Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
-	fn update_association() -> Weight {
-		(53_670_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-		// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-		// Storage: System Account (r:1 w:1)
-	fn clear_association() -> Weight {
-		(59_500_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    fn add_association() -> Weight {
+        (69_550_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
+    fn update_association() -> Weight {
+        (53_670_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+    // Storage: System Account (r:1 w:1)
+    fn clear_association() -> Weight {
+        (59_500_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
 }
