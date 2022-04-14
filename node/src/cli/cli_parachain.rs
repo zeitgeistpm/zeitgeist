@@ -1,4 +1,4 @@
-use clap::Subcommand;
+use clap::Parser;
 use sc_cli::{
     self, ChainSpec, ImportParams, KeystoreParams, NetworkParams, RuntimeVersion, SharedParams,
     SubstrateCli,
@@ -33,7 +33,7 @@ impl RelayChainCli {
             .as_ref()
             .map(|x| x.path().join(chain_id.clone().unwrap_or_else(|| "polkadot".into())));
 
-        Self { base_path, chain_id, base: polkadot_cli::RunCmd::from_iter(relay_chain_args) }
+        Self { base_path, chain_id, base: polkadot_cli::RunCmd::parse_from(relay_chain_args) }
     }
 }
 
@@ -204,7 +204,7 @@ impl sc_cli::SubstrateCli for RelayChainCli {
 }
 
 /// Command for exporting the genesis state of the parachain
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct ExportGenesisStateCommand {
     /// Output file name or stdout if unspecified.
     #[clap(parse(from_os_str))]
