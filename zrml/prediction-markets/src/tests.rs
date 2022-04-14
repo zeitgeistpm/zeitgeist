@@ -861,8 +861,9 @@ fn process_subsidy_blocks_market_with_insufficient_subsidy() {
             min_sub_period..max_sub_period,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         );
-        let subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get() / 2;
+        let subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get() / 3;
         assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), 0, subsidy));
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), 0, subsidy));
         run_to_block(min_sub_period);
         let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
         assert_eq!(subsidy_queue.len(), 0);
@@ -870,6 +871,7 @@ fn process_subsidy_blocks_market_with_insufficient_subsidy() {
 
         // Check that the balances are correctly unreserved.
         assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
     });
 }
 
