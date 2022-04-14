@@ -146,6 +146,7 @@ runtime-benchmarks = [
     "orml-tokens/runtime-benchmarks",
     "orml-benchmarking",
     "pallet-author-mapping/runtime-benchmarks",
+    "pallet-author-slot-filter/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "pallet-crowdloan-rewards/runtime-benchmarks",

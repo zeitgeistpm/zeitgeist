@@ -22,9 +22,10 @@ use xcm_builder::{
 use zeitgeist_primitives::{constants::MICRO, types::Balance};
 
 match_type! {
-    pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
+    pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
         MultiLocation { parents: 1, interior: Junctions::Here } |
-        MultiLocation { parents: 1, interior: Junctions::X1(Junction::Plurality { id: BodyId::Executive, .. }) }
+        // Potentially change "Unit" to "Executive" for mainnet once we have separate runtimes
+        MultiLocation { parents: 1, interior: Junctions::X1(Junction::Plurality { id: BodyId::Unit, .. }) }
     };
 }
 parameter_types! {
@@ -43,7 +44,8 @@ parameter_types! {
     // Cumulus and Polkadot
     pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
     pub const RelayLocation: MultiLocation = MultiLocation::parent();
-    pub const RelayNetwork: NetworkId = NetworkId::Kusama;
+    // Have to change "Any" to "Kusama" for mainnet once we have separate runtimes
+    pub const RelayNetwork: NetworkId = NetworkId::Any;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
@@ -90,7 +92,7 @@ parameter_types! {
 pub type Barrier = (
     TakeWeightCredit,
     AllowTopLevelPaidExecutionFrom<Everything>,
-    AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+    AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
     // ^^^ Parent and its exec plurality get free execution
 );
 

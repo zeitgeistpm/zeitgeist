@@ -275,7 +275,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type ChannelInfo = ParachainSystem;
-    type ControllerOrigin = EnsureRoot<AccountId>;
+    type ControllerOrigin = EnsureRootOrTwoThirdsTechnicalCommittee;
     type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
@@ -981,6 +981,7 @@ impl_runtime_apis! {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
                     list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
+                    list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                     list_benchmark!(list, extra, parachain_staking, ParachainStaking);
                     list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
                 } else {
@@ -1051,6 +1052,7 @@ impl_runtime_apis! {
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
                     add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
+                    add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                     add_benchmark!(params, batches, parachain_staking, ParachainStaking);
                     add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
                 } else {
