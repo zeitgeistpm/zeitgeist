@@ -23,7 +23,7 @@ pub use parameters::*;
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, ConstU16, ConstU32, EnsureOneOf, EqualPrivilegeOnly},
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -687,13 +687,13 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
 }
 
 impl pallet_multisig::Config for Runtime {
-	type Event = Event;
-	type Call = Call;
-	type Currency = Balances;
-	type DepositBase = DepositBase;
-	type DepositFactor = DepositFactor;
-	type MaxSignatories = ConstU16<100>;
-	type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type DepositBase = DepositBase;
+    type DepositFactor = DepositFactor;
+    type MaxSignatories = ConstU16<100>;
+    type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
 }
 
 impl pallet_preimage::Config for Runtime {
