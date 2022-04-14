@@ -326,7 +326,7 @@ cfg_if::cfg_if! {
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(inner_call) => false,
+                    | Call::PredictionMarkets()
                     | Call::Vesting(_) => false,
                 }
             }
