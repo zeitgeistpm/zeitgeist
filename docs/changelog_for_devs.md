@@ -15,6 +15,9 @@
   - `PoolJoin` (pool shares minted)
   - `PoolJoinWithExactPoolAmount` (pool shares minted)
   - `PoolJoinWithExactAssetAmount` (pool shares minted)
+  - `PoolCreate` (pool shares minted)
+
+  The pool shares are always burned/minted for `who`.
 
 - [Rikiddo-related] `PoolExitSubsidy` now has the following fields:
   `[asset, bound, pool_id, who, amount]`. The `bound` refers to the amount of
