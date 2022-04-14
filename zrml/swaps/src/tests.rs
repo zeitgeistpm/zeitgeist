@@ -223,6 +223,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_rikiddo() {
 #[test]
 fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
         // Errors trigger correctly.
         assert_noop!(
             Swaps::destroy_pool_in_subsidy_phase(0),
@@ -238,13 +239,21 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
         let pool_id = 1;
         // Reserve some funds for subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
+        assert_ok!(Currencies::deposit(ASSET_D, &BOB, _26));
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), pool_id, _26));
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), _25);
+        assert_eq!(Currencies::reserved_balance(ASSET_D, &BOB), _26);
 
         assert_ok!(Swaps::destroy_pool_in_subsidy_phase(pool_id));
         // Rserved balanced was returned and all storage cleared.
         assert_eq!(Currencies::reserved_balance(ASSET_D, &ALICE), 0);
+        assert_eq!(Currencies::reserved_balance(ASSET_D, &BOB), 0);
         assert!(!crate::SubsidyProviders::<Runtime>::contains_key(pool_id, ALICE));
         assert!(!crate::Pools::<Runtime>::contains_key(pool_id));
+        assert!(event_exists(crate::Event::PoolDestroyedInSubsidyPhase(
+            pool_id,
+            vec![(BOB, _26), (ALICE, _25)]
+        )));
     });
 }
 

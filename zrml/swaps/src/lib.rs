@@ -849,11 +849,16 @@ mod pallet {
                 BalanceOf<T>,
             >,
         ),
-        /// Total subsidy collected for a pool. \[pool_id, [(provider, subsidy), ...], total_subsidy\]
+        /// Total subsidy collected for a pool. \[pool_id, \[(provider, subsidy), ...\], total_subsidy\]
         SubsidyCollected(
             PoolId,
             Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
             BalanceOf<T>,
+        ),
+        /// Pool destroyed due to insufficient subsidy. \[pool_id, \[(provider, subsidy), ...\]\]
+        PoolDestroyedInSubsidyPhase(
+            PoolId,
+            Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
         ),
         /// An exact amount of an asset is entering the pool. \[SwapEvent\]
         SwapExactAmountIn(
@@ -1331,14 +1336,21 @@ mod pallet {
 
                 let base_asset = pool.base_asset;
 
+                let mut providers_and_pool_shares = vec![];
                 for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
                     T::Shares::unreserve(base_asset, &provider.0, provider.1);
                     total_providers = total_providers.saturating_add(1);
+                    providers_and_pool_shares.push(provider);
                 }
 
                 if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                     T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?
                 }
+
+                Self::deposit_event(Event::PoolDestroyedInSubsidyPhase(
+                    pool_id,
+                    providers_and_pool_shares,
+                ));
 
                 Ok(())
             })?;
