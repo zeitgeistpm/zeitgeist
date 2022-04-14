@@ -952,11 +952,9 @@ mod pallet {
             let market_report = Report { at: current_block, by: sender.clone(), outcome };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
-                // TODO make this a conditional check
-                // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-
                 Self::ensure_market_is_closed(&market.period)?;
+                Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
 
                 let mut should_check_origin = false;
                 match market.period {
@@ -1249,6 +1247,8 @@ mod pallet {
         SwapPoolExists,
         /// Too many categories for a categorical market.
         TooManyCategories,
+        /// Catch-all error for invalid market status
+        InvalidMarketStatus,
         /// An amount was illegally specified as zero.
         ZeroAmount,
     }
@@ -1590,15 +1590,11 @@ mod pallet {
                     return Err(Error::<T>::OutcomeMismatch.into());
                 }
             }
-            if let OutcomeReport::Scalar(ref inner) = outcome {
-                if let MarketType::Scalar(ref outcome_range) = market.market_type {
-                    ensure!(
-                        inner >= outcome_range.start() && inner <= outcome_range.end(),
-                        Error::<T>::OutcomeOutOfRange
-                    );
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
+            if let OutcomeReport::Scalar(_) = outcome {
+                ensure!(
+                    matches!(&market.market_type, MarketType::Scalar(_)),
+                    Error::<T>::OutcomeMismatch
+                );
             }
             Ok(())
         }
@@ -1655,21 +1651,10 @@ mod pallet {
 
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
-            let resolved_outcome = match market.mdm {
-                MarketDisputeMechanism::Authorized(_) => {
-                    T::Authorized::on_resolution(&disputes, market_id, market)?
-                }
-                MarketDisputeMechanism::Court => {
-                    T::Court::on_resolution(&disputes, market_id, market)?
-                }
-                MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
-                }
-            };
 
             let report = T::MarketCommons::report(market)?;
 
-            match market.status {
+            let resolved_outcome = match market.status {
                 MarketStatus::Reported => {
                     // the oracle bond gets returned if the reporter was the oracle
                     if report.by == market.oracle {
@@ -1688,8 +1673,22 @@ mod pallet {
                         // give it to the real reporter
                         CurrencyOf::<T>::resolve_creating(&report.by, imbalance);
                     }
+
+                    T::MarketCommons::report(market)?.outcome.clone()
                 }
                 MarketStatus::Disputed => {
+                    let resolved_outcome = match market.mdm {
+                        MarketDisputeMechanism::Authorized(_) => {
+                            T::Authorized::on_resolution(&disputes, market_id, market)?
+                        }
+                        MarketDisputeMechanism::Court => {
+                            T::Court::on_resolution(&disputes, market_id, market)?
+                        }
+                        MarketDisputeMechanism::SimpleDisputes => {
+                            T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                        }
+                    };
+
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
                     let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
@@ -1738,8 +1737,10 @@ mod pallet {
                         CurrencyOf::<T>::resolve_creating(correct_reporter, amount);
                         overall_imbalance = leftover;
                     }
+
+                    resolved_outcome
                 }
-                _ => (),
+                _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
             let to_stale_weight = Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(to_stale_weight);
