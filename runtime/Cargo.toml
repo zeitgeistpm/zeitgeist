@@ -15,6 +15,7 @@ pallet-collective = { branch = "moonbeam-polkadot-v0.9.17", default-features = f
 pallet-democracy = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-identity = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-membership = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-multisig = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-preimage = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -171,96 +172,97 @@ runtime-benchmarks = [
     "zrml-swaps/runtime-benchmarks",
 ]
 std = [
-    "frame-executive/std",
-    "frame-support/std",
-    "frame-system-rpc-runtime-api/std",
-    "frame-system/std",
-    "hex-literal",
-    "log/std",
-    "orml-benchmarking/std",
-    "orml-currencies/std",
-    "orml-tokens/std",
-    "orml-traits/std",
-    "pallet-balances/std",
-    "pallet-collective/std",
-    "pallet-democracy/std",
-    "pallet-identity/std",
-    "pallet-membership/std",
-    "pallet-preimage/std",
-    "pallet-randomness-collective-flip/std",
-    "pallet-scheduler/std",
-    "pallet-sudo/std",
-    "pallet-timestamp/std",
-    "pallet-transaction-payment-rpc-runtime-api/std",
-    "pallet-transaction-payment/std",
-    "pallet-treasury/std",
-    "pallet-utility/std",
-    "pallet-vesting/std",
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "sp-api/std",
-    "sp-block-builder/std",
-    "sp-core/std",
-    "sp-inherents/std",
-    "sp-offchain/std",
-    "sp-runtime/std",
-    "sp-session/std",
-    "sp-transaction-pool/std",
-    "sp-version/std",
-    "substrate-fixed/std",
+	"frame-executive/std",
+	"frame-support/std",
+	"frame-system-rpc-runtime-api/std",
+	"frame-system/std",
+	"hex-literal",
+	"log/std",
+	"orml-benchmarking/std",
+	"orml-currencies/std",
+	"orml-tokens/std",
+	"orml-traits/std",
+	"pallet-balances/std",
+	"pallet-collective/std",
+	"pallet-democracy/std",
+	"pallet-identity/std",
+	"pallet-membership/std",
+	"pallet-multisig/std",
+	"pallet-preimage/std",
+	"pallet-randomness-collective-flip/std",
+	"pallet-scheduler/std",
+	"pallet-sudo/std",
+	"pallet-timestamp/std",
+	"pallet-transaction-payment-rpc-runtime-api/std",
+	"pallet-transaction-payment/std",
+	"pallet-treasury/std",
+	"pallet-utility/std",
+	"pallet-vesting/std",
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"sp-api/std",
+	"sp-block-builder/std",
+	"sp-core/std",
+	"sp-inherents/std",
+	"sp-offchain/std",
+	"sp-runtime/std",
+	"sp-session/std",
+	"sp-transaction-pool/std",
+	"sp-version/std",
+	"substrate-fixed/std",
 
-    # Benchmark
+	# Benchmark
 
-    "frame-benchmarking?/std",
-    "frame-system-benchmarking?/std",
+	"frame-benchmarking?/std",
+	"frame-system-benchmarking?/std",
 
-    # Cumulus
+	# Cumulus
 
-    "cumulus-pallet-dmp-queue?/std",
-    "cumulus-pallet-parachain-system?/std",
-    "cumulus-pallet-xcm?/std",
-    "cumulus-pallet-xcmp-queue?/std",
-    "cumulus-primitives-core?/std",
-    "cumulus-primitives-timestamp?/std",
-    "cumulus-primitives-utility?/std",
-    "parachain-info?/std",
+	"cumulus-pallet-dmp-queue?/std",
+	"cumulus-pallet-parachain-system?/std",
+	"cumulus-pallet-xcm?/std",
+	"cumulus-pallet-xcmp-queue?/std",
+	"cumulus-primitives-core?/std",
+	"cumulus-primitives-timestamp?/std",
+	"cumulus-primitives-utility?/std",
+	"parachain-info?/std",
 
-    # Parachain
+	# Parachain
 
-    "nimbus-primitives?/std",
-    "pallet-author-inherent?/std",
-    "pallet-author-mapping?/std",
-    "pallet-author-slot-filter?/std",
-    "pallet-crowdloan-rewards?/std",
-    "parachain-staking?/std",
+	"nimbus-primitives?/std",
+	"pallet-author-inherent?/std",
+	"pallet-author-mapping?/std",
+	"pallet-author-slot-filter?/std",
+	"pallet-crowdloan-rewards?/std",
+	"parachain-staking?/std",
 
-    # Polkadot
+	# Polkadot
 
-    "pallet-xcm?/std",
-    "polkadot-parachain?/std",
-    "xcm-builder?/std",
-    "xcm-executor?/std",
-    "xcm?/std",
+	"pallet-xcm?/std",
+	"polkadot-parachain?/std",
+	"xcm-builder?/std",
+	"xcm-executor?/std",
+	"xcm?/std",
 
-    # Standalone
+	# Standalone
 
-    "pallet-aura/std",
-    "pallet-grandpa/std",
-    "sp-consensus-aura/std",
-    "sp-finality-grandpa/std",
+	"pallet-aura/std",
+	"pallet-grandpa/std",
+	"sp-consensus-aura/std",
+	"sp-finality-grandpa/std",
 
-    # Zeitgeist
+	# Zeitgeist
 
-    "zeitgeist-primitives/std",
-    "zrml-authorized/std",
-    "zrml-court/std",
-    "zrml-liquidity-mining/std",
-    "zrml-market-commons/std",
-    "zrml-prediction-markets/std",
-    "zrml-rikiddo/std",
-    "zrml-simple-disputes/std",
-    "zrml-swaps-runtime-api/std",
-    "zrml-swaps/std",
+	"zeitgeist-primitives/std",
+	"zrml-authorized/std",
+	"zrml-court/std",
+	"zrml-liquidity-mining/std",
+	"zrml-market-commons/std",
+	"zrml-prediction-markets/std",
+	"zrml-rikiddo/std",
+	"zrml-simple-disputes/std",
+	"zrml-swaps-runtime-api/std",
+	"zrml-swaps/std",
 ]
 txfilter = [
     "log"
