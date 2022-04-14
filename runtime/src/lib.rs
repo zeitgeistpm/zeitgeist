@@ -290,6 +290,7 @@ pub struct IsCallable;
 
 cfg_if::cfg_if! {
     if #[cfg(all(feature = "parachain", feature = "txfilter"))] {
+        // Restricted parachain.
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
                 match call {
@@ -325,11 +326,12 @@ cfg_if::cfg_if! {
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(_)
+                    | Call::PredictionMarkets(inner_call) => false,
                     | Call::Vesting(_) => false,
                 }
             }
         }
+    // Restricted standalone chain.
     } else if #[cfg(all(feature = "txfilter", not(feature = "parachain")))] {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
@@ -361,11 +363,29 @@ cfg_if::cfg_if! {
                 }
             }
         }
+    // Unrestricted (no "txfilter" feature) chains
+    // Currently disables Rikiddo and Court markets, will be relaxed
+    // for testnet once runtimes are separated
     } else {
         impl Contains<Call> for IsCallable {
-            fn contains(_call: &Call) -> bool {
-                // Every call is allowed
-                true
+            fn contains(call: &Call) -> bool {
+                use zrml_prediction_markets::Call::{create_categorical_market, create_cpmm_market_and_deploy_assets, create_scalar_market};
+
+                match call {
+                    Call::PredictionMarkets(inner_call) => {
+                        match inner_call {
+                            // Disable Rikiddo markets
+                            create_categorical_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
+                            create_scalar_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
+                            // Disable Court dispute resolution mechanism
+                            create_categorical_market { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            create_scalar_market { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            create_cpmm_market_and_deploy_assets { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            _ => true
+                        }
+                    }
+                    _ => true
+                }
             }
         }
     }
