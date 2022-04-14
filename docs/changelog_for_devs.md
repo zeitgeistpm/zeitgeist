@@ -26,8 +26,14 @@
   pool tokens, but the subsidy amount is reserved. When exiting, the subsidy
   amount is unreserved.
 
-  When the pool holds enough subsidies at the end of the subsidy phase, the
+  If the pool holds enough subsidies at the end of the subsidy phase, the
   reserved funds are transferred to the pool, the pool shares are minted and the
   event `SubsidyCollected` is emitted, which now has the following fields:
   `[pool_id, vec![(who, pool_amount), ...], total_subsidy]`. The vector contains
   all subsidy providers and their amount of pool tokens.
+
+  If, on the other hand, the pool does not hold sufficient subsidies, then
+  `PoolDestroyedInSubsidyPhase` is emitted. This event has the following fields:
+  `[pool_id, vec![(who, subsidy), ...]]`. The second element `subsidy` of each
+  tuple refers to the amount of unreserved funds. No pool tokens are minted or
+  burned.
