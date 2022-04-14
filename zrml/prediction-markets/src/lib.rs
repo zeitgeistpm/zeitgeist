@@ -952,11 +952,9 @@ mod pallet {
             let market_report = Report { at: current_block, by: sender.clone(), outcome };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
-                // TODO make this a conditional check
-                // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-
                 Self::ensure_market_is_closed(&market.period)?;
+                Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
 
                 let mut should_check_origin = false;
                 match market.period {
@@ -1590,15 +1588,11 @@ mod pallet {
                     return Err(Error::<T>::OutcomeMismatch.into());
                 }
             }
-            if let OutcomeReport::Scalar(ref inner) = outcome {
-                if let MarketType::Scalar(ref outcome_range) = market.market_type {
-                    ensure!(
-                        inner >= outcome_range.start() && inner <= outcome_range.end(),
-                        Error::<T>::OutcomeOutOfRange
-                    );
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
+            if let OutcomeReport::Scalar(_) = outcome {
+                ensure!(
+                    matches!(&market.market_type, MarketType::Scalar(_)),
+                    Error::<T>::OutcomeMismatch
+                );
             }
             Ok(())
         }

@@ -46,6 +46,23 @@ fn simple_create_categorical_market<T: crate::Config>(
     ));
 }
 
+fn simple_create_scalar_market<T: crate::Config>(
+    creation: MarketCreation,
+    period: Range<u64>,
+    scoring_rule: ScoringRule,
+) {
+    assert_ok!(PredictionMarkets::create_scalar_market(
+        Origin::signed(ALICE),
+        BOB,
+        MarketPeriod::Block(period),
+        gen_metadata(2),
+        creation,
+        100..=200,
+        MarketDisputeMechanism::SimpleDisputes,
+        scoring_rule
+    ));
+}
+
 #[test]
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
@@ -275,7 +292,7 @@ fn it_allows_to_deploy_a_pool() {
             ScoringRule::CPMM,
         );
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE));
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
@@ -428,6 +445,66 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle
         );
+    });
+}
+
+#[test]
+fn report_fails_on_mismatched_outcome_for_categorical_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..100,
+            ScoringRule::CPMM,
+        );
+        run_to_block(100);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(123)),
+            Error::<Runtime>::OutcomeMismatch,
+        );
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.report.is_none(), true);
+    });
+}
+
+#[test]
+fn report_fails_on_out_of_range_outcome_for_categorical_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..100,
+            ScoringRule::CPMM,
+        );
+        run_to_block(100);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(2)),
+            Error::<Runtime>::OutcomeOutOfRange,
+        );
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.report.is_none(), true);
+    });
+}
+
+#[test]
+fn report_fails_on_mismatched_outcome_for_scalar_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_scalar_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..100,
+            ScoringRule::CPMM,
+        );
+        run_to_block(100);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(0)),
+            Error::<Runtime>::OutcomeMismatch,
+        );
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.report.is_none(), true);
     });
 }
 
@@ -886,7 +963,7 @@ fn full_scalar_market_lifecycle() {
             ScoringRule::CPMM
         ));
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
 
         // check balances
         let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
@@ -979,6 +1056,24 @@ fn full_scalar_market_lifecycle() {
 }
 
 #[test]
+fn scalar_market_correctly_resolves_on_out_of_range_outcomes_below_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        scalar_market_correctly_resolves_common(50);
+        assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
+        assert_eq!(Balances::free_balance(&EVE), 1100 * BASE);
+    })
+}
+
+#[test]
+fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        scalar_market_correctly_resolves_common(250);
+        assert_eq!(Balances::free_balance(&CHARLIE), 1000 * BASE);
+        assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
+    })
+}
+
+#[test]
 fn market_resolve_does_not_hold_liquidity_withdraw() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_categorical_market(
@@ -1010,7 +1105,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
 }
 
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
-    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE,));
+    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
         <Runtime as crate::Config>::PalletId::get().into_account(),
@@ -1022,6 +1117,53 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
         0,
         (0..outcome_assets_len + 1).map(|_| BASE).collect(),
     )
+}
+
+// Common code of `scalar_market_correctly_resolves_*`
+fn scalar_market_correctly_resolves_common(reported_value: u128) {
+    simple_create_scalar_market::<Runtime>(
+        MarketCreation::Permissionless,
+        0..100,
+        ScoringRule::CPMM,
+    );
+    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
+    assert_ok!(Tokens::transfer(
+        Origin::signed(CHARLIE),
+        EVE,
+        Asset::ScalarOutcome(0, ScalarPosition::Short),
+        100 * BASE
+    ));
+    // (Eve now has 100 SHORT, Charlie has 100 LONG)
+
+    run_to_block(100);
+    assert_ok!(PredictionMarkets::report(
+        Origin::signed(BOB),
+        0,
+        OutcomeReport::Scalar(reported_value)
+    ));
+    let market_after_report = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after_report.report.is_some(), true);
+    let report = market_after_report.report.unwrap();
+    assert_eq!(report.at, 100);
+    assert_eq!(report.by, BOB);
+    assert_eq!(report.outcome, OutcomeReport::Scalar(reported_value));
+
+    run_to_block(150);
+    let market_after_resolve = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
+
+    // Check balances before redeeming (just to make sure that our tests are based on correct
+    // assumptions)!
+    assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
+    assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
+
+    assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+    assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
+    let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
+    for asset in assets.iter() {
+        assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
+        assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
+    }
 }
 
 fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
