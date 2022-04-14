@@ -21,6 +21,3 @@ members = [
     "zrml/swaps/runtime-api",
 ]
 resolver = "2"
-
-[patch."https://github.com/purestake/moonbeam"]
-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "parachain-staking-migrations-3" }
