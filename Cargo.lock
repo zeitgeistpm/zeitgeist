@@ -12212,6 +12212,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-identity",
  "pallet-membership",
+ "pallet-multisig",
  "pallet-preimage",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",

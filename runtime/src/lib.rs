@@ -23,7 +23,7 @@ pub use parameters::*;
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, EnsureOneOf, EqualPrivilegeOnly},
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -184,6 +184,7 @@ macro_rules! create_zeitgeist_runtime {
                 TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
+                MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -315,6 +316,7 @@ cfg_if::cfg_if! {
                     | Call::CouncilMembership(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
+                    | Call::MultiSig(_)
                     | Call::Democracy(_)
                     | Call::Scheduler(_)
                     | Call::Preimage(_)
@@ -346,6 +348,7 @@ cfg_if::cfg_if! {
                     | Call::CouncilMembership(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
+                    | Call::MultiSig(_)
                     | Call::Democracy(_)
                     | Call::Scheduler(_)
                     | Call::Preimage(_)
@@ -387,7 +390,7 @@ impl frame_system::Config for Runtime {
     type Header = generic::Header<BlockNumber, BlakeTwo256>;
     type Index = Index;
     type Lookup = AccountIdLookup<AccountId, ()>;
-    type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type MaxConsumers = ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
     #[cfg(feature = "parachain")]
@@ -683,6 +686,16 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
+impl pallet_multisig::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type DepositBase = DepositBase;
+    type DepositFactor = DepositFactor;
+    type MaxSignatories = ConstU16<100>;
+    type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+}
+
 impl pallet_preimage::Config for Runtime {
     type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
     type Event = Event;
@@ -968,6 +981,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_democracy, Democracy);
             list_benchmark!(list, extra, pallet_identity, Identity);
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
+            list_benchmark!(list, extra, pallet_multisig, MultiSig);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
@@ -1038,6 +1052,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_democracy, Democracy);
             add_benchmark!(params, batches, pallet_identity, Identity);
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
+            add_benchmark!(params, batches, pallet_multisig, MultiSig);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
