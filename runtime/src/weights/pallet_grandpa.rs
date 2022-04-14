@@ -18,7 +18,7 @@
 // --template=./misc/frame_weight_template.hbs
 // --output=./runtime/src/weights/
 
-#![cfg_attr(rustfmt, rustfmt_skip)]
+
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
