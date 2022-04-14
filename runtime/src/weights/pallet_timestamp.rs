@@ -9,19 +9,21 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_timestamp (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_timestamp::weights::WeightInfo for WeightInfo<T> {
-        // Storage: Timestamp Now (r:1 w:1)
-        // Storage: Aura CurrentSlot (r:1 w:0)
+    // Storage: Timestamp Now (r:1 w:1)
+    // Storage: Aura CurrentSlot (r:1 w:0)
     fn set() -> Weight {
         (17_850_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))    
-
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 
     fn on_finalize() -> Weight {

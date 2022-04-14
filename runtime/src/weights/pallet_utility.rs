@@ -9,32 +9,29 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_utility (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo<T> {
-
-    fn batch(c: u32, ) -> Weight {
-        (78_660_000 as Weight)        
-        // Standard Error: 24_000
-
-            .saturating_add((6_253_000 as Weight).saturating_mul(c as Weight))    
-
+    fn batch(c: u32) -> Weight {
+        (78_660_000 as Weight)
+            // Standard Error: 24_000
+            .saturating_add((6_253_000 as Weight).saturating_mul(c as Weight))
     }
 
     fn as_derivative() -> Weight {
-        (4_210_000 as Weight)    
-
+        (4_210_000 as Weight)
     }
 
-    fn batch_all(c: u32, ) -> Weight {
-        (95_725_000 as Weight)        
-        // Standard Error: 26_000
-
-            .saturating_add((6_720_000 as Weight).saturating_mul(c as Weight))    
-
+    fn batch_all(c: u32) -> Weight {
+        (95_725_000 as Weight)
+            // Standard Error: 26_000
+            .saturating_add((6_720_000 as Weight).saturating_mul(c as Weight))
     }
 
     fn dispatch_as() -> Weight {
