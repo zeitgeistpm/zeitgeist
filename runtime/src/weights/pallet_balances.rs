@@ -15,46 +15,46 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_balances (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_balances::weights::WeightInfo for WeightInfo<T> {
-		// Storage: System Account (r:1 w:1)
-	fn transfer() -> Weight {
-		(105_740_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
-		// Storage: System Account (r:1 w:1)
-	fn transfer_keep_alive() -> Weight {
-		(81_100_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
-		// Storage: System Account (r:1 w:1)
-	fn set_balance_creating() -> Weight {
-		(49_480_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
-		// Storage: System Account (r:1 w:1)
-	fn set_balance_killing() -> Weight {
-		(58_480_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
-		// Storage: System Account (r:2 w:2)
-	fn force_transfer() -> Weight {
-		(104_590_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-		// Storage: System Account (r:1 w:1)
-	fn transfer_all() -> Weight {
-		(94_810_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
-		// Storage: System Account (r:1 w:1)
-	fn force_unreserve() -> Weight {
-		(46_040_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
+        // Storage: System Account (r:1 w:1)
+    fn transfer() -> Weight {
+        (105_740_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+        // Storage: System Account (r:1 w:1)
+    fn transfer_keep_alive() -> Weight {
+        (81_100_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+        // Storage: System Account (r:1 w:1)
+    fn set_balance_creating() -> Weight {
+        (49_480_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+        // Storage: System Account (r:1 w:1)
+    fn set_balance_killing() -> Weight {
+        (58_480_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+        // Storage: System Account (r:2 w:2)
+    fn force_transfer() -> Weight {
+        (104_590_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+        // Storage: System Account (r:1 w:1)
+    fn transfer_all() -> Weight {
+        (94_810_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+        // Storage: System Account (r:1 w:1)
+    fn force_unreserve() -> Weight {
+        (46_040_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
 }

@@ -16,28 +16,28 @@ use core::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo<T> {
 
-	fn batch(c: u32, ) -> Weight {
-		(78_660_000 as Weight)		
-		// Standard Error: 24_000
+    fn batch(c: u32, ) -> Weight {
+        (78_660_000 as Weight)        
+        // Standard Error: 24_000
 
-			.saturating_add((6_253_000 as Weight).saturating_mul(c as Weight))	
+            .saturating_add((6_253_000 as Weight).saturating_mul(c as Weight))    
 
-	}
+    }
 
-	fn as_derivative() -> Weight {
-		(4_210_000 as Weight)	
+    fn as_derivative() -> Weight {
+        (4_210_000 as Weight)    
 
-	}
+    }
 
-	fn batch_all(c: u32, ) -> Weight {
-		(95_725_000 as Weight)		
-		// Standard Error: 26_000
+    fn batch_all(c: u32, ) -> Weight {
+        (95_725_000 as Weight)        
+        // Standard Error: 26_000
 
-			.saturating_add((6_720_000 as Weight).saturating_mul(c as Weight))	
+            .saturating_add((6_720_000 as Weight).saturating_mul(c as Weight))    
 
-	}
+    }
 
-	fn dispatch_as() -> Weight {
-		(25_780_000 as Weight)
-	}
+    fn dispatch_as() -> Weight {
+        (25_780_000 as Weight)
+    }
 }

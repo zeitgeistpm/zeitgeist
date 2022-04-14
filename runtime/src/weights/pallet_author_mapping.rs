@@ -15,24 +15,24 @@ use core::marker::PhantomData;
 /// Weight functions for pallet_author_mapping (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for WeightInfo<T> {
-		// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-		// Storage: System Account (r:1 w:1)
-	fn add_association() -> Weight {
-		(69_550_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-		// Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
-	fn update_association() -> Weight {
-		(53_670_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-		// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
-		// Storage: System Account (r:1 w:1)
-	fn clear_association() -> Weight {
-		(59_500_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
+        // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+        // Storage: System Account (r:1 w:1)
+    fn add_association() -> Weight {
+        (69_550_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+        // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
+    fn update_association() -> Weight {
+        (53_670_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+        // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+        // Storage: System Account (r:1 w:1)
+    fn clear_association() -> Weight {
+        (59_500_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
 }

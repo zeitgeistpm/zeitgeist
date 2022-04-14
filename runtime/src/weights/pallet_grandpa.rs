@@ -31,21 +31,21 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_grandpa::weights::WeightInfo for WeightInfo<T> {
 
 
-	fn check_equivocation_proof(x: u32, ) -> Weight {
-		(206_093_000 as Weight)
-		
-		// Standard Error: 82_000
+    fn check_equivocation_proof(x: u32, ) -> Weight {
+        (206_093_000 as Weight)
+        
+        // Standard Error: 82_000
 
-			.saturating_add((33_636_000 as Weight).saturating_mul(x as Weight))
+            .saturating_add((33_636_000 as Weight).saturating_mul(x as Weight))
 
-	}
+    }
 
-		// Storage: Grandpa Stalled (r:0 w:1)
+        // Storage: Grandpa Stalled (r:0 w:1)
 
-	fn note_stalled() -> Weight {
-		(6_440_000 as Weight)
+    fn note_stalled() -> Weight {
+        (6_440_000 as Weight)
 
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
 
-	}
+    }
 }
