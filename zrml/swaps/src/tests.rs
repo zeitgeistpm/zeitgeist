@@ -166,6 +166,8 @@ fn assets_must_be_bounded() {
 #[test]
 fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+
         let next_pool_before = Swaps::next_pool_id();
         assert_eq!(next_pool_before, 0);
 
@@ -186,6 +188,12 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_B).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_C).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_D).unwrap(), _2);
+
+        assert!(event_exists(crate::Event::PoolCreate(
+            CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
+            pool,
+            <Runtime as Config>::MinLiquidity::get(),
+        )));
     });
 }
 
