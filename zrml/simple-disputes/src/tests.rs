@@ -9,7 +9,7 @@ use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
         Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, Report, ScoringRule,
+        MarketType, OutcomeReport, ScoringRule,
     },
 };
 
@@ -49,17 +49,6 @@ fn on_resolution_denies_non_simple_disputes_markets() {
             SimpleDisputes::on_resolution(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
         );
-    });
-}
-
-#[test]
-fn on_resolution_sets_reported_outcome_of_reported_markets_as_the_canonical_outcome() {
-    ExtBuilder.build().execute_with(|| {
-        let outcome = OutcomeReport::Scalar(3);
-        let mut market = DEFAULT_MARKET;
-        market.status = MarketStatus::Reported;
-        market.report = Some(Report { at: 0, by: 0, outcome: outcome.clone() });
-        assert_eq!(outcome, SimpleDisputes::on_resolution(&[], &0, &market).unwrap())
     });
 }
 
