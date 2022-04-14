@@ -1,10 +1,10 @@
+use clap::Subcommand;
 use sc_cli::{
     self, ChainSpec, ImportParams, KeystoreParams, NetworkParams, RuntimeVersion, SharedParams,
     SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use std::{net::SocketAddr, path::PathBuf};
-use structopt::StructOpt;
 
 const BATTERY_STATION_RELAY_ID: &str = "battery_station_relay_v3";
 
@@ -207,46 +207,46 @@ impl sc_cli::SubstrateCli for RelayChainCli {
 #[derive(Debug, StructOpt)]
 pub struct ExportGenesisStateCommand {
     /// Output file name or stdout if unspecified.
-    #[structopt(parse(from_os_str))]
+    #[clap(parse(from_os_str))]
     pub output: Option<PathBuf>,
 
     /// Id of the parachain this state is for.
     // Sync with crate::DEFAULT_PARACHAIN_ID
-    #[structopt(long)]
+    #[clap(long)]
     pub parachain_id: u32,
 
     /// Write output in binary. Default is to write in hex.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub raw: bool,
 
     /// The name of the chain for that the genesis state should be exported.
-    #[structopt(long)]
+    #[clap(long)]
     pub chain: Option<String>,
 }
 
 /// Command for exporting the genesis wasm file.
-#[derive(Debug, structopt::StructOpt)]
+#[derive(Debug, Parser)]
 pub struct ExportGenesisWasmCommand {
     /// Output file name or stdout if unspecified.
-    #[structopt(parse(from_os_str))]
+    #[clap(parse(from_os_str))]
     pub output: Option<PathBuf>,
 
     /// Write output in binary. Default is to write in hex.
-    #[structopt(short, long)]
+    #[clap(short, long)]
     pub raw: bool,
 
     /// The name of the chain for that the genesis wasm file should be exported.
-    #[structopt(long)]
+    #[clap(long)]
     pub chain: Option<String>,
 }
 
-#[derive(Debug, structopt::StructOpt)]
+#[derive(Debug, Parser)]
 pub struct RunCmd {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub base: sc_cli::RunCmd,
 
     /// Id of the parachain this collator collates for.
-    #[structopt(long)]
+    #[clap(long)]
     pub parachain_id: u32,
 }
 

@@ -20,9 +20,7 @@ impl Config for XcmConfig {
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
     type ResponseHandler = PolkadotXcm;
     type SubscriptionService = PolkadotXcm;
-    type Trader =
-        UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
+    type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     type XcmSender = XcmRouter;
 }
-
