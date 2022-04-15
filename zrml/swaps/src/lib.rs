@@ -1314,7 +1314,7 @@ mod pallet {
             Self::deposit_event(Event::PoolCreate(
                 CommonPoolEventParams { pool_id: next_pool_id, who },
                 pool,
-                if scoring_rule == ScoringRule::CPMM { amount } else { 0u32 },
+                if scoring_rule == ScoringRule::CPMM { amount } else { <BalanceOf<T>>::zero() },
             ));
 
             Ok(next_pool_id)
