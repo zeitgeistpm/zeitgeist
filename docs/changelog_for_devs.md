@@ -37,3 +37,9 @@
   `[pool_id, vec![(who, subsidy), ...]]`. The second element `subsidy` of each
   tuple refers to the amount of unreserved funds. No pool tokens are minted or
   burned.
+
+- We now use a fork of ORML which emits the `Slashed` event when assets are
+  slashed. This means that all balances changes are covered using only basic
+  ORML events. We still emit custom events to inform about the semantic meaning
+  of the ORML low-level events. The ORML events should be used to track
+  balances.
