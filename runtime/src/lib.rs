@@ -366,9 +366,9 @@ cfg_if::cfg_if! {
                 }
             }
         }
-    // Unrestricted (no "txfilter" feature) chains
-    // Currently disables Rikiddo and Court markets, will be relaxed
-    // for testnet once runtimes are separated
+    // Unrestricted (no "txfilter" feature) chains.
+    // Currently disables Rikiddo and Court markets as well as LiquidityMining.
+    // Will be relaxed for testnet once runtimes are separated.
     } else {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
@@ -387,6 +387,7 @@ cfg_if::cfg_if! {
                             _ => true
                         }
                     }
+                    Call::LiquidityMining(_) => false,
                     _ => true
                 }
             }
@@ -837,6 +838,27 @@ impl zrml_market_commons::Config for Runtime {
     type Timestamp = Timestamp;
 }
 
+// NoopLiquidityMining implements LiquidityMiningPalletApi with no-ops.
+// Has to be public because it will be exposed by Runtime.
+pub struct NoopLiquidityMining;
+
+impl zrml_liquidity_mining::LiquidityMiningPalletApi for NoopLiquidityMining {
+    type AccountId = AccountId;
+    type Balance = Balance;
+    type BlockNumber = BlockNumber;
+    type MarketId = MarketId;
+
+    fn add_shares(_: Self::AccountId, _: Self::MarketId, _: Self::Balance) {}
+
+    fn distribute_market_incentives(
+        _: &Self::MarketId,
+    ) -> frame_support::pallet_prelude::DispatchResult {
+        Ok(())
+    }
+
+    fn remove_shares(_: &Self::AccountId, _: &Self::MarketId, _: Self::Balance) {}
+}
+
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
@@ -848,7 +870,10 @@ impl zrml_prediction_markets::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
-    type LiquidityMining = LiquidityMining;
+    // LiquidityMining is currently unstable.
+    // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
+    type LiquidityMining = NoopLiquidityMining;
+    // type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
@@ -893,7 +918,10 @@ impl zrml_swaps::Config for Runtime {
     type ExitFee = ExitFee;
     type FixedTypeU = FixedU128<U33>;
     type FixedTypeS = FixedI128<U33>;
-    type LiquidityMining = LiquidityMining;
+    // LiquidityMining is currently unstable.
+    // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
+    type LiquidityMining = NoopLiquidityMining;
+    // type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
