@@ -918,7 +918,10 @@ impl zrml_swaps::Config for Runtime {
     type ExitFee = ExitFee;
     type FixedTypeU = FixedU128<U33>;
     type FixedTypeS = FixedI128<U33>;
-    type LiquidityMining = LiquidityMining;
+    // LiquidityMining is currently unstable.
+    // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
+    type LiquidityMining = NoopLiquidityMining;
+    // type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
