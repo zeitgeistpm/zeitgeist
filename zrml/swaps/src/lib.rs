@@ -1311,11 +1311,19 @@ mod pallet {
 
             <Pools<T>>::insert(next_pool_id, Some(pool.clone()));
 
-            Self::deposit_event(Event::PoolCreate(
-                CommonPoolEventParams { pool_id: next_pool_id, who },
-                pool,
-                amount,
-            ));
+            if scoring_rule == ScoringRule::CPMM {
+                Self::deposit_event(Event::PoolCreate(
+                    CommonPoolEventParams { pool_id: next_pool_id, who },
+                    pool,
+                    amount,
+                ));
+            } else {
+                Self::deposit_event(Event::PoolCreate(
+                    CommonPoolEventParams { pool_id: next_pool_id, who },
+                    pool,
+                    0u32.saturated_into(),
+                ));
+            }
 
             Ok(next_pool_id)
         }
