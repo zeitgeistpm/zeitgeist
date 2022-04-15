@@ -366,9 +366,9 @@ cfg_if::cfg_if! {
                 }
             }
         }
-    // Unrestricted (no "txfilter" feature) chains
-    // Currently disables Rikiddo and Court markets, will be relaxed
-    // for testnet once runtimes are separated
+    // Unrestricted (no "txfilter" feature) chains.
+    // Currently disables Rikiddo and Court markets as well as LiquidityMining.
+    // Will be relaxed for testnet once runtimes are separated.
     } else {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
@@ -387,6 +387,7 @@ cfg_if::cfg_if! {
                             _ => true
                         }
                     }
+                    Call::LiquidityMining(_) => false,
                     _ => true
                 }
             }
