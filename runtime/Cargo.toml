@@ -272,7 +272,7 @@ txfilter = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.0"
+version = "0.3.1"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
