@@ -1198,6 +1198,68 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
+        fn set_pool_as_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            Self::mutate_pool(pool_id, |pool| {
+                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
+                pool.pool_status = PoolStatus::Stale;
+                Ok(())
+            })?;
+
+            Ok(T::DbWeight::get().reads_writes(1, 1))
+        }
+
+        fn set_pool_as_stale_categorical(
+            pool_id: PoolId,
+            outcome_report: &OutcomeReport,
+            winner_payout_account: &T::AccountId,
+        ) -> Result<Weight, DispatchError> {
+            let mut extra_weight = 0;
+            let mut total_assets = 0;
+
+            Self::mutate_pool(pool_id, |pool| {
+                // Find winning asset, remove losing assets from pool
+                let base_asset = pool.base_asset;
+                let mut winning_asset: Result<_, DispatchError> =
+                    Err(Error::<T>::WinningAssetNotFound.into());
+                if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
+                    pool.assets.retain(|el| {
+                        if let Asset::CategoricalOutcome(_, idx) = *el {
+                            if idx == *winning_asset_idx {
+                                winning_asset = Ok(*el);
+                                return true;
+                            };
+                        }
+
+                        *el == base_asset
+                    });
+                }
+
+                total_assets = pool.assets.len();
+
+                let winning_asset_unwrapped = winning_asset?;
+
+                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?;
+                    let distribute_weight = Self::distribute_pool_share_rewards(
+                        pool,
+                        pool_id,
+                        base_asset,
+                        winning_asset_unwrapped,
+                        winner_payout_account,
+                    );
+                    extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
+                    extra_weight = extra_weight.saturating_add(distribute_weight);
+                }
+
+                Ok(())
+            })?;
+
+            Ok(T::WeightInfo::set_pool_as_stale_without_reward_distribution(
+                total_assets.saturated_into(),
+            )
+            .saturating_add(extra_weight))
+        }
+
         /// Calculate the exit fee percentage for `pool`.
         fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
             // We don't charge exit fees on stale pools (no need to punish LPs for leaving the
@@ -1616,18 +1678,22 @@ mod pallet {
             Ok(Self::pool_by_id(pool_id)?)
         }
 
-        /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
-        /// that is not ZTG or winning assets from the selected pool. Additionally, it distributes
-        /// the rewards to all pool share holders.
-        ///
-        /// Does nothing if pool is already stale. Returns `Err` if `pool_id` does not exist.
+        /// Mark a pool as stale, remove losing assets and distribute Rikiddo pool share rewards.
         ///
         /// # Arguments
         ///
-        /// * `market_type`: Type of the market (e.g. categorical or scalar).
+        /// * `market_type`: Type of the market.
         /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
-        /// * `outcome_report`: The resulting outcome.
+        /// * `outcome_report`: The reported outcome.
         /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
+        ///
+        /// # Errors
+        ///
+        /// * Returns `Error::<T>::PoolDoesNotExist` if there is no pool with `pool_id`.
+        /// * Returns `Error::<T>::WinningAssetNotFound` if the reported asset is not found in the
+        ///   pool and the scoring rule is Rikiddo.
+        /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not active or already
+        ///   stale
         #[frame_support::transactional]
         fn set_pool_as_stale(
             market_type: &MarketType,
@@ -1635,59 +1701,17 @@ mod pallet {
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
-            let mut extra_weight = 0;
-            let mut total_assets = 0;
-
-            Self::mutate_pool(pool_id, |pool| {
-                if pool.pool_status == PoolStatus::Stale {
-                    return Ok(());
-                }
-
-                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
-                let base_asset = pool.base_asset;
-                let mut winning_asset: Result<_, DispatchError> =
-                    Err(Error::<T>::WinningAssetNotFound.into());
-
-                if let MarketType::Categorical(_) = market_type {
-                    if let OutcomeReport::Categorical(winning_asset_idx) = outcome_report {
-                        pool.assets.retain(|el| {
-                            if let Asset::CategoricalOutcome(_, idx) = *el {
-                                if idx == *winning_asset_idx {
-                                    winning_asset = Ok(*el);
-                                    return true;
-                                };
-                            }
-
-                            *el == base_asset
-                        });
-                    }
-
-                    total_assets = pool.assets.len();
-                }
-
-                let winning_asset_unwrapped = winning_asset?;
-
-                if pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                    T::RikiddoSigmoidFeeMarketEma::destroy(pool_id)?;
-                    let distribute_weight = Self::distribute_pool_share_rewards(
-                        pool,
-                        pool_id,
-                        base_asset,
-                        winning_asset_unwrapped,
-                        winner_payout_account,
-                    );
-                    extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
-                    extra_weight = extra_weight.saturating_add(distribute_weight);
-                }
-
-                pool.pool_status = PoolStatus::Stale;
-                Ok(())
-            })?;
-
-            Ok(T::WeightInfo::set_pool_as_stale_without_reward_distribution(
-                total_assets.saturated_into(),
-            )
-            .saturating_add(extra_weight))
+            let mut weight = 0;
+            weight = weight.saturating_add(Self::set_pool_as_stale_common(pool_id)?);
+            if let MarketType::Categorical(_) = market_type {
+                weight = weight.saturating_add(Self::set_pool_as_stale_categorical(
+                    pool_id,
+                    outcome_report,
+                    winner_payout_account,
+                )?);
+            }
+            // (No extra work required for scalar markets!)
+            Ok(weight)
         }
 
         /// Swap - Exact amount in
