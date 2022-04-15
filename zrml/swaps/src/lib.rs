@@ -1200,14 +1200,12 @@ mod pallet {
 
         fn set_pool_as_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
-                if pool.pool_status == PoolStatus::Stale {
-                    return Ok(());
-                }
                 ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Stale;
                 Ok(())
             })?;
-            Ok(0) // TODO Needs benchmark!
+
+            Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
         fn set_pool_as_stale_categorical(
