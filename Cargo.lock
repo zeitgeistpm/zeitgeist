@@ -4888,7 +4888,7 @@ dependencies = [
 [[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
-source = "git+https://github.com/PureStake/open-runtime-module-library?branch=moonbeam-polkadot-v0.9.17#7ba9fad0423294bd0799d45cd7d7cff37da9007b"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=slashed-0.9.17-2#c70bfdc33b0003774c1f14843a49a1bf2b82fc28"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4908,7 +4908,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/PureStake/open-runtime-module-library?branch=moonbeam-polkadot-v0.9.17#7ba9fad0423294bd0799d45cd7d7cff37da9007b"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=slashed-0.9.17-2#c70bfdc33b0003774c1f14843a49a1bf2b82fc28"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4925,7 +4925,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/PureStake/open-runtime-module-library?branch=moonbeam-polkadot-v0.9.17#7ba9fad0423294bd0799d45cd7d7cff37da9007b"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=slashed-0.9.17-2#c70bfdc33b0003774c1f14843a49a1bf2b82fc28"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4940,7 +4940,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/PureStake/open-runtime-module-library?branch=moonbeam-polkadot-v0.9.17#7ba9fad0423294bd0799d45cd7d7cff37da9007b"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=slashed-0.9.17-2#c70bfdc33b0003774c1f14843a49a1bf2b82fc28"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4958,7 +4958,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/PureStake/open-runtime-module-library?branch=moonbeam-polkadot-v0.9.17#7ba9fad0423294bd0799d45cd7d7cff37da9007b"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=slashed-0.9.17-2#c70bfdc33b0003774c1f14843a49a1bf2b82fc28"
 dependencies = [
  "frame-support",
  "parity-scale-codec 2.3.1",

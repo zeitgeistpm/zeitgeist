@@ -13,8 +13,8 @@ zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 
 # Mock
 
-orml-currencies = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
-orml-tokens = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
+orml-currencies = { git = "https://github.com/purestake/open-runtime-module-library", optional = true }
+orml-tokens = { git = "https://github.com/purestake/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
