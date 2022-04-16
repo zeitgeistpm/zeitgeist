@@ -31,10 +31,11 @@ use frame_support::{
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T> {
     fn remark(_b: u32) -> Weight {
-        (0 as Weight)
+        (4_155_000 as Weight)
     }
     fn remark_with_event(b: u32) -> Weight {
-        (0 as Weight)
+        (12_000_000 as Weight)
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
             // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(b as Weight))
     }
