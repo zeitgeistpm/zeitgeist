@@ -7,21 +7,21 @@ skinparam interface {
 skinparam component {
   FontSize 13
   FontName Courier
+  FontColor black
   BorderColor black
   BackgroundColor gold
   ArrowFontName Impact
   ArrowColor #FF6655
-  ArrowFontColor #777777
 }
 
 [prediction-market] as PM
 [authorized] as AU
 [market-commons] as MC
 [simple-disputes] as SD
-[court] as CO #Gray
+[court] as CO #Lightgray
 [swaps] as SW
-[rikiddo] as RI #Gray
-[liquidity-mining] as LM #Gray
+[rikiddo] as RI #Lightgray
+[liquidity-mining] as LM #Lightgray
 () SwapsAPI
 () MarketsAPI
 () DisputeAPI
