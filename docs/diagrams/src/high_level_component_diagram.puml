@@ -1,0 +1,46 @@
+@startuml
+skinparam interface {
+  backgroundColor Green
+  borderColor black
+}
+
+skinparam component {
+  FontSize 13
+  FontName Courier
+  BorderColor black
+  BackgroundColor gold
+  ArrowFontName Impact
+  ArrowColor #FF6655
+  ArrowFontColor #777777
+}
+
+[prediction-market] as PM
+[authorized] as AU
+[market-commons] as MC
+[simple-disputes] as SD
+[court] as CO #Gray
+[swaps] as SW
+[rikiddo] as RI #Gray
+[liquidity-mining] as LM #Gray
+() SwapsAPI
+() MarketsAPI
+() DisputeAPI
+() RikiddoMVPallet
+() LiquidityMiningPalletApi
+
+SW -l- SwapsAPI
+MC - MarketsAPI
+AU - DisputeAPI
+SD - DisputeAPI
+CO - DisputeAPI
+LM - LiquidityMiningPalletApi
+RI -r- RikiddoMVPallet
+PM .r.> SwapsAPI : use
+PM ..> MarketsAPI : use
+PM .l.> DisputeAPI : use
+PM .d.> LiquidityMiningPalletApi : use
+AU ..> MarketsAPI : use
+SD ..> MarketsAPI : use
+SW .d.> RikiddoMVPallet : use
+SW .d.> LiquidityMiningPalletApi : use
+@enduml
