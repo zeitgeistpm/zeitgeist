@@ -14,7 +14,7 @@ skinparam component {
   ArrowColor #FF6655
 }
 
-[prediction-market] as PM
+[prediction-markets] as PM
 [authorized] as AU
 [market-commons] as MC
 [simple-disputes] as SD
