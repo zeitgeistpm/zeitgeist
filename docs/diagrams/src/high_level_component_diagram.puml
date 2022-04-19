@@ -10,7 +10,6 @@ skinparam component {
   FontColor black
   BorderColor black
   BackgroundColor gold
-  ArrowFontName Impact
   ArrowColor #FF6655
 }
 
