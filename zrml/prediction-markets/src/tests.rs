@@ -46,6 +46,23 @@ fn simple_create_categorical_market<T: crate::Config>(
     ));
 }
 
+fn simple_create_scalar_market<T: crate::Config>(
+    creation: MarketCreation,
+    period: Range<u64>,
+    scoring_rule: ScoringRule,
+) {
+    assert_ok!(PredictionMarkets::create_scalar_market(
+        Origin::signed(ALICE),
+        BOB,
+        MarketPeriod::Block(period),
+        gen_metadata(2),
+        creation,
+        100..=200,
+        MarketDisputeMechanism::SimpleDisputes,
+        scoring_rule
+    ));
+}
+
 #[test]
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
@@ -188,10 +205,11 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 #[test]
 fn it_allows_to_buy_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::CPMM,
         );
 
@@ -214,6 +232,7 @@ fn it_allows_to_buy_a_complete_set() {
         let market_account = PredictionMarkets::market_account(0);
         let market_bal = Balances::free_balance(market_account);
         assert_eq!(market_bal, CENT);
+        assert!(event_exists(Event::BoughtCompleteSet(0, CENT, BOB)));
     });
 }
 
@@ -234,6 +253,36 @@ fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
 }
 
 #[test]
+fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 0),
+            Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn it_does_not_allow_buying_complete_sets_with_insufficient_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 10000 * BASE),
+            Error::<Runtime>::NotEnoughBalance
+        );
+    });
+}
+
+#[test]
 fn it_allows_to_deploy_a_pool() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
@@ -243,7 +292,7 @@ fn it_allows_to_deploy_a_pool() {
             ScoringRule::CPMM,
         );
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 100 * BASE));
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
@@ -283,10 +332,11 @@ fn it_does_not_allow_to_deploy_a_pool_on_pending_advised_market() {
 #[test]
 fn it_allows_to_sell_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::CPMM,
         );
 
@@ -306,6 +356,40 @@ fn it_allows_to_sell_a_complete_set() {
         // also check native balance
         let bal = Balances::free_balance(&BOB);
         assert_eq!(bal, 1_000 * BASE);
+
+        assert!(event_exists(Event::SoldCompleteSet(0, CENT, BOB)));
+    });
+}
+
+#[test]
+fn it_does_not_allow_zero_amounts_in_sell_complete_set() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 0),
+            Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * CENT));
+        assert_eq!(Currency::slash(Asset::CategoricalOutcome(0, 1), &BOB, CENT), 0);
+        assert_noop!(
+            PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 2 * CENT),
+            Error::<Runtime>::InsufficientShareBalance
+        );
     });
 }
 
@@ -361,6 +445,66 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle
         );
+    });
+}
+
+#[test]
+fn report_fails_on_mismatched_outcome_for_categorical_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..100,
+            ScoringRule::CPMM,
+        );
+        run_to_block(100);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(123)),
+            Error::<Runtime>::OutcomeMismatch,
+        );
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.report.is_none(), true);
+    });
+}
+
+#[test]
+fn report_fails_on_out_of_range_outcome_for_categorical_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..100,
+            ScoringRule::CPMM,
+        );
+        run_to_block(100);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(2)),
+            Error::<Runtime>::OutcomeOutOfRange,
+        );
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.report.is_none(), true);
+    });
+}
+
+#[test]
+fn report_fails_on_mismatched_outcome_for_scalar_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_scalar_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..100,
+            ScoringRule::CPMM,
+        );
+        run_to_block(100);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(0)),
+            Error::<Runtime>::OutcomeMismatch,
+        );
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.report.is_none(), true);
     });
 }
 
@@ -683,22 +827,61 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
 }
 
 #[test]
-fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
+fn process_subsidy_activates_market_with_sufficient_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
-        // Create permissionless categorical market using Rikiddo.
-        // One will have enough subsidy, one insufficient and the last not ready for activation.
         let min_sub_period =
             <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
         let max_sub_period =
             <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
-        for _ in 0..2 {
-            simple_create_categorical_market::<Runtime>(
-                MarketCreation::Permissionless,
-                min_sub_period..max_sub_period,
-                ScoringRule::RikiddoSigmoidFeeMarketEma,
-            );
-        }
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            min_sub_period..max_sub_period,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        let min_subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get();
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), 0, min_subsidy));
+        run_to_block(min_sub_period);
+        let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
+        assert_eq!(subsidy_queue.len(), 0);
+        assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Active);
+    });
+}
+
+#[test]
+fn process_subsidy_blocks_market_with_insufficient_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min_sub_period =
+            <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
+        let max_sub_period =
+            <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
+
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            min_sub_period..max_sub_period,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        let subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get() / 3;
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), 0, subsidy));
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), 0, subsidy));
+        run_to_block(min_sub_period);
+        let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
+        assert_eq!(subsidy_queue.len(), 0);
+        assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::InsufficientSubsidy);
+
+        // Check that the balances are correctly unreserved.
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
+    });
+}
+
+#[test]
+fn process_subsidy_keeps_market_in_subsidy_queue_until_end_of_subsidy_phase() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min_sub_period =
+            <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
+        let max_sub_period =
+            <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Permissionless,
@@ -706,30 +889,12 @@ fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         );
 
-        let market_enough_subsidy = 0;
-        let market_insufficient_subsidy = 1;
-        let market_not_ready = 2;
-        let min_subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get();
-
-        // Give alice enough funds and subsidize one market
-        assert_ok!(Swaps::pool_join_subsidy(
-            Origin::signed(ALICE),
-            market_enough_subsidy,
-            min_subsidy
-        ));
-
         // Run to block where 2 markets are ready and process all markets.
         run_to_block(min_sub_period);
         let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
         assert!(subsidy_queue.len() == 1);
-        assert!(subsidy_queue[0].market_id == market_not_ready);
-        assert!(
-            MarketCommons::market(&market_enough_subsidy).unwrap().status == MarketStatus::Active
-        );
-        assert!(
-            MarketCommons::market(&market_insufficient_subsidy).unwrap().status
-                == MarketStatus::InsufficientSubsidy
-        );
+        assert!(subsidy_queue[0].market_id == 0);
+        assert!(MarketCommons::market(&0).unwrap().status == MarketStatus::CollectingSubsidy);
     });
 }
 
@@ -819,7 +984,7 @@ fn full_scalar_market_lifecycle() {
             ScoringRule::CPMM
         ));
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE,));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
 
         // check balances
         let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
@@ -912,6 +1077,24 @@ fn full_scalar_market_lifecycle() {
 }
 
 #[test]
+fn scalar_market_correctly_resolves_on_out_of_range_outcomes_below_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        scalar_market_correctly_resolves_common(50);
+        assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
+        assert_eq!(Balances::free_balance(&EVE), 1100 * BASE);
+    })
+}
+
+#[test]
+fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        scalar_market_correctly_resolves_common(250);
+        assert_eq!(Balances::free_balance(&CHARLIE), 1000 * BASE);
+        assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
+    })
+}
+
+#[test]
 fn market_resolve_does_not_hold_liquidity_withdraw() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_categorical_market(
@@ -943,7 +1126,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
 }
 
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
-    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE,));
+    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
         <Runtime as crate::Config>::PalletId::get().into_account(),
@@ -955,6 +1138,53 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
         0,
         (0..outcome_assets_len + 1).map(|_| BASE).collect(),
     )
+}
+
+// Common code of `scalar_market_correctly_resolves_*`
+fn scalar_market_correctly_resolves_common(reported_value: u128) {
+    simple_create_scalar_market::<Runtime>(
+        MarketCreation::Permissionless,
+        0..100,
+        ScoringRule::CPMM,
+    );
+    assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 100 * BASE));
+    assert_ok!(Tokens::transfer(
+        Origin::signed(CHARLIE),
+        EVE,
+        Asset::ScalarOutcome(0, ScalarPosition::Short),
+        100 * BASE
+    ));
+    // (Eve now has 100 SHORT, Charlie has 100 LONG)
+
+    run_to_block(100);
+    assert_ok!(PredictionMarkets::report(
+        Origin::signed(BOB),
+        0,
+        OutcomeReport::Scalar(reported_value)
+    ));
+    let market_after_report = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after_report.report.is_some(), true);
+    let report = market_after_report.report.unwrap();
+    assert_eq!(report.at, 100);
+    assert_eq!(report.by, BOB);
+    assert_eq!(report.outcome, OutcomeReport::Scalar(reported_value));
+
+    run_to_block(150);
+    let market_after_resolve = MarketCommons::market(&0).unwrap();
+    assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
+
+    // Check balances before redeeming (just to make sure that our tests are based on correct
+    // assumptions)!
+    assert_eq!(Balances::free_balance(&CHARLIE), 900 * BASE);
+    assert_eq!(Balances::free_balance(&EVE), 1000 * BASE);
+
+    assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+    assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
+    let assets = PredictionMarkets::outcome_assets(0, &MarketCommons::market(&0).unwrap());
+    for asset in assets.iter() {
+        assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
+        assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
+    }
 }
 
 fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {

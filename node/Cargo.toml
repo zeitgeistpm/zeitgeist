@@ -3,90 +3,90 @@ name = "zeitgeist"
 path = "./src/main.rs"
 
 [build-dependencies]
-substrate-build-script-utils = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
+substrate-build-script-utils = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
 
 [dependencies]
-pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-basic-authorship = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-cli = { branch = "moonbeam-polkadot-v0.9.16", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
-sc-client-api = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-consensus = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-executor = { branch = "moonbeam-polkadot-v0.9.16", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
-sc-keystore = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-rpc = { branch = "moonbeam-polkadot-v0.9.16",  git = "https://github.com/purestake/substrate" }
-sc-rpc-api = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-service = { branch = "moonbeam-polkadot-v0.9.16", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
-sc-telemetry = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-transaction-pool = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-transaction-pool-api = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-api = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-block-builder = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-blockchain = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-consensus = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-core = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-offchain = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-session = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-storage = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-timestamp = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
+pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-basic-authorship = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-cli = { branch = "moonbeam-polkadot-v0.9.17", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
+sc-client-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-consensus = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-executor = { branch = "moonbeam-polkadot-v0.9.17", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
+sc-keystore = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-rpc = { branch = "moonbeam-polkadot-v0.9.17",  git = "https://github.com/purestake/substrate" }
+sc-rpc-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-service = { branch = "moonbeam-polkadot-v0.9.17", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
+sc-telemetry = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-transaction-pool = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-transaction-pool-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-block-builder = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-blockchain = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-consensus = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-core = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-offchain = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-session = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-storage = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-timestamp = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
 
 # Benchmark
 
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
-frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
+frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 
 # Cumulus
 
-cumulus-client-cli = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-collator = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-consensus-common = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-consensus-relay-chain = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-network = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-client-service = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-relay-chain-interface = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-relay-chain-local = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-cli = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-collator = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-consensus-common = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-consensus-relay-chain = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-network = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-client-service = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-primitives-parachain-inherent = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-relay-chain-interface = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-relay-chain-local = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/cumulus", optional = true }
 
 # Parachain
 
-nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.16", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-parachain-staking = { rev = "30b955354981b6d11808c10d728e1b93fa919f33", git = "https://github.com/purestake/moonbeam", optional = true }
+nimbus-consensus = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+parachain-staking = { rev = "223c5bc09bc2b23e967f6d7794166b9566d50f4f", git = "https://github.com/purestake/moonbeam", optional = true }
 parity-scale-codec = { optional = true, version = "3.0.0" }
-sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
-sc-network = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
-sc-tracing = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
-serde = { features = ["derive"], optional = true, version = "1.0.132" }
-sp-trie = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
-sp-keystore = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
-substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate", optional = true }
+sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
+sc-network = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
+sc-tracing = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
+serde = { features = ["derive"], optional = true, version = "1.0.136" }
+sp-trie = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
+sp-keystore = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
+substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 
 # Polkadot
 
-polkadot-cli = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-service = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-test-service = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-cli = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-service = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-test-service = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/polkadot", optional = true }
 
 # Standalone
 
-sc-consensus-aura = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sc-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
-sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.16", git = "https://github.com/purestake/substrate" }
+sc-consensus-aura = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sc-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
 
 # Utility
 cfg-if = { version = "1.0.0" }
+clap = { version = "3.1", features = [ "derive" ] }
 hex-literal = { version = "0.3.4" }
 jsonrpc-core = { version = "18.0.0" }
 log = { optional = true, version = "0.4.14" }
-structopt = { version = "0.3.25" }
 
 # Zeitgeist
 
@@ -152,7 +152,7 @@ description = "An evolving blockchain for prediction markets and futarchy."
 edition = "2021"
 homepage = "https://zeitgeist.pm"
 name = "zeitgeist-node"
-version = "0.3.0"
+version = "0.3.1"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

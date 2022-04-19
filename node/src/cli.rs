@@ -4,6 +4,7 @@ mod cli_parachain;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
 
+use clap::Parser;
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 
 const COPYRIGHT_START_YEAR: i32 = 2021;
@@ -15,11 +16,11 @@ type RunCmd = cumulus_client_cli::RunCmd;
 #[cfg(not(feature = "parachain"))]
 type RunCmd = sc_cli::RunCmd;
 
-#[derive(Debug, structopt::StructOpt)]
+#[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
     /// The custom benchmark subcommmand benchmarking runtime pallets.
     #[cfg(feature = "runtime-benchmarks")]
-    #[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+    #[clap(name = "benchmark", about = "Benchmark runtime pallets.")]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
     /// Build a chain specification.
@@ -37,12 +38,12 @@ pub enum Subcommand {
 
     /// Export the genesis state of the parachain.
     #[cfg(feature = "parachain")]
-    #[structopt(name = "export-genesis-state")]
+    #[clap(name = "export-genesis-state")]
     ExportGenesisState(cli_parachain::ExportGenesisStateCommand),
 
     /// Export the genesis wasm of the parachain.
     #[cfg(feature = "parachain")]
-    #[structopt(name = "export-genesis-wasm")]
+    #[clap(name = "export-genesis-wasm")]
     ExportGenesisWasm(cli_parachain::ExportGenesisWasmCommand),
 
     /// Export the state of a given block into a chain spec.
@@ -52,6 +53,7 @@ pub enum Subcommand {
     ImportBlocks(sc_cli::ImportBlocksCmd),
 
     /// Key management cli utilities
+    #[clap(subcommand)]
     Key(sc_cli::KeySubcommand),
 
     #[cfg(feature = "parachain")]
@@ -66,27 +68,27 @@ pub enum Subcommand {
     Revert(sc_cli::RevertCmd),
 }
 
-#[derive(Debug, structopt::StructOpt)]
-#[structopt(settings = &[
-	structopt::clap::AppSettings::GlobalVersion,
-	structopt::clap::AppSettings::ArgsNegateSubcommands,
-	structopt::clap::AppSettings::SubcommandsNegateReqs,
-])]
+#[derive(Debug, Parser)]
+#[clap(
+    propagate_version = true,
+    args_conflicts_with_subcommands = true,
+    subcommand_negates_reqs = true
+)]
 pub struct Cli {
-    #[structopt(flatten)]
+    #[clap(flatten)]
     pub run: RunCmd,
 
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub subcommand: Option<Subcommand>,
 
     /// Relaychain arguments
     #[cfg(feature = "parachain")]
-    #[structopt(raw = true)]
+    #[clap(raw = true)]
     pub relaychain_args: Vec<String>,
 
     /// Id of the parachain this collator collates for.
     #[cfg(feature = "parachain")]
-    #[structopt(long)]
+    #[clap(long)]
     pub parachain_id: Option<u32>,
 }
 

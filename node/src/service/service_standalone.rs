@@ -138,10 +138,10 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
                     let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
                     let slot =
-						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-							*timestamp,
-							raw_slot_duration,
-						);
+                        sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+                            *timestamp,
+                            raw_slot_duration,
+                        );
 
                     Ok((timestamp, slot))
                 },
