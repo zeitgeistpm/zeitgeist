@@ -19,7 +19,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        pallet_prelude::StorageDoubleMap,
+        pallet_prelude::{StorageMap, ValueQuery},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         Blake2_128Concat, PalletId,
     };
@@ -49,30 +49,19 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::authorize_market_outcome())]
         pub fn authorize_market_outcome(
             origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let markets = T::MarketCommons::markets();
-            let market_id = if let Some(rslt) = markets.iter().find(|el| {
-                if let MarketDisputeMechanism::Authorized(ref account_id) = el.1.mdm {
-                    account_id == &who
-                } else {
-                    false
+            let market = T::MarketCommons::market(&market_id)?;
+            if let MarketDisputeMechanism::Authorized(ref account_id) = market.mdm {
+                if account_id != &who {
+                    return Err(Error::<T>::AccountIsNotLinkedToAnyAuthorizedMarket.into());
                 }
-            }) {
-                rslt.0
             } else {
                 return Err(Error::<T>::AccountIsNotLinkedToAnyAuthorizedMarket.into());
-            };
-
-            Outcomes::<T>::insert(market_id, who, outcome);
-
-            // An already stored market was probably modified with a different
-            // authorized account.
-            if Outcomes::<T>::iter_prefix(market_id).count() > 1 {
-                return Err(Error::<T>::MarketsCanNotHaveMoreThanOneAuthorizedAccount.into());
             }
-
+            Outcomes::<T>::insert(market_id, Some(outcome));
             Ok(())
         }
     }
@@ -148,22 +137,14 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<OutcomeReport, DispatchError> {
-            let market_ai = if let MarketDisputeMechanism::Authorized(ref el) = market.mdm {
-                el
-            } else {
-                return Err(Error::<T>::MarketDoesNotHaveAuthorizedMechanism.into());
-            };
-
-            let outcome = if let Some(el) = Outcomes::<T>::get(market_id, market_ai) {
+            let outcome = if let Some(el) = Outcomes::<T>::get(market_id) {
                 el
             } else {
                 return Err(Error::<T>::UnknownOutcome.into());
             };
-
-            Outcomes::<T>::remove(market_id, market_ai);
-
+            Outcomes::<T>::remove(market_id);
             Ok(outcome)
         }
     }
@@ -173,13 +154,13 @@ mod pallet {
     /// Reported outcomes of accounts that are linked through
     /// `MarketDisputeMechanism::Authorized(..)`.
     #[pallet::storage]
-    pub type Outcomes<T: Config> = StorageDoubleMap<
+    #[pallet::getter(fn outcomes)]
+    pub type Outcomes<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
-        Blake2_128Concat,
-        T::AccountId,
-        OutcomeReport,
+        Option<OutcomeReport>,
+        ValueQuery,
     >;
 }
 

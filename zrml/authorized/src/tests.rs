@@ -16,9 +16,9 @@ use zrml_market_commons::Markets;
 fn authorize_market_outcome_inserts_a_new_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), OutcomeReport::Scalar(1))
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
             .unwrap();
-        assert_eq!(Outcomes::<Runtime>::get(0, ALICE).unwrap(), OutcomeReport::Scalar(1));
+        assert_eq!(Outcomes::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(1));
     });
 }
 
@@ -26,7 +26,7 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
 fn authorize_market_outcome_forbids_accounts_without_an_authorized_market() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Authorized::authorize_market_outcome(Origin::signed(ALICE), OutcomeReport::Scalar(1)),
+            Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)),
             Error::<Runtime>::AccountIsNotLinkedToAnyAuthorizedMarket
         );
     });
@@ -36,13 +36,13 @@ fn authorize_market_outcome_forbids_accounts_without_an_authorized_market() {
 fn authorize_market_outcome_forbids_more_than_one_outcome_for_a_market() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), OutcomeReport::Scalar(1))
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
             .unwrap();
         Markets::<Runtime>::mutate(0, |el| {
             el.as_mut().unwrap().mdm = MarketDisputeMechanism::Authorized(BOB);
         });
         assert_noop!(
-            Authorized::authorize_market_outcome(Origin::signed(BOB), OutcomeReport::Scalar(1)),
+            Authorized::authorize_market_outcome(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)),
             Error::<Runtime>::MarketsCanNotHaveMoreThanOneAuthorizedAccount
         );
     });
@@ -87,10 +87,10 @@ fn on_resolution_removes_stored_outcomes() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>(ALICE);
         Markets::<Runtime>::insert(0, &market);
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), OutcomeReport::Scalar(1))
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
             .unwrap();
         let _ = Authorized::on_resolution(&[], &0, &market).unwrap();
-        assert_eq!(Outcomes::<Runtime>::get(0, ALICE), None);
+        assert_eq!(Outcomes::<Runtime>::get(0), None);
     });
 }
 
@@ -99,7 +99,7 @@ fn on_resolution_returns_the_canonical_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>(ALICE);
         Markets::<Runtime>::insert(0, &market);
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), OutcomeReport::Scalar(1))
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
             .unwrap();
         assert_eq!(Authorized::on_resolution(&[], &0, &market).unwrap(), OutcomeReport::Scalar(1));
     });
