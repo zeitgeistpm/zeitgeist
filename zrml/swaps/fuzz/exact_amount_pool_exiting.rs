@@ -18,8 +18,8 @@ fuzz_target!(|data: ExactAmountData| {
     let _ = ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
-        for a in data.pool_creation.assets.clone() {
-            let _ = Shares::deposit(asset(a), &data.pool_creation.origin, MinLiquidity::get());
+        for a in &data.pool_creation.assets {
+            let _ = Shares::deposit(asset(*a), &data.pool_creation.origin, MinLiquidity::get());
         }
 
         match Swaps::create_pool(
