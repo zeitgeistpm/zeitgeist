@@ -155,13 +155,8 @@ mod pallet {
     /// `MarketDisputeMechanism::Authorized(..)`.
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
-    pub type Outcomes<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        Option<OutcomeReport>,
-        ValueQuery,
-    >;
+    pub type Outcomes<T: Config> =
+        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, Option<OutcomeReport>, ValueQuery>;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]

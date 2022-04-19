@@ -26,7 +26,11 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
 fn authorize_market_outcome_forbids_accounts_without_an_authorized_market() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1)),
+            Authorized::authorize_market_outcome(
+                Origin::signed(ALICE),
+                0,
+                OutcomeReport::Scalar(1)
+            ),
             Error::<Runtime>::AccountIsNotLinkedToAnyAuthorizedMarket
         );
     });
