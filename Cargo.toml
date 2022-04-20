@@ -22,9 +22,8 @@ members = [
 ]
 resolver = "2"
 
-[patch."https://github.com/purestake/nimbus"]
-nimbus-consensus = { git = "https://github.com/zeitgeistpm/nimbus", branch = "moonbeam-polkadot-v0.9.16" }
-nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "moonbeam-polkadot-v0.9.16" }
-
-[patch."https://github.com/purestake/moonbeam"]
-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "parachain-staking-migrations-3" }
+[patch."https://github.com/purestake/open-runtime-module-library"]
+orml-benchmarking = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "slashed-0.9.17-2" }
+orml-currencies = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "slashed-0.9.17-2" }
+orml-tokens = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "slashed-0.9.17-2" }
+orml-traits = { git = "https://github.com/zeitgeistpm/open-runtime-module-library", branch = "slashed-0.9.17-2" }

@@ -2,7 +2,6 @@ use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market}
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
 
-/// Dispute Api
 pub trait DisputeApi {
     type AccountId;
     type Balance;
@@ -11,14 +10,36 @@ pub trait DisputeApi {
     type Moment;
     type Origin;
 
-    /// Disputes a reported outcome.
+    /// Dispute a reported outcome.
+    ///
+    /// # Arguments
+    ///
+    /// * `disputes` - The disputes of `market`
+    /// * `market_id` - The id of `market`
+    /// * `market` - The market to dispute
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the market's dispute mechanism is not as expected.
     fn on_dispute(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> DispatchResult;
 
-    /// Manages markets resolutions moving all reported markets to resolved.
+    /// Manage market resolution of disputed market.
+    ///
+    /// Should only be called if the market was disputed before resolving.
+    ///
+    /// # Arguments
+    ///
+    /// * `disputes` - The disputes of `market`
+    /// * `market_id` - The id of `market`
+    /// * `market` - The market to dispute
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the market's dispute mechanism is not as expected.
     fn on_resolution(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,

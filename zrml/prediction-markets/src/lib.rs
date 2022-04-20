@@ -275,13 +275,14 @@ mod pallet {
             Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
         }
 
-        /// Buys the complete set of outcome shares of a market. For example, when calling this
-        /// function on a categorical market with five different outcomes, five different shares
-        /// will be transferred to the callee.
+        /// Buy a complete set of outcome shares of a market.
         ///
-        /// The amount of each share will equal the provided `amount` parameter.
+        /// The cost of a full set is exactly one unit of the market's base asset. For example,
+        /// when calling `buy_complete_set(origin, 1, 2)` on a categorical market with five
+        /// different outcomes, the caller pays `2` of the base asset and receives `2` of each of
+        /// the five outcome tokens.
         ///
-        /// NOTE: This is the only way to create new shares.
+        /// NOTE: This is the only way to create new shares of outcome tokens.
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
@@ -462,9 +463,6 @@ mod pallet {
         ///     all assets should be deployed. For example, `amount_outcome_assets = [120, 150]`
         ///     means, that after deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `keep_outcome_assets`: Specifies how many outcome assets to keep. Any left-over
-        ///     assets that are specified as zero in this vector are sold. Must have the same
-        ///     length as `amount_outcome_assets`.
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into()))
@@ -486,7 +484,6 @@ mod pallet {
             amount_base_asset: BalanceOf<T>,
             amount_outcome_assets: Vec<BalanceOf<T>>,
             weights: Vec<u128>,
-            keep_outcome_assets: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin.clone())?;
 
@@ -498,11 +495,6 @@ mod pallet {
             } else if let MarketType::Scalar(_) = assets {
                 ensure!(amount_outcome_assets.len() == 2, Error::<T>::NotEnoughAssets);
             }
-
-            ensure!(
-                amount_outcome_assets.len() == keep_outcome_assets.len(),
-                Error::<T>::NotEnoughAssets
-            );
 
             // Create the correct market
             let weight_market_creation = match assets.clone() {
@@ -540,7 +532,6 @@ mod pallet {
                 amount_base_asset,
                 amount_outcome_assets.clone(),
                 weights.clone(),
-                keep_outcome_assets,
             )?
             .actual_weight
             .unwrap_or_else(|| {
@@ -648,9 +639,6 @@ mod pallet {
         ///     all assets should be deployed. For example, `amount_outcome_assets = [120, 150]
         ///     means, that after deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
-        /// * `keep_outcome_assets`: Specifies how many outcome assets to keep. Any left-over
-        ///     assets that are specified as zero in this vector are sold. Must have the same
-        ///     length as `amount_outcome_assets`.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
@@ -667,7 +655,6 @@ mod pallet {
             amount_base_asset: BalanceOf<T>,
             amount_outcome_assets: Vec<BalanceOf<T>>,
             weights: Vec<u128>,
-            keep_outcome_assets: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin.clone())?;
             // Buy a complete set of assets based on the highest number to be deployed
@@ -685,8 +672,6 @@ mod pallet {
             let _ = Self::deploy_swap_pool_for_market(origin, market_id, weights)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
             let mut weight_pool_joins_and_sells = 0;
-            let mut remaining_sells: Vec<(Asset<MarketIdOf<T>>, BalanceOf<T>)> =
-                Vec::with_capacity(amount_outcome_assets.len());
             let mut add_liqudity =
                 |amount: BalanceOf<T>, asset: Asset<MarketIdOf<T>>| -> DispatchResult {
                     let local_weight = T::Swaps::pool_join_with_exact_asset_amount(
@@ -702,9 +687,7 @@ mod pallet {
                 };
 
             // Add additional liquidity as specified in amount_outcome_assets
-            for ((idx, asset_amount), keep_amount) in
-                amount_outcome_assets.iter().enumerate().zip(keep_outcome_assets)
-            {
+            for (idx, asset_amount) in amount_outcome_assets.iter().enumerate() {
                 if *asset_amount == zero_balance {
                     continue;
                 };
@@ -727,11 +710,6 @@ mod pallet {
                 if remaining_amount > zero_balance {
                     add_liqudity(remaining_amount, asset_in)?;
                 }
-
-                remaining_sells.push((
-                    asset_in,
-                    max_assets.saturating_sub(*asset_amount).saturating_sub(keep_amount),
-                ));
             }
 
             // Add additional liquidity for the base asset
@@ -740,26 +718,6 @@ mod pallet {
 
             if remaining_amount > zero_balance {
                 add_liqudity(remaining_amount, Asset::Ztg)?;
-            }
-
-            // If desired, sell remaining assets. An additional loop is used because the
-            // sell prices change after all additional liquidity was added.
-            for (asset, amount) in remaining_sells.into_iter() {
-                if amount == zero_balance {
-                    continue;
-                }
-
-                let local_weight = T::Swaps::swap_exact_amount_in(
-                    who.clone(),
-                    pool_id,
-                    asset,
-                    amount,
-                    Asset::Ztg,
-                    zero_balance,
-                    u128::MAX.saturated_into(),
-                )?;
-                weight_pool_joins_and_sells =
-                    weight_pool_joins_and_sells.saturating_add(local_weight);
             }
 
             Ok(Some(
@@ -804,7 +762,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 sender,
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 ScoringRule::CPMM,
                 Some(Zero::zero()),
@@ -928,13 +886,25 @@ mod pallet {
 
                 // Pay out the winner.
                 let remaining_bal = CurrencyOf::<T>::free_balance(&market_account);
+                let actual_payout = payout.min(remaining_bal);
 
                 CurrencyOf::<T>::transfer(
                     &market_account,
                     &sender,
-                    payout.min(remaining_bal),
+                    actual_payout,
                     ExistenceRequirement::AllowDeath,
                 )?;
+                // The if-check prevents scalar markets to emit events even if sender only owns one
+                // of the outcome tokens.
+                if balance != <BalanceOf<T>>::zero() {
+                    Self::deposit_event(Event::TokensRedeemed(
+                        market_id,
+                        currency_id,
+                        balance,
+                        actual_payout,
+                        sender.clone(),
+                    ));
+                }
             }
 
             // Weight correction
@@ -982,11 +952,9 @@ mod pallet {
             let market_report = Report { at: current_block, by: sender.clone(), outcome };
 
             T::MarketCommons::mutate_market(&market_id, |market| {
-                // TODO make this a conditional check
-                // ensure!(outcome <= market.outcomes(), Error::<T>::OutcomeOutOfRange);
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-
                 Self::ensure_market_is_closed(&market.period)?;
+                Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
 
                 let mut should_check_origin = false;
                 match market.period {
@@ -1031,8 +999,9 @@ mod pallet {
             Ok(())
         }
 
-        /// Destroys a complete set of outcomes shares for a market.
+        /// Sells a complete set of outcomes shares for a market.
         ///
+        /// Each complete set is sold for one unit of the market's base asset.
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
@@ -1042,6 +1011,7 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
@@ -1229,7 +1199,7 @@ mod pallet {
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
-        /// An invalid Hash was included in a multihash parameter
+        /// An invalid Hash was included in a multihash parameter.
         InvalidMultihash,
         /// An invalid market type was found.
         InvalidMarketType,
@@ -1263,11 +1233,11 @@ mod pallet {
         MaxDisputesReached,
         /// The number of assets specified in a parameter does not match the total asset count.
         NotEnoughAssets,
-        /// The number of categories for a categorical market is too low
+        /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
         NoWinningBalance,
-        /// Submitted outcome does not match market type
+        /// Submitted outcome does not match market type.
         OutcomeMismatch,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
@@ -1275,8 +1245,12 @@ mod pallet {
         StorageOverflow,
         /// A swap pool already exists for this market.
         SwapPoolExists,
-        /// Too many categories for a categorical market
+        /// Too many categories for a categorical market.
         TooManyCategories,
+        /// Catch-all error for invalid market status
+        InvalidMarketStatus,
+        /// An amount was illegally specified as zero.
+        ZeroAmount,
     }
 
     #[pallet::event]
@@ -1311,6 +1285,14 @@ mod pallet {
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount_redeemed, payout, who\]
+        TokensRedeemed(
+            MarketIdOf<T>,
+            Asset<MarketIdOf<T>>,
+            BalanceOf<T>,
+            BalanceOf<T>,
+            <T as frame_system::Config>::AccountId,
+        ),
     }
 
     #[pallet::hooks]
@@ -1441,6 +1423,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
+            ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance);
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -1607,15 +1590,11 @@ mod pallet {
                     return Err(Error::<T>::OutcomeMismatch.into());
                 }
             }
-            if let OutcomeReport::Scalar(ref inner) = outcome {
-                if let MarketType::Scalar(ref outcome_range) = market.market_type {
-                    ensure!(
-                        inner >= outcome_range.start() && inner <= outcome_range.end(),
-                        Error::<T>::OutcomeOutOfRange
-                    );
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
+            if let OutcomeReport::Scalar(_) = outcome {
+                ensure!(
+                    matches!(&market.market_type, MarketType::Scalar(_)),
+                    Error::<T>::OutcomeMismatch
+                );
             }
             Ok(())
         }
@@ -1672,21 +1651,10 @@ mod pallet {
 
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
-            let resolved_outcome = match market.mdm {
-                MarketDisputeMechanism::Authorized(_) => {
-                    T::Authorized::on_resolution(&disputes, market_id, market)?
-                }
-                MarketDisputeMechanism::Court => {
-                    T::Court::on_resolution(&disputes, market_id, market)?
-                }
-                MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
-                }
-            };
 
             let report = T::MarketCommons::report(market)?;
 
-            match market.status {
+            let resolved_outcome = match market.status {
                 MarketStatus::Reported => {
                     // the oracle bond gets returned if the reporter was the oracle
                     if report.by == market.oracle {
@@ -1705,8 +1673,22 @@ mod pallet {
                         // give it to the real reporter
                         CurrencyOf::<T>::resolve_creating(&report.by, imbalance);
                     }
+
+                    T::MarketCommons::report(market)?.outcome.clone()
                 }
                 MarketStatus::Disputed => {
+                    let resolved_outcome = match market.mdm {
+                        MarketDisputeMechanism::Authorized(_) => {
+                            T::Authorized::on_resolution(&disputes, market_id, market)?
+                        }
+                        MarketDisputeMechanism::Court => {
+                            T::Court::on_resolution(&disputes, market_id, market)?
+                        }
+                        MarketDisputeMechanism::SimpleDisputes => {
+                            T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                        }
+                    };
+
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
                     let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
@@ -1755,8 +1737,10 @@ mod pallet {
                         CurrencyOf::<T>::resolve_creating(correct_reporter, amount);
                         overall_imbalance = leftover;
                     }
+
+                    resolved_outcome
                 }
-                _ => (),
+                _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
             let to_stale_weight = Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(to_stale_weight);
@@ -2055,7 +2039,7 @@ mod pallet {
             let pool_id = T::Swaps::create_pool(
                 market.creator.clone(),
                 assets,
-                Some(base_asset),
+                base_asset,
                 market_id,
                 market.scoring_rule,
                 None,
