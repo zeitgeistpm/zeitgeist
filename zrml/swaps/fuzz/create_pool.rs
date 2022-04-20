@@ -9,15 +9,15 @@ mod data_structs;
 use data_structs::PoolCreationData;
 
 mod helper_functions;
-use helper_functions::asset;
+use helper_functions::construct_asset;
 
 fuzz_target!(|data: PoolCreationData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
         let _ = Swaps::create_pool(
             data.origin,
-            data.assets.into_iter().map(asset).collect(),
-            asset(data.base_asset),
+            data.assets.into_iter().map(construct_asset).collect(),
+            construct_asset(data.base_asset),
             data.market_id,
             ScoringRule::CPMM,
             data.swap_fee,

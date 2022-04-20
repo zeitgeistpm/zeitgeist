@@ -1,55 +1,55 @@
 [[bin]]
 doc = false
-name = "pool_creation"
-path = "pool_creation.rs"
+name = "create_pool"
+path = "create_pool.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "general_pool_joining"
-path = "general_pool_joining.rs"
+name = "pool_join"
+path = "pool_join.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "exact_amount_pool_joining"
-path = "exact_amount_pool_joining.rs"
+name = "pool_join_with_exact_pool_amount"
+path = "pool_join_with_exact_pool_amount.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "exact_asset_amount_pool_joining"
-path = "exact_asset_amount_pool_joining.rs"
+name = "pool_join_with_exact_asset_amount"
+path = "pool_join_with_exact_asset_amount.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "input_swap_exact_amount_pool_joining"
-path = "input_swap_exact_amount_pool_joining.rs"
+name = "swap_exact_amount_in"
+path = "swap_exact_amount_in.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "output_swap_exact_amount_pool_joining"
-path = "output_swap_exact_amount_pool_joining.rs"
+name = "swap_exact_amount_out"
+path = "swap_exact_amount_out.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "exact_asset_amount_pool_exiting"
-path = "exact_asset_amount_pool_exiting.rs"
+name = "pool_exit_with_exact_asset_amount"
+path = "pool_exit_with_exact_asset_amount.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "exact_amount_pool_exiting"
-path = "exact_amount_pool_exiting.rs"
+name = "pool_exit_with_exact_pool_amount"
+path = "pool_exit_with_exact_pool_amount.rs"
 test = false
 
 [[bin]]
 doc = false
-name = "general_pool_exiting"
-path = "general_pool_exiting.rs"
+name = "pool_exit"
+path = "pool_exit.rs"
 test = false
 
 [dependencies]

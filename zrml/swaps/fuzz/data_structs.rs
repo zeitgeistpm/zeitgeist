@@ -3,7 +3,7 @@
     clippy::integer_arithmetic
 )]
 
-use zeitgeist_primitives::constants::{MaxAssets, MaxTotalWeight, MinAssets, MinWeight};
+use zeitgeist_primitives::constants::{MaxAssets, MaxTotalWeight, MinAssets, MinWeight, BASE};
 
 use arbitrary::{Arbitrary, Result, Unstructured};
 
@@ -36,9 +36,10 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         for _ in 0..assets_len {
             // use always the min weight to rarely reach the constraint of MaxTotalWeight
             let weight: u128 = MinWeight::get();
+            // let weight: u128 =
+            // rng.gen_range(MinWeight::get()..=MaxTotalWeight::get() / assets_len as u128);
             match weight_sum.checked_add(weight) {
                 // MaxWeight is 50 * BASE and MaxTotalWeight is also 50 * BASE
-                // so it is very likely to reach the max total weight with two assets
                 Some(sum) if sum <= MaxTotalWeight::get() => weight_sum = sum,
                 // if sum > MaxTotalWeight or u128 Overflow (None case)
                 _ => return Err(<arbitrary::Error>::IncorrectFormat),
@@ -55,7 +56,7 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
             .get(rng.gen::<usize>() % assets_len)
             .ok_or(<arbitrary::Error>::IncorrectFormat)?;
         let market_id = rng.gen::<u128>();
-        let swap_fee = rng.gen::<u128>();
+        let swap_fee = rng.gen_range(0..BASE);
 
         Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, weights })
     }

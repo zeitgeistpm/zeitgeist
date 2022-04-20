@@ -9,15 +9,15 @@ set -euxo pipefail
 BASE=1000
 RUNS="${RUNS:-50000}"
 
-POOL_CREATION=500
-GENERAL_POOL_JOINING=150
-EXACT_AMOUNT_POOL_JOINING=150
-EXACT_ASSET_AMOUNT_POOL_JOINING=150
-INPUT_SWAP_EXACT_AMOUNT_POOL_JOINING=1000
-OUTPUT_SWAP_EXACT_AMOUNT_POOL_JOINING=1000
-EXACT_ASSET_AMOUNT_POOL_EXITING=150
-EXACT_AMOUNT_POOL_EXITING=150
-GENERAL_POOL_EXITING=150
+CREATE_POOL_FACT=500
+POOL_JOIN_FACT=150
+POOL_JOIN_WITH_EXACT_POOL_AMOUNT_FACT=150
+POOL_JOIN_WITH_EXACT_ASSET_AMOUNT_FACT=150
+SWAP_EXACT_AMOUNT_IN_FACT=500
+SWAP_EXACT_AMOUNT_OUT_FACT=500
+POOL_EXIT_WITH_EXACT_ASSET_AMOUNT_FACT=150
+POOL_EXIT_WITH_EXACT_POOL_AMOUNT_FACT=150
+POOL_EXIT_FACT=150
 
 FEE_SIGMOID_FACT=50000
 FIXEDI_TO_FIXEDU_FACT=100000
@@ -36,15 +36,15 @@ RIKIDDO_PALLET_FACT=1000
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/prediction-markets/fuzz pm_full_workflow -- -runs=$RUNS
 
 # --- Swaps Pallet fuzz tests ---
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_creation -- -runs=$(($(($RUNS * $POOL_CREATION)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_joining -- -runs=$(($(($RUNS * $GENERAL_POOL_JOINING)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_joining -- -runs=$(($(($RUNS * $EXACT_AMOUNT_POOL_JOINING)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_joining -- -runs=$(($(($RUNS * $EXACT_ASSET_AMOUNT_POOL_JOINING)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz input_swap_exact_amount_pool_joining -- -runs=$(($(($RUNS * $INPUT_SWAP_EXACT_AMOUNT_POOL_JOINING)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz output_swap_exact_amount_pool_joining -- -runs=$(($(($RUNS * $OUTPUT_SWAP_EXACT_AMOUNT_POOL_JOINING)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_asset_amount_pool_exiting -- -runs=$(($(($RUNS * $EXACT_ASSET_AMOUNT_POOL_EXITING)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz exact_amount_pool_exiting -- -runs=$(($(($RUNS * $EXACT_AMOUNT_POOL_EXITING)) / $BASE))
-RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz general_pool_exiting -- -runs=$(($(($RUNS * $GENERAL_POOL_EXITING)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz create_pool -- -runs=$(($(($RUNS * $CREATE_POOL_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join -- -runs=$(($(($RUNS * $POOL_JOIN_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join_with_exact_pool_amount -- -runs=$(($(($RUNS * $POOL_JOIN_WITH_EXACT_POOL_AMOUNT_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_join_with_exact_asset_amount -- -runs=$(($(($RUNS * $POOL_JOIN_WITH_EXACT_ASSET_AMOUNT_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz swap_exact_amount_in -- -runs=$(($(($RUNS * $SWAP_EXACT_AMOUNT_IN_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz swap_exact_amount_out -- -runs=$(($(($RUNS * $SWAP_EXACT_AMOUNT_OUT_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit_with_exact_asset_amount -- -runs=$(($(($RUNS * $POOL_EXIT_WITH_EXACT_ASSET_AMOUNT_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit_with_exact_pool_amount -- -runs=$(($(($RUNS * $POOL_EXIT_WITH_EXACT_POOL_AMOUNT_FACT)) / $BASE))
+RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/swaps/fuzz pool_exit -- -runs=$(($(($RUNS * $POOL_EXIT_FACT)) / $BASE))
 
 # --- Orderbook-v1 Pallet fuzz tests ---
 RUST_BACKTRACE=1 cargo fuzz run --fuzz-dir zrml/orderbook-v1/fuzz orderbook_v1_full_workflow -- -runs=$RUNS

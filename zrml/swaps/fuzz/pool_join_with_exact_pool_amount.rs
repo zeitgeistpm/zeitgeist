@@ -6,7 +6,7 @@ use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 mod data_structs;
 use data_structs::ExactAmountData;
 mod helper_functions;
-use helper_functions::asset;
+use helper_functions::{construct_asset, _CREATE_POOL_FAILURE};
 use orml_traits::MultiCurrency;
 use zeitgeist_primitives::{
     constants::MinLiquidity, traits::Swaps as SwapsTrait, types::ScoringRule,
@@ -19,32 +19,31 @@ fuzz_target!(|data: ExactAmountData| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            let _ = Shares::deposit(asset(*a), &data.pool_creation.origin, MinLiquidity::get());
+            let _ = Shares::deposit(
+                construct_asset(*a),
+                &data.pool_creation.origin,
+                MinLiquidity::get(),
+            );
         }
-
         match Swaps::create_pool(
             data.pool_creation.origin,
-            data.pool_creation.assets.into_iter().map(asset).collect(),
-            asset(data.pool_creation.base_asset),
+            data.pool_creation.assets.into_iter().map(construct_asset).collect(),
+            construct_asset(data.pool_creation.base_asset),
             data.pool_creation.market_id,
             ScoringRule::CPMM,
             Some(data.pool_creation.swap_fee),
             Some(data.pool_creation.weights),
         ) {
             Ok(pool_id) => {
-                let _ = Swaps::pool_exit_with_exact_pool_amount(
+                let _ = Swaps::pool_join_with_exact_pool_amount(
                     Origin::signed(data.origin),
                     pool_id,
-                    asset(data.asset),
+                    construct_asset(data.asset),
                     data.pool_amount,
                     data.asset_amount,
                 );
             }
-            Err(e) => panic!(
-                "There needs to be a valid pool creation! This Swaps::create_pool call returns an \
-                 error, but should be ok. Error: {:?}",
-                e
-            ),
+            Err(e) => panic!("{_CREATE_POOL_FAILURE} {:?}", e),
         }
     });
     let _ = ext.commit_all();
