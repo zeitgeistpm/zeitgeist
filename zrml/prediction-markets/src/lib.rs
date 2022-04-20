@@ -404,6 +404,7 @@ mod pallet {
 
             // Require sha3-384 as multihash. TODO The irrefutable `if let` is a workaround for a
             // compiler error. Link an issue for this!
+            #[allow(irrefutable_let_patterns)]
             let multihash =
                 if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
@@ -587,6 +588,7 @@ mod pallet {
 
             // Require sha3-384 as multihash. TODO The irrefutable `if let` is a workaround for a
             // compiler error. Link an issue for this!
+            #[allow(irrefutable_let_patterns)]
             let multihash =
                 if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
