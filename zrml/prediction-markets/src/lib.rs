@@ -953,7 +953,7 @@ mod pallet {
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-                Self::ensure_market_is_closed(&market)?;
+                Self::ensure_market_is_closed(market)?;
                 Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
 
                 let mut should_check_origin = false;
