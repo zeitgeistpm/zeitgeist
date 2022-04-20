@@ -433,18 +433,6 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             0,
             OutcomeReport::Categorical(1)
         ));
-
-        // Reset and report again as unauthorized origin
-        let _ = MarketCommons::mutate_market(&0, |market| {
-            market.status = MarketStatus::Closed;
-            market.report = None;
-            Ok(())
-        });
-
-        assert_noop!(
-            PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
-            Error::<Runtime>::ReporterNotOracle
-        );
     });
 }
 
@@ -1123,6 +1111,133 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         assert_ok!(Swaps::pool_exit(Origin::signed(FRED), 0, BASE * 100, vec![0, 0]));
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
     })
+}
+
+#[test]
+fn report_fails_if_market_is_proposed() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..100_000_000),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::MarketIsNotClosed,
+        );
+    });
+}
+
+#[test]
+fn report_fails_if_market_is_proposed_after_close() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..100_000_000),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        Timestamp::set_timestamp(123_456_789); // Market is now "closed".
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::MarketIsNotClosed,
+        );
+    });
+}
+
+#[test]
+fn report_fails_if_market_is_collecting_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(100_000_000..200_000_000),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::RikiddoSigmoidFeeMarketEma
+        ));
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::MarketIsNotClosed,
+        );
+    });
+}
+
+#[test]
+fn report_fails_if_market_is_active() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..100_000_000),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::MarketIsNotClosed,
+        );
+    });
+}
+
+#[test]
+fn report_fails_if_market_is_resolved() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..100_000_000),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        Timestamp::set_timestamp(123_456_789);
+        let _ = MarketCommons::mutate_market(&0, |market| {
+            market.status = MarketStatus::Resolved;
+            Ok(())
+        });
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::MarketIsNotClosed,
+        );
+    });
+}
+
+#[test]
+fn report_fails_if_reporter_is_not_the_oracle() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..100_000_000),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        Timestamp::set_timestamp(123_456_789);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::ReporterNotOracle,
+        );
+    });
 }
 
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
