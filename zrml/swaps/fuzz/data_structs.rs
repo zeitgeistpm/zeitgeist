@@ -102,7 +102,7 @@ pub struct SwapExactAmountData {
 pub struct PoolCreationData {
     pub origin: u128,
     pub assets: Vec<(u128, u16)>,
-    pub base_asset: Option<(u128, u16)>,
+    pub base_asset: (u128, u16),
     pub market_id: u128,
     pub swap_fee: Option<u128>,
     pub weights: Option<Vec<u128>>,

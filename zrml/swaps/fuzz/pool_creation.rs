@@ -17,7 +17,7 @@ fuzz_target!(|data: PoolCreationData| {
         let _ = Swaps::create_pool(
             data.origin,
             data.assets.into_iter().map(asset).collect(),
-            data.base_asset.map(asset),
+            asset(data.base_asset),
             data.market_id,
             ScoringRule::CPMM,
             data.swap_fee,

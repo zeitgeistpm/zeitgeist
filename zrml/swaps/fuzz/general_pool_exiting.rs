@@ -23,7 +23,7 @@ fuzz_target!(|data: GeneralPoolData| {
         match Swaps::create_pool(
             data.pool_creation.origin,
             data.pool_creation.assets.into_iter().map(asset).collect(),
-            Some(data.pool_creation.base_asset).map(asset),
+            asset(data.pool_creation.base_asset),
             data.pool_creation.market_id,
             ScoringRule::CPMM,
             Some(data.pool_creation.swap_fee),
