@@ -74,6 +74,12 @@ parameter_types! {
     pub const MaxSubAccounts: u32 = 64;
     pub const SubAccountDeposit: Balance = 2 * BASE;
 
+    // Multisig
+    // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+    pub const DepositBase: Balance = deposit(1, 88);
+    // Additional storage item size of 32 bytes.
+    pub const DepositFactor: Balance = deposit(0, 32);
+
     // ORML
     pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
 
