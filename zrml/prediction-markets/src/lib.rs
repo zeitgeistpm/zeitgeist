@@ -402,8 +402,10 @@ mod pallet {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
 
-            // Require sha3-384 as multihash.
-            let MultiHash::Sha3_384(multihash) = metadata;
+            // Require sha3-384 as multihash. TODO The irrefutable `if let` is a workaround for a
+            // compiler error. Link an issue for this!
+            let multihash =
+                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
             let status: MarketStatus = match creation {
@@ -583,8 +585,10 @@ mod pallet {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
 
-            // Require sha3-384 as multihash.
-            let MultiHash::Sha3_384(multihash) = metadata;
+            // Require sha3-384 as multihash. TODO The irrefutable `if let` is a workaround for a
+            // compiler error. Link an issue for this!
+            let multihash =
+                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
             let status: MarketStatus = match creation {
