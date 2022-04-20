@@ -53,7 +53,7 @@ mod pallet {
         traits::{
             Currency, ExistenceRequirement, Get, Hooks, IsType, StorageVersion, WithdrawReasons,
         },
-        Blake2_128Concat, PalletId, Twox64Concat,
+        transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
     use sp_runtime::{
@@ -78,6 +78,7 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::set_per_block_distribution())]
+        #[transactional]
         pub fn set_per_block_distribution(
             origin: OriginFor<T>,
             per_block_distribution: BalanceOf<T>,
