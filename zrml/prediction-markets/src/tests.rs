@@ -423,7 +423,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         // Reset and report again as approval origin
         let _ = MarketCommons::mutate_market(&0, |market| {
-            market.status = MarketStatus::Closed;
+            market.status = MarketStatus::Active;
             market.report = None;
             Ok(())
         });

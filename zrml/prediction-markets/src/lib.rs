@@ -953,7 +953,7 @@ mod pallet {
 
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
-                Self::ensure_market_is_closed(&market.period)?;
+                Self::ensure_market_is_closed(&market)?;
                 Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
 
                 let mut should_check_origin = false;
@@ -1536,10 +1536,11 @@ mod pallet {
 
         // Check that the market has reached the end of its period.
         fn ensure_market_is_closed(
-            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotClosed);
             ensure!(
-                match period {
+                match &market.period {
                     MarketPeriod::Block(range) => {
                         <frame_system::Pallet<T>>::block_number() >= range.end
                     }
