@@ -14,7 +14,8 @@ use frame_support::{
     PalletId,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
+use pallet_transaction_payment::Multiplier;
+use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
@@ -118,6 +119,12 @@ parameter_types! {
     // Transaction payment
     pub const OperationalFeeMultiplier: u8 = 5;
     pub const TransactionByteFee: Balance = 100 * MICRO;
+    // polkadot uses Perquintill::from_percent(25)
+    pub TargetBlockFullness: Perquintill = Default::default();
+    // polkadot uses Multiplier::saturating_from_rational(3, 100_000)
+    pub AdjustmentVariable: Multiplier = Default::default();
+    // polkadot uses Multiplier::saturating_from_rational(1, 1_000_000u128);
+    pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_integer(1);
 
     // Treasury
     pub const Burn: Permill = Permill::from_percent(50);

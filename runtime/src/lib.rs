@@ -759,7 +759,12 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-    type FeeMultiplierUpdate = ();
+    type FeeMultiplierUpdate = pallet_transaction_payment::TargetedFeeAdjustment<
+        Runtime,
+        TargetBlockFullness,
+        AdjustmentVariable,
+        MinimumMultiplier,
+    >;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
     type TransactionByteFee = TransactionByteFee;
