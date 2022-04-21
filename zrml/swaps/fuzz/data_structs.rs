@@ -3,11 +3,13 @@
     clippy::integer_arithmetic
 )]
 
-use zeitgeist_primitives::constants::{MaxAssets, MaxTotalWeight, MinAssets, MinWeight, BASE};
+use zeitgeist_primitives::constants::{
+    MaxAssets, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE,
+};
 
 use arbitrary::{Arbitrary, Result, Unstructured};
 
-use rand::Rng;
+use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 
 #[derive(Debug)]
 pub struct ValidPoolData {
@@ -23,43 +25,71 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
     fn arbitrary(_: &mut Unstructured<'a>) -> Result<Self> {
         let mut rng = rand::thread_rng();
 
+        // unstructured arbitrary_len function did always return zero, that's why using rand crate
         let assets_len: u16 = rng.gen_range(MinAssets::get()..=MaxAssets::get());
 
         let assets_len = assets_len as usize;
-        // unstructured arbitrary_len function did always return zero, that's why using rand crate
-        // create a weight collection with the capacity of assets length
-        let mut weights: Vec<u128> = Vec::with_capacity(assets_len);
-        let mut weight_sum = 0u128;
 
-        let mut assets: Vec<(u128, u16)> = Vec::with_capacity(assets_len);
+        // create assets and weights collections with assets length
+        let (assets, weights) = create_random_assets_and_weights(assets_len, &mut rng)?;
 
-        for _ in 0..assets_len {
-            // use always the min weight to rarely reach the constraint of MaxTotalWeight
-            let weight: u128 = MinWeight::get();
-            // let weight: u128 =
-            // rng.gen_range(MinWeight::get()..=MaxTotalWeight::get() / assets_len as u128);
-            match weight_sum.checked_add(weight) {
-                // MaxWeight is 50 * BASE and MaxTotalWeight is also 50 * BASE
-                Some(sum) if sum <= MaxTotalWeight::get() => weight_sum = sum,
-                // if sum > MaxTotalWeight or u128 Overflow (None case)
-                _ => return Err(<arbitrary::Error>::IncorrectFormat),
-            }
-            let asset = (rng.gen::<u128>(), rng.gen::<u16>());
-
-            weights.push(weight);
-            assets.push(asset);
-        }
-
-        let origin = rng.gen::<u128>();
         // the base_assets needs to be in the assets
         let base_asset = *assets
             .get(rng.gen::<usize>() % assets_len)
             .ok_or(<arbitrary::Error>::IncorrectFormat)?;
+
+        let origin = rng.gen::<u128>();
         let market_id = rng.gen::<u128>();
         let swap_fee = rng.gen_range(0..BASE);
 
         Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, weights })
     }
+}
+
+fn create_random_assets_and_weights(
+    assets_len: usize,
+    rng: &mut ThreadRng,
+) -> Result<(Vec<(u128, u16)>, Vec<u128>)> {
+    let mut assets: Vec<(u128, u16)> = Vec::with_capacity(assets_len);
+    let mut weights: Vec<u128> = Vec::with_capacity(assets_len);
+
+    if MaxWeight::get() > MaxTotalWeight::get() {
+        panic!(
+            "Unexpected error during random weight creation. MaxWeight should be smaller than \
+             MaxTotalWeight."
+        );
+    }
+
+    let mut weight_sum = 0;
+
+    let assets_len = assets_len as u128;
+    for i in 0..assets_len {
+        // first iteration: (asset_len - 1) assets left
+        let assets_left = assets_len - 1 - i;
+        // reservation of multiple MinWeight for the future iterations
+        let future_min_weight_reserve = assets_left * MinWeight::get();
+        // take min_weight_reserve for future iterations in calculation
+        // maximum value of weight without looking at the previous weight_sum
+        let max_weight_limit = MaxTotalWeight::get() - future_min_weight_reserve;
+        // previous weight sum substraction limits to exceed the MaxTotalWeight (otherwise no pool creation)
+        let max_weight_limit = max_weight_limit - weight_sum;
+        // each individual weight is at most MaxWeight
+        let max = max_weight_limit.min(MaxWeight::get());
+        let weight = rng.gen_range(MinWeight::get()..max);
+
+        match weight_sum.checked_add(weight) {
+            Some(sum) => weight_sum = sum,
+            None => return Err(<arbitrary::Error>::IncorrectFormat),
+        };
+        weights.push(weight);
+
+        let asset = (rng.gen::<u128>(), rng.gen::<u16>());
+        assets.push(asset);
+    }
+    // Need to shuffle the vector, because earlier numbers have a higher probability of being
+    // large.
+    weights.shuffle(rng);
+    Ok((assets, weights))
 }
 
 #[derive(Debug, Arbitrary)]
