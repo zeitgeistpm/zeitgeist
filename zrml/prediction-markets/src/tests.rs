@@ -1125,6 +1125,160 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
     })
 }
 
+#[test]
+fn approve_market_correctly_unreserves_advisory_bond() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(Balances::reserved_balance(&ALICE), AdvisoryBond::get() + OracleBond::get());
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance(&ALICE), OracleBond::get());
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + AdvisoryBond::get());
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_oracle_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        // We need to set the validity bond to something larger than the advisory bond in order to
+        // be able to detect if we're unreserving the correct amount!
+        <Runtime as Config>::ValidityBond::set(&(2 * AdvisoryBond::get()));
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(Balances::reserved_balance(&ALICE), ValidityBond::get() + OracleBond::get());
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(150);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        // Check that nothing got slashed
+        assert_eq!(
+            Balances::free_balance(&ALICE),
+            alice_balance_before + ValidityBond::get() + OracleBond::get()
+        );
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_outsider_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        // We need to set the validity bond to something larger than the advisory bond in order to
+        // be able to detect if we're unreserving the correct amount!
+        <Runtime as Config>::ValidityBond::set(&(2 * AdvisoryBond::get()));
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(Balances::reserved_balance(&ALICE), ValidityBond::get() + OracleBond::get());
+        run_to_block(9000);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9100);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        // Check that validity bond didn't get slashed, but oracle bond did
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_oracle_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        // We need to set the advisory bond to something larger than the validity bond in order to
+        // be able to detect if we're unreserving the correct amount!
+        <Runtime as Config>::AdvisoryBond::set(&(2 * ValidityBond::get()));
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(Balances::reserved_balance(&ALICE), OracleBond::get());
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(150);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        // Check that nothing got slashed
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_outsider_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        // We need to set the advisory bond to something larger than the validity bond in order to
+        // be able to detect if we're unreserving the correct amount!
+        <Runtime as Config>::AdvisoryBond::set(&(2 * ValidityBond::get()));
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(Balances::reserved_balance(&ALICE), OracleBond::get());
+        run_to_block(9000);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9100);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        // Check that oracle bond got slashed
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+    });
+}
+
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
