@@ -133,7 +133,7 @@ mod pallet {
         )]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             T::DestroyOrigin::ensure_origin(origin)?;
 
@@ -193,7 +193,7 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::admin_move_market_to_closed())]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             T::CloseOrigin::ensure_origin(origin)?;
             T::MarketCommons::mutate_market(&market_id, |m| {
@@ -224,7 +224,7 @@ mod pallet {
         ))]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             T::ResolveOrigin::ensure_origin(origin)?;
 
@@ -250,7 +250,7 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::approve_market())]
         pub fn approve_market(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             T::ApprovalOrigin::ensure_origin(origin)?;
             let mut extra_weight = 0;
@@ -293,7 +293,7 @@ mod pallet {
         #[transactional]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -304,7 +304,7 @@ mod pallet {
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -357,7 +357,7 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::cancel_pending_market())]
         pub fn cancel_pending_market(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -481,7 +481,7 @@ mod pallet {
             metadata: MultiHash,
             assets: MarketType,
             mdm: MarketDisputeMechanism<T::AccountId>,
-            amount_base_asset: BalanceOf<T>,
+            #[pallet::compact] amount_base_asset: BalanceOf<T>,
             amount_outcome_assets: Vec<BalanceOf<T>>,
             weights: Vec<u128>,
         ) -> DispatchResultWithPostInfo {
@@ -651,8 +651,8 @@ mod pallet {
         #[transactional]
         pub fn deploy_swap_pool_and_additional_liquidity(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
-            amount_base_asset: BalanceOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] amount_base_asset: BalanceOf<T>,
             amount_outcome_assets: Vec<BalanceOf<T>>,
             weights: Vec<u128>,
         ) -> DispatchResultWithPostInfo {
@@ -740,7 +740,7 @@ mod pallet {
         #[transactional]
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             weights: Vec<u128>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
@@ -778,7 +778,10 @@ mod pallet {
         /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
         ///
         #[pallet::weight(10_000_000)]
-        pub fn global_dispute(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub fn global_dispute(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
             let _sender = ensure_signed(origin)?;
             let _market = T::MarketCommons::market(&market_id)?;
             // TODO: implement global disputes
@@ -792,7 +795,7 @@ mod pallet {
         )]
         pub fn redeem_shares(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
@@ -919,7 +922,10 @@ mod pallet {
 
         /// Rejects a market that is waiting for approval from the advisory committee.
         #[pallet::weight(T::WeightInfo::reject_market())]
-        pub fn reject_market(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
+        pub fn reject_market(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -943,7 +949,7 @@ mod pallet {
         #[transactional]
         pub fn report(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let sender = ensure_signed(origin.clone())?;
@@ -1007,7 +1013,7 @@ mod pallet {
         )]
         pub fn sell_complete_set(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
