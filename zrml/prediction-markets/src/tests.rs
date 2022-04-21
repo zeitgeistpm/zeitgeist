@@ -1175,6 +1175,30 @@ fn report_fails_if_market_is_collecting_subsidy() {
 }
 
 #[test]
+fn report_fails_if_market_has_insufficient_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(100_000_000..200_000_000),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::RikiddoSigmoidFeeMarketEma
+        ));
+        let _ = MarketCommons::mutate_market(&0, |market| {
+            market.status = MarketStatus::InsufficientSubsidy;
+            Ok(())
+        });
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::MarketIsNotClosed,
+        );
+    });
+}
+
+#[test]
 fn report_fails_if_market_is_active() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_categorical_market(
