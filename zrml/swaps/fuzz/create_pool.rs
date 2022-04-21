@@ -5,11 +5,8 @@ use zeitgeist_primitives::{traits::Swaps as SwapsTrait, types::ScoringRule};
 
 use zrml_swaps::mock::{ExtBuilder, Swaps};
 
-mod data_structs;
-use data_structs::PoolCreationData;
-
-mod helper_functions;
-use helper_functions::construct_asset;
+mod utils;
+use utils::{construct_asset, PoolCreationData};
 
 fuzz_target!(|data: PoolCreationData| {
     let mut ext = ExtBuilder::default().build();

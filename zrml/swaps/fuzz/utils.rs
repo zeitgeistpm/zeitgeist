@@ -11,6 +11,30 @@ use arbitrary::{Arbitrary, Result, Unstructured};
 
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 
+use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
+
+use zeitgeist_primitives::{
+    traits::Swaps as SwapsTrait,
+    types::{PoolId, ScoringRule},
+};
+use zrml_swaps::mock::Swaps;
+
+pub fn construct_asset(seed: (u128, u16)) -> Asset<u128> {
+    let (seed0, seed1) = seed;
+    let module = seed0 % 5;
+    match module {
+        0 => Asset::CategoricalOutcome(seed0, seed1),
+        1 => {
+            let scalar_position =
+                if seed1 % 2 == 0 { ScalarPosition::Long } else { ScalarPosition::Short };
+            Asset::ScalarOutcome(seed0, scalar_position)
+        }
+        2 => Asset::CombinatorialOutcome,
+        3 => Asset::PoolShare(SerdeWrapper(seed0)),
+        _ => Asset::Ztg,
+    }
+}
+
 #[derive(Debug)]
 pub struct ValidPoolData {
     pub origin: u128,
@@ -19,6 +43,23 @@ pub struct ValidPoolData {
     pub market_id: u128,
     pub swap_fee: u128,
     pub weights: Vec<u128>,
+}
+
+impl ValidPoolData {
+    pub fn _create_pool(self) -> PoolId {
+        match Swaps::create_pool(
+            self.origin,
+            self.assets.into_iter().map(construct_asset).collect(),
+            construct_asset(self.base_asset),
+            self.market_id,
+            ScoringRule::CPMM,
+            Some(self.swap_fee),
+            Some(self.weights),
+        ) {
+            Ok(pool_id) => pool_id,
+            Err(e) => panic!("Pool creation failed unexpectedly. Error: {:?}", e),
+        }
+    }
 }
 
 impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {

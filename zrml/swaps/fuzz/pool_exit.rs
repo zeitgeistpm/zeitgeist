@@ -3,12 +3,9 @@
 use libfuzzer_sys::fuzz_target;
 use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 
-mod data_structs;
-use data_structs::GeneralPoolData;
-use zeitgeist_primitives::{traits::Swaps as SwapsTrait, types::ScoringRule};
-mod helper_functions;
-use helper_functions::{construct_asset, _CREATE_POOL_FAILURE};
+mod utils;
 use orml_traits::MultiCurrency;
+use utils::{construct_asset, GeneralPoolData};
 use zeitgeist_primitives::constants::MinLiquidity;
 use zrml_swaps::mock::Shares;
 
@@ -24,25 +21,9 @@ fuzz_target!(|data: GeneralPoolData| {
                 MinLiquidity::get(),
             );
         }
-        match Swaps::create_pool(
-            data.pool_creation.origin,
-            data.pool_creation.assets.into_iter().map(construct_asset).collect(),
-            construct_asset(data.pool_creation.base_asset),
-            data.pool_creation.market_id,
-            ScoringRule::CPMM,
-            Some(data.pool_creation.swap_fee),
-            Some(data.pool_creation.weights),
-        ) {
-            Ok(pool_id) => {
-                let _ = Swaps::pool_exit(
-                    Origin::signed(data.origin),
-                    pool_id,
-                    data.pool_amount,
-                    data.assets,
-                );
-            }
-            Err(e) => panic!("{_CREATE_POOL_FAILURE} {:?}", e),
-        }
+        let pool_id = data.pool_creation._create_pool();
+        let _ =
+            Swaps::pool_exit(Origin::signed(data.origin), pool_id, data.pool_amount, data.assets);
     });
     let _ = ext.commit_all();
 });
