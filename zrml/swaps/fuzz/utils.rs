@@ -21,7 +21,7 @@ use zrml_swaps::mock::Swaps;
 
 pub fn construct_asset(seed: (u128, u16)) -> Asset<u128> {
     let (seed0, seed1) = seed;
-    let module = seed0 % 5;
+    let module = seed0 % 4;
     match module {
         0 => Asset::CategoricalOutcome(seed0, seed1),
         1 => {

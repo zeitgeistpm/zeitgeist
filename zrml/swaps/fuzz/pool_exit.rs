@@ -6,7 +6,10 @@ use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 mod utils;
 use orml_traits::MultiCurrency;
 use utils::{construct_asset, GeneralPoolData};
-use zeitgeist_primitives::constants::MinLiquidity;
+use zeitgeist_primitives::{
+    constants::MinLiquidity,
+    types::{Asset, SerdeWrapper},
+};
 use zrml_swaps::mock::Shares;
 
 fuzz_target!(|data: GeneralPoolData| {
@@ -21,7 +24,14 @@ fuzz_target!(|data: GeneralPoolData| {
                 MinLiquidity::get(),
             );
         }
+        let pool_creator = data.pool_creation.origin.clone();
         let pool_id = data.pool_creation._create_pool();
+        // to exit a pool, origin also needs to have the pool tokens of the pool that they're exiting
+        let _ = Shares::deposit(
+            Asset::PoolShare(SerdeWrapper(pool_id)),
+            &pool_creator,
+            data.pool_amount,
+        );
         let _ =
             Swaps::pool_exit(Origin::signed(data.origin), pool_id, data.pool_amount, data.assets);
     });

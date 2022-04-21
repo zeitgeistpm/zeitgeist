@@ -9,6 +9,8 @@ use utils::{construct_asset, ExactAssetAmountData};
 use zeitgeist_primitives::constants::MinLiquidity;
 use zrml_swaps::mock::Shares;
 
+use zeitgeist_primitives::types::{Asset, SerdeWrapper};
+
 fuzz_target!(|data: ExactAssetAmountData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
@@ -22,7 +24,14 @@ fuzz_target!(|data: ExactAssetAmountData| {
             );
         }
 
+        let pool_creator = data.pool_creation.origin.clone();
         let pool_id = data.pool_creation._create_pool();
+        // to exit a pool, origin also needs to have the pool tokens of the pool that they're exiting
+        let _ = Shares::deposit(
+            Asset::PoolShare(SerdeWrapper(pool_id)),
+            &pool_creator,
+            data.pool_amount,
+        );
         let _ = Swaps::pool_exit_with_exact_asset_amount(
             Origin::signed(data.origin),
             pool_id,

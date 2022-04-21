@@ -19,7 +19,8 @@ fuzz_target!(|data: ExactAmountData| {
             let _ = Shares::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
-                MinLiquidity::get(),
+                // In order to successfully join the pool, data.asset_amount more tokens needed
+                MinLiquidity::get().saturating_add(data.asset_amount),
             );
         }
         let pool_id = data.pool_creation._create_pool();
