@@ -84,16 +84,16 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::admin_set_pool_as_stale())]
+        #[pallet::weight(T::WeightInfo::admin_set_pool_to_stale())]
         #[frame_support::transactional]
-        pub fn admin_set_pool_as_stale(
+        pub fn admin_set_pool_to_stale(
             origin: OriginFor<T>,
             market_type: MarketType,
             pool_id: PoolId,
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            Self::set_pool_as_stale(
+            Self::set_pool_to_stale(
                 &market_type,
                 pool_id,
                 &outcome_report,
@@ -1201,7 +1201,7 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        fn set_pool_as_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
+        fn set_pool_to_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
                 ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Stale;
@@ -1211,7 +1211,7 @@ mod pallet {
             Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
-        fn set_pool_as_stale_categorical(
+        fn set_pool_to_stale_categorical(
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
@@ -1257,7 +1257,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Ok(T::WeightInfo::set_pool_as_stale_without_reward_distribution(
+            Ok(T::WeightInfo::set_pool_to_stale_without_reward_distribution(
                 total_assets.saturated_into(),
             )
             .saturating_add(extra_weight))
@@ -1713,16 +1713,16 @@ mod pallet {
         /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not active or already
         ///   stale
         #[frame_support::transactional]
-        fn set_pool_as_stale(
+        fn set_pool_to_stale(
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = 0;
-            weight = weight.saturating_add(Self::set_pool_as_stale_common(pool_id)?);
+            weight = weight.saturating_add(Self::set_pool_to_stale_common(pool_id)?);
             if let MarketType::Categorical(_) = market_type {
-                weight = weight.saturating_add(Self::set_pool_as_stale_categorical(
+                weight = weight.saturating_add(Self::set_pool_to_stale_categorical(
                     pool_id,
                     outcome_report,
                     winner_payout_account,

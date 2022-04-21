@@ -393,7 +393,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(0),
             0,
             &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
@@ -557,11 +557,11 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
 }
 
 #[test]
-fn only_root_can_call_admin_set_pool_as_stale() {
+fn only_root_can_call_admin_set_pool_to_stale() {
     ExtBuilder::default().build().execute_with(|| {
         let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
         assert_noop!(
-            Swaps::admin_set_pool_as_stale(
+            Swaps::admin_set_pool_to_stale(
                 alice_signed(),
                 MarketType::Categorical(0),
                 0,
@@ -572,7 +572,7 @@ fn only_root_can_call_admin_set_pool_as_stale() {
 
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
+        assert_ok!(Swaps::admin_set_pool_to_stale(
             Origin::root(),
             MarketType::Categorical(0),
             0,
@@ -718,7 +718,7 @@ fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
+        assert_ok!(Swaps::admin_set_pool_to_stale(
             Origin::root(),
             MarketType::Categorical(4),
             0,
@@ -1121,13 +1121,13 @@ fn provided_values_len_must_equal_assets_len() {
 }
 
 #[test]
-fn set_pool_as_stale_leaves_only_correct_assets() {
+fn set_pool_to_stale_leaves_only_correct_assets() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
         let pool_id = 0;
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(1337),
                 pool_id,
                 &OutcomeReport::Categorical(1337),
@@ -1138,7 +1138,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1151,7 +1151,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 }
 
 #[test]
-fn set_pool_as_stale_handles_rikiddo_pools_properly() {
+fn set_pool_to_stale_handles_rikiddo_pools_properly() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 0;
@@ -1159,7 +1159,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(4),
                 pool_id,
                 &OutcomeReport::Categorical(cat_idx),
@@ -1173,7 +1173,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
             Ok(())
         }));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),

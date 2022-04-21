@@ -114,7 +114,7 @@ fn bench_create_pool<T: Config>(
 }
 
 benchmarks! {
-    admin_set_pool_as_stale {
+    admin_set_pool_to_stale {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
     }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
@@ -293,7 +293,7 @@ benchmarks! {
         let max_asset_amount: BalanceOf<T> = T::MinLiquidity::get();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
 
-    set_pool_as_stale_without_reward_distribution {
+    set_pool_to_stale_without_reward_distribution {
         // Total possible outcomes
         let a in 3..T::MaxAssets::get().into();
 
@@ -310,7 +310,7 @@ benchmarks! {
             false
         );
     }: {
-        Pallet::<T>::set_pool_as_stale(
+        Pallet::<T>::set_pool_to_stale(
             &MarketType::Categorical(a as u16),
             pool_id, &OutcomeReport::Categorical(0),
             &account("ScrapCollector", 0, 0)
