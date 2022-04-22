@@ -1125,6 +1125,39 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
     })
 }
 
+#[test]
+fn reject_market_fails_on_permissionless_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
+#[test]
+fn reject_market_fails_on_approved_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_noop!(
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
