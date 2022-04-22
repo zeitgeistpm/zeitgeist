@@ -25,7 +25,7 @@ fuzz_target!(|data: ExactAmountData| {
             );
         }
 
-        let pool_creator = data.pool_creation.origin.clone();
+        let pool_creator = data.pool_creation.origin;
         let pool_id = data.pool_creation._create_pool();
         // to exit a pool, origin also needs to have the pool tokens of the pool that they're exiting
         let _ = Shares::deposit(
