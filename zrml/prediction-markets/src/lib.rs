@@ -76,7 +76,7 @@ mod pallet {
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced, StorageVersion,
+            NamedReservableCurrency, OnUnbalanced, ReservableCurrency, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
@@ -117,9 +117,6 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Allows the `DestroyOrigin` to immediately destroy a market.
-        ///
-        /// todo: this should check if there's any outstanding funds reserved if it stays
-        /// in for production
         #[pallet::weight(
             T::WeightInfo::admin_destroy_reported_market(
                 900,
@@ -143,6 +140,30 @@ mod pallet {
             let market_status = market.status;
             let outcome_assets = Self::outcome_assets(market_id, &market);
             let outcome_assets_amount = outcome_assets.len();
+
+            // Slash outstanding bonds
+            if market_status == MarketStatus::Proposed {
+                CurrencyOf::<T>::slash_reserved_named(
+                    &RESERVE_ID,
+                    &market.creator,
+                    T::AdvisoryBond::get(),
+                );
+            }
+            if market_status != MarketStatus::Resolved {
+                if market.creation == MarketCreation::Permissionless {
+                    CurrencyOf::<T>::slash_reserved_named(
+                        &RESERVE_ID,
+                        &market.creator,
+                        T::ValidityBond::get(),
+                    );
+                }
+                CurrencyOf::<T>::slash_reserved_named(
+                    &RESERVE_ID,
+                    &market.creator,
+                    T::OracleBond::get(),
+                );
+            }
+
             Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketDestroyed(market_id));

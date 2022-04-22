@@ -4,12 +4,13 @@ use orml_traits::currency::MultiReservableCurrency;
 
 /// Custom `MultiReservableCurrency` trait.
 pub trait ZeitgeistMultiReservableCurrency<AccountId>: MultiReservableCurrency<AccountId> {
-    /// Returns the total number of accounts (1st value) and all users that hold a given `currency_id` (2nd value)
+    /// Return the total number of accounts that hold _any_ asset (first value) and all accounts
+    /// that hold assets of a given `currency_id` (second value).
     fn accounts_by_currency_id(
         currency_id: Self::CurrencyId,
     ) -> (usize, Vec<(AccountId, AccountData<Self::Balance>)>);
 
-    /// Destroys all assets of a given `currency_id` for all `accounts`.
+    /// Destroy all assets of a given `currency_id` for all `accounts`.
     fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I)
     where
         I: Iterator<Item = (AccountId, AccountData<Self::Balance>)>;
