@@ -1223,8 +1223,6 @@ mod pallet {
         MarketIsNotReported,
         /// A resolved market was expected.
         MarketIsNotResolved,
-        /// The market is not reported on.
-        MarketNotReported,
         /// The point in time when the market becomes active is too soon.
         MarketStartTooSoon,
         /// The point in time when the market becomes active is too late.
@@ -2062,11 +2060,11 @@ mod pallet {
             num_disputes: u32,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
-            ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
+            ensure!(market.report.is_some(), Error::<T>::MarketIsNotReported);
             Self::ensure_outcome_matches_market_type(market, outcome)?;
             Self::ensure_can_not_dispute_the_same_outcome(
                 disputes,
-                (&market.report.as_ref()).ok_or(Error::<T>::MarketNotReported)?,
+                (&market.report.as_ref()).ok_or(Error::<T>::MarketIsNotReported)?,
                 outcome,
             )?;
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
