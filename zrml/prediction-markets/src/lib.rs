@@ -76,7 +76,7 @@ mod pallet {
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced, ReservableCurrency, StorageVersion,
+            NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
