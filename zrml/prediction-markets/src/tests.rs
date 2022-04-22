@@ -1125,6 +1125,122 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
     })
 }
 
+#[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_bob = Balances::free_balance(&BOB);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_bob = Balances::free_balance(&BOB);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+        assert_eq!(balance_free_before_bob, balance_free_after_bob);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9000);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_bob = Balances::free_balance(&BOB);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_bob = Balances::free_balance(&BOB);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+        assert_eq!(balance_free_before_bob, balance_free_after_bob);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_bob = Balances::free_balance(&BOB);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_bob = Balances::free_balance(&BOB);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+        assert_eq!(balance_free_before_bob, balance_free_after_bob);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_active() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_bob = Balances::free_balance(&BOB);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_bob = Balances::free_balance(&BOB);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+        assert_eq!(balance_free_before_bob, balance_free_after_bob);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9000);
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_free_before_bob = Balances::free_balance(&BOB);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let balance_free_after_bob = Balances::free_balance(&BOB);
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+        assert_eq!(balance_free_before_bob, balance_free_after_bob);
+    });
+}
+
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
