@@ -249,9 +249,9 @@ benchmarks! {
             let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
 
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let sudo = RawOrigin::Root.into();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(sudo)? }
 
     admin_destroy_reported_market{
         // a = total accounts
@@ -264,9 +264,9 @@ benchmarks! {
 
         let c_u16 = c.saturated_into();
         let (caller, market_id) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let sudo = RawOrigin::Root.into();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(sudo)? }
 
     admin_move_market_to_closed {
         let (caller, market_id) = create_market_common::<T>(
