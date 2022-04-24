@@ -28,6 +28,7 @@ pub trait Swaps<AccountId> {
         market_id: Self::MarketId,
         scoring_rule: ScoringRule,
         swap_fee: Option<Self::Balance>,
+        amount: Option<Self::Balance>,
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
