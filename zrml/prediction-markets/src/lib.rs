@@ -765,6 +765,7 @@ mod pallet {
                 market_id,
                 ScoringRule::CPMM,
                 Some(Zero::zero()),
+                Some(MinLiquidity::get().saturated_into()),
                 Some(weights),
             )?;
 
@@ -2041,6 +2042,7 @@ mod pallet {
                 base_asset,
                 market_id,
                 market.scoring_rule,
+                None,
                 None,
                 None,
             )?;
