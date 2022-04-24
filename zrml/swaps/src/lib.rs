@@ -731,6 +731,8 @@ mod pallet {
         InvalidStateTransition,
         /// Could not create CPMM pool since no weights were supplied.
         InvalidWeightArgument,
+        /// Could not create CPMM pool since no amount was specified.
+        InvalidAmountArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
         /// A transferal of funds out of a swaps pool was below a threshhold specified by the
@@ -772,6 +774,8 @@ mod pallet {
         UnsupportedTrade,
         /// The outcome asset specified as the winning asset was not found in the pool.
         WinningAssetNotFound,
+        /// Liquidity provided to new Balancer pool is less than `MinLiquidity`.
+        InsufficientLiquidity,
     }
 
     #[pallet::event]
@@ -1302,35 +1306,43 @@ mod pallet {
             market_id: Self::MarketId,
             scoring_rule: ScoringRule,
             swap_fee: Option<BalanceOf<T>>,
+            amount: Option<BalanceOf<T>>,
             weights: Option<Vec<u128>>,
         ) -> Result<PoolId, DispatchError> {
             ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
             ensure!(assets.len() >= usize::from(T::MinAssets::get()), Error::<T>::TooFewAssets);
-            let amount = T::MinLiquidity::get();
+            ensure!(assets.contains(&base_asset), Error::<T>::BaseAssetNotFound);
             let next_pool_id = Self::inc_next_pool_id()?;
             let pool_shares_id = Self::pool_shares_id(next_pool_id);
             let pool_account = Self::pool_account_id(next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
-            ensure!(assets.contains(&base_asset), Error::<T>::BaseAssetNotFound);
+            let amount_unwrapped = amount.unwrap_or(BalanceOf::<T>::zero());
 
             if scoring_rule == ScoringRule::CPMM {
+                if amount == None {
+                    return Err(Error::<T>::InvalidAmountArgument.into());
+                }
+                ensure!(
+                    amount_unwrapped >= T::MinLiquidity::get(),
+                    Error::<T>::InsufficientLiquidity
+                );
                 let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                 let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                 Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
 
                 for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
                     let free_balance = T::Shares::free_balance(asset, &who);
-                    ensure!(free_balance >= amount, Error::<T>::InsufficientBalance);
+                    ensure!(free_balance >= amount_unwrapped, Error::<T>::InsufficientBalance);
                     ensure!(weight >= T::MinWeight::get(), Error::<T>::BelowMinimumWeight);
                     ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
                     map.insert(asset, weight);
                     total_weight = total_weight.check_add_rslt(&weight)?;
-                    T::Shares::transfer(asset, &who, &pool_account, amount)?;
+                    T::Shares::transfer(asset, &who, &pool_account, amount_unwrapped)?;
                 }
 
                 ensure!(total_weight <= T::MaxTotalWeight::get(), Error::<T>::MaxTotalWeight);
-                T::Shares::deposit(pool_shares_id, &who, amount)?;
+                T::Shares::deposit(pool_shares_id, &who, amount_unwrapped)?;
             } else {
                 let mut rikiddo_instance: RikiddoSigmoidMV<
                     T::FixedTypeU,
@@ -1376,7 +1388,7 @@ mod pallet {
             Self::deposit_event(Event::PoolCreate(
                 CommonPoolEventParams { pool_id: next_pool_id, who },
                 pool,
-                if scoring_rule == ScoringRule::CPMM { amount } else { <BalanceOf<T>>::zero() },
+                amount_unwrapped,
             ));
 
             Ok(next_pool_id)
