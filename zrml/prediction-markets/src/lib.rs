@@ -116,7 +116,10 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Allows the `DestroyOrigin` to immediately destroy a market.
+        /// Destroy a market, including its outcome assets.
+        ///
+        /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
+        /// exception.
         #[pallet::weight(
             T::WeightInfo::admin_destroy_reported_market(
                 900,
@@ -170,7 +173,7 @@ mod pallet {
 
             let mut outcome_assets_iter = outcome_assets.into_iter();
 
-            // Delete of this market's outcome assets.
+            // Delete market's outcome assets.
             let mut manage_outcome_asset = |asset: Asset<_>| -> usize {
                 let (total_accounts, accounts) = T::Shares::accounts_by_currency_id(asset);
                 share_accounts = share_accounts.saturating_add(accounts.len());
