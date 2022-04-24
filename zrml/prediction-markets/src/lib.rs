@@ -388,7 +388,6 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
-
             ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
             ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
 
@@ -479,7 +478,7 @@ mod pallet {
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
-            assets: MarketType,
+            market_type: MarketType,
             mdm: MarketDisputeMechanism<T::AccountId>,
             amount_base_asset: BalanceOf<T>,
             amount_outcome_assets: Vec<BalanceOf<T>>,
@@ -487,17 +486,17 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin.clone())?;
 
-            if let MarketType::Categorical(num_cat) = assets {
+            if let MarketType::Categorical(num_cat) = market_type {
                 ensure!(
                     amount_outcome_assets.len().saturated_into::<u16>() == num_cat,
                     Error::<T>::NotEnoughAssets
                 );
-            } else if let MarketType::Scalar(_) = assets {
+            } else if let MarketType::Scalar(_) = market_type {
                 ensure!(amount_outcome_assets.len() == 2, Error::<T>::NotEnoughAssets);
             }
 
             // Create the correct market
-            let weight_market_creation = match assets.clone() {
+            let weight_market_creation = match market_type.clone() {
                 MarketType::Categorical(category_count) => Self::create_categorical_market(
                     origin.clone(),
                     oracle,
