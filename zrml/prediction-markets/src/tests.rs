@@ -141,7 +141,7 @@ fn it_allows_sudo_to_destroy_markets() {
         );
 
         // destroy the market
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
 
         assert_noop!(
             MarketCommons::market(&0),
@@ -1135,7 +1135,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
         );
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_free_before_bob = Balances::free_balance(&BOB);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let balance_free_after_bob = Balances::free_balance(&BOB);
         assert_eq!(Balances::reserved_balance(&ALICE), 0);
@@ -1164,7 +1164,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
         assert_eq!(Balances::reserved_balance(&BOB), 0);
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_free_before_bob = Balances::free_balance(&BOB);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let balance_free_after_bob = Balances::free_balance(&BOB);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
@@ -1182,7 +1182,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
         );
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_free_before_bob = Balances::free_balance(&BOB);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let balance_free_after_bob = Balances::free_balance(&BOB);
         assert_eq!(Balances::reserved_balance(&ALICE), 0);
@@ -1203,7 +1203,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_active() {
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_free_before_bob = Balances::free_balance(&BOB);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let balance_free_after_bob = Balances::free_balance(&BOB);
         assert_eq!(Balances::reserved_balance(&ALICE), 0);
@@ -1231,7 +1231,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
         run_to_block(9000);
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_free_before_bob = Balances::free_balance(&BOB);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let balance_free_after_bob = Balances::free_balance(&BOB);
         assert_eq!(Balances::reserved_balance(&ALICE), 0);
@@ -1251,7 +1251,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_collecting_subsi
         );
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_free_before_bob = Balances::free_balance(&BOB);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let balance_free_after_bob = Balances::free_balance(&BOB);
         assert_eq!(Balances::reserved_balance(&ALICE), 0);
@@ -1272,7 +1272,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_insufficient_sub
         run_to_block(150);
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_free_before_bob = Balances::free_balance(&BOB);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let balance_free_after_bob = Balances::free_balance(&BOB);
         assert_eq!(Balances::reserved_balance(&ALICE), 0);

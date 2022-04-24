@@ -80,7 +80,7 @@ mod pallet {
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::MultiCurrency;
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
@@ -135,7 +135,7 @@ mod pallet {
             origin: OriginFor<T>,
             market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            T::DestroyOrigin::ensure_origin(origin)?;
+            ensure_root(origin)?;
 
             let mut total_accounts = 0usize;
             let mut share_accounts = 0usize;
