@@ -303,6 +303,7 @@ fn it_allows_to_deploy_a_pool() {
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
             0,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![BASE, BASE, BASE]
         ));
     });
@@ -322,6 +323,7 @@ fn it_does_not_allow_to_deploy_a_pool_on_pending_advised_market() {
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(BOB),
                 0,
+                <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
                 vec![BASE, BASE, BASE]
             ),
             Error::<Runtime>::MarketIsNotActive,
@@ -787,13 +789,9 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
     let metadata = gen_metadata(42);
     let category_count = 4;
     let assets = MarketType::Categorical(category_count);
-    let extra_amount = 10 * BASE;
-    let min_liqudity = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
-    let amount = min_liqudity + 2 * extra_amount;
-    let weights = vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 5];
-    let amount_base_asset = amount;
-    let amounts = vec![amount - extra_amount, amount, amount, amount];
+    let amount = 123 * BASE;
     let pool_id = 0;
+    let weights = vec![2 * BASE; 5];
 
     // Execute the combined convenience function
     ExtBuilder::default().build().execute_with(|| {
@@ -804,21 +802,17 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
             metadata,
             assets,
             MarketDisputeMechanism::SimpleDisputes,
-            amount_base_asset,
-            amounts,
+            amount,
             weights,
         ));
 
         let pool_account = Swaps::pool_account_id(pool_id);
-        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), extra_amount);
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &ALICE), 0);
 
-        assert_eq!(
-            Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account),
-            amount - extra_amount
-        );
+        assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
@@ -1136,6 +1130,7 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
     PredictionMarkets::deploy_swap_pool_for_market(
         Origin::signed(FRED),
         0,
+        <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
         (0..outcome_assets_len + 1).map(|_| BASE).collect(),
     )
 }
