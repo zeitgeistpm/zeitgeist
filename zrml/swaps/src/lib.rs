@@ -574,7 +574,7 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be received.
         /// * `pool_id`: Unique pool identifier.
         /// * `asset_in`: Asset entering the pool.
-        /// * `max_amount_asset_in`: Maximum asset amount that can enter the pool.
+        /// * `max_asset_amount_in`: Maximum asset amount that can enter the pool.
         /// * `asset_out`: Asset leaving the pool.
         /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
         /// * `max_price`: Market price must be equal or less than the provided value.
@@ -584,7 +584,7 @@ mod pallet {
             origin: OriginFor<T>,
             pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
-            max_amount_asset_in: Option<BalanceOf<T>>,
+            max_asset_amount_in: Option<BalanceOf<T>>,
             asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
@@ -594,7 +594,7 @@ mod pallet {
                 who,
                 pool_id,
                 asset_in,
-                max_amount_asset_in,
+                max_asset_amount_in,
                 asset_out,
                 asset_amount_out,
                 max_price,
@@ -1841,7 +1841,7 @@ mod pallet {
             who: T::AccountId,
             pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
-            max_amount_asset_in: Option<BalanceOf<T>>,
+            max_asset_amount_in: Option<BalanceOf<T>>,
             asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
@@ -1900,12 +1900,12 @@ mod pallet {
                         cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
                     };
 
-                    if let Some(maai) = max_amount_asset_in {
+                    if let Some(maai) = max_asset_amount_in {
                         ensure!(asset_amount_in <= maai, Error::<T>::LimitIn);
                     }
                     Ok([asset_amount_in, asset_amount_out])
                 },
-                asset_bound: max_amount_asset_in,
+                asset_bound: max_asset_amount_in,
                 asset_in,
                 asset_out,
                 event: |evt| Self::deposit_event(Event::SwapExactAmountOut(evt)),
