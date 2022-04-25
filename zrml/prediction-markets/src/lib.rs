@@ -457,20 +457,14 @@ mod pallet {
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
-            // We can guarantee that the market has at most `weights.len()` many categories when
-            // `buy_complete_sets` is called. Thus, we can save the user some advance fees.
-            .saturating_add(T::WeightInfo::buy_complete_set(
-                T::MaxCategories::get().min(weights.len().saturated_into()).into(),
-            ))
+            .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                T::MaxCategories::get().min(weights.len().saturated_into()).into(),
+                T::MaxCategories::get().into(),
             ))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
             // (it is loosely coupled to this pallet using a trait). Contains weight for
-            // create_pool() and swap_exact_amount_in()
-            .saturating_add(5_000_000_000.saturating_mul(
-                T::MaxCategories::get().min(weights.len().saturated_into()).into(),
-            ))
+            // create_pool() and swap_exact_amount_in().
+            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
         #[transactional]
@@ -614,20 +608,14 @@ mod pallet {
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
-            // We can guarantee that the market has at most `weights.len()` many categories when
-            // `buy_complete_sets` is called. Thus, we can save the user some advance fees.
-            T::WeightInfo::buy_complete_set(
-                T::MaxCategories::get().min(weights.len().saturated_into()).into(),
-            )
+            T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                T::MaxCategories::get().min(weights.len().saturated_into()).into(),
+                T::MaxCategories::get().into(),
             ))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
             // (it is loosely coupled to this pallet using a trait). Contains weight for
             // create_pool() and swap_exact_amount_in()
-            .saturating_add(5_000_000_000.saturating_mul(
-                T::MaxCategories::get().min(weights.len().saturated_into()).into(),
-            ))
+            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
         #[transactional]
