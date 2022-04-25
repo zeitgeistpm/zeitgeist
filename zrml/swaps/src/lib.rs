@@ -1317,7 +1317,7 @@ mod pallet {
             let pool_account = Self::pool_account_id(next_pool_id);
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
-            let amount_unwrapped = amount.unwrap_or(BalanceOf::<T>::zero());
+            let amount_unwrapped = amount.unwrap_or_else(BalanceOf::<T>::zero);
 
             if scoring_rule == ScoringRule::CPMM {
                 if amount == None {
