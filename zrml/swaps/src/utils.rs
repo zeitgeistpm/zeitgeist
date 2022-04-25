@@ -273,7 +273,7 @@ where
     T: Config,
 {
     pub(crate) asset_amounts: F1,
-    pub(crate) asset_bound: BalanceOf<T>,
+    pub(crate) asset_bound: Option<BalanceOf<T>>,
     pub(crate) asset_in: Asset<T::MarketId>,
     pub(crate) asset_out: Asset<T::MarketId>,
     pub(crate) event: F2,

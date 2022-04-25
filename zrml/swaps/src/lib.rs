@@ -549,7 +549,7 @@ mod pallet {
             asset_in: Asset<T::MarketId>,
             asset_amount_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
-            min_asset_amount_out: BalanceOf<T>,
+            min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -584,7 +584,7 @@ mod pallet {
             origin: OriginFor<T>,
             pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
-            max_amount_asset_in: BalanceOf<T>,
+            max_amount_asset_in: Option<BalanceOf<T>>,
             asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
@@ -1751,7 +1751,7 @@ mod pallet {
             asset_in: Asset<T::MarketId>,
             asset_amount_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
-            min_asset_amount_out: BalanceOf<T>,
+            min_asset_amount_out: Option<BalanceOf<T>>,
             max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
@@ -1812,7 +1812,9 @@ mod pallet {
                             T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
                         cost_before.checked_sub(&cost_after).ok_or(ArithmeticError::Overflow)?
                     };
-                    ensure!(asset_amount_out >= min_asset_amount_out, Error::<T>::LimitOut);
+                    if let Some(maao) = min_asset_amount_out {
+                        ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
+                    }
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
@@ -1839,7 +1841,7 @@ mod pallet {
             who: T::AccountId,
             pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
-            max_amount_asset_in: BalanceOf<T>,
+            max_amount_asset_in: Option<BalanceOf<T>>,
             asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
             max_price: Option<BalanceOf<T>>,
@@ -1898,7 +1900,9 @@ mod pallet {
                         cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
                     };
 
-                    ensure!(asset_amount_in <= max_amount_asset_in, Error::<T>::LimitIn);
+                    if let Some(maai) = max_amount_asset_in {
+                        ensure!(asset_amount_in <= maai, Error::<T>::LimitIn);
+                    }
                     Ok([asset_amount_in, asset_amount_out])
                 },
                 asset_bound: max_amount_asset_in,

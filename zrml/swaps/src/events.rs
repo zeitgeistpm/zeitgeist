@@ -33,7 +33,7 @@ pub struct PoolAssetEvent<AI, AS, B> {
 pub struct SwapEvent<AI, AS, B> {
     pub asset_amount_in: B,
     pub asset_amount_out: B,
-    pub asset_bound: B,
+    pub asset_bound: Option<B>,
     pub asset_in: AS,
     pub asset_out: AS,
     pub cpep: CommonPoolEventParams<AI>,
