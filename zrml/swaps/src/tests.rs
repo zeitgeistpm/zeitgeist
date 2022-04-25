@@ -1238,6 +1238,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
 fn swap_exact_amount_in_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let expected_amount = 9900990100;
         assert_noop!(
             Swaps::swap_exact_amount_in(
                 alice_signed(),
@@ -1245,7 +1246,7 @@ fn swap_exact_amount_in_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm
                 ASSET_A,
                 _1,
                 ASSET_B,
-                Some(9900990100 + 100), // 9900990100 is expected out amount.
+                Some(expected_amount + 100),
                 None,
             ),
             crate::Error::<Runtime>::LimitOut,
@@ -1363,12 +1364,13 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
 fn swap_exact_amount_out_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let expected_amount = 10101010100;
         assert_noop!(
             Swaps::swap_exact_amount_out(
                 alice_signed(),
                 0,
                 ASSET_A,
-                Some(10101010100 - 100), // 1010101000 is expected in amount.
+                Some(expected_amount - 100),
                 ASSET_B,
                 _1,
                 None,
@@ -1692,13 +1694,14 @@ fn pool_exit_with_exact_asset_amount_fails_if_min_pool_amount_is_violated() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _5, 0));
         let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        let expected_amount = 45_082_061_850;
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(
                 alice_signed(),
                 0,
                 ASSET_A,
                 pool_amount,
-                45_082_061_850 + 100,
+                expected_amount + 100,
             ),
             crate::Error::<Runtime>::LimitOut,
         );
@@ -1714,13 +1717,14 @@ fn pool_exit_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
         assert_ok!(Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _5));
         let asset_after_join = asset_before_join - Currencies::free_balance(ASSET_A, &ALICE);
         let exit_amount = (asset_after_join * 9) / 10;
+        let expected_amount = 9_984_935_413;
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
                 alice_signed(),
                 0,
                 ASSET_A,
                 exit_amount,
-                9_984_935_413 - 100, // 9_984_935_413 is expected amount in.
+                expected_amount - 100,
             ),
             crate::Error::<Runtime>::LimitIn,
         );
