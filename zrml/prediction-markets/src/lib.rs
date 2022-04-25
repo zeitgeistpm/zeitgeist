@@ -443,24 +443,17 @@ mod pallet {
             Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
 
-        /// This function combines the creation of a permissionless market, the buying of a
-        /// complete set of outcome assets, the deployment of the minimum amount of outcome assets
-        /// and the optional deployment of additional outcome asset.
+        /// Create a permissionless market, buy complete sets and deploy a pool with specified
+        /// liquidity.
         ///
         /// # Arguments
         ///
         /// * `oracle`: The oracle of the market who will report the correct outcome.
         /// * `period`: The active period of the market.
         /// * `metadata`: A hash pointer to the metadata of the market.
-        /// * `assets`: The type and the parameters of an asset (for example 5 categorical assets).
+        /// * `market_type`: The type of the market.
         /// * `mdm`: The market dispute mechanism.
-        /// * `amount_base_asset`: The amount of the base asset that should be deployed.
-        /// * `amount_outcome_assets`: A vector containing the amount of each outcome asset that should be
-        ///     deployed. The highest value will be used to buy a complete set, i.e. every outcome
-        ///     asset will be bought in quantities specified by the highest value in this vector.
-        ///     Any value that is lower than the highest value in the vector signals that not
-        ///     all assets should be deployed. For example, `amount_outcome_assets = [120, 150]`
-        ///     means, that after deployment 30 of the first outcome asset will be kept.
+        /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
             T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
@@ -613,14 +606,12 @@ mod pallet {
             Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
         }
 
-        /// This function combines the creation of a market, the buying of a complete set of
-        /// outcome assets, the deployment of the minimum amount of outcome assets and
-        /// the optional deployment of additional outcome asset.
+        /// Buy complete sets and deploy a pool with specified liquidity for a market.
         ///
         /// # Arguments
         ///
-        /// * `market_id`: Id of the market for that the pool should be created and populated.
-        /// * `amount` - The amount of each token to add to the pool
+        /// * `market_id`: The id of the market.
+        /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
             // We can guarantee that the market has at most `weights.len()` many categories when
@@ -662,11 +653,15 @@ mod pallet {
             .into())
         }
 
-        /// Deploys a new pool for the market. This pallet keeps track of a single
-        /// canonical swap pool for each market in `market_to_swap_pool`.
+        /// Deploy a pool with specified liquidity for a market.
         ///
-        /// The sender should have enough funds to cover all of the required
-        /// shares to seed the pool.
+        /// The sender must have enough funds to cover all of the required shares to seed the pool.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The id of the market.
+        /// * `amount`: The amount of each token to add to the pool.
+        /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
         )]
