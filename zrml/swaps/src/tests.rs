@@ -1219,6 +1219,38 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
 }
 
 #[test]
+fn swap_exact_amount_in_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::swap_exact_amount_in(
+                alice_signed(),
+                0,
+                ASSET_A,
+                _1,
+                ASSET_B,
+                9900990100 + 100, // 9900990100 is expected out amount.
+                _2,
+            ),
+            crate::Error::<Runtime>::LimitOut,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_in_fails_if_max_price_is_not_satisfied_with_cpmm() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        // We're swapping 1:1, but due to slippage the price will exceed _1, so this should raise an
+        // error:
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, _1, ASSET_B, 0, _1,),
+            crate::Error::<Runtime>::BadLimitPrice,
+        );
+    });
+}
+
+#[test]
 fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, true);
@@ -1283,6 +1315,38 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
             0,
             [_101 + 0101010100, _99, _100, _100],
             _100,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_out_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::swap_exact_amount_out(
+                alice_signed(),
+                0,
+                ASSET_A,
+                10101010100 - 100, // 1010101000 is expected in amount.
+                ASSET_B,
+                _1,
+                _3,
+            ),
+            crate::Error::<Runtime>::LimitIn,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_out_fails_if_max_price_is_not_satisfied_with_cpmm() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        // We're swapping 1:1, but due to slippage the price will exceed 1, so this should raise an
+        // error:
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _2, ASSET_B, _1, _1),
+            crate::Error::<Runtime>::BadLimitPrice,
         );
     });
 }
