@@ -1166,8 +1166,6 @@ mod pallet {
         MarketStartTooLate,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
-        /// The number of assets specified in a parameter does not match the total asset count.
-        NotEnoughAssets,
         /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
