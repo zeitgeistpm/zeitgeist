@@ -1119,6 +1119,60 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
     })
 }
 
+#[test]
+fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            5,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        let _ = Balances::set_balance(Origin::root(), ALICE, 246 * BASE, 0);
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 123 * BASE));
+        assert_noop!(
+            PredictionMarkets::deploy_swap_pool_for_market(
+                Origin::signed(ALICE),
+                0,
+                123 * BASE,
+                vec![BASE; 5],
+            ),
+            zrml_swaps::Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen,
+        );
+    });
+}
+
+#[test]
+fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            5,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        let _ = Balances::set_balance(Origin::root(), ALICE, 246 * BASE, 0);
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 123 * BASE));
+        assert_noop!(
+            PredictionMarkets::deploy_swap_pool_for_market(
+                Origin::signed(ALICE),
+                0,
+                123 * BASE,
+                vec![BASE; 7],
+            ),
+            zrml_swaps::Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen,
+        );
+    });
+}
+
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
