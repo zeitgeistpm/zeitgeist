@@ -101,7 +101,7 @@ struct Data {
     swap_exact_amount_in_asset_amount_in: u128,
     swap_exact_amount_in_asset_out: (u128, u16),
     swap_exact_amount_in_min_asset_amount_out: u128,
-    swap_exact_amount_in_max_price: u128,
+    swap_exact_amount_in_max_price: Option<u128>,
 
     swap_exact_amount_out_origin: u8,
     swap_exact_amount_out_pool_id: u8,
@@ -109,7 +109,7 @@ struct Data {
     swap_exact_amount_out_max_amount_asset_in: u128,
     swap_exact_amount_out_asset_out: (u128, u16),
     swap_exact_amount_out_asset_amount_out: u128,
-    swap_exact_amount_out_max_price: u128,
+    swap_exact_amount_out_max_price: Option<u128>,
 
     pool_exit_with_exact_pool_amount_origin: u8,
     pool_exit_with_exact_pool_amount_pool_id: u8,
