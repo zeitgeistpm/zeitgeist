@@ -1516,24 +1516,6 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
     });
 }
 
-// Macro for comparing fixed point u128.
-macro_rules! assert_approx {
-    ($left:expr, $right:expr, $precision:expr $(,)?) => {
-        match (&$left, &$right, &$precision) {
-            (left_val, right_val, precision_val) => {
-                let diff = if *left_val > *right_val {
-                    *left_val - *right_val
-                } else {
-                    *right_val - *left_val
-                };
-                if diff > $precision {
-                    panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
-                }
-            }
-        }
-    };
-}
-
 #[test]
 fn join_pool_exit_pool_does_not_create_extra_tokens() {
     ExtBuilder::default().build().execute_with(|| {
@@ -1800,4 +1782,23 @@ fn subsidize_and_start_rikiddo_pool(
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
     assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
+}
+
+// Macro for comparing fixed point u128.
+#[allow(unused_macros)]
+macro_rules! assert_approx {
+    ($left:expr, $right:expr, $precision:expr $(,)?) => {
+        match (&$left, &$right, &$precision) {
+            (left_val, right_val, precision_val) => {
+                let diff = if *left_val > *right_val {
+                    *left_val - *right_val
+                } else {
+                    *right_val - *left_val
+                };
+                if diff > $precision {
+                    panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
+                }
+            }
+        }
+    };
 }
