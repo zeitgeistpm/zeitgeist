@@ -151,7 +151,9 @@ where
     }
 
     let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
+    if let Some(max_price) = p.max_price {
+        ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
+    }
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
@@ -186,7 +188,9 @@ where
         ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
     }
 
-    ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
+    if let Some(max_price) = p.max_price {
+        ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
+    }
 
     if p.pool.scoring_rule == ScoringRule::CPMM {
         ensure!(
@@ -273,7 +277,7 @@ where
     pub(crate) asset_in: Asset<T::MarketId>,
     pub(crate) asset_out: Asset<T::MarketId>,
     pub(crate) event: F2,
-    pub(crate) max_price: BalanceOf<T>,
+    pub(crate) max_price: Option<BalanceOf<T>>,
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_id: PoolId,
     pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,

@@ -37,5 +37,5 @@ pub struct SwapEvent<AI, AS, B> {
     pub asset_in: AS,
     pub asset_out: AS,
     pub cpep: CommonPoolEventParams<AI>,
-    pub max_price: B,
+    pub max_price: Option<B>,
 }

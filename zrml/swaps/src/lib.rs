@@ -550,7 +550,7 @@ mod pallet {
             asset_amount_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
             min_asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            max_price: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
@@ -587,7 +587,7 @@ mod pallet {
             max_amount_asset_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            max_price: Option<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_out(
@@ -1752,7 +1752,7 @@ mod pallet {
             asset_amount_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
             min_asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
@@ -1842,7 +1842,7 @@ mod pallet {
             max_amount_asset_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
             asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            max_price: Option<BalanceOf<T>>,
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
