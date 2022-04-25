@@ -1572,6 +1572,105 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
     });
 }
 
+#[test]
+fn pool_join_fails_if_max_assets_in_is_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1 - 1, _1)),
+            crate::Error::<Runtime>::LimitIn,
+        );
+    });
+}
+
+#[test]
+fn pool_join_with_exact_asset_amount_fails_if_min_pool_tokens_is_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_join_with_exact_asset_amount(
+                alice_signed(),
+                0,
+                ASSET_A,
+                _1,
+                2490679300 + 100,
+            ),
+            crate::Error::<Runtime>::LimitOut,
+        );
+    });
+}
+
+#[test]
+fn pool_join_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_join_with_exact_pool_amount(
+                alice_signed(),
+                0,
+                ASSET_A,
+                _1,
+                40604010000 - 100,
+            ),
+            crate::Error::<Runtime>::LimitIn,
+        );
+    });
+}
+
+#[test]
+fn pool_exit_fails_if_min_assets_out_is_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1)));
+        assert_noop!(
+            Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1, _1 + 1, _1)),
+            crate::Error::<Runtime>::LimitOut,
+        );
+    });
+}
+
+#[test]
+fn pool_exit_with_exact_asset_amount_fails_if_min_pool_amount_is_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&(BASE / 10));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _5, 0));
+        let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
+        assert_noop!(
+            Swaps::pool_exit_with_exact_pool_amount(
+                alice_signed(),
+                0,
+                ASSET_A,
+                pool_amount,
+                45_082_061_850 + 100,
+            ),
+            crate::Error::<Runtime>::LimitOut,
+        );
+    });
+}
+
+#[test]
+fn pool_exit_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&(BASE / 10));
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let asset_before_join = Currencies::free_balance(ASSET_A, &ALICE);
+        assert_ok!(Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _5));
+        let asset_after_join = asset_before_join - Currencies::free_balance(ASSET_A, &ALICE);
+        let exit_amount = (asset_after_join * 9) / 10;
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(
+                alice_signed(),
+                0,
+                ASSET_A,
+                exit_amount,
+                9_984_935_413 - 100, // 9_984_935_413 is expected amount in.
+            ),
+            crate::Error::<Runtime>::LimitIn,
+        );
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
