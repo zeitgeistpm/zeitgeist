@@ -125,7 +125,7 @@ parameter_types! {
     // https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html
     // With a target block time of 12 seconds (7200 blocks per day)
     // where p is the amount of change over 7200 blocks.
-    // p >= AdjustmentVariable * BlocksPerDay * (TargetBlockFullness * NORMAL_DISPATCH_RATIO)
+    // p >= AdjustmentVariable * BlocksPerDay * (1 - TargetBlockFullness * NORMAL_DISPATCH_RATIO)
     // p >= 0.00003 * 7200 * (1 - 0.25 * 0.75)
     // p >= 0.1755
     // Meaning that fees can change by around ~17.55% per day, given extreme congestion.
