@@ -25,6 +25,7 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
 #[test]
 fn authorize_market_outcome_forbids_accounts_without_an_authorized_market() {
     ExtBuilder::default().build().execute_with(|| {
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
         assert_noop!(
             Authorized::authorize_market_outcome(
                 Origin::signed(ALICE),
@@ -32,22 +33,6 @@ fn authorize_market_outcome_forbids_accounts_without_an_authorized_market() {
                 OutcomeReport::Scalar(1)
             ),
             Error::<Runtime>::AccountIsNotLinkedToAnyAuthorizedMarket
-        );
-    });
-}
-
-#[test]
-fn authorize_market_outcome_forbids_more_than_one_outcome_for_a_market() {
-    ExtBuilder::default().build().execute_with(|| {
-        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
-            .unwrap();
-        Markets::<Runtime>::mutate(0, |el| {
-            el.as_mut().unwrap().mdm = MarketDisputeMechanism::Authorized(BOB);
-        });
-        assert_noop!(
-            Authorized::authorize_market_outcome(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)),
-            Error::<Runtime>::MarketsCanNotHaveMoreThanOneAuthorizedAccount
         );
     });
 }

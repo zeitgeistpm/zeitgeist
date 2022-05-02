@@ -137,8 +137,13 @@ mod pallet {
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<OutcomeReport, DispatchError> {
+            if let MarketDisputeMechanism::Authorized(_) = market.mdm {
+            } else {
+                return Err(Error::<T>::MarketDoesNotHaveAuthorizedMechanism.into());
+            }
+
             let outcome = if let Some(el) = Outcomes::<T>::get(market_id) {
                 el
             } else {
