@@ -110,7 +110,7 @@ mod pallet {
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
+    pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
