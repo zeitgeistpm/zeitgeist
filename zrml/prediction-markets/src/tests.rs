@@ -1275,6 +1275,45 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_insufficient_sub
     });
 }
 
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_collecting_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            100..200,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_insufficient_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            100..200,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        run_to_block(150);
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::root(), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
