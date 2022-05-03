@@ -53,6 +53,7 @@
 //! - `reject_market` -  Rejects a `Proposed` market that is waiting approval from the Advisory Committee.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments)]
 
 extern crate alloc;
 

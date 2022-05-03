@@ -176,7 +176,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
 
         let pool = Swaps::pools(0).unwrap();
 
-        assert_eq!(pool.assets, ASSETS.iter().cloned().collect::<Vec<_>>());
+        assert_eq!(pool.assets, ASSETS.to_vec());
         assert_eq!(pool.scoring_rule, ScoringRule::CPMM);
         assert_eq!(pool.swap_fee.unwrap(), 0);
         assert_eq!(pool.total_subsidy, None);
@@ -201,7 +201,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_rikiddo() {
         assert_eq!(next_pool_after, 1);
         let pool = Swaps::pools(0).unwrap();
 
-        assert_eq!(pool.assets, ASSETS.iter().cloned().collect::<Vec<_>>());
+        assert_eq!(pool.assets, ASSETS.to_vec());
         assert_eq!(pool.base_asset, ASSET_D);
         assert_eq!(pool.pool_status, PoolStatus::CollectingSubsidy);
         assert_eq!(pool.scoring_rule, ScoringRule::RikiddoSigmoidFeeMarketEma);
@@ -499,8 +499,8 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
         });
         assert_ok!(Swaps::create_pool(
             BOB,
-            ASSETS.iter().cloned().collect(),
-            ASSETS.last().unwrap().clone(),
+            ASSETS.to_vec(),
+            *ASSETS.last().unwrap(),
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -1101,7 +1101,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
         assert_all_parameters(
             [_24, _25 + 9900990100, _25, _25],
             0,
-            [_101, _99 + 0099009900, _100, _100],
+            [_101, _99 + 99009900, _100, _100],
             _100,
         );
     });
@@ -1170,7 +1170,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
         assert_all_parameters(
             [239898989900, _26, _25, _25],
             0,
-            [_101 + 0101010100, _99, _100, _100],
+            [_101 + 101010100, _99, _100, _100],
             _100,
         );
     });
@@ -1236,7 +1236,7 @@ fn create_pool_fails_on_too_many_assets() {
             Swaps::create_pool(
                 BOB,
                 assets.clone(),
-                assets.last().unwrap().clone(),
+                *assets.last().unwrap(),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1283,24 +1283,6 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
     });
 }
 
-// Macro for comparing fixed point u128.
-macro_rules! assert_approx {
-    ($left:expr, $right:expr, $precision:expr $(,)?) => {
-        match (&$left, &$right, &$precision) {
-            (left_val, right_val, precision_val) => {
-                let diff = if *left_val > *right_val {
-                    *left_val - *right_val
-                } else {
-                    *right_val - *left_val
-                };
-                if diff > $precision {
-                    panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
-                }
-            }
-        }
-    };
-}
-
 #[test]
 fn join_pool_exit_pool_does_not_create_extra_tokens() {
     ExtBuilder::default().build().execute_with(|| {
@@ -1342,8 +1324,8 @@ fn create_pool_fails_on_weight_below_minimum_weight() {
         assert_noop!(
             Swaps::create_pool(
                 BOB,
-                ASSETS.iter().cloned().collect(),
-                ASSETS.last().unwrap().clone(),
+                ASSETS.to_vec(),
+                *ASSETS.last().unwrap(),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1363,8 +1345,8 @@ fn create_pool_fails_on_weight_above_maximum_weight() {
         assert_noop!(
             Swaps::create_pool(
                 BOB,
-                ASSETS.iter().cloned().collect(),
-                ASSETS.last().unwrap().clone(),
+                ASSETS.to_vec(),
+                *ASSETS.last().unwrap(),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1385,8 +1367,8 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
         assert_noop!(
             Swaps::create_pool(
                 BOB,
-                ASSETS.iter().cloned().collect(),
-                ASSETS.last().unwrap().clone(),
+                ASSETS.to_vec(),
+                *ASSETS.last().unwrap(),
                 0,
                 ScoringRule::CPMM,
                 Some(0),
@@ -1410,8 +1392,8 @@ fn create_initial_pool(scoring_rule: ScoringRule, deposit: bool) {
 
     assert_ok!(Swaps::create_pool(
         BOB,
-        ASSETS.iter().cloned().collect(),
-        ASSETS.last().unwrap().clone(),
+        ASSETS.to_vec(),
+        *ASSETS.last().unwrap(),
         0,
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(0) } else { None },
@@ -1465,5 +1447,5 @@ fn subsidize_and_start_rikiddo_pool(
     let min_subsidy = <Runtime as crate::Config>::MinSubsidy::get();
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
-    assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
+    assert!(Swaps::end_subsidy_phase(pool_id).unwrap().result);
 }

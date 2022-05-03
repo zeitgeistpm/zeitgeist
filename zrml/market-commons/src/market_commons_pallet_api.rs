@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use alloc::vec::Vec;
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},

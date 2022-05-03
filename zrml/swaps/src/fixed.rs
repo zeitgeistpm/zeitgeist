@@ -381,12 +381,12 @@ mod tests {
             (BASE, BASE + 1, DispatchError::Other("[bpow_approx]: expected exp <= BASE")),
             (
                 BASE / 10,
-                1 * BASE / 2,
+                BASE / 2,
                 DispatchError::Other("[bpow_approx]: expected base >= BASE / 4"),
             ),
             (
                 2 * BASE - BASE / 10,
-                1 * BASE / 2,
+                BASE / 2,
                 DispatchError::Other("[bpow_approx]: expected base <= 7 * BASE / 4"),
             ),
         ];

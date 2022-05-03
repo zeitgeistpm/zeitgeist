@@ -3,6 +3,7 @@
     clippy::integer_arithmetic
 )]
 #![cfg(feature = "runtime-benchmarks")]
+#![allow(clippy::type_complexity)]
 
 use super::*;
 #[cfg(test)]

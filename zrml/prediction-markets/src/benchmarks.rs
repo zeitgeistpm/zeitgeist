@@ -2,6 +2,7 @@
     // Auto-generated code is a no man's land
     clippy::integer_arithmetic
 )]
+#![allow(clippy::type_complexity)]
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;

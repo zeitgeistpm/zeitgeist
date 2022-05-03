@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use alloc::vec::Vec;
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
 use orml_traits::currency::MultiReservableCurrency;
