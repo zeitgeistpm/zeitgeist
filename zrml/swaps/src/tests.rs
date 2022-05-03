@@ -347,7 +347,7 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         assert_ok!(Currencies::deposit(ASSET_D, &BOB, subsidy_bob));
         assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), pool_id, min_subsidy));
         assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), pool_id, subsidy_bob));
-        assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
+        assert!(Swaps::end_subsidy_phase(pool_id).unwrap().result);
 
         // Check that subsidy was deposited, shares were distributed in exchange, the initial
         // outstanding event outcome assets are assigned to the pool account and pool is active.
