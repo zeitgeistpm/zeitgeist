@@ -156,28 +156,19 @@ mod pallet {
             let outcome_assets_amount = outcome_assets.len();
 
             // Slash outstanding bonds
+            let slash_market_creator = |amount| {
+                CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, &market.creator, amount);
+            };
             if market_status == MarketStatus::Proposed {
-                CurrencyOf::<T>::slash_reserved_named(
-                    &RESERVE_ID,
-                    &market.creator,
-                    T::AdvisoryBond::get(),
-                );
+                slash_market_creator(T::AdvisoryBond::get());
             }
             if market_status != MarketStatus::Resolved
                 && market_status != MarketStatus::InsufficientSubsidy
             {
                 if market.creation == MarketCreation::Permissionless {
-                    CurrencyOf::<T>::slash_reserved_named(
-                        &RESERVE_ID,
-                        &market.creator,
-                        T::ValidityBond::get(),
-                    );
+                    slash_market_creator(T::ValidityBond::get());
                 }
-                CurrencyOf::<T>::slash_reserved_named(
-                    &RESERVE_ID,
-                    &market.creator,
-                    T::OracleBond::get(),
-                );
+                slash_market_creator(T::OracleBond::get());
             }
 
             Self::clear_auto_resolve(&market_id)?;
