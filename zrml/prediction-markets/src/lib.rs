@@ -42,11 +42,11 @@
 //! #### Admin Dispatches
 //!
 //! The administrative dispatches are used to perform admin functions on chain. Currently, the
-//! admin functions can only be called by the `ApprovalOrigin`, `CloseOrigin`, `ResolveOrigin` and
-//! root.
+//! admin functions can only be called by the `CloseOrigin`, `ResolveOrigin` and
+//! the root origin.
 //!
 //! - `admin_destroy_market` - Destroys a market and all related assets, regardless of its state.
-//!   Can only be called by sudo.
+//!   Can only be called by the root origin.
 //! - `admin_move_market_to_closed` - Immediately moves a market that is an `Active` state to
 //!   closed. Can only be called by `CloseOrigin`.
 //! - `admin_move_market_to_resolved` - Immediately moves a market that is `Reported` or `Disputed`

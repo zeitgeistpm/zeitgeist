@@ -10,7 +10,7 @@ pub trait ZeitgeistMultiReservableCurrency<AccountId>: MultiReservableCurrency<A
         currency_id: Self::CurrencyId,
     ) -> (usize, Vec<(AccountId, AccountData<Self::Balance>)>);
 
-    /// Destroy all assets of a given `currency_id` for all `accounts`.
+    /// Destroy all assets of a `currency_id` for the given `accounts`.
     fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I)
     where
         I: Iterator<Item = (AccountId, AccountData<Self::Balance>)>;
