@@ -39,6 +39,11 @@ sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.17", default-features =
 sp-version = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 substrate-fixed = { rev = "5984ba9b9433d5007597c7f03f65ea5bf6d08601", default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
 
+# Try-Runtime
+
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.17", optional = true, git = "https://github.com/purestake/substrate"}
+try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.17", optional = true, git = "https://github.com/purestake/substrate"}
+
 # Benchmark
 
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
@@ -211,6 +216,9 @@ std = [
     "sp-version/std",
     "substrate-fixed/std",
 
+    # Try-Runtime
+    "frame-try-runtime/std",
+
     # Benchmark
 
     "frame-benchmarking?/std",
@@ -266,6 +274,11 @@ std = [
 ]
 txfilter = [
     "log"
+]
+try-runtime = [
+    "frame-executive/try-runtime",
+    "frame-try-runtime",
+    "frame-system/try-runtime",
 ]
 
 [package]
