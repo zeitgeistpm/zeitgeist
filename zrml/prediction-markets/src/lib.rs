@@ -163,7 +163,9 @@ mod pallet {
                     T::AdvisoryBond::get(),
                 );
             }
-            if market_status != MarketStatus::Resolved {
+            if market_status != MarketStatus::Resolved
+                && market_status != MarketStatus::InsufficientSubsidy
+            {
                 if market.creation == MarketCreation::Permissionless {
                     CurrencyOf::<T>::slash_reserved_named(
                         &RESERVE_ID,
