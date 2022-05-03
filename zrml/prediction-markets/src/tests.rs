@@ -827,22 +827,61 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
 }
 
 #[test]
-fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
+fn process_subsidy_activates_market_with_sufficient_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
-        // Create permissionless categorical market using Rikiddo.
-        // One will have enough subsidy, one insufficient and the last not ready for activation.
         let min_sub_period =
             <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
         let max_sub_period =
             <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
-        for _ in 0..2 {
-            simple_create_categorical_market::<Runtime>(
-                MarketCreation::Permissionless,
-                min_sub_period..max_sub_period,
-                ScoringRule::RikiddoSigmoidFeeMarketEma,
-            );
-        }
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            min_sub_period..max_sub_period,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        let min_subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get();
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), 0, min_subsidy));
+        run_to_block(min_sub_period);
+        let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
+        assert_eq!(subsidy_queue.len(), 0);
+        assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Active);
+    });
+}
+
+#[test]
+fn process_subsidy_blocks_market_with_insufficient_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min_sub_period =
+            <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
+        let max_sub_period =
+            <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
+
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            min_sub_period..max_sub_period,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        let subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get() / 3;
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(ALICE), 0, subsidy));
+        assert_ok!(Swaps::pool_join_subsidy(Origin::signed(BOB), 0, subsidy));
+        run_to_block(min_sub_period);
+        let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
+        assert_eq!(subsidy_queue.len(), 0);
+        assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::InsufficientSubsidy);
+
+        // Check that the balances are correctly unreserved.
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);
+        assert_eq!(Balances::reserved_balance(&BOB), 0);
+    });
+}
+
+#[test]
+fn process_subsidy_keeps_market_in_subsidy_queue_until_end_of_subsidy_phase() {
+    ExtBuilder::default().build().execute_with(|| {
+        let min_sub_period =
+            <Runtime as crate::Config>::MinSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
+        let max_sub_period =
+            <Runtime as crate::Config>::MaxSubsidyPeriod::get() / (MILLISECS_PER_BLOCK as u64);
 
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Permissionless,
@@ -850,30 +889,12 @@ fn process_subsidy_collecting_market_creates_or_destroys_markets_properly() {
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         );
 
-        let market_enough_subsidy = 0;
-        let market_insufficient_subsidy = 1;
-        let market_not_ready = 2;
-        let min_subsidy = <Runtime as zrml_swaps::Config>::MinSubsidy::get();
-
-        // Give alice enough funds and subsidize one market
-        assert_ok!(Swaps::pool_join_subsidy(
-            Origin::signed(ALICE),
-            market_enough_subsidy,
-            min_subsidy
-        ));
-
         // Run to block where 2 markets are ready and process all markets.
         run_to_block(min_sub_period);
         let subsidy_queue = crate::MarketsCollectingSubsidy::<Runtime>::get();
         assert!(subsidy_queue.len() == 1);
-        assert!(subsidy_queue[0].market_id == market_not_ready);
-        assert!(
-            MarketCommons::market(&market_enough_subsidy).unwrap().status == MarketStatus::Active
-        );
-        assert!(
-            MarketCommons::market(&market_insufficient_subsidy).unwrap().status
-                == MarketStatus::InsufficientSubsidy
-        );
+        assert!(subsidy_queue[0].market_id == 0);
+        assert!(MarketCommons::market(&0).unwrap().status == MarketStatus::CollectingSubsidy);
     });
 }
 

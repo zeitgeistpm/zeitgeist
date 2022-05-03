@@ -23,7 +23,7 @@ pub use parameters::*;
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{Contains, EnsureOneOf, EqualPrivilegeOnly},
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -63,7 +63,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_version: 35,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 11,
+    transaction_version: 12,
     state_version: 1,
 };
 
@@ -184,6 +184,7 @@ macro_rules! create_zeitgeist_runtime {
                 TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
+                MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -290,6 +291,7 @@ pub struct IsCallable;
 
 cfg_if::cfg_if! {
     if #[cfg(all(feature = "parachain", feature = "txfilter"))] {
+        // Restricted parachain.
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
                 match call {
@@ -315,6 +317,7 @@ cfg_if::cfg_if! {
                     | Call::CouncilMembership(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
+                    | Call::MultiSig(_)
                     | Call::Democracy(_)
                     | Call::Scheduler(_)
                     | Call::Preimage(_)
@@ -330,6 +333,7 @@ cfg_if::cfg_if! {
                 }
             }
         }
+    // Restricted standalone chain.
     } else if #[cfg(all(feature = "txfilter", not(feature = "parachain")))] {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
@@ -346,6 +350,7 @@ cfg_if::cfg_if! {
                     | Call::CouncilMembership(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
+                    | Call::MultiSig(_)
                     | Call::Democracy(_)
                     | Call::Scheduler(_)
                     | Call::Preimage(_)
@@ -361,11 +366,30 @@ cfg_if::cfg_if! {
                 }
             }
         }
+    // Unrestricted (no "txfilter" feature) chains.
+    // Currently disables Rikiddo and Court markets as well as LiquidityMining.
+    // Will be relaxed for testnet once runtimes are separated.
     } else {
         impl Contains<Call> for IsCallable {
-            fn contains(_call: &Call) -> bool {
-                // Every call is allowed
-                true
+            fn contains(call: &Call) -> bool {
+                use zrml_prediction_markets::Call::{create_categorical_market, create_cpmm_market_and_deploy_assets, create_scalar_market};
+
+                match call {
+                    Call::PredictionMarkets(inner_call) => {
+                        match inner_call {
+                            // Disable Rikiddo markets
+                            create_categorical_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
+                            create_scalar_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
+                            // Disable Court dispute resolution mechanism
+                            create_categorical_market { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            create_scalar_market { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            create_cpmm_market_and_deploy_assets { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            _ => true
+                        }
+                    }
+                    Call::LiquidityMining(_) => false,
+                    _ => true
+                }
             }
         }
     }
@@ -387,7 +411,7 @@ impl frame_system::Config for Runtime {
     type Header = generic::Header<BlockNumber, BlakeTwo256>;
     type Index = Index;
     type Lookup = AccountIdLookup<AccountId, ()>;
-    type MaxConsumers = frame_support::traits::ConstU32<16>;
+    type MaxConsumers = ConstU32<16>;
     type OnKilledAccount = ();
     type OnNewAccount = ();
     #[cfg(feature = "parachain")]
@@ -683,6 +707,16 @@ impl pallet_membership::Config<TechnicalCommitteeMembershipInstance> for Runtime
     type WeightInfo = weights::pallet_membership::WeightInfo<Runtime>;
 }
 
+impl pallet_multisig::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type DepositBase = DepositBase;
+    type DepositFactor = DepositFactor;
+    type MaxSignatories = ConstU16<100>;
+    type WeightInfo = weights::pallet_multisig::WeightInfo<Runtime>;
+}
+
 impl pallet_preimage::Config for Runtime {
     type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
     type Event = Event;
@@ -804,6 +838,27 @@ impl zrml_market_commons::Config for Runtime {
     type Timestamp = Timestamp;
 }
 
+// NoopLiquidityMining implements LiquidityMiningPalletApi with no-ops.
+// Has to be public because it will be exposed by Runtime.
+pub struct NoopLiquidityMining;
+
+impl zrml_liquidity_mining::LiquidityMiningPalletApi for NoopLiquidityMining {
+    type AccountId = AccountId;
+    type Balance = Balance;
+    type BlockNumber = BlockNumber;
+    type MarketId = MarketId;
+
+    fn add_shares(_: Self::AccountId, _: Self::MarketId, _: Self::Balance) {}
+
+    fn distribute_market_incentives(
+        _: &Self::MarketId,
+    ) -> frame_support::pallet_prelude::DispatchResult {
+        Ok(())
+    }
+
+    fn remove_shares(_: &Self::AccountId, _: &Self::MarketId, _: Self::Balance) {}
+}
+
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
@@ -815,7 +870,10 @@ impl zrml_prediction_markets::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
-    type LiquidityMining = LiquidityMining;
+    // LiquidityMining is currently unstable.
+    // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
+    type LiquidityMining = NoopLiquidityMining;
+    // type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
@@ -860,7 +918,10 @@ impl zrml_swaps::Config for Runtime {
     type ExitFee = ExitFee;
     type FixedTypeU = FixedU128<U33>;
     type FixedTypeS = FixedI128<U33>;
-    type LiquidityMining = LiquidityMining;
+    // LiquidityMining is currently unstable.
+    // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
+    type LiquidityMining = NoopLiquidityMining;
+    // type LiquidityMining = LiquidityMining;
     type MarketId = MarketId;
     type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
@@ -968,6 +1029,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_democracy, Democracy);
             list_benchmark!(list, extra, pallet_identity, Identity);
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
+            list_benchmark!(list, extra, pallet_multisig, MultiSig);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
@@ -1038,6 +1100,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_democracy, Democracy);
             add_benchmark!(params, batches, pallet_identity, Identity);
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
+            add_benchmark!(params, batches, pallet_multisig, MultiSig);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);

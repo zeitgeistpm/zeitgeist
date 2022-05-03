@@ -7,14 +7,15 @@ frame-support = { branch = "moonbeam-polkadot-v0.9.17", default-features = false
 frame-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 orml-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, optional = true, git = "https://github.com/PureStake/open-runtime-module-library" }
-orml-currencies = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
-orml-tokens = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
-orml-traits = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
+orml-currencies = { default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
+orml-tokens = { default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
+orml-traits = { default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-democracy = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-identity = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-membership = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-multisig = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-preimage = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -136,8 +137,6 @@ parachain = [
 ]
 
 runtime-benchmarks = [
-    "pallet-identity/runtime-benchmarks",
-    "pallet-membership/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking",
@@ -153,6 +152,8 @@ runtime-benchmarks = [
     "pallet-democracy/runtime-benchmarks",
     "pallet-grandpa/runtime-benchmarks",
     "pallet-identity/runtime-benchmarks",
+    "pallet-membership/runtime-benchmarks",
+    "pallet-multisig/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
     "pallet-scheduler/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
@@ -186,6 +187,7 @@ std = [
     "pallet-democracy/std",
     "pallet-identity/std",
     "pallet-membership/std",
+    "pallet-multisig/std",
     "pallet-preimage/std",
     "pallet-randomness-collective-flip/std",
     "pallet-scheduler/std",
@@ -270,7 +272,7 @@ txfilter = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.0"
+version = "0.3.1"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
