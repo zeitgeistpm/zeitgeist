@@ -93,6 +93,38 @@ fn it_creates_binary_markets() {
 }
 
 #[test]
+fn create_categorical_market_deposits_the_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let market_account = PredictionMarkets::market_account(market_id);
+        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
+    });
+}
+
+#[test]
+fn create_scalar_market_deposits_the_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        simple_create_scalar_market::<Runtime>(
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let market_account = PredictionMarkets::market_account(market_id);
+        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
+    });
+}
+
+#[test]
 fn it_does_not_create_market_with_too_few_categories() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
