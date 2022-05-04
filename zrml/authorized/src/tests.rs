@@ -8,7 +8,7 @@ use crate::{
 use frame_support::assert_noop;
 use zeitgeist_primitives::{
     traits::DisputeApi,
-    types::{MarketDisputeMechanism, OutcomeReport},
+    types::{MarketDisputeMechanism, OutcomeReport, MarketStatus},
 };
 use zrml_market_commons::Markets;
 
@@ -23,50 +23,73 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
 }
 
 #[test]
-fn authorize_market_outcome_forbids_accounts_without_an_authorized_market() {
+fn authorize_market_outcome_fails_on_non_authorized_market() {
     ExtBuilder::default().build().execute_with(|| {
-        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
+        let mut market = market_mock::<Runtime>(ALICE);
+        market.mdm = MarketDisputeMechanism::Court;
+        Markets::<Runtime>::insert(0, market);
         assert_noop!(
             Authorized::authorize_market_outcome(
                 Origin::signed(ALICE),
                 0,
                 OutcomeReport::Scalar(1)
             ),
-            Error::<Runtime>::AccountIsNotLinkedToAnyAuthorizedMarket
+            Error::<Runtime>::MarketDoesNotHaveDisputeMechanismAuthorized
         );
     });
 }
 
 #[test]
-fn on_dispute_denies_non_authorized_markets() {
+fn authorize_market_outcome_fails_on_undisputed_market() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = market_mock::<Runtime>(ALICE);
-        market.mdm = MarketDisputeMechanism::Court;
+        market.status = MarketStatus::Active;
+        Markets::<Runtime>::insert(0, market);
         assert_noop!(
-            Authorized::on_dispute(&[], &0, &market),
-            Error::<Runtime>::MarketDoesNotHaveAuthorizedMechanism
+            Authorized::authorize_market_outcome(
+                Origin::signed(ALICE),
+                0,
+                OutcomeReport::Scalar(1)
+            ),
+            Error::<Runtime>::MarketIsNotDisputed
         );
     });
 }
 
 #[test]
-fn on_resolution_denies_non_authorized_markets() {
+fn authorize_market_outcome_fails_on_invalid_report() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = market_mock::<Runtime>(ALICE);
-        market.mdm = MarketDisputeMechanism::Court;
+        market.status = MarketStatus::Active;
+        Markets::<Runtime>::insert(0, market);
         assert_noop!(
-            Authorized::on_resolution(&[], &0, &market),
-            Error::<Runtime>::MarketDoesNotHaveAuthorizedMechanism
+            Authorized::authorize_market_outcome(
+                Origin::signed(ALICE),
+                0,
+                OutcomeReport::Categorical(123)
+            ),
+            Error::<Runtime>::MarketDoesNotHaveDisputeMechanismAuthorized
         );
     });
 }
 
 #[test]
-fn on_resolution_must_demand_an_already_included_outcome() {
+fn authorize_market_outcome_fails_on_unauthorized_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
+        assert_noop!(
+            Authorized::authorize_market_outcome(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)),
+            Error::<Runtime>::NotAuthorizedForThisMarket,
+        );
+    });
+}
+
+#[test]
+fn on_resolution_fails_if_no_report_was_submitted() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             Authorized::on_resolution(&[], &0, &market_mock::<Runtime>(ALICE)),
-            Error::<Runtime>::UnknownOutcome
+            Error::<Runtime>::ReportNotFound
         );
     });
 }
@@ -84,7 +107,7 @@ fn on_resolution_removes_stored_outcomes() {
 }
 
 #[test]
-fn on_resolution_returns_the_canonical_outcome() {
+fn on_resolution_returns_the_reported_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>(ALICE);
         Markets::<Runtime>::insert(0, &market);

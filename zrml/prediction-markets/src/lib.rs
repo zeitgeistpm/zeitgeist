@@ -320,13 +320,13 @@ mod pallet {
             )?;
             match market.mdm {
                 MarketDisputeMechanism::Authorized(_) => {
-                    T::Authorized::on_dispute(&who, &disputes, &market_id, &market)?
+                    T::Authorized::on_dispute(&disputes, &market_id, &market)?
                 }
                 MarketDisputeMechanism::Court => {
-                    T::Court::on_dispute(&who, &disputes, &market_id, &market)?
+                    T::Court::on_dispute(&disputes, &market_id, &market)?
                 }
                 MarketDisputeMechanism::SimpleDisputes => {
-                    T::SimpleDisputes::on_dispute(&who, &disputes, &market_id, &market)?
+                    T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?
                 }
             }
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;

@@ -19,6 +19,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         pallet_prelude::{StorageMap, ValueQuery},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         Blake2_128Concat, PalletId,
@@ -27,7 +28,7 @@ mod pallet {
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -54,13 +55,15 @@ mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             if let MarketDisputeMechanism::Authorized(ref account_id) = market.mdm {
                 if account_id != &who {
-                    return Err(Error::<T>::AccountIsNotLinkedToAnyAuthorizedMarket.into());
+                    return Err(Error::<T>::NotAuthorizedForThisMarket.into());
                 }
             } else {
-                return Err(Error::<T>::AccountIsNotLinkedToAnyAuthorizedMarket.into());
+                return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
+            // TODO We should check that the outcome fits the market!
             Outcomes::<T>::insert(market_id, Some(outcome));
             Ok(())
         }
@@ -87,14 +90,15 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// An account trying to register an outcome is not tied to any authorized market.
-        AccountIsNotLinkedToAnyAuthorizedMarket,
-        /// On dispute or resolution, someone tried to pass a non-authorized market type
-        MarketDoesNotHaveAuthorizedMechanism,
-        /// It is not possible to have more than one stored outcome for the same market.
-        MarketsCanNotHaveMoreThanOneAuthorizedAccount,
-        /// On resolution, someone tried to pass a unknown account id or market id.
-        UnknownOutcome,
+        /// An unauthorized account attempts to submit a report.
+        NotAuthorizedForThisMarket,
+        /// The market unexpectedly has the incorrect dispute mechanism.
+        MarketDoesNotHaveDisputeMechanismAuthorized,
+        /// The authorized account has not reported an outcome.
+        // TODO This should be part of the dispute api, and the prediction markets pallet should handle this error
+        ReportNotFound,
+        /// An account attempts to submit a report to an undisputed market.
+        MarketIsNotDisputed,
     }
 
     #[pallet::event]
@@ -125,29 +129,20 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if let MarketDisputeMechanism::Authorized(_) = market.mdm {
-                Ok(())
-            } else {
-                Err(Error::<T>::MarketDoesNotHaveAuthorizedMechanism.into())
-            }
+            Ok(())
         }
 
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<OutcomeReport, DispatchError> {
-            if let MarketDisputeMechanism::Authorized(_) = market.mdm {
-            } else {
-                return Err(Error::<T>::MarketDoesNotHaveAuthorizedMechanism.into());
-            }
-
             let outcome = if let Some(el) = Outcomes::<T>::get(market_id) {
                 el
             } else {
-                return Err(Error::<T>::UnknownOutcome.into());
+                return Err(Error::<T>::ReportNotFound.into());
             };
             Outcomes::<T>::remove(market_id);
             Ok(outcome)
@@ -166,7 +161,7 @@ mod pallet {
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub(crate) fn market_mock<T>(
-    ai: T::AccountId,
+    ai: T::AccountId
 ) -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
 where
     T: crate::Config,
@@ -187,6 +182,6 @@ where
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
-        status: zeitgeist_primitives::types::MarketStatus::Closed,
+        status: zeitgeist_primitives::types::MarketStatus::Disputed,
     }
 }
