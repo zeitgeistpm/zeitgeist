@@ -8,7 +8,7 @@ use crate::{
 use frame_support::assert_noop;
 use zeitgeist_primitives::{
     traits::DisputeApi,
-    types::{MarketDisputeMechanism, OutcomeReport, MarketStatus},
+    types::{MarketDisputeMechanism, MarketStatus, OutcomeReport},
 };
 use zrml_market_commons::Markets;
 
