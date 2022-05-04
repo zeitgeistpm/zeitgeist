@@ -30,7 +30,6 @@
 //! - `create_scalar_market` - Creates a new scalar market.
 //! - `deploy_swap_pool_for_market` - Deploys a single "canonical" pool for a market.
 //! - `dispute` - Submits a disputed outcome for a market.
-//! - `global_dispute` - `unimplemented!()`
 //! - `redeem_shares` - Redeems the winning shares for a market.
 //! - `report` - Reports an outcome for a market.
 //! - `sell_complete_set` - Sells a complete set of outcome assets for a market.
@@ -768,18 +767,6 @@ mod pallet {
             )?;
 
             T::MarketCommons::insert_market_pool(market_id, pool_id);
-            Ok(())
-        }
-
-        /// Starts a global dispute.
-        ///
-        /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
-        ///
-        #[pallet::weight(10_000_000)]
-        pub fn global_dispute(origin: OriginFor<T>, market_id: MarketIdOf<T>) -> DispatchResult {
-            let _sender = ensure_signed(origin)?;
-            let _market = T::MarketCommons::market(&market_id)?;
-            // TODO(#489): Implement global disputes!
             Ok(())
         }
 
