@@ -746,6 +746,73 @@ fn it_resolves_a_disputed_market() {
 }
 
 #[test]
+fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..1),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            <Runtime as Config>::MinCategories::get(),
+            MarketDisputeMechanism::Authorized(ALICE),
+            ScoringRule::CPMM,
+        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
+
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        run_to_block(102);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(103);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        run_to_block(104);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        let eve_reserved = Balances::reserved_balance(&EVE);
+
+        run_to_block(115);
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+
+        // make sure rewards are right
+        //
+        // slashed amounts
+        // ---------------------------
+        // - Charlie's reserve: DisputeBond::get()
+        // - Eve's reserve: DisputeBond::get() + 2 * DisputeFactor::get()
+        //
+        // All goes to Dave (because Bob is - strictly speaking - not a disputor).
+        assert_eq!(Balances::free_balance(&CHARLIE), 1_000 * BASE - charlie_reserved);
+        assert_eq!(Balances::free_balance(&EVE), 1_000 * BASE - eve_reserved);
+        let total_slashed = charlie_reserved + eve_reserved;
+        assert_eq!(Balances::free_balance(&DAVE), 1_000 * BASE + total_slashed);
+
+        // The oracle report was accepted, so Alice is not slashed.
+        assert_eq!(Balances::free_balance(&ALICE), 1_000 * BASE);
+        assert_eq!(Balances::free_balance(&BOB), 1_000 * BASE);
+    });
+}
+
+#[test]
 fn it_allows_to_redeem_shares() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
