@@ -382,7 +382,7 @@ mod pallet {
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             creation: MarketCreation,
-            categories: u16,
+            #[pallet::compact] categories: u16,
             mdm: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
