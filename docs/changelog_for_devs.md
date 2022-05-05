@@ -1,7 +1,7 @@
 # v0.3.2
 
-- Changed the all parameters of type `BalanceOf`, `MarketId` and `PoolId` in
-  extrinsics to
+- Changed the all parameters of type `u16`, `BalanceOf`, `MarketId` and `PoolId`
+  in extrinsics to
   [compact encoding](https://docs.substrate.io/v3/advanced/scale-codec/#compactgeneral-integers).
 
 # v0.3.1
