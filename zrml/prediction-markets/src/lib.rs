@@ -23,7 +23,6 @@
 //! #### Public Dispatches
 //!
 //! - `buy_complete_set` - Buys a complete set of outcome assets for a market.
-//! - `cancel_pending_market` - Allows the proposer of a market that is currently in a `Proposed` state to cancel the market proposal.
 //! - `create_categorical_market` - Creates a new categorical market.
 //! - `create_cpmm_market_and_deploy_assets` - Create a market using CPMM scoring rule, buy a complete set of the assets used and deploy.
 //!    within and deploy an arbitrary amount of those that's greater than the minimum amount.
@@ -348,31 +347,6 @@ mod pallet {
                 num_disputes,
                 T::MaxDisputes::get(),
             )
-        }
-
-        /// NOTE: Only for PoC probably - should only allow rejections
-        /// in a production environment since this better aligns incentives.
-        /// See also: Polkadot Treasury
-        ///
-        #[pallet::weight(T::WeightInfo::cancel_pending_market())]
-        pub fn cancel_pending_market(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            let sender = ensure_signed(origin)?;
-
-            let market = T::MarketCommons::market(&market_id)?;
-
-            let creator = market.creator;
-            let status = market.status;
-            ensure!(creator == sender, "Canceller must be market creator.");
-            ensure!(status == MarketStatus::Proposed, "Market must be pending approval.");
-            // The market is being cancelled, return the deposit.
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::AdvisoryBond::get());
-            T::MarketCommons::remove_market(&market_id)?;
-            Self::deposit_event(Event::MarketCancelled(market_id));
-            Self::deposit_event(Event::MarketDestroyed(market_id));
-            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::create_categorical_market())]
@@ -1279,8 +1253,6 @@ mod pallet {
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
-        /// A pending market has been cancelled. \[market_id\]
-        MarketCancelled(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
         MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
         /// A pending market has been rejected as invalid. \[market_id\]

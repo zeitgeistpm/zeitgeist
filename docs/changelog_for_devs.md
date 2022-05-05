@@ -3,6 +3,8 @@
 - Changed the all parameters of type `u16`, `BalanceOf`, `MarketId` and `PoolId`
   in extrinsics to
   [compact encoding](https://docs.substrate.io/v3/advanced/scale-codec/#compactgeneral-integers).
+- Removed the `cancel_pending_market` function and the corresponding event
+  `MarketCancelled`.
 
 # v0.3.1
 
@@ -61,6 +63,7 @@
 - `LiquidityMining` was replaced with a dummy implementation and the calls to
   that pallet are filtered. We also plan to losen this constraint with the
   introduction of separate runtimes.
+
 - When tokens are redeemed an event is emitted: `TokensRedeemed`. The fields are
   (in that order): `market_id, currency_id, amount_redeemed, payout, who`. This
   should also be regarded as an informative event, as stated before in this
