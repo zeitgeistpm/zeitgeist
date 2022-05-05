@@ -97,6 +97,8 @@ fn on_resolution_removes_stored_outcomes() {
         Markets::<Runtime>::insert(0, &market);
         Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
             .unwrap();
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(2))
+            .unwrap();
         let _ = Authorized::on_resolution(&[], &0, &market).unwrap();
         assert_eq!(Outcomes::<Runtime>::get(0), None);
     });
@@ -107,11 +109,14 @@ fn on_resolution_returns_the_reported_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>(ALICE);
         Markets::<Runtime>::insert(0, &market);
+        // Authorize outcome, then overwrite it.
         Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
+            .unwrap();
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(2))
             .unwrap();
         assert_eq!(
             Authorized::on_resolution(&[], &0, &market).unwrap(),
-            Some(OutcomeReport::Scalar(1))
+            Some(OutcomeReport::Scalar(2))
         );
     });
 }
