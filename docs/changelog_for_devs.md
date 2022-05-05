@@ -1,3 +1,8 @@
+# v0.3.2
+
+- Added a field for `market_account` to `MarketCreated` event and `pool_account`
+  field to `PoolCreate` event.
+
 # v0.3.1
 
 - Removed function parameter `keep_outcome_assets` from dispatchables
@@ -55,9 +60,8 @@
 - `LiquidityMining` was replaced with a dummy implementation and the calls to
   that pallet are filtered. We also plan to losen this constraint with the
   introduction of separate runtimes.
-  
-- When tokens are redeemed an event is emitted: `TokensRedeemed`. The fields 
-  are (in that order): `market_id, currency_id, amount_redeemed, payout, who`.
-  This should also be regarded as an informative event, as stated before in 
-  this document balance changes should only be executed by events emitted by
-  the pallets that manage the balances.
+- When tokens are redeemed an event is emitted: `TokensRedeemed`. The fields are
+  (in that order): `market_id, currency_id, amount_redeemed, payout, who`. This
+  should also be regarded as an informative event, as stated before in this
+  document balance changes should only be executed by events emitted by the
+  pallets that manage the balances.
