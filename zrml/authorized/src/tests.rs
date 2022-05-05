@@ -5,7 +5,7 @@ use crate::{
     mock::{Authorized, ExtBuilder, Origin, Runtime, ALICE, BOB},
     Error, Outcomes,
 };
-use frame_support::assert_noop;
+use frame_support::{assert_noop, assert_ok};
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{MarketDisputeMechanism, MarketStatus, OutcomeReport},
@@ -16,8 +16,11 @@ use zrml_market_commons::Markets;
 fn authorize_market_outcome_inserts_a_new_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
-            .unwrap();
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(ALICE),
+            0,
+            OutcomeReport::Scalar(1)
+        ));
         assert_eq!(Outcomes::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(1));
     });
 }
@@ -95,11 +98,17 @@ fn on_resolution_removes_stored_outcomes() {
     ExtBuilder::default().build().execute_with(|| {
         let market = market_mock::<Runtime>(ALICE);
         Markets::<Runtime>::insert(0, &market);
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
-            .unwrap();
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(2))
-            .unwrap();
-        let _ = Authorized::on_resolution(&[], &0, &market).unwrap();
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(ALICE),
+            0,
+            OutcomeReport::Scalar(1)
+        ));
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(ALICE),
+            0,
+            OutcomeReport::Scalar(2)
+        ));
+        assert_ok!(Authorized::on_resolution(&[], &0, &market));
         assert_eq!(Outcomes::<Runtime>::get(0), None);
     });
 }
@@ -110,10 +119,16 @@ fn on_resolution_returns_the_reported_outcome() {
         let market = market_mock::<Runtime>(ALICE);
         Markets::<Runtime>::insert(0, &market);
         // Authorize outcome, then overwrite it.
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
-            .unwrap();
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(2))
-            .unwrap();
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(ALICE),
+            0,
+            OutcomeReport::Scalar(1)
+        ));
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(ALICE),
+            0,
+            OutcomeReport::Scalar(2)
+        ));
         assert_eq!(
             Authorized::on_resolution(&[], &0, &market).unwrap(),
             Some(OutcomeReport::Scalar(2))
@@ -126,10 +141,16 @@ fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
         Markets::<Runtime>::insert(1, market_mock::<Runtime>(ALICE));
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(123))
-            .unwrap();
-        Authorized::authorize_market_outcome(Origin::signed(ALICE), 1, OutcomeReport::Scalar(456))
-            .unwrap();
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(ALICE),
+            0,
+            OutcomeReport::Scalar(123)
+        ));
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(ALICE),
+            1,
+            OutcomeReport::Scalar(456)
+        ));
         assert_eq!(Outcomes::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(123));
         assert_eq!(Outcomes::<Runtime>::get(1).unwrap(), OutcomeReport::Scalar(456));
     });
