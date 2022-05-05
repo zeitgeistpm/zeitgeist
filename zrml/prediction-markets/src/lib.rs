@@ -1697,8 +1697,8 @@ mod pallet {
 
                     let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
 
-                    // if the reporter reported right, return the OracleBond, otherwise
-                    // slash it to pay the correct reporters
+                    // If the oracle reported right, return the OracleBond, otherwise slash it to
+                    // pay the correct reporters.
                     if report.outcome == resolved_outcome {
                         CurrencyOf::<T>::unreserve_named(
                             &RESERVE_ID,
