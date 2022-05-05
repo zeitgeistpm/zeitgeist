@@ -1677,7 +1677,9 @@ mod pallet {
                     T::MarketCommons::report(market)?.outcome.clone()
                 }
                 MarketStatus::Disputed => {
-                    let resolved_outcome = match market.mdm {
+                    // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
+                    // the oracle's report.
+                    let resolved_outcome_option = match market.mdm {
                         MarketDisputeMechanism::Authorized(_) => {
                             T::Authorized::on_resolution(&disputes, market_id, market)?
                         }
@@ -1688,6 +1690,8 @@ mod pallet {
                             T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
                         }
                     };
+                    let resolved_outcome =
+                        resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
