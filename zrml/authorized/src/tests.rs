@@ -120,3 +120,17 @@ fn on_resolution_returns_the_reported_outcome() {
         );
     });
 }
+
+#[test]
+fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
+    ExtBuilder::default().build().execute_with(|| {
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
+        Markets::<Runtime>::insert(1, market_mock::<Runtime>(ALICE));
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(123))
+            .unwrap();
+        Authorized::authorize_market_outcome(Origin::signed(ALICE), 1, OutcomeReport::Scalar(456))
+            .unwrap();
+        assert_eq!(Outcomes::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(123));
+        assert_eq!(Outcomes::<Runtime>::get(1).unwrap(), OutcomeReport::Scalar(456));
+    });
+}
