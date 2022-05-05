@@ -56,6 +56,7 @@ mod pallet {
             let who = ensure_signed(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
+            ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
             if let MarketDisputeMechanism::Authorized(ref account_id) = market.mdm {
                 if account_id != &who {
                     return Err(Error::<T>::NotAuthorizedForThisMarket.into());
@@ -63,7 +64,6 @@ mod pallet {
             } else {
                 return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
-            // TODO We should check that the outcome fits the market!
             Outcomes::<T>::insert(market_id, Some(outcome));
             Ok(())
         }
@@ -94,11 +94,10 @@ mod pallet {
         NotAuthorizedForThisMarket,
         /// The market unexpectedly has the incorrect dispute mechanism.
         MarketDoesNotHaveDisputeMechanismAuthorized,
-        /// The authorized account has not reported an outcome.
-        // TODO This should be part of the dispute api, and the prediction markets pallet should handle this error
-        ReportNotFound,
         /// An account attempts to submit a report to an undisputed market.
         MarketIsNotDisputed,
+        /// The report does not match the market's type.
+        OutcomeMismatch,
     }
 
     #[pallet::event]

@@ -59,16 +59,14 @@ fn authorize_market_outcome_fails_on_undisputed_market() {
 #[test]
 fn authorize_market_outcome_fails_on_invalid_report() {
     ExtBuilder::default().build().execute_with(|| {
-        let mut market = market_mock::<Runtime>(ALICE);
-        market.status = MarketStatus::Active;
-        Markets::<Runtime>::insert(0, market);
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
         assert_noop!(
             Authorized::authorize_market_outcome(
                 Origin::signed(ALICE),
                 0,
                 OutcomeReport::Categorical(123)
             ),
-            Error::<Runtime>::MarketDoesNotHaveDisputeMechanismAuthorized
+            Error::<Runtime>::OutcomeMismatch
         );
     });
 }

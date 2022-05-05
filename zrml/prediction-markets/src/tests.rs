@@ -480,7 +480,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
         run_to_block(100);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(2)),
-            Error::<Runtime>::OutcomeOutOfRange,
+            Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Active);

@@ -954,7 +954,10 @@ mod pallet {
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
                 Self::ensure_market_is_closed(&market.period)?;
-                Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
+                ensure!(
+                    market.matches_outcome_report(&market_report.outcome),
+                    Error::<T>::OutcomeMismatch
+                );
 
                 let mut should_check_origin = false;
                 match market.period {
@@ -1207,8 +1210,6 @@ mod pallet {
         InvalidScoringRule,
         /// Sender does not have enough balance to buy shares.
         NotEnoughBalance,
-        /// The outcome being reported is out of range.
-        OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
         /// Market was expected to be active.
@@ -1576,26 +1577,6 @@ mod pallet {
                 <MomentOf<T>>::saturated_from(interval) <= T::MaxSubsidyPeriod::get(),
                 <Error<T>>::MarketStartTooLate
             );
-            Ok(())
-        }
-
-        fn ensure_outcome_matches_market_type(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            outcome: &OutcomeReport,
-        ) -> DispatchResult {
-            if let OutcomeReport::Categorical(ref inner) = outcome {
-                if let MarketType::Categorical(ref categories) = market.market_type {
-                    ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
-            }
-            if let OutcomeReport::Scalar(_) = outcome {
-                ensure!(
-                    matches!(&market.market_type, MarketType::Scalar(_)),
-                    Error::<T>::OutcomeMismatch
-                );
-            }
             Ok(())
         }
 
@@ -2067,7 +2048,7 @@ mod pallet {
             outcome: &OutcomeReport,
         ) -> DispatchResult {
             ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
-            Self::ensure_outcome_matches_market_type(market, outcome)?;
+            ensure!(market.matches_outcome_report(outcome), Error::<T>::OutcomeMismatch);
             Self::ensure_can_not_dispute_the_same_outcome(
                 disputes,
                 (&market.report.as_ref()).ok_or(Error::<T>::MarketNotReported)?,
