@@ -87,10 +87,8 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
 #[test]
 fn on_resolution_fails_if_no_report_was_submitted() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            Authorized::on_resolution(&[], &0, &market_mock::<Runtime>(ALICE)),
-            Error::<Runtime>::ReportNotFound
-        );
+        let report = Authorized::on_resolution(&[], &0, &market_mock::<Runtime>(ALICE)).unwrap();
+        assert!(report.is_none());
     });
 }
 
@@ -113,6 +111,9 @@ fn on_resolution_returns_the_reported_outcome() {
         Markets::<Runtime>::insert(0, &market);
         Authorized::authorize_market_outcome(Origin::signed(ALICE), 0, OutcomeReport::Scalar(1))
             .unwrap();
-        assert_eq!(Authorized::on_resolution(&[], &0, &market).unwrap(), OutcomeReport::Scalar(1));
+        assert_eq!(
+            Authorized::on_resolution(&[], &0, &market).unwrap(),
+            Some(OutcomeReport::Scalar(1))
+        );
     });
 }

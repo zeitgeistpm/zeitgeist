@@ -138,14 +138,12 @@ mod pallet {
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError> {
-            let outcome = if let Some(el) = Outcomes::<T>::get(market_id) {
-                el
-            } else {
-                return Err(Error::<T>::ReportNotFound.into());
-            };
-            Outcomes::<T>::remove(market_id);
-            Ok(outcome)
+        ) -> Result<Option<OutcomeReport>, DispatchError> {
+            let result = Outcomes::<T>::get(market_id);
+            if result.is_some() {
+                Outcomes::<T>::remove(market_id);
+            }
+            Ok(result)
         }
     }
 

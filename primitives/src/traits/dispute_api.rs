@@ -13,23 +13,25 @@ pub trait DisputeApi {
     /// Initiate a dispute of a reported outcome.
     ///
     /// Further interaction with the dispute API (if necessary) **should** happen through an
-    /// associated pallet.
-    ///
-    /// **May** assume that `market.mdm` refers to the calling dispute API.
+    /// associated pallet. **May** assume that `market.mdm` refers to the calling dispute API.
     fn on_dispute(
         previous_disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> DispatchResult;
 
-    /// Manage market resolution of a disputed market and return the final outcome report.
+    /// Manage market resolution of a disputed market.
     ///
-    /// **Should** only be called if the market was disputed before resolving.
+    /// **Should** only be called if the market was disputed before resolving. **May** assume that
+    /// `market.mdm` refers to the calling dispute API.
     ///
-    /// **May** assume that `market.mdm` refers to the calling dispute API.
+    /// # Returns
+    ///
+    /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
+    /// returned, this means that the dispute could not be resolved.
     fn on_resolution(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<OutcomeReport, DispatchError>;
+    ) -> Result<Option<OutcomeReport>, DispatchError>;
 }
