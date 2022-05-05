@@ -33,7 +33,6 @@ pub trait WeightInfoZeitgeist {
     fn admin_move_market_to_resolved_overhead() -> Weight;
     fn approve_market() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
-    fn cancel_pending_market() -> Weight;
     fn create_categorical_market() -> Weight;
     fn create_scalar_market() -> Weight;
     fn deploy_swap_pool_for_market(a: u32) -> Weight;
@@ -128,13 +127,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
-    }
-    // Storage: MarketCommons Markets (r:1 w:1)
-    // Storage: Balances Reserves (r:1 w:1)
-    fn cancel_pending_market() -> Weight {
-        (76_990_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     // Storage: Timestamp Now (r:1 w:0)
     // Storage: Balances Reserves (r:1 w:1)
