@@ -1273,8 +1273,8 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             OutcomeReport::Categorical(1)
         ));
         run_to_block(9100);
-        assert_eq!(Balances::reserved_balance(&ALICE), 0);
         // Check that oracle bond got slashed
+        assert_eq!(Balances::reserved_balance(&ALICE), 0);    
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
     });
 }
