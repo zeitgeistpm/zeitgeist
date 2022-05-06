@@ -4,8 +4,6 @@
 //!
 //! ## Overview
 //!
-//! TODO
-//!
 //! ## Interface
 //!
 //! ### Dispatches

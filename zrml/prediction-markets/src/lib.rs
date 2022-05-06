@@ -29,7 +29,6 @@
 //! - `create_scalar_market` - Creates a new scalar market.
 //! - `deploy_swap_pool_for_market` - Deploys a single "canonical" pool for a market.
 //! - `dispute` - Submits a disputed outcome for a market.
-//! - `global_dispute` - `unimplemented!()`
 //! - `redeem_shares` - Redeems the winning shares for a market.
 //! - `report` - Reports an outcome for a market.
 //! - `sell_complete_set` - Sells a complete set of outcome assets for a market.
@@ -116,9 +115,6 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Allows the `DestroyOrigin` to immediately destroy a market.
-        ///
-        /// todo: this should check if there's any outstanding funds reserved if it stays
-        /// in for production
         #[pallet::weight(
             T::WeightInfo::admin_destroy_reported_market(
                 900,
@@ -134,6 +130,7 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#486)
             T::DestroyOrigin::ensure_origin(origin)?;
 
             let mut total_accounts = 0usize;
@@ -747,21 +744,6 @@ mod pallet {
             Ok(())
         }
 
-        /// Starts a global dispute.
-        ///
-        /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
-        ///
-        #[pallet::weight(10_000_000)]
-        pub fn global_dispute(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            let _sender = ensure_signed(origin)?;
-            let _market = T::MarketCommons::market(&market_id)?;
-            // TODO: implement global disputes
-            Ok(())
-        }
-
         /// Redeems the winning shares of a prediction market.
         ///
         #[pallet::weight(T::WeightInfo::redeem_shares_categorical()
@@ -1247,7 +1229,7 @@ mod pallet {
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, creator\]
         MarketCreated(MarketIdOf<T>, Market<T::AccountId, T::BlockNumber, MomentOf<T>>),
-        /// A market has been created \[market_id, creator\]
+        /// A market has been destroyed. \[market_id\]
         MarketDestroyed(MarketIdOf<T>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
