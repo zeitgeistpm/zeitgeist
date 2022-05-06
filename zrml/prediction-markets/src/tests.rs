@@ -13,10 +13,7 @@ use frame_support::{
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::{
-        DisputeFactor, BASE, CENT,
-        MILLISECS_PER_BLOCK,
-    },
+    constants::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,

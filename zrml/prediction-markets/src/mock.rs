@@ -19,12 +19,12 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
-        CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
-        ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories,
-        MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxTotalWeight,
-        MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, BASE, CENT,
+        CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
+        MaxInRatio, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxTotalWeight, MaxWeight,
+        MinAssets, MinCategories, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight,
+        SwapsPalletId, BASE, CENT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
