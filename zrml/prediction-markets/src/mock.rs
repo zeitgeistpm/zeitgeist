@@ -19,11 +19,11 @@ use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
-        CourtPalletId, DisputeBond, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
+        CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits,
         ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories,
         MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxTotalWeight,
         MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod, SimpleDisputesPalletId,
+        MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId,
         StakeWeight, SwapsPalletId, BASE, CENT,
     },
     types::{
@@ -47,8 +47,10 @@ ord_parameter_types! {
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
-    pub storage AdvisoryBondMock: Balance = 25 * CENT;
-    pub storage ValidityBondMock: Balance = 50 * CENT;
+    pub const AdvisoryBond: Balance = 11 * CENT;
+    pub const OracleBond: Balance = 25 * CENT;
+    pub const ValidityBond: Balance = 53 * CENT;
+    pub const DisputeBond: Balance = 109 * CENT;
 }
 
 construct_runtime!(
@@ -76,7 +78,7 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type AdvisoryBond = AdvisoryBondMock;
+    type AdvisoryBond = AdvisoryBond;
     type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
@@ -101,7 +103,7 @@ impl crate::Config for Runtime {
     type SimpleDisputes = SimpleDisputes;
     type Slash = ();
     type Swaps = Swaps;
-    type ValidityBond = ValidityBondMock;
+    type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
 }
 

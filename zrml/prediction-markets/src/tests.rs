@@ -14,7 +14,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::{
-        AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT,
+        DisputeFactor, BASE, CENT,
         MILLISECS_PER_BLOCK,
     },
     types::{
@@ -724,23 +724,24 @@ fn it_resolves_a_disputed_market() {
         // ---------------------------
         // - OracleBond: 50 * CENT
         // - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
-        // Total: 50 * CENT + DisputeBond::get() + DisputeFactor::get()
-        // Per each: 25 * CENT + (DisputeBond::get() + DisputeFactor::get()) / 2
+        // Total: OracleBond::get() + DisputeBond::get() + DisputeFactor::get()
+        // Per each: ( OracleBond::get() + DisputeBond::get() + DisputeFactor::get()) / 2
 
         let dave_reserved = DisputeBond::get() + DisputeFactor::get();
+        let total_slashed = OracleBond::get() + dave_reserved;
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + 25 * CENT + dave_reserved / 2);
+        assert_eq!(charlie_balance, 1_000 * BASE + total_slashed / 2);
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(&EVE);
-        assert_eq!(eve_balance, 1_000 * BASE + 25 * CENT + dave_reserved / 2);
+        assert_eq!(eve_balance, 1_000 * BASE + total_slashed / 2);
 
         let dave_balance = Balances::free_balance(&DAVE);
         assert_eq!(dave_balance, 1_000 * BASE - dave_reserved);
 
         let alice_balance = Balances::free_balance(&ALICE);
-        assert_eq!(alice_balance, 1_000 * BASE - 50 * CENT);
+        assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter
