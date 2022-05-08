@@ -172,6 +172,7 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(amount != Zero::zero(), Error::<T>::ZeroAmount);
 
             <Pools<T>>::try_mutate(pool_id, |pool_opt| {
                 let pool = pool_opt.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;

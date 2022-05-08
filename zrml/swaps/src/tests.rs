@@ -750,21 +750,8 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         // Events cannot be emitted on block zero...
         frame_system::Pallet::<Runtime>::set_block_number(1);
 
-        create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), 0, 42),
-            crate::Error::<Runtime>::InvalidScoringRule
-        );
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), 1, 42),
-            crate::Error::<Runtime>::PoolDoesNotExist
-        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
-        let pool_id = 1;
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), pool_id, 42),
-            crate::Error::<Runtime>::NoSubsidyProvided
-        );
+        let pool_id = 0;
 
         // Add some subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
@@ -814,6 +801,49 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert_eq!(reserved, total_subsidy);
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_no_subsidy_is_provided() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::NoSubsidyProvided
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, 0),
+            crate::Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
     });
 }
 
@@ -1007,14 +1037,8 @@ fn pool_join_subsidy_reserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         // Events cannot be emitted on block zero...
         frame_system::Pallet::<Runtime>::set_block_number(1);
-
-        create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(
-            Swaps::pool_join_subsidy(alice_signed(), 0, 42),
-            crate::Error::<Runtime>::InvalidScoringRule
-        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
-        let pool_id = 1;
+        let pool_id = 0;
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
         let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
         let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
