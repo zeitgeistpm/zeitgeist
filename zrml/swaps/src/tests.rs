@@ -1075,6 +1075,65 @@ fn pool_join_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
 }
 
 #[test]
+fn pool_join_subsidy_fails_if_subsidy_is_below_min_per_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_join_subsidy(
+                alice_signed(),
+                0,
+                <Runtime as Config>::MinSubsidyPerAccount::get() - 1
+            ),
+            crate::Error::<Runtime>::InvalidSubsidyAmount,
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_with_small_amount_is_ok_if_account_is_already_a_provider() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        let pool_id = 0;
+        let large_amount = <Runtime as Config>::MinSubsidyPerAccount::get();
+        let small_amount = 1;
+        let total_amount = large_amount + small_amount;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, small_amount));
+        let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, total_amount);
+        assert_eq!(noted, total_amount);
+        assert_eq!(total_subsidy, total_amount);
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_unreserves_remaining_subsidy_if_below_min_per_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        let pool_id = 0;
+        let large_amount = <Runtime as Config>::MinSubsidyPerAccount::get();
+        let small_amount = 1;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
+        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, small_amount));
+        let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE);
+        let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, 0);
+        assert!(noted.is_none());
+        assert_eq!(total_subsidy, 0);
+        assert!(event_exists(crate::Event::PoolExitSubsidy(
+            ASSET_D,
+            small_amount,
+            CommonPoolEventParams { pool_id, who: ALICE },
+            large_amount,
+        )));
+    });
+}
+
+#[test]
 fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);

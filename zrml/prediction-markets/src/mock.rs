@@ -47,6 +47,7 @@ ord_parameter_types! {
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
+    pub const MinSubsidyPerAccount: Balance = BASE;
 }
 
 construct_runtime!(
@@ -239,6 +240,7 @@ impl zrml_swaps::Config for Runtime {
     type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;

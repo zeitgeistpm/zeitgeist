@@ -188,6 +188,11 @@ mod pallet {
                     if amount > subsidy {
                         real_amount = subsidy;
                     }
+                    // If the account would be left with less than the minimum subsidy per account,
+                    // then withdraw all their subsidy instead.
+                    if subsidy.saturating_sub(amount) < T::MinSubsidyPerAccount::get() {
+                        real_amount = subsidy;
+                    }
 
                     let missing = T::Shares::unreserve(base_asset, &who, real_amount);
                     transferred = real_amount.saturating_sub(missing);
@@ -394,6 +399,7 @@ mod pallet {
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be added to subsidy.
         #[pallet::weight(T::WeightInfo::pool_join_subsidy())]
+        #[frame_support::transactional]
         pub fn pool_join_subsidy(
             origin: OriginFor<T>,
             pool_id: PoolId,
@@ -413,15 +419,26 @@ mod pallet {
                 T::Shares::reserve(base_asset, &who, amount)?;
 
                 let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
-                let _ = <SubsidyProviders<T>>::mutate(&pool_id, &who, |user_subsidy| {
-                    if let Some(prev_val) = user_subsidy {
-                        *prev_val += amount;
-                    } else {
-                        *user_subsidy = Some(amount);
-                    }
+                <SubsidyProviders<T>>::try_mutate::<_, _, _, DispatchError, _>(
+                    &pool_id,
+                    &who,
+                    |user_subsidy| {
+                        if let Some(prev_val) = user_subsidy {
+                            *prev_val += amount;
+                        } else {
+                            // If the account adds subsidy for the first time, ensure that it's
+                            // larger than the minimum amount.
+                            ensure!(
+                                amount >= T::MinSubsidyPerAccount::get(),
+                                Error::<T>::InvalidSubsidyAmount
+                            );
+                            *user_subsidy = Some(amount);
+                        }
 
-                    pool.total_subsidy = Some(total_subsidy + amount);
-                });
+                        pool.total_subsidy = Some(total_subsidy + amount);
+                        Ok(())
+                    },
+                )?;
 
                 Self::deposit_event(Event::PoolJoinSubsidy(
                     base_asset,
@@ -675,6 +692,10 @@ mod pallet {
         #[pallet::constant]
         type MinSubsidy: Get<BalanceOf<Self>>;
 
+        /// The minimum amount of subsidy that each subsidy provider must contribute.
+        #[pallet::constant]
+        type MinSubsidyPerAccount: Get<BalanceOf<Self>>;
+
         #[pallet::constant]
         type MinWeight: Get<u128>;
 
@@ -734,6 +755,8 @@ mod pallet {
         InvalidWeightArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
+        /// Subsidy amount is too small.
+        InvalidSubsidyAmount,
         /// A transferal of funds out of a swaps pool was below a threshhold specified by the
         /// receiver.
         LimitOut,
