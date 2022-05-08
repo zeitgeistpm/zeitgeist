@@ -1043,6 +1043,38 @@ fn pool_join_subsidy_reserves_correct_values() {
 }
 
 #[test]
+fn pool_join_subsidy_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, 0),
+            crate::Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test]
 fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
