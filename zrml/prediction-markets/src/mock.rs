@@ -301,3 +301,21 @@ sp_api::mock_impl_runtime_apis! {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Config;
+
+    // We run this test to ensure that bonds are mutually non-equal (some of the tests in
+    // `tests.rs` require this to be true).
+    #[test]
+    fn test_bonds_are_pairwise_non_equal() {
+        assert_ne!(<Runtime as Config>::AdvisoryBond::get(), <Runtime as Config>::OracleBond::get());
+        assert_ne!(<Runtime as Config>::AdvisoryBond::get(), <Runtime as Config>::ValidityBond::get());
+        assert_ne!(<Runtime as Config>::AdvisoryBond::get(), <Runtime as Config>::DisputeBond::get());
+        assert_ne!(<Runtime as Config>::OracleBond::get(), <Runtime as Config>::ValidityBond::get());
+        assert_ne!(<Runtime as Config>::OracleBond::get(), <Runtime as Config>::DisputeBond::get());
+        assert_ne!(<Runtime as Config>::ValidityBond::get(), <Runtime as Config>::DisputeBond::get());
+    }
+}
