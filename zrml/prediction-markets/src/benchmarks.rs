@@ -249,9 +249,9 @@ benchmarks! {
             let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
 
-        let root = RawOrigin::Root.into();
+        let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(root)? }
+    }: { call.dispatch_bypass_filter(destroy_origin)? }
 
     admin_destroy_reported_market{
         // a = total accounts
@@ -264,9 +264,9 @@ benchmarks! {
 
         let c_u16 = c.saturated_into();
         let (caller, market_id) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
-        let root = RawOrigin::Root.into();
+        let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(root)? }
+    }: { call.dispatch_bypass_filter(destroy_origin)? }
 
     admin_move_market_to_closed {
         let (caller, market_id) = create_market_common::<T>(
@@ -310,14 +310,6 @@ benchmarks! {
         )?;
         let amount = BASE * 1_000;
     }: _(RawOrigin::Signed(caller), market_id, amount.saturated_into())
-
-    cancel_pending_market {
-        let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
-        )?;
-    }: _(RawOrigin::Signed(caller), market_id)
 
     create_categorical_market {
         let (caller, oracle, period, metadata, creation) =
