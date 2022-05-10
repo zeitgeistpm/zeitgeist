@@ -97,7 +97,7 @@ mod pallet {
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
+    pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -885,6 +885,7 @@ mod pallet {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.creation == MarketCreation::Advised, Error::<T>::OnlyAdvisedMarket);
             let creator = market.creator;
             let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                 &RESERVE_ID,
@@ -893,6 +894,8 @@ mod pallet {
             );
             // Slashes the imbalance.
             T::Slash::on_unbalanced(imbalance);
+            // Unreserves the OracleBond
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::OracleBond::get());
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketRejected(market_id));
             Self::deposit_event(Event::MarketDestroyed(market_id));
@@ -1213,6 +1216,8 @@ mod pallet {
         InvalidMarketStatus,
         /// An amount was illegally specified as zero.
         ZeroAmount,
+        /// It's not an advised market creation.
+        OnlyAdvisedMarket,
     }
 
     #[pallet::event]
