@@ -153,7 +153,9 @@ mod pallet {
             let outcome_assets = Self::outcome_assets(market_id, &market);
             let outcome_assets_amount = outcome_assets.len();
 
-            // Slash outstanding bonds
+            // Slash outstanding bonds; see
+            // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
+            // details.
             let slash_market_creator = |amount| {
                 CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, &market.creator, amount);
             };
