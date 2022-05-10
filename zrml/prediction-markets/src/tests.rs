@@ -715,15 +715,14 @@ fn it_resolves_a_disputed_market() {
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
-        // make sure rewards are right
+        // Make sure rewards are right:
         //
-        // slashed amounts
-        // ---------------------------
-        // - OracleBond: 50 * CENT
-        // - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
+        // Slashed amounts:
+        //     - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
+        //     - Alice's oracle bond: OracleBond::get()
         // Total: OracleBond::get() + DisputeBond::get() + DisputeFactor::get()
-        // Per each: ( OracleBond::get() + DisputeBond::get() + DisputeFactor::get()) / 2
-
+        //
+        // Charlie and Eve each receive half of the total slashed amount as bounty.
         let dave_reserved = DisputeBond::get() + DisputeFactor::get();
         let total_slashed = OracleBond::get() + dave_reserved;
 
