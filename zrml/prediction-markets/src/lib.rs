@@ -143,7 +143,6 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            // TODO(#486)
             T::DestroyOrigin::ensure_origin(origin)?;
 
             let mut total_accounts = 0usize;
@@ -152,6 +151,7 @@ mod pallet {
             let market_status = market.status;
             let outcome_assets = Self::outcome_assets(market_id, &market);
             let outcome_assets_amount = outcome_assets.len();
+            let market_account = Self::market_account(market_id);
 
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
@@ -171,26 +171,26 @@ mod pallet {
                 slash_market_creator(T::OracleBond::get());
             }
 
-            Self::clear_auto_resolve(&market_id)?;
-            T::MarketCommons::remove_market(&market_id)?;
-            Self::deposit_event(Event::MarketDestroyed(market_id));
-
-            let mut outcome_assets_iter = outcome_assets.into_iter();
-
-            // Delete market's outcome assets.
-            let mut manage_outcome_asset = |asset: Asset<_>| -> usize {
+            // Delete market's outcome assets, clear market and delete pool if necessary.
+            let mut destroy_asset = |asset: Asset<_>| -> usize {
                 let (total_accounts, accounts) = T::Shares::accounts_by_currency_id(asset);
                 share_accounts = share_accounts.saturating_add(accounts.len());
                 T::Shares::destroy_all(asset, accounts.iter().cloned());
                 total_accounts
             };
+            for asset in outcome_assets.into_iter() {
+                total_accounts = destroy_asset(asset);
+            }
+            CurrencyOf::<T>::slash(&market_account, CurrencyOf::<T>::free_balance(&market_account));
+            if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
+                T::Swaps::destroy_pool(pool_id)?;
+                T::MarketCommons::remove_market_pool(&market_id)?;
+            }
 
-            if let Some(first_asset) = outcome_assets_iter.next() {
-                total_accounts = manage_outcome_asset(first_asset);
-            }
-            for asset in outcome_assets_iter {
-                let _ = manage_outcome_asset(asset);
-            }
+            Self::clear_auto_resolve(&market_id)?;
+            T::MarketCommons::remove_market(&market_id)?;
+
+            Self::deposit_event(Event::MarketDestroyed(market_id));
 
             // Weight correction
             if market_status == MarketStatus::Reported {

@@ -1422,6 +1422,56 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
     });
 }
 
+#[test]
+fn admin_destroy_market_correctly_cleans_up_accounts() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Block(0..42),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![amount, amount, amount],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+        let market_id = 0;
+        let pool_id = 0;
+        let pool_account = Swaps::pool_account_id(pool_id);
+        let market_account = PredictionMarkets::market_account(market_id);
+        let alice_balances_before = vec![
+            Currency::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE),
+            Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE),
+            Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE),
+            Currency::free_balance(Asset::Ztg, &ALICE),
+        ];
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::Ztg, &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &market_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
+        assert_eq!(Currency::free_balance(Asset::Ztg, &market_account), 0);
+        assert_eq!(
+            Currency::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE),
+            alice_balances_before[0]
+        );
+        assert_eq!(
+            Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE),
+            alice_balances_before[1]
+        );
+        assert_eq!(
+            Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE),
+            alice_balances_before[2]
+        );
+        assert_eq!(Currency::free_balance(Asset::Ztg, &ALICE), alice_balances_before[3]);
+    });
+}
+
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
