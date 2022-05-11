@@ -1142,6 +1142,9 @@ mod pallet {
         #[pallet::constant]
         type MaxDisputes: Get<u32>;
 
+        /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
+        type MaxMarketPeriod: Get<u64>;
+
         /// Shares
         type Shares: ZeitgeistMultiReservableCurrency<
             Self::AccountId,

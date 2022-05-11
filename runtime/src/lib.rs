@@ -878,6 +878,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
+    type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;

@@ -24,7 +24,7 @@ use zeitgeist_primitives::{
         MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxSubsidyPeriod,
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
         MinSubsidyPeriod, MinWeight, MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod,
-        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, ValidityBond, BASE,
+        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, ValidityBond, BASE, MaxMarketPeriod
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -89,6 +89,7 @@ impl crate::Config for Runtime {
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
+    type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
