@@ -782,11 +782,12 @@ mod pallet {
     {
         /// Share holder rewards were distributed. \[pool_id, num_accounts_rewarded, amount\]
         DistributeShareHolderRewards(PoolId, u64, BalanceOf<T>),
-        /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount\]
+        /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount, pool_account\]
         PoolCreate(
             CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
             Pool<BalanceOf<T>, T::MarketId>,
             BalanceOf<T>,
+            T::AccountId,
         ),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
@@ -1379,6 +1380,7 @@ mod pallet {
                 CommonPoolEventParams { pool_id: next_pool_id, who },
                 pool,
                 if scoring_rule == ScoringRule::CPMM { amount } else { <BalanceOf<T>>::zero() },
+                pool_account,
             ));
 
             Ok(next_pool_id)

@@ -436,13 +436,14 @@ mod pallet {
                 status,
             };
             let market_id = T::MarketCommons::push_market(market.clone())?;
+            let market_account = Self::market_account(market_id);
             let mut extra_weight = 0;
 
             if market.status == MarketStatus::CollectingSubsidy {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            Self::deposit_event(Event::MarketCreated(market_id, market));
+            Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
             Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
         }
@@ -616,13 +617,14 @@ mod pallet {
                 scoring_rule,
             };
             let market_id = T::MarketCommons::push_market(market.clone())?;
+            let market_account = Self::market_account(market_id);
             let mut extra_weight = 0;
 
             if market.status == MarketStatus::CollectingSubsidy {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            Self::deposit_event(Event::MarketCreated(market_id, market));
+            Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
             Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
         }
@@ -1217,8 +1219,6 @@ mod pallet {
         MarketIsNotReported,
         /// A resolved market was expected.
         MarketIsNotResolved,
-        /// The market is not reported on.
-        MarketNotReported,
         /// The point in time when the market becomes active is too soon.
         MarketStartTooSoon,
         /// The point in time when the market becomes active is too late.
@@ -1259,8 +1259,12 @@ mod pallet {
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
-        /// A market has been created \[market_id, creator\]
-        MarketCreated(MarketIdOf<T>, Market<T::AccountId, T::BlockNumber, MomentOf<T>>),
+        /// A market has been created \[market_id, market_account, creator\]
+        MarketCreated(
+            MarketIdOf<T>,
+            T::AccountId,
+            Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        ),
         /// A market has been destroyed. \[market_id\]
         MarketDestroyed(MarketIdOf<T>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
@@ -1639,7 +1643,13 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &market.creator, T::ValidityBond::get());
+            if market.creation == MarketCreation::Permissionless {
+                CurrencyOf::<T>::unreserve_named(
+                    &RESERVE_ID,
+                    &market.creator,
+                    T::ValidityBond::get(),
+                );
+            }
 
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
@@ -2054,13 +2064,9 @@ mod pallet {
             num_disputes: u32,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
-            ensure!(market.report.is_some(), Error::<T>::MarketNotReported);
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             Self::ensure_outcome_matches_market_type(market, outcome)?;
-            Self::ensure_can_not_dispute_the_same_outcome(
-                disputes,
-                (&market.report.as_ref()).ok_or(Error::<T>::MarketNotReported)?,
-                outcome,
-            )?;
+            Self::ensure_can_not_dispute_the_same_outcome(disputes, report, outcome)?;
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
             Ok(())
         }

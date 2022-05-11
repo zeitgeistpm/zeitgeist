@@ -1,8 +1,12 @@
 # v0.3.2
 
+- Added a field for `market_account` to `MarketCreated` event and `pool_account`
+  field to `PoolCreate` event.
+
 - Changed all call parameters of type `u16`, `BalanceOf`, `MarketId` and `PoolId`
   in extrinsics to
   [compact encoding](https://docs.substrate.io/v3/advanced/scale-codec/#compactgeneral-integers).
+
 - Removed the `cancel_pending_market` function and the corresponding event
   `MarketCancelled`.
 
