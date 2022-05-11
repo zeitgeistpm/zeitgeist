@@ -110,7 +110,7 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::vote())]
         pub fn vote(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;

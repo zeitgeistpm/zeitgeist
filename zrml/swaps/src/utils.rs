@@ -47,6 +47,7 @@ where
         bound: p.bound,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred: asset_amount,
+        pool_amount,
     });
 
     Ok(())
@@ -82,6 +83,7 @@ where
         bound: p.bound,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred: asset_amount,
+        pool_amount,
     });
 
     Ok(())
@@ -124,6 +126,7 @@ where
         bounds: p.asset_bounds,
         cpep: CommonPoolEventParams { pool_id: p.pool_id, who: p.who },
         transferred,
+        pool_amount: p.pool_amount,
     });
 
     Ok(())

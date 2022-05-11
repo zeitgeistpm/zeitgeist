@@ -80,7 +80,7 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::set_per_block_distribution())]
         pub fn set_per_block_distribution(
             origin: OriginFor<T>,
-            per_block_distribution: BalanceOf<T>,
+            #[pallet::compact] per_block_distribution: BalanceOf<T>,
         ) -> DispatchResult {
             let _ = ensure_root(origin)?;
             <PerBlockIncentive<T>>::put(per_block_distribution);

@@ -2,7 +2,7 @@
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-traits = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
+orml-traits = { default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "2.0.0" }
 sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -16,8 +16,8 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 # Mock
 
-orml-currencies = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
-orml-tokens = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
+orml-currencies = { git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
+orml-tokens = { git = "https://github.com/PureStake/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
@@ -71,4 +71,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets"
-version = "0.3.0"
+version = "0.3.1"
