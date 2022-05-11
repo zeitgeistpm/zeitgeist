@@ -372,8 +372,8 @@ mod pallet {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
 
-            // Require sha3-384 as multihash. TODO The irrefutable `if let` is a workaround for a
-            // compiler error. Link an issue for this!
+            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
+            // for a compiler error. Link an issue for this!
             #[allow(irrefutable_let_patterns)]
             let multihash =
                 if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
@@ -557,8 +557,8 @@ mod pallet {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
 
-            // Require sha3-384 as multihash. TODO The irrefutable `if let` is a workaround for a
-            // compiler error. Link an issue for this!
+            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
+            // for a compiler error. Link an issue for this!
             #[allow(irrefutable_let_patterns)]
             let multihash =
                 if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
