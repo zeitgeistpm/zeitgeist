@@ -47,6 +47,45 @@ const _105: u128 = 105 * BASE;
 const _10000: u128 = 10000 * BASE;
 
 #[test]
+fn destroy_pool_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, true);
+        assert_noop!(Swaps::destroy_pool(42), crate::Error::<Runtime>::PoolDoesNotExist);
+    });
+}
+
+#[test]
+fn destroy_pool_correctly_cleans_up_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        let alice_balance_before = [
+            Currencies::free_balance(ASSET_A, &ALICE),
+            Currencies::free_balance(ASSET_B, &ALICE),
+            Currencies::free_balance(ASSET_C, &ALICE),
+            Currencies::free_balance(ASSET_D, &ALICE),
+        ];
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        assert!(matches!(
+            Swaps::pool_by_id(pool_id).unwrap_err(),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        ));
+        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
+    });
+}
+
+#[test]
+fn destroy_pool_emits_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        assert!(event_exists(crate::Event::PoolDestroyed(pool_id)));
+    });
+}
+
+#[test]
 fn allows_the_full_user_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
@@ -1505,45 +1544,6 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
             ),
             crate::Error::<Runtime>::MaxTotalWeight,
         );
-    });
-}
-
-#[test]
-fn destroy_pool_fails_if_pool_does_not_exist() {
-    ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(Swaps::destroy_pool(42), crate::Error::<Runtime>::PoolDoesNotExist);
-    });
-}
-
-#[test]
-fn destroy_pool_correctly_cleans_up_pool() {
-    ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool(ScoringRule::CPMM, true);
-        let pool_id = 0;
-        let alice_balance_before = [
-            Currencies::free_balance(ASSET_A, &ALICE),
-            Currencies::free_balance(ASSET_B, &ALICE),
-            Currencies::free_balance(ASSET_C, &ALICE),
-            Currencies::free_balance(ASSET_D, &ALICE),
-        ];
-        assert_ok!(Swaps::destroy_pool(pool_id));
-        assert!(matches!(
-            Swaps::pool_by_id(pool_id).unwrap_err(),
-            crate::Error::<Runtime>::PoolDoesNotExist
-        ));
-        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
-    });
-}
-
-#[test]
-fn destroy_pool_emits_correct_event() {
-    ExtBuilder::default().build().execute_with(|| {
-        frame_system::Pallet::<Runtime>::set_block_number(1);
-        create_initial_pool(ScoringRule::CPMM, true);
-        let pool_id = 0;
-        assert_ok!(Swaps::destroy_pool(pool_id));
-        assert!(event_exists(crate::Event::PoolDestroyed(pool_id)));
     });
 }
 

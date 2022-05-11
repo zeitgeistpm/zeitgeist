@@ -67,6 +67,350 @@ fn simple_create_scalar_market<T: crate::Config>(
 }
 
 #[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_collecting_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            100..200,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
+        // that no free funds are slashed.
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_insufficient_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            100..200,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        run_to_block(150);
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9000); // Wait until market resolves
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_collecting_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            100..200,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_insufficient_subsidy() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            100..200,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        run_to_block(150);
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_active() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_reported() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        run_to_block(2);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9000); // Wait until market resolves
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_cleans_up_accounts() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Block(0..42),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![amount, amount, amount],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+        let market_id = 0;
+        let pool_id = 0;
+        let pool_account = Swaps::pool_account_id(pool_id);
+        let market_account = PredictionMarkets::market_account(market_id);
+        let alice_balances_before = vec![
+            Currency::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE),
+            Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE),
+            Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE),
+            Currency::free_balance(Asset::Ztg, &ALICE),
+        ];
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::Ztg, &pool_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &market_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
+        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
+        assert_eq!(Currency::free_balance(Asset::Ztg, &market_account), 0);
+        assert_eq!(
+            Currency::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE),
+            alice_balances_before[0]
+        );
+        assert_eq!(
+            Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE),
+            alice_balances_before[1]
+        );
+        assert_eq!(
+            Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE),
+            alice_balances_before[2]
+        );
+        assert_eq!(Currency::free_balance(Asset::Ztg, &ALICE), alice_balances_before[3]);
+    });
+}
+
+#[test]
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market::<Runtime>(
@@ -1126,350 +1470,6 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         assert_ok!(Swaps::pool_exit(Origin::signed(FRED), 0, BASE * 100, vec![0, 0]));
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
     })
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_permissionless_market_collecting_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            100..200,
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        );
-        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
-        // that no free funds are slashed.
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_permissionless_market_insufficient_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            100..200,
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        );
-        run_to_block(150);
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        run_to_block(2);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        run_to_block(2);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        run_to_block(2);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        run_to_block(9000); // Wait until market resolves
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_advised_market_collecting_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            100..200,
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        );
-        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_advised_market_insufficient_subsidy() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            100..200,
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        );
-        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        run_to_block(150);
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_advised_market_active() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_advised_market_reported() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        run_to_block(2);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        run_to_block(2);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        assert_ok!(PredictionMarkets::dispute(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
-    ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            0..1,
-            ScoringRule::CPMM,
-        );
-        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        run_to_block(2);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-        run_to_block(9000); // Wait until market resolves
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(balance_free_before_alice, balance_free_after_alice);
-    });
-}
-
-#[test]
-fn admin_destroy_market_correctly_cleans_up_accounts() {
-    ExtBuilder::default().build().execute_with(|| {
-        let amount = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
-        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
-            Origin::signed(ALICE),
-            ALICE,
-            MarketPeriod::Block(0..42),
-            gen_metadata(50),
-            MarketType::Categorical(3),
-            MarketDisputeMechanism::SimpleDisputes,
-            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
-            vec![amount, amount, amount],
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
-        ));
-        let market_id = 0;
-        let pool_id = 0;
-        let pool_account = Swaps::pool_account_id(pool_id);
-        let market_account = PredictionMarkets::market_account(market_id);
-        let alice_balances_before = vec![
-            Currency::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE),
-            Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE),
-            Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE),
-            Currency::free_balance(Asset::Ztg, &ALICE),
-        ];
-        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::Ztg, &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &market_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
-        assert_eq!(Currency::free_balance(Asset::Ztg, &market_account), 0);
-        assert_eq!(
-            Currency::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE),
-            alice_balances_before[0]
-        );
-        assert_eq!(
-            Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE),
-            alice_balances_before[1]
-        );
-        assert_eq!(
-            Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE),
-            alice_balances_before[2]
-        );
-        assert_eq!(Currency::free_balance(Asset::Ztg, &ALICE), alice_balances_before[3]);
-    });
 }
 
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
