@@ -1611,7 +1611,13 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &market.creator, T::ValidityBond::get());
+            if market.creation == MarketCreation::Permissionless {
+                CurrencyOf::<T>::unreserve_named(
+                    &RESERVE_ID,
+                    &market.creator,
+                    T::ValidityBond::get(),
+                );
+            }
 
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
