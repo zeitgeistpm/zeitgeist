@@ -206,27 +206,8 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 }
 
 #[test]
-fn it_does_not_allow_to_reject_markets_on_permissionless_markets() {
-    ExtBuilder::default().build().execute_with(|| {
-        // Creates an permissionless market.
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..1,
-            ScoringRule::CPMM,
-        );
-
-        // Don't allow the Advisory Committee to reject a permissionless market.
-        assert_noop!(
-            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
-            Error::<Runtime>::OnlyAdvisedMarket
-        );
-    });
-}
-
-#[test]
 fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
     ExtBuilder::default().build().execute_with(|| {
-        // Creates an advised market.
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Advised,
             0..1,
@@ -239,23 +220,12 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
 
-        // make sure it's in status proposed
-        let market = MarketCommons::market(&0);
-        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
-
         let balance_reserved_before_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
 
-        // Now it should work from SUDO
         assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
-
-        assert_noop!(
-            MarketCommons::market(&0),
-            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
-        );
 
         // AdvisoryBond gets slashed after reject_market
         // OracleBond gets unreserved after reject_market
-        // need to non-equal to see the difference between AdvisoryBond and OracleBond
         let balance_reserved_after_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
         assert_eq!(
             balance_reserved_after_alice,

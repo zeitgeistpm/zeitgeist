@@ -885,16 +885,13 @@ mod pallet {
             T::ApprovalOrigin::ensure_origin(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.creation == MarketCreation::Advised, Error::<T>::OnlyAdvisedMarket);
             let creator = market.creator;
             let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                 &RESERVE_ID,
                 &creator,
                 T::AdvisoryBond::get(),
             );
-            // Slashes the imbalance.
             T::Slash::on_unbalanced(imbalance);
-            // Unreserves the OracleBond
             CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::OracleBond::get());
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketRejected(market_id));
@@ -1216,8 +1213,6 @@ mod pallet {
         InvalidMarketStatus,
         /// An amount was illegally specified as zero.
         ZeroAmount,
-        /// It's not an advised market creation.
-        OnlyAdvisedMarket,
     }
 
     #[pallet::event]
