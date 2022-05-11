@@ -4,8 +4,6 @@
 //!
 //! ## Overview
 //!
-//! TODO
-//!
 //! ## Interface
 //!
 //! ### Dispatches
@@ -181,8 +179,8 @@ mod pallet {
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
             side: OrderSide,
-            amount: BalanceOf<T>,
-            price: BalanceOf<T>,
+            #[pallet::compact] amount: BalanceOf<T>,
+            #[pallet::compact] price: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
