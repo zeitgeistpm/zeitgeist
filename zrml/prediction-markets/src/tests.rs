@@ -20,9 +20,6 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
-use zrml_prediction_markets::RESERVE_ID;
-
-const SENTINEL_AMOUNT: u128 = BASE;
 
 const SENTINEL_AMOUNT: u128 = BASE;
 
