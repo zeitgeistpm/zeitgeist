@@ -1512,7 +1512,7 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
 fn destroy_pool_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(Swaps::destroy_pool(1), crate::Error::<Runtime>::PoolDoesNotExist);
+        assert_noop!(Swaps::destroy_pool(42), crate::Error::<Runtime>::PoolDoesNotExist);
     });
 }
 
