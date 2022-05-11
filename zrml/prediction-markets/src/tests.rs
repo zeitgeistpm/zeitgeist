@@ -1,26 +1,27 @@
 #![cfg(all(feature = "mock", test))]
 
-use crate::{mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock};
+use crate::{
+    mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, RESERVE_ID,
+};
 use core::ops::Range;
 use frame_support::{
     assert_err, assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
-    traits::Get,
+    traits::{Get, NamedReservableCurrency},
 };
 
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::{
-        AdvisoryBond, DisputeBond, DisputeFactor, OracleBond, ValidityBond, BASE, CENT,
-        MILLISECS_PER_BLOCK,
-    },
+    constants::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
+
+const SENTINEL_AMOUNT: u128 = BASE;
 
 fn gen_metadata(byte: u8) -> MultiHash {
     let mut metadata = [byte; 50];
@@ -89,6 +90,38 @@ fn it_creates_binary_markets() {
         // Make sure that the market id has been incrementing
         let market_id = MarketCommons::latest_market_id().unwrap();
         assert_eq!(market_id, 1);
+    });
+}
+
+#[test]
+fn create_categorical_market_deposits_the_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let market_account = PredictionMarkets::market_account(market_id);
+        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
+    });
+}
+
+#[test]
+fn create_scalar_market_deposits_the_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        simple_create_scalar_market::<Runtime>(
+            MarketCreation::Permissionless,
+            1..2,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id).unwrap();
+        let market_account = PredictionMarkets::market_account(market_id);
+        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
     });
 }
 
@@ -702,29 +735,29 @@ fn it_resolves_a_disputed_market() {
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
-        // make sure rewards are right
+        // Make sure rewards are right:
         //
-        // slashed amounts
-        // ---------------------------
-        // - OracleBond: 50 * CENT
-        // - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
-        // Total: 50 * CENT + DisputeBond::get() + DisputeFactor::get()
-        // Per each: 25 * CENT + (DisputeBond::get() + DisputeFactor::get()) / 2
-
+        // Slashed amounts:
+        //     - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
+        //     - Alice's oracle bond: OracleBond::get()
+        // Total: OracleBond::get() + DisputeBond::get() + DisputeFactor::get()
+        //
+        // Charlie and Eve each receive half of the total slashed amount as bounty.
         let dave_reserved = DisputeBond::get() + DisputeFactor::get();
+        let total_slashed = OracleBond::get() + dave_reserved;
 
         let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE + 25 * CENT + dave_reserved / 2);
+        assert_eq!(charlie_balance, 1_000 * BASE + total_slashed / 2);
         let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved_2, 0);
         let eve_balance = Balances::free_balance(&EVE);
-        assert_eq!(eve_balance, 1_000 * BASE + 25 * CENT + dave_reserved / 2);
+        assert_eq!(eve_balance, 1_000 * BASE + total_slashed / 2);
 
         let dave_balance = Balances::free_balance(&DAVE);
         assert_eq!(dave_balance, 1_000 * BASE - dave_reserved);
 
         let alice_balance = Balances::free_balance(&ALICE);
-        assert_eq!(alice_balance, 1_000 * BASE - 50 * CENT);
+        assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
 
         // bob kinda gets away scot-free since Alice is held responsible
         // for her designated reporter
@@ -1114,7 +1147,167 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
 }
 
 #[test]
-fn report_failss_on_market_state_proposed() {
+fn approve_market_correctly_unreserves_advisory_bond() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        // Reserve a sentinel amount to check that we don't unreserve too much.
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(
+            Balances::reserved_balance(&ALICE),
+            SENTINEL_AMOUNT + AdvisoryBond::get() + OracleBond::get()
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + AdvisoryBond::get());
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_oracle_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        // Reserve a sentinel amount to check that we don't unreserve too much.
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(
+            Balances::reserved_balance(&ALICE),
+            SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
+        );
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(150);
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::free_balance(&ALICE),
+            alice_balance_before + ValidityBond::get() + OracleBond::get()
+        );
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_outsider_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        // Reserve a sentinel amount to check that we don't unreserve too much.
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(
+            Balances::reserved_balance(&ALICE),
+            SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
+        );
+        run_to_block(9000);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9100);
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        // Check that validity bond didn't get slashed, but oracle bond did
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_oracle_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        // Reserve a sentinel amount to check that we don't unreserve too much.
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(150);
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        // Check that nothing got slashed
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
+    });
+}
+
+#[test]
+fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_outsider_report()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Advised,
+            2,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        // Reserve a sentinel amount to check that we don't unreserve too much.
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
+        run_to_block(9000);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(9100);
+        // Check that oracle bond got slashed
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
+    });
+}
+
+#[test]
+fn report_fails_on_market_state_proposed() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_categorical_market(
             Origin::signed(ALICE),
