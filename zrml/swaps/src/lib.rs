@@ -1397,7 +1397,7 @@ mod pallet {
             T::Shares::destroy_all(pool_share_id, liquidity_providers.iter().cloned());
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
-            // TODO (#603): fix weight calculation
+            // TODO(#603): fix weight calculation
             Ok(0u64)
         }
 
