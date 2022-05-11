@@ -734,15 +734,14 @@ impl InstanceFilter<Call> for ProxyType {
     fn filter(&self, c: &Call) -> bool {
         match self {
             ProxyType::Any => true,
-            ProxyType::NonTransfer => matches!(
-                c,
-                Call::Balances(..)
-            ),
+            ProxyType::NonTransfer => matches!(c, Call::Balances(..)),
             ProxyType::Governance => matches!(
                 c,
-                Call::Democracy(..) |
-                    Call::Council(..) | Call::TechnicalCommittee(..) |
-                    Call:: AdvisoryCommittee(..) | Call::Treasury(..)
+                Call::Democracy(..)
+                    | Call::Council(..)
+                    | Call::TechnicalCommittee(..)
+                    | Call::AdvisoryCommittee(..)
+                    | Call::Treasury(..)
             ),
             #[cfg(feature = "parachain")]
             ProxyType::Staking => matches!(c, Call::ParachainStaking(..)),
