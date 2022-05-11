@@ -30,6 +30,7 @@ zrml-swaps = { optional = true, path = "../swaps" }
 
 [dev-dependencies]
 zrml-prediction-markets = { features = ["mock"], path = "." }
+test-case = "2.0.2"
 
 [features]
 default = ["std"]
