@@ -286,6 +286,124 @@ fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
 }
 
 #[test]
+fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_categorical_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(3..3),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                3,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test]
+fn create_categorical_market_fails_if_market_begin_is_greater_than_end() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_categorical_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(2..1),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                3,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test]
+fn create_categorical_market_fails_if_market_end_exceeds_limit() {
+    ExtBuilder::default().build().execute_with(|| {
+        let begin = 0;
+        let end = <Runtime as Config>::MaxMarketPeriod::get() + 1;
+        assert_noop!(
+            PredictionMarkets::create_categorical_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(begin..end),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                3,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test]
+fn create_scalar_market_fails_if_market_begin_is_equal_to_end() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_scalar_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(3..3),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                123...=456,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test]
+fn create_scalar_market_fails_if_market_begin_is_greater_than_end() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_scalar_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(2..1),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                123..=456,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test]
+fn create_scalar_market_fails_if_market_end_exceeds_limit() {
+    ExtBuilder::default().build().execute_with(|| {
+        let begin = 0;
+        let end = <Runtime as Config>::MaxMarketPeriod::get() + 1;
+        assert_noop!(
+            PredictionMarkets::create_scalar_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(begin..end),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                123..=456,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test]
 fn it_does_not_allow_zero_amounts_in_buy_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market::<Runtime>(
