@@ -1216,6 +1216,8 @@ mod pallet {
         InvalidMarketStatus,
         /// An amount was illegally specified as zero.
         ZeroAmount,
+        /// Market period is faulty (exceeds maximum, or is empty)
+        InvalidMarketPeriod,
     }
 
     #[pallet::event]
