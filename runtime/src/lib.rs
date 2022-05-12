@@ -282,6 +282,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type VersionWrapper = ();
+    type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
     type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
 
@@ -1043,6 +1044,7 @@ impl_runtime_apis! {
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
+                    list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
                     list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                     list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                     list_benchmark!(list, extra, parachain_staking, ParachainStaking);
@@ -1115,6 +1117,7 @@ impl_runtime_apis! {
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
+                    add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
                     add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                     add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                     add_benchmark!(params, batches, parachain_staking, ParachainStaking);
