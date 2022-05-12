@@ -236,6 +236,42 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 }
 
 #[test]
+fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+
+        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
+        // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+
+        let balance_reserved_before_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+
+        // AdvisoryBond gets slashed after reject_market
+        // OracleBond gets unreserved after reject_market
+        let balance_reserved_after_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+        assert_eq!(
+            balance_reserved_after_alice,
+            balance_reserved_before_alice
+                - <Runtime as Config>::OracleBond::get()
+                - <Runtime as Config>::AdvisoryBond::get()
+        );
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(
+            balance_free_after_alice,
+            balance_free_before_alice + <Runtime as Config>::OracleBond::get()
+        );
+    });
+}
+
+#[test]
 fn it_allows_to_buy_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);

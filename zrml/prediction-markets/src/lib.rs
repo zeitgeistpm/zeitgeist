@@ -97,7 +97,7 @@ mod pallet {
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
+    pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -893,8 +893,8 @@ mod pallet {
                 &creator,
                 T::AdvisoryBond::get(),
             );
-            // Slashes the imbalance.
             T::Slash::on_unbalanced(imbalance);
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::OracleBond::get());
             T::MarketCommons::remove_market(&market_id)?;
             Self::deposit_event(Event::MarketRejected(market_id));
             Self::deposit_event(Event::MarketDestroyed(market_id));
