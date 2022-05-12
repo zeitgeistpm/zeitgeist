@@ -1021,7 +1021,7 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
         // Create advised categorical market using Rikiddo.
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Advised,
-            1337..1337,
+            1337..1338,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         );
         let market_id = 0;
