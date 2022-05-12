@@ -23,6 +23,11 @@ pub enum Subcommand {
     #[clap(name = "benchmark", about = "Benchmark runtime pallets.")]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
+    /// Sub command for benchmarking the storage speed.
+    #[cfg(feature = "runtime-benchmarks")]
+    #[clap(name = "benchmark-storage", about = "Benchmark storage speed.")]
+    BenchmarkStorage(frame_benchmarking_cli::StorageCmd),
+
     /// Build a chain specification.
     BuildSpec(sc_cli::BuildSpecCmd),
 

@@ -39,6 +39,17 @@ pub fn run() -> sc_cli::Result<()> {
                     .into())
             }
         }
+        #[cfg(feature = "runtime-benchmarks")]
+        Some(Subcommand::BenchmarkStorage(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            runner.async_run(|config| {
+                let PartialComponents { client, task_manager, backend, .. } = new_partial(&config)?;
+                let db = backend.expose_db();
+                let storage = backend.expose_storage();
+
+                Ok((cmd.run(config, client, db, storage), task_manager))
+            })
+        },
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
