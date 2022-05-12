@@ -124,7 +124,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Destroy a market, including its outcome assets.
+        /// Destroy a market, including its outcome assets, market account and pool account.
         ///
         /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
         /// exception.
