@@ -38,9 +38,7 @@
 //!
 //! #### Admin Dispatches
 //!
-//! The administrative dispatches are used to perform admin functions on chain. Currently, the
-//! admin functions can only be called by the `CloseOrigin`, `ResolveOrigin` and
-//! the `DestroyOrigin`.
+//! The administrative dispatches are used to perform admin functions on chain:
 //!
 //! - `admin_destroy_market` - Destroys a market and all related assets, regardless of its state.
 //!   Can only be called by the `DestroyOrigin`.
@@ -49,11 +47,15 @@
 //! - `admin_move_market_to_resolved` - Immediately moves a market that is `Reported` or `Disputed`
 //!   to resolved. Can only be called by `ResolveOrigin`.
 //!
-//! #### `ApprovalOrigin` Dispatches
-//!
-//! Those origins are mainly minimum vote proportions from the advisory committee, the on-chain
+//! The origins from which the admin functions are called (`CloseOrigin`, `DestroyOrigin`,
+//! `ResolveOrigin`) are mainly minimum vote proportions from the advisory committee, the on-chain
 //! governing body of Zeitgeist that is responsible for maintaining a list of high quality markets
 //! and slash low quality markets.
+//!
+//! #### `ApprovalOrigin` Dispatches
+//!
+//! Users can also propose markets, which are subject to approval or rejection by the Advisory
+//! Committee. The `AdvisoryOrigin` calls the following dispatches:
 //!
 //! - `approve_market` - Approves a `Proposed` market that is waiting approval from the Advisory
 //!   Committee.
@@ -127,7 +129,7 @@ mod pallet {
         /// Destroy a market, including its outcome assets, market account and pool account.
         ///
         /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
-        /// exception.
+        /// exception. Can currently only be used for destroying CPMM markets.
         #[pallet::weight(
             T::WeightInfo::admin_destroy_reported_market(
                 900,
@@ -143,11 +145,13 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#618): Not implemented for Rikiddo!
             T::DestroyOrigin::ensure_origin(origin)?;
 
             let mut total_accounts = 0usize;
             let mut share_accounts = 0usize;
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             let market_status = market.status;
             let outcome_assets = Self::outcome_assets(market_id, &market);
             let outcome_assets_amount = outcome_assets.len();
