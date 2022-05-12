@@ -1399,7 +1399,7 @@ mod pallet {
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
             // TODO(#603): Fix weight calculation.
-            Ok(0u64)
+            Ok(50_000_000_000)
         }
 
         /// All supporters will receive their reserved funds back and the pool is destroyed.
