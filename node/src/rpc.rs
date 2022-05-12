@@ -41,7 +41,7 @@ where
 {
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
     use substrate_frame_rpc_system::{FullSystem, SystemApi};
-    
+
     let mut io = jsonrpc_core::IoHandler::default();
     let FullDeps { client, pool, deny_unsafe } = deps;
 
