@@ -57,7 +57,7 @@ fn destroy_pool_fails_if_pool_does_not_exist() {
 #[test]
 fn destroy_pool_correctly_cleans_up_pool() {
     ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool(ScoringRule::CPMM, true);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         let pool_id = 0;
         let alice_balance_before = [
             Currencies::free_balance(ASSET_A, &ALICE),
@@ -67,9 +67,10 @@ fn destroy_pool_correctly_cleans_up_pool() {
         ];
         assert_ok!(Swaps::destroy_pool(pool_id));
         assert!(matches!(
-            Swaps::pool_by_id(pool_id).unwrap_err(),
-            crate::Error::<Runtime>::PoolDoesNotExist
+            Swaps::pool_by_id(pool_id),
+            Err(crate::Error::<Runtime>::PoolDoesNotExist)
         ));
+        // Ensure that funds _outside_ of the pool are not impacted!
         assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
     });
 }
