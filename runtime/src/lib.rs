@@ -31,7 +31,6 @@ use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_api::impl_runtime_apis;
 use sp_core::{
     crypto::KeyTypeId,
-    u32_trait::{_1, _2, _3, _4},
     OpaqueMetadata,
 };
 use sp_runtime::{
@@ -105,58 +104,58 @@ type TechnicalCommitteeMembershipInstance = pallet_membership::Instance3;
 // Council vote proportions
 // At least 50%
 type EnsureRootOrHalfCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
 
 // At least 66%
 type EnsureRootOrTwoThirdsCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
 
 // At least 75%
 type EnsureRootOrThreeFourthsCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_3, _4, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
 
 // At least 100%
 type EnsureRootOrAllCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
 
 // Technical committee vote proportions
 // At least 50%
 #[cfg(feature = "parachain")]
 type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 2>,
 >;
 
 // At least 66%
 type EnsureRootOrTwoThirdsTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 2, 3>,
 >;
 
 // At least 100%
 type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
 >;
 
 // Advisory committee vote proportions
 // At least 50%
 type EnsureRootOrHalfAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _2, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
 >;
 
 // Technical committee vote proportions
 // At least 66%
 type EnsureRootOrTwoThirdsAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_2, _3, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 2, 3>,
 >;
 
 // At least 100%
 type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _1, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 1>,
 >;
 
 // Construct runtime
