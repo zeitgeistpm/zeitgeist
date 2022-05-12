@@ -1508,7 +1508,7 @@ mod pallet {
         ) -> DispatchResult {
             let verify = |start: u64, end: u64| -> DispatchResult {
                 ensure!(start < end, Error::<T>::InvalidMarketPeriod);
-                ensure!(end < T::MaxMarketPeriod::get(), Error::<T>::InvalidMarketPeriod);
+                ensure!(end <= T::MaxMarketPeriod::get(), Error::<T>::InvalidMarketPeriod);
                 Ok(())
             };
             match period {
