@@ -16,9 +16,9 @@ mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
-#[cfg(feature = "parachain")]
-pub use parachain_params::*;
 pub use parameters::*;
+#[cfg(feature = "parachain")]
+pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
@@ -29,10 +29,7 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_api::impl_runtime_apis;
-use sp_core::{
-    crypto::KeyTypeId,
-    OpaqueMetadata,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},

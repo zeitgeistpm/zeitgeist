@@ -1,8 +1,11 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for cumulus_pallet_xcmp_queue (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
