@@ -1386,7 +1386,6 @@ mod pallet {
             Ok(next_pool_id)
         }
 
-        /// Destroy pool, slash pool account and destroy pool shares.
         fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
@@ -1399,7 +1398,7 @@ mod pallet {
             T::Shares::destroy_all(pool_share_id, liquidity_providers.iter().cloned());
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
-            // TODO(#603): fix weight calculation
+            // TODO(#603): Fix weight calculation.
             Ok(0u64)
         }
 
