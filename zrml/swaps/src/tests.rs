@@ -189,10 +189,12 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_C).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_D).unwrap(), _2);
 
+        let pool_account = Swaps::pool_account_id(0);
         assert!(event_exists(crate::Event::PoolCreate(
             CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
             pool,
             <Runtime as Config>::MinLiquidity::get(),
+            pool_account,
         )));
     });
 }
