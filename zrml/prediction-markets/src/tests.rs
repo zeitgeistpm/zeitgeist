@@ -1095,37 +1095,6 @@ fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
 }
 
 #[test]
-fn market_resolve_does_not_hold_liquidity_withdraw() {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
-            Origin::signed(ALICE),
-            BOB,
-            MarketPeriod::Block(0..100),
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            3,
-            MarketDisputeMechanism::SimpleDisputes,
-            ScoringRule::CPMM
-        ));
-        deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 1 * BASE));
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * BASE));
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
-
-        run_to_block(100);
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(2)
-        ));
-
-        run_to_block(150);
-        assert_ok!(Swaps::pool_exit(Origin::signed(FRED), 0, BASE * 100, vec![0, 0]));
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
-    })
-}
-
-#[test]
 fn reject_market_fails_on_permissionless_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
@@ -1156,6 +1125,37 @@ fn reject_market_fails_on_approved_market() {
             Error::<Runtime>::InvalidMarketStatus
         );
     });
+}
+
+#[test]
+fn market_resolve_does_not_hold_liquidity_withdraw() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..100),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            3,
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 1 * BASE));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * BASE));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
+
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(2)
+        ));
+
+        run_to_block(150);
+        assert_ok!(Swaps::pool_exit(Origin::signed(FRED), 0, BASE * 100, vec![0, 0]));
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
+    })
 }
 
 fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
