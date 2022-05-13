@@ -442,6 +442,7 @@ impl pallet_author_mapping::Config for Runtime {
     type DepositAmount = CollatorDeposit;
     type DepositCurrency = Balances;
     type Event = Event;
+    type Keys = NimbusId;
     type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
 }
 
@@ -518,6 +519,8 @@ impl parachain_staking::Config for Runtime {
     type MinDelegatorStk = MinDelegatorStk;
     type MinSelectedCandidates = MinSelectedCandidates;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
+    type OnCollatorPayout = ();
+    type OnNewRound = ();
     type RevokeDelegationDelay = RevokeDelegationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
     type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
