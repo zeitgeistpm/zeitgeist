@@ -195,7 +195,7 @@ where
 async fn do_new_full<RuntimeApi, Executor, BIC>(
     parachain_config: Configuration,
     polkadot_config: Configuration,
-    id: polkadot_primitives::v0::Id,
+    id: polkadot_primitives::v2::Id,
     build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where

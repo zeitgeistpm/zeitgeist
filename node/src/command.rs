@@ -1,7 +1,7 @@
 use super::{
     cli::{Cli, Subcommand},
     command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
-    service::{new_partial, ExecutorDispatch, FullClient},
+    service::{new_partial, ExecutorDispatch},
 };
 use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
@@ -56,9 +56,12 @@ pub fn run() -> sc_cli::Result<()> {
                         cmd.run(config, client, db, storage)
                     },
                     BenchmarkCmd::Overhead(cmd) => {
-                        let ext_builder = BenchmarkExtrinsicBuilder::new(client.clone());
-
-                        cmd.run(config, client, inherent_benchmark_data()?, Arc::new(ext_builder))
+                        if cfg!(feature = "parachain") {
+                            Err("Overhead is only supported in standalone chain".into())
+                        } else {
+                            let ext_builder = BenchmarkExtrinsicBuilder::new(client.clone());
+                            cmd.run(config, client, inherent_benchmark_data()?, Arc::new(ext_builder))
+                        }
                     },
                 }
             })
@@ -243,7 +246,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<
-            polkadot_primitives::v0::AccountId,
+            polkadot_primitives::v2::AccountId,
         >::into_account(&parachain_id);
 
         let state_version = Cli::native_runtime_version(chain_spec).state_version();

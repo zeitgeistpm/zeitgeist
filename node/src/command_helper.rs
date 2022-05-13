@@ -9,7 +9,7 @@ use sp_keyring::Sr25519Keyring;
 use sp_runtime::{OpaqueExtrinsic, SaturatedConversion};
 use std::{sync::Arc, time::Duration};
 use zeitgeist_primitives::{constants::BlockHashCount, types::Signature};
-use zeitgeist_runtime::{SystemCall, VERSION};
+use zeitgeist_runtime::{SystemCall, UncheckedExtrinsic, VERSION};
 
 /// Generates extrinsics for the `benchmark overhead` command.
 ///
@@ -48,7 +48,7 @@ pub fn create_benchmark_extrinsic<RuntimeApi, Executor: NativeExecutionDispatch 
 	sender: sp_core::sr25519::Pair,
 	call: zeitgeist_runtime::Call,
 	nonce: u32,
-) -> zeitgeist_runtime::UncheckedExtrinsic
+) -> UncheckedExtrinsic
 {
 	let genesis_hash = client.block_hash(0).ok().flatten().expect("Genesis block exists; qed");
 	let best_hash = client.chain_info().best_hash;
@@ -88,7 +88,7 @@ pub fn create_benchmark_extrinsic<RuntimeApi, Executor: NativeExecutionDispatch 
 	);
 	let signature = raw_payload.using_encoded(|e| sender.sign(e));
 
-	zeitgeist_runtime::UncheckedExtrinsic::new_signed(
+	UncheckedExtrinsic::new_signed(
 		call.clone(),
 		sp_runtime::AccountId32::from(sender.public()).into(),
 		Signature::Sr25519(signature.clone()),
