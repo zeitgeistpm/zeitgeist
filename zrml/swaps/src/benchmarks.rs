@@ -137,7 +137,7 @@ benchmarks! {
             }
         )?;
         let _ = T::MarketCommons::insert_market_pool(0u32.saturated_into(), 0u128);
-        let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
+        let _ = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
     }: _(RawOrigin::Root, 0u32.into(), OutcomeReport::Categorical(0))
 
     end_subsidy_phase {
