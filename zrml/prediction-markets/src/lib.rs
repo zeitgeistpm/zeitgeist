@@ -1265,7 +1265,7 @@ mod pallet {
             let mut total_weight: Weight =
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
-            with_transaction(|| {
+            let _ = with_transaction(|| {
                 let output = Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
                     total_weight = total_weight.saturating_add(weight);
@@ -1276,9 +1276,9 @@ mod pallet {
                     Err(err) => {
                         Self::deposit_event(Event::BadOnInitialize);
                         log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
-                        TransactionOutcome::Rollback(())
+                        TransactionOutcome::Rollback(err.into())
                     }
-                    Ok(_) => TransactionOutcome::Commit(()),
+                    Ok(_) => TransactionOutcome::Commit(Ok(())),
                 }
             });
 

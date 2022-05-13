@@ -24,7 +24,7 @@ use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
     traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
-    weights::{constants::RocksDbWeight, IdentityFee},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
@@ -757,9 +757,9 @@ impl pallet_timestamp::Config for Runtime {
 
 impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = ();
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-    type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
 }
 
