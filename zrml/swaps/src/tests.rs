@@ -5,7 +5,7 @@ use crate::{
     mock::*,
     Config, SubsidyProviders,
 };
-use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
+use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
@@ -66,10 +66,7 @@ fn destroy_pool_correctly_cleans_up_pool() {
             Currencies::free_balance(ASSET_D, &ALICE),
         ];
         assert_ok!(Swaps::destroy_pool(pool_id));
-        assert!(matches!(
-            Swaps::pool_by_id(pool_id),
-            Err(crate::Error::<Runtime>::PoolDoesNotExist)
-        ));
+        assert_err!(Swaps::pool(pool_id), crate::Error::<Runtime>::PoolDoesNotExist);
         // Ensure that funds _outside_ of the pool are not impacted!
         assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
     });
