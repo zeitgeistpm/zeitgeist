@@ -16,11 +16,12 @@ mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
-pub use {
-    parameters::*,
-    frame_system::{Call as SystemCall,CheckNonZeroSender,CheckSpecVersion,CheckTxVersion,CheckGenesis,CheckEra,CheckNonce,CheckWeight},
-    pallet_transaction_payment::ChargeTransactionPayment,
+pub use frame_system::{
+    Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
+    CheckTxVersion, CheckWeight,
 };
+pub use pallet_transaction_payment::ChargeTransactionPayment;
+pub use parameters::*;
 #[cfg(feature = "parachain")]
 pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
@@ -202,7 +203,7 @@ macro_rules! create_zeitgeist_runtime {
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 32,
 
                 // Third-party
-                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 40,
+                Currency: orml_currencies::{Call, Pallet, Storage} = 40,
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
 
                 // Zeitgeist
@@ -532,7 +533,6 @@ impl parachain_staking::Config for Runtime {
 }
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
@@ -547,7 +547,9 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 

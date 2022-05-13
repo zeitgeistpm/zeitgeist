@@ -32,40 +32,45 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
 
             runner.sync_run(|config| {
-                let PartialComponents { client, backend, .. } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+                let PartialComponents { client, backend, .. } =
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
 
                 // This switch needs to be in the client, since the client decides
                 // which sub-commands it wants to support.
                 match cmd {
                     BenchmarkCmd::Pallet(cmd) => {
                         if !cfg!(feature = "runtime-benchmarks") {
-                            return Err(
-                                "Runtime benchmarking wasn't enabled when building the node. \
-                            You can enable it with `--features runtime-benchmarks`."
-                                    .into(),
-                            )
+                            return Err("Runtime benchmarking wasn't enabled when building the \
+                                        node. You can enable it with `--features \
+                                        runtime-benchmarks`."
+                                .into());
                         }
 
                         cmd.run::<Block, ExecutorDispatch>(config)
-                    },
+                    }
                     BenchmarkCmd::Block(cmd) => cmd.run(client),
                     BenchmarkCmd::Storage(cmd) => {
                         let db = backend.expose_db();
                         let storage = backend.expose_storage();
 
                         cmd.run(config, client, db, storage)
-                    },
+                    }
                     BenchmarkCmd::Overhead(cmd) => {
                         if cfg!(feature = "parachain") {
                             Err("Overhead is only supported in standalone chain".into())
                         } else {
                             let ext_builder = BenchmarkExtrinsicBuilder::new(client.clone());
-                            cmd.run(config, client, inherent_benchmark_data()?, Arc::new(ext_builder))
+                            cmd.run(
+                                config,
+                                client,
+                                inherent_benchmark_data()?,
+                                Arc::new(ext_builder),
+                            )
                         }
-                    },
+                    }
                 }
             })
-        },
+        }
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -203,7 +208,8 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents { client, task_manager, backend, .. } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+                let PartialComponents { client, task_manager, backend, .. } =
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
 
                 let aux_revert = Box::new(move |client, _, blocks| {
                     sc_finality_grandpa::revert(client, blocks)?;
