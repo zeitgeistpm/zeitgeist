@@ -59,6 +59,7 @@ impl crate::Config for Runtime {
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;

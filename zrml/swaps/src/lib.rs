@@ -70,6 +70,7 @@ mod pallet {
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
+    use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
         traits::RikiddoMVPallet,
@@ -88,13 +89,14 @@ mod pallet {
         #[frame_support::transactional]
         pub fn admin_set_pool_to_stale(
             origin: OriginFor<T>,
-            market_type: MarketType,
-            pool_id: PoolId,
+            market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            let pool_id = T::MarketCommons::market_pool(&market_id)?;
             Self::set_pool_to_stale(
-                &market_type,
+                &market.market_type,
                 pool_id,
                 &outcome_report,
                 &Self::pool_account_id(pool_id),
@@ -642,6 +644,11 @@ mod pallet {
             Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,
             MarketId = Self::MarketId,
+        >;
+
+        type MarketCommons: MarketCommonsPalletApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
         >;
 
         type MarketId: MarketId;
