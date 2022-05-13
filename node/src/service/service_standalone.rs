@@ -17,7 +17,7 @@ use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
-type FullClient<RuntimeApi, Executor> =
+pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;

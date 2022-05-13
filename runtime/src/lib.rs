@@ -16,7 +16,11 @@ mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
-pub use parameters::*;
+pub use {
+    parameters::*,
+    frame_system::{Call as SystemCall,CheckNonZeroSender,CheckSpecVersion,CheckTxVersion,CheckGenesis,CheckEra,CheckNonce,CheckWeight},
+    pallet_transaction_payment::ChargeTransactionPayment,
+};
 #[cfg(feature = "parachain")]
 pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
@@ -78,17 +82,18 @@ type Executive = frame_executive::Executive<
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
-type SignedExtra = (
-    frame_system::CheckNonZeroSender<Runtime>,
-    frame_system::CheckSpecVersion<Runtime>,
-    frame_system::CheckTxVersion<Runtime>,
-    frame_system::CheckGenesis<Runtime>,
-    frame_system::CheckEra<Runtime>,
-    frame_system::CheckNonce<Runtime>,
-    frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+pub type SignedExtra = (
+    CheckNonZeroSender<Runtime>,
+    CheckSpecVersion<Runtime>,
+    CheckTxVersion<Runtime>,
+    CheckGenesis<Runtime>,
+    CheckEra<Runtime>,
+    CheckNonce<Runtime>,
+    CheckWeight<Runtime>,
+    ChargeTransactionPayment<Runtime>,
 );
-type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 // Governance
 type AdvisoryCommitteeInstance = pallet_collective::Instance1;

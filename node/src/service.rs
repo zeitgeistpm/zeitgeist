@@ -8,9 +8,9 @@ use zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId};
 use zeitgeist_runtime::opaque::Block;
 
 #[cfg(feature = "parachain")]
-pub use service_parachain::{new_full, new_partial, ParachainPartialComponents};
+pub use service_parachain::{new_full, new_partial, ParachainPartialComponents, FullClient};
 #[cfg(not(feature = "parachain"))]
-pub use service_standalone::{new_full, new_partial};
+pub use service_standalone::{new_full, new_partial, FullClient};
 
 pub struct ExecutorDispatch;
 

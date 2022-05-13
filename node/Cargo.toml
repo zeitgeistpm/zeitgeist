@@ -6,6 +6,7 @@ path = "./src/main.rs"
 substrate-build-script-utils = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
 [dependencies]
+pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-basic-authorship = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
@@ -25,6 +26,8 @@ sp-block-builder = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github
 sp-blockchain = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-consensus = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-core = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+sp-inherents = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+sp-keyring = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-offchain = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-session = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
@@ -36,7 +39,7 @@ substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.19", git = "http
 # Benchmark
 
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
 # Cumulus
 
@@ -142,7 +145,6 @@ parachain = [
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
-    "frame-benchmarking-cli",
     "polkadot-service?/runtime-benchmarks",
     "zeitgeist-runtime/runtime-benchmarks"
 ]

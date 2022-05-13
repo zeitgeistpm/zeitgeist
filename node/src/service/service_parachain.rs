@@ -25,7 +25,7 @@ use zeitgeist_primitives::types::Hash;
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
 type FullBackend = TFullBackend<Block>;
-type FullClient<RuntimeApi, Executor> =
+pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
     FullClient<RuntimeApi, Executor>,

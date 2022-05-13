@@ -1,10 +1,13 @@
-use crate::{
+use super::{
     cli::{Cli, Subcommand},
-    service::{new_partial, ExecutorDispatch},
+    command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
+    service::{new_partial, ExecutorDispatch, FullClient},
 };
+use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
-use zeitgeist_runtime::RuntimeApi;
+use std::sync::Arc;
+use zeitgeist_runtime::{Block, RuntimeApi};
 #[cfg(feature = "parachain")]
 use {
     sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
@@ -25,32 +28,41 @@ pub fn run() -> sc_cli::Result<()> {
     }
 
     match &cli.subcommand {
-        #[cfg(feature = "runtime-benchmarks")]
         Some(Subcommand::Benchmark(cmd)) => {
-            if cfg!(feature = "runtime-benchmarks") {
-                let runner = cli.create_runner(cmd)?;
-
-                runner.sync_run(|config| {
-                    cmd.run::<zeitgeist_runtime::Block, ExecutorDispatch>(config)
-                })
-            } else {
-                Err("Benchmarking wasn't enabled when building the node. You can enable it with \
-                     `--features runtime-benchmarks`."
-                    .into())
-            }
-        }
-        #[cfg(feature = "runtime-benchmarks")]
-        Some(Subcommand::BenchmarkStorage(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, backend, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-                let db = backend.expose_db();
-                let storage = backend.expose_storage();
 
-                Ok((cmd.run(config, client, db, storage), task_manager))
+            runner.sync_run(|config| {
+                let PartialComponents { client, backend, .. } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+
+                // This switch needs to be in the client, since the client decides
+                // which sub-commands it wants to support.
+                match cmd {
+                    BenchmarkCmd::Pallet(cmd) => {
+                        if !cfg!(feature = "runtime-benchmarks") {
+                            return Err(
+                                "Runtime benchmarking wasn't enabled when building the node. \
+                            You can enable it with `--features runtime-benchmarks`."
+                                    .into(),
+                            )
+                        }
+
+                        cmd.run::<Block, ExecutorDispatch>(config)
+                    },
+                    BenchmarkCmd::Block(cmd) => cmd.run(client),
+                    BenchmarkCmd::Storage(cmd) => {
+                        let db = backend.expose_db();
+                        let storage = backend.expose_storage();
+
+                        cmd.run(config, client, db, storage)
+                    },
+                    BenchmarkCmd::Overhead(cmd) => {
+                        let ext_builder = BenchmarkExtrinsicBuilder::new(client.clone());
+
+                        cmd.run(config, client, inherent_benchmark_data()?, Arc::new(ext_builder))
+                    },
+                }
             })
-        }
+        },
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
@@ -188,9 +200,14 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents { client, task_manager, backend, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-                Ok((cmd.run(client, backend), task_manager))
+                let PartialComponents { client, task_manager, backend, .. } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+
+                let aux_revert = Box::new(move |client, _, blocks| {
+                    sc_finality_grandpa::revert(client, blocks)?;
+                    Ok(())
+                });
+
+                Ok((cmd.run(client, backend, Some(aux_revert)), task_manager))
             })
         }
         None => none_command(&cli),

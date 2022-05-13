@@ -19,14 +19,8 @@ type RunCmd = sc_cli::RunCmd;
 #[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
     /// The custom benchmark subcommmand benchmarking runtime pallets.
-    #[cfg(feature = "runtime-benchmarks")]
-    #[clap(name = "benchmark", about = "Benchmark runtime pallets.")]
+    #[clap(subcommand)]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
-
-    /// Sub command for benchmarking the storage speed.
-    #[cfg(feature = "runtime-benchmarks")]
-    #[clap(name = "benchmark-storage", about = "Benchmark storage speed.")]
-    BenchmarkStorage(frame_benchmarking_cli::StorageCmd),
 
     /// Build a chain specification.
     BuildSpec(sc_cli::BuildSpecCmd),
