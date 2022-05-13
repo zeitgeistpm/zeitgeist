@@ -2,12 +2,12 @@
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
 frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-traits = { rev = "c673da3374dfe1d251cd196041470b9eb191c15b", default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
+orml-traits = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 zrml-authorized = { default-features = false, path = "../authorized" }
 zrml-court = { default-features = false, path = "../court" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
@@ -16,8 +16,8 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 # Mock
 
-orml-currencies = { rev = "c673da3374dfe1d251cd196041470b9eb191c15b", git = "https://github.com/purestake/open-runtime-module-library", optional = true }
-orml-tokens = { rev = "c673da3374dfe1d251cd196041470b9eb191c15b", git = "https://github.com/purestake/open-runtime-module-library", optional = true }
+orml-currencies = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/open-runtime-module-library", optional = true }
+orml-tokens = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
