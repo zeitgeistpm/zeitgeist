@@ -89,7 +89,7 @@ mod pallet {
         #[frame_support::transactional]
         pub fn admin_set_pool_to_stale(
             origin: OriginFor<T>,
-            market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+            #[pallet::compact] market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
@@ -120,8 +120,8 @@ mod pallet {
         #[frame_support::transactional]
         pub fn pool_exit(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            pool_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
             min_assets_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -170,8 +170,8 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::pool_exit_subsidy())]
         pub fn pool_exit_subsidy(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -254,10 +254,10 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
+            #[pallet::compact] pool_id: PoolId,
             asset: Asset<T::MarketId>,
-            asset_amount: BalanceOf<T>,
-            max_pool_amount: BalanceOf<T>,
+            #[pallet::compact] asset_amount: BalanceOf<T>,
+            #[pallet::compact] max_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Self as Swaps<T::AccountId>>::pool_exit_with_exact_asset_amount(
@@ -287,10 +287,10 @@ mod pallet {
         #[frame_support::transactional]
         pub fn pool_exit_with_exact_pool_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
+            #[pallet::compact] pool_id: PoolId,
             asset: Asset<T::MarketId>,
-            pool_amount: BalanceOf<T>,
-            min_asset_amount: BalanceOf<T>,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            #[pallet::compact] min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
             let pool = Self::pool_by_id(pool_id)?;
@@ -355,8 +355,8 @@ mod pallet {
         #[frame_support::transactional]
         pub fn pool_join(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            pool_amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
             max_assets_in: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -398,8 +398,8 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::pool_join_subsidy())]
         pub fn pool_join_subsidy(
             origin: OriginFor<T>,
-            pool_id: PoolId,
-            amount: BalanceOf<T>,
+            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -450,10 +450,10 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
+            #[pallet::compact] pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
-            asset_amount: BalanceOf<T>,
-            min_pool_amount: BalanceOf<T>,
+            #[pallet::compact] asset_amount: BalanceOf<T>,
+            #[pallet::compact] min_pool_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             <Self as Swaps<T::AccountId>>::pool_join_with_exact_asset_amount(
@@ -483,10 +483,10 @@ mod pallet {
         #[frame_support::transactional]
         pub fn pool_join_with_exact_pool_amount(
             origin: OriginFor<T>,
-            pool_id: PoolId,
+            #[pallet::compact] pool_id: PoolId,
             asset: Asset<T::MarketId>,
-            pool_amount: BalanceOf<T>,
-            max_asset_amount: BalanceOf<T>,
+            #[pallet::compact] pool_amount: BalanceOf<T>,
+            #[pallet::compact] max_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
@@ -547,12 +547,12 @@ mod pallet {
         #[frame_support::transactional]
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
-            pool_id: PoolId,
+            #[pallet::compact] pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
-            asset_amount_in: BalanceOf<T>,
+            #[pallet::compact] asset_amount_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
-            min_asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            #[pallet::compact] min_asset_amount_out: BalanceOf<T>,
+            #[pallet::compact] max_price: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_in(
@@ -584,12 +584,12 @@ mod pallet {
         #[frame_support::transactional]
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
-            pool_id: PoolId,
+            #[pallet::compact] pool_id: PoolId,
             asset_in: Asset<T::MarketId>,
-            max_amount_asset_in: BalanceOf<T>,
+            #[pallet::compact] max_amount_asset_in: BalanceOf<T>,
             asset_out: Asset<T::MarketId>,
-            asset_amount_out: BalanceOf<T>,
-            max_price: BalanceOf<T>,
+            #[pallet::compact] asset_amount_out: BalanceOf<T>,
+            #[pallet::compact] max_price: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let weight = <Self as Swaps<T::AccountId>>::swap_exact_amount_out(
@@ -789,11 +789,12 @@ mod pallet {
     {
         /// Share holder rewards were distributed. \[pool_id, num_accounts_rewarded, amount\]
         DistributeShareHolderRewards(PoolId, u64, BalanceOf<T>),
-        /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount\]
+        /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount, pool_account\]
         PoolCreate(
             CommonPoolEventParams<<T as frame_system::Config>::AccountId>,
             Pool<BalanceOf<T>, T::MarketId>,
             BalanceOf<T>,
+            T::AccountId,
         ),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
@@ -1384,6 +1385,7 @@ mod pallet {
                 CommonPoolEventParams { pool_id: next_pool_id, who },
                 pool,
                 if scoring_rule == ScoringRule::CPMM { amount } else { <BalanceOf<T>>::zero() },
+                pool_account,
             ));
 
             Ok(next_pool_id)
