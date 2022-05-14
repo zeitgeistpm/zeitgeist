@@ -26,11 +26,12 @@
 //!
 //! - `buy_complete_set` - Buys a complete set of outcome assets for a market.
 //! - `create_categorical_market` - Creates a new categorical market.
-//! - `create_cpmm_market_and_deploy_assets` - Create a market using CPMM scoring rule, buy a
-//!   complete set of the assets used and deploy.
-//!    within and deploy an arbitrary amount of those that's greater than the minimum amount.
+//! - `create_cpmm_market_and_deploy_assets` - Creates a market using CPMM scoring rule, buys a
+//!   complete set of the assets used and deploys the funds.
 //! - `create_scalar_market` - Creates a new scalar market.
 //! - `deploy_swap_pool_for_market` - Deploys a single "canonical" pool for a market.
+//! - `deploy_swap_pool_and_additional_liquidity` - Deploys a single "canonical" pool for a market,
+//!   buys a complete set of the assets used and deploys the funds as specified.
 //! - `dispute` - Submits a disputed outcome for a market.
 //! - `redeem_shares` - Redeems the winning shares for a market.
 //! - `report` - Reports an outcome for a market.
