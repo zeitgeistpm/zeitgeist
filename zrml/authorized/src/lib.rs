@@ -20,7 +20,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{StorageMap, ValueQuery},
+        pallet_prelude::{StorageMap, OptionQuery},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         Blake2_128Concat, PalletId,
     };
@@ -64,7 +64,7 @@ mod pallet {
             } else {
                 return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
-            Outcomes::<T>::insert(market_id, Some(outcome));
+            Outcomes::<T>::insert(market_id, outcome);
             Ok(())
         }
     }
@@ -153,7 +153,7 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
     pub type Outcomes<T: Config> =
-        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, Option<OutcomeReport>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, OutcomeReport, OptionQuery>;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
