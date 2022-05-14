@@ -9,6 +9,7 @@ substrate-fixed = { rev = "5984ba9b9433d5007597c7f03f65ea5bf6d08601", default-fe
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
+zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 
 # Mock
@@ -19,7 +20,6 @@ pallet-balances = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
-zrml-market-commons = { optional = true, path = "../market-commons" }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]
@@ -35,7 +35,6 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
-    "zrml-market-commons",
     "zrml-swaps-runtime-api",
 ]
 runtime-benchmarks = [
@@ -52,6 +51,7 @@ std = [
     "sp-runtime/std",
     "substrate-fixed/std",
     "zeitgeist-primitives/std",
+    "zrml-market-commons/std",
     "zrml-liquidity-mining/std",
     "zrml-rikiddo/std",
 ]

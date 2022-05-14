@@ -922,6 +922,7 @@ impl zrml_swaps::Config for Runtime {
     // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
     type LiquidityMining = NoopLiquidityMining;
     // type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;

@@ -13,9 +13,12 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
+        AccountIdTest, Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism,
+        MarketId, MarketPeriod, MarketStatus, MarketType, Moment, OutcomeReport, PoolId,
+        PoolStatus, ScoringRule,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
@@ -432,7 +435,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(0),
             0,
             &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
@@ -596,27 +599,16 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
 }
 
 #[test]
-fn only_root_can_call_admin_set_pool_as_stale() {
+fn set_pool_to_stale_fails_if_origin_is_not_root() {
     ExtBuilder::default().build().execute_with(|| {
         let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(MarketCommons::push_market(mock_market(69)));
+        MarketCommons::insert_market_pool(0, 0);
         assert_noop!(
-            Swaps::admin_set_pool_as_stale(
-                alice_signed(),
-                MarketType::Categorical(0),
-                0,
-                OutcomeReport::Categorical(idx)
-            ),
+            Swaps::admin_set_pool_to_stale(alice_signed(), 0, OutcomeReport::Categorical(idx)),
             BadOrigin
         );
-
-        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
-        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
-            Origin::root(),
-            MarketType::Categorical(0),
-            0,
-            OutcomeReport::Categorical(idx)
-        ),);
     });
 }
 
@@ -755,11 +747,12 @@ fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(MarketCommons::push_market(mock_market(69)));
+        MarketCommons::insert_market_pool(0, 0);
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
+        assert_ok!(Swaps::admin_set_pool_to_stale(
             Origin::root(),
-            MarketType::Categorical(4),
             0,
             OutcomeReport::Categorical(65),
         ));
@@ -1275,13 +1268,13 @@ fn provided_values_len_must_equal_assets_len() {
 }
 
 #[test]
-fn set_pool_as_stale_leaves_only_correct_assets() {
+fn set_pool_to_stale_leaves_only_correct_assets() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
         let pool_id = 0;
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(1337),
                 pool_id,
                 &OutcomeReport::Categorical(1337),
@@ -1292,7 +1285,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1305,7 +1298,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 }
 
 #[test]
-fn set_pool_as_stale_handles_rikiddo_pools_properly() {
+fn set_pool_to_stale_handles_rikiddo_pools_properly() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 0;
@@ -1313,7 +1306,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(4),
                 pool_id,
                 &OutcomeReport::Categorical(cat_idx),
@@ -1327,7 +1320,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
             Ok(())
         }));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1731,4 +1724,21 @@ fn subsidize_and_start_rikiddo_pool(
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
     assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
+}
+
+fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
+    Market {
+        creation: MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: ALICE,
+        market_type: MarketType::Categorical(categories),
+        mdm: MarketDisputeMechanism::Authorized(ALICE),
+        metadata: vec![0; 50],
+        oracle: ALICE,
+        period: MarketPeriod::Block(0..1),
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: MarketStatus::Active,
+    }
 }

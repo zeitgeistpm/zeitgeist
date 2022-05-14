@@ -2017,7 +2017,7 @@ mod pallet {
                 return Ok(T::DbWeight::get().reads(1));
             };
             let market_account = Self::market_account(*market_id);
-            let weight = T::Swaps::set_pool_as_stale(
+            let weight = T::Swaps::set_pool_to_stale(
                 &market.market_type,
                 pool_id,
                 outcome_report,
