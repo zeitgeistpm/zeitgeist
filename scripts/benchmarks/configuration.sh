@@ -4,7 +4,8 @@
 
 export FRAME_PALLETS=( frame_system pallet_balances pallet_democracy \
                 pallet_identity pallet_membership  pallet_multisig pallet_preimage \
-                pallet_scheduler pallet_timestamp pallet_treasury pallet_utility pallet_vesting \
+                pallet_proxy pallet_scheduler pallet_timestamp pallet_treasury \
+                pallet_utility pallet_vesting \
                 ) # pallet_collective pallet_grandpa )
 export FRAME_PALLETS_RUNS=20
 export FRAME_PALLETS_STEPS=50

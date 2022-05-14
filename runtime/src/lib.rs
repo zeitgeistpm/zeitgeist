@@ -23,7 +23,7 @@ pub use parameters::*;
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -199,6 +199,7 @@ macro_rules! create_zeitgeist_runtime {
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 31,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 32,
+                Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 33,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 40,
@@ -323,6 +324,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
+                    | Call::Proxy(_)
                     | Call::Currency(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
@@ -356,6 +358,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
+                    | Call::Proxy(_)
                     | Call::Currency(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
@@ -727,6 +730,53 @@ impl pallet_preimage::Config for Runtime {
     type ByteDeposit = PreimageByteDeposit;
 }
 
+impl InstanceFilter<Call> for ProxyType {
+    fn filter(&self, c: &Call) -> bool {
+        match self {
+            ProxyType::Any => true,
+            ProxyType::CancelProxy => {
+                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+            }
+            ProxyType::Governance => matches!(
+                c,
+                Call::Democracy(..)
+                    | Call::Council(..)
+                    | Call::TechnicalCommittee(..)
+                    | Call::AdvisoryCommittee(..)
+                    | Call::Treasury(..)
+            ),
+            #[cfg(feature = "parachain")]
+            ProxyType::Staking => matches!(c, Call::ParachainStaking(..)),
+            #[cfg(not(feature = "parachain"))]
+            ProxyType::Staking => false,
+        }
+    }
+
+    fn is_superset(&self, o: &Self) -> bool {
+        match (self, o) {
+            (x, y) if x == y => true,
+            (ProxyType::Any, _) => true,
+            (_, ProxyType::Any) => false,
+            _ => false,
+        }
+    }
+}
+
+impl pallet_proxy::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type ProxyType = ProxyType;
+    type ProxyDepositBase = ProxyDepositBase;
+    type ProxyDepositFactor = ProxyDepositFactor;
+    type MaxProxies = ConstU32<32>;
+    type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
+    type MaxPending = ConstU32<32>;
+    type CallHasher = BlakeTwo256;
+    type AnnouncementDepositBase = AnnouncementDepositBase;
+    type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_scheduler::Config for Runtime {
@@ -1033,6 +1083,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_multisig, MultiSig);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_proxy, Proxy);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_treasury, Treasury);
@@ -1104,6 +1155,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_multisig, MultiSig);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);
