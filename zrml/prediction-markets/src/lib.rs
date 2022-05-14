@@ -142,6 +142,7 @@ mod pallet {
                 T::MaxCategories::get().into()
             ))
         )]
+        #[transactional]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -224,6 +225,7 @@ mod pallet {
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
         #[pallet::weight(T::WeightInfo::admin_move_market_to_closed())]
+        #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -255,6 +257,7 @@ mod pallet {
                 T::MaxCategories::get().into()
             ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
         ))]
+        #[transactional]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -281,6 +284,7 @@ mod pallet {
         /// NOTE: Can only be called by the `ApprovalOrigin`.
         ///
         #[pallet::weight(T::WeightInfo::approve_market())]
+        #[transactional]
         pub fn approve_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -384,6 +388,7 @@ mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::create_categorical_market())]
+        #[transactional]
         pub fn create_categorical_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
@@ -404,8 +409,11 @@ mod pallet {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
 
-            // Require sha3-384 as multihash.
-            let MultiHash::Sha3_384(multihash) = metadata;
+            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
+            // for a compiler error. Link an issue for this!
+            #[allow(irrefutable_let_patterns)]
+            let multihash =
+                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
             let status: MarketStatus = match creation {
@@ -566,6 +574,7 @@ mod pallet {
         }
 
         #[pallet::weight(T::WeightInfo::create_scalar_market())]
+        #[transactional]
         pub fn create_scalar_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
@@ -585,8 +594,11 @@ mod pallet {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
 
-            // Require sha3-384 as multihash.
-            let MultiHash::Sha3_384(multihash) = metadata;
+            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
+            // for a compiler error. Link an issue for this!
+            #[allow(irrefutable_let_patterns)]
+            let multihash =
+                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
             let status: MarketStatus = match creation {
@@ -788,6 +800,7 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::redeem_shares_categorical()
             .max(T::WeightInfo::redeem_shares_scalar())
         )]
+        #[transactional]
         pub fn redeem_shares(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -917,6 +930,7 @@ mod pallet {
 
         /// Rejects a market that is waiting for approval from the advisory committee.
         #[pallet::weight(T::WeightInfo::reject_market())]
+        #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -1006,6 +1020,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
+        #[transactional]
         pub fn sell_complete_set(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,

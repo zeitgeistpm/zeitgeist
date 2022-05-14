@@ -44,7 +44,7 @@ mod pallet {
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{Get, IsType, StorageVersion},
-        Blake2_128Concat, PalletId, Twox64Concat,
+        transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{BalanceStatus, MultiCurrency, MultiReservableCurrency};
@@ -86,7 +86,7 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::admin_set_pool_to_stale())]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn admin_set_pool_to_stale(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
@@ -117,7 +117,7 @@ mod pallet {
         /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
         /// provided values.
         #[pallet::weight(T::WeightInfo::pool_exit(min_assets_out.len() as u32))]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn pool_exit(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -168,6 +168,7 @@ mod pallet {
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be removed from subsidy.
         #[pallet::weight(T::WeightInfo::pool_exit_subsidy())]
+        #[transactional]
         pub fn pool_exit_subsidy(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -258,6 +259,7 @@ mod pallet {
         /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
         /// greater than the given value.
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
+        // MARK(non-transactional): Immediately calls and returns a transactional.
         pub fn pool_exit_with_exact_asset_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -290,7 +292,7 @@ mod pallet {
         /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
         /// than the given value.
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_pool_amount())]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn pool_exit_with_exact_pool_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -358,7 +360,7 @@ mod pallet {
         /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
         /// provided values.
         #[pallet::weight(T::WeightInfo::pool_join(max_assets_in.len() as u32))]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn pool_join(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -402,7 +404,7 @@ mod pallet {
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be added to subsidy.
         #[pallet::weight(T::WeightInfo::pool_join_subsidy())]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn pool_join_subsidy(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -466,6 +468,7 @@ mod pallet {
         /// * `asset_amount`: Asset amount that is entering the pool.
         /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
         /// than the given value.
+        // MARK(non-transactional): Immediately calls and returns a transactional.
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
         pub fn pool_join_with_exact_asset_amount(
             origin: OriginFor<T>,
@@ -499,7 +502,7 @@ mod pallet {
         /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or
         /// less than the given value.
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_pool_amount())]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn pool_join_with_exact_pool_amount(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -563,7 +566,7 @@ mod pallet {
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
         #[pallet::weight(T::WeightInfo::swap_exact_amount_in_rikiddo(T::MaxAssets::get().into()))]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
@@ -600,7 +603,7 @@ mod pallet {
         /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
         /// * `max_price`: Market price must be equal or less than the provided value.
         #[pallet::weight(T::WeightInfo::swap_exact_amount_out_rikiddo(T::MaxAssets::get().into()))]
-        #[frame_support::transactional]
+        #[transactional]
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
             #[pallet::compact] pool_id: PoolId,
