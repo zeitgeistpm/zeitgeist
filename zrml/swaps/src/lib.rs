@@ -856,6 +856,8 @@ mod pallet {
             Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
             BalanceOf<T>,
         ),
+        /// Pool was manually destroyed. \[pool_id\]
+        PoolDestroyed(PoolId),
         /// Pool destroyed due to insufficient subsidy. \[pool_id, \[(provider, subsidy), ...\]\]
         PoolDestroyedInSubsidyPhase(
             PoolId,
@@ -1382,6 +1384,22 @@ mod pallet {
             ));
 
             Ok(next_pool_id)
+        }
+
+        fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            let pool = Self::pool_by_id(pool_id)?;
+            let pool_account = Self::pool_account_id(pool_id);
+            for asset in pool.assets.into_iter() {
+                let amount = T::Shares::free_balance(asset, &pool_account);
+                T::Shares::slash(asset, &pool_account, amount);
+            }
+            let pool_share_id = Self::pool_shares_id(pool_id);
+            let (_, liquidity_providers) = T::Shares::accounts_by_currency_id(pool_share_id);
+            T::Shares::destroy_all(pool_share_id, liquidity_providers.iter().cloned());
+            Pools::<T>::remove(pool_id);
+            Self::deposit_event(Event::PoolDestroyed(pool_id));
+            // TODO(#603): Fix weight calculation.
+            Ok(50_000_000_000)
         }
 
         /// All supporters will receive their reserved funds back and the pool is destroyed.

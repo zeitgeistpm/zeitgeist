@@ -31,6 +31,9 @@ pub trait Swaps<AccountId> {
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
+    /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
+    fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
+
     /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
     /// state and all other conditions are met. Returns the result of the operation and
     /// the total weight. If the result is false, not enough subsidy was gathered and the

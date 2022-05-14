@@ -5,7 +5,7 @@ use crate::{
     mock::*,
     Config, SubsidyProviders,
 };
-use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
+use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
@@ -45,6 +45,43 @@ const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
 const _10000: u128 = 10000 * BASE;
+
+#[test]
+fn destroy_pool_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, true);
+        assert_noop!(Swaps::destroy_pool(42), crate::Error::<Runtime>::PoolDoesNotExist);
+    });
+}
+
+#[test]
+fn destroy_pool_correctly_cleans_up_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        let alice_balance_before = [
+            Currencies::free_balance(ASSET_A, &ALICE),
+            Currencies::free_balance(ASSET_B, &ALICE),
+            Currencies::free_balance(ASSET_C, &ALICE),
+            Currencies::free_balance(ASSET_D, &ALICE),
+        ];
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        assert_err!(Swaps::pool(pool_id), crate::Error::<Runtime>::PoolDoesNotExist);
+        // Ensure that funds _outside_ of the pool are not impacted!
+        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
+    });
+}
+
+#[test]
+fn destroy_pool_emits_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        assert!(event_exists(crate::Event::PoolDestroyed(pool_id)));
+    });
+}
 
 #[test]
 fn allows_the_full_user_lifecycle() {
