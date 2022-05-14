@@ -47,7 +47,6 @@ use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
-use zrml_swaps::migrations::MigratePoolBaseAsset;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{Everything, Nothing},
@@ -72,13 +71,25 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
+#[cfg(not(feature = "parachain"))]
 type Executive = frame_executive::Executive<
     Runtime,
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    MigratePoolBaseAsset<Runtime>,
+>;
+#[cfg(feature = "parachain")]
+type Executive = frame_executive::Executive<
+    Runtime,
+    Block,
+    frame_system::ChainContext<Runtime>,
+    Runtime,
+    AllPalletsWithSystem,
+    (
+        pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
+        parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
+    ),
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
