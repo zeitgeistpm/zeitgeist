@@ -149,7 +149,7 @@ mod pallet {
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}
 
-    // Legacy storage, no longer in use. TODO(...): Remove this at the earliest convenience!
+    // Legacy storage, no longer in use. TODO(#626): Remove this at the earliest convenience!
     #[pallet::storage]
     pub type Outcomes<T: Config> = StorageDoubleMap<
         _,
