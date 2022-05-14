@@ -3,7 +3,7 @@
 use crate::{
     market_mock,
     mock::{Authorized, ExtBuilder, Origin, Runtime, ALICE, BOB},
-    Error, Outcomes,
+    Error, AuthorizedOutcomeReports,
 };
 use frame_support::{assert_noop, assert_ok};
 use zeitgeist_primitives::{
@@ -21,7 +21,7 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
             0,
             OutcomeReport::Scalar(1)
         ));
-        assert_eq!(Outcomes::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(1));
+        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(1));
     });
 }
 
@@ -109,7 +109,7 @@ fn on_resolution_removes_stored_outcomes() {
             OutcomeReport::Scalar(2)
         ));
         assert_ok!(Authorized::on_resolution(&[], &0, &market));
-        assert_eq!(Outcomes::<Runtime>::get(0), None);
+        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(0), None);
     });
 }
 
@@ -151,7 +151,7 @@ fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
             1,
             OutcomeReport::Scalar(456)
         ));
-        assert_eq!(Outcomes::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(123));
-        assert_eq!(Outcomes::<Runtime>::get(1).unwrap(), OutcomeReport::Scalar(456));
+        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(123));
+        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(1).unwrap(), OutcomeReport::Scalar(456));
     });
 }

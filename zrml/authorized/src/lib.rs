@@ -7,6 +7,7 @@ extern crate alloc;
 mod authorized_pallet_api;
 mod benchmarks;
 mod mock;
+mod migrations;
 mod tests;
 pub mod weights;
 
@@ -20,7 +21,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{StorageMap, OptionQuery},
+        pallet_prelude::{StorageMap, StorageDoubleMap, OptionQuery},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         Blake2_128Concat, PalletId,
     };
@@ -64,7 +65,7 @@ mod pallet {
             } else {
                 return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
-            Outcomes::<T>::insert(market_id, outcome);
+            AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
             Ok(())
         }
     }
@@ -138,9 +139,9 @@ mod pallet {
             market_id: &Self::MarketId,
             _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            let result = Outcomes::<T>::get(market_id);
+            let result = AuthorizedOutcomeReports::<T>::get(market_id);
             if result.is_some() {
-                Outcomes::<T>::remove(market_id);
+                AuthorizedOutcomeReports::<T>::remove(market_id);
             }
             Ok(result)
         }
@@ -148,11 +149,21 @@ mod pallet {
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}
 
-    /// Reported outcomes of accounts that are linked through
-    /// `MarketDisputeMechanism::Authorized(..)`.
+    // Legacy storage, no longer in use. TODO(...): Remove this at the earliest convenience!
+    #[pallet::storage]
+    pub type Outcomes<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        Blake2_128Concat,
+        T::AccountId,
+        OutcomeReport,
+    >;
+
+    /// Maps the market id to the outcome reported by the authorized account.    
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
-    pub type Outcomes<T: Config> =
+    pub type AuthorizedOutcomeReports<T: Config> =
         StorageMap<_, Blake2_128Concat, MarketIdOf<T>, OutcomeReport, OptionQuery>;
 }
 
