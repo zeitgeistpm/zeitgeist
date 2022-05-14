@@ -769,7 +769,7 @@ impl pallet_proxy::Config for Runtime {
     type ProxyDepositBase = ProxyDepositBase;
     type ProxyDepositFactor = ProxyDepositFactor;
     type MaxProxies = ConstU32<32>;
-    type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
     type MaxPending = ConstU32<32>;
     type CallHasher = BlakeTwo256;
     type AnnouncementDepositBase = AnnouncementDepositBase;
@@ -1080,6 +1080,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_multisig, MultiSig);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_proxy, Proxy);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_treasury, Treasury);
@@ -1151,6 +1152,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_multisig, MultiSig);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);
