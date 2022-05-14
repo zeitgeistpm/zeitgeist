@@ -32,6 +32,7 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 // Mocked exit fee for easier calculations
 parameter_types! {
     pub storage ExitFeeMock: Balance = BASE / 10;
+    pub const MinSubsidyPerAccount: Balance = BASE;
 }
 
 construct_runtime!(
@@ -68,6 +69,7 @@ impl crate::Config for Runtime {
     type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
