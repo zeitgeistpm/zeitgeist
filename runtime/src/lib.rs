@@ -734,7 +734,9 @@ impl InstanceFilter<Call> for ProxyType {
     fn filter(&self, c: &Call) -> bool {
         match self {
             ProxyType::Any => true,
-            ProxyType::CancelProxy => matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. })),
+            ProxyType::CancelProxy => {
+                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+            }
             ProxyType::Governance => matches!(
                 c,
                 Call::Democracy(..)
