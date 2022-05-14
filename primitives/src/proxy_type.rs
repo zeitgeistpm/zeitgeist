@@ -16,7 +16,7 @@ use frame_support::pallet_prelude::*;
 )]
 pub enum ProxyType {
     Any,
-    NonTransfer,
+    CancelProxy,
     Governance,
     Staking,
 }
