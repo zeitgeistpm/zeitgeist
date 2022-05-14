@@ -3,7 +3,7 @@
 use crate::{
     market_mock,
     mock::{Authorized, ExtBuilder, Origin, Runtime, ALICE, BOB},
-    Error, AuthorizedOutcomeReports,
+    AuthorizedOutcomeReports, Error,
 };
 use frame_support::{assert_noop, assert_ok};
 use zeitgeist_primitives::{
@@ -151,7 +151,13 @@ fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
             1,
             OutcomeReport::Scalar(456)
         ));
-        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(123));
-        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(1).unwrap(), OutcomeReport::Scalar(456));
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
+            OutcomeReport::Scalar(123)
+        );
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(1).unwrap(),
+            OutcomeReport::Scalar(456)
+        );
     });
 }

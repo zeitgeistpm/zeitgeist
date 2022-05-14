@@ -6,8 +6,8 @@ extern crate alloc;
 
 mod authorized_pallet_api;
 mod benchmarks;
-mod mock;
 mod migrations;
+mod mock;
 mod tests;
 pub mod weights;
 
@@ -21,7 +21,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{StorageMap, StorageDoubleMap, OptionQuery},
+        pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
         Blake2_128Concat, PalletId,
     };

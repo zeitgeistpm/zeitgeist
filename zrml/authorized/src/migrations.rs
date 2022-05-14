@@ -40,9 +40,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateAuthorizedStorage<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        mock::{ExtBuilder, Runtime},
-    };
+    use crate::mock::{ExtBuilder, Runtime};
     use zeitgeist_primitives::types::OutcomeReport;
 
     #[test]
