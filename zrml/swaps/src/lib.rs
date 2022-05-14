@@ -70,6 +70,7 @@ mod pallet {
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
+    use zrml_market_commons::MarketCommonsPalletApi;
     use zrml_rikiddo::{
         constants::{EMA_LONG, EMA_SHORT},
         traits::RikiddoMVPallet,
@@ -84,17 +85,18 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::admin_set_pool_as_stale())]
+        #[pallet::weight(T::WeightInfo::admin_set_pool_to_stale())]
         #[transactional]
-        pub fn admin_set_pool_as_stale(
+        pub fn admin_set_pool_to_stale(
             origin: OriginFor<T>,
-            market_type: MarketType,
-            #[pallet::compact] pool_id: PoolId,
+            #[pallet::compact] market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            Self::set_pool_as_stale(
-                &market_type,
+            let market = T::MarketCommons::market(&market_id)?;
+            let pool_id = T::MarketCommons::market_pool(&market_id)?;
+            Self::set_pool_to_stale(
+                &market.market_type,
                 pool_id,
                 &outcome_report,
                 &Self::pool_account_id(pool_id),
@@ -173,6 +175,7 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(amount != Zero::zero(), Error::<T>::ZeroAmount);
 
             <Pools<T>>::try_mutate(pool_id, |pool_opt| {
                 let pool = pool_opt.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
@@ -187,6 +190,11 @@ mod pallet {
 
                 if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
                     if amount > subsidy {
+                        real_amount = subsidy;
+                    }
+                    // If the account would be left with less than the minimum subsidy per account,
+                    // then withdraw all their subsidy instead.
+                    if subsidy.saturating_sub(amount) < T::MinSubsidyPerAccount::get() {
                         real_amount = subsidy;
                     }
 
@@ -403,6 +411,7 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(amount != Zero::zero(), Error::<T>::ZeroAmount);
 
             <Pools<T>>::try_mutate(pool_id, |pool_opt| {
                 let pool = pool_opt.as_mut().ok_or(Error::<T>::PoolDoesNotExist)?;
@@ -415,15 +424,26 @@ mod pallet {
                 T::Shares::reserve(base_asset, &who, amount)?;
 
                 let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
-                let _ = <SubsidyProviders<T>>::mutate(&pool_id, &who, |user_subsidy| {
-                    if let Some(prev_val) = user_subsidy {
-                        *prev_val += amount;
-                    } else {
-                        *user_subsidy = Some(amount);
-                    }
+                <SubsidyProviders<T>>::try_mutate::<_, _, _, DispatchError, _>(
+                    &pool_id,
+                    &who,
+                    |user_subsidy| {
+                        if let Some(prev_val) = user_subsidy {
+                            *prev_val += amount;
+                        } else {
+                            // If the account adds subsidy for the first time, ensure that it's
+                            // larger than the minimum amount.
+                            ensure!(
+                                amount >= T::MinSubsidyPerAccount::get(),
+                                Error::<T>::InvalidSubsidyAmount
+                            );
+                            *user_subsidy = Some(amount);
+                        }
 
-                    pool.total_subsidy = Some(total_subsidy + amount);
-                });
+                        pool.total_subsidy = Some(total_subsidy + amount);
+                        Ok(())
+                    },
+                )?;
 
                 Self::deposit_event(Event::PoolJoinSubsidy(
                     base_asset,
@@ -648,6 +668,11 @@ mod pallet {
             MarketId = Self::MarketId,
         >;
 
+        type MarketCommons: MarketCommonsPalletApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+        >;
+
         type MarketId: MarketId;
 
         #[pallet::constant]
@@ -677,6 +702,10 @@ mod pallet {
         /// Must be greater than 0, but can be arbitrarily close to 0.
         #[pallet::constant]
         type MinSubsidy: Get<BalanceOf<Self>>;
+
+        /// The minimum amount of subsidy that each subsidy provider must contribute.
+        #[pallet::constant]
+        type MinSubsidyPerAccount: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
         type MinWeight: Get<u128>;
@@ -737,6 +766,8 @@ mod pallet {
         InvalidWeightArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
+        /// Subsidy amount is too small.
+        InvalidSubsidyAmount,
         /// A transferal of funds out of a swaps pool was below a threshhold specified by the
         /// receiver.
         LimitOut,
@@ -776,6 +807,8 @@ mod pallet {
         UnsupportedTrade,
         /// The outcome asset specified as the winning asset was not found in the pool.
         WinningAssetNotFound,
+        /// Some amount in a transaction equals zero.
+        ZeroAmount,
     }
 
     #[pallet::event]
@@ -860,6 +893,8 @@ mod pallet {
             Vec<(<T as frame_system::Config>::AccountId, BalanceOf<T>)>,
             BalanceOf<T>,
         ),
+        /// Pool was manually destroyed. \[pool_id\]
+        PoolDestroyed(PoolId),
         /// Pool destroyed due to insufficient subsidy. \[pool_id, \[(provider, subsidy), ...\]\]
         PoolDestroyedInSubsidyPhase(
             PoolId,
@@ -1206,7 +1241,7 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        fn set_pool_as_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
+        fn set_pool_to_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
                 ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Stale;
@@ -1216,7 +1251,7 @@ mod pallet {
             Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
-        fn set_pool_as_stale_categorical(
+        fn set_pool_to_stale_categorical(
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
@@ -1262,7 +1297,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Ok(T::WeightInfo::set_pool_as_stale_without_reward_distribution(
+            Ok(T::WeightInfo::set_pool_to_stale_without_reward_distribution(
                 total_assets.saturated_into(),
             )
             .saturating_add(extra_weight))
@@ -1386,6 +1421,22 @@ mod pallet {
             ));
 
             Ok(next_pool_id)
+        }
+
+        fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            let pool = Self::pool_by_id(pool_id)?;
+            let pool_account = Self::pool_account_id(pool_id);
+            for asset in pool.assets.into_iter() {
+                let amount = T::Shares::free_balance(asset, &pool_account);
+                T::Shares::slash(asset, &pool_account, amount);
+            }
+            let pool_share_id = Self::pool_shares_id(pool_id);
+            let (_, liquidity_providers) = T::Shares::accounts_by_currency_id(pool_share_id);
+            T::Shares::destroy_all(pool_share_id, liquidity_providers.iter().cloned());
+            Pools::<T>::remove(pool_id);
+            Self::deposit_event(Event::PoolDestroyed(pool_id));
+            // TODO(#603): Fix weight calculation.
+            Ok(50_000_000_000)
         }
 
         /// All supporters will receive their reserved funds back and the pool is destroyed.
@@ -1719,16 +1770,16 @@ mod pallet {
         /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not active or already
         ///   stale
         #[frame_support::transactional]
-        fn set_pool_as_stale(
+        fn set_pool_to_stale(
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = 0;
-            weight = weight.saturating_add(Self::set_pool_as_stale_common(pool_id)?);
+            weight = weight.saturating_add(Self::set_pool_to_stale_common(pool_id)?);
             if let MarketType::Categorical(_) = market_type {
-                weight = weight.saturating_add(Self::set_pool_as_stale_categorical(
+                weight = weight.saturating_add(Self::set_pool_to_stale_categorical(
                     pool_id,
                     outcome_report,
                     winner_payout_account,
