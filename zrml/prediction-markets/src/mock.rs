@@ -47,6 +47,7 @@ ord_parameter_types! {
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
+    pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
     pub const OracleBond: Balance = 25 * CENT;
     pub const ValidityBond: Balance = 53 * CENT;
@@ -234,6 +235,7 @@ impl zrml_swaps::Config for Runtime {
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
@@ -243,6 +245,7 @@ impl zrml_swaps::Config for Runtime {
     type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
