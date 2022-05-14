@@ -53,7 +53,7 @@ mod pallet {
         traits::{
             Currency, ExistenceRequirement, Get, Hooks, IsType, StorageVersion, WithdrawReasons,
         },
-        transactional, Blake2_128Concat, PalletId, Twox64Concat,
+        Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, pallet_prelude::OriginFor};
     use sp_runtime::{
