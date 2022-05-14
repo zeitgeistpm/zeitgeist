@@ -923,14 +923,19 @@ mod pallet {
                 let mut should_check_origin = false;
                 match market.period {
                     MarketPeriod::Block(ref range) => {
-                        if current_block <= range.end + T::ReportingPeriod::get().into() {
+                        if current_block
+                            <= range.end.saturating_add(T::ReportingPeriod::get().into())
+                        {
                             should_check_origin = true;
                         }
                     }
                     MarketPeriod::Timestamp(ref range) => {
                         let rp_moment: MomentOf<T> = T::ReportingPeriod::get().into();
-                        let reporting_period_in_ms = rp_moment * MILLISECS_PER_BLOCK.into();
-                        if T::MarketCommons::now() <= range.end + reporting_period_in_ms {
+                        let reporting_period_in_ms =
+                            rp_moment.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        if T::MarketCommons::now()
+                            <= range.end.saturating_add(reporting_period_in_ms)
+                        {
                             should_check_origin = true;
                         }
                     }
