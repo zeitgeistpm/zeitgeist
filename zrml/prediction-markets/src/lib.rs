@@ -921,8 +921,8 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
-
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = market.creator;
             let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                 &RESERVE_ID,

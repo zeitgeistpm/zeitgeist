@@ -1406,6 +1406,39 @@ fn scalar_market_correctly_resolves_on_out_of_range_outcomes_above_threshold() {
 }
 
 #[test]
+fn reject_market_fails_on_permissionless_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_noop!(
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
+#[test]
+fn reject_market_fails_on_approved_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        assert_noop!(
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
+#[test]
 fn market_resolve_does_not_hold_liquidity_withdraw() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_categorical_market(
