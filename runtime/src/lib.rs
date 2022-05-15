@@ -71,27 +71,13 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-#[cfg(not(feature = "parachain"))]
 type Executive = frame_executive::Executive<
     Runtime,
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,),
->;
-#[cfg(feature = "parachain")]
-type Executive = frame_executive::Executive<
-    Runtime,
-    Block,
-    frame_system::ChainContext<Runtime>,
-    Runtime,
-    AllPalletsWithSystem,
-    (
-        pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
-        parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
-        zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,
-    ),
+    zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -464,7 +450,6 @@ impl pallet_author_mapping::Config for Runtime {
     type DepositAmount = CollatorDeposit;
     type DepositCurrency = Balances;
     type Event = Event;
-    type Keys = NimbusId;
     type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
 }
 
@@ -541,8 +526,6 @@ impl parachain_staking::Config for Runtime {
     type MinDelegatorStk = MinDelegatorStk;
     type MinSelectedCandidates = MinSelectedCandidates;
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
-    type OnCollatorPayout = ();
-    type OnNewRound = ();
     type RevokeDelegationDelay = RevokeDelegationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
     type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
