@@ -875,7 +875,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
         run_to_block(100);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(2)),
-            Error::<Runtime>::OutcomeOutOfRange,
+            Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Active);
@@ -1137,6 +1137,73 @@ fn it_resolves_a_disputed_market() {
         // for her designated reporter
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
+    });
+}
+
+#[test]
+fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..1),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            <Runtime as Config>::MinCategories::get(),
+            MarketDisputeMechanism::Authorized(ALICE),
+            ScoringRule::CPMM,
+        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
+
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        run_to_block(102);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(103);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        run_to_block(104);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        let eve_reserved = Balances::reserved_balance(&EVE);
+
+        run_to_block(115);
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+
+        // make sure rewards are right
+        //
+        // slashed amounts
+        // ---------------------------
+        // - Charlie's reserve: DisputeBond::get()
+        // - Eve's reserve: DisputeBond::get() + 2 * DisputeFactor::get()
+        //
+        // All goes to Dave (because Bob is - strictly speaking - not a disputor).
+        assert_eq!(Balances::free_balance(&CHARLIE), 1_000 * BASE - charlie_reserved);
+        assert_eq!(Balances::free_balance(&EVE), 1_000 * BASE - eve_reserved);
+        let total_slashed = charlie_reserved + eve_reserved;
+        assert_eq!(Balances::free_balance(&DAVE), 1_000 * BASE + total_slashed);
+
+        // The oracle report was accepted, so Alice is not slashed.
+        assert_eq!(Balances::free_balance(&ALICE), 1_000 * BASE);
+        assert_eq!(Balances::free_balance(&BOB), 1_000 * BASE);
     });
 }
 
@@ -1554,6 +1621,125 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
 }
 
 #[test]
+fn authorized_correctly_resolves_disputed_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..1),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            <Runtime as Config>::MinCategories::get(),
+            MarketDisputeMechanism::Authorized(FRED),
+            ScoringRule::CPMM,
+        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
+
+        run_to_block(100);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        run_to_block(102);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        // Fred authorizses an outcome, but fat-fingers it on the first try.
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(FRED),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(FRED),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        run_to_block(103);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(DAVE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        run_to_block(104);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
+
+        // check everyone's deposits
+        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        assert_eq!(charlie_reserved, DisputeBond::get());
+
+        let dave_reserved = Balances::reserved_balance(&DAVE);
+        assert_eq!(dave_reserved, DisputeBond::get() + DisputeFactor::get());
+
+        let eve_reserved = Balances::reserved_balance(&EVE);
+        assert_eq!(eve_reserved, DisputeBond::get() + 2 * DisputeFactor::get());
+
+        // check disputes length
+        let disputes = crate::Disputes::<Runtime>::get(&0);
+        assert_eq!(disputes.len(), 3);
+
+        // make sure the old mappings of market id per dispute block are erased
+        let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(&102);
+        assert_eq!(market_ids_1.len(), 0);
+
+        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(&103);
+        assert_eq!(market_ids_2.len(), 0);
+
+        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(&104);
+        assert_eq!(market_ids_3.len(), 1);
+
+        run_to_block(115);
+
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
+
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+
+        // Make sure rewards are right:
+        //
+        // Slashed amounts:
+        //     - Dave's reserve: DisputeBond::get() + DisputeFactor::get()
+        //     - Alice's oracle bond: OracleBond::get()
+        // Total: OracleBond::get() + DisputeBond::get() + DisputeFactor::get()
+        //
+        // Charlie and Eve each receive half of the total slashed amount as bounty.
+        let dave_reserved = DisputeBond::get() + DisputeFactor::get();
+        let total_slashed = OracleBond::get() + dave_reserved;
+
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE + total_slashed / 2);
+        let charlie_reserved_2 = Balances::reserved_balance(&CHARLIE);
+        assert_eq!(charlie_reserved_2, 0);
+        let eve_balance = Balances::free_balance(&EVE);
+        assert_eq!(eve_balance, 1_000 * BASE + total_slashed / 2);
+
+        let dave_balance = Balances::free_balance(&DAVE);
+        assert_eq!(dave_balance, 1_000 * BASE - dave_reserved);
+
+        let alice_balance = Balances::free_balance(&ALICE);
+        assert_eq!(alice_balance, 1_000 * BASE - OracleBond::get());
+
+        // bob kinda gets away scot-free since Alice is held responsible
+        // for her designated reporter
+        let bob_balance = Balances::free_balance(&BOB);
+        assert_eq!(bob_balance, 1_000 * BASE);
+    });
+}
+
+#[test]
 fn approve_market_correctly_unreserves_advisory_bond() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_categorical_market(
@@ -1604,7 +1790,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
-            OutcomeReport::Categorical(1)
+            OutcomeReport::Categorical(0)
         ));
         run_to_block(150);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);

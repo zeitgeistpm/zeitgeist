@@ -496,7 +496,7 @@ mod pallet {
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<Option<OutcomeReport>, DispatchError> {
             if market.mdm != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
@@ -517,7 +517,7 @@ mod pallet {
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
             Votes::<T>::remove_prefix(market_id, None);
             RequestedJurors::<T>::remove_prefix(market_id, None);
-            Ok(first)
+            Ok(Some(first))
         }
     }
 

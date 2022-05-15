@@ -12187,6 +12187,7 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
+ "test-case",
 ]
 
 [[package]]

@@ -969,7 +969,10 @@ mod pallet {
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
                 Self::ensure_market_is_closed(market)?;
-                Self::ensure_outcome_matches_market_type(market, &market_report.outcome)?;
+                ensure!(
+                    market.matches_outcome_report(&market_report.outcome),
+                    Error::<T>::OutcomeMismatch
+                );
 
                 let mut should_check_origin = false;
                 match market.period {
@@ -1231,8 +1234,6 @@ mod pallet {
         InvalidScoringRule,
         /// Sender does not have enough balance to buy shares.
         NotEnoughBalance,
-        /// The outcome being reported is out of range.
-        OutcomeOutOfRange,
         /// Market is already reported on.
         MarketAlreadyReported,
         /// Market was expected to be active.
@@ -1625,26 +1626,6 @@ mod pallet {
             Ok(())
         }
 
-        fn ensure_outcome_matches_market_type(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            outcome: &OutcomeReport,
-        ) -> DispatchResult {
-            if let OutcomeReport::Categorical(ref inner) = outcome {
-                if let MarketType::Categorical(ref categories) = market.market_type {
-                    ensure!(inner < categories, Error::<T>::OutcomeOutOfRange);
-                } else {
-                    return Err(Error::<T>::OutcomeMismatch.into());
-                }
-            }
-            if let OutcomeReport::Scalar(_) = outcome {
-                ensure!(
-                    matches!(&market.market_type, MarketType::Scalar(_)),
-                    Error::<T>::OutcomeMismatch
-                );
-            }
-            Ok(())
-        }
-
         // If a market is categorical, destroys all non-winning assets.
         fn manage_resolved_categorical_market(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
@@ -1729,7 +1710,9 @@ mod pallet {
                     T::MarketCommons::report(market)?.outcome.clone()
                 }
                 MarketStatus::Disputed => {
-                    let resolved_outcome = match market.mdm {
+                    // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
+                    // the oracle's report.
+                    let resolved_outcome_option = match market.mdm {
                         MarketDisputeMechanism::Authorized(_) => {
                             T::Authorized::on_resolution(&disputes, market_id, market)?
                         }
@@ -1740,13 +1723,15 @@ mod pallet {
                             T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
                         }
                     };
+                    let resolved_outcome =
+                        resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
                     let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
 
-                    // if the reporter reported right, return the OracleBond, otherwise
-                    // slash it to pay the correct reporters
+                    // If the oracle reported right, return the OracleBond, otherwise slash it to
+                    // pay the correct reporters.
                     if report.outcome == resolved_outcome {
                         CurrencyOf::<T>::unreserve_named(
                             &RESERVE_ID,
@@ -2112,11 +2097,11 @@ mod pallet {
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             num_disputes: u32,
-            outcome: &OutcomeReport,
+            outcome_report: &OutcomeReport,
         ) -> DispatchResult {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
-            Self::ensure_outcome_matches_market_type(market, outcome)?;
-            Self::ensure_can_not_dispute_the_same_outcome(disputes, report, outcome)?;
+            ensure!(market.matches_outcome_report(outcome_report), Error::<T>::OutcomeMismatch);
+            Self::ensure_can_not_dispute_the_same_outcome(disputes, report, outcome_report)?;
             Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
             Ok(())
         }

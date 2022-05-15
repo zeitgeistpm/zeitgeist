@@ -45,8 +45,8 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
+use zrml_authorized::migrations::MigrateAuthorizedStorage;
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
-use zrml_swaps::migrations::MigratePoolBaseAsset;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{Everything, Nothing},
@@ -77,7 +77,7 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    MigratePoolBaseAsset<Runtime>,
+    MigrateAuthorizedStorage<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
