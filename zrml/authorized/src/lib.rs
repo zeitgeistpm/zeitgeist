@@ -23,7 +23,7 @@ mod pallet {
         ensure,
         pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
-        Blake2_128Concat, PalletId,
+        Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::DispatchError;
@@ -164,7 +164,7 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
     pub type AuthorizedOutcomeReports<T: Config> =
-        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, OutcomeReport, OptionQuery>;
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, OutcomeReport, OptionQuery>;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
