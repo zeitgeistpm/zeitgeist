@@ -64,6 +64,7 @@ mod tests {
             }
             // Ensure that `Outcomes` has been properly drained.
             assert!(<Outcomes<Runtime>>::iter().peekable().peek().is_none());
+            assert_eq!(StorageVersion::get::<Pallet<Runtime>>(), NEXT_STORAGE_VERSION);
         });
     }
 }
