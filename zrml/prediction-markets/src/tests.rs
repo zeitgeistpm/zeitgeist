@@ -9,14 +9,15 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     traits::{Get, NamedReservableCurrency},
 };
+use test_case::test_case;
 
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     types::{
-        Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
+        Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -571,6 +572,89 @@ fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT),
             Error::<Runtime>::MarketIsNotActive,
+        );
+    });
+}
+
+#[test]
+fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_categorical_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(3..3),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                3,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test_case(MarketPeriod::Block(2..1); "block start greater than end")]
+#[test_case(MarketPeriod::Block(3..3); "block start equal to end")]
+#[test_case(
+    MarketPeriod::Block(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
+    "block end greater than max market period"
+)]
+#[test_case(MarketPeriod::Timestamp(2..1); "timestamp start greater than end")]
+#[test_case(MarketPeriod::Timestamp(3..3); "timestamp start equal to end")]
+#[test_case(
+    MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
+    "timestamp end greater than max market period"
+)]
+fn create_categorical_market_fails_if_market_period_is_invalid(
+    period: MarketPeriod<BlockNumber, Moment>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_categorical_market(
+                Origin::signed(ALICE),
+                BOB,
+                period,
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                3,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+    });
+}
+
+#[test_case(MarketPeriod::Block(2..1); "block start greater than end")]
+#[test_case(MarketPeriod::Block(3..3); "block start equal to end")]
+#[test_case(
+    MarketPeriod::Block(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
+    "block end greater than max market period"
+)]
+#[test_case(MarketPeriod::Timestamp(2..1); "timestamp start greater than end")]
+#[test_case(MarketPeriod::Timestamp(3..3); "timestamp start equal to end")]
+#[test_case(
+    MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
+    "timestamp end greater than max market period"
+)]
+fn create_scalar_market_fails_if_market_period_is_invalid(
+    period: MarketPeriod<BlockNumber, Moment>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_scalar_market(
+                Origin::signed(ALICE),
+                BOB,
+                period,
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                123..=456,
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
         );
     });
 }
@@ -1215,7 +1299,7 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
         // Create advised categorical market using Rikiddo.
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Advised,
-            1337..1337,
+            1337..1338,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
         );
         let market_id = 0;

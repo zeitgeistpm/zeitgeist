@@ -10766,6 +10766,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-case"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6344589a99d3971d6fa4e8314dbcbeca2df6273a6b642e46906971779159af1f"
+dependencies = [
+ "cfg-if 1.0.0",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "test-runtime-constants"
 version = "0.9.17"
 source = "git+https://github.com/purestake/polkadot?branch=moonbeam-polkadot-v0.9.17#66cb46bb3a7bd7295d1eb39a391559bc6efb2a22"
@@ -12397,6 +12410,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "substrate-fixed 0.5.8",
+ "test-case",
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",

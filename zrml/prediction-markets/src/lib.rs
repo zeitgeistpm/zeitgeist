@@ -401,6 +401,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
+            Self::ensure_market_period_is_valid(&period)?;
 
             ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
             ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
@@ -587,8 +588,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_is_active(&period)?;
-
-            ensure!(outcome_range.start() < outcome_range.end(), "Invalid range provided.");
+            Self::ensure_market_period_is_valid(&period)?;
 
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 Self::ensure_market_start_is_in_time(&period)?;
@@ -974,14 +974,19 @@ mod pallet {
                 let mut should_check_origin = false;
                 match market.period {
                     MarketPeriod::Block(ref range) => {
-                        if current_block <= range.end + T::ReportingPeriod::get().into() {
+                        if current_block
+                            <= range.end.saturating_add(T::ReportingPeriod::get().into())
+                        {
                             should_check_origin = true;
                         }
                     }
                     MarketPeriod::Timestamp(ref range) => {
                         let rp_moment: MomentOf<T> = T::ReportingPeriod::get().into();
-                        let reporting_period_in_ms = rp_moment * MILLISECS_PER_BLOCK.into();
-                        if T::MarketCommons::now() <= range.end + reporting_period_in_ms {
+                        let reporting_period_in_ms =
+                            rp_moment.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        if T::MarketCommons::now()
+                            <= range.end.saturating_add(reporting_period_in_ms)
+                        {
                             should_check_origin = true;
                         }
                     }
@@ -1158,6 +1163,9 @@ mod pallet {
         #[pallet::constant]
         type MaxDisputes: Get<u32>;
 
+        /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
+        type MaxMarketPeriod: Get<u64>;
+
         /// Shares
         type Shares: ZeitgeistMultiReservableCurrency<
             Self::AccountId,
@@ -1265,6 +1273,8 @@ mod pallet {
         InvalidMarketStatus,
         /// An amount was illegally specified as zero.
         ZeroAmount,
+        /// Market period is faulty (too short, outside of limits)
+        InvalidMarketPeriod,
     }
 
     #[pallet::event]
@@ -1547,6 +1557,25 @@ mod pallet {
                 },
                 Error::<T>::MarketIsNotActive
             );
+            Ok(())
+        }
+
+        fn ensure_market_period_is_valid(
+            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        ) -> DispatchResult {
+            let verify = |start: u64, end: u64| -> DispatchResult {
+                ensure!(start < end, Error::<T>::InvalidMarketPeriod);
+                ensure!(end <= T::MaxMarketPeriod::get(), Error::<T>::InvalidMarketPeriod);
+                Ok(())
+            };
+            match period {
+                MarketPeriod::Block(ref range) => {
+                    verify(range.start.saturated_into(), range.end.saturated_into())
+                }
+                MarketPeriod::Timestamp(ref range) => {
+                    verify(range.start.saturated_into(), range.end.saturated_into())
+                }
+            }?;
             Ok(())
         }
 
