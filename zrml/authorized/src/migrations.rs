@@ -24,7 +24,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateAuthorizedStorage<T> {
         let mut total_weight: Weight = 0;
         log::info!("Starting storage migration of authorized reports");
 
-        for (market_id, _, outcome_report) in <Outcomes<T>>::iter() {
+        for (market_id, _, outcome_report) in <Outcomes<T>>::drain() {
             <AuthorizedOutcomeReports<T>>::insert(market_id, outcome_report);
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
         }
@@ -62,6 +62,8 @@ mod tests {
                     <AuthorizedOutcomeReports<Runtime>>::get(market_id).unwrap()
                 );
             }
+            // Ensure that `Outcomes` has been properly drained.
+            assert!(<Outcomes<Runtime>>::iter().peekable().peek().is_none());
         });
     }
 }
