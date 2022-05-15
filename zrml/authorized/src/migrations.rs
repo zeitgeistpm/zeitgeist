@@ -18,10 +18,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateAuthorizedStorage<T> {
     where
         T: Config,
     {
+        let mut total_weight = T::DbWeight::get().reads(1);
         if StorageVersion::get::<Pallet<T>>() != REQUIRED_STORAGE_VERSION {
-            return 0;
+            return total_weight;
         }
-        let mut total_weight: Weight = 0;
         log::info!("Starting storage migration of authorized reports");
 
         for (market_id, _, outcome_report) in <Outcomes<T>>::drain() {
@@ -30,7 +30,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateAuthorizedStorage<T> {
         }
 
         StorageVersion::new(NEXT_STORAGE_VERSION).put::<Pallet<T>>();
-        total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
         log::info!("Completed storage migration of authorized reports");
         total_weight
