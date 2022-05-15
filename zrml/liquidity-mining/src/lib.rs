@@ -177,12 +177,12 @@ mod pallet {
                 }
                 Some(())
             };
-            with_transaction(|| match fun() {
+            let _ = with_transaction(|| match fun() {
                 None => {
                     log::error!("Block {:?} was not finalized", block);
-                    TransactionOutcome::Rollback(())
+                    TransactionOutcome::Rollback(Err("Block was not finalized"))
                 }
-                Some(_) => TransactionOutcome::Commit(()),
+                Some(_) => TransactionOutcome::Commit(Ok(())),
             });
         }
     }

@@ -46,9 +46,7 @@ where
     let FullDeps { client, pool, deny_unsafe } = deps;
 
     io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
-
     io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
-
     io.extend_with(zrml_swaps_rpc::SwapsApi::to_delegate(zrml_swaps_rpc::Swaps::new(client)));
 
     io
