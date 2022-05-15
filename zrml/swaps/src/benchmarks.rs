@@ -17,8 +17,12 @@ use sp_runtime::traits::{SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
-    types::{Asset, MarketType, OutcomeReport, ScoringRule},
+    types::{
+        Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+        MarketType, OutcomeReport, ScoringRule,
+    },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 
 // Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
 fn generate_accounts_with_assets<T: Config>(
@@ -114,10 +118,27 @@ fn bench_create_pool<T: Config>(
 }
 
 benchmarks! {
-    admin_set_pool_as_stale {
+    admin_set_pool_to_stale {
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, ..) = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
-    }: _(RawOrigin::Root, MarketType::Categorical(0), pool_id as _, OutcomeReport::Categorical(0))
+        T::MarketCommons::push_market(
+            Market {
+                creation: MarketCreation::Permissionless,
+                creator_fee: 0,
+                creator: caller.clone(),
+                market_type: MarketType::Categorical(5),
+                mdm: MarketDisputeMechanism::Authorized(caller.clone()),
+                metadata: vec![0; 50],
+                oracle: caller.clone(),
+                period: MarketPeriod::Block(0u32.into()..1u32.into()),
+                report: None,
+                resolved_outcome: None,
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Active,
+            }
+        )?;
+        let _ = T::MarketCommons::insert_market_pool(0u32.saturated_into(), 0u128);
+        let _ = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
+    }: _(RawOrigin::Root, 0u32.into(), OutcomeReport::Categorical(0))
 
     end_subsidy_phase {
         // Total assets
@@ -293,7 +314,7 @@ benchmarks! {
         let max_asset_amount: BalanceOf<T> = T::MinLiquidity::get();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
 
-    set_pool_as_stale_without_reward_distribution {
+    set_pool_to_stale_without_reward_distribution {
         // Total possible outcomes
         let a in 3..T::MaxAssets::get().into();
 
@@ -310,7 +331,7 @@ benchmarks! {
             false
         );
     }: {
-        Pallet::<T>::set_pool_as_stale(
+        Pallet::<T>::set_pool_to_stale(
             &MarketType::Categorical(a as u16),
             pool_id, &OutcomeReport::Categorical(0),
             &account("ScrapCollector", 0, 0)

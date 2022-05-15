@@ -9,6 +9,7 @@ substrate-fixed = { default-features = false, git = "https://github.com/encointe
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
+zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 
 # Mock
@@ -35,7 +36,6 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
-    "zrml-market-commons",
     "zrml-swaps-runtime-api",
 ]
 runtime-benchmarks = [
@@ -52,6 +52,7 @@ std = [
     "sp-runtime/std",
     "substrate-fixed/std",
     "zeitgeist-primitives/std",
+    "zrml-market-commons/std",
     "zrml-liquidity-mining/std",
     "zrml-rikiddo/std",
 ]
@@ -60,4 +61,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-swaps"
-version = "0.3.1"
+version = "0.3.2"

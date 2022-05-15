@@ -63,6 +63,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::cancel_order_ask().max(T::WeightInfo::cancel_order_bid())
         )]
+        #[transactional]
         pub fn cancel_order(
             origin: OriginFor<T>,
             asset: Asset<T::MarketId>,
@@ -107,6 +108,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::fill_order_ask().max(T::WeightInfo::fill_order_bid())
         )]
+        #[transactional]
         pub fn fill_order(origin: OriginFor<T>, order_hash: T::Hash) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             let mut bid = true;

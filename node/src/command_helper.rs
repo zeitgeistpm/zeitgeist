@@ -44,7 +44,7 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     }
 }
 
-/// Create a transaction using the given `call`.
+/// Creates a transaction using the given `call`.
 ///
 /// Note: Should only be used for benchmarking.
 pub fn create_benchmark_extrinsic<RuntimeApi, Executor: NativeExecutionDispatch + 'static>(

@@ -17,7 +17,7 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let market = market_mock::<T>(caller.clone());
         T::MarketCommons::push_market(market).unwrap();
-    }: _(RawOrigin::Signed(caller), OutcomeReport::Scalar(1))
+    }: _(RawOrigin::Signed(caller), 0u32.into(), OutcomeReport::Scalar(1))
 }
 
 impl_benchmark_test_suite!(Court, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);

@@ -17,6 +17,7 @@ pallet-identity = { branch = "moonbeam-polkadot-v0.9.19", default-features = fal
 pallet-membership = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-multisig = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-preimage = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-proxy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-sudo = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -156,6 +157,7 @@ runtime-benchmarks = [
     "pallet-membership/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
+    "pallet-proxy/runtime-benchmarks",
     "pallet-scheduler/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "pallet-treasury/runtime-benchmarks",
@@ -190,6 +192,7 @@ std = [
     "pallet-membership/std",
     "pallet-multisig/std",
     "pallet-preimage/std",
+    "pallet-proxy/std",
     "pallet-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-sudo/std",
@@ -273,7 +276,7 @@ txfilter = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.1"
+version = "0.3.2"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

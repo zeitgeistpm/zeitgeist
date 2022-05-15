@@ -78,6 +78,7 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::set_per_block_distribution())]
+        // MARK(non-transactional): `set_per_block_distribution` is infallible.
         pub fn set_per_block_distribution(
             origin: OriginFor<T>,
             #[pallet::compact] per_block_distribution: BalanceOf<T>,

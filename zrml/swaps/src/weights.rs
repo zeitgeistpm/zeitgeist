@@ -27,7 +27,7 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_swaps (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_set_pool_as_stale() -> Weight;
+    fn admin_set_pool_to_stale() -> Weight;
     fn end_subsidy_phase(a: u32, b: u32) -> Weight;
     fn destroy_pool_in_subsidy_phase(a: u32) -> Weight;
     fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight;
@@ -39,7 +39,7 @@ pub trait WeightInfoZeitgeist {
     fn pool_join_subsidy() -> Weight;
     fn pool_join_with_exact_asset_amount() -> Weight;
     fn pool_join_with_exact_pool_amount() -> Weight;
-    fn set_pool_as_stale_without_reward_distribution(a: u32) -> Weight;
+    fn set_pool_to_stale_without_reward_distribution(a: u32) -> Weight;
     fn swap_exact_amount_in_cpmm() -> Weight;
     fn swap_exact_amount_in_rikiddo(a: u32) -> Weight;
     fn swap_exact_amount_out_cpmm() -> Weight;
@@ -50,7 +50,7 @@ pub trait WeightInfoZeitgeist {
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Swaps Pools (r:1 w:1)
-    fn admin_set_pool_as_stale() -> Weight {
+    fn admin_set_pool_to_stale() -> Weight {
         (30_780_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -176,7 +176,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     // Storage: Swaps Pools (r:1 w:1)
-    fn set_pool_as_stale_without_reward_distribution(a: u32) -> Weight {
+    fn set_pool_to_stale_without_reward_distribution(a: u32) -> Weight {
         (20_989_000 as Weight)
             // Standard Error: 8_000
             .saturating_add((874_000 as Weight).saturating_mul(a as Weight))

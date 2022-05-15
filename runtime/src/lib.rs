@@ -28,7 +28,7 @@ pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
@@ -78,6 +78,9 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    (
+        zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,
+    )
 >;
 #[cfg(feature = "parachain")]
 type Executive = frame_executive::Executive<
@@ -89,6 +92,7 @@ type Executive = frame_executive::Executive<
     (
         pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
         parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
+        zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,
     ),
 >;
 
@@ -212,6 +216,7 @@ macro_rules! create_zeitgeist_runtime {
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 31,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 32,
+                Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 33,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Pallet, Storage} = 40,
@@ -337,6 +342,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
+                    | Call::Proxy(_)
                     | Call::Currency(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
@@ -370,6 +376,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
+                    | Call::Proxy(_)
                     | Call::Currency(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
@@ -745,6 +752,53 @@ impl pallet_preimage::Config for Runtime {
     type ByteDeposit = PreimageByteDeposit;
 }
 
+impl InstanceFilter<Call> for ProxyType {
+    fn filter(&self, c: &Call) -> bool {
+        match self {
+            ProxyType::Any => true,
+            ProxyType::CancelProxy => {
+                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+            }
+            ProxyType::Governance => matches!(
+                c,
+                Call::Democracy(..)
+                    | Call::Council(..)
+                    | Call::TechnicalCommittee(..)
+                    | Call::AdvisoryCommittee(..)
+                    | Call::Treasury(..)
+            ),
+            #[cfg(feature = "parachain")]
+            ProxyType::Staking => matches!(c, Call::ParachainStaking(..)),
+            #[cfg(not(feature = "parachain"))]
+            ProxyType::Staking => false,
+        }
+    }
+
+    fn is_superset(&self, o: &Self) -> bool {
+        match (self, o) {
+            (x, y) if x == y => true,
+            (ProxyType::Any, _) => true,
+            (_, ProxyType::Any) => false,
+            _ => false,
+        }
+    }
+}
+
+impl pallet_proxy::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type ProxyType = ProxyType;
+    type ProxyDepositBase = ProxyDepositBase;
+    type ProxyDepositFactor = ProxyDepositFactor;
+    type MaxProxies = ConstU32<32>;
+    type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
+    type MaxPending = ConstU32<32>;
+    type CallHasher = BlakeTwo256;
+    type AnnouncementDepositBase = AnnouncementDepositBase;
+    type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_scheduler::Config for Runtime {
@@ -896,6 +950,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
+    type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
@@ -940,6 +995,7 @@ impl zrml_swaps::Config for Runtime {
     // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
     type LiquidityMining = NoopLiquidityMining;
     // type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
@@ -949,6 +1005,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
@@ -1049,6 +1106,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_multisig, MultiSig);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_proxy, Proxy);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_treasury, Treasury);
@@ -1121,6 +1179,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_multisig, MultiSig);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);
