@@ -6,7 +6,7 @@ extern crate alloc;
 
 mod authorized_pallet_api;
 mod benchmarks;
-mod migrations;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
