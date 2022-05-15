@@ -78,9 +78,7 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    (
-        zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,
-    )
+    (zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,),
 >;
 #[cfg(feature = "parachain")]
 type Executive = frame_executive::Executive<

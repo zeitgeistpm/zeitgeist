@@ -20,7 +20,6 @@ pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-zrml-market-commons = { optional = true, path = "../market-commons" }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]
