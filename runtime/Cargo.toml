@@ -60,10 +60,10 @@ parachain-info = { branch = "moonbeam-polkadot-v0.9.19", default-features = fals
 
 nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-author-mapping = { rev = "b0a04975df9d287fbdfa2666a402e0f05672bec1", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
+pallet-author-mapping = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/crowdloan-rewards", optional = true }
-parachain-staking = { rev = "b0a04975df9d287fbdfa2666a402e0f05672bec1", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
+parachain-staking = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 
 # Polkadot
 

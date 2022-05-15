@@ -2967,7 +2967,7 @@ dependencies = [
  "indexmap",
  "slab",
  "tokio",
- "tokio-util 0.7.1",
+ "tokio-util 0.7.2",
  "tracing",
 ]
 
@@ -3192,7 +3192,7 @@ dependencies = [
  "http",
  "hyper",
  "log",
- "rustls 0.20.4",
+ "rustls 0.20.5",
  "rustls-native-certs 0.6.2",
  "tokio",
  "tokio-rustls 0.23.4",
@@ -3516,7 +3516,7 @@ dependencies = [
  "log",
  "tokio",
  "tokio-stream",
- "tokio-util 0.6.9",
+ "tokio-util 0.6.10",
  "unicase",
 ]
 
@@ -3564,7 +3564,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-rustls 0.23.4",
- "tokio-util 0.7.1",
+ "tokio-util 0.7.2",
  "tracing",
  "webpki-roots 0.22.3",
 ]
@@ -5206,9 +5206,9 @@ dependencies = [
 
 [[package]]
 name = "os_str_bytes"
-version = "6.0.0"
+version = "6.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
+checksum = "029d8d0b2f198229de29dca79676f2738ff952edf3fde542eb8bf94d8c21b435"
 
 [[package]]
 name = "owning_ref"
@@ -5257,7 +5257,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/purestake/moonbeam?rev=b0a04975df9d287fbdfa2666a402e0f05672bec1#b0a04975df9d287fbdfa2666a402e0f05672bec1"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=downgrade-staking-and-mapping#3c80eb3d61f8dfb057e2242318c2d7bfee1b7a39"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5267,7 +5267,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "session-keys-primitives",
  "sp-runtime",
  "sp-std",
 ]
@@ -6209,7 +6208,7 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/purestake/moonbeam?rev=b0a04975df9d287fbdfa2666a402e0f05672bec1#b0a04975df9d287fbdfa2666a402e0f05672bec1"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=downgrade-staking-and-mapping#3c80eb3d61f8dfb057e2242318c2d7bfee1b7a39"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -8141,9 +8140,9 @@ checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
 name = "rayon"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd249e82c21598a9a426a4e00dd7adc1d640b22445ec8545feef801d1a74c221"
+checksum = "bd99e5772ead8baa5215278c9b15bf92087709e9c1b2d1f97cdb5a183c933a7d"
 dependencies = [
  "autocfg",
  "crossbeam-deque",
@@ -8505,9 +8504,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.20.4"
+version = "0.20.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fbfeb8d0ddb84706bc597a5574ab8912817c52a397f819e5b614e2265206921"
+checksum = "a024a432ae760ab3bff924ad91ce1cfa52cb57ed16e1ef32d0d249cfee1a6c13"
 dependencies = [
  "log",
  "ring",
@@ -9814,11 +9813,6 @@ checksum = "e44969a61f5d316be20a42ff97816efb3b407a924d06824c3d8a49fa8450de0e"
 dependencies = [
  "serde",
 ]
-
-[[package]]
-name = "session-keys-primitives"
-version = "0.1.0"
-source = "git+https://github.com/purestake/moonbeam?rev=b0a04975df9d287fbdfa2666a402e0f05672bec1#b0a04975df9d287fbdfa2666a402e0f05672bec1"
 
 [[package]]
 name = "sha-1"
@@ -11256,7 +11250,7 @@ version = "0.23.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
 dependencies = [
- "rustls 0.20.4",
+ "rustls 0.20.5",
  "tokio",
  "webpki 0.22.0",
 ]
@@ -11274,9 +11268,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.6.9"
+version = "0.6.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e99e1983e5d376cd8eb4b66604d2e99e79f5bd988c3055891dcd8c9e2604cc0"
+checksum = "36943ee01a6d67977dd3f84a5a1d2efeb4ada3a1ae771cadfaa535d9d9fc6507"
 dependencies = [
  "bytes 1.1.0",
  "futures-core",
@@ -11288,9 +11282,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0edfdeb067411dba2044da6d1cb2df793dd35add7888d73c16e3381ded401764"
+checksum = "f988a1a1adc2fb21f9c12aa96441da33a1728193ae0b95d2be22dbd17fcb4e5c"
 dependencies = [
  "bytes 1.1.0",
  "futures-core",
