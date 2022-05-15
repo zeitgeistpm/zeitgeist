@@ -32,25 +32,25 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for WeightInfo<T> {
     // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     fn add_association() -> Weight {
-		(34_696_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
+        (34_696_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
     // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     fn update_association() -> Weight {
-		(26_877_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
+        (26_877_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
     // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     fn clear_association() -> Weight {
-		(36_253_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
+        (36_253_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
 }
