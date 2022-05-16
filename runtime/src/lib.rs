@@ -77,7 +77,6 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
