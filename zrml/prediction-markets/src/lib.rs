@@ -1199,6 +1199,7 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
+        // TODO use ZCurrencies instead of Shares, because also native currency is handled here
         /// Shares
         type Shares: ZeitgeistMultiReservableCurrency<
             Self::AccountId,
@@ -1735,9 +1736,10 @@ mod pallet {
                             &market.creator,
                             T::OracleBond::get(),
                         );
+                        // deposit only to the real reporter what actually was slashed
                         let negative_imbalance = T::OracleBond::get() - excess;
-                        // give it to the real reporter
-                        T::Shares::deposit(T::BaseAsset::get(), &report.by, negative_imbalance);
+                        // deposit could fail for below ExistentialDeposit or Overflow of total issuance
+                        T::Shares::deposit(T::BaseAsset::get(), &report.by, negative_imbalance)?;
                     }
 
                     T::MarketCommons::report(market)?.outcome.clone()
@@ -1780,6 +1782,7 @@ mod pallet {
                             T::OracleBond::get(),
                         );
 
+                        // negative_imbalance is the actual slash value (excess should be zero)
                         let negative_imbalance = T::OracleBond::get() - excess;
 
                         overall_imbalance.saturating_add(negative_imbalance);
@@ -1804,6 +1807,7 @@ mod pallet {
                                 actual_bond,
                             );
 
+                            // negative_imbalance is the actual slash value (excess should be zero)
                             let negative_imbalance = actual_bond - excess;
 
                             overall_imbalance.saturating_add(negative_imbalance);
@@ -1815,19 +1819,18 @@ mod pallet {
                         .checked_div(&correct_reporters.len().saturated_into())
                         .ok_or(ArithmeticError::DivisionByZero)?;
                     for correct_reporter in &correct_reporters {
-                        let leftover = overall_imbalance - reward_per_each;
-                        if leftover >= BalanceOf::<T>::zero() {
-                            T::Shares::deposit(
-                                T::BaseAsset::get(),
-                                correct_reporter,
-                                reward_per_each,
-                            );
-                            overall_imbalance = leftover;
-                        } else if leftover < BalanceOf::<T>::zero() {
-                            let reward = overall_imbalance;
-                            T::Shares::deposit(T::BaseAsset::get(), correct_reporter, reward);
-                            overall_imbalance = BalanceOf::<T>::zero();
-                        }
+                        let reward: BalanceOf<T> = if overall_imbalance < reward_per_each {
+                            let remainder = overall_imbalance;
+                            if !overall_imbalance.is_zero() {
+                                overall_imbalance = BalanceOf::<T>::zero();
+                            }
+                            remainder
+                        } else {
+                            overall_imbalance -= reward_per_each;
+                            reward_per_each
+                        };
+                        // deposit could fail for below ExistentialDeposit or Overflow of total issuance
+                        T::Shares::deposit(T::BaseAsset::get(), correct_reporter, reward)?;
                     }
 
                     resolved_outcome
