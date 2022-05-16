@@ -74,7 +74,7 @@ impl crate::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currencies;
+    type Shares = Tokens;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 

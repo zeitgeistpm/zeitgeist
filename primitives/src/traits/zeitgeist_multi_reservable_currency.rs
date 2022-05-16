@@ -1,9 +1,11 @@
 use alloc::vec::Vec;
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
-use orml_traits::currency::MultiReservableCurrency;
+use orml_traits::currency::NamedMultiReservableCurrency;
 
 /// Custom `MultiReservableCurrency` trait.
-pub trait ZeitgeistMultiReservableCurrency<AccountId>: MultiReservableCurrency<AccountId> {
+pub trait ZeitgeistMultiReservableCurrency<AccountId>:
+    NamedMultiReservableCurrency<AccountId>
+{
     /// Return the total number of accounts that hold _any_ asset (first value) and all accounts
     /// that hold assets of a given `currency_id` (second value).
     fn accounts_by_currency_id(
@@ -48,8 +50,10 @@ where
     }
 }
 
-/// This implementation will only affect the `MultiCurrency` part, i.e., it won't touch
-/// the native currency
+// This implementation will only affect the `MultiCurrency` part, i.e., it won't touch
+// the native currency
+// TODO what about this?
+/*
 impl<T> ZeitgeistMultiReservableCurrency<T::AccountId> for orml_currencies::Pallet<T>
 where
     T: orml_currencies::Config,
@@ -68,3 +72,4 @@ where
         T::MultiCurrency::destroy_all(currency_id, accounts)
     }
 }
+*/

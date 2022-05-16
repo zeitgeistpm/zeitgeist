@@ -939,8 +939,8 @@ impl zrml_prediction_markets::Config for Runtime {
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
     type Shares = Tokens;
+    type BaseAsset = GetNativeCurrencyId;
     type SimpleDisputes = SimpleDisputes;
-    type Slash = ();
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
