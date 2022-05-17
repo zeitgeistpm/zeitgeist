@@ -1,7 +1,7 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{
-    mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, RESERVE_ID,
+    mock::*, Config, Error, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, RESERVE_ID,
 };
 use core::ops::Range;
 use frame_support::{
@@ -360,7 +360,7 @@ fn create_categorical_market_deposits_the_correct_event() {
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = PredictionMarkets::market_account(market_id);
-        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::MarketCreated(0, market_account, market)));
     });
 }
 
@@ -376,7 +376,7 @@ fn create_scalar_market_deposits_the_correct_event() {
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = PredictionMarkets::market_account(market_id);
-        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::MarketCreated(0, market_account, market)));
     });
 }
 
@@ -556,7 +556,7 @@ fn it_allows_to_buy_a_complete_set() {
         let market_account = PredictionMarkets::market_account(0);
         let market_bal = Balances::free_balance(market_account);
         assert_eq!(market_bal, CENT);
-        assert!(event_exists(Event::BoughtCompleteSet(0, CENT, BOB)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::BoughtCompleteSet(0, CENT, BOB)));
     });
 }
 
@@ -764,7 +764,7 @@ fn it_allows_to_sell_a_complete_set() {
         let bal = Balances::free_balance(&BOB);
         assert_eq!(bal, 1_000 * BASE);
 
-        assert!(event_exists(Event::SoldCompleteSet(0, CENT, BOB)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::SoldCompleteSet(0, CENT, BOB)));
     });
 }
 
@@ -1232,7 +1232,7 @@ fn it_allows_to_redeem_shares() {
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
-        assert!(event_exists(Event::TokensRedeemed(
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::TokensRedeemed(
             0,
             Asset::CategoricalOutcome(0, 1),
             CENT,
@@ -1503,14 +1503,14 @@ fn full_scalar_market_lifecycle() {
         let ztg_bal_eve = Balances::free_balance(&EVE);
         assert_eq!(ztg_bal_charlie, 98750 * CENT); // 75 (LONG) + 12.5 (SHORT) + 900 (balance)
         assert_eq!(ztg_bal_eve, 1000 * BASE);
-        assert!(event_exists(Event::TokensRedeemed(
+        System::assert_has_event(Event::PredictionMarkets(crate::Event::TokensRedeemed(
             0,
             Asset::ScalarOutcome(0, ScalarPosition::Long),
             100 * BASE,
             75 * BASE,
             CHARLIE
         )));
-        assert!(event_exists(Event::TokensRedeemed(
+        System::assert_has_event(Event::PredictionMarkets(crate::Event::TokensRedeemed(
             0,
             Asset::ScalarOutcome(0, ScalarPosition::Short),
             50 * BASE,
@@ -1521,14 +1521,7 @@ fn full_scalar_market_lifecycle() {
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
         let ztg_bal_eve_after = Balances::free_balance(&EVE);
         assert_eq!(ztg_bal_eve_after, 101250 * CENT); // 12.5 (SHORT) + 1000 (balance)
-        assert!(!event_exists(Event::TokensRedeemed(
-            0,
-            Asset::ScalarOutcome(0, ScalarPosition::Long),
-            0,
-            0,
-            EVE
-        )));
-        assert!(event_exists(Event::TokensRedeemed(
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::TokensRedeemed(
             0,
             Asset::ScalarOutcome(0, ScalarPosition::Short),
             50 * BASE,
@@ -2134,9 +2127,4 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
         assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
         assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
     }
-}
-
-fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
-    let evt = crate::mock::Event::PredictionMarkets(raw_evt);
-    frame_system::Pallet::<Runtime>::events().iter().any(|e| e.event == evt)
 }
