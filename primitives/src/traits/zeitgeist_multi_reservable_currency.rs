@@ -52,7 +52,6 @@ where
 
 // This implementation will only affect the `MultiCurrency` part, i.e., it won't touch
 // the native currency
-/*
 impl<T> ZeitgeistMultiReservableCurrency<T::AccountId> for orml_currencies::Pallet<T>
 where
     T: orml_currencies::Config,
@@ -71,4 +70,3 @@ where
         T::MultiCurrency::destroy_all(currency_id, accounts)
     }
 }
-*/

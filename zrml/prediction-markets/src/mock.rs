@@ -64,7 +64,7 @@ construct_runtime!(
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
-        Currency: orml_currencies::{Call, Pallet, Storage},
+        Currencies: orml_currencies::{Call, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
@@ -101,7 +101,7 @@ impl crate::Config for Runtime {
     type PalletId = PmPalletId;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
-    type Shares = Tokens;
+    type Shares = Currencies;
     type BaseAsset = GetNativeCurrencyId;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;
