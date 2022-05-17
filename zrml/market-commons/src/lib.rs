@@ -8,6 +8,7 @@
 extern crate alloc;
 
 mod market_commons_pallet_api;
+mod mock;
 
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use pallet::*;

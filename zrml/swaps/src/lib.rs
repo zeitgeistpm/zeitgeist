@@ -1198,11 +1198,11 @@ mod pallet {
 
         pub(crate) fn pool_by_id(
             pool_id: PoolId,
-        ) -> Result<Pool<BalanceOf<T>, T::MarketId>, Error<T>>
+        ) -> Result<Pool<BalanceOf<T>, T::MarketId>, DispatchError>
         where
             T: Config,
         {
-            Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist)
+            Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist.into())
         }
 
         fn inc_next_pool_id() -> Result<PoolId, DispatchError> {
