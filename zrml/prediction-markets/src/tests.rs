@@ -360,7 +360,11 @@ fn create_categorical_market_deposits_the_correct_event() {
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = PredictionMarkets::market_account(market_id);
-        System::assert_last_event(Event::PredictionMarkets(crate::Event::MarketCreated(0, market_account, market)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::MarketCreated(
+            0,
+            market_account,
+            market,
+        )));
     });
 }
 
@@ -376,7 +380,11 @@ fn create_scalar_market_deposits_the_correct_event() {
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = PredictionMarkets::market_account(market_id);
-        System::assert_last_event(Event::PredictionMarkets(crate::Event::MarketCreated(0, market_account, market)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::MarketCreated(
+            0,
+            market_account,
+            market,
+        )));
     });
 }
 
@@ -556,7 +564,9 @@ fn it_allows_to_buy_a_complete_set() {
         let market_account = PredictionMarkets::market_account(0);
         let market_bal = Balances::free_balance(market_account);
         assert_eq!(market_bal, CENT);
-        System::assert_last_event(Event::PredictionMarkets(crate::Event::BoughtCompleteSet(0, CENT, BOB)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::BoughtCompleteSet(
+            0, CENT, BOB,
+        )));
     });
 }
 
@@ -764,7 +774,9 @@ fn it_allows_to_sell_a_complete_set() {
         let bal = Balances::free_balance(&BOB);
         assert_eq!(bal, 1_000 * BASE);
 
-        System::assert_last_event(Event::PredictionMarkets(crate::Event::SoldCompleteSet(0, CENT, BOB)));
+        System::assert_last_event(Event::PredictionMarkets(crate::Event::SoldCompleteSet(
+            0, CENT, BOB,
+        )));
     });
 }
 
@@ -1237,7 +1249,7 @@ fn it_allows_to_redeem_shares() {
             Asset::CategoricalOutcome(0, 1),
             CENT,
             CENT,
-            CHARLIE
+            CHARLIE,
         )));
     });
 }
@@ -1508,14 +1520,14 @@ fn full_scalar_market_lifecycle() {
             Asset::ScalarOutcome(0, ScalarPosition::Long),
             100 * BASE,
             75 * BASE,
-            CHARLIE
+            CHARLIE,
         )));
         System::assert_has_event(Event::PredictionMarkets(crate::Event::TokensRedeemed(
             0,
             Asset::ScalarOutcome(0, ScalarPosition::Short),
             50 * BASE,
             1250 * CENT, // 12.5
-            CHARLIE
+            CHARLIE,
         )));
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
@@ -1526,7 +1538,7 @@ fn full_scalar_market_lifecycle() {
             Asset::ScalarOutcome(0, ScalarPosition::Short),
             50 * BASE,
             1250 * CENT, // 12.5
-            EVE
+            EVE,
         )));
     })
 }
