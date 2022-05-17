@@ -121,14 +121,14 @@ parameter_types! {
     pub const TransactionByteFee: Balance = 100 * MICRO;
     // The portion of the `NORMAL_DISPATCH_RATIO` that we adjust the fees with. Blocks filled less
     // than this will decrease the weight and more will increase.
-    pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
+    pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(10);
     // https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html
     // With a target block time of 12 seconds (7200 blocks per day)
     // where p is the amount of change over 7200 blocks.
     // p >= AdjustmentVariable * BlocksPerDay * (1 - TargetBlockFullness * NORMAL_DISPATCH_RATIO)
-    // p >= 0.00003 * 7200 * (1 - 0.25 * 0.75)
-    // p >= 0.1755
-    // Meaning that fees can change by around ~17.55% per day, given extreme congestion.
+    // p >= 0.00003 * 7200 * (1 - 0.10 * 0.75)
+    // p >= 0.1998
+    // Meaning that fees can change by around ~19.98% per day, given extreme congestion.
     // The adjustment variable of the runtime. Higher values will cause `TargetBlockFullness` to
     // change the fees more rapidly.
     pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(3, 100_000);
