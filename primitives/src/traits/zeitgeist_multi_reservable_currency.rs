@@ -52,7 +52,6 @@ where
 
 // This implementation will only affect the `MultiCurrency` part, i.e., it won't touch
 // the native currency
-// TODO what about this?
 /*
 impl<T> ZeitgeistMultiReservableCurrency<T::AccountId> for orml_currencies::Pallet<T>
 where

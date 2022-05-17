@@ -85,7 +85,7 @@ mod pallet {
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{Currency, EnsureOrigin, Get, Hooks, IsType, StorageVersion},
+        traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -113,11 +113,6 @@ mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     pub(crate) type BalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
-    // TODO later use this balance
-    pub(crate) type BalanceOf2<T> =
         <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
@@ -930,7 +925,6 @@ mod pallet {
                 T::Shares::slash(currency_id, &sender, balance);
 
                 // Pay out the winner.
-                // TODO use the base asset with the BaseCurrencyAdapter and not Ztg directly
                 let remaining_bal = T::Shares::free_balance(T::BaseAsset::get(), &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
@@ -1199,11 +1193,9 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
-        // TODO use ZCurrencies instead of Shares, because also native currency is handled here
         /// Shares
         type Shares: ZeitgeistMultiReservableCurrency<
             Self::AccountId,
-            Balance = BalanceOf<Self>,
             CurrencyId = Asset<MarketIdOf<Self>>,
             ReserveIdentifier = [u8; 8],
         >;
