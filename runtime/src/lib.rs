@@ -990,7 +990,7 @@ impl zrml_swaps::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currency;
+    type Shares = Tokens;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
