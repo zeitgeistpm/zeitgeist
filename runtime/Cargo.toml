@@ -278,7 +278,54 @@ txfilter = [
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
+
+    # For every pallet in the runtime include try-runtime
+
+    # System runtime pallets
     "frame-system/try-runtime",
+    "pallet-timestamp/try-runtime",
+    "pallet-randomness-collective-flip/try-runtime",
+    "pallet-scheduler/try-runtime",
+    "pallet-preimage/try-runtime",
+
+    # Money runtime pallets
+    "pallet-balances/try-runtime",
+    "pallet-transaction-payment/try-runtime",
+    # "pallet-transaction-payment-rpc-runtime-api/try-runtime",
+    "pallet-treasury/try-runtime",
+    "pallet-vesting/try-runtime",
+    "pallet-multisig/try-runtime",
+
+    # Governance runtime pallets
+    "pallet-democracy/try-runtime",
+    "pallet-collective/try-runtime",
+    "pallet-membership/try-runtime",
+
+    # Other Parity runtime pallets
+    "pallet-identity/try-runtime",
+    "pallet-sudo/try-runtime",
+    "pallet-utility/try-runtime",
+
+    # Standalone
+    # "pallet-aura/std",
+    # "pallet-grandpa/std",
+    
+    # ORML runtime pallets
+    "orml-currencies/try-runtime",
+    "orml-tokens/try-runtime",
+    # "orml-traits/try-runtime",
+
+    # Zeitgeist runtime pallets
+    "zeitgeist-primitives/try-runtime",
+    "zrml-authorized/try-runtime",
+    "zrml-court/try-runtime",
+    "zrml-liquidity-mining/try-runtime",
+    "zrml-market-commons/try-runtime",
+    "zrml-prediction-markets/try-runtime",
+    "zrml-rikiddo/try-runtime",
+    "zrml-simple-disputes/try-runtime",
+    # "zrml-swaps-runtime-api/try-runtime",
+    "zrml-swaps/try-runtime",
 ]
 
 [package]
