@@ -8,6 +8,7 @@
 extern crate alloc;
 
 mod market_commons_pallet_api;
+pub mod migrations;
 mod mock;
 mod tests;
 
