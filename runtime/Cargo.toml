@@ -223,6 +223,7 @@ std = [
 
     # Try-Runtime
     "frame-try-runtime/std",
+    "getrandom/std",
 
     # Benchmark
 

@@ -45,7 +45,6 @@ try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", optional = true, git =
 
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 frame-benchmarking-cli = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
-getrandom = { version = "0.2.6", features = ["js"] }
 
 # Cumulus
 

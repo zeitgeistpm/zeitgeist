@@ -12430,7 +12430,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "frame-try-runtime",
- "getrandom 0.2.6",
  "hex-literal",
  "jsonrpc-core",
  "log",
