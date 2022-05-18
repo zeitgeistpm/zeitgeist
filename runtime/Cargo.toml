@@ -44,7 +44,6 @@ substrate-fixed = { default-features = false, features = ["serde"], git = "https
 
 frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", optional = true, git = "https://github.com/purestake/substrate"}
 try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", optional = true, git = "https://github.com/purestake/substrate"}
-getrandom = { version = "0.2.6", features = ["js"] }
 
 # Benchmark
 
@@ -223,7 +222,6 @@ std = [
 
     # Try-Runtime
     "frame-try-runtime/std",
-    "getrandom/std",
 
     # Benchmark
 
