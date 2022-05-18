@@ -314,8 +314,8 @@ try-runtime = [
     "pallet-utility/try-runtime",
 
     # Standalone
-    # "pallet-aura/std",
-    # "pallet-grandpa/std",
+    "pallet-aura/std",
+    "pallet-grandpa/std",
     
     # ORML runtime pallets
     "orml-currencies/try-runtime",
