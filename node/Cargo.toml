@@ -38,7 +38,7 @@ substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.19", git = "http
 
 # Try-Runtime
 
-frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", optional = true, git = "https://github.com/purestake/substrate"}
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate"}
 try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", optional = true, git = "https://github.com/purestake/substrate"}
 
 # Benchmark
