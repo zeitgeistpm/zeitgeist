@@ -314,8 +314,8 @@ try-runtime = [
     "pallet-utility/try-runtime",
 
     # Standalone
-    # "pallet-aura/std",
-    # "pallet-grandpa/std",
+    "pallet-aura/try-runtime",
+    "pallet-grandpa/try-runtime",
     
     # ORML runtime pallets
     "orml-currencies/try-runtime",
@@ -323,7 +323,7 @@ try-runtime = [
     # "orml-traits/try-runtime",
 
     # Zeitgeist runtime pallets
-    # "zeitgeist-primitives/try-runtime",
+    "zeitgeist-primitives/try-runtime",
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
     "zrml-liquidity-mining/try-runtime",
