@@ -78,9 +78,10 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::set_per_block_distribution())]
+        // MARK(non-transactional): `set_per_block_distribution` is infallible.
         pub fn set_per_block_distribution(
             origin: OriginFor<T>,
-            per_block_distribution: BalanceOf<T>,
+            #[pallet::compact] per_block_distribution: BalanceOf<T>,
         ) -> DispatchResult {
             let _ = ensure_root(origin)?;
             <PerBlockIncentive<T>>::put(per_block_distribution);
@@ -176,12 +177,12 @@ mod pallet {
                 }
                 Some(())
             };
-            with_transaction(|| match fun() {
+            let _ = with_transaction(|| match fun() {
                 None => {
                     log::error!("Block {:?} was not finalized", block);
-                    TransactionOutcome::Rollback(())
+                    TransactionOutcome::Rollback(Err("Block was not finalized"))
                 }
-                Some(_) => TransactionOutcome::Commit(()),
+                Some(_) => TransactionOutcome::Commit(Ok(())),
             });
         }
     }

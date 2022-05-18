@@ -1,16 +1,18 @@
 [dependencies]
 arbitrary = { default-features = false, optional = true, version = "1.0" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-tokens = { default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
-orml-traits = { default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
-orml-currencies = { default-features = false, git = "https://github.com/purestake/open-runtime-module-library" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "2.0.0" }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+orml-tokens = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-traits = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-currencies = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 serde = { default-features = false, features = ["derive"], optional = true, version = "1.0.136" }
-sp-core = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-core = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 
+[dev-dependencies]
+test-case = "2.0.2"
 
 [features]
 default = ["std"]
@@ -33,4 +35,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-primitives"
-version = "0.3.1"
+version = "0.3.2"

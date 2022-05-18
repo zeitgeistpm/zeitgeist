@@ -5,7 +5,7 @@ use crate::{
     mock::*,
     Config, SubsidyProviders,
 };
-use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
+use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
@@ -13,9 +13,12 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
+        AccountIdTest, Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism,
+        MarketId, MarketPeriod, MarketStatus, MarketType, Moment, OutcomeReport, PoolId,
+        PoolStatus, ScoringRule,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
@@ -45,6 +48,43 @@ const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
 const _10000: u128 = 10000 * BASE;
+
+#[test]
+fn destroy_pool_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, true);
+        assert_noop!(Swaps::destroy_pool(42), crate::Error::<Runtime>::PoolDoesNotExist);
+    });
+}
+
+#[test]
+fn destroy_pool_correctly_cleans_up_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        let alice_balance_before = [
+            Currencies::free_balance(ASSET_A, &ALICE),
+            Currencies::free_balance(ASSET_B, &ALICE),
+            Currencies::free_balance(ASSET_C, &ALICE),
+            Currencies::free_balance(ASSET_D, &ALICE),
+        ];
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        assert_err!(Swaps::pool(pool_id), crate::Error::<Runtime>::PoolDoesNotExist);
+        // Ensure that funds _outside_ of the pool are not impacted!
+        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
+    });
+}
+
+#[test]
+fn destroy_pool_emits_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        assert!(event_exists(crate::Event::PoolDestroyed(pool_id)));
+    });
+}
 
 #[test]
 fn allows_the_full_user_lifecycle() {
@@ -189,10 +229,12 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_C).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_D).unwrap(), _2);
 
+        let pool_account = Swaps::pool_account_id(0);
         assert!(event_exists(crate::Event::PoolCreate(
             CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
             pool,
             <Runtime as Config>::MinLiquidity::get(),
+            pool_account,
         )));
     });
 }
@@ -393,7 +435,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(0),
             0,
             &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
@@ -557,27 +599,16 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
 }
 
 #[test]
-fn only_root_can_call_admin_set_pool_as_stale() {
+fn set_pool_to_stale_fails_if_origin_is_not_root() {
     ExtBuilder::default().build().execute_with(|| {
         let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(MarketCommons::push_market(mock_market(69)));
+        MarketCommons::insert_market_pool(0, 0);
         assert_noop!(
-            Swaps::admin_set_pool_as_stale(
-                alice_signed(),
-                MarketType::Categorical(0),
-                0,
-                OutcomeReport::Categorical(idx)
-            ),
+            Swaps::admin_set_pool_to_stale(alice_signed(), 0, OutcomeReport::Categorical(idx)),
             BadOrigin
         );
-
-        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
-        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
-            Origin::root(),
-            MarketType::Categorical(0),
-            0,
-            OutcomeReport::Categorical(idx)
-        ),);
     });
 }
 
@@ -716,11 +747,12 @@ fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(MarketCommons::push_market(mock_market(69)));
+        MarketCommons::insert_market_pool(0, 0);
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
+        assert_ok!(Swaps::admin_set_pool_to_stale(
             Origin::root(),
-            MarketType::Categorical(4),
             0,
             OutcomeReport::Categorical(65),
         ));
@@ -750,21 +782,8 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         // Events cannot be emitted on block zero...
         frame_system::Pallet::<Runtime>::set_block_number(1);
 
-        create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), 0, 42),
-            crate::Error::<Runtime>::InvalidScoringRule
-        );
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), 1, 42),
-            crate::Error::<Runtime>::PoolDoesNotExist
-        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
-        let pool_id = 1;
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), pool_id, 42),
-            crate::Error::<Runtime>::NoSubsidyProvided
-        );
+        let pool_id = 0;
 
         // Add some subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
@@ -814,6 +833,49 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert_eq!(reserved, total_subsidy);
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_no_subsidy_is_provided() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::NoSubsidyProvided
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, 0),
+            crate::Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
     });
 }
 
@@ -1007,14 +1069,8 @@ fn pool_join_subsidy_reserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         // Events cannot be emitted on block zero...
         frame_system::Pallet::<Runtime>::set_block_number(1);
-
-        create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(
-            Swaps::pool_join_subsidy(alice_signed(), 0, 42),
-            crate::Error::<Runtime>::InvalidScoringRule
-        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
-        let pool_id = 1;
+        let pool_id = 0;
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
         let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
         let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
@@ -1038,6 +1094,97 @@ fn pool_join_subsidy_reserves_correct_values() {
             ASSET_D,
             _5,
             CommonPoolEventParams { pool_id, who: ALICE },
+        )));
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, 0),
+            crate::Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_subsidy_is_below_min_per_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_join_subsidy(
+                alice_signed(),
+                0,
+                <Runtime as Config>::MinSubsidyPerAccount::get() - 1
+            ),
+            crate::Error::<Runtime>::InvalidSubsidyAmount,
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_with_small_amount_is_ok_if_account_is_already_a_provider() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        let pool_id = 0;
+        let large_amount = <Runtime as Config>::MinSubsidyPerAccount::get();
+        let small_amount = 1;
+        let total_amount = large_amount + small_amount;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, small_amount));
+        let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, total_amount);
+        assert_eq!(noted, total_amount);
+        assert_eq!(total_subsidy, total_amount);
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_unreserves_remaining_subsidy_if_below_min_per_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        let pool_id = 0;
+        let large_amount = <Runtime as Config>::MinSubsidyPerAccount::get();
+        let small_amount = 1;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
+        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, small_amount));
+        let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE);
+        let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, 0);
+        assert!(noted.is_none());
+        assert_eq!(total_subsidy, 0);
+        assert!(event_exists(crate::Event::PoolExitSubsidy(
+            ASSET_D,
+            small_amount,
+            CommonPoolEventParams { pool_id, who: ALICE },
+            large_amount,
         )));
     });
 }
@@ -1121,13 +1268,13 @@ fn provided_values_len_must_equal_assets_len() {
 }
 
 #[test]
-fn set_pool_as_stale_leaves_only_correct_assets() {
+fn set_pool_to_stale_leaves_only_correct_assets() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
         let pool_id = 0;
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(1337),
                 pool_id,
                 &OutcomeReport::Categorical(1337),
@@ -1138,7 +1285,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1151,7 +1298,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 }
 
 #[test]
-fn set_pool_as_stale_handles_rikiddo_pools_properly() {
+fn set_pool_to_stale_handles_rikiddo_pools_properly() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 0;
@@ -1159,7 +1306,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(4),
                 pool_id,
                 &OutcomeReport::Categorical(cat_idx),
@@ -1173,7 +1320,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
             Ok(())
         }));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1577,4 +1724,21 @@ fn subsidize_and_start_rikiddo_pool(
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
     assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
+}
+
+fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
+    Market {
+        creation: MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: ALICE,
+        market_type: MarketType::Categorical(categories),
+        mdm: MarketDisputeMechanism::Authorized(ALICE),
+        metadata: vec![0; 50],
+        oracle: ALICE,
+        period: MarketPeriod::Block(0..1),
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: MarketStatus::Active,
+    }
 }
