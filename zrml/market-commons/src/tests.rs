@@ -217,6 +217,25 @@ fn remove_market_pool_correctly_interacts_with_insert_market_pool() {
     });
 }
 
+#[test]
+fn market_counter_interacts_correctly_with_push_market_and_remove_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_eq!(<MarketCounter<Runtime>>::get(), 0);
+        assert_ok!(MarketCommons::push_market(market_mock(0)));
+        assert_eq!(<MarketCounter<Runtime>>::get(), 1);
+        assert_ok!(MarketCommons::push_market(market_mock(1)));
+        assert_eq!(<MarketCounter<Runtime>>::get(), 2);
+        assert_ok!(MarketCommons::push_market(market_mock(2)));
+        assert_eq!(<MarketCounter<Runtime>>::get(), 3);
+        assert_ok!(MarketCommons::remove_market(&1));
+        assert_eq!(<MarketCounter<Runtime>>::get(), 3);
+        assert_ok!(MarketCommons::remove_market(&2));
+        assert_eq!(<MarketCounter<Runtime>>::get(), 3);
+        assert_ok!(MarketCommons::push_market(market_mock(3)));
+        assert_eq!(<MarketCounter<Runtime>>::get(), 4);
+    });
+}
+
 fn market_mock(
     id: AccountIdTest,
 ) -> zeitgeist_primitives::types::Market<AccountIdTest, BlockNumber, Moment> {
