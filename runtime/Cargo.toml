@@ -42,8 +42,8 @@ substrate-fixed = { default-features = false, features = ["serde"], git = "https
 
 # Try-Runtime
 
-frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.17", optional = true, git = "https://github.com/purestake/substrate"}
-try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.17", optional = true, git = "https://github.com/purestake/substrate"}
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", optional = true, git = "https://github.com/purestake/substrate"}
+try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", optional = true, git = "https://github.com/purestake/substrate"}
 
 # Benchmark
 
@@ -282,6 +282,7 @@ txfilter = [
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
+    "frame-support/try-runtime",
 
     # For every pallet in the runtime include try-runtime
 
@@ -328,8 +329,11 @@ try-runtime = [
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
-    # "zrml-swaps-runtime-api/try-runtime",
     "zrml-swaps/try-runtime",
+    # "zrml-swaps-runtime-api/try-runtime",
+
+    # Parachain
+    # "parachain-staking/try-runtime",
 ]
 
 [package]
