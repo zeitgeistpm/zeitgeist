@@ -174,9 +174,8 @@ mod pallet {
         }
 
         fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult {
-            // TODO This is strange! Shouldn't we rather check that there is a market pool?
-            if !<Markets<T>>::contains_key(market_id) {
-                return Err(Error::<T>::MarketDoesNotExist.into());
+            if !<MarketPool<T>>::contains_key(market_id) {
+                return Err(Error::<T>::MarketPoolDoesNotExist.into());
             }
             <MarketPool<T>>::remove(market_id);
             Ok(())
