@@ -26,7 +26,7 @@ mod pallet {
     };
     use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
-        traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member},
+        traits::{AtLeast32Bit, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member},
         ArithmeticError, DispatchError,
     };
     use zeitgeist_primitives::types::{Market, PoolId, Report};
@@ -90,12 +90,9 @@ mod pallet {
         //
         // Returns `Err` if `MarketId` addition overflows.
         fn next_market_id() -> Result<T::MarketId, DispatchError> {
-            let id = if let Ok(current) = MarketCounter::<T>::try_get() {
-                current.checked_add(&T::MarketId::from(1u8)).ok_or(ArithmeticError::Overflow)?
-            } else {
-                T::MarketId::from(0u8)
-            };
-            <MarketCounter<T>>::put(id);
+            let id = MarketCounter::<T>::get();
+            let new_counter = id.checked_add(&1u8.into()).ok_or(ArithmeticError::Overflow)?;
+            <MarketCounter<T>>::put(new_counter);
             Ok(id)
         }
     }
@@ -114,7 +111,12 @@ mod pallet {
         // Market
 
         fn latest_market_id() -> Result<Self::MarketId, DispatchError> {
-            <MarketCounter<T>>::try_get().map_err(|_err| Error::<T>::NoMarketHasBeenCreated.into())
+            match <MarketCounter<T>>::try_get() {
+                Ok(market_id) if market_id != 0u8.into() => {
+                    Ok(market_id.checked_sub(&1u8.into()).ok_or(ArithmeticError::Underflow)?)
+                }
+                _ => Err(Error::<T>::NoMarketHasBeenCreated.into()),
+            }
         }
 
         fn market(
@@ -165,10 +167,13 @@ mod pallet {
         // MarketPool
 
         fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) {
+            // TODO Shouldn't we check that there is a market here?
+            // TODO Check for duplicates?
             <MarketPool<T>>::insert(market_id, pool_id);
         }
 
         fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult {
+            // TODO This is strange! Shouldn't we rather check that there is a market pool?
             if !<Markets<T>>::contains_key(market_id) {
                 return Err(Error::<T>::MarketDoesNotExist.into());
             }

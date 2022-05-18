@@ -44,6 +44,18 @@ fn market_interacts_correctly_with_push_market() {
 }
 
 #[test]
+fn markets_interacts_correctly_with_push_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(MarketCommons::push_market(market_mock(0)));
+        assert_ok!(MarketCommons::push_market(market_mock(1)));
+        assert_ok!(MarketCommons::push_market(market_mock(2)));
+        assert_eq!(<Markets<Runtime>>::get(0).unwrap().oracle, 0);
+        assert_eq!(<Markets<Runtime>>::get(1).unwrap().oracle, 1);
+        assert_eq!(<Markets<Runtime>>::get(2).unwrap().oracle, 2);
+    });
+}
+
+#[test]
 fn market_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(MarketCommons::market(&0), crate::Error::<Runtime>::MarketDoesNotExist);
