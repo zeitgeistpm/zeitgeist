@@ -43,7 +43,6 @@ substrate-fixed = { default-features = false, features = ["serde"], git = "https
 # Try-Runtime
 
 frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate"}
-try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate"}
 
 # Benchmark
 
