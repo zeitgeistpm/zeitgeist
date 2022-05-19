@@ -12427,6 +12427,7 @@ dependencies = [
  "cumulus-relay-chain-rpc-interface",
  "frame-benchmarking",
  "frame-benchmarking-cli",
+ "frame-try-runtime",
  "hex-literal",
  "jsonrpc-core",
  "log",
