@@ -5,7 +5,6 @@ frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 rand = { default-features = false, features = ["alloc", "std_rng"], version = "0.8" }
-getrandom = { version = "0.2", features = ["js"] }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
