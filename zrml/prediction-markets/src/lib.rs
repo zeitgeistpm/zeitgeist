@@ -232,6 +232,7 @@ mod pallet {
         ) -> DispatchResult {
             T::CloseOrigin::ensure_origin(origin)?;
             T::MarketCommons::mutate_market(&market_id, |m| {
+                Self::ensure_market_is_active(&m.period)?;
                 m.period = match m.period {
                     MarketPeriod::Block(ref range) => {
                         let current_block = <frame_system::Pallet<T>>::block_number();
