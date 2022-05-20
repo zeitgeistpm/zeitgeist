@@ -488,10 +488,12 @@ mod pallet {
             Ok(())
         }
 
-        // Set jurors that sided on the second most voted outcome as tardy. Jurors are only
-        // rewarded if sided on the most voted outcome but jurors that voted second most
-        // voted outcome (winner of the losing majority) are placed as tardy instead of
-        // being slashed.
+        /// Return most-voted outcome, if available, and distribute rewards to jurors.
+        ///
+        /// If no votes were cast, `None` is returned.
+        ///
+        /// Jurors are rewarded if they sided on the most voted outcome. Those that voted
+        /// for second most voted outcome (winner of the losing majority) are marked as tardy. The remaining jurors are slashed.
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
@@ -508,7 +510,11 @@ mod pallet {
                     Ok((juror_id, juror, max_allowed_block, vote_opt))
                 })
                 .collect::<Result<_, DispatchError>>()?;
-            let (first, second_opt) = Self::two_best_outcomes(&votes)?;
+            let (first, second_opt) = if let Ok(result) = Self::two_best_outcomes(&votes) {
+                result
+            } else {
+                return Ok(None);
+            };
             let valid_winners_and_losers = if let Some(second) = second_opt {
                 Self::manage_tardy_jurors(&requested_jurors, |outcome| outcome == &second)?
             } else {
