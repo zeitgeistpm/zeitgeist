@@ -2,8 +2,8 @@
 
 use crate::{
     mock::{
-        Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
-        CHARLIE, INITIAL_BALANCE,
+        Balances, Court, Event, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System,
+        ALICE, BOB, CHARLIE, INITIAL_BALANCE,
     },
     Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes, RESERVE_ID,
 };
@@ -59,6 +59,20 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
 }
 
 #[test]
+fn exit_court_emits_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let who = ALICE;
+        assert_ok!(Court::join_court(Origin::signed(who)));
+        assert_ok!(Court::exit_court(Origin::signed(who)));
+        System::assert_last_event(Event::Court(crate::Event::ExitedJuror(
+            who,
+            Juror { status: JurorStatus::Ok },
+        )));
+    });
+}
+
+#[test]
 fn exit_court_will_not_remove_an_unknown_juror() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
@@ -86,11 +100,21 @@ fn join_court_reserves_balance_according_to_the_number_of_jurors() {
 #[test]
 fn join_court_successfully_stores_a_juror() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
-        assert_eq!(
-            Jurors::<Runtime>::iter().next().unwrap(),
-            (ALICE, Juror { status: JurorStatus::Ok })
-        );
+        let who = ALICE;
+        assert_ok!(Court::join_court(Origin::signed(who)));
+        let juror = Juror { status: JurorStatus::Ok };
+        assert_eq!(Jurors::<Runtime>::iter().next().unwrap(), (who, juror.clone()));
+    });
+}
+
+#[test]
+fn join_court_emits_correct_signal() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let who = ALICE;
+        assert_ok!(Court::join_court(Origin::signed(who)));
+        let juror = Juror { status: JurorStatus::Ok };
+        System::assert_last_event(Event::Court(crate::Event::JoinedJuror(who, juror)));
     });
 }
 

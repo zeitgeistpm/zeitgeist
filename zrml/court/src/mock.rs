@@ -44,7 +44,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
-    type Event = ();
+    type Event = Event;
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
@@ -63,7 +63,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type Call = Call;
     type DbWeight = ();
-    type Event = ();
+    type Event = Event;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -84,7 +84,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type Event = Event;
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
