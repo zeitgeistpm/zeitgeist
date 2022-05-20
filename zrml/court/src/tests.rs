@@ -272,6 +272,19 @@ fn on_resolution_removes_requested_jurors_and_votes() {
 }
 
 #[test]
+fn on_resolution_returns_none_if_no_votes_were_cast() {
+    ExtBuilder::default().build().execute_with(|| {
+        setup_blocks(2);
+        Court::join_court(Origin::signed(ALICE)).unwrap();
+        Court::join_court(Origin::signed(BOB)).unwrap();
+        Court::join_court(Origin::signed(CHARLIE)).unwrap();
+        Court::on_dispute(&[], &0, &DEFAULT_MARKET).unwrap();
+        let outcome = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
+        assert!(outcome.is_none());
+    });
+}
+
+#[test]
 fn random_jurors_returns_an_unique_different_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
