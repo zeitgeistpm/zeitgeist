@@ -72,10 +72,10 @@ test = false
 
 [dependencies]
 arbitrary = { features = ["derive"], version = "1.0" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 libfuzzer-sys = "0.4"
-substrate-fixed = { rev = "5984ba9b9433d5007597c7f03f65ea5bf6d08601", default-features = false, git = "https://github.com/encointer/substrate-fixed" }
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
 zrml-rikiddo = { features = ["arbitrary", "mock"], path = ".." }
 
 [package]

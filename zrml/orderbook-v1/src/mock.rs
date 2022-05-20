@@ -29,7 +29,7 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Orderbook: orderbook_v1::{Call, Event<T>, Pallet},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Tokens: orml_tokens::{Config<T>, Pallet, Storage},
     }
 );
 
@@ -76,7 +76,9 @@ impl orml_tokens::Config for Runtime {
     type Event = ();
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
+    type MaxReserves = MaxReserves;
     type OnDust = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 

@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
@@ -34,9 +33,6 @@ pub trait MarketCommonsPalletApi {
     fn market(
         market_id: &Self::MarketId,
     ) -> Result<Market<Self::AccountId, Self::BlockNumber, Self::Moment>, DispatchError>;
-
-    /// All stored markets
-    fn markets() -> Vec<(Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>)>;
 
     /// Mutates a given market storage
     fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
