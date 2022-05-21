@@ -12637,6 +12637,7 @@ dependencies = [
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
+ "pallet-treasury",
  "parity-scale-codec",
  "rand 0.8.5",
  "scale-info",

@@ -3,7 +3,7 @@
 use crate::{
     mock::{
         Balances, Court, Event, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System,
-        ALICE, BOB, CHARLIE, INITIAL_BALANCE,
+        Treasury, ALICE, BOB, CHARLIE, INITIAL_BALANCE,
     },
     Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes, RESERVE_ID,
 };
@@ -248,7 +248,7 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         let join_court_stake = 40000000000;
         let slash = join_court_stake / 5;
-        assert_eq!(Balances::free_balance(Court::treasury_account_id()), INITIAL_BALANCE + slash);
+        assert_eq!(Balances::free_balance(Treasury::account_id()), INITIAL_BALANCE + slash);
         assert_eq!(Balances::free_balance(BOB), INITIAL_BALANCE - slash);
         assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 0);
     });

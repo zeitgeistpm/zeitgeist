@@ -2,14 +2,16 @@
 
 use crate::{self as zrml_court};
 use frame_support::{construct_runtime, parameter_types, traits::Everything, PalletId};
+use frame_system::EnsureRoot;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    Permill,
 };
 use zeitgeist_primitives::{
     constants::{
         BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, StakeWeight,
-        BASE,
+        BASE, BLOCKS_PER_DAY,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
@@ -23,7 +25,13 @@ pub const CHARLIE: AccountIdTest = 2;
 pub const INITIAL_BALANCE: u128 = 1000 * BASE;
 
 parameter_types! {
-    pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
+    pub const Burn: Permill = Permill::from_percent(50);
+    pub const MaxApprovals: u32 = 100;
+    pub const ProposalBond: Permill = Permill::from_percent(5);
+    pub const ProposalBondMinimum: Balance = 10 * BASE;
+    pub const ProposalBondMaximum: Balance = 500 * BASE;
+    pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
+    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 }
 
 construct_runtime!(
@@ -39,6 +47,7 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
 
@@ -51,6 +60,24 @@ impl crate::Config for Runtime {
     type StakeWeight = StakeWeight;
     type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
+}
+
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureRoot<AccountIdTest>;
+    type Burn = Burn;
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ProposalBondMaximum;
+    type RejectOrigin = EnsureRoot<AccountIdTest>;
+    type SpendFunds = ();
+    type SpendPeriod = SpendPeriod;
+    type WeightInfo = ();
 }
 
 impl frame_system::Config for Runtime {
