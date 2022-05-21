@@ -501,10 +501,10 @@ mod pallet {
                     Ok((juror_id, juror, max_allowed_block, vote_opt))
                 })
                 .collect::<Result<_, DispatchError>>()?;
-            let (first, second_opt) = if let Ok(result) = Self::two_best_outcomes(&votes) {
-                result
-            } else {
-                return Ok(None);
+            let (first, second_opt) = match Self::two_best_outcomes(&votes) {
+                Ok(result) => result,
+                Err(err) if err == Error::<T>::NoVotes.into() => return Ok(None),
+                Err(err) => return Err(err),
             };
             let valid_winners_and_losers = if let Some(second) = second_opt {
                 Self::manage_tardy_jurors(&requested_jurors, |outcome| outcome == &second)?
