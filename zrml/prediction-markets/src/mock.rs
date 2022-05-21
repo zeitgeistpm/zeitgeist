@@ -191,8 +191,8 @@ impl zrml_court::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
+    type Slash = ();
     type StakeWeight = StakeWeight;
-    type TreasuryPalletId = TreasuryPalletId;
     type WeightInfo = zrml_court::weights::WeightInfo<Runtime>;
 }
 

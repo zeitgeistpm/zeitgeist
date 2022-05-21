@@ -58,7 +58,7 @@ impl crate::Config for Runtime {
     type PalletId = CourtPalletId;
     type Random = RandomnessCollectiveFlip;
     type StakeWeight = StakeWeight;
-    type TreasuryPalletId = TreasuryPalletId;
+    type Slash = Treasury;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
@@ -145,7 +145,7 @@ impl Default for ExtBuilder {
                 (ALICE, 1_000 * BASE),
                 (BOB, 1_000 * BASE),
                 (CHARLIE, 1_000 * BASE),
-                (Court::treasury_account_id(), 1_000 * BASE),
+                (Treasury::account_id(), 1_000 * BASE),
             ],
         }
     }
