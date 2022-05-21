@@ -32,6 +32,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         traits::{
             Currency, Get, Hooks, IsType, NamedReservableCurrency, OnUnbalanced, Randomness,
@@ -114,14 +115,11 @@ mod pallet {
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            if Jurors::<T>::get(&who).is_none() {
-                return Err(Error::<T>::OnlyJurorsCanVote.into());
-            }
-            Votes::<T>::insert(
-                market_id,
-                who,
-                (<frame_system::Pallet<T>>::block_number(), outcome),
-            );
+            let block_limit =
+                RequestedJurors::<T>::get(&market_id, &who).ok_or(Error::<T>::JurorNotRequested)?;
+            let current_block = <frame_system::Pallet<T>>::block_number();
+            ensure!(current_block < block_limit, Error::<T>::BlockLimitExceeded);
+            Votes::<T>::insert(market_id, who, (current_block, outcome));
             Ok(())
         }
     }
@@ -169,8 +167,10 @@ mod pallet {
         MarketDoesNotHaveCourtMechanism,
         /// No-one voted on an outcome to resolve a market
         NoVotes,
-        /// Forbids voting of unknown accounts
-        OnlyJurorsCanVote,
+        /// Unrequested accounts cannot vote
+        JurorNotRequested,
+        /// The juror cast their vote after the block limit was exceeded
+        BlockLimitExceeded,
     }
 
     #[pallet::event]
@@ -210,8 +210,10 @@ mod pallet {
             jurors.choose_multiple(rng, actual_len).collect()
         }
 
-        // Returns a pseudo random number generator implementation based on the seed
-        // provided by the `Config::Random` type and the `JurorsSelectionNonce` storage.
+        /// Returns a pseudo random number generator implementation based on the seed
+        /// provided by the `Config::Random` type and the `JurorsSelectionNonce` storage.
+        ///
+        /// Will panic if the block number is zero.
         pub(crate) fn rng() -> impl RngCore {
             let nonce = <JurorsSelectionNonce<T>>::mutate(|n| {
                 let rslt = *n;
@@ -503,8 +505,8 @@ mod pallet {
                 .collect::<Result<_, DispatchError>>()?;
             let (first, second_opt) = match Self::two_best_outcomes(&votes) {
                 Ok(result) => result,
-                Err(err) if err == Error::<T>::NoVotes.into() => return Ok(None),
-                Err(err) => return Err(err),
+                Err(e) if e == Error::<T>::NoVotes.into() => return Ok(None),
+                Err(e) => return Err(e),
             };
             let valid_winners_and_losers = if let Some(second) = second_opt {
                 Self::manage_tardy_jurors(&requested_jurors, |outcome| outcome == &second)?

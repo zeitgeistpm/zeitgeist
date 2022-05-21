@@ -10,8 +10,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, StakeWeight,
-        BASE, BLOCKS_PER_DAY,
+        BlockHashCount, CourtPalletId, MaxReserves, MinimumPeriod, StakeWeight, BASE,
+        BLOCKS_PER_DAY,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
@@ -22,9 +22,11 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
+pub const DAVE: AccountIdTest = 3;
 pub const INITIAL_BALANCE: u128 = 1000 * BASE;
 
 parameter_types! {
+    // Treasury
     pub const Burn: Permill = Permill::from_percent(50);
     pub const MaxApprovals: u32 = 100;
     pub const ProposalBond: Permill = Permill::from_percent(5);
@@ -32,6 +34,9 @@ parameter_types! {
     pub const ProposalBondMaximum: Balance = 500 * BASE;
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+
+    // Court
+    pub const CourtCaseDuration: BlockNumber = 10;
 }
 
 construct_runtime!(
@@ -142,10 +147,11 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             balances: vec![
-                (ALICE, 1_000 * BASE),
-                (BOB, 1_000 * BASE),
-                (CHARLIE, 1_000 * BASE),
-                (Treasury::account_id(), 1_000 * BASE),
+                (ALICE, INITIAL_BALANCE),
+                (BOB, INITIAL_BALANCE),
+                (CHARLIE, INITIAL_BALANCE),
+                (DAVE, INITIAL_BALANCE),
+                (Treasury::account_id(), INITIAL_BALANCE),
             ],
         }
     }
