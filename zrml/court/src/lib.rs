@@ -34,8 +34,8 @@ mod pallet {
         dispatch::DispatchResult,
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         traits::{
-            Currency, Get, Hooks, IsType, NamedReservableCurrency, OnUnbalanced,
-            Randomness, StorageVersion,
+            Currency, Get, Hooks, IsType, NamedReservableCurrency, OnUnbalanced, Randomness,
+            StorageVersion,
         },
         Blake2_128Concat, PalletId,
     };
