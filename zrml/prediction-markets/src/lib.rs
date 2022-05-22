@@ -789,7 +789,7 @@ mod pallet {
             )?;
 
             // This errors if a pool already exists!
-            T::MarketCommons::insert_market_pool(market_id, pool_id);
+            T::MarketCommons::insert_market_pool(market_id, pool_id)?;
             Ok(())
         }
 
@@ -2080,7 +2080,7 @@ mod pallet {
             )?;
 
             // This errors if a pool already exists!
-            T::MarketCommons::insert_market_pool(market_id, pool_id);
+            T::MarketCommons::insert_market_pool(market_id, pool_id)?;
             <MarketsCollectingSubsidy<T>>::try_mutate(|markets| {
                 markets
                     .try_push(SubsidyUntil { market_id, period: market.period.clone() })
