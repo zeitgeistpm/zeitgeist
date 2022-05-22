@@ -20,6 +20,7 @@ mod pallet {
     use crate::MarketCommonsPalletApi;
     use core::marker::PhantomData;
     use frame_support::{
+        ensure,
         dispatch::DispatchResult,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
@@ -71,6 +72,8 @@ mod pallet {
         NoMarketHasBeenCreated,
         /// Market does not have a report
         NoReport,
+        /// There's a pool registered for this market already.
+        DuplicatePool,
     }
 
     #[pallet::hooks]
@@ -167,10 +170,11 @@ mod pallet {
 
         // MarketPool
 
-        fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) {
-            // TODO Shouldn't we check that there is a market here?
-            // TODO Check for duplicates?
+        fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) -> DispatchResult {
+            ensure!(!<MarketPool<T>>::contains_key(market_id), Error::<T>::DuplicatePool);
+            ensure!(<Markets<T>>::contains_key(market_id), Error::<T>::MarketDoesNotExist);
             <MarketPool<T>>::insert(market_id, pool_id);
+            Ok(())
         }
 
         fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult {
