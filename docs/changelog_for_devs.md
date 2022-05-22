@@ -1,3 +1,11 @@
+# v0.3.3
+
+- The `MarketCounter` of the `market-commons` pallet is incremented by one. This
+  means that `MarketCounter` is now equal to the total number of markets ever
+  created, instead of equal to the id of the last market created. For details
+  regarding this fix, see https://github.com/zeitgeistpm/zeitgeist/pull/636 and
+  https://github.com/zeitgeistpm/zeitgeist/issues/365.
+
 # v0.3.2
 
 - Added a field for `market_account` to `MarketCreated` event and `pool_account`
