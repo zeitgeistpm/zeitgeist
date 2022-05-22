@@ -1202,7 +1202,7 @@ mod pallet {
         where
             T: Config,
         {
-            Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist.into())
+            Self::pools(pool_id).ok_or_else(|| Error::<T>::PoolDoesNotExist.into())
         }
 
         fn inc_next_pool_id() -> Result<PoolId, DispatchError> {
@@ -1750,7 +1750,7 @@ mod pallet {
         }
 
         fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError> {
-            Ok(Self::pool_by_id(pool_id)?)
+            Self::pool_by_id(pool_id)
         }
 
         /// Mark a pool as stale, remove losing assets and distribute Rikiddo pool share rewards.
