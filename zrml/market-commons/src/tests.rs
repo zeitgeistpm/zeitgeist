@@ -150,6 +150,35 @@ fn remove_market_fails_if_market_does_not_exist() {
 }
 
 #[test]
+fn insert_market_pool_fails_if_market_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            MarketCommons::insert_market_pool(0, 15),
+            crate::Error::<Runtime>::MarketDoesNotExist
+        );
+        assert_ok!(MarketCommons::push_market(market_mock(0)));
+        assert_ok!(MarketCommons::push_market(market_mock(1)));
+        assert_ok!(MarketCommons::push_market(market_mock(2)));
+        assert_noop!(
+            MarketCommons::insert_market_pool(3, 12),
+            crate::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn insert_market_pool_fails_if_market_has_a_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(MarketCommons::push_market(market_mock(0)));
+        assert_ok!(MarketCommons::insert_market_pool(0, 15));
+        assert_noop!(
+            MarketCommons::insert_market_pool(0, 14),
+            crate::Error::<Runtime>::DuplicatePool
+        );
+    });
+}
+
+#[test]
 fn market_pool_correctly_interacts_with_insert_market_pool() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(MarketCommons::push_market(market_mock(0)));
