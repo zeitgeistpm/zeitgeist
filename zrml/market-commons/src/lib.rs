@@ -20,8 +20,8 @@ mod pallet {
     use crate::MarketCommonsPalletApi;
     use core::marker::PhantomData;
     use frame_support::{
-        ensure,
         dispatch::DispatchResult,
+        ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
