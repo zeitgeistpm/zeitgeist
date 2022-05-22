@@ -774,9 +774,6 @@ mod pallet {
             // not a pending advised market.
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
-            // ensure a swap pool does not already exist
-            ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
-
             let mut assets = Self::outcome_assets(market_id, &market);
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
@@ -791,6 +788,7 @@ mod pallet {
                 Some(weights),
             )?;
 
+            // This errors if a pool already exists!
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             Ok(())
         }
@@ -1266,8 +1264,6 @@ mod pallet {
         ReporterNotOracle,
         /// It was tried to append an item to storage beyond the boundaries.
         StorageOverflow,
-        /// A swap pool already exists for this market.
-        SwapPoolExists,
         /// Too many categories for a categorical market.
         TooManyCategories,
         /// Catch-all error for invalid market status
@@ -1935,7 +1931,9 @@ mod pallet {
                                     return true;
                                 }
 
-                                T::MarketCommons::remove_market_pool(&subsidy_info.market_id)?;
+                                // `remove_market_pool` can only error due to missing pool, but
+                                // above we ensured that the pool exists.
+                                let _ = T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
                                 total_weight =
                                     total_weight.saturating_add(one_read).saturating_add(one_write);
                                 Self::deposit_event(Event::MarketInsufficientSubsidy(
@@ -2061,7 +2059,6 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: MarketIdOf<T>,
         ) -> Result<Weight, DispatchError> {
-            ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
             ensure!(
                 market.status == MarketStatus::CollectingSubsidy,
                 Error::<T>::MarketIsNotCollectingSubsidy
@@ -2082,6 +2079,7 @@ mod pallet {
                 None,
             )?;
 
+            // This errors if a pool already exists!
             T::MarketCommons::insert_market_pool(market_id, pool_id);
             <MarketsCollectingSubsidy<T>>::try_mutate(|markets| {
                 markets
