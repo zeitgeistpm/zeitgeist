@@ -3,7 +3,7 @@
 use crate::{
     market_commons_pallet_api::MarketCommonsPalletApi,
     mock::{ExtBuilder, MarketCommons, Runtime},
-    MarketCounter, MarketPool, Markets,
+    MarketCounter, Markets,
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::DispatchError;
