@@ -1933,7 +1933,8 @@ mod pallet {
 
                                 // `remove_market_pool` can only error due to missing pool, but
                                 // above we ensured that the pool exists.
-                                let _ = T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
+                                let _ =
+                                    T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
                                 total_weight =
                                     total_weight.saturating_add(one_read).saturating_add(one_write);
                                 Self::deposit_event(Event::MarketInsufficientSubsidy(

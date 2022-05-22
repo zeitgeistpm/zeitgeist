@@ -184,9 +184,9 @@ fn market_pool_correctly_interacts_with_insert_market_pool() {
         assert_ok!(MarketCommons::push_market(market_mock(0)));
         assert_ok!(MarketCommons::push_market(market_mock(1)));
         assert_ok!(MarketCommons::push_market(market_mock(2)));
-        let _ = MarketCommons::insert_market_pool(0, 15);
-        let _ = MarketCommons::insert_market_pool(1, 14);
-        let _ = MarketCommons::insert_market_pool(2, 13);
+        assert_ok!(MarketCommons::insert_market_pool(0, 15));
+        assert_ok!(MarketCommons::insert_market_pool(1, 14));
+        assert_ok!(MarketCommons::insert_market_pool(2, 13));
         assert_eq!(MarketCommons::market_pool(&0).unwrap(), 15);
         assert_eq!(MarketCommons::market_pool(&1).unwrap(), 14);
         assert_eq!(MarketCommons::market_pool(&2).unwrap(), 13);
@@ -203,9 +203,9 @@ fn market_pool_fails_if_market_has_no_pool() {
         assert_ok!(MarketCommons::push_market(market_mock(0)));
         assert_ok!(MarketCommons::push_market(market_mock(1)));
         assert_ok!(MarketCommons::push_market(market_mock(2)));
-        let _ = MarketCommons::insert_market_pool(0, 15);
-        let _ = MarketCommons::insert_market_pool(1, 14);
-        let _ = MarketCommons::insert_market_pool(2, 13);
+        assert_ok!(MarketCommons::insert_market_pool(0, 15));
+        assert_ok!(MarketCommons::insert_market_pool(1, 14));
+        assert_ok!(MarketCommons::insert_market_pool(2, 13));
         assert_noop!(
             MarketCommons::market_pool(&3),
             crate::Error::<Runtime>::MarketPoolDoesNotExist
@@ -219,9 +219,9 @@ fn remove_market_pool_correctly_interacts_with_insert_market_pool() {
         assert_ok!(MarketCommons::push_market(market_mock(0)));
         assert_ok!(MarketCommons::push_market(market_mock(1)));
         assert_ok!(MarketCommons::push_market(market_mock(2)));
-        let _ = MarketCommons::insert_market_pool(0, 15);
-        let _ = MarketCommons::insert_market_pool(1, 14);
-        let _ = MarketCommons::insert_market_pool(2, 13);
+        assert_ok!(MarketCommons::insert_market_pool(0, 15));
+        assert_ok!(MarketCommons::insert_market_pool(1, 14));
+        assert_ok!(MarketCommons::insert_market_pool(2, 13));
 
         assert_ok!(MarketCommons::remove_market_pool(&1));
         assert_eq!(MarketCommons::market_pool(&0).unwrap(), 15);
@@ -268,9 +268,9 @@ fn remove_market_pool_fails_if_market_has_no_pool() {
         assert_ok!(MarketCommons::push_market(market_mock(0)));
         assert_ok!(MarketCommons::push_market(market_mock(1)));
         assert_ok!(MarketCommons::push_market(market_mock(2)));
-        let _ = MarketCommons::insert_market_pool(0, 15);
-        let _ = MarketCommons::insert_market_pool(1, 14);
-        let _ = MarketCommons::insert_market_pool(2, 13);
+        assert_ok!(MarketCommons::insert_market_pool(0, 15));
+        assert_ok!(MarketCommons::insert_market_pool(1, 14));
+        assert_ok!(MarketCommons::insert_market_pool(2, 13));
         assert_noop!(
             MarketCommons::remove_market_pool(&3),
             crate::Error::<Runtime>::MarketPoolDoesNotExist
