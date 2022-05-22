@@ -1935,10 +1935,7 @@ mod pallet {
                                     return true;
                                 }
 
-                                // TODO Doesn't check for errors! Why did clippy not notice? Also
-                                // fix this!
-                                let _ =
-                                    T::MarketCommons::remove_market_pool(&subsidy_info.market_id);
+                                T::MarketCommons::remove_market_pool(&subsidy_info.market_id)?;
                                 total_weight =
                                     total_weight.saturating_add(one_read).saturating_add(one_write);
                                 Self::deposit_event(Event::MarketInsufficientSubsidy(
