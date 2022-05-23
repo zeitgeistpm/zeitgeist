@@ -295,7 +295,6 @@ try-runtime = [
     # Money runtime pallets
     "pallet-balances/try-runtime",
     "pallet-transaction-payment/try-runtime",
-    # "pallet-transaction-payment-rpc-runtime-api/try-runtime",
     "pallet-treasury/try-runtime",
     "pallet-vesting/try-runtime",
     "pallet-multisig/try-runtime",
@@ -309,15 +308,10 @@ try-runtime = [
     "pallet-identity/try-runtime",
     "pallet-sudo/try-runtime",
     "pallet-utility/try-runtime",
-
-    # Standalone
-    # "pallet-aura/try-runtime",
-    # "pallet-grandpa/try-runtime",
     
     # ORML runtime pallets
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
-    # "orml-traits/try-runtime",
 
     # Zeitgeist runtime pallets
     "zeitgeist-primitives/try-runtime",
@@ -329,10 +323,9 @@ try-runtime = [
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
     "zrml-swaps/try-runtime",
-    # "zrml-swaps-runtime-api/try-runtime",
 
     # Parachain
-    # "parachain-staking/try-runtime",
+    "parachain-staking/try-runtime",
 ]
 
 [package]
