@@ -10,11 +10,10 @@ use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    traits::{Currency, EnsureOrigin, Get, Hooks},
+    traits::{EnsureOrigin, Get, Hooks},
     BoundedVec,
 };
 use frame_system::RawOrigin;
-use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
@@ -41,7 +40,7 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    let _ = CurrencyOf::<T>::deposit_creating(&caller, (u128::MAX).saturated_into());
+    let _ = T::AssetManager::deposit(&caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
     let mut metadata = [0u8; 50];
@@ -116,10 +115,10 @@ fn generate_accounts_with_assets<T: Config>(
     for i in 0..acc_total {
         let acc = account("AssetHolder", i, 0);
         if mut_acc_asset > 0 {
-            let _ = T::Shares::deposit(asset, &acc, min_liquidity)?;
+            let _ = T::AssetManager::deposit(asset, &acc, min_liquidity)?;
             mut_acc_asset -= 1;
         } else {
-            let _ = T::Shares::deposit(fake_asset, &acc, min_liquidity)?;
+            let _ = T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
         }
     }
 
