@@ -1317,8 +1317,6 @@ mod pallet {
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
         InvalidMarketPeriod,
-        /// This operation is not allowed for the native currency.
-        NotAllowedForNativeCurrency,
     }
 
     #[pallet::event]
