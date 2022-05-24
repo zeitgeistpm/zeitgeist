@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountId, Balance, Currency, CurrencyId, Runtime};
+use crate::{AccountId, Balance, AssetManager, CurrencyId, Runtime};
 
 use frame_support::assert_ok;
 use orml_traits::MultiCurrencyExtended;
@@ -29,7 +29,7 @@ pub fn lookup_of_account(
 }
 
 pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) {
-    assert_ok!(<Currency as MultiCurrencyExtended<_>>::update_balance(
+    assert_ok!(<AssetManager as MultiCurrencyExtended<_>>::update_balance(
         currency_id,
         who,
         balance.saturated_into()
