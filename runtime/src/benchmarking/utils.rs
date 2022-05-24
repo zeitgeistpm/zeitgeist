@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountId, Balance, AssetManager, CurrencyId, Runtime};
+use crate::{AccountId, AssetManager, Balance, CurrencyId, Runtime};
 
 use frame_support::assert_ok;
 use orml_traits::MultiCurrencyExtended;

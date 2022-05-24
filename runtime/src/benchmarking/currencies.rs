@@ -18,7 +18,7 @@
 
 use super::utils::{lookup_of_account, set_balance};
 use crate::{
-    AccountId, Amount, Balance, AssetManager, CurrencyId, ExistentialDeposit, GetNativeCurrencyId,
+    AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit, GetNativeCurrencyId,
     Runtime,
 };
 use zeitgeist_primitives::{constants::BASE, types::Asset};
