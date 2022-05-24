@@ -112,8 +112,9 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
-    pub(crate) type BalanceOf<T> =
-        <<T as Config>::AssetManager as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
@@ -176,14 +177,22 @@ mod pallet {
             }
 
             // Delete market's outcome assets, clear market and delete pool if necessary.
-            let mut destroy_asset = |asset: Asset<_>| -> usize {
-                let (total_accounts, accounts) = T::AssetManager::accounts_by_currency_id(asset);
-                share_accounts = share_accounts.saturating_add(accounts.len());
-                T::AssetManager::destroy_all(asset, accounts.iter().cloned());
-                total_accounts
+            let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
+                if let Some((total_accounts, accounts)) =
+                    T::AssetManager::accounts_by_currency_id(asset)
+                {
+                    share_accounts = share_accounts.saturating_add(accounts.len());
+                    let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
+                    Some(total_accounts)
+                } else {
+                    // native currency case
+                    None
+                }
             };
             for asset in outcome_assets.into_iter() {
-                total_accounts = destroy_asset(asset);
+                if let Some(total) = destroy_asset(asset) {
+                    total_accounts = total;
+                }
             }
             T::AssetManager::slash(
                 T::BaseAsset::get(),
@@ -847,7 +856,8 @@ mod pallet {
             let winning_assets = match resolved_outcome {
                 OutcomeReport::Categorical(category_index) => {
                     let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
-                    let winning_balance = T::AssetManager::free_balance(winning_currency_id, &sender);
+                    let winning_balance =
+                        T::AssetManager::free_balance(winning_currency_id, &sender);
 
                     ensure!(winning_balance > BalanceOf::<T>::zero(), Error::<T>::NoWinningBalance);
 
@@ -925,10 +935,16 @@ mod pallet {
                 T::AssetManager::slash(currency_id, &sender, balance);
 
                 // Pay out the winner.
-                let remaining_bal = T::AssetManager::free_balance(T::BaseAsset::get(), &market_account);
+                let remaining_bal =
+                    T::AssetManager::free_balance(T::BaseAsset::get(), &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
-                T::AssetManager::transfer(T::BaseAsset::get(), &market_account, &sender, actual_payout)?;
+                T::AssetManager::transfer(
+                    T::BaseAsset::get(),
+                    &market_account,
+                    &sender,
+                    actual_payout,
+                )?;
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
                 if balance != <BalanceOf<T>>::zero() {
@@ -1301,6 +1317,8 @@ mod pallet {
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
         InvalidMarketPeriod,
+        /// This operation is not allowed for the native currency.
+        NotAllowedForNativeCurrency,
     }
 
     #[pallet::event]
@@ -1671,10 +1689,12 @@ mod pallet {
                                 return 0;
                             }
                             let (total_accounts, accounts) =
-                                T::AssetManager::accounts_by_currency_id(asset);
+                                T::AssetManager::accounts_by_currency_id(asset)
+                                    .unwrap_or((0usize, vec![]));
                             total_asset_accounts =
                                 total_asset_accounts.saturating_add(accounts.len());
-                            T::AssetManager::destroy_all(asset, accounts.iter().cloned());
+
+                            let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
                             total_accounts
                         } else {
                             0
@@ -1731,7 +1751,11 @@ mod pallet {
                         // deposit only to the real reporter what actually was slashed
                         let negative_imbalance = T::OracleBond::get() - excess;
                         // deposit could fail for below ExistentialDeposit or Overflow of total issuance
-                        T::AssetManager::deposit(T::BaseAsset::get(), &report.by, negative_imbalance)?;
+                        T::AssetManager::deposit(
+                            T::BaseAsset::get(),
+                            &report.by,
+                            negative_imbalance,
+                        )?;
                     }
 
                     T::MarketCommons::report(market)?.outcome.clone()

@@ -1,19 +1,20 @@
 use alloc::vec::Vec;
+use frame_support::traits::Get;
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
 use orml_traits::currency::NamedMultiReservableCurrency;
 
 /// Custom `NamedMultiReservableCurrency` trait.
-pub trait ZeitgeistAssetManager<AccountId>:
-    NamedMultiReservableCurrency<AccountId>
-{
+pub trait ZeitgeistAssetManager<AccountId>: NamedMultiReservableCurrency<AccountId> {
     /// Return the total number of accounts that hold _any_ asset (first value) and all accounts
     /// that hold assets of a given `currency_id` (second value).
+    /// If the `currency_id` is the native currency, then return None.
     fn accounts_by_currency_id(
         currency_id: Self::CurrencyId,
-    ) -> (usize, Vec<(AccountId, AccountData<Self::Balance>)>);
+    ) -> Option<(usize, Vec<(AccountId, AccountData<Self::Balance>)>)>;
 
     /// Destroy all assets of a `currency_id` for the given `accounts`.
-    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I)
+    /// If the `currency_id` is the native currency, then return false.
+    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> bool
     where
         I: Iterator<Item = (AccountId, AccountData<Self::Balance>)>;
 }
@@ -24,7 +25,7 @@ where
 {
     fn accounts_by_currency_id(
         currency_id: Self::CurrencyId,
-    ) -> (usize, Vec<(T::AccountId, AccountData<T::Balance>)>) {
+    ) -> Option<(usize, Vec<(T::AccountId, AccountData<Self::Balance>)>)> {
         let mut total = 0;
         #[allow(
             // Iterator will never yield more than `usize::MAX` elements
@@ -36,10 +37,10 @@ where
                 if k1 == currency_id { Some((k0, v)) } else { None }
             })
             .collect();
-        (total, accounts)
+        Some((total, accounts))
     }
 
-    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I)
+    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> bool
     where
         I: Iterator<Item = (T::AccountId, AccountData<Self::Balance>)>,
     {
@@ -47,6 +48,7 @@ where
             <Accounts<T>>::remove(k0, currency_id);
         }
         <TotalIssuance<T>>::remove(currency_id);
+        true
     }
 }
 
@@ -59,14 +61,22 @@ where
 {
     fn accounts_by_currency_id(
         currency_id: Self::CurrencyId,
-    ) -> (usize, Vec<(T::AccountId, AccountData<Self::Balance>)>) {
-        T::MultiCurrency::accounts_by_currency_id(currency_id)
+    ) -> Option<(usize, Vec<(T::AccountId, AccountData<Self::Balance>)>)> {
+        if currency_id == T::GetNativeCurrencyId::get() {
+            None
+        } else {
+            T::MultiCurrency::accounts_by_currency_id(currency_id)
+        }
     }
 
-    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I)
+    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> bool
     where
         I: Iterator<Item = (T::AccountId, AccountData<Self::Balance>)>,
     {
-        T::MultiCurrency::destroy_all(currency_id, accounts)
+        if currency_id == T::GetNativeCurrencyId::get() {
+            false
+        } else {
+            T::MultiCurrency::destroy_all(currency_id, accounts)
+        }
     }
 }

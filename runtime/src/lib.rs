@@ -203,7 +203,7 @@ macro_rules! create_zeitgeist_runtime {
                 Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 33,
 
                 // Third-party
-                Currencies: orml_currencies::{Call, Pallet, Storage} = 40,
+                AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
 
                 // Zeitgeist
@@ -327,7 +327,7 @@ cfg_if::cfg_if! {
                     | Call::Identity(_)
                     | Call::Utility(_)
                     | Call::Proxy(_)
-                    | Call::Currencies(_)
+                    | Call::AssetManager(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
@@ -361,7 +361,7 @@ cfg_if::cfg_if! {
                     | Call::Identity(_)
                     | Call::Utility(_)
                     | Call::Proxy(_)
-                    | Call::Currencies(_)
+                    | Call::AssetManager(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
@@ -938,7 +938,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
-    type AssetManager = Currencies;
+    type AssetManager = AssetManager;
     type BaseAsset = GetNativeCurrencyId;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;
@@ -990,7 +990,7 @@ impl zrml_swaps::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type AssetManager = Currencies;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
