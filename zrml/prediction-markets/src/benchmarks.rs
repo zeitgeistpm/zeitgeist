@@ -299,7 +299,7 @@ benchmarks! {
     create_market {
         let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, 
+    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation,
             MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 

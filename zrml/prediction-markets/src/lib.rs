@@ -440,17 +440,17 @@ mod pallet {
 
             // Create the correct market
             let weight_market_creation = Self::create_market(
-                    origin.clone(),
-                    oracle,
-                    period,
-                    metadata,
-                    MarketCreation::Permissionless,
-                    assets.clone(),
-                    mdm,
-                    ScoringRule::CPMM,
-                )?
-                .actual_weight
-                .unwrap_or_else(T::WeightInfo::create_market);
+                origin.clone(),
+                oracle,
+                period,
+                metadata,
+                MarketCreation::Permissionless,
+                assets.clone(),
+                mdm,
+                ScoringRule::CPMM,
+            )?
+            .actual_weight
+            .unwrap_or_else(T::WeightInfo::create_market);
 
             // Deploy the swap pool and populate it.
             let market_id = T::MarketCommons::latest_market_id()?;
