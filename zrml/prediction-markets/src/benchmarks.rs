@@ -14,6 +14,7 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::RawOrigin;
+use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::{MinLiquidity, MinWeight, BASE},
