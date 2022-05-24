@@ -5123,7 +5123,7 @@ dependencies = [
 [[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=named_currencies#8e9bed1f50ac1a50a265a4e2cb3ea0a40a0f41f9"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5143,7 +5143,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=named_currencies#8e9bed1f50ac1a50a265a4e2cb3ea0a40a0f41f9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5160,7 +5160,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=named_currencies#8e9bed1f50ac1a50a265a4e2cb3ea0a40a0f41f9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5175,7 +5175,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=named_currencies#8e9bed1f50ac1a50a265a4e2cb3ea0a40a0f41f9"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5193,7 +5193,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=named_currencies#8e9bed1f50ac1a50a265a4e2cb3ea0a40a0f41f9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",

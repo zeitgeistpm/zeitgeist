@@ -2,8 +2,8 @@ use alloc::vec::Vec;
 use orml_tokens::{AccountData, Accounts, TotalIssuance};
 use orml_traits::currency::NamedMultiReservableCurrency;
 
-/// Custom `MultiReservableCurrency` trait.
-pub trait ZeitgeistMultiReservableCurrency<AccountId>:
+/// Custom `NamedMultiReservableCurrency` trait.
+pub trait ZeitgeistAssetManager<AccountId>:
     NamedMultiReservableCurrency<AccountId>
 {
     /// Return the total number of accounts that hold _any_ asset (first value) and all accounts
@@ -18,7 +18,7 @@ pub trait ZeitgeistMultiReservableCurrency<AccountId>:
         I: Iterator<Item = (AccountId, AccountData<Self::Balance>)>;
 }
 
-impl<T> ZeitgeistMultiReservableCurrency<T::AccountId> for orml_tokens::Pallet<T>
+impl<T> ZeitgeistAssetManager<T::AccountId> for orml_tokens::Pallet<T>
 where
     T: orml_tokens::Config,
 {
@@ -52,10 +52,10 @@ where
 
 // This implementation will only affect the `MultiCurrency` part, i.e., it won't touch
 // the native currency
-impl<T> ZeitgeistMultiReservableCurrency<T::AccountId> for orml_currencies::Pallet<T>
+impl<T> ZeitgeistAssetManager<T::AccountId> for orml_currencies::Pallet<T>
 where
     T: orml_currencies::Config,
-    T::MultiCurrency: ZeitgeistMultiReservableCurrency<T::AccountId>,
+    T::MultiCurrency: ZeitgeistAssetManager<T::AccountId>,
 {
     fn accounts_by_currency_id(
         currency_id: Self::CurrencyId,

@@ -97,7 +97,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{MinLiquidity, PmPalletId, MILLISECS_PER_BLOCK},
-        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
+        traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
@@ -113,7 +113,7 @@ mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
     pub(crate) type BalanceOf<T> =
-        <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+        <<T as Config>::AssetManager as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
@@ -156,7 +156,7 @@ mod pallet {
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
             let slash_market_creator = |amount| {
-                T::Shares::slash_reserved_named(
+                T::AssetManager::slash_reserved_named(
                     &RESERVE_ID,
                     T::BaseAsset::get(),
                     &market.creator,
@@ -177,18 +177,18 @@ mod pallet {
 
             // Delete market's outcome assets, clear market and delete pool if necessary.
             let mut destroy_asset = |asset: Asset<_>| -> usize {
-                let (total_accounts, accounts) = T::Shares::accounts_by_currency_id(asset);
+                let (total_accounts, accounts) = T::AssetManager::accounts_by_currency_id(asset);
                 share_accounts = share_accounts.saturating_add(accounts.len());
-                T::Shares::destroy_all(asset, accounts.iter().cloned());
+                T::AssetManager::destroy_all(asset, accounts.iter().cloned());
                 total_accounts
             };
             for asset in outcome_assets.into_iter() {
                 total_accounts = destroy_asset(asset);
             }
-            T::Shares::slash(
+            T::AssetManager::slash(
                 T::BaseAsset::get(),
                 &market_account,
-                T::Shares::free_balance(T::BaseAsset::get(), &market_account),
+                T::AssetManager::free_balance(T::BaseAsset::get(), &market_account),
             );
             if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
                 T::Swaps::destroy_pool(pool_id)?;
@@ -306,7 +306,7 @@ mod pallet {
                     extra_weight = Self::start_subsidy(m, market_id)?;
                 }
 
-                T::Shares::unreserve_named(
+                T::AssetManager::unreserve_named(
                     &RESERVE_ID,
                     T::BaseAsset::get(),
                     &m.creator,
@@ -357,7 +357,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
-            T::Shares::reserve_named(
+            T::AssetManager::reserve_named(
                 &RESERVE_ID,
                 T::BaseAsset::get(),
                 &who,
@@ -428,7 +428,7 @@ mod pallet {
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    T::Shares::reserve_named(
+                    T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         T::BaseAsset::get(),
                         &sender,
@@ -443,7 +443,7 @@ mod pallet {
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    T::Shares::reserve_named(
+                    T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         T::BaseAsset::get(),
                         &sender,
@@ -622,7 +622,7 @@ mod pallet {
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    T::Shares::reserve_named(
+                    T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         T::BaseAsset::get(),
                         &sender,
@@ -637,7 +637,7 @@ mod pallet {
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    T::Shares::reserve_named(
+                    T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         T::BaseAsset::get(),
                         &sender,
@@ -847,14 +847,14 @@ mod pallet {
             let winning_assets = match resolved_outcome {
                 OutcomeReport::Categorical(category_index) => {
                     let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
-                    let winning_balance = T::Shares::free_balance(winning_currency_id, &sender);
+                    let winning_balance = T::AssetManager::free_balance(winning_currency_id, &sender);
 
                     ensure!(winning_balance > BalanceOf::<T>::zero(), Error::<T>::NoWinningBalance);
 
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::Shares::free_balance(T::BaseAsset::get(), &market_account)
+                        T::AssetManager::free_balance(T::BaseAsset::get(), &market_account)
                             >= winning_balance,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -864,8 +864,8 @@ mod pallet {
                 OutcomeReport::Scalar(value) => {
                     let long_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
                     let short_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Short);
-                    let long_balance = T::Shares::free_balance(long_currency_id, &sender);
-                    let short_balance = T::Shares::free_balance(short_currency_id, &sender);
+                    let long_balance = T::AssetManager::free_balance(long_currency_id, &sender);
+                    let short_balance = T::AssetManager::free_balance(short_currency_id, &sender);
 
                     ensure!(
                         long_balance > BalanceOf::<T>::zero()
@@ -908,7 +908,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::Shares::free_balance(T::BaseAsset::get(), &market_account)
+                        T::AssetManager::free_balance(T::BaseAsset::get(), &market_account)
                             >= long_payout + short_payout,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -922,13 +922,13 @@ mod pallet {
 
             for (currency_id, payout, balance) in winning_assets {
                 // Destroy the shares.
-                T::Shares::slash(currency_id, &sender, balance);
+                T::AssetManager::slash(currency_id, &sender, balance);
 
                 // Pay out the winner.
-                let remaining_bal = T::Shares::free_balance(T::BaseAsset::get(), &market_account);
+                let remaining_bal = T::AssetManager::free_balance(T::BaseAsset::get(), &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
-                T::Shares::transfer(T::BaseAsset::get(), &market_account, &sender, actual_payout)?;
+                T::AssetManager::transfer(T::BaseAsset::get(), &market_account, &sender, actual_payout)?;
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
                 if balance != <BalanceOf<T>>::zero() {
@@ -963,13 +963,13 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = market.creator;
-            T::Shares::slash_reserved_named(
+            T::AssetManager::slash_reserved_named(
                 &RESERVE_ID,
                 T::BaseAsset::get(),
                 &creator,
                 T::AdvisoryBond::get(),
             );
-            T::Shares::unreserve_named(
+            T::AssetManager::unreserve_named(
                 &RESERVE_ID,
                 T::BaseAsset::get(),
                 &creator,
@@ -1075,7 +1075,7 @@ mod pallet {
 
             let market_account = Self::market_account(market_id);
             ensure!(
-                T::Shares::free_balance(T::BaseAsset::get(), &market_account) >= amount,
+                T::AssetManager::free_balance(T::BaseAsset::get(), &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
             );
 
@@ -1086,17 +1086,17 @@ mod pallet {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
                 ensure!(
-                    T::Shares::free_balance(*asset, &sender) >= amount,
+                    T::AssetManager::free_balance(*asset, &sender) >= amount,
                     Error::<T>::InsufficientShareBalance,
                 );
             }
 
             // write last.
             for asset in assets.iter() {
-                T::Shares::slash(*asset, &sender, amount);
+                T::AssetManager::slash(*asset, &sender, amount);
             }
 
-            T::Shares::transfer(T::BaseAsset::get(), &market_account, &sender, amount)?;
+            T::AssetManager::transfer(T::BaseAsset::get(), &market_account, &sender, amount)?;
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
@@ -1193,8 +1193,8 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
-        /// Shares
-        type Shares: ZeitgeistMultiReservableCurrency<
+        /// Shares of outcome assets and native currency
+        type AssetManager: ZeitgeistAssetManager<
             Self::AccountId,
             CurrencyId = Asset<MarketIdOf<Self>>,
             ReserveIdentifier = [u8; 8],
@@ -1477,7 +1477,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             ensure!(
-                T::Shares::free_balance(T::BaseAsset::get(), &who) >= amount,
+                T::AssetManager::free_balance(T::BaseAsset::get(), &who) >= amount,
                 Error::<T>::NotEnoughBalance
             );
 
@@ -1489,11 +1489,11 @@ mod pallet {
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             let market_account = Self::market_account(market_id);
-            T::Shares::transfer(T::BaseAsset::get(), &who, &market_account, amount)?;
+            T::AssetManager::transfer(T::BaseAsset::get(), &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {
-                T::Shares::deposit(*asset, &who, amount)?;
+                T::AssetManager::deposit(*asset, &who, amount)?;
             }
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
@@ -1671,10 +1671,10 @@ mod pallet {
                                 return 0;
                             }
                             let (total_accounts, accounts) =
-                                T::Shares::accounts_by_currency_id(asset);
+                                T::AssetManager::accounts_by_currency_id(asset);
                             total_asset_accounts =
                                 total_asset_accounts.saturating_add(accounts.len());
-                            T::Shares::destroy_all(asset, accounts.iter().cloned());
+                            T::AssetManager::destroy_all(asset, accounts.iter().cloned());
                             total_accounts
                         } else {
                             0
@@ -1698,7 +1698,7 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
-                T::Shares::unreserve_named(
+                T::AssetManager::unreserve_named(
                     &RESERVE_ID,
                     T::BaseAsset::get(),
                     &market.creator,
@@ -1715,14 +1715,14 @@ mod pallet {
                 MarketStatus::Reported => {
                     // the oracle bond gets returned if the reporter was the oracle
                     if report.by == market.oracle {
-                        T::Shares::unreserve_named(
+                        T::AssetManager::unreserve_named(
                             &RESERVE_ID,
                             T::BaseAsset::get(),
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
-                        let excess = T::Shares::slash_reserved_named(
+                        let excess = T::AssetManager::slash_reserved_named(
                             &RESERVE_ID,
                             T::BaseAsset::get(),
                             &market.creator,
@@ -1731,7 +1731,7 @@ mod pallet {
                         // deposit only to the real reporter what actually was slashed
                         let negative_imbalance = T::OracleBond::get() - excess;
                         // deposit could fail for below ExistentialDeposit or Overflow of total issuance
-                        T::Shares::deposit(T::BaseAsset::get(), &report.by, negative_imbalance)?;
+                        T::AssetManager::deposit(T::BaseAsset::get(), &report.by, negative_imbalance)?;
                     }
 
                     T::MarketCommons::report(market)?.outcome.clone()
@@ -1760,14 +1760,14 @@ mod pallet {
                     // If the oracle reported right, return the OracleBond, otherwise slash it to
                     // pay the correct reporters.
                     if report.outcome == resolved_outcome {
-                        T::Shares::unreserve_named(
+                        T::AssetManager::unreserve_named(
                             &RESERVE_ID,
                             T::BaseAsset::get(),
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
-                        let excess = T::Shares::slash_reserved_named(
+                        let excess = T::AssetManager::slash_reserved_named(
                             &RESERVE_ID,
                             T::BaseAsset::get(),
                             &market.creator,
@@ -1783,7 +1783,7 @@ mod pallet {
                     for (i, dispute) in disputes.iter().enumerate() {
                         let actual_bond = default_dispute_bond::<T>(i);
                         if dispute.outcome == resolved_outcome {
-                            T::Shares::unreserve_named(
+                            T::AssetManager::unreserve_named(
                                 &RESERVE_ID,
                                 T::BaseAsset::get(),
                                 &dispute.by,
@@ -1792,7 +1792,7 @@ mod pallet {
 
                             correct_reporters.push(dispute.by.clone());
                         } else {
-                            let excess = T::Shares::slash_reserved_named(
+                            let excess = T::AssetManager::slash_reserved_named(
                                 &RESERVE_ID,
                                 T::BaseAsset::get(),
                                 &dispute.by,
@@ -1822,7 +1822,7 @@ mod pallet {
                             reward_per_each
                         };
                         // deposit could fail for below ExistentialDeposit or Overflow of total issuance
-                        T::Shares::deposit(T::BaseAsset::get(), correct_reporter, reward)?;
+                        T::AssetManager::deposit(T::BaseAsset::get(), correct_reporter, reward)?;
                     }
 
                     resolved_outcome
@@ -1953,7 +1953,7 @@ mod pallet {
                                         if m.creation == MarketCreation::Permissionless {
                                             let required_bond =
                                                 T::ValidityBond::get() + T::OracleBond::get();
-                                            T::Shares::unreserve_named(
+                                            T::AssetManager::unreserve_named(
                                                 &RESERVE_ID,
                                                 T::BaseAsset::get(),
                                                 &m.creator,
@@ -1962,7 +1962,7 @@ mod pallet {
                                         } else if m.creation == MarketCreation::Advised {
                                             // AdvisoryBond was already returned when the market
                                             // was approved. Approval is inevitable to reach this.
-                                            T::Shares::unreserve_named(
+                                            T::AssetManager::unreserve_named(
                                                 &RESERVE_ID,
                                                 T::BaseAsset::get(),
                                                 &m.creator,

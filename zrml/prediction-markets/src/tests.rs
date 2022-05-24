@@ -73,7 +73,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
             0..1,
             ScoringRule::CPMM,
         );
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -97,7 +97,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
             0,
             OutcomeReport::Categorical(1)
         ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -126,7 +126,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
             0,
             OutcomeReport::Categorical(0)
         ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -152,7 +152,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
         ));
         run_to_block(9000); // Wait until market resolves
         assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -170,7 +170,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
             0..1,
             ScoringRule::CPMM,
         );
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -189,7 +189,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_active() {
             ScoringRule::CPMM,
         );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -214,7 +214,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_reported() {
             0,
             OutcomeReport::Categorical(1)
         ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -244,7 +244,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
             0,
             OutcomeReport::Categorical(0)
         ));
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -271,7 +271,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
         ));
         run_to_block(9000); // Wait until market resolves
         assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -302,20 +302,20 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         let pool_id = 0;
         let pool_account = Swaps::pool_account_id(pool_id);
         let market_account = PredictionMarkets::market_account(market_id);
-        let alice_ztg_before = Currency::free_balance(Asset::Ztg, &ALICE);
+        let alice_ztg_before = Currencies::free_balance(Asset::Ztg, &ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::Ztg, &pool_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &market_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
-        assert_eq!(Currency::free_balance(Asset::Ztg, &market_account), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
-        assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
-        assert_eq!(Currency::free_balance(Asset::Ztg, &ALICE), alice_ztg_before);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::Ztg, &pool_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 0), &market_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::Ztg, &market_account), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
+        assert_eq!(Currencies::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
+        assert_eq!(Currencies::free_balance(Asset::Ztg, &ALICE), alice_ztg_before);
     });
 }
 
@@ -501,7 +501,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
 
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
-        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Currencies::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
 
@@ -792,7 +792,7 @@ fn it_does_not_allow_to_sell_complete_sets_with_insufficient_balance() {
             ScoringRule::CPMM,
         );
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * CENT));
-        assert_eq!(Currency::slash(Asset::CategoricalOutcome(0, 1), &BOB, CENT), 0);
+        assert_eq!(Currencies::slash(Asset::CategoricalOutcome(0, 1), &BOB, CENT), 0);
         assert_noop!(
             PredictionMarkets::sell_complete_set(Origin::signed(BOB), 0, 2 * CENT),
             Error::<Runtime>::InsufficientShareBalance
