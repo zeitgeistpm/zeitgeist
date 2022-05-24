@@ -78,7 +78,7 @@ pub use pallet::*;
 mod pallet {
     use crate::weights::*;
     use alloc::{vec, vec::Vec};
-    use core::{cmp, marker::PhantomData, ops::RangeInclusive};
+    use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
@@ -406,7 +406,7 @@ mod pallet {
         ///     means, that after deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
-            T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
+            T::WeightInfo::create_market()
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
@@ -450,7 +450,7 @@ mod pallet {
                     ScoringRule::CPMM,
                 )?
                 .actual_weight
-                .unwrap_or_else(T::WeightInfo::create_scalar_market); // TODO
+                .unwrap_or_else(T::WeightInfo::create_market);
 
             // Deploy the swap pool and populate it.
             let market_id = T::MarketCommons::latest_market_id()?;
@@ -484,7 +484,7 @@ mod pallet {
             Ok(Some(weight_market_creation.saturating_add(deploy_and_populate_weight)).into())
         }
 
-        #[pallet::weight(T::WeightInfo::create_scalar_market())] // TODO
+        #[pallet::weight(T::WeightInfo::create_market())]
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
@@ -558,7 +558,7 @@ mod pallet {
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
-            Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into()) // TODO
+            Ok(Some(T::WeightInfo::create_market().saturating_add(extra_weight)).into())
         }
 
         /// This function combines the creation of a market, the buying of a complete set of
