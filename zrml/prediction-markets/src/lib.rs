@@ -1798,8 +1798,7 @@ mod pallet {
 
                         // negative_imbalance is the actual slash value (excess should be zero)
                         let negative_imbalance = T::OracleBond::get() - excess;
-
-                        overall_imbalance.saturating_add(negative_imbalance);
+                        overall_imbalance = overall_imbalance.saturating_add(negative_imbalance);
                     }
 
                     for (i, dispute) in disputes.iter().enumerate() {
@@ -1823,8 +1822,8 @@ mod pallet {
 
                             // negative_imbalance is the actual slash value (excess should be zero)
                             let negative_imbalance = actual_bond - excess;
-
-                            overall_imbalance.saturating_add(negative_imbalance);
+                            overall_imbalance =
+                                overall_imbalance.saturating_add(negative_imbalance);
                         }
                     }
 
