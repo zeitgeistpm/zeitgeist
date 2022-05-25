@@ -119,22 +119,13 @@ parameter_types! {
     // Transaction payment
     pub const OperationalFeeMultiplier: u8 = 5;
     pub const TransactionByteFee: Balance = 100 * MICRO;
-    // The portion of the `NORMAL_DISPATCH_RATIO` that we adjust the fees with. Blocks filled less
-    // than this will decrease the weight and more will increase.
     pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(10);
-    // https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html
     // With a target block time of 12 seconds (7200 blocks per day)
-    // where p is the amount of change over 7200 blocks.
-    // p >= AdjustmentVariable * BlocksPerDay * (1 - TargetBlockFullness * NORMAL_DISPATCH_RATIO)
-    // p >= 0.00003 * 7200 * (1 - 0.10 * 0.75)
-    // p >= 0.1998
-    // Meaning that fees can change by around ~19.98% per day, given extreme congestion.
-    // The adjustment variable of the runtime. Higher values will cause `TargetBlockFullness` to
-    // change the fees more rapidly.
+    // the weight fees can increase by at most ~22.12% per day, given extreme congestion.
+    // See https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html for details.
     pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(3, 100_000);
-    // Minimum amount of the multiplier. This value cannot be too low. A test case should ensure
-    // that combined with `AdjustmentVariable`, we can recover from the minimum.
-    // See `multiplier_can_grow_from_zero`.
+    // Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
+    // that this value is not too low.
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
 
     // Treasury
@@ -241,27 +232,5 @@ mod multiplier_tests {
             let next = SlowAdjustingFeeUpdate::<Runtime>::convert(minimum_multiplier);
             assert!(next > minimum_multiplier, "{:?} !>= {:?}", next, minimum_multiplier);
         })
-    }
-
-    #[test]
-    #[ignore]
-    fn multiplier_growth_simulator() {
-        // assume the multiplier is initially set to its minimum. We update it with values twice the
-        //target (target is 25%, thus 50%) and we see at which point it reaches 1.
-        let mut multiplier = MinimumMultiplier::get();
-        let block_weight = TargetBlockFullness::get()
-            * BlockWeights::get().get(DispatchClass::Normal).max_total.unwrap()
-            * 2;
-        let mut blocks = 0;
-        while multiplier <= Multiplier::one() {
-            run_with_system_weight(block_weight, || {
-                let next = SlowAdjustingFeeUpdate::<Runtime>::convert(multiplier);
-                // ensure that it is growing as well.
-                assert!(next > multiplier, "{:?} !>= {:?}", next, multiplier);
-                multiplier = next;
-            });
-            blocks += 1;
-            println!("block = {} multiplier {:?}", blocks, multiplier);
-        }
     }
 }
