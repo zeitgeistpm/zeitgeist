@@ -65,8 +65,8 @@ fn simple_create_scalar_market<T: crate::Config>(
     ));
 }
 
-#[test_case(654..=321; "low greater than high")]
-#[test_case(555..=555; "low equal to high")]
+#[test_case(654..=321; "empty range")]
+#[test_case(555..=555; "one element as range")]
 fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(

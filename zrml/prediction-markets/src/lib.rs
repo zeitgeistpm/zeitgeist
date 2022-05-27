@@ -1277,7 +1277,7 @@ mod pallet {
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
         InvalidMarketPeriod,
-        /// Outcome range of scalar market is empty
+        /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
     }
 
