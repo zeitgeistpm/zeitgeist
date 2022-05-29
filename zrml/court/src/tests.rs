@@ -346,7 +346,7 @@ fn vote_fails_if_juror_is_not_requested() {
 }
 
 #[test]
-fn vote_fails_if_juror_is_requested_for_wrong_market() {
+fn vote_fails_if_juror_is_not_requested_for_this_market() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
