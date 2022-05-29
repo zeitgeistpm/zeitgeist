@@ -83,6 +83,21 @@ fn exit_court_will_not_remove_an_unknown_juror() {
 }
 
 #[test]
+fn exit_court_correctly_removes_requests_for_jurors() {
+    ExtBuilder::default().build().execute_with(|| {
+        setup_blocks(2);
+        assert_ok!(Court::join_court(Origin::signed(ALICE)));
+        assert_ok!(Court::on_dispute(&[], &0, &DEFAULT_MARKET));
+        assert_ok!(Court::exit_court(Origin::signed(ALICE)));
+        // Alice was requested, but can no longer vote.
+        assert_noop!(
+            Court::vote(Origin::signed(ALICE), 0, OutcomeReport::Scalar(456)),
+            Error::<Runtime>::JurorNotRequested
+        );
+    });
+}
+
+#[test]
 fn join_court_reserves_balance_according_to_the_number_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(Balances::free_balance(ALICE), 1000 * BASE);
@@ -331,27 +346,13 @@ fn random_jurors_returns_a_subset_of_jurors() {
 }
 
 #[test]
-fn vote_fails_if_juror_is_not_requested() {
-    ExtBuilder::default().build().execute_with(|| {
-        setup_blocks(2);
-        assert_ok!(Court::join_court(Origin::signed(ALICE)));
-        assert_ok!(Court::on_dispute(&[], &0, &DEFAULT_MARKET));
-        // Bob joins too late, so he's guaranteed not to be requested for this market.
-        assert_ok!(Court::join_court(Origin::signed(BOB)));
-        assert_noop!(
-            Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(456)),
-            Error::<Runtime>::JurorNotRequested
-        );
-    });
-}
-
-#[test]
 fn vote_fails_if_juror_is_not_requested_for_this_market() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(2);
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_ok!(Court::on_dispute(&[], &0, &DEFAULT_MARKET));
-        // Dave joins too late, so he's guaranteed to be requested for the second market.
+        // Bob joins too late, so he's guaranteed to be requested for the second market, _not_ the
+        // first.
         assert_ok!(Court::join_court(Origin::signed(BOB)));
         assert_ok!(Court::on_dispute(&[], &1, &DEFAULT_MARKET));
         assert_noop!(
