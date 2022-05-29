@@ -98,6 +98,24 @@ fn exit_court_correctly_removes_requests_for_jurors() {
 }
 
 #[test]
+fn exit_court_punishes_tardy_jurors() {
+    ExtBuilder::default().build().execute_with(|| {
+        setup_blocks(2);
+        let balance_before_join = Balances::free_balance(ALICE);
+        assert_ok!(Court::join_court(Origin::signed(ALICE)));
+        assert_ok!(Court::on_dispute(&[], &0, &DEFAULT_MARKET));
+        assert_ok!(Court::mutate_juror(&ALICE, |juror| {
+            juror.status = JurorStatus::Tardy;
+            Ok(())
+        }));
+        assert_ok!(Court::exit_court(Origin::signed(ALICE)));
+        let balance_after_exit = Balances::free_balance(ALICE);
+        let slashed_amount = <Runtime as Config>::StakeWeight::get() / 5;
+        assert_eq!(balance_after_exit, balance_before_join - slashed_amount);
+    });
+}
+
+#[test]
 fn join_court_reserves_balance_according_to_the_number_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         assert_eq!(Balances::free_balance(ALICE), 1000 * BASE);

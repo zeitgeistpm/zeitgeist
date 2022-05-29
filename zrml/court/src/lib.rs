@@ -85,6 +85,9 @@ mod pallet {
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             let juror = Self::juror(&who)?;
+            if juror.status == JurorStatus::Tardy {
+                Self::punish_juror(&who);
+            }
             Self::remove_juror_from_all_courts_of_all_markets(&who);
             Self::deposit_event(Event::ExitedJuror(who, juror));
             Ok(())
@@ -282,11 +285,7 @@ mod pallet {
         {
             let mut valid_winners_and_losers = Vec::with_capacity(requested_jurors.len());
             let slash_and_remove_juror = |ai: &T::AccountId| {
-                let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, ai);
-                // Division will never overflow
-                let slash = all_reserved / BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR);
-                let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, ai, slash);
-                T::Slash::on_unbalanced(imbalance);
+                Self::punish_juror(ai);
                 Self::remove_juror_from_all_courts_of_all_markets(ai);
                 Ok::<_, DispatchError>(())
             };
@@ -328,7 +327,7 @@ mod pallet {
         }
 
         // Modifies a stored juror.
-        fn mutate_juror<F>(account_id: &T::AccountId, mut cb: F) -> DispatchResult
+        pub(crate) fn mutate_juror<F>(account_id: &T::AccountId, mut cb: F) -> DispatchResult
         where
             F: FnMut(&mut Juror) -> DispatchResult,
         {
@@ -431,6 +430,14 @@ mod pallet {
             }
 
             Ok((best_score.0.clone(), Some(second_best_score.0.clone())))
+        }
+
+        fn punish_juror(ai: &T::AccountId) {
+            let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, ai);
+            // Division will never overflow
+            let slash = all_reserved / BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR);
+            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, ai, slash);
+            T::Slash::on_unbalanced(imbalance);
         }
 
         // Obliterates all stored references of a juror un-reserving balances.
