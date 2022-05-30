@@ -3,7 +3,7 @@
 use crate::{
     mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, RESERVE_ID,
 };
-use core::ops::Range;
+use core::ops::{Range, RangeInclusive};
 use frame_support::{
     assert_err, assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
@@ -63,6 +63,26 @@ fn simple_create_scalar_market<T: crate::Config>(
         MarketDisputeMechanism::SimpleDisputes,
         scoring_rule
     ));
+}
+
+#[test_case(654..=321; "empty range")]
+#[test_case(555..=555; "one element as range")]
+fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_scalar_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                range,
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidOutcomeRange
+        );
+    });
 }
 
 #[test]
