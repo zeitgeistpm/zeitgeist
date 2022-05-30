@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
 # This script contains the configuration for other benchmarking scripts.
-
 export FRAME_PALLETS=( frame_system pallet_balances pallet_democracy \
                 pallet_identity pallet_membership  pallet_multisig pallet_preimage \
-                pallet_scheduler pallet_timestamp pallet_treasury pallet_utility pallet_vesting \
+                pallet_proxy pallet_scheduler pallet_timestamp pallet_treasury \
+                pallet_utility pallet_vesting \
                 ) # pallet_collective pallet_grandpa )
 export FRAME_PALLETS_RUNS=20
 export FRAME_PALLETS_STEPS=50
 
 # pallet_crowdloan_rewards benchmark lead to an error within the verify function (deprecated)
-export FRAME_PALLETS_PARACHAIN=( pallet_author_slot_filter pallet_author_mapping \
-                parachain_staking ) # pallet_crowdloan_rewards )
+export FRAME_PALLETS_PARACHAIN=( cumulus_pallet_xcmp_queue pallet_author_slot_filter \
+                pallet_author_mapping parachain_staking ) # pallet_crowdloan_rewards )
 export FRAME_PALLETS_PARACHAIN_RUNS=$FRAME_PALLETS_RUNS
 export FRAME_PALLETS_PARACHAIN_STEPS=$FRAME_PALLETS_STEPS
 

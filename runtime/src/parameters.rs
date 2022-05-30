@@ -88,6 +88,14 @@ parameter_types! {
     pub PreimageBaseDeposit: Balance = deposit(2, 64);
     pub PreimageByteDeposit: Balance = deposit(0, 1);
 
+    // Proxy
+    // One storage item; key size 32, value size 8; .
+    pub const ProxyDepositBase: Balance = deposit(1, 8);
+    // Additional storage item size of 33 bytes.
+    pub const ProxyDepositFactor: Balance = deposit(0, 33);
+    pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+    pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+
     // Scheduler
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
     // No hard limit, used for worst-case weight estimation

@@ -1,25 +1,25 @@
 [dependencies]
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-traits = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "2.0.0" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-substrate-fixed = { rev = "5984ba9b9433d5007597c7f03f65ea5bf6d08601", default-features = false, git = "https://github.com/encointer/substrate-fixed" }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+orml-traits = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
+zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 
 # Mock
 
-orml-currencies = { git = "https://github.com/purestake/open-runtime-module-library", optional = true }
-orml-tokens = { git = "https://github.com/purestake/open-runtime-module-library", optional = true }
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
-sp-api = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
-sp-io = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate", optional = true }
-zrml-market-commons = { optional = true, path = "../market-commons" }
+orml-currencies = { branch = "polkadot-0.9.19-latest", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-tokens = { branch = "polkadot-0.9.19-latest", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]
@@ -35,7 +35,6 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
-    "zrml-market-commons",
     "zrml-swaps-runtime-api",
 ]
 runtime-benchmarks = [
@@ -52,6 +51,7 @@ std = [
     "sp-runtime/std",
     "substrate-fixed/std",
     "zeitgeist-primitives/std",
+    "zrml-market-commons/std",
     "zrml-liquidity-mining/std",
     "zrml-rikiddo/std",
 ]
@@ -60,4 +60,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-swaps"
-version = "0.3.1"
+version = "0.3.2"

@@ -36,6 +36,7 @@ pub type UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>;
 // Mocked exit fee for easier calculations
 parameter_types! {
     pub storage ExitFeeMock: Balance = BASE / 10;
+    pub const MinSubsidyPerAccount: Balance = BASE;
 }
 
 construct_runtime!(
@@ -46,7 +47,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Currencies: orml_currencies::{Event<T>, Pallet},
+        Currencies: orml_currencies::{Pallet},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
@@ -65,6 +66,7 @@ impl crate::Config for Runtime {
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
@@ -74,6 +76,7 @@ impl crate::Config for Runtime {
     type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
@@ -109,7 +112,6 @@ impl frame_system::Config for Runtime {
 }
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
@@ -124,7 +126,9 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
     type OnDust = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
