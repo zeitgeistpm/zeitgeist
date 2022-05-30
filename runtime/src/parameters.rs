@@ -121,7 +121,7 @@ parameter_types! {
     pub const TransactionByteFee: Balance = 100 * MICRO;
     pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(10);
     // With a target block time of 12 seconds (7200 blocks per day)
-    // the weight fees can increase by at most ~22.12% per day, given extreme congestion.
+    // the weight fees can increase by at most ~21.46% per day, given extreme congestion.
     // See https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html for details.
     pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(3, 100_000);
     // Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
@@ -156,7 +156,7 @@ mod multiplier_tests {
     use sp_core::H256;
     use sp_runtime::{
         testing::Header,
-        traits::{BlakeTwo256, Convert, IdentityLookup, One},
+        traits::{BlakeTwo256, Convert, IdentityLookup},
         Perbill,
     };
 
