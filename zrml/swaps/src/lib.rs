@@ -826,6 +826,8 @@ mod pallet {
             BalanceOf<T>,
             T::AccountId,
         ),
+        /// A pool was closed. \[pool_id\]
+        PoolClosed(PoolId),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
             PoolAssetsEvent<
@@ -1176,10 +1178,9 @@ mod pallet {
         pub(crate) fn check_if_pool_is_active(
             pool: &Pool<BalanceOf<T>, T::MarketId>,
         ) -> DispatchResult {
-            if pool.pool_status == PoolStatus::Active {
-                Ok(())
-            } else {
-                Err(Error::<T>::PoolIsNotActive.into())
+            match pool.pool_status {
+                PoolStatus::Active => Ok(()),
+                _ => Err(Error::<T>::PoolIsNotActive.into()),
             }
         }
 
@@ -1243,7 +1244,11 @@ mod pallet {
 
         fn set_pool_to_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
-                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
+                ensure!(
+                    pool.pool_status == PoolStatus::Active
+                        || pool.pool_status == PoolStatus::Closed,
+                    Error::<T>::InvalidStateTransition
+                );
                 pool.pool_status = PoolStatus::Stale;
                 Ok(())
             })?;
@@ -1421,6 +1426,16 @@ mod pallet {
             ));
 
             Ok(next_pool_id)
+        }
+
+        fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            Self::mutate_pool(pool_id, |pool| {
+                pool.pool_status = PoolStatus::Closed;
+                Ok(())
+            })?;
+            Self::deposit_event(Event::PoolClosed(pool_id));
+            // TODO(#603): Fix weight calculation!
+            Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
         fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {

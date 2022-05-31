@@ -31,6 +31,9 @@ pub trait Swaps<AccountId> {
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
+    /// Close the specified pool.
+    fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
+
     /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
     fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 

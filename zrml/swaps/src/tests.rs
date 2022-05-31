@@ -1704,6 +1704,58 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
     });
 }
 
+#[test]
+fn close_pool_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(Swaps::close_pool(0), crate::Error::<Runtime>::PoolDoesNotExist);
+    });
+}
+
+#[test]
+fn close_pool_succeeds_and_emits_correct_event_if_pool_exists() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::close_pool(pool_id));
+        let pool = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool.pool_status, PoolStatus::Closed);
+        System::assert_last_event(Event::PoolClosed(pool_id).into());
+    });
+}
+
+#[test]
+fn trading_is_not_allowed_in_closed_cpmm_pools() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
+            pool.pool_status = PoolStatus::Closed;
+            Ok(())
+        }));
+        assert_noop!(
+            Swaps::pool_join(alice_signed(), pool_id, _5, vec!(_25, _25, _25, _25)),
+            crate::Error::<Runtime>::PoolIsNotActive,
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, _1, ASSET_B, _1 / 2, _2),
+            crate::Error::<Runtime>::PoolIsNotActive,
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _2, ASSET_B, _1, _3),
+            crate::Error::<Runtime>::PoolIsNotActive,
+        );
+        assert_noop!(
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_B, 1, 1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_B, 1, 1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
