@@ -85,9 +85,10 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::admin_set_pool_to_stale())]
+        /// Clean up the pool of a resolved market.
+        #[pallet::weight(T::WeightInfo::admin_clean_up_pool())]
         #[transactional]
-        pub fn admin_set_pool_to_stale(
+        pub fn admin_clean_up_pool(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
             outcome_report: OutcomeReport,
@@ -95,7 +96,7 @@ mod pallet {
             ensure_root(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
-            Self::set_pool_to_stale(
+            Self::clean_up_pool(
                 &market.market_type,
                 pool_id,
                 &outcome_report,
@@ -1242,21 +1243,7 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        fn set_pool_to_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            Self::mutate_pool(pool_id, |pool| {
-                ensure!(
-                    pool.pool_status == PoolStatus::Active
-                        || pool.pool_status == PoolStatus::Closed,
-                    Error::<T>::InvalidStateTransition
-                );
-                pool.pool_status = PoolStatus::Stale;
-                Ok(())
-            })?;
-
-            Ok(T::DbWeight::get().reads_writes(1, 1))
-        }
-
-        fn set_pool_to_stale_categorical(
+        fn clean_up_pool_categorical(
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
@@ -1302,7 +1289,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Ok(T::WeightInfo::set_pool_to_stale_without_reward_distribution(
+            Ok(T::WeightInfo::clean_up_pool_without_reward_distribution(
                 total_assets.saturated_into(),
             )
             .saturating_add(extra_weight))
@@ -1310,9 +1297,9 @@ mod pallet {
 
         /// Calculate the exit fee percentage for `pool`.
         fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
-            // We don't charge exit fees on stale pools (no need to punish LPs for leaving the
+            // We don't charge exit fees on closed pools (no need to punish LPs for leaving the
             // pool)!
-            if pool.pool_status == PoolStatus::Stale {
+            if pool.pool_status == PoolStatus::Closed {
                 0u128.saturated_into()
             } else {
                 T::ExitFee::get().saturated_into()
@@ -1430,6 +1417,7 @@ mod pallet {
 
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
+                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
                 pool.pool_status = PoolStatus::Closed;
                 Ok(())
             })?;
@@ -1768,12 +1756,12 @@ mod pallet {
             Ok(Self::pool_by_id(pool_id)?)
         }
 
-        /// Mark a pool as stale, remove losing assets and distribute Rikiddo pool share rewards.
+        /// Remove losing assets and distribute Rikiddo pool share rewards.
         ///
         /// # Arguments
         ///
         /// * `market_type`: Type of the market.
-        /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
+        /// * `pool_id`: Unique pool identifier associated with the pool to be made closed.
         /// * `outcome_report`: The reported outcome.
         /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
         ///
@@ -1782,19 +1770,19 @@ mod pallet {
         /// * Returns `Error::<T>::PoolDoesNotExist` if there is no pool with `pool_id`.
         /// * Returns `Error::<T>::WinningAssetNotFound` if the reported asset is not found in the
         ///   pool and the scoring rule is Rikiddo.
-        /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not active or already
-        ///   stale
+        /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not closed
         #[frame_support::transactional]
-        fn set_pool_to_stale(
+        fn clean_up_pool(
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = 0;
-            weight = weight.saturating_add(Self::set_pool_to_stale_common(pool_id)?);
+            let pool = Self::pool(pool_id)?;
+            ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
             if let MarketType::Categorical(_) = market_type {
-                weight = weight.saturating_add(Self::set_pool_to_stale_categorical(
+                weight = weight.saturating_add(Self::clean_up_pool_categorical(
                     pool_id,
                     outcome_report,
                     winner_payout_account,

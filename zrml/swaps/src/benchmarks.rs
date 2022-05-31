@@ -19,7 +19,7 @@ use zeitgeist_primitives::{
     traits::Swaps as _,
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, ScoringRule,
+        MarketType, OutcomeReport, PoolStatus, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -118,7 +118,7 @@ fn bench_create_pool<T: Config>(
 }
 
 benchmarks! {
-    admin_set_pool_to_stale {
+    admin_clean_up_pool {
         let caller: T::AccountId = whitelisted_caller();
         T::MarketCommons::push_market(
             Market {
@@ -138,6 +138,9 @@ benchmarks! {
         )?;
         let _ = T::MarketCommons::insert_market_pool(0u32.saturated_into(), 0u128);
         let _ = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
+        let _ = Pallet::<T>::mutate_pool(0, |pool| {
+            pool.pool_status = PoolStatus::Closed; Ok(())
+        });
     }: _(RawOrigin::Root, 0u32.into(), OutcomeReport::Categorical(0))
 
     end_subsidy_phase {
@@ -314,7 +317,7 @@ benchmarks! {
         let max_asset_amount: BalanceOf<T> = T::MinLiquidity::get();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
 
-    set_pool_to_stale_without_reward_distribution {
+    clean_up_pool_without_reward_distribution {
         // Total possible outcomes
         let a in 3..T::MaxAssets::get().into();
 
@@ -330,8 +333,11 @@ benchmarks! {
             ScoringRule::CPMM,
             false
         );
+        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
+            pool.pool_status = PoolStatus::Closed; Ok(())
+        });
     }: {
-        Pallet::<T>::set_pool_to_stale(
+        Pallet::<T>::clean_up_pool(
             &MarketType::Categorical(a as u16),
             pool_id, &OutcomeReport::Categorical(0),
             &account("ScrapCollector", 0, 0)

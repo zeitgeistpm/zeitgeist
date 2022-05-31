@@ -1885,8 +1885,8 @@ mod pallet {
                 }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
-            let to_stale_weight = Self::set_pool_to_stale(market, market_id, &resolved_outcome)?;
-            total_weight = total_weight.saturating_add(to_stale_weight);
+            let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
+            total_weight = total_weight.saturating_add(clean_up_weight);
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             let mut total_accounts = 0u32;
@@ -2162,7 +2162,7 @@ mod pallet {
 
         // If a market has a pool that is `Active`, then changes from `Active` to `Stale`. If
         // the market does not exist or the market does not have a pool, does nothing.
-        fn set_pool_to_stale(
+        fn clean_up_pool(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
@@ -2173,7 +2173,7 @@ mod pallet {
                 return Ok(T::DbWeight::get().reads(1));
             };
             let market_account = Self::market_account(*market_id);
-            let weight = T::Swaps::set_pool_to_stale(
+            let weight = T::Swaps::clean_up_pool(
                 &market.market_type,
                 pool_id,
                 outcome_report,

@@ -19,8 +19,6 @@ pub enum PoolStatus {
     Active,
     /// No trading is allowed. The pool is waiting to be subsidized.
     CollectingSubsidy,
-    /// No trading is allowed. Only liquidity awaiting redemption is present in the pool.
-    Stale,
     /// No trading/adding liquidity is allowed.
     Closed,
 }

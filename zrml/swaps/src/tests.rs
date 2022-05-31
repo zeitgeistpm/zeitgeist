@@ -430,7 +430,7 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
 }
 
 #[test]
-fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
+fn nothing_except_exit_pool_is_allowed_in_closed_cpmm_pools() {
     ExtBuilder::default().build().execute_with(|| {
         use zeitgeist_primitives::traits::Swaps as _;
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
@@ -440,7 +440,8 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
-        assert_ok!(Swaps::set_pool_to_stale(
+        assert_ok!(Swaps::close_pool(0));
+        assert_ok!(Swaps::clean_up_pool(
             &MarketType::Categorical(0),
             0,
             &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
@@ -604,14 +605,14 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
 }
 
 #[test]
-fn set_pool_to_stale_fails_if_origin_is_not_root() {
+fn admin_clean_up_pool_fails_if_origin_is_not_root() {
     ExtBuilder::default().build().execute_with(|| {
         let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(MarketCommons::push_market(mock_market(69)));
         MarketCommons::insert_market_pool(0, 0);
         assert_noop!(
-            Swaps::admin_set_pool_to_stale(alice_signed(), 0, OutcomeReport::Categorical(idx)),
+            Swaps::admin_clean_up_pool(alice_signed(), 0, OutcomeReport::Categorical(idx)),
             BadOrigin
         );
     });
@@ -756,7 +757,7 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
 }
 
 #[test]
-fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
+fn pool_exit_decreases_correct_pool_parameters_on_closed_pool() {
     // Test is the same as
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -765,11 +766,8 @@ fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
         MarketCommons::insert_market_pool(0, 0);
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_to_stale(
-            Origin::root(),
-            0,
-            OutcomeReport::Categorical(65),
-        ));
+        assert_ok!(Swaps::close_pool(0));
+        assert_ok!(Swaps::admin_clean_up_pool(Origin::root(), 0, OutcomeReport::Categorical(65),));
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1),));
 
         System::assert_last_event(
@@ -1311,13 +1309,14 @@ fn provided_values_len_must_equal_assets_len() {
 }
 
 #[test]
-fn set_pool_to_stale_leaves_only_correct_assets() {
+fn clean_up_pool_leaves_only_correct_assets() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
         let pool_id = 0;
+        assert_ok!(Swaps::close_pool(pool_id));
 
         assert_noop!(
-            Swaps::set_pool_to_stale(
+            Swaps::clean_up_pool(
                 &MarketType::Categorical(1337),
                 pool_id,
                 &OutcomeReport::Categorical(1337),
@@ -1328,20 +1327,18 @@ fn set_pool_to_stale_leaves_only_correct_assets() {
 
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
-        assert_ok!(Swaps::set_pool_to_stale(
+        assert_ok!(Swaps::clean_up_pool(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
             &Default::default()
         ));
-
-        assert_eq!(Swaps::pool_by_id(pool_id).unwrap().pool_status, PoolStatus::Stale);
         assert_eq!(Swaps::pool_by_id(pool_id).unwrap().assets, vec![ASSET_A, ASSET_D]);
     });
 }
 
 #[test]
-fn set_pool_to_stale_handles_rikiddo_pools_properly() {
+fn clean_up_pool_handles_rikiddo_pools_properly() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 0;
@@ -1349,7 +1346,7 @@ fn set_pool_to_stale_handles_rikiddo_pools_properly() {
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
         assert_noop!(
-            Swaps::set_pool_to_stale(
+            Swaps::clean_up_pool(
                 &MarketType::Categorical(4),
                 pool_id,
                 &OutcomeReport::Categorical(cat_idx),
@@ -1358,12 +1355,14 @@ fn set_pool_to_stale_handles_rikiddo_pools_properly() {
             crate::Error::<Runtime>::InvalidStateTransition
         );
 
+        // We need to forcefully closed the pool (Rikiddo pools are not allowed to be cleaned
+        // up when CollectingSubsidy.
         assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
-            pool.pool_status = PoolStatus::Active;
+            pool.pool_status = PoolStatus::Closed;
             Ok(())
         }));
 
-        assert_ok!(Swaps::set_pool_to_stale(
+        assert_ok!(Swaps::clean_up_pool(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1721,38 +1720,6 @@ fn close_pool_succeeds_and_emits_correct_event_if_pool_exists() {
         let pool = Swaps::pool(pool_id).unwrap();
         assert_eq!(pool.pool_status, PoolStatus::Closed);
         System::assert_last_event(Event::PoolClosed(pool_id).into());
-    });
-}
-
-#[test]
-fn trading_is_not_allowed_in_closed_cpmm_pools() {
-    ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
-        let pool_id = 0;
-        assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
-            pool.pool_status = PoolStatus::Closed;
-            Ok(())
-        }));
-        assert_noop!(
-            Swaps::pool_join(alice_signed(), pool_id, _5, vec!(_25, _25, _25, _25)),
-            crate::Error::<Runtime>::PoolIsNotActive,
-        );
-        assert_noop!(
-            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, _1, ASSET_B, _1 / 2, _2),
-            crate::Error::<Runtime>::PoolIsNotActive,
-        );
-        assert_noop!(
-            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _2, ASSET_B, _1, _3),
-            crate::Error::<Runtime>::PoolIsNotActive,
-        );
-        assert_noop!(
-            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_B, 1, 1),
-            crate::Error::<Runtime>::PoolIsNotActive
-        );
-        assert_noop!(
-            Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_B, 1, 1),
-            crate::Error::<Runtime>::PoolIsNotActive
-        );
     });
 }
 
