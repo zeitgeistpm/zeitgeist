@@ -52,6 +52,7 @@ parameter_types! {
     pub const OracleBond: Balance = 25 * CENT;
     pub const ValidityBond: Balance = 53 * CENT;
     pub const DisputeBond: Balance = 109 * CENT;
+    pub const MinMarketDuration: Moment = 120_000; // 10 Blocks in ms.
 }
 
 construct_runtime!(
@@ -95,6 +96,7 @@ impl crate::Config for Runtime {
     type MaxDisputes = MaxDisputes;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MaxMarketPeriod = MaxMarketPeriod;
+    type MinMarketDuration = MinMarketDuration;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;

@@ -1184,6 +1184,10 @@ mod pallet {
         #[pallet::constant]
         type MinSubsidyPeriod: Get<MomentOf<Self>>;
 
+        /// The shortest marked duration allowed for timestamp based markets. Specified in ms.
+        #[pallet::constant]
+        type MinMarketDuration: Get<MomentOf<Self>>;
+
         /// The maximum number of disputes allowed on any single market.
         #[pallet::constant]
         type MaxDisputes: Get<u32>;
@@ -1628,19 +1632,36 @@ mod pallet {
         fn ensure_market_period_is_valid(
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
-            let verify = |start: u64, end: u64| -> DispatchResult {
-                ensure!(start < end, Error::<T>::InvalidMarketPeriod);
-                ensure!(end <= T::MaxMarketPeriod::get(), Error::<T>::InvalidMarketPeriod);
-                Ok(())
-            };
+            // The start of the market is allowed to be in the past (this results in the market
+            // being active immediately), but the market's end must be in the future and the market
+            // must run for at least the minimum duration (if it uses timestamps instead of
+            // block numbers for time keeping).
             match period {
                 MarketPeriod::Block(ref range) => {
-                    verify(range.start.saturated_into(), range.end.saturated_into())
+                    ensure!(
+                        <frame_system::Pallet<T>>::block_number() < range.end,
+                        Error::<T>::InvalidMarketPeriod
+                    );
+                    ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
+                    ensure!(
+                        range.end <= T::MaxMarketPeriod::get().saturated_into(),
+                        Error::<T>::InvalidMarketPeriod
+                    );
                 }
                 MarketPeriod::Timestamp(ref range) => {
-                    verify(range.start.saturated_into(), range.end.saturated_into())
+                    let start = range.start.max(T::MarketCommons::now());
+                    ensure!(start < range.end, Error::<T>::InvalidMarketPeriod);
+                    // Implies range.end > range.start unless `MinMarketDuration` is zero.
+                    ensure!(
+                        range.end.saturating_sub(start) >= T::MinMarketDuration::get(),
+                        Error::<T>::InvalidMarketPeriod
+                    );
+                    ensure!(
+                        range.end <= T::MaxMarketPeriod::get().saturated_into(),
+                        Error::<T>::InvalidMarketPeriod
+                    );
                 }
-            }?;
+            };
             Ok(())
         }
 
