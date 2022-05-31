@@ -15,7 +15,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::MarketCommonsPalletApi;
-    use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
@@ -121,11 +120,6 @@ mod pallet {
         ) -> Result<Market<Self::AccountId, Self::BlockNumber, Self::Moment>, DispatchError>
         {
             <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
-        }
-
-        fn markets()
-        -> Vec<(Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>)> {
-            <Markets<T>>::iter().collect()
         }
 
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult

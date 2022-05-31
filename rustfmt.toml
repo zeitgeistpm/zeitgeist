@@ -3,3 +3,4 @@ format_strings = true
 imports_granularity = "Crate"
 use_small_heuristics = "Max"
 version = "Two"
+report_todo = "Unnumbered"
