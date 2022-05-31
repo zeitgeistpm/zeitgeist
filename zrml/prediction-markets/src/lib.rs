@@ -960,6 +960,7 @@ mod pallet {
         ) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
+            Self::clear_auto_close(&market_id)?;
             Self::do_reject_market(&market_id, market)?;
             Ok(())
         }

@@ -650,6 +650,26 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
 }
 
 #[test]
+fn reject_market_clears_auto_close_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            33..66,
+            ScoringRule::CPMM,
+        );
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            22..66,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
+        assert_eq!(auto_close.len(), 1);
+        assert_eq!(auto_close[0], 1);
+    });
+}
+
+#[test]
 fn on_close_market_rejects_ignored_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market::<Runtime>(
