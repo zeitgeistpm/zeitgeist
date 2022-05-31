@@ -70,13 +70,10 @@ fn market_fails_if_market_does_not_exist() {
 fn mutate_market_succeeds_if_closure_succeeds() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(MarketCommons::push_market(market_mock(0)));
-        assert_ok!(
-            // We change the market to check that `mutate_market` is actually no-op.
-            MarketCommons::mutate_market(&0, |market| {
-                market.oracle = 1;
-                Ok(())
-            })
-        );
+        assert_ok!(MarketCommons::mutate_market(&0, |market| {
+            market.oracle = 1;
+            Ok(())
+        }));
         assert_eq!(MarketCommons::market(&0).unwrap().oracle, 1);
     });
 }
@@ -104,7 +101,7 @@ fn mutate_market_is_noop_if_closure_fails() {
         let err = DispatchError::Other("foo");
         assert_ok!(MarketCommons::push_market(market_mock(0)));
         assert_noop!(
-            // We change the market to check that `mutate_market` is actually no-op.
+            // We change the market to check that `mutate_market` is no-op when it errors.
             MarketCommons::mutate_market(&0, |market| {
                 market.oracle = 1;
                 Err(err)
