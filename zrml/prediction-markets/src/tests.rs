@@ -1,7 +1,8 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{
-    mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, RESERVE_ID,
+    mock::*, Config, Error, Event, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
+    MarketIdsPerReportBlock, RESERVE_ID,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -63,6 +64,65 @@ fn simple_create_scalar_market<T: crate::Config>(
         MarketDisputeMechanism::SimpleDisputes,
         scoring_rule
     ));
+}
+
+#[test]
+fn admin_move_market_to_closed_successfully_closes_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+    });
+}
+
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+fn admin_move_market_to_closed_fails_if_market_is_not_active(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = status;
+            Ok(())
+        }));
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id),
+            crate::Error::<Runtime>::MarketIsNotActive,
+        );
+    });
+}
+
+#[test]
+fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            22..66,
+            ScoringRule::CPMM,
+        );
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            33..66,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0));
+        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
+        assert_eq!(auto_close.len(), 1);
+        assert_eq!(auto_close[0], 1);
+    });
 }
 
 #[test_case(654..=321; "empty range")]
@@ -336,6 +396,26 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
         assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
         assert_eq!(Currency::free_balance(Asset::Ztg, &ALICE), alice_ztg_before);
+    });
+}
+
+#[test]
+fn admin_destroy_market_correctly_clears_auto_close_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            22..66,
+            ScoringRule::CPMM,
+        );
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            33..66,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
+        assert_eq!(auto_close.len(), 1);
+        assert_eq!(auto_close[0], 1);
     });
 }
 

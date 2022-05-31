@@ -235,9 +235,9 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             T::CloseOrigin::ensure_origin(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            Self::ensure_market_is_active(&market)?;
             Self::close_market(&market_id)?;
-            // Manually remove market from cache. (This results in an awkward double read of the
-            // `Market` object.)
             Self::clear_auto_close(&market_id)?;
             Ok(())
         }
@@ -1477,6 +1477,7 @@ mod pallet {
             T::PalletId::get().into_sub_account(market_id.saturated_into::<u128>())
         }
 
+        // Manually remove market from cache for auto close.
         fn clear_auto_close(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(&market_id)?;
             match market.period {
