@@ -1469,7 +1469,7 @@ mod pallet {
 
         // Manually remove market from cache for auto close.
         fn clear_auto_close(market_id: &MarketIdOf<T>) -> DispatchResult {
-            let market = T::MarketCommons::market(&market_id)?;
+            let market = T::MarketCommons::market(market_id)?;
             match market.period {
                 MarketPeriod::Block(range) => {
                     MarketIdsPerCloseBlock::<T>::mutate(&range.end, |ids| {
@@ -1551,22 +1551,19 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
-            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                &RESERVE_ID,
-                &creator,
-                T::AdvisoryBond::get(),
-            );
+            let (imbalance, _) =
+                CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, creator, T::AdvisoryBond::get());
             T::Slash::on_unbalanced(imbalance);
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::OracleBond::get());
-            T::MarketCommons::remove_market(&market_id)?;
-            Self::deposit_event(Event::MarketRejected(market_id.clone()));
-            Self::deposit_event(Event::MarketDestroyed(market_id.clone()));
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, creator, T::OracleBond::get());
+            T::MarketCommons::remove_market(market_id)?;
+            Self::deposit_event(Event::MarketRejected(*market_id));
+            Self::deposit_event(Event::MarketDestroyed(*market_id));
             Ok(0)
         }
 
         fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
             let div = BLOCKS_PER_TIME_FRAME.saturating_mul(MILLISECS_PER_BLOCK.into());
-            time.saturated_into::<TimeFrame>() / div
+            time.saturated_into::<TimeFrame>().saturating_div(div)
         }
 
         fn calculate_actual_weight<F>(
@@ -1759,7 +1756,7 @@ mod pallet {
                 market.status = MarketStatus::Closed;
                 Ok(())
             })?;
-            if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
+            if let Ok(pool_id) = T::MarketCommons::market_pool(market_id) {
                 T::Swaps::close_pool(pool_id)?;
             };
             Self::deposit_event(Event::MarketClosed(*market_id));
@@ -2110,7 +2107,7 @@ mod pallet {
                 .chain(MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter())
             {
                 let market = T::MarketCommons::market(market_id)?;
-                mutation(&market_id, market)?;
+                mutation(market_id, market)?;
             }
             MarketIdsPerCloseBlock::<T>::remove(&now);
             MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
