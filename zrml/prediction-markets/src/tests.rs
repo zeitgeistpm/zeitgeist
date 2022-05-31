@@ -340,6 +340,40 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
 }
 
 #[test]
+fn admin_move_market_to_resolved_resolves_reported_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..33,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+
+        run_to_block(33);
+        let category = 1;
+        let outcome_report = OutcomeReport::Categorical(category);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            market_id,
+            outcome_report.clone()
+        ));
+        assert_ok!(PredictionMarkets::admin_move_market_to_resolved(
+            Origin::signed(SUDO),
+            market_id
+        ));
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Resolved);
+        assert_eq!(market.report.unwrap().outcome, outcome_report);
+        assert_eq!(market.resolved_outcome.unwrap(), outcome_report);
+        System::assert_last_event(
+            Event::MarketResolved(market_id, MarketStatus::Resolved, outcome_report).into(),
+        );
+        // TODO Check bonds!
+    });
+}
+
+#[test]
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market::<Runtime>(
