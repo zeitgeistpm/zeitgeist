@@ -1332,13 +1332,19 @@ mod pallet {
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let _ = with_transaction(|| {
-                let output = Self::resolution_manager(now, |market_id, market| {
+                let close = Self::market_close_manager(now, |market_id, market| {
+                    let weight = Self::on_market_close(market_id, market)?;
+                    total_weight = total_weight.saturating_add(weight);
+                    Ok(())
+                });
+
+                let resolve = Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
                     total_weight = total_weight.saturating_add(weight);
                     Ok(())
                 });
 
-                match output {
+                match close.and(resolve) {
                     Err(err) => {
                         Self::deposit_event(Event::BadOnInitialize);
                         log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
@@ -1673,6 +1679,13 @@ mod pallet {
             Ok([total_accounts, total_asset_accounts, total_categories])
         }
 
+        fn on_market_close(
+            _market_id: &MarketIdOf<T>,
+            _market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        ) -> Result<Weight, DispatchError> {
+            Ok(0)
+        }
+
         fn on_resolution(
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
@@ -1989,6 +2002,16 @@ mod pallet {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
+            Ok(())
+        }
+
+        fn market_close_manager<F>(_now: T::BlockNumber, mut _mutation: F) -> DispatchResult
+        where
+            F: FnMut(
+                &MarketIdOf<T>,
+                &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            ) -> DispatchResult,
+        {
             Ok(())
         }
 
