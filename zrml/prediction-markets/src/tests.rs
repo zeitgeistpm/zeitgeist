@@ -69,15 +69,17 @@ fn simple_create_scalar_market<T: crate::Config>(
 #[test]
 fn admin_move_market_to_closed_successfully_closes_market() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Permissionless,
-            0..1,
+            0..2,
             ScoringRule::CPMM,
         );
         let market_id = 0;
         assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
         let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
+        System::assert_last_event(Event::MarketClosed(market_id).into());
     });
 }
 
@@ -670,13 +672,14 @@ fn reject_market_clears_auto_close_blocks() {
 }
 
 #[test]
-fn on_close_market_rejects_ignored_advised_market() {
+fn on_market_close_auto_rejects_ignored_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Advised,
             0..33,
             ScoringRule::CPMM,
         );
+        let market_id = 0;
 
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
@@ -701,9 +704,56 @@ fn on_close_market_rejects_ignored_advised_market() {
         );
 
         assert_noop!(
-            MarketCommons::market(&0),
+            MarketCommons::market(&market_id),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
+        System::assert_has_event(Event::MarketDestroyed(market_id).into());
+        System::assert_has_event(Event::MarketRejected(market_id).into());
+    });
+}
+
+#[test]
+fn on_market_close_successfully_auto_closes_market_with_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 33;
+        assert_ok!(PredictionMarkets::create_scalar_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..end),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            123..=456,
+            MarketDisputeMechanism::Authorized(CHARLIE),
+            ScoringRule::CPMM,
+        ));
+        let market_id = 0;
+        run_to_block(33);
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+        System::assert_last_event(Event::MarketClosed(market_id).into());
+    });
+}
+
+#[test]
+fn on_market_close_successfully_auto_closes_market_with_timestamps() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = <Runtime as Config>::MinMarketDuration::get();
+        assert_ok!(PredictionMarkets::create_scalar_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..end),
+            gen_metadata(0),
+            MarketCreation::Permissionless,
+            123..=456,
+            MarketDisputeMechanism::Authorized(CHARLIE),
+            ScoringRule::CPMM,
+        ));
+        let market_id = 0;
+        Timestamp::set_timestamp(end);
+        run_to_block(1); // Trigger hooks!
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+        System::assert_last_event(Event::MarketClosed(market_id).into());
     });
 }
 
