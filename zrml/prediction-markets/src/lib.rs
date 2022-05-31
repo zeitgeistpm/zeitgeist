@@ -289,6 +289,7 @@ mod pallet {
             let mut status = MarketStatus::Active;
 
             T::MarketCommons::mutate_market(&market_id, |m| {
+                Self::ensure_market_period_is_valid(&m.period)?;
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
 
                 if m.scoring_rule == ScoringRule::CPMM {
@@ -959,18 +960,7 @@ mod pallet {
         ) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
-            let creator = market.creator;
-            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
-                &RESERVE_ID,
-                &creator,
-                T::AdvisoryBond::get(),
-            );
-            T::Slash::on_unbalanced(imbalance);
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::OracleBond::get());
-            T::MarketCommons::remove_market(&market_id)?;
-            Self::deposit_event(Event::MarketRejected(market_id));
-            Self::deposit_event(Event::MarketDestroyed(market_id));
+            Self::do_reject_market(&market_id, market)?;
             Ok(())
         }
 
@@ -1359,8 +1349,8 @@ mod pallet {
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let _ = with_transaction(|| {
-                let close = Self::market_close_manager(now, |market_id| {
-                    let weight = Self::close_market(market_id)?;
+                let close = Self::market_close_manager(now, |market_id, market| {
+                    let weight = Self::on_market_close(market_id, market)?;
                     total_weight = total_weight.saturating_add(weight);
                     Ok(())
                 });
@@ -1553,6 +1543,25 @@ mod pallet {
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
             Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
+        }
+
+        fn do_reject_market(
+            market_id: &MarketIdOf<T>,
+            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        ) -> Result<Weight, DispatchError> {
+            ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
+            let creator = &market.creator;
+            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                &RESERVE_ID,
+                &creator,
+                T::AdvisoryBond::get(),
+            );
+            T::Slash::on_unbalanced(imbalance);
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &creator, T::OracleBond::get());
+            T::MarketCommons::remove_market(&market_id)?;
+            Self::deposit_event(Event::MarketRejected(market_id.clone()));
+            Self::deposit_event(Event::MarketDestroyed(market_id.clone()));
+            Ok(0)
         }
 
         fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
@@ -1755,6 +1764,18 @@ mod pallet {
             };
             Self::deposit_event(Event::MarketClosed(*market_id));
             Ok(0)
+        }
+
+        /// Handle market state transitions at the end of its active phase.
+        fn on_market_close(
+            market_id: &MarketIdOf<T>,
+            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        ) -> Result<Weight, DispatchError> {
+            match market.status {
+                MarketStatus::Active => Self::close_market(market_id),
+                MarketStatus::Proposed => Self::do_reject_market(market_id, market),
+                _ => Err(Error::<T>::InvalidMarketStatus.into()), // Should never occur!
+            }
         }
 
         fn on_resolution(
@@ -2078,14 +2099,18 @@ mod pallet {
 
         fn market_close_manager<F>(now: T::BlockNumber, mut mutation: F) -> DispatchResult
         where
-            F: FnMut(&MarketIdOf<T>) -> DispatchResult,
+            F: FnMut(
+                &MarketIdOf<T>,
+                Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            ) -> DispatchResult,
         {
             let time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
             for market_id in MarketIdsPerCloseBlock::<T>::get(&now)
                 .iter()
                 .chain(MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter())
             {
-                mutation(&market_id)?;
+                let market = T::MarketCommons::market(market_id)?;
+                mutation(&market_id, market)?;
             }
             MarketIdsPerCloseBlock::<T>::remove(&now);
             MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);

@@ -567,6 +567,29 @@ fn it_allows_advisory_origin_to_approve_markets() {
 }
 
 #[test]
+fn approve_market_fails_if_market_close_is_not_far_enough_ahead() {
+    // Note that there's no need for the symmetric test with blocks, since there's no minimum
+    // duration requirement for those.
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get()),
+            gen_metadata(0),
+            MarketCreation::Advised,
+            3,
+            MarketDisputeMechanism::Authorized(CHARLIE),
+            ScoringRule::CPMM,
+        ));
+        Timestamp::set_timestamp(<Runtime as Config>::MinMarketDuration::get() / 2);
+        assert_noop!(
+            PredictionMarkets::approve_market(Origin::signed(SUDO), 0),
+            crate::Error::<Runtime>::InvalidMarketPeriod
+        );
+    });
+}
+
+#[test]
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
@@ -622,6 +645,44 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         assert_eq!(
             balance_free_after_alice,
             balance_free_before_alice + <Runtime as Config>::OracleBond::get()
+        );
+    });
+}
+
+#[test]
+fn on_close_market_rejects_ignored_advised_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..33,
+            ScoringRule::CPMM,
+        );
+
+        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
+        // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_reserved_before_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+
+        run_to_block(33);
+
+        let balance_reserved_after_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+        assert_eq!(
+            balance_reserved_after_alice,
+            balance_reserved_before_alice
+                - <Runtime as Config>::OracleBond::get()
+                - <Runtime as Config>::AdvisoryBond::get()
+        );
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(
+            balance_free_after_alice,
+            balance_free_before_alice + <Runtime as Config>::OracleBond::get()
+        );
+
+        assert_noop!(
+            MarketCommons::market(&0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
     });
 }
