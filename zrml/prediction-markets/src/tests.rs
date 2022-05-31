@@ -833,7 +833,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         run_to_block(100);
 
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
 
         assert_ok!(PredictionMarkets::report(
@@ -850,7 +850,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         // Reset and report again as approval origin
         let _ = MarketCommons::mutate_market(&0, |market| {
-            market.status = MarketStatus::Active;
+            market.status = MarketStatus::Closed;
             market.report = None;
             Ok(())
         });
@@ -878,7 +878,7 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
             Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
     });
 }
@@ -898,7 +898,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
             Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
     });
 }
@@ -918,7 +918,7 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
             Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
     });
 }
@@ -1433,6 +1433,8 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
         // set the timestamp
+        Timestamp::set_timestamp(100_000_000);
+        run_to_block(100); // Trigger hooks which close the market!
         Timestamp::set_timestamp(123_456_789);
 
         assert_noop!(
@@ -1472,8 +1474,9 @@ fn full_scalar_market_lifecycle() {
             assert_eq!(bal, 100 * BASE);
         }
 
+        Timestamp::set_timestamp(100_000_000);
+        run_to_block(100); // Trigger hooks which close the market!
         Timestamp::set_timestamp(123_456_789);
-        run_to_block(100);
 
         // report
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
@@ -2084,6 +2087,8 @@ fn report_fails_if_reporter_is_not_the_oracle() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
+        Timestamp::set_timestamp(100_000_000);
+        run_to_block(100); // Trigger hooks which close the market!
         Timestamp::set_timestamp(123_456_789);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),

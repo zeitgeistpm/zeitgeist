@@ -110,6 +110,9 @@ mod pallet {
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
+    pub(crate) type TimeFrame = u64;
+    pub const BLOCKS_PER_TIME_FRAME: u64 = 5; // 1min
+
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
@@ -193,6 +196,7 @@ mod pallet {
                 T::MarketCommons::remove_market_pool(&market_id)?;
             }
 
+            Self::clear_auto_close(&market_id)?;
             Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
 
@@ -231,19 +235,10 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResult {
             T::CloseOrigin::ensure_origin(origin)?;
-            T::MarketCommons::mutate_market(&market_id, |m| {
-                m.period = match m.period {
-                    MarketPeriod::Block(ref range) => {
-                        let current_block = <frame_system::Pallet<T>>::block_number();
-                        MarketPeriod::Block(range.start..current_block)
-                    }
-                    MarketPeriod::Timestamp(ref range) => {
-                        let now = T::MarketCommons::now();
-                        MarketPeriod::Timestamp(range.start..now)
-                    }
-                };
-                Ok(())
-            })?;
+            Self::close_market(&market_id)?;
+            // Manually remove market from cache. (This results in an awkward double read of the
+            // `Market` object.)
+            Self::clear_auto_close(&market_id)?;
             Ok(())
         }
 
@@ -400,7 +395,6 @@ mod pallet {
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            Self::ensure_market_is_active(&period)?;
             Self::ensure_market_period_is_valid(&period)?;
 
             ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
@@ -443,7 +437,7 @@ mod pallet {
                 mdm,
                 metadata: Vec::from(multihash),
                 oracle,
-                period,
+                period: period.clone(),
                 report: None,
                 resolved_outcome: None,
                 scoring_rule,
@@ -455,6 +449,20 @@ mod pallet {
 
             if market.status == MarketStatus::CollectingSubsidy {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
+            }
+
+            match period {
+                MarketPeriod::Block(range) => {
+                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+                    })?;
+                }
+                MarketPeriod::Timestamp(range) => {
+                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                        Self::calculate_time_frame_of_moment(range.end),
+                        |ids| ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow),
+                    )?;
+                }
             }
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
@@ -587,7 +595,6 @@ mod pallet {
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            Self::ensure_market_is_active(&period)?;
             Self::ensure_market_period_is_valid(&period)?;
 
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
@@ -628,7 +635,7 @@ mod pallet {
                 mdm,
                 metadata: Vec::from(multihash),
                 oracle,
-                period,
+                period: period.clone(),
                 report: None,
                 resolved_outcome: None,
                 status,
@@ -640,6 +647,20 @@ mod pallet {
 
             if market.status == MarketStatus::CollectingSubsidy {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
+            }
+
+            match period {
+                MarketPeriod::Block(range) => {
+                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+                    })?;
+                }
+                MarketPeriod::Timestamp(range) => {
+                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                        Self::calculate_time_frame_of_moment(range.end),
+                        |ids| ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow),
+                    )?;
+                }
             }
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
@@ -770,7 +791,7 @@ mod pallet {
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
-            Self::ensure_market_is_active(&market.period)?;
+            Self::ensure_market_is_active(&market)?;
             // The check below is primarily to ensure that the market is
             // not a pending advised market.
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
@@ -1040,7 +1061,7 @@ mod pallet {
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
-            Self::ensure_market_is_active(&market.period)?;
+            Self::ensure_market_is_active(&market)?;
             // The check below is primarily to ensure that the market is
             // not a pending advised market.
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
@@ -1305,6 +1326,8 @@ mod pallet {
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
+        /// A market has been closed \[market_id\]
+        MarketClosed(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
         MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
         /// A pending market has been rejected as invalid. \[market_id\]
@@ -1332,8 +1355,8 @@ mod pallet {
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let _ = with_transaction(|| {
-                let close = Self::market_close_manager(now, |market_id, market| {
-                    let weight = Self::on_market_close(market_id, market)?;
+                let close = Self::market_close_manager(now, |market_id| {
+                    let weight = Self::close_market(market_id)?;
                     total_weight = total_weight.saturating_add(weight);
                     Ok(())
                 });
@@ -1370,6 +1393,26 @@ mod pallet {
         Blake2_128Concat,
         MarketIdOf<T>,
         BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
+        ValueQuery,
+    >;
+
+    /// A mapping of market identifiers to the block their market ends on.
+    #[pallet::storage]
+    pub type MarketIdsPerCloseBlock<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        T::BlockNumber,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        ValueQuery,
+    >;
+
+    /// A mapping of market identifiers to the time frame their market ends in.
+    #[pallet::storage]
+    pub type MarketIdsPerCloseTimeFrame<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        TimeFrame,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
     >;
 
@@ -1430,6 +1473,24 @@ mod pallet {
             T::PalletId::get().into_sub_account(market_id.saturated_into::<u128>())
         }
 
+        fn clear_auto_close(market_id: &MarketIdOf<T>) -> DispatchResult {
+            let market = T::MarketCommons::market(&market_id)?;
+            match market.period {
+                MarketPeriod::Block(range) => {
+                    MarketIdsPerCloseBlock::<T>::mutate(&range.end, |ids| {
+                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                    });
+                }
+                MarketPeriod::Timestamp(range) => {
+                    let time_frame = Self::calculate_time_frame_of_moment(range.end);
+                    MarketIdsPerCloseTimeFrame::<T>::mutate(&time_frame, |ids| {
+                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                    });
+                }
+            };
+            Ok(())
+        }
+
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(market_id)?;
@@ -1464,7 +1525,7 @@ mod pallet {
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
-            Self::ensure_market_is_active(&market.period)?;
+            Self::ensure_market_is_active(&market)?;
             // The check below is primarily to ensure that the market is
             // not a pending advised market.
             ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
@@ -1487,6 +1548,11 @@ mod pallet {
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
             Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
+        }
+
+        fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
+            let div = BLOCKS_PER_TIME_FRAME.saturating_mul(MILLISECS_PER_BLOCK.into());
+            time.saturated_into::<TimeFrame>() / div
         }
 
         fn calculate_actual_weight<F>(
@@ -1552,21 +1618,10 @@ mod pallet {
             Ok(())
         }
 
-        // Check that the market hasn't reached the end of its period yet.
         fn ensure_market_is_active(
-            period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
-            ensure!(
-                match period {
-                    MarketPeriod::Block(range) => {
-                        <frame_system::Pallet<T>>::block_number() < range.end
-                    }
-                    MarketPeriod::Timestamp(range) => {
-                        T::MarketCommons::now() < range.end
-                    }
-                },
-                Error::<T>::MarketIsNotActive
-            );
+            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
             Ok(())
         }
 
@@ -1593,18 +1648,7 @@ mod pallet {
         fn ensure_market_is_closed(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotClosed);
-            ensure!(
-                match &market.period {
-                    MarketPeriod::Block(range) => {
-                        <frame_system::Pallet<T>>::block_number() >= range.end
-                    }
-                    MarketPeriod::Timestamp(range) => {
-                        T::MarketCommons::now() >= range.end
-                    }
-                },
-                Error::<T>::MarketIsNotClosed
-            );
+            ensure!(market.status == MarketStatus::Closed, Error::<T>::MarketIsNotClosed);
             Ok(())
         }
 
@@ -1679,10 +1723,15 @@ mod pallet {
             Ok([total_accounts, total_asset_accounts, total_categories])
         }
 
-        fn on_market_close(
-            _market_id: &MarketIdOf<T>,
-            _market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> Result<Weight, DispatchError> {
+        fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
+            T::MarketCommons::mutate_market(market_id, |market| {
+                market.status = MarketStatus::Closed;
+                Ok(())
+            })?;
+            if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
+                T::Swaps::close_pool(pool_id)?;
+            };
+            Self::deposit_event(Event::MarketClosed(*market_id));
             Ok(0)
         }
 
@@ -2005,13 +2054,19 @@ mod pallet {
             Ok(())
         }
 
-        fn market_close_manager<F>(_now: T::BlockNumber, mut _mutation: F) -> DispatchResult
+        fn market_close_manager<F>(now: T::BlockNumber, mut mutation: F) -> DispatchResult
         where
-            F: FnMut(
-                &MarketIdOf<T>,
-                &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            ) -> DispatchResult,
+            F: FnMut(&MarketIdOf<T>) -> DispatchResult,
         {
+            let time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+            for market_id in MarketIdsPerCloseBlock::<T>::get(&now)
+                .iter()
+                .chain(MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter())
+            {
+                mutation(&market_id)?;
+            }
+            MarketIdsPerCloseBlock::<T>::remove(&now);
+            MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
             Ok(())
         }
 
