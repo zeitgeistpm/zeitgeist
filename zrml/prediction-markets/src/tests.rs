@@ -2,7 +2,7 @@
 
 use crate::{
     mock::*, Config, Error, Event, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
-    MarketIdsPerReportBlock, RESERVE_ID,
+    MarketIdsPerReportBlock, BLOCKS_PER_TIME_FRAME, RESERVE_ID,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -16,9 +16,11 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
+    traits::Swaps as SwapsPalletApi,
     types::{
         Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
+        MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition,
+        ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -716,20 +718,33 @@ fn on_market_close_auto_rejects_ignored_advised_market() {
 fn on_market_close_successfully_auto_closes_market_with_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 33;
-        assert_ok!(PredictionMarkets::create_scalar_market(
+        let amount = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
-            BOB,
-            MarketPeriod::Block(0..end),
-            gen_metadata(0),
-            MarketCreation::Permissionless,
-            123..=456,
-            MarketDisputeMechanism::Authorized(CHARLIE),
-            ScoringRule::CPMM,
+            ALICE,
+            MarketPeriod::Block(0..33),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![amount, amount, amount],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
         ));
         let market_id = 0;
+        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
+
+        run_to_block(end - 1);
+        let market_before_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_before_close.status, MarketStatus::Active);
+        let pool_before_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_before_close.pool_status, PoolStatus::Active);
+
         run_to_block(33);
-        let market = MarketCommons::market(&market_id).unwrap();
-        assert_eq!(market.status, MarketStatus::Closed);
+        let market_after_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+
         System::assert_last_event(Event::MarketClosed(market_id).into());
     });
 }
@@ -738,21 +753,35 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
 fn on_market_close_successfully_auto_closes_market_with_timestamps() {
     ExtBuilder::default().build().execute_with(|| {
         let end = <Runtime as Config>::MinMarketDuration::get();
-        assert_ok!(PredictionMarkets::create_scalar_market(
+        let amount = <Runtime as zrml_swaps::Config>::MinLiquidity::get();
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
-            BOB,
+            ALICE,
             MarketPeriod::Timestamp(0..end),
-            gen_metadata(0),
-            MarketCreation::Permissionless,
-            123..=456,
-            MarketDisputeMechanism::Authorized(CHARLIE),
-            ScoringRule::CPMM,
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![amount, amount, amount],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
         ));
         let market_id = 0;
+        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
+
+        Timestamp::set_timestamp(end - BLOCKS_PER_TIME_FRAME * MILLISECS_PER_BLOCK as u64);
+        run_to_block(1); // Trigger hook!
+        let market_before_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_before_close.status, MarketStatus::Active);
+        let pool_before_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_before_close.pool_status, PoolStatus::Active);
+
         Timestamp::set_timestamp(end);
-        run_to_block(1); // Trigger hooks!
-        let market = MarketCommons::market(&market_id).unwrap();
-        assert_eq!(market.status, MarketStatus::Closed);
+        run_to_block(2);
+        let market_after_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+
         System::assert_last_event(Event::MarketClosed(market_id).into());
     });
 }
