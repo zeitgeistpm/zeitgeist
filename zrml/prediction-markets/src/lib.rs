@@ -1546,7 +1546,7 @@ mod pallet {
             Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
         }
 
-        fn do_reject_market(
+        pub(crate) fn do_reject_market(
             market_id: &MarketIdOf<T>,
             market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<Weight, DispatchError> {
@@ -1562,7 +1562,7 @@ mod pallet {
             Ok(0)
         }
 
-        fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
+        pub(crate) fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
             let div = BLOCKS_PER_TIME_FRAME.saturating_mul(MILLISECS_PER_BLOCK.into());
             time.saturated_into::<TimeFrame>().saturating_div(div)
         }
@@ -1752,7 +1752,7 @@ mod pallet {
             Ok([total_accounts, total_asset_accounts, total_categories])
         }
 
-        fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
+        pub(crate) fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
             T::MarketCommons::mutate_market(market_id, |market| {
                 market.status = MarketStatus::Closed;
                 Ok(())

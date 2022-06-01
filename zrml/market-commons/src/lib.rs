@@ -15,6 +15,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::MarketCommonsPalletApi;
+    use alloc::boxed::Box;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
@@ -113,6 +114,14 @@ mod pallet {
 
         fn latest_market_id() -> Result<Self::MarketId, DispatchError> {
             <MarketCounter<T>>::try_get().map_err(|_err| Error::<T>::NoMarketHasBeenCreated.into())
+        }
+
+        fn market_iter() -> Box<
+            dyn Iterator<
+                Item = (Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>),
+            >,
+        > {
+            Box::new(<Markets<T>>::iter())
         }
 
         fn market(
