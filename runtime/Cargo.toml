@@ -275,9 +275,7 @@ std = [
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
-txfilter = [
-    "log"
-]
+txfilter = []
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
