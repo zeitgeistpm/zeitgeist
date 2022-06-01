@@ -1559,7 +1559,7 @@ mod pallet {
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketRejected(*market_id));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
-            Ok(0)
+            Ok(T::WeightInfo::do_reject_market())
         }
 
         pub(crate) fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
@@ -1757,11 +1757,14 @@ mod pallet {
                 market.status = MarketStatus::Closed;
                 Ok(())
             })?;
+            let mut total_weight = T::DbWeight::get().reads_writes(1, 1);
             if let Ok(pool_id) = T::MarketCommons::market_pool(market_id) {
-                T::Swaps::close_pool(pool_id)?;
+                let close_pool_weight = T::Swaps::close_pool(pool_id)?;
+                total_weight = total_weight.saturating_add(close_pool_weight);
             };
             Self::deposit_event(Event::MarketClosed(*market_id));
-            Ok(0)
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            Ok(total_weight)
         }
 
         /// Handle market state transitions at the end of its active phase.
