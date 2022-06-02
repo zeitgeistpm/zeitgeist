@@ -233,19 +233,19 @@ mod tests {
             auto_close_long.sort(); // (Iteration above is without order)
             assert_eq!(*auto_close_long, vec![3, 4, 5]);
 
-            // Check that only expired advised markets are removed.
-            assert_ok!(MarketCommons::market(&0));
-            assert_ok!(MarketCommons::market(&1));
-            assert_ok!(MarketCommons::market(&2));
-            assert_ok!(MarketCommons::market(&3));
-            assert_ok!(MarketCommons::market(&4));
-            assert_ok!(MarketCommons::market(&5));
-            assert_ok!(MarketCommons::market(&6));
-            assert_ok!(MarketCommons::market(&7));
-            assert_ok!(MarketCommons::market(&9));
-            assert_ok!(MarketCommons::market(&10));
-            assert_ok!(MarketCommons::market(&12));
-            assert_ok!(MarketCommons::market(&13));
+            // Check status and that only expired advised markets are removed.
+            assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Active);
+            assert_eq!(MarketCommons::market(&1).unwrap().status, MarketStatus::Active);
+            assert_eq!(MarketCommons::market(&2).unwrap().status, MarketStatus::Proposed);
+            assert_eq!(MarketCommons::market(&3).unwrap().status, MarketStatus::Active);
+            assert_eq!(MarketCommons::market(&4).unwrap().status, MarketStatus::Active);
+            assert_eq!(MarketCommons::market(&5).unwrap().status, MarketStatus::Proposed);
+            assert_eq!(MarketCommons::market(&6).unwrap().status, MarketStatus::Closed);
+            assert_eq!(MarketCommons::market(&7).unwrap().status, MarketStatus::Closed);
+            assert_eq!(MarketCommons::market(&9).unwrap().status, MarketStatus::Closed);
+            assert_eq!(MarketCommons::market(&10).unwrap().status, MarketStatus::Closed);
+            assert_eq!(MarketCommons::market(&12).unwrap().status, MarketStatus::Resolved);
+            assert_eq!(MarketCommons::market(&13).unwrap().status, MarketStatus::Disputed);
             assert_err!(
                 MarketCommons::market(&8),
                 zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
