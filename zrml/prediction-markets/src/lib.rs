@@ -500,11 +500,11 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin.clone())?;
 
-            let category_count = match market_type.clone() {
+            let category_count = match market_type {
                 MarketType::Categorical(value) => value,
                 MarketType::Scalar(_) => 2,
             };
-            let create_market_weight = match market_type.clone() {
+            let create_market_weight = match market_type {
                 MarketType::Categorical(category_count) => Self::create_categorical_market(
                     origin.clone(),
                     oracle,
