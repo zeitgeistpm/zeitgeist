@@ -1362,9 +1362,7 @@ mod pallet {
             let amount_unwrapped = amount.unwrap_or_else(BalanceOf::<T>::zero);
 
             if scoring_rule == ScoringRule::CPMM {
-                if amount == None {
-                    return Err(Error::<T>::InvalidAmountArgument.into());
-                }
+                ensure!(amount.is_some(), Error::<T>::InvalidAmountArgument);
                 ensure!(
                     amount_unwrapped >= T::MinLiquidity::get(),
                     Error::<T>::InsufficientLiquidity
