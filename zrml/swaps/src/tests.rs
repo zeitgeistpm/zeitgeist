@@ -3,12 +3,13 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    Config, Event, SubsidyProviders,
+    BalanceOf, Config, Event, SubsidyProviders,
 };
 use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
+use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
@@ -122,7 +123,7 @@ fn allows_the_full_user_lifecycle() {
             _1,
             ASSET_B,
             Some(_1 / 2),
-            None,
+            Some(_2),
         ));
 
         let asset_a_bal_after = Currencies::free_balance(ASSET_A, &ALICE);
@@ -153,7 +154,7 @@ fn allows_the_full_user_lifecycle() {
             Some(_2),
             ASSET_B,
             _1,
-            None
+            Some(_3),
         ));
 
         let asset_a_bal_after_2 = Currencies::free_balance(ASSET_A, &ALICE);
@@ -174,20 +175,20 @@ fn assets_must_be_bounded() {
         }));
 
         assert_noop!(
-            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, 1, ASSET_B, Some(1), None),
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, 1, ASSET_B, Some(1), Some(1)),
             crate::Error::<Runtime>::AssetNotBound
         );
         assert_noop!(
-            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_B, 1, ASSET_A, Some(1), None),
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_B, 1, ASSET_A, Some(1), Some(1)),
             crate::Error::<Runtime>::AssetNotBound
         );
 
         assert_noop!(
-            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, Some(1), ASSET_B, 1, None),
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, Some(1), ASSET_B, 1, Some(1)),
             crate::Error::<Runtime>::AssetNotBound
         );
         assert_noop!(
-            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_B, Some(1), ASSET_A, 1, None),
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_B, Some(1), ASSET_A, 1, Some(1)),
             crate::Error::<Runtime>::AssetNotBound
         );
 
@@ -345,7 +346,7 @@ fn distribute_pool_share_rewards() {
                 Some(asset_per_acc + 20),
                 winning_asset,
                 asset_per_acc,
-                None,
+                Some(_5),
             ));
         });
         let total_winning_assets = asset_holders.len().saturated_into::<u128>() * asset_per_acc;
@@ -489,7 +490,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
                 u64::MAX.into(),
                 ASSET_B,
                 Some(_1),
-                None,
+                Some(_1),
             ),
             crate::Error::<Runtime>::PoolIsNotActive
         );
@@ -501,7 +502,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
                 Some(u64::MAX.into()),
                 ASSET_B,
                 _1,
-                None,
+                Some(_1),
             ),
             crate::Error::<Runtime>::PoolIsNotActive
         );
@@ -556,7 +557,7 @@ fn in_amount_must_be_equal_or_less_than_max_in_ratio() {
                 u64::MAX.into(),
                 ASSET_B,
                 Some(_1),
-                None,
+                Some(_1),
             ),
             crate::Error::<Runtime>::MaxInRatio
         );
@@ -638,7 +639,7 @@ fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
                 Some(_1),
                 ASSET_B,
                 u128::MAX,
-                None
+                Some(_1),
             ),
             crate::Error::<Runtime>::MaxOutRatio
         );
@@ -1391,8 +1392,12 @@ fn set_pool_to_stale_handles_rikiddo_pools_properly() {
     });
 }
 
-#[test]
-fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
+#[test_case(Some(_1 / 2), Some(_2); "with limits")]
+#[test_case(None, None; "without limits")]
+fn swap_exact_amount_in_exchanges_correct_values_with_cpmm(
+    asset_bound: Option<BalanceOf<Runtime>>,
+    max_price: Option<BalanceOf<Runtime>>,
+) {
     ExtBuilder::default().build().execute_with(|| {
         // CPMM
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -1403,18 +1408,18 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
             ASSET_A,
             _1,
             ASSET_B,
-            Some(_1 / 2),
-            None,
+            asset_bound,
+            max_price,
         ));
         System::assert_last_event(
             Event::SwapExactAmountIn(SwapEvent {
                 asset_amount_in: _1,
                 asset_amount_out: 9900990100,
-                asset_bound: Some(_1 / 2),
+                asset_bound,
                 asset_in: ASSET_A,
                 asset_out: ASSET_B,
                 cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                max_price: None,
+                max_price,
             })
             .into(),
         );
@@ -1481,7 +1486,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
                 _1,
                 ASSET_B,
                 Some(_1 / 2),
-                None,
+                Some(_2),
             ),
             crate::Error::<Runtime>::UnsupportedTrade
         );
@@ -1493,7 +1498,7 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
                 _1,
                 ASSET_D,
                 Some(_1 / 2),
-                None,
+                Some(_2),
             ),
             crate::Error::<Runtime>::UnsupportedTrade
         );
@@ -1507,8 +1512,8 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
             ASSET_A,
             _1,
             ASSET_D,
-            None,
-            None,
+            Some(0),
+            Some(_20),
         ));
 
         // Check if the balances were updated accordingly.
@@ -1523,8 +1528,12 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
     });
 }
 
-#[test]
-fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
+#[test_case(Some(_2), Some(_3); "with limits")]
+#[test_case(None, None; "without limits")]
+fn swap_exact_amount_out_exchanges_correct_values_with_cpmm(
+    asset_bound: Option<BalanceOf<Runtime>>,
+    max_price: Option<BalanceOf<Runtime>>,
+) {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
@@ -1532,20 +1541,20 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
             alice_signed(),
             0,
             ASSET_A,
-            Some(_2),
+            asset_bound,
             ASSET_B,
             _1,
-            None
+            max_price,
         ));
         System::assert_last_event(
             Event::SwapExactAmountOut(SwapEvent {
                 asset_amount_in: 10101010100,
                 asset_amount_out: _1,
-                asset_bound: Some(_2),
+                asset_bound,
                 asset_in: ASSET_A,
                 asset_out: ASSET_B,
                 cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-                max_price: None,
+                max_price,
             })
             .into(),
         );
@@ -1612,7 +1621,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
                 Some(_20),
                 ASSET_D,
                 _1,
-                None
+                Some(_20),
             ),
             crate::Error::<Runtime>::UnsupportedTrade
         );
@@ -1624,7 +1633,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
                 Some(_2),
                 ASSET_D,
                 _1,
-                None
+                Some(_2),
             ),
             crate::Error::<Runtime>::UnsupportedTrade
         );
@@ -1638,7 +1647,7 @@ fn swap_exact_amount_out_exchanges_correct_values_with_rikiddo() {
             Some(_1),
             ASSET_A,
             _1,
-            None,
+            Some(_20),
         ));
 
         // Check if the balances were updated accordingly.

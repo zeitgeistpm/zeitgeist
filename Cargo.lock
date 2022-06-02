@@ -12830,6 +12830,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "substrate-fixed",
+ "test-case",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",
