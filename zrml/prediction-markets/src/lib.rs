@@ -1690,7 +1690,7 @@ mod pallet {
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
 
-            let report = T::MarketCommons::report(market)?;
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => {
@@ -1712,7 +1712,7 @@ mod pallet {
                         CurrencyOf::<T>::resolve_creating(&report.by, imbalance);
                     }
 
-                    T::MarketCommons::report(market)?.outcome.clone()
+                    report.outcome.clone()
                 }
                 MarketStatus::Disputed => {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
