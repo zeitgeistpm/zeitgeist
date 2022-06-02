@@ -85,6 +85,16 @@ fn admin_move_market_to_closed_successfully_closes_market() {
     });
 }
 
+#[test]
+fn admin_move_market_fails_if_market_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
 #[test_case(MarketStatus::Proposed; "proposed")]
 #[test_case(MarketStatus::Closed; "closed")]
 #[test_case(MarketStatus::Reported; "reported")]

@@ -28,7 +28,7 @@ mod pallet {
         traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member},
         ArithmeticError, DispatchError,
     };
-    use zeitgeist_primitives::types::{Market, PoolId, Report};
+    use zeitgeist_primitives::types::{Market, PoolId};
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -67,8 +67,6 @@ mod pallet {
         /// It is not possible to fetch the latest market ID when
         /// no market has been created.
         NoMarketHasBeenCreated,
-        /// Market does not have a report
-        NoReport,
     }
 
     #[pallet::hooks]
@@ -160,13 +158,6 @@ mod pallet {
             }
             <Markets<T>>::remove(market_id);
             Ok(())
-        }
-
-        fn report(
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) -> Result<&Report<Self::AccountId, Self::BlockNumber>, DispatchError> {
-            let report = market.report.as_ref().ok_or(Error::<T>::NoReport)?;
-            Ok(report)
         }
 
         // MarketPool
