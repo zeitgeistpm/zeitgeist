@@ -9,6 +9,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     traits::{Get, NamedReservableCurrency},
 };
+use more_asserts::assert_le;
 use test_case::test_case;
 
 use orml_traits::MultiCurrency;
@@ -336,6 +337,85 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
         assert_eq!(Currency::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
         assert_eq!(Currency::free_balance(Asset::Ztg, &ALICE), alice_ztg_before);
+    });
+}
+
+#[test_case(MarketPeriod::Block(0..100); "market period block")]
+#[test_case(MarketPeriod::Timestamp(0..100); "market period timestamp")]
+fn admin_move_market_moves_active_market_to_closed(
+    market_period: MarketPeriod<BlockNumber, Moment>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            market_period,
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            <Runtime as Config>::MinCategories::get(),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let market_id = 0;
+        let block = 50;
+        let timestamp = 50;
+        run_to_block(block);
+        Timestamp::set_timestamp(timestamp);
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
+        let market = MarketCommons::market(&market_id).unwrap();
+        // Verify that the market is _closed_ in the sense that the status is `Active` and the
+        // market period has ended.
+        assert_eq!(market.status, MarketStatus::Active);
+        match market.period {
+            MarketPeriod::Block(range) => assert_le!(range.end, block),
+            MarketPeriod::Timestamp(range) => assert_le!(range.end, timestamp),
+        };
+    });
+}
+
+#[test]
+fn admin_move_market_fails_if_market_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test_case(MarketStatus::Active, MarketPeriod::Block(0..1); "closed with block")]
+#[test_case(MarketStatus::Active, MarketPeriod::Timestamp(0..1); "closed with timestamp")]
+#[test_case(MarketStatus::Reported, MarketPeriod::Block(0..1); "reported")]
+#[test_case(MarketStatus::Disputed, MarketPeriod::Block(0..1); "disputed")]
+#[test_case(MarketStatus::Resolved, MarketPeriod::Block(0..1); "resolved")]
+#[test_case(MarketStatus::Proposed, MarketPeriod::Block(0..1); "proposed")]
+#[test_case(MarketStatus::CollectingSubsidy, MarketPeriod::Block(0..1); "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy, MarketPeriod::Block(0..1); "insufficient subsidy")]
+fn admin_move_market_to_closed_fails_if_market_is_not_active(
+    market_status: MarketStatus,
+    market_period: MarketPeriod<BlockNumber, Moment>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            market_period,
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            <Runtime as Config>::MinCategories::get(),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let _ = MarketCommons::mutate_market(&0, |market| {
+            market.status = market_status;
+            Ok(())
+        });
+        run_to_block(2);
+        Timestamp::set_timestamp(2);
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
+            Error::<Runtime>::MarketIsNotActive,
+        );
     });
 }
 
