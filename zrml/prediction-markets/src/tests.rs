@@ -349,6 +349,13 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         );
         let market_id = 0;
 
+        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
+        // that the correct bonds are unreserved!
+        assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before = Balances::free_balance(&ALICE);
+        let balance_reserved_before = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+
         run_to_block(33);
         let category = 1;
         let outcome_report = OutcomeReport::Categorical(category);
@@ -369,7 +376,44 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         System::assert_last_event(
             Event::MarketResolved(market_id, MarketStatus::Resolved, outcome_report).into(),
         );
-        // TODO Check bonds!
+
+        assert_eq!(
+            Balances::reserved_balance_named(&RESERVE_ID, &ALICE),
+            balance_reserved_before
+                - <Runtime as Config>::OracleBond::get()
+                - <Runtime as Config>::ValidityBond::get()
+        );
+        assert_eq!(
+            Balances::free_balance(&ALICE),
+            balance_free_before
+                + <Runtime as Config>::OracleBond::get()
+                + <Runtime as Config>::ValidityBond::get()
+        );
+    });
+}
+
+#[test_case(MarketStatus::Active; "Active")]
+#[test_case(MarketStatus::Closed; "Closed")]
+#[test_case(MarketStatus::CollectingSubsidy; "CollectingSubsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "InsufficientSubsidy")]
+fn admin_move_market_to_resovled_fails_if_market_is_not_reported_or_disputed(
+    market_status: MarketStatus,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..33,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = market_status;
+            Ok(())
+        }));
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_resolved(Origin::signed(SUDO), market_id,),
+            crate::Error::<Runtime>::InvalidMarketStatus,
+        );
     });
 }
 
