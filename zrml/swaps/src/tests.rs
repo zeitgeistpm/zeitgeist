@@ -1431,6 +1431,8 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
 fn swap_exact_amount_in_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        // Expected amount to receive from trading BASE of A for B. See
+        // swap_exact_amount_in_exchanges_correct_values_with_cpmm for details.
         let expected_amount = 9900990100;
         assert_noop!(
             Swaps::swap_exact_amount_in(
@@ -1439,7 +1441,7 @@ fn swap_exact_amount_in_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm
                 ASSET_A,
                 _1,
                 ASSET_B,
-                Some(expected_amount + 100),
+                Some(expected_amount + 1), // We expect 1 more than we will actually receive!
                 None,
             ),
             crate::Error::<Runtime>::LimitOut,
@@ -1560,13 +1562,15 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
 fn swap_exact_amount_out_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        // Expected amount of A to swap in for receiving BASE of B. See
+        // swap_exact_amount_out_exchanges_correct_values_with_cpmm for details!
         let expected_amount = 10101010100;
         assert_noop!(
             Swaps::swap_exact_amount_out(
                 alice_signed(),
                 0,
                 ASSET_A,
-                Some(expected_amount - 100),
+                Some(expected_amount - 1), // We expect to pay 1 less than we actually have to pay!
                 ASSET_B,
                 _1,
                 None,
@@ -1823,13 +1827,15 @@ fn pool_join_fails_if_max_assets_in_is_violated() {
 fn pool_join_with_exact_asset_amount_fails_if_min_pool_tokens_is_violated() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        // Expected pool amount when joining with exactly BASE A.
+        let expected_pool_amount = 2490679300;
         assert_noop!(
             Swaps::pool_join_with_exact_asset_amount(
                 alice_signed(),
                 0,
                 ASSET_A,
                 _1,
-                2490679300 + 100,
+                expected_pool_amount + 1, // We expect 1 pool share than we will actually receive.
             ),
             crate::Error::<Runtime>::LimitOut,
         );
@@ -1840,13 +1846,15 @@ fn pool_join_with_exact_asset_amount_fails_if_min_pool_tokens_is_violated() {
 fn pool_join_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        // Expected asset amount required to joining for BASE pool share.
+        let expected_asset_amount = 40604010000;
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(
                 alice_signed(),
                 0,
                 ASSET_A,
                 _1,
-                40604010000 - 100,
+                expected_asset_amount - 1, // We want to pay 1 less than we actually have to pay.
             ),
             crate::Error::<Runtime>::LimitIn,
         );
