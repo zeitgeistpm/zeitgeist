@@ -230,8 +230,10 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResult {
+            // TODO(#638): Handle Rikiddo markets!
             T::CloseOrigin::ensure_origin(origin)?;
             T::MarketCommons::mutate_market(&market_id, |m| {
+                Self::ensure_market_is_active(&m.period)?;
                 m.period = match m.period {
                     MarketPeriod::Block(ref range) => {
                         let current_block = <frame_system::Pallet<T>>::block_number();
@@ -593,6 +595,7 @@ mod pallet {
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
+            ensure!(outcome_range.start() < outcome_range.end(), <Error<T>>::InvalidOutcomeRange);
 
             // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
             // for a compiler error. Link an issue for this!
@@ -1272,6 +1275,8 @@ mod pallet {
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
         InvalidMarketPeriod,
+        /// The outcome range of the scalar market is invalid.
+        InvalidOutcomeRange,
     }
 
     #[pallet::event]
@@ -1681,7 +1686,7 @@ mod pallet {
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
 
-            let report = T::MarketCommons::report(market)?;
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => {
@@ -1703,7 +1708,7 @@ mod pallet {
                         CurrencyOf::<T>::resolve_creating(&report.by, imbalance);
                     }
 
-                    T::MarketCommons::report(market)?.outcome.clone()
+                    report.outcome.clone()
                 }
                 MarketStatus::Disputed => {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to

@@ -31,7 +31,7 @@ mod pallet {
         traits::{AtLeast32Bit, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member},
         ArithmeticError, DispatchError,
     };
-    use zeitgeist_primitives::types::{Market, PoolId, Report};
+    use zeitgeist_primitives::types::{Market, PoolId};
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -159,13 +159,6 @@ mod pallet {
             }
             <Markets<T>>::remove(market_id);
             Ok(())
-        }
-
-        fn report(
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) -> Result<&Report<Self::AccountId, Self::BlockNumber>, DispatchError> {
-            let report = market.report.as_ref().ok_or(Error::<T>::NoReport)?;
-            Ok(report)
         }
 
         // MarketPool

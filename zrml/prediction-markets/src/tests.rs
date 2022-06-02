@@ -3,12 +3,13 @@
 use crate::{
     mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, RESERVE_ID,
 };
-use core::ops::Range;
+use core::ops::{Range, RangeInclusive};
 use frame_support::{
     assert_err, assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
     traits::{Get, NamedReservableCurrency},
 };
+use more_asserts::assert_le;
 use test_case::test_case;
 
 use orml_traits::MultiCurrency;
@@ -63,6 +64,26 @@ fn simple_create_scalar_market<T: crate::Config>(
         MarketDisputeMechanism::SimpleDisputes,
         scoring_rule
     ));
+}
+
+#[test_case(654..=321; "empty range")]
+#[test_case(555..=555; "one element as range")]
+fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::create_scalar_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                range,
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidOutcomeRange
+        );
+    });
 }
 
 #[test]
@@ -319,6 +340,85 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
     });
 }
 
+#[test_case(MarketPeriod::Block(0..100); "market period block")]
+#[test_case(MarketPeriod::Timestamp(0..100); "market period timestamp")]
+fn admin_move_market_moves_active_market_to_closed(
+    market_period: MarketPeriod<BlockNumber, Moment>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            market_period,
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            <Runtime as Config>::MinCategories::get(),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let market_id = 0;
+        let block = 50;
+        let timestamp = 50;
+        run_to_block(block);
+        Timestamp::set_timestamp(timestamp);
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
+        let market = MarketCommons::market(&market_id).unwrap();
+        // Verify that the market is _closed_ in the sense that the status is `Active` and the
+        // market period has ended.
+        assert_eq!(market.status, MarketStatus::Active);
+        match market.period {
+            MarketPeriod::Block(range) => assert_le!(range.end, block),
+            MarketPeriod::Timestamp(range) => assert_le!(range.end, timestamp),
+        };
+    });
+}
+
+#[test]
+fn admin_move_market_fails_if_market_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test_case(MarketStatus::Active, MarketPeriod::Block(0..1); "closed with block")]
+#[test_case(MarketStatus::Active, MarketPeriod::Timestamp(0..1); "closed with timestamp")]
+#[test_case(MarketStatus::Reported, MarketPeriod::Block(0..1); "reported")]
+#[test_case(MarketStatus::Disputed, MarketPeriod::Block(0..1); "disputed")]
+#[test_case(MarketStatus::Resolved, MarketPeriod::Block(0..1); "resolved")]
+#[test_case(MarketStatus::Proposed, MarketPeriod::Block(0..1); "proposed")]
+#[test_case(MarketStatus::CollectingSubsidy, MarketPeriod::Block(0..1); "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy, MarketPeriod::Block(0..1); "insufficient subsidy")]
+fn admin_move_market_to_closed_fails_if_market_is_not_active(
+    market_status: MarketStatus,
+    market_period: MarketPeriod<BlockNumber, Moment>,
+) {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_categorical_market(
+            Origin::signed(ALICE),
+            BOB,
+            market_period,
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            <Runtime as Config>::MinCategories::get(),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM,
+        ));
+        let _ = MarketCommons::mutate_market(&0, |market| {
+            market.status = market_status;
+            Ok(())
+        });
+        run_to_block(2);
+        Timestamp::set_timestamp(2);
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
+            Error::<Runtime>::MarketIsNotActive,
+        );
+    });
+}
+
 #[test]
 fn it_creates_binary_markets() {
     ExtBuilder::default().build().execute_with(|| {
@@ -360,7 +460,7 @@ fn create_categorical_market_deposits_the_correct_event() {
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = PredictionMarkets::market_account(market_id);
-        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
+        System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
     });
 }
 
@@ -376,7 +476,7 @@ fn create_scalar_market_deposits_the_correct_event() {
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
         let market_account = PredictionMarkets::market_account(market_id);
-        assert!(event_exists(Event::MarketCreated(0, market_account, market)));
+        System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
     });
 }
 
@@ -556,7 +656,7 @@ fn it_allows_to_buy_a_complete_set() {
         let market_account = PredictionMarkets::market_account(0);
         let market_bal = Balances::free_balance(market_account);
         assert_eq!(market_bal, CENT);
-        assert!(event_exists(Event::BoughtCompleteSet(0, CENT, BOB)));
+        System::assert_last_event(Event::BoughtCompleteSet(0, CENT, BOB).into());
     });
 }
 
@@ -789,7 +889,7 @@ fn it_allows_to_sell_a_complete_set() {
         let bal = Balances::free_balance(&BOB);
         assert_eq!(bal, 1_000 * BASE);
 
-        assert!(event_exists(Event::SoldCompleteSet(0, CENT, BOB)));
+        System::assert_last_event(Event::SoldCompleteSet(0, CENT, BOB).into());
     });
 }
 
@@ -1257,13 +1357,9 @@ fn it_allows_to_redeem_shares() {
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
         let bal = Balances::free_balance(&CHARLIE);
         assert_eq!(bal, 1_000 * BASE);
-        assert!(event_exists(Event::TokensRedeemed(
-            0,
-            Asset::CategoricalOutcome(0, 1),
-            CENT,
-            CENT,
-            CHARLIE
-        )));
+        System::assert_last_event(
+            Event::TokensRedeemed(0, Asset::CategoricalOutcome(0, 1), CENT, CENT, CHARLIE).into(),
+        );
     });
 }
 
@@ -1528,38 +1624,40 @@ fn full_scalar_market_lifecycle() {
         let ztg_bal_eve = Balances::free_balance(&EVE);
         assert_eq!(ztg_bal_charlie, 98750 * CENT); // 75 (LONG) + 12.5 (SHORT) + 900 (balance)
         assert_eq!(ztg_bal_eve, 1000 * BASE);
-        assert!(event_exists(Event::TokensRedeemed(
-            0,
-            Asset::ScalarOutcome(0, ScalarPosition::Long),
-            100 * BASE,
-            75 * BASE,
-            CHARLIE
-        )));
-        assert!(event_exists(Event::TokensRedeemed(
-            0,
-            Asset::ScalarOutcome(0, ScalarPosition::Short),
-            50 * BASE,
-            1250 * CENT, // 12.5
-            CHARLIE
-        )));
+        System::assert_has_event(
+            Event::TokensRedeemed(
+                0,
+                Asset::ScalarOutcome(0, ScalarPosition::Long),
+                100 * BASE,
+                75 * BASE,
+                CHARLIE,
+            )
+            .into(),
+        );
+        System::assert_has_event(
+            Event::TokensRedeemed(
+                0,
+                Asset::ScalarOutcome(0, ScalarPosition::Short),
+                50 * BASE,
+                1250 * CENT, // 12.5
+                CHARLIE,
+            )
+            .into(),
+        );
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(EVE), 0));
         let ztg_bal_eve_after = Balances::free_balance(&EVE);
         assert_eq!(ztg_bal_eve_after, 101250 * CENT); // 12.5 (SHORT) + 1000 (balance)
-        assert!(!event_exists(Event::TokensRedeemed(
-            0,
-            Asset::ScalarOutcome(0, ScalarPosition::Long),
-            0,
-            0,
-            EVE
-        )));
-        assert!(event_exists(Event::TokensRedeemed(
-            0,
-            Asset::ScalarOutcome(0, ScalarPosition::Short),
-            50 * BASE,
-            1250 * CENT, // 12.5
-            EVE
-        )));
+        System::assert_last_event(
+            Event::TokensRedeemed(
+                0,
+                Asset::ScalarOutcome(0, ScalarPosition::Short),
+                50 * BASE,
+                1250 * CENT, // 12.5
+                EVE,
+            )
+            .into(),
+        );
     })
 }
 
@@ -2159,9 +2257,4 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
         assert_eq!(Tokens::free_balance(*asset, &CHARLIE), 0);
         assert_eq!(Tokens::free_balance(*asset, &EVE), 0);
     }
-}
-
-fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
-    let evt = crate::mock::Event::PredictionMarkets(raw_evt);
-    frame_system::Pallet::<Runtime>::events().iter().any(|e| e.event == evt)
 }

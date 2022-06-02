@@ -7,7 +7,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, CourtPalletId, MaxReserves, MinimumPeriod, BASE},
+    constants::{AuthorizedPalletId, BlockHashCount, MaxReserves, MinimumPeriod, BASE},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
@@ -36,7 +36,7 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Event = ();
     type MarketCommons = MarketCommons;
-    type PalletId = CourtPalletId;
+    type PalletId = AuthorizedPalletId;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 

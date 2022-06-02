@@ -21,9 +21,9 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap},
+        pallet_prelude::{OptionQuery, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
-        Blake2_128Concat, PalletId, Twox64Concat,
+        PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::DispatchError;
@@ -148,17 +148,6 @@ mod pallet {
     }
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}
-
-    // Legacy storage, no longer in use. TODO(#626): Remove this at the earliest convenience!
-    #[pallet::storage]
-    pub type Outcomes<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        Blake2_128Concat,
-        T::AccountId,
-        OutcomeReport,
-    >;
 
     /// Maps the market id to the outcome reported by the authorized account.    
     #[pallet::storage]
