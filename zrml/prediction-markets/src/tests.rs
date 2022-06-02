@@ -1906,6 +1906,8 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
         ));
         let _ = Balances::set_balance(Origin::root(), ALICE, 246 * BASE, 0);
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 123 * BASE));
+        // Attempt to create a pool with five weights; but we need six instead (five for the
+        // outcome tokens, one for the base asset).
         assert_noop!(
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(ALICE),
@@ -2051,6 +2053,8 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
         ));
         let _ = Balances::set_balance(Origin::root(), ALICE, 246 * BASE, 0);
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 123 * BASE));
+        // Attempt to create a pool with seven weights; but we need six instead (five for the
+        // outcome tokens, one for the base asset).
         assert_noop!(
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(ALICE),
