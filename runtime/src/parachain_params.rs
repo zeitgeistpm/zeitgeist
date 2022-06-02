@@ -8,7 +8,7 @@ use crate::{
     AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue, BASE,
     BLOCKS_PER_MINUTE, MAXIMUM_BLOCK_WEIGHT,
 };
-use frame_support::{match_type, parameter_types, traits::Everything, weights::Weight};
+use frame_support::{match_types, parameter_types, traits::Everything, weights::Weight};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::{Perbill, Percent, SaturatedConversion};
@@ -21,7 +21,7 @@ use xcm_builder::{
 };
 use zeitgeist_primitives::{constants::MICRO, types::Balance};
 
-match_type! {
+match_types! {
     pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
         MultiLocation { parents: 1, interior: Junctions::Here } |
         // Potentially change "Unit" to "Executive" for mainnet once we have separate runtimes

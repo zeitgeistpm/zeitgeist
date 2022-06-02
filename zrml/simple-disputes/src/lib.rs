@@ -99,7 +99,7 @@ mod pallet {
             disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError> {
+        ) -> Result<Option<OutcomeReport>, DispatchError> {
             if market.mdm != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
             }
@@ -107,7 +107,7 @@ mod pallet {
                 return Err(Error::<T>::InvalidMarketStatus.into());
             }
             if let Some(last_dispute) = disputes.last() {
-                Ok(last_dispute.outcome.clone())
+                Ok(Some(last_dispute.outcome.clone()))
             } else {
                 Err(Error::<T>::InvalidMarketStatus.into())
             }

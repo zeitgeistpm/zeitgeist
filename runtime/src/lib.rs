@@ -16,24 +16,25 @@ mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
-#[cfg(feature = "parachain")]
-pub use parachain_params::*;
+pub use frame_system::{
+    Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
+    CheckTxVersion, CheckWeight,
+};
+pub use pallet_transaction_payment::ChargeTransactionPayment;
 pub use parameters::*;
+#[cfg(feature = "parachain")]
+pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
-    weights::{constants::RocksDbWeight, IdentityFee},
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_api::impl_runtime_apis;
-use sp_core::{
-    crypto::KeyTypeId,
-    u32_trait::{_1, _2, _3, _4},
-    OpaqueMetadata,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
@@ -46,7 +47,6 @@ use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
-use zrml_swaps::migrations::MigratePoolBaseAsset;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{Everything, Nothing},
@@ -60,10 +60,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 35,
+    spec_version: 36,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 12,
+    transaction_version: 13,
     state_version: 1,
 };
 
@@ -77,22 +77,22 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    MigratePoolBaseAsset<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
-type SignedExtra = (
-    frame_system::CheckNonZeroSender<Runtime>,
-    frame_system::CheckSpecVersion<Runtime>,
-    frame_system::CheckTxVersion<Runtime>,
-    frame_system::CheckGenesis<Runtime>,
-    frame_system::CheckEra<Runtime>,
-    frame_system::CheckNonce<Runtime>,
-    frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+pub type SignedExtra = (
+    CheckNonZeroSender<Runtime>,
+    CheckSpecVersion<Runtime>,
+    CheckTxVersion<Runtime>,
+    CheckGenesis<Runtime>,
+    CheckEra<Runtime>,
+    CheckNonce<Runtime>,
+    CheckWeight<Runtime>,
+    ChargeTransactionPayment<Runtime>,
 );
-type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 // Governance
 type AdvisoryCommitteeInstance = pallet_collective::Instance1;
@@ -105,58 +105,58 @@ type TechnicalCommitteeMembershipInstance = pallet_membership::Instance3;
 // Council vote proportions
 // At least 50%
 type EnsureRootOrHalfCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
 
 // At least 66%
 type EnsureRootOrTwoThirdsCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
 
 // At least 75%
 type EnsureRootOrThreeFourthsCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_3, _4, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
 
 // At least 100%
 type EnsureRootOrAllCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
 
 // Technical committee vote proportions
 // At least 50%
 #[cfg(feature = "parachain")]
 type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 2>,
 >;
 
 // At least 66%
 type EnsureRootOrTwoThirdsTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 2, 3>,
 >;
 
 // At least 100%
 type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
 >;
 
 // Advisory committee vote proportions
 // At least 50%
 type EnsureRootOrHalfAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _2, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
 >;
 
 // Technical committee vote proportions
 // At least 66%
 type EnsureRootOrTwoThirdsAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_2, _3, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 2, 3>,
 >;
 
 // At least 100%
 type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _1, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 1>,
 >;
 
 // Construct runtime
@@ -199,9 +199,10 @@ macro_rules! create_zeitgeist_runtime {
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
                 Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 31,
                 Utility: pallet_utility::{Call, Event, Pallet, Storage} = 32,
+                Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 33,
 
                 // Third-party
-                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 40,
+                Currency: orml_currencies::{Call, Pallet, Storage} = 40,
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
 
                 // Zeitgeist
@@ -283,6 +284,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type VersionWrapper = ();
+    type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
     type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
 
@@ -323,6 +325,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
+                    | Call::Proxy(_)
                     | Call::Currency(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
@@ -356,6 +359,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Identity(_)
                     | Call::Utility(_)
+                    | Call::Proxy(_)
                     | Call::Currency(_)
                     | Call::Authorized(_)
                     | Call::Court(_)
@@ -527,7 +531,6 @@ impl parachain_staking::Config for Runtime {
 }
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
@@ -542,7 +545,9 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
@@ -727,6 +732,53 @@ impl pallet_preimage::Config for Runtime {
     type ByteDeposit = PreimageByteDeposit;
 }
 
+impl InstanceFilter<Call> for ProxyType {
+    fn filter(&self, c: &Call) -> bool {
+        match self {
+            ProxyType::Any => true,
+            ProxyType::CancelProxy => {
+                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+            }
+            ProxyType::Governance => matches!(
+                c,
+                Call::Democracy(..)
+                    | Call::Council(..)
+                    | Call::TechnicalCommittee(..)
+                    | Call::AdvisoryCommittee(..)
+                    | Call::Treasury(..)
+            ),
+            #[cfg(feature = "parachain")]
+            ProxyType::Staking => matches!(c, Call::ParachainStaking(..)),
+            #[cfg(not(feature = "parachain"))]
+            ProxyType::Staking => false,
+        }
+    }
+
+    fn is_superset(&self, o: &Self) -> bool {
+        match (self, o) {
+            (x, y) if x == y => true,
+            (ProxyType::Any, _) => true,
+            (_, ProxyType::Any) => false,
+            _ => false,
+        }
+    }
+}
+
+impl pallet_proxy::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type ProxyType = ProxyType;
+    type ProxyDepositBase = ProxyDepositBase;
+    type ProxyDepositFactor = ProxyDepositFactor;
+    type MaxProxies = ConstU32<32>;
+    type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
+    type MaxPending = ConstU32<32>;
+    type CallHasher = BlakeTwo256;
+    type AnnouncementDepositBase = AnnouncementDepositBase;
+    type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_scheduler::Config for Runtime {
@@ -760,9 +812,9 @@ impl pallet_timestamp::Config for Runtime {
 
 impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = ();
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-    type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
 }
 
@@ -878,6 +930,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
+    type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
@@ -922,6 +975,7 @@ impl zrml_swaps::Config for Runtime {
     // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
     type LiquidityMining = NoopLiquidityMining;
     // type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
@@ -931,6 +985,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
@@ -1031,6 +1086,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_multisig, MultiSig);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_proxy, Proxy);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_treasury, Treasury);
@@ -1044,6 +1100,7 @@ impl_runtime_apis! {
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
+                    list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
                     list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                     list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                     list_benchmark!(list, extra, parachain_staking, ParachainStaking);
@@ -1102,6 +1159,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_multisig, MultiSig);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);
@@ -1116,6 +1174,7 @@ impl_runtime_apis! {
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
+                    add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
                     add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                     add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                     add_benchmark!(params, batches, parachain_staking, ParachainStaking);

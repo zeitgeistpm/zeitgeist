@@ -15,7 +15,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::MarketCommonsPalletApi;
-    use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
@@ -28,7 +27,7 @@ mod pallet {
         traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member},
         ArithmeticError, DispatchError,
     };
-    use zeitgeist_primitives::types::{Market, PoolId, Report};
+    use zeitgeist_primitives::types::{Market, PoolId};
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
@@ -67,8 +66,6 @@ mod pallet {
         /// It is not possible to fetch the latest market ID when
         /// no market has been created.
         NoMarketHasBeenCreated,
-        /// Market does not have a report
-        NoReport,
     }
 
     #[pallet::hooks]
@@ -123,11 +120,6 @@ mod pallet {
             <Markets<T>>::try_get(market_id).map_err(|_err| Error::<T>::MarketDoesNotExist.into())
         }
 
-        fn markets()
-        -> Vec<(Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>)> {
-            <Markets<T>>::iter().collect()
-        }
-
         fn mutate_market<F>(market_id: &Self::MarketId, cb: F) -> DispatchResult
         where
             F: FnOnce(
@@ -157,13 +149,6 @@ mod pallet {
             }
             <Markets<T>>::remove(market_id);
             Ok(())
-        }
-
-        fn report(
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-        ) -> Result<&Report<Self::AccountId, Self::BlockNumber>, DispatchError> {
-            let report = market.report.as_ref().ok_or(Error::<T>::NoReport)?;
-            Ok(report)
         }
 
         // MarketPool

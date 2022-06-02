@@ -32,6 +32,9 @@ pub trait Swaps<AccountId> {
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
+    /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
+    fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
+
     /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
     /// state and all other conditions are met. Returns the result of the operation and
     /// the total weight. If the result is false, not enough subsidy was gathered and the
@@ -107,7 +110,7 @@ pub trait Swaps<AccountId> {
     /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
     /// * `outcome_report`: The resulting outcome.
     /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
-    fn set_pool_as_stale(
+    fn set_pool_to_stale(
         market_type: &MarketType,
         pool_id: PoolId,
         outcome_report: &OutcomeReport,

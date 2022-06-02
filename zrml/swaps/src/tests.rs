@@ -3,9 +3,9 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    Config, SubsidyProviders,
+    Config, Event, SubsidyProviders,
 };
-use frame_support::{assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
+use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
@@ -13,9 +13,12 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, MarketId, MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
+        AccountIdTest, Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism,
+        MarketId, MarketPeriod, MarketStatus, MarketType, Moment, OutcomeReport, PoolId,
+        PoolStatus, ScoringRule,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::traits::RikiddoMVPallet;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
@@ -46,6 +49,43 @@ const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
 const _1234: u128 = 1234 * BASE;
 const _10000: u128 = 10000 * BASE;
+
+#[test]
+fn destroy_pool_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, true);
+        assert_noop!(Swaps::destroy_pool(42), crate::Error::<Runtime>::PoolDoesNotExist);
+    });
+}
+
+#[test]
+fn destroy_pool_correctly_cleans_up_pool() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        let alice_balance_before = [
+            Currencies::free_balance(ASSET_A, &ALICE),
+            Currencies::free_balance(ASSET_B, &ALICE),
+            Currencies::free_balance(ASSET_C, &ALICE),
+            Currencies::free_balance(ASSET_D, &ALICE),
+        ];
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        assert_err!(Swaps::pool(pool_id), crate::Error::<Runtime>::PoolDoesNotExist);
+        // Ensure that funds _outside_ of the pool are not impacted!
+        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
+    });
+}
+
+#[test]
+fn destroy_pool_emits_correct_event() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::destroy_pool(pool_id));
+        System::assert_last_event(Event::PoolDestroyed(pool_id).into());
+    });
+}
 
 #[test]
 fn allows_the_full_user_lifecycle() {
@@ -190,11 +230,16 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_C).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_D).unwrap(), _2);
 
-        assert!(event_exists(crate::Event::PoolCreate(
-            CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
-            pool,
-            <Runtime as Config>::MinLiquidity::get(),
-        )));
+        let pool_account = Swaps::pool_account_id(0);
+        System::assert_last_event(
+            Event::PoolCreate(
+                CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
+                pool,
+                <Runtime as Config>::MinLiquidity::get(),
+                pool_account,
+            )
+            .into(),
+        );
     });
 }
 
@@ -251,10 +296,9 @@ fn destroy_pool_in_subsidy_phase_returns_subsidy_and_closes_pool() {
         assert_eq!(Currencies::reserved_balance(ASSET_D, &BOB), 0);
         assert!(!crate::SubsidyProviders::<Runtime>::contains_key(pool_id, ALICE));
         assert!(!crate::Pools::<Runtime>::contains_key(pool_id));
-        assert!(event_exists(crate::Event::PoolDestroyedInSubsidyPhase(
-            pool_id,
-            vec![(BOB, _26), (ALICE, _25)]
-        )));
+        System::assert_last_event(
+            Event::PoolDestroyedInSubsidyPhase(pool_id, vec![(BOB, _26), (ALICE, _25)]).into(),
+        );
     });
 }
 
@@ -363,11 +407,14 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         let total_subsidy = Currencies::total_balance(ASSET_D, &pool_account_id);
         let total_subsidy_expected = subsidy_alice + subsidy_bob;
         assert_eq!(total_subsidy, total_subsidy_expected);
-        assert!(event_exists(crate::Event::SubsidyCollected(
-            pool_id,
-            vec![(BOB, subsidy_bob), (ALICE, subsidy_alice),],
-            total_subsidy_expected,
-        )));
+        System::assert_last_event(
+            Event::SubsidyCollected(
+                pool_id,
+                vec![(BOB, subsidy_bob), (ALICE, subsidy_alice)],
+                total_subsidy_expected,
+            )
+            .into(),
+        );
         let initial_outstanding_assets = RikiddoSigmoidFeeMarketEma::initial_outstanding_assets(
             pool_id,
             (ASSETS.len() - 1).saturated_into::<u32>(),
@@ -394,7 +441,7 @@ fn ensure_which_operations_can_be_called_depending_on_the_pool_status() {
         let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(0),
             0,
             &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
@@ -559,27 +606,16 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
 }
 
 #[test]
-fn only_root_can_call_admin_set_pool_as_stale() {
+fn set_pool_to_stale_fails_if_origin_is_not_root() {
     ExtBuilder::default().build().execute_with(|| {
         let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(MarketCommons::push_market(mock_market(69)));
+        MarketCommons::insert_market_pool(0, 0);
         assert_noop!(
-            Swaps::admin_set_pool_as_stale(
-                alice_signed(),
-                MarketType::Categorical(0),
-                0,
-                OutcomeReport::Categorical(idx)
-            ),
+            Swaps::admin_set_pool_to_stale(alice_signed(), 0, OutcomeReport::Categorical(idx)),
             BadOrigin
         );
-
-        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
-        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
-            Origin::root(),
-            MarketType::Categorical(0),
-            0,
-            OutcomeReport::Categorical(idx)
-        ),);
     });
 }
 
@@ -648,13 +684,16 @@ fn pool_exit_decreases_correct_pool_parameters() {
 
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
 
-        assert!(event_exists(crate::Event::PoolExit(PoolAssetsEvent {
-            assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
-            bounds: vec!(_1, _1, _1, _1),
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: vec!(_1 + 1, _1 + 1, _1 + 1, _1 + 1),
-            pool_amount: _1,
-        })));
+        System::assert_last_event(
+            Event::PoolExit(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![_1, _1, _1, _1],
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: vec![_1 + 1, _1 + 1, _1 + 1, _1 + 1],
+                pool_amount: _1,
+            })
+            .into(),
+        );
         assert_all_parameters(
             [_25 + 1, _25 + 1, _25 + 1, _25 + 1],
             0,
@@ -671,13 +710,16 @@ fn pool_exit_emits_correct_events() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, _1, vec!(1, 2, 3, 4),));
         let amount = _1 - BASE / 10; // Subtract 10% fees!
-        assert!(event_exists(crate::Event::PoolExit(PoolAssetsEvent {
-            assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
-            bounds: vec!(1, 2, 3, 4),
-            cpep: CommonPoolEventParams { pool_id: 0, who: BOB },
-            transferred: vec![amount; 4],
-            pool_amount: _1,
-        })));
+        System::assert_last_event(
+            Event::PoolExit(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![1, 2, 3, 4],
+                cpep: CommonPoolEventParams { pool_id: 0, who: BOB },
+                transferred: vec![amount; 4],
+                pool_amount: _1,
+            })
+            .into(),
+        );
     });
 }
 
@@ -702,13 +744,16 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
         assert_eq!(Currencies::free_balance(ASSET_D, &pool_account), _100 - _9);
         assert_eq!(Currencies::total_issuance(pool_shares_id), _100 - _10);
 
-        assert!(event_exists(crate::Event::PoolExit(PoolAssetsEvent {
-            assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
-            bounds: vec!(_1, _1, _1, _1),
-            cpep: CommonPoolEventParams { pool_id: 0, who: BOB },
-            transferred: vec!(_9, _9, _9, _9),
-            pool_amount: _10,
-        })));
+        System::assert_last_event(
+            Event::PoolExit(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![_1, _1, _1, _1],
+                cpep: CommonPoolEventParams { pool_id: 0, who: BOB },
+                transferred: vec![_9, _9, _9, _9],
+                pool_amount: _10,
+            })
+            .into(),
+        );
     })
 }
 
@@ -718,23 +763,27 @@ fn pool_exit_decreases_correct_pool_parameters_on_stale_pool() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_ok!(MarketCommons::push_market(mock_market(69)));
+        MarketCommons::insert_market_pool(0, 0);
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert_ok!(Swaps::admin_set_pool_as_stale(
+        assert_ok!(Swaps::admin_set_pool_to_stale(
             Origin::root(),
-            MarketType::Categorical(4),
             0,
             OutcomeReport::Categorical(65),
         ));
         assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1, _1),));
 
-        assert!(event_exists(crate::Event::PoolExit(PoolAssetsEvent {
-            assets: vec![ASSET_A, ASSET_D],
-            bounds: vec!(_1, _1),
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: vec!(_1 + 1, _1 + 1),
-            pool_amount: _1,
-        })));
+        System::assert_last_event(
+            Event::PoolExit(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_D],
+                bounds: vec![_1, _1],
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: vec![_1 + 1, _1 + 1],
+                pool_amount: _1,
+            })
+            .into(),
+        );
         assert_all_parameters(
             [_25 + 1, _24, _24, _25 + 1],
             0,
@@ -752,21 +801,8 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         // Events cannot be emitted on block zero...
         frame_system::Pallet::<Runtime>::set_block_number(1);
 
-        create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), 0, 42),
-            crate::Error::<Runtime>::InvalidScoringRule
-        );
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), 1, 42),
-            crate::Error::<Runtime>::PoolDoesNotExist
-        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
-        let pool_id = 1;
-        assert_noop!(
-            Swaps::pool_exit_subsidy(alice_signed(), pool_id, 42),
-            crate::Error::<Runtime>::NoSubsidyProvided
-        );
+        let pool_id = 0;
 
         // Add some subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
@@ -784,12 +820,10 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, noted);
         assert_eq!(reserved, total_subsidy);
-        assert!(event_exists(crate::Event::PoolExitSubsidy(
-            ASSET_D,
-            _5,
-            CommonPoolEventParams { pool_id, who: ALICE },
-            _5,
-        )));
+        System::assert_last_event(
+            Event::PoolExitSubsidy(ASSET_D, _5, CommonPoolEventParams { pool_id, who: ALICE }, _5)
+                .into(),
+        );
 
         // Exit the remaining subsidy (in fact, we attempt to exit with more than remaining!) and
         // see if the storage is consistent
@@ -799,12 +833,15 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert_eq!(reserved, total_subsidy);
-        assert!(event_exists(crate::Event::PoolExitSubsidy(
-            ASSET_D,
-            _25,
-            CommonPoolEventParams { pool_id, who: ALICE },
-            _20,
-        )));
+        System::assert_last_event(
+            Event::PoolExitSubsidy(
+                ASSET_D,
+                _25,
+                CommonPoolEventParams { pool_id, who: ALICE },
+                _20,
+            )
+            .into(),
+        );
 
         // Add some subsidy, manually remove some reserved balance (create inconsistency)
         // and check if the internal values are adjusted to the inconsistency.
@@ -816,6 +853,49 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert_eq!(reserved, total_subsidy);
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_no_subsidy_is_provided() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::NoSubsidyProvided
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, 0),
+            crate::Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_exit_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
     });
 }
 
@@ -834,13 +914,16 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values() {
             pool_amount,
             _4
         ));
-        assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
-            asset: ASSET_A,
-            bound: _4,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: _5 - 335,
-            pool_amount,
-        })));
+        System::assert_last_event(
+            Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
+                asset: ASSET_A,
+                bound: _4,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: _5 - 335,
+                pool_amount,
+            })
+            .into(),
+        );
         assert_all_parameters([_25 - 335, _25, _25, _25], 0, [_100 + 335, _100, _100, _100], _100)
     });
 }
@@ -866,13 +949,16 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values_with_fee() {
             [1_004_917_938_150, _100, _100, _100],
             _100,
         );
-        assert!(event_exists(crate::Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
-            asset: ASSET_A,
-            bound: _4,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: 45_082_061_850,
-            pool_amount,
-        })));
+        System::assert_last_event(
+            Event::PoolExitWithExactPoolAmount(PoolAssetEvent {
+                asset: ASSET_A,
+                bound: _4,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: 45_082_061_850,
+                pool_amount,
+            })
+            .into(),
+        );
     });
 }
 
@@ -895,13 +981,16 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values() {
         ));
         let pool_amount_after_exit = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
         let pool_amount = pool_amount_before_exit - pool_amount_after_exit;
-        assert!(event_exists(crate::Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
-            asset: ASSET_A,
-            bound: _1,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: asset_after_join - 1000,
-            pool_amount,
-        })));
+        System::assert_last_event(
+            Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
+                asset: ASSET_A,
+                bound: _1,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: asset_after_join - 1000,
+                pool_amount,
+            })
+            .into(),
+        );
         assert_eq!(asset_after_join, 40604010000);
         assert_all_parameters(
             [_25 - 1000, _25, _25, _25],
@@ -931,13 +1020,16 @@ fn pool_exit_with_exact_asset_amount_exchanges_correct_values_with_fee() {
             _1
         ));
         let pool_amount = 9_984_935_413;
-        assert!(event_exists(crate::Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
-            asset: ASSET_A,
-            bound: _1,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: exit_amount,
-            pool_amount,
-        })));
+        System::assert_last_event(
+            Event::PoolExitWithExactAssetAmount(PoolAssetEvent {
+                asset: ASSET_A,
+                bound: _1,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: exit_amount,
+                pool_amount,
+            })
+            .into(),
+        );
         assert_eq!(asset_after_join, 40604010000);
         let shares_remaining = _1 - pool_amount; // shares_after_join - pool_amount_in
         assert_all_parameters(
@@ -977,13 +1069,16 @@ fn pool_join_increases_correct_pool_parameters() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _5, vec!(_25, _25, _25, _25),));
-        assert!(event_exists(crate::Event::PoolJoin(PoolAssetsEvent {
-            assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
-            bounds: vec!(_25, _25, _25, _25),
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: vec!(_5, _5, _5, _5),
-            pool_amount: _5,
-        })));
+        System::assert_last_event(
+            Event::PoolJoin(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![_25, _25, _25, _25],
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: vec![_5, _5, _5, _5],
+                pool_amount: _5,
+            })
+            .into(),
+        );
         assert_all_parameters([_20, _20, _20, _20], _5, [_105, _105, _105, _105], _105);
     })
 }
@@ -994,13 +1089,16 @@ fn pool_join_emits_correct_events() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
-        assert!(event_exists(crate::Event::PoolJoin(PoolAssetsEvent {
-            assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
-            bounds: vec!(_1, _1, _1, _1),
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: vec!(_1, _1, _1, _1),
-            pool_amount: _1,
-        })));
+        System::assert_last_event(
+            Event::PoolJoin(PoolAssetsEvent {
+                assets: vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D],
+                bounds: vec![_1, _1, _1, _1],
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: vec![_1, _1, _1, _1],
+                pool_amount: _1,
+            })
+            .into(),
+        );
     });
 }
 
@@ -1009,25 +1107,18 @@ fn pool_join_subsidy_reserves_correct_values() {
     ExtBuilder::default().build().execute_with(|| {
         // Events cannot be emitted on block zero...
         frame_system::Pallet::<Runtime>::set_block_number(1);
-
-        create_initial_pool(ScoringRule::CPMM, true);
-        assert_noop!(
-            Swaps::pool_join_subsidy(alice_signed(), 0, 42),
-            crate::Error::<Runtime>::InvalidScoringRule
-        );
         create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
-        let pool_id = 1;
+        let pool_id = 0;
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
         let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
         let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
         assert_eq!(reserved, _20);
         assert_eq!(reserved, noted);
         assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
-        assert!(event_exists(crate::Event::PoolJoinSubsidy(
-            ASSET_D,
-            _20,
-            CommonPoolEventParams { pool_id, who: ALICE },
-        )));
+        System::assert_last_event(
+            Event::PoolJoinSubsidy(ASSET_D, _20, CommonPoolEventParams { pool_id, who: ALICE })
+                .into(),
+        );
 
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
@@ -1036,11 +1127,104 @@ fn pool_join_subsidy_reserves_correct_values() {
         assert_eq!(reserved, noted);
         assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
         assert_storage_noop!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5).unwrap_or(()));
-        assert!(event_exists(crate::Event::PoolJoinSubsidy(
-            ASSET_D,
-            _5,
-            CommonPoolEventParams { pool_id, who: ALICE },
-        )));
+        System::assert_last_event(
+            Event::PoolJoinSubsidy(ASSET_D, _5, CommonPoolEventParams { pool_id, who: ALICE })
+                .into(),
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_amount_is_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, 0),
+            crate::Error::<Runtime>::ZeroAmount
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_pool_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::PoolDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_scoring_rule_is_not_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::pool_join_subsidy(alice_signed(), 0, _1),
+            crate::Error::<Runtime>::InvalidScoringRule
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_fails_if_subsidy_is_below_min_per_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        assert_noop!(
+            Swaps::pool_join_subsidy(
+                alice_signed(),
+                0,
+                <Runtime as Config>::MinSubsidyPerAccount::get() - 1
+            ),
+            crate::Error::<Runtime>::InvalidSubsidyAmount,
+        );
+    });
+}
+
+#[test]
+fn pool_join_subsidy_with_small_amount_is_ok_if_account_is_already_a_provider() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        let pool_id = 0;
+        let large_amount = <Runtime as Config>::MinSubsidyPerAccount::get();
+        let small_amount = 1;
+        let total_amount = large_amount + small_amount;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, small_amount));
+        let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, total_amount);
+        assert_eq!(noted, total_amount);
+        assert_eq!(total_subsidy, total_amount);
+    });
+}
+
+#[test]
+fn pool_exit_subsidy_unreserves_remaining_subsidy_if_below_min_per_account() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        let pool_id = 0;
+        let large_amount = <Runtime as Config>::MinSubsidyPerAccount::get();
+        let small_amount = 1;
+        assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
+        assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, small_amount));
+        let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE);
+        let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
+        assert_eq!(reserved, 0);
+        assert!(noted.is_none());
+        assert_eq!(total_subsidy, 0);
+        System::assert_last_event(
+            Event::PoolExitSubsidy(
+                ASSET_D,
+                small_amount,
+                CommonPoolEventParams { pool_id, who: ALICE },
+                large_amount,
+            )
+            .into(),
+        );
     });
 }
 
@@ -1058,13 +1242,16 @@ fn pool_join_with_exact_asset_amount_exchanges_correct_values() {
             0
         ));
         let alice_received = Currencies::free_balance(Swaps::pool_shares_id(0), &ALICE);
-        assert!(event_exists(crate::Event::PoolJoinWithExactAssetAmount(PoolAssetEvent {
-            asset: ASSET_A,
-            bound: 0,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: alice_sent,
-            pool_amount: alice_received,
-        })));
+        System::assert_last_event(
+            Event::PoolJoinWithExactAssetAmount(PoolAssetEvent {
+                asset: ASSET_A,
+                bound: 0,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: alice_sent,
+                pool_amount: alice_received,
+            })
+            .into(),
+        );
         assert_all_parameters(
             [_25 - alice_sent, _25, _25, _25],
             alice_received,
@@ -1089,13 +1276,16 @@ fn pool_join_with_exact_pool_amount_exchanges_correct_values() {
             _5
         ));
         let asset_amount = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
-        assert!(event_exists(crate::Event::PoolJoinWithExactPoolAmount(PoolAssetEvent {
-            asset: ASSET_A,
-            bound: _5,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            transferred: asset_amount,
-            pool_amount: alice_sent,
-        })));
+        System::assert_last_event(
+            Event::PoolJoinWithExactPoolAmount(PoolAssetEvent {
+                asset: ASSET_A,
+                bound: _5,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                transferred: asset_amount,
+                pool_amount: alice_sent,
+            })
+            .into(),
+        );
         let alice_received = alice_initial - Currencies::free_balance(ASSET_A, &ALICE);
         assert_eq!(alice_received, 40604010000);
         assert_all_parameters(
@@ -1123,13 +1313,13 @@ fn provided_values_len_must_equal_assets_len() {
 }
 
 #[test]
-fn set_pool_as_stale_leaves_only_correct_assets() {
+fn set_pool_to_stale_leaves_only_correct_assets() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, true);
         let pool_id = 0;
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(1337),
                 pool_id,
                 &OutcomeReport::Categorical(1337),
@@ -1140,7 +1330,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1153,7 +1343,7 @@ fn set_pool_as_stale_leaves_only_correct_assets() {
 }
 
 #[test]
-fn set_pool_as_stale_handles_rikiddo_pools_properly() {
+fn set_pool_to_stale_handles_rikiddo_pools_properly() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 0;
@@ -1161,7 +1351,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
         assert_noop!(
-            Swaps::set_pool_as_stale(
+            Swaps::set_pool_to_stale(
                 &MarketType::Categorical(4),
                 pool_id,
                 &OutcomeReport::Categorical(cat_idx),
@@ -1175,7 +1365,7 @@ fn set_pool_as_stale_handles_rikiddo_pools_properly() {
             Ok(())
         }));
 
-        assert_ok!(Swaps::set_pool_as_stale(
+        assert_ok!(Swaps::set_pool_to_stale(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
@@ -1202,15 +1392,18 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
             _1 / 2,
             _2,
         ));
-        assert!(event_exists(crate::Event::SwapExactAmountIn(SwapEvent {
-            asset_amount_in: _1,
-            asset_amount_out: 9900990100,
-            asset_bound: _1 / 2,
-            asset_in: ASSET_A,
-            asset_out: ASSET_B,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            max_price: _2,
-        })));
+        System::assert_last_event(
+            Event::SwapExactAmountIn(SwapEvent {
+                asset_amount_in: _1,
+                asset_amount_out: 9900990100,
+                asset_bound: _1 / 2,
+                asset_in: ASSET_A,
+                asset_out: ASSET_B,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                max_price: _2,
+            })
+            .into(),
+        );
         assert_all_parameters(
             [_24, _25 + 9900990100, _25, _25],
             0,
@@ -1271,15 +1464,18 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, _2, ASSET_B, _1, _3,));
-        assert!(event_exists(crate::Event::SwapExactAmountOut(SwapEvent {
-            asset_amount_in: 10101010100,
-            asset_amount_out: _1,
-            asset_bound: _2,
-            asset_in: ASSET_A,
-            asset_out: ASSET_B,
-            cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
-            max_price: _3,
-        })));
+        System::assert_last_event(
+            Event::SwapExactAmountOut(SwapEvent {
+                asset_amount_in: 10101010100,
+                asset_amount_out: _1,
+                asset_bound: _2,
+                asset_in: ASSET_A,
+                asset_out: ASSET_B,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                max_price: _3,
+            })
+            .into(),
+        );
         assert_all_parameters(
             [239898989900, _26, _25, _25],
             0,
@@ -1605,11 +1801,6 @@ fn create_initial_pool_with_funds_for_alice(scoring_rule: ScoringRule, deposit: 
     let _ = Currencies::deposit(ASSET_D, &ALICE, _25);
 }
 
-fn event_exists(raw_evt: crate::Event<Runtime>) -> bool {
-    let evt = Event::Swaps(raw_evt);
-    frame_system::Pallet::<Runtime>::events().iter().any(|e| e.event == evt)
-}
-
 fn assert_all_parameters(
     alice_assets: [u128; 4],
     alice_pool_assets: u128,
@@ -1644,4 +1835,21 @@ fn subsidize_and_start_rikiddo_pool(
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
     assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
+}
+
+fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
+    Market {
+        creation: MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: ALICE,
+        market_type: MarketType::Categorical(categories),
+        mdm: MarketDisputeMechanism::Authorized(ALICE),
+        metadata: vec![0; 50],
+        oracle: ALICE,
+        period: MarketPeriod::Block(0..1),
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: MarketStatus::Active,
+    }
 }

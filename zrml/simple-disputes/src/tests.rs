@@ -62,7 +62,7 @@ fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outc
             MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
         ];
         assert_eq!(
-            &SimpleDisputes::on_resolution(&disputes, &0, &market).unwrap(),
+            &SimpleDisputes::on_resolution(&disputes, &0, &market).unwrap().unwrap(),
             &disputes.last().unwrap().outcome
         )
     });

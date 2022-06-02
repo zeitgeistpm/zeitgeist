@@ -22,10 +22,10 @@ use zeitgeist_primitives::{
 use zeitgeist_runtime::SS58Prefix;
 #[cfg(feature = "parachain")]
 use {
-    sp_runtime::{Perbill, Percent},
+    sp_runtime::Perbill,
     zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
     zeitgeist_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, MinCollatorStk, PolkadotXcmConfig,
+        CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
     },
 };
 
@@ -107,7 +107,7 @@ fn generic_genesis(
         },
         #[cfg(feature = "parachain")]
         author_filter: zeitgeist_runtime::AuthorFilterConfig {
-            eligible_ratio: Percent::from_percent(50),
+            eligible_count: EligibilityValue::new_unchecked(50),
         },
         #[cfg(feature = "parachain")]
         author_mapping: zeitgeist_runtime::AuthorMappingConfig {

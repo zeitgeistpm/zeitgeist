@@ -178,7 +178,7 @@ fn on_resolution_decides_market_outcome_based_on_the_majority() {
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
         let outcome = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(outcome, OutcomeReport::Scalar(1))
+        assert_eq!(outcome, Some(OutcomeReport::Scalar(1)));
     });
 }
 
