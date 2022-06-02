@@ -26,6 +26,20 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
 }
 
 #[test]
+fn authorize_market_outcome_fails_if_market_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Authorized::authorize_market_outcome(
+                Origin::signed(ALICE),
+                0,
+                OutcomeReport::Scalar(1)
+            ),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test]
 fn authorize_market_outcome_fails_on_non_authorized_market() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = market_mock::<Runtime>(ALICE);
