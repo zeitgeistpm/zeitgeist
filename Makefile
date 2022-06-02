@@ -15,7 +15,7 @@ check-dummy:
 
 .PHONY: try-runtime-upgrade
 try-runtime-upgrade:
-	cargo run --release --bin zeitgeist --features parachain --features=try-runtime try-runtime on-runtime-upgrade live --uri wss://bsr.zeitgeist.pm:443
+	cargo run --release --bin=zeitgeist --features=parachain,try-runtime try-runtime on-runtime-upgrade live --uri wss://bsr.zeitgeist.pm:443
 
 build:
 	SKIP_WASM_BUILD= cargo build

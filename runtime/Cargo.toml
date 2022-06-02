@@ -281,7 +281,6 @@ txfilter = [
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
-    "frame-support/try-runtime",
 
     # For every pallet in the runtime include try-runtime
 
@@ -314,7 +313,6 @@ try-runtime = [
     "orml-tokens/try-runtime",
 
     # Zeitgeist runtime pallets
-    "zeitgeist-primitives/try-runtime",
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
     "zrml-liquidity-mining/try-runtime",
@@ -325,7 +323,9 @@ try-runtime = [
     "zrml-swaps/try-runtime",
 
     # Parachain
-    "parachain-staking/try-runtime",
+    "pallet-author-mapping?/try-runtime",
+    "pallet-author-slot-filter?/try-runtime",
+    "parachain-staking?/try-runtime",
 ]
 
 [package]
