@@ -68,7 +68,7 @@
 extern crate alloc;
 
 mod benchmarks;
-mod migrations;
+pub mod migrations;
 pub mod mock;
 mod tests;
 pub mod weights;
