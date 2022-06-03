@@ -34,8 +34,7 @@ pub trait WeightInfoZeitgeist {
     fn admin_move_market_to_resolved_overhead() -> Weight;
     fn approve_market() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
-    fn create_categorical_market() -> Weight;
-    fn create_scalar_market() -> Weight;
+    fn create_market() -> Weight;
     fn deploy_swap_pool_for_market(a: u32) -> Weight;
     fn dispute(a: u32) -> Weight;
     fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight;
@@ -146,18 +145,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: MarketCommons MarketCounter (r:1 w:1)
     // Storage: MarketCommons Markets (r:0 w:1)
-    fn create_categorical_market() -> Weight {
+    fn create_market() -> Weight {
         (79_610_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(4 as Weight))
-    }
-    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
-    // Storage: Timestamp Now (r:1 w:0)
-    // Storage: Balances Reserves (r:1 w:1)
-    // Storage: MarketCommons MarketCounter (r:1 w:1)
-    // Storage: MarketCommons Markets (r:0 w:1)
-    fn create_scalar_market() -> Weight {
-        (71_850_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
