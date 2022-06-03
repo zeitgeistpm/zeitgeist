@@ -71,13 +71,13 @@ fn simple_create_scalar_market<T: crate::Config>(
 fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::create_scalar_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Block(123..456),
                 gen_metadata(2),
                 MarketCreation::Permissionless,
-                range,
+                MarketType::Scalar(range),
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
@@ -346,13 +346,13 @@ fn admin_move_market_moves_active_market_to_closed(
     market_period: MarketPeriod<BlockNumber, Moment>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             market_period,
             gen_metadata(2),
             MarketCreation::Permissionless,
-            <Runtime as Config>::MinCategories::get(),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
@@ -396,13 +396,13 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(
     market_period: MarketPeriod<BlockNumber, Moment>,
 ) {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             market_period,
             gen_metadata(2),
             MarketCreation::Permissionless,
-            <Runtime as Config>::MinCategories::get(),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));

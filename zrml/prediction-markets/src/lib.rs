@@ -517,7 +517,6 @@ mod pallet {
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
-            ensure!(outcome_range.start() < outcome_range.end(), <Error<T>>::InvalidOutcomeRange);
 
             // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
             // for a compiler error. Link an issue for this!
