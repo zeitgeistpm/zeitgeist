@@ -500,11 +500,18 @@ mod pallet {
             Self::ensure_market_is_active(&period)?;
             Self::ensure_market_period_is_valid(&period)?;
 
-            if let MarketType::Categorical(categories) = market_type {
-                ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
-                ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+            match market_type {
+                MarketType::Categorical(categories) => {
+                    ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
+                    ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+                }
+                MarketType::Scalar(ref outcome_range) => {
+                    ensure!(
+                        outcome_range.start() < outcome_range.end(),
+                        <Error<T>>::InvalidOutcomeRange
+                    );
+                }
             }
-
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
