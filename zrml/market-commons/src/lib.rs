@@ -28,7 +28,7 @@ mod pallet {
     };
     use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
-        traits::{AtLeast32Bit, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member},
+        traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, Saturating},
         ArithmeticError, DispatchError,
     };
     use zeitgeist_primitives::types::{Market, PoolId};
@@ -116,8 +116,8 @@ mod pallet {
 
         fn latest_market_id() -> Result<Self::MarketId, DispatchError> {
             match <MarketCounter<T>>::try_get() {
-                Ok(market_id) if market_id != 0u8.into() => {
-                    Ok(market_id.checked_sub(&1u8.into()).ok_or(ArithmeticError::Underflow)?)
+                Ok(market_id) => {
+                    Ok(market_id.saturating_sub(1u8.into())) // Note: market_id > 0!
                 }
                 _ => Err(Error::<T>::NoMarketHasBeenCreated.into()),
             }
