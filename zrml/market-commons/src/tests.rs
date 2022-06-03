@@ -62,7 +62,7 @@ fn market_interacts_correctly_with_push_market() {
 }
 
 #[test]
-fn markets_interacts_correctly_with_push_market() {
+fn markets_storage_map_interacts_correctly_with_push_market() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(MarketCommons::push_market(market_mock(0)));
         assert_ok!(MarketCommons::push_market(market_mock(1)));
