@@ -376,17 +376,15 @@ cfg_if::cfg_if! {
     } else {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
-                use zrml_prediction_markets::Call::{create_categorical_market, create_cpmm_market_and_deploy_assets, create_scalar_market};
+                use zrml_prediction_markets::Call::{create_market, create_cpmm_market_and_deploy_assets};
 
                 match call {
                     Call::PredictionMarkets(inner_call) => {
                         match inner_call {
                             // Disable Rikiddo markets
-                            create_categorical_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
-                            create_scalar_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
+                            create_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
                             // Disable Court dispute resolution mechanism
-                            create_categorical_market { mdm: MarketDisputeMechanism::Court, .. } => false,
-                            create_scalar_market { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            create_market { mdm: MarketDisputeMechanism::Court, .. } => false,
                             create_cpmm_market_and_deploy_assets { mdm: MarketDisputeMechanism::Court, .. } => false,
                             _ => true
                         }
