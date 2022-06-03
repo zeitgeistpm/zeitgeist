@@ -1,3 +1,10 @@
+# v0.3.3
+
+- Simplify `create_cpmm_market_and_deploy_assets`,
+  `deploy_swap_pool_and_additional_liquidity` and `deploy_swap_pool_for_market`
+  by using a single `amount` parameter instead of `amount_base_asset` and
+  `amount_outcome_assets`.
+
 # v0.3.2
 
 - Added a field for `market_account` to `MarketCreated` event and `pool_account`
