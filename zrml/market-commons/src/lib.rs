@@ -73,7 +73,7 @@ mod pallet {
         /// Market does not have a report
         NoReport,
         /// There's a pool registered for this market already.
-        DuplicatePool,
+        PoolAlreadyExists,
     }
 
     #[pallet::hooks]
@@ -164,7 +164,7 @@ mod pallet {
         // MarketPool
 
         fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) -> DispatchResult {
-            ensure!(!<MarketPool<T>>::contains_key(market_id), Error::<T>::DuplicatePool);
+            ensure!(!<MarketPool<T>>::contains_key(market_id), Error::<T>::PoolAlreadyExists);
             ensure!(<Markets<T>>::contains_key(market_id), Error::<T>::MarketDoesNotExist);
             <MarketPool<T>>::insert(market_id, pool_id);
             Ok(())

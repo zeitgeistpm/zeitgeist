@@ -835,7 +835,7 @@ fn deploy_swap_pool_for_market_fails_if_market_has_a_pool() {
                 0,
                 vec![BASE, BASE, BASE]
             ),
-            zrml_market_commons::Error::<Runtime>::DuplicatePool,
+            zrml_market_commons::Error::<Runtime>::PoolAlreadyExists,
         );
     });
 }

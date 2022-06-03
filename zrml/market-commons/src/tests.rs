@@ -188,7 +188,7 @@ fn insert_market_pool_fails_if_market_has_a_pool() {
         assert_ok!(MarketCommons::insert_market_pool(0, 15));
         assert_noop!(
             MarketCommons::insert_market_pool(0, 14),
-            crate::Error::<Runtime>::DuplicatePool
+            crate::Error::<Runtime>::PoolAlreadyExists
         );
     });
 }
