@@ -57,7 +57,7 @@ fn generate_assets<T: Config>(
     let asset_amount_unwrapped: BalanceOf<T> = {
         match asset_amount {
             Some(ac) => ac,
-            _ => T::MinLiquidity::get().into(),
+            _ => T::MinLiquidity::get(),
         }
     };
 
