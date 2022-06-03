@@ -24,8 +24,6 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
-const _123: u128 = 123 * BASE;
-
 // Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
 fn generate_accounts_with_assets<T: Config>(
     acc_total: u32,
@@ -59,7 +57,7 @@ fn generate_assets<T: Config>(
     let asset_amount_unwrapped: BalanceOf<T> = {
         match asset_amount {
             Some(ac) => ac,
-            _ => _123.saturated_into(),
+            _ => T::MinLiquidity::get().into(),
         }
     };
 
@@ -102,7 +100,7 @@ fn bench_create_pool<T: Config>(
         market_id,
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
-        if scoring_rule == ScoringRule::CPMM { Some(_123.saturated_into()) } else { None },
+        if scoring_rule == ScoringRule::CPMM { Some(T::MinLiquidity::get()) } else { None },
         if scoring_rule == ScoringRule::CPMM { Some(weights) } else { None },
     )
     .unwrap();
@@ -252,7 +250,7 @@ benchmarks! {
         let (pool_id, ..) = bench_create_pool::<T>(
             caller.clone(),
             Some(a as usize),
-            None,
+            Some(T::MinLiquidity::get() * 2u32.into()),
             ScoringRule::CPMM,
             false
         );
@@ -315,12 +313,12 @@ benchmarks! {
         let (pool_id, ..) = bench_create_pool::<T>(
             caller.clone(),
             Some(a as usize),
-            Some(T::MinLiquidity::get() * 3u32.into()),
+            Some(T::MinLiquidity::get() * 2u32.into()),
             ScoringRule::CPMM,
             false
         );
         let pool_amount = T::MinLiquidity::get();
-        let max_assets_in = vec![T::MinLiquidity::get() * 2u32.into(); a as usize];
+        let max_assets_in = vec![T::MinLiquidity::get(); a as usize];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, max_assets_in)
 
     pool_join_subsidy {
