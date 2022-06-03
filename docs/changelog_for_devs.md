@@ -5,6 +5,10 @@
   by using a single `amount` parameter instead of `amount_base_asset` and
   `amount_outcome_assets`.
 
+- Replaced `create_categorical_market` and `create_scalar_market` with
+  `create_market`, which uses a `market_type` parameter to determine what market
+  we create
+
 # v0.3.2
 
 - Added a field for `market_account` to `MarketCreated` event and `pool_account`

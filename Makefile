@@ -1,3 +1,5 @@
+.PHONY: $(MAKECMDGOALS)
+
 run:
 	SKIP_WASM_BUILD= cargo run -- --dev --execution=Native -lruntime=debug
 

@@ -28,7 +28,6 @@
 //! - `create_categorical_market` - Creates a new categorical market.
 //! - `create_cpmm_market_and_deploy_assets` - Creates a market using CPMM scoring rule, buys a
 //!   complete set of the assets used and deploys the funds.
-//! - `create_scalar_market` - Creates a new scalar market.
 //! - `deploy_swap_pool_for_market` - Deploys a single "canonical" pool for a market.
 //! - `deploy_swap_pool_and_additional_liquidity` - Deploys a single "canonical" pool for a market,
 //!   buys a complete set of the assets used and deploys the funds as specified.
@@ -79,7 +78,7 @@ pub use pallet::*;
 mod pallet {
     use crate::weights::*;
     use alloc::{vec, vec::Vec};
-    use core::{cmp, marker::PhantomData, ops::RangeInclusive};
+    use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
@@ -389,80 +388,6 @@ mod pallet {
             )
         }
 
-        #[pallet::weight(T::WeightInfo::create_categorical_market())]
-        #[transactional]
-        pub fn create_categorical_market(
-            origin: OriginFor<T>,
-            oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            metadata: MultiHash,
-            creation: MarketCreation,
-            #[pallet::compact] categories: u16,
-            mdm: MarketDisputeMechanism<T::AccountId>,
-            scoring_rule: ScoringRule,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            Self::ensure_market_is_active(&period)?;
-            Self::ensure_market_period_is_valid(&period)?;
-            ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
-            ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
-
-            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                Self::ensure_market_start_is_in_time(&period)?;
-            }
-
-            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
-            // for a compiler error. Link an issue for this!
-            #[allow(irrefutable_let_patterns)]
-            let multihash =
-                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
-            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
-
-            let status: MarketStatus = match creation {
-                MarketCreation::Permissionless => {
-                    let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
-
-                    if scoring_rule == ScoringRule::CPMM {
-                        MarketStatus::Active
-                    } else {
-                        MarketStatus::CollectingSubsidy
-                    }
-                }
-                MarketCreation::Advised => {
-                    let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
-                    MarketStatus::Proposed
-                }
-            };
-
-            let market = Market {
-                creation,
-                creator_fee: 0,
-                creator: sender,
-                market_type: MarketType::Categorical(categories),
-                mdm,
-                metadata: Vec::from(multihash),
-                oracle,
-                period,
-                report: None,
-                resolved_outcome: None,
-                scoring_rule,
-                status,
-            };
-            let market_id = T::MarketCommons::push_market(market.clone())?;
-            let market_account = Self::market_account(market_id);
-            let mut extra_weight = 0;
-
-            if market.status == MarketStatus::CollectingSubsidy {
-                extra_weight = Self::start_subsidy(&market, market_id)?;
-            }
-
-            Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
-
-            Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
-        }
-
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
         /// liquidity.
         ///
@@ -476,7 +401,7 @@ mod pallet {
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
-            T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
+            T::WeightInfo::create_market()
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
                 T::MaxCategories::get().into(),
@@ -500,38 +425,24 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin.clone())?;
 
-            let category_count = match market_type {
+            let create_market_weight = Self::create_market(
+                origin.clone(),
+                oracle,
+                period,
+                metadata,
+                MarketCreation::Permissionless,
+                market_type.clone(),
+                mdm,
+                ScoringRule::CPMM,
+            )?
+            .actual_weight
+            .unwrap_or_else(T::WeightInfo::create_market);
+
+            // Deploy the swap pool and populate it.
+            let asset_count = match market_type {
                 MarketType::Categorical(value) => value,
                 MarketType::Scalar(_) => 2,
             };
-            let create_market_weight = match market_type {
-                MarketType::Categorical(category_count) => Self::create_categorical_market(
-                    origin.clone(),
-                    oracle,
-                    period,
-                    metadata,
-                    MarketCreation::Permissionless,
-                    category_count,
-                    mdm,
-                    ScoringRule::CPMM,
-                )?
-                .actual_weight
-                .unwrap_or_else(T::WeightInfo::create_categorical_market),
-                MarketType::Scalar(range) => Self::create_scalar_market(
-                    origin.clone(),
-                    oracle,
-                    period,
-                    metadata,
-                    MarketCreation::Permissionless,
-                    range,
-                    mdm,
-                    ScoringRule::CPMM,
-                )?
-                .actual_weight
-                .unwrap_or_else(T::WeightInfo::create_scalar_market),
-            };
-
-            // Deploy the swap pool and populate it.
             let market_id = T::MarketCommons::latest_market_id()?;
             let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liquidity(
                 origin,
@@ -541,26 +452,24 @@ mod pallet {
             )?
             .actual_weight
             .unwrap_or_else(|| {
-                T::WeightInfo::buy_complete_set(category_count.into())
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                        category_count.into(),
-                    ))
-                    .saturating_add(5_000_000_000.saturating_mul(category_count.into()))
+                T::WeightInfo::buy_complete_set(asset_count.into())
+                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(asset_count.into()))
+                    .saturating_add(5_000_000_000.saturating_mul(asset_count.into()))
                     .saturating_add(T::DbWeight::get().reads(2 as Weight))
             });
 
             Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
         }
 
-        #[pallet::weight(T::WeightInfo::create_scalar_market())]
+        #[pallet::weight(T::WeightInfo::create_market())]
         #[transactional]
-        pub fn create_scalar_market(
+        pub fn create_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             creation: MarketCreation,
-            outcome_range: RangeInclusive<u128>,
+            market_type: MarketType,
             mdm: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
@@ -568,10 +477,21 @@ mod pallet {
             Self::ensure_market_is_active(&period)?;
             Self::ensure_market_period_is_valid(&period)?;
 
+            match market_type {
+                MarketType::Categorical(categories) => {
+                    ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
+                    ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+                }
+                MarketType::Scalar(ref outcome_range) => {
+                    ensure!(
+                        outcome_range.start() < outcome_range.end(),
+                        <Error<T>>::InvalidOutcomeRange
+                    );
+                }
+            }
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
-            ensure!(outcome_range.start() < outcome_range.end(), <Error<T>>::InvalidOutcomeRange);
 
             // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
             // for a compiler error. Link an issue for this!
@@ -602,7 +522,7 @@ mod pallet {
                 creation,
                 creator_fee: 0,
                 creator: sender,
-                market_type: MarketType::Scalar(outcome_range),
+                market_type,
                 mdm,
                 metadata: Vec::from(multihash),
                 oracle,
@@ -622,7 +542,7 @@ mod pallet {
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
-            Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::create_market().saturating_add(extra_weight)).into())
         }
 
         /// Buy complete sets and deploy a pool with specified liquidity for a market.
