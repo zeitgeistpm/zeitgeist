@@ -39,13 +39,13 @@ fn simple_create_categorical_market<T: crate::Config>(
     period: Range<u64>,
     scoring_rule: ScoringRule,
 ) {
-    assert_ok!(PredictionMarkets::create_categorical_market(
+    assert_ok!(PredictionMarkets::create_market(
         Origin::signed(ALICE),
         BOB,
         MarketPeriod::Block(period),
         gen_metadata(2),
         creation,
-        T::MinCategories::get(),
+        MarketType::Categorical(T::MinCategories::get()),
         MarketDisputeMechanism::SimpleDisputes,
         scoring_rule
     ));
@@ -56,13 +56,13 @@ fn simple_create_scalar_market<T: crate::Config>(
     period: Range<u64>,
     scoring_rule: ScoringRule,
 ) {
-    assert_ok!(PredictionMarkets::create_scalar_market(
+    assert_ok!(PredictionMarkets::create_market(
         Origin::signed(ALICE),
         BOB,
         MarketPeriod::Block(period),
         gen_metadata(2),
         creation,
-        100..=200,
+        MarketType::Scalar(100..=200),
         MarketDisputeMechanism::SimpleDisputes,
         scoring_rule
     ));
@@ -86,7 +86,7 @@ fn admin_move_market_to_closed_successfully_closes_market() {
 }
 
 #[test]
-fn admin_move_market_fails_if_market_does_not_exist() {
+fn admin_move_market_to_closed_fails_if_market_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
             PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
@@ -95,12 +95,14 @@ fn admin_move_market_fails_if_market_does_not_exist() {
     });
 }
 
-#[test_case(MarketStatus::Proposed; "proposed")]
 #[test_case(MarketStatus::Closed; "closed")]
 #[test_case(MarketStatus::Reported; "reported")]
 #[test_case(MarketStatus::Disputed; "disputed")]
 #[test_case(MarketStatus::Resolved; "resolved")]
-fn admin_move_market_to_closed_fails_if_market_is_not_active(status: MarketStatus) {
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market::<Runtime>(
             MarketCreation::Permissionless,
@@ -109,7 +111,7 @@ fn admin_move_market_to_closed_fails_if_market_is_not_active(status: MarketStatu
         );
         let market_id = 0;
         assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
-            market.status = status;
+            market.status = market_status;
             Ok(())
         }));
         assert_noop!(
@@ -144,13 +146,13 @@ fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
 fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::create_scalar_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Block(123..456),
                 gen_metadata(2),
                 MarketCreation::Permissionless,
-                range,
+                MarketType::Scalar(range),
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
@@ -498,13 +500,13 @@ fn create_scalar_market_deposits_the_correct_event() {
 fn it_does_not_create_market_with_too_few_categories() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::create_categorical_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Block(0..100),
                 gen_metadata(2),
                 MarketCreation::Advised,
-                <Runtime as Config>::MinCategories::get() - 1,
+                MarketType::Categorical(<Runtime as Config>::MinCategories::get() - 1),
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM
             ),
@@ -517,13 +519,13 @@ fn it_does_not_create_market_with_too_few_categories() {
 fn it_does_not_create_market_with_too_many_categories() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::create_categorical_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Block(0..100),
                 gen_metadata(2),
                 MarketCreation::Advised,
-                <Runtime as Config>::MaxCategories::get() + 1,
+                MarketType::Categorical(<Runtime as Config>::MaxCategories::get() + 1),
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM
             ),
@@ -585,13 +587,13 @@ fn approve_market_fails_if_market_close_is_not_far_enough_ahead() {
     // Note that there's no need for the symmetric test with blocks, since there's no minimum
     // duration requirement for those.
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get()),
             gen_metadata(0),
             MarketCreation::Advised,
-            3,
+            MarketType::Categorical(3),
             MarketDisputeMechanism::Authorized(CHARLIE),
             ScoringRule::CPMM,
         ));
@@ -850,13 +852,13 @@ fn it_does_not_allow_to_buy_a_complete_set_on_pending_advised_market() {
 fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::create_categorical_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Block(3..3),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                3,
+                MarketType::Categorical(3),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -886,13 +888,13 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
 ) {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::create_categorical_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 period,
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                3,
+                MarketType::Categorical(3),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -906,13 +908,13 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(33);
         assert_noop!(
-            PredictionMarkets::create_categorical_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Block(0..33),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                3,
+                MarketType::Categorical(3),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -921,13 +923,13 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
 
         Timestamp::set_timestamp(<Runtime as Config>::MinMarketDuration::get() / 2);
         assert_noop!(
-            PredictionMarkets::create_categorical_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get() / 2),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                3,
+                MarketType::Categorical(3),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -957,13 +959,13 @@ fn create_scalar_market_fails_if_market_period_is_invalid(
 ) {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(
-            PredictionMarkets::create_scalar_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 period,
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                123..=456,
+                MarketType::Scalar(123..=456),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -977,13 +979,13 @@ fn create_scalar_market_fails_if_end_is_not_far_enough_ahead() {
     ExtBuilder::default().build().execute_with(|| {
         run_to_block(33);
         assert_noop!(
-            PredictionMarkets::create_scalar_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Block(0..33),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                123..=456,
+                MarketType::Scalar(123..=456),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -992,13 +994,13 @@ fn create_scalar_market_fails_if_end_is_not_far_enough_ahead() {
 
         Timestamp::set_timestamp(<Runtime as Config>::MinMarketDuration::get() / 2);
         assert_noop!(
-            PredictionMarkets::create_scalar_market(
+            PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
                 MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get() / 2),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                123..=456,
+                MarketType::Scalar(123..=456),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -1491,13 +1493,13 @@ fn it_resolves_a_disputed_market() {
 #[test]
 fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..1),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            <Runtime as Config>::MinCategories::get(),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             MarketDisputeMechanism::Authorized(ALICE),
             ScoringRule::CPMM,
         ));
@@ -1746,13 +1748,13 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
 fn the_entire_market_lifecycle_works_with_timestamps() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -1781,13 +1783,13 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
 #[test]
 fn full_scalar_market_lifecycle() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_scalar_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(3),
             MarketCreation::Permissionless,
-            10..=30,
+            MarketType::Scalar(10..=30),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -1941,13 +1943,13 @@ fn reject_market_fails_on_approved_market() {
 #[test]
 fn market_resolve_does_not_hold_liquidity_withdraw() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..100),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            3,
+            MarketType::Categorical(3),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -1973,13 +1975,13 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
 fn authorized_correctly_resolves_disputed_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..1),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            <Runtime as Config>::MinCategories::get(),
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
             MarketDisputeMechanism::Authorized(FRED),
             ScoringRule::CPMM,
         ));
@@ -2091,13 +2093,13 @@ fn authorized_correctly_resolves_disputed_market() {
 #[test]
 fn approve_market_correctly_unreserves_advisory_bond() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..100),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
@@ -2118,13 +2120,13 @@ fn approve_market_correctly_unreserves_advisory_bond() {
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_oracle_report()
  {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..100),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
@@ -2154,13 +2156,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_market_on_outsider_report()
  {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..100),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
@@ -2188,13 +2190,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_oracle_report()
  {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..100),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
@@ -2220,13 +2222,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_outsider_report()
  {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Block(0..100),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
@@ -2251,13 +2253,13 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
 #[test]
 fn report_fails_on_market_state_proposed() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -2271,13 +2273,13 @@ fn report_fails_on_market_state_proposed() {
 #[test]
 fn report_fails_on_market_state_closed_for_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -2292,13 +2294,13 @@ fn report_fails_on_market_state_closed_for_advised_market() {
 #[test]
 fn report_fails_on_market_state_collecting_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::RikiddoSigmoidFeeMarketEma
         ));
@@ -2312,13 +2314,13 @@ fn report_fails_on_market_state_collecting_subsidy() {
 #[test]
 fn report_fails_on_market_state_insufficient_subsidy() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(100_000_000..200_000_000),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::RikiddoSigmoidFeeMarketEma
         ));
@@ -2336,13 +2338,13 @@ fn report_fails_on_market_state_insufficient_subsidy() {
 #[test]
 fn report_fails_on_market_state_active() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -2356,13 +2358,13 @@ fn report_fails_on_market_state_active() {
 #[test]
 fn report_fails_on_market_state_suspended() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -2380,13 +2382,13 @@ fn report_fails_on_market_state_suspended() {
 #[test]
 fn report_fails_on_market_state_resolved() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(2),
             MarketCreation::Advised,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
@@ -2405,13 +2407,13 @@ fn report_fails_on_market_state_resolved() {
 #[test]
 fn report_fails_if_reporter_is_not_the_oracle() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             MarketPeriod::Timestamp(0..100_000_000),
             gen_metadata(2),
             MarketCreation::Permissionless,
-            2,
+            MarketType::Categorical(2),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));

@@ -297,13 +297,13 @@ mod tests {
         market_creation: MarketCreation,
         market_status: MarketStatus,
     ) {
-        assert_ok!(PredictionMarkets::create_categorical_market(
+        assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
             period,
             gen_metadata(0),
             market_creation,
-            5,
+            MarketType::Categorical(5),
             MarketDisputeMechanism::Authorized(CHARLIE),
             ScoringRule::CPMM,
         ));
