@@ -17,20 +17,38 @@ use xcm::latest::{BodyId, Junction, Junctions, MultiLocation};
 
 pub struct XcmConfig;
 
+/// The main XCM config
+/// This is where we configure the core of our XCM integrations: how tokens are transferred,
+/// how fees are calculated, what barriers we impose on incoming XCM messages, etc.
 impl Config for XcmConfig {
+    /// The handler for when there is an instruction to claim assets.
     type AssetClaims = PolkadotXcm;
+    /// TODO: How to withdraw and deposit an asset.
     type AssetTransactor = LocalAssetTransactor;
+    /// The general asset trap - handler for when assets are left in the Holding Register at the
+    /// end of execution.
     type AssetTrap = PolkadotXcm;
+    /// Additional filters that specify whether the XCM call should be executed at all.
     type Barrier = Barrier;
+    /// The outer call dispatch type.
     type Call = Call;
+    /// TODO: Combinations of (Location, Asset) pairs which are trusted as reserves
     type IsReserve = NativeAsset;
+    /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
+    /// Means of inverting a location.
     type LocationInverter = LocationInverter<Ancestry>;
+    /// TODO: How to get a call origin from a `OriginKind` value.
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
+    /// Module that handles responses of queries.
     type ResponseHandler = PolkadotXcm;
+    /// Module that handles subscription requests.
     type SubscriptionService = PolkadotXcm;
+    /// TODO: The means of purchasing weight credit for XCM execution.
     type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
+    /// TODO: The means of determining an XCM message's weight.
     type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+    /// How to send an onward XCM message.
     type XcmSender = XcmRouter;
 }
 
