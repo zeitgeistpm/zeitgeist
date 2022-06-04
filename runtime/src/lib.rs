@@ -53,7 +53,7 @@ use {
     frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
-    xcm_config::XcmConfig,
+    xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin, LocalOriginToLocation, XcmRouter}
 };
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
