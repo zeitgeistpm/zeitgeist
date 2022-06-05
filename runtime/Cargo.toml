@@ -64,11 +64,12 @@ pallet-author-mapping = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", defa
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/crowdloan-rewards", optional = true }
 parachain-staking = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
-
-# Polkadot
-
-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+
+# XCM
+orml-xcm-support = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-unknown-tokens = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm-builder = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm-executor = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
@@ -123,11 +124,13 @@ parachain = [
     "pallet-author-slot-filter",
     "pallet-crowdloan-rewards",
     "parachain-staking",
-
-    # Polkadot
-
-    "pallet-xcm",
     "polkadot-parachain",
+
+    # XCM
+
+    "orml-unknown-tokens",
+    "orml-xcm-support",
+    "pallet-xcm",
     "xcm-builder",
     "xcm-executor",
     "xcm",
@@ -239,11 +242,13 @@ std = [
     "pallet-author-slot-filter?/std",
     "pallet-crowdloan-rewards?/std",
     "parachain-staking?/std",
-
-    # Polkadot
-
-    "pallet-xcm?/std",
     "polkadot-parachain?/std",
+
+    # XCM
+
+    "orml-unknown-tokens?/std",
+    "orml-xcm-support?/std",
+    "pallet-xcm?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",

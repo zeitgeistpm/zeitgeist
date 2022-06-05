@@ -53,7 +53,7 @@ use {
     frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
-    xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin, LocalOriginToLocation, XcmRouter}
+    xcm_config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter},
 };
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -204,6 +204,7 @@ macro_rules! create_zeitgeist_runtime {
                 // Third-party
                 Currency: orml_currencies::{Call, Pallet, Storage} = 40,
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
+                UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 42,
 
                 // Zeitgeist
                 MarketCommons: zrml_market_commons::{Pallet, Storage} = 50,
@@ -547,6 +548,10 @@ impl orml_tokens::Config for Runtime {
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
+}
+
+impl orml_unknown_tokens::Config for Runtime {
+    type Event = Event;
 }
 
 #[cfg(feature = "parachain")]

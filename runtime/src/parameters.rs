@@ -135,6 +135,7 @@ parameter_types! {
     pub const ProposalBondMaximum: Balance = 500 * BASE;
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+    pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 
     // Vesting
     pub const MinVestedTransfer: Balance = CENT;

@@ -33,14 +33,14 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for WeightInfo<T> {
     // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     fn add_association() -> Weight {
         (60_010_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     // Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     fn update_association() -> Weight {
         (45_540_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
@@ -48,7 +48,7 @@ impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for Wei
     }
     // Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     fn clear_association() -> Weight {
         (60_780_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))

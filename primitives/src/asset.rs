@@ -18,6 +18,9 @@ pub enum Asset<MI: MaxEncodedLen> {
     ScalarOutcome(MI, ScalarPosition),
     CombinatorialOutcome,
     PoolShare(SerdeWrapper<PoolId>),
+    Ausd,
+    Ksm,
+    Roc,
     Ztg,
 }
 

@@ -5191,6 +5191,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-unknown-tokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-xcm-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
 source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
@@ -5202,6 +5217,20 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-xcm-support"
+version = "0.4.1-dev"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+dependencies = [
+ "frame-support",
+ "orml-traits",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -12530,6 +12559,8 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",

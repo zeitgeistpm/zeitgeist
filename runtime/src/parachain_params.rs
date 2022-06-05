@@ -10,7 +10,6 @@ use sp_runtime::{Perbill, Percent, SaturatedConversion};
 use xcm::latest::{Junction, MultiLocation, NetworkId};
 use zeitgeist_primitives::{constants::MICRO, types::Balance};
 
-
 parameter_types! {
     // Author-Mapping
     /// The amount that should be taken as a security deposit when registering a NimbusId.
