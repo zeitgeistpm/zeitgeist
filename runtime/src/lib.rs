@@ -365,7 +365,7 @@ cfg_if::cfg_if! {
                     | Call::Vesting(_) => true,
 
                     // Prohibited calls:
-                    | Call::Authorized(_)
+                    Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
