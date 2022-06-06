@@ -17,6 +17,9 @@ std = [
     "sp-runtime/std",
     "zeitgeist-primitives/std",
 ]
+try-runtime = [
+  "frame-support/try-runtime",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
