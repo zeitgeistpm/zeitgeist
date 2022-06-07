@@ -1,3 +1,9 @@
+# v0.3.3
+
+- Made the `min_asset_amount_out` and `max_price` parameters of
+  `swap_exact_amount_in` and the `max_asset_amount_in` and `max_price`
+  parameters of `swap_exact_amount_out` optional
+
 # v0.3.2
 
 - Added a field for `market_account` to `MarketCreated` event and `pool_account`
