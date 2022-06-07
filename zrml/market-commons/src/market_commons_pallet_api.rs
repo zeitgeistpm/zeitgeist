@@ -6,7 +6,7 @@ use frame_support::{
 };
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::traits::AtLeast32Bit;
-use zeitgeist_primitives::types::{Market, PoolId, Report};
+use zeitgeist_primitives::types::{Market, PoolId};
 
 /// Simple disputes - Pallet Api
 pub trait MarketCommonsPalletApi {
@@ -46,11 +46,6 @@ pub trait MarketCommonsPalletApi {
 
     /// Removes a market from the storage.
     fn remove_market(market_id: &Self::MarketId) -> DispatchResult;
-
-    /// If any, returns all information regarding the account that reported an outcome.
-    fn report(
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<&Report<Self::AccountId, Self::BlockNumber>, DispatchError>;
 
     // MarketPool
 

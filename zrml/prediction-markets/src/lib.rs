@@ -28,7 +28,6 @@
 //! - `create_categorical_market` - Creates a new categorical market.
 //! - `create_cpmm_market_and_deploy_assets` - Creates a market using CPMM scoring rule, buys a
 //!   complete set of the assets used and deploys the funds.
-//! - `create_scalar_market` - Creates a new scalar market.
 //! - `deploy_swap_pool_for_market` - Deploys a single "canonical" pool for a market.
 //! - `deploy_swap_pool_and_additional_liquidity` - Deploys a single "canonical" pool for a market,
 //!   buys a complete set of the assets used and deploys the funds as specified.
@@ -79,7 +78,7 @@ pub use pallet::*;
 mod pallet {
     use crate::weights::*;
     use alloc::{vec, vec::Vec};
-    use core::{cmp, marker::PhantomData, ops::RangeInclusive};
+    use core::{cmp, marker::PhantomData};
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
@@ -241,8 +240,10 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResult {
+            // TODO(#638): Handle Rikiddo markets!
             T::CloseOrigin::ensure_origin(origin)?;
             T::MarketCommons::mutate_market(&market_id, |m| {
+                Self::ensure_market_is_active(&m.period)?;
                 m.period = match m.period {
                     MarketPeriod::Block(ref range) => {
                         let current_block = <frame_system::Pallet<T>>::block_number();
@@ -404,91 +405,6 @@ mod pallet {
             )
         }
 
-        #[pallet::weight(T::WeightInfo::create_categorical_market())]
-        #[transactional]
-        pub fn create_categorical_market(
-            origin: OriginFor<T>,
-            oracle: T::AccountId,
-            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            metadata: MultiHash,
-            creation: MarketCreation,
-            #[pallet::compact] categories: u16,
-            mdm: MarketDisputeMechanism<T::AccountId>,
-            scoring_rule: ScoringRule,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            Self::ensure_market_is_active(&period)?;
-            Self::ensure_market_period_is_valid(&period)?;
-
-            ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
-            ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
-
-            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-                Self::ensure_market_start_is_in_time(&period)?;
-            }
-
-            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
-            // for a compiler error. Link an issue for this!
-            #[allow(irrefutable_let_patterns)]
-            let multihash =
-                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
-            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
-
-            let status: MarketStatus = match creation {
-                MarketCreation::Permissionless => {
-                    let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    T::AssetManager::reserve_named(
-                        &RESERVE_ID,
-                        T::BaseAsset::get(),
-                        &sender,
-                        required_bond,
-                    )?;
-
-                    if scoring_rule == ScoringRule::CPMM {
-                        MarketStatus::Active
-                    } else {
-                        MarketStatus::CollectingSubsidy
-                    }
-                }
-                MarketCreation::Advised => {
-                    let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    T::AssetManager::reserve_named(
-                        &RESERVE_ID,
-                        T::BaseAsset::get(),
-                        &sender,
-                        required_bond,
-                    )?;
-                    MarketStatus::Proposed
-                }
-            };
-
-            let market = Market {
-                creation,
-                creator_fee: 0,
-                creator: sender,
-                market_type: MarketType::Categorical(categories),
-                mdm,
-                metadata: Vec::from(multihash),
-                oracle,
-                period,
-                report: None,
-                resolved_outcome: None,
-                scoring_rule,
-                status,
-            };
-            let market_id = T::MarketCommons::push_market(market.clone())?;
-            let market_account = Self::market_account(market_id);
-            let mut extra_weight = 0;
-
-            if market.status == MarketStatus::CollectingSubsidy {
-                extra_weight = Self::start_subsidy(&market, market_id)?;
-            }
-
-            Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
-
-            Ok(Some(T::WeightInfo::create_categorical_market().saturating_add(extra_weight)).into())
-        }
-
         /// This function combines the creation of a permissionless market, the buying of a
         /// complete set of outcome assets, the deployment of the minimum amount of outcome assets
         /// and the optional deployment of additional outcome asset.
@@ -509,7 +425,7 @@ mod pallet {
         ///     means, that after deployment 30 of the first outcome asset will be kept.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
-            T::WeightInfo::create_scalar_market().max(T::WeightInfo::create_categorical_market())
+            T::WeightInfo::create_market()
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().min(amount_outcome_assets.len().saturated_into()).into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(T::MaxCategories::get().min(weights.len().saturated_into()).into()))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
@@ -542,32 +458,18 @@ mod pallet {
             }
 
             // Create the correct market
-            let weight_market_creation = match assets.clone() {
-                MarketType::Categorical(category_count) => Self::create_categorical_market(
-                    origin.clone(),
-                    oracle,
-                    period,
-                    metadata,
-                    MarketCreation::Permissionless,
-                    category_count,
-                    mdm,
-                    ScoringRule::CPMM,
-                )?
-                .actual_weight
-                .unwrap_or_else(T::WeightInfo::create_categorical_market),
-                MarketType::Scalar(range) => Self::create_scalar_market(
-                    origin.clone(),
-                    oracle,
-                    period,
-                    metadata,
-                    MarketCreation::Permissionless,
-                    range,
-                    mdm,
-                    ScoringRule::CPMM,
-                )?
-                .actual_weight
-                .unwrap_or_else(T::WeightInfo::create_scalar_market),
-            };
+            let weight_market_creation = Self::create_market(
+                origin.clone(),
+                oracle,
+                period,
+                metadata,
+                MarketCreation::Permissionless,
+                assets.clone(),
+                mdm,
+                ScoringRule::CPMM,
+            )?
+            .actual_weight
+            .unwrap_or_else(T::WeightInfo::create_market);
 
             // Deploy the swap pool and populate it.
             let market_id = T::MarketCommons::latest_market_id()?;
@@ -601,15 +503,15 @@ mod pallet {
             Ok(Some(weight_market_creation.saturating_add(deploy_and_populate_weight)).into())
         }
 
-        #[pallet::weight(T::WeightInfo::create_scalar_market())]
+        #[pallet::weight(T::WeightInfo::create_market())]
         #[transactional]
-        pub fn create_scalar_market(
+        pub fn create_market(
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             creation: MarketCreation,
-            outcome_range: RangeInclusive<u128>,
+            market_type: MarketType,
             mdm: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
@@ -617,6 +519,18 @@ mod pallet {
             Self::ensure_market_is_active(&period)?;
             Self::ensure_market_period_is_valid(&period)?;
 
+            match market_type {
+                MarketType::Categorical(categories) => {
+                    ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
+                    ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+                }
+                MarketType::Scalar(ref outcome_range) => {
+                    ensure!(
+                        outcome_range.start() < outcome_range.end(),
+                        <Error<T>>::InvalidOutcomeRange
+                    );
+                }
+            }
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
@@ -660,7 +574,7 @@ mod pallet {
                 creation,
                 creator_fee: 0,
                 creator: sender,
-                market_type: MarketType::Scalar(outcome_range),
+                market_type,
                 mdm,
                 metadata: Vec::from(multihash),
                 oracle,
@@ -680,7 +594,7 @@ mod pallet {
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
-            Ok(Some(T::WeightInfo::create_scalar_market().saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::create_market().saturating_add(extra_weight)).into())
         }
 
         /// This function combines the creation of a market, the buying of a complete set of
@@ -1317,6 +1231,8 @@ mod pallet {
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
         InvalidMarketPeriod,
+        /// The outcome range of the scalar market is invalid.
+        InvalidOutcomeRange,
     }
 
     #[pallet::event]
@@ -1727,7 +1643,7 @@ mod pallet {
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
 
-            let report = T::MarketCommons::report(market)?;
+            let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
 
             let resolved_outcome = match market.status {
                 MarketStatus::Reported => {
@@ -1756,7 +1672,7 @@ mod pallet {
                         )?;
                     }
 
-                    T::MarketCommons::report(market)?.outcome.clone()
+                    report.outcome.clone()
                 }
                 MarketStatus::Disputed => {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to

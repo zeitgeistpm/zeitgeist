@@ -59,33 +59,16 @@ fn create_market_common<T: Config>(
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, oracle, period, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
-
-    if let MarketType::Categorical(categories) = options {
-        let _ = Call::<T>::create_categorical_market {
-            oracle,
-            period,
-            metadata,
-            creation,
-            categories,
-            mdm: MarketDisputeMechanism::SimpleDisputes,
-            scoring_rule,
-        }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    } else if let MarketType::Scalar(range) = options {
-        let _ = Call::<T>::create_scalar_market {
-            oracle,
-            period,
-            metadata,
-            creation,
-            outcome_range: range,
-            mdm: MarketDisputeMechanism::SimpleDisputes,
-            scoring_rule,
-        }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    } else {
-        panic!("create_market_common: Unsupported market type: {:?}", options);
+    let _ = Call::<T>::create_market {
+        oracle,
+        period,
+        metadata,
+        creation,
+        market_type: options,
+        mdm: MarketDisputeMechanism::SimpleDisputes,
+        scoring_rule,
     }
-
+    .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let market_id = T::MarketCommons::latest_market_id()?;
     Ok((caller, market_id))
 }
@@ -311,18 +294,13 @@ benchmarks! {
         let amount = BASE * 1_000;
     }: _(RawOrigin::Signed(caller), market_id, amount.saturated_into())
 
-    create_categorical_market {
+    // Beware! We're only benchmarking categorical markets (scalar market creation is essentially
+    // the same).
+    create_market {
         let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-        let categories = T::MaxCategories::get();
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, categories,
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
-
-    create_scalar_market {
-        let (caller, oracle, period, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-        let outcome_range = 0u128..=u128::MAX;
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, outcome_range,
+    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation,
+            MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 
     deploy_swap_pool_for_market {
