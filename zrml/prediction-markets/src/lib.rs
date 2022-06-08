@@ -262,7 +262,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
-                "not reported nor disputed"
+                Error::<T>::InvalidMarketStatus,
             );
             Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
