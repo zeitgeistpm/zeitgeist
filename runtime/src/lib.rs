@@ -551,6 +551,8 @@ impl orml_tokens::Config for Runtime {
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 #[cfg(feature = "parachain")]

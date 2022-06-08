@@ -124,6 +124,8 @@ impl orml_tokens::Config for Runtime {
     type OnDust = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Runtime {

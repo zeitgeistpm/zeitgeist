@@ -6,10 +6,10 @@ frame-executive = { branch = "moonbeam-polkadot-v0.9.19", default-features = fal
 frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-benchmarking = { branch = "named_currencies", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-currencies = { branch = "named_currencies", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-tokens = { branch = "named_currencies", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-traits = { branch = "named_currencies", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-benchmarking = { branch = "2022-06-v0.9.19", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-currencies = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-tokens = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-democracy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
