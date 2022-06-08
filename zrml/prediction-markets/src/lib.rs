@@ -576,12 +576,9 @@ mod pallet {
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weights_len = weights.len();
             let _ = Self::deploy_swap_pool_for_market(origin, market_id, amount, weights)?;
-            Ok(Some(
-                weight_bcs
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                        weights_len.saturated_into(),
-                    ))
-            )
+            Ok(Some(weight_bcs.saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
+                weights_len.saturated_into(),
+            )))
             .into())
         }
 
