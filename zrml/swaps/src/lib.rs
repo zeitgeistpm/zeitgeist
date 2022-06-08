@@ -753,8 +753,12 @@ mod pallet {
         BelowMinimumWeight,
         /// Some funds could not be transferred due to a too low balance.
         InsufficientBalance,
+        /// Liquidity provided to new Balancer pool is less than `MinLiquidity`.
+        InsufficientLiquidity,
         /// The market was not started since the subsidy goal was not reached.
         InsufficientSubsidy,
+        /// Could not create CPMM pool since no amount was specified.
+        InvalidAmountArgument,
         /// Could not create CPMM pool since no fee was supplied.
         InvalidFeeArgument,
         /// A function that is only valid for pools with specific scoring rules was called for a
@@ -764,8 +768,6 @@ mod pallet {
         InvalidStateTransition,
         /// Could not create CPMM pool since no weights were supplied.
         InvalidWeightArgument,
-        /// Could not create CPMM pool since no amount was specified.
-        InvalidAmountArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
         /// Subsidy amount is too small.
@@ -809,8 +811,6 @@ mod pallet {
         UnsupportedTrade,
         /// The outcome asset specified as the winning asset was not found in the pool.
         WinningAssetNotFound,
-        /// Liquidity provided to new Balancer pool is less than `MinLiquidity`.
-        InsufficientLiquidity,
         /// Some amount in a transaction equals zero.
         ZeroAmount,
     }
