@@ -581,7 +581,6 @@ mod pallet {
                     .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
                         weights_len.saturated_into(),
                     ))
-                    .saturating_add(T::DbWeight::get().reads(2)),
             )
             .into())
         }
