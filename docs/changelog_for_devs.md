@@ -5,6 +5,10 @@
   by using a single `amount` parameter instead of `amount_base_asset` and
   `amount_outcome_assets`.
 
+- Made the `min_asset_amount_out` and `max_price` parameters of
+  `swap_exact_amount_in` and the `max_asset_amount_in` and `max_price`
+  parameters of `swap_exact_amount_out` optional
+
 - Replaced `create_categorical_market` and `create_scalar_market` with
   `create_market`, which uses a `market_type` parameter to determine what market
   we create

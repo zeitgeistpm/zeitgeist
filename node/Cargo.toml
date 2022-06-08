@@ -36,6 +36,10 @@ sp-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com
 sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
+# Try-Runtime
+
+try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+
 # Benchmark
 
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
@@ -147,6 +151,10 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
     "zeitgeist-runtime/runtime-benchmarks"
+]
+try-runtime = [
+    "zeitgeist-runtime/try-runtime",
+    "try-runtime-cli",
 ]
 
 [package]

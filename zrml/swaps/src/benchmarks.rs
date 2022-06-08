@@ -390,8 +390,8 @@ benchmarks! {
         let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
             Some(T::MinLiquidity::get() * 2u32.into()), ScoringRule::CPMM, false);
         let asset_amount_in: BalanceOf<T> = BASE.saturated_into();
-        let min_asset_amount_out: BalanceOf<T> = 0u32.into();
-        let max_price = T::MinLiquidity::get() * 2u32.into();
+        let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u32.into());
+        let max_price = Some(T::MinLiquidity::get() * 2u32.into());
     }: swap_exact_amount_in(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount_in,
             assets[T::MaxAssets::get() as usize - 1], min_asset_amount_out, max_price)
 
@@ -401,8 +401,8 @@ benchmarks! {
         let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
             Some(BASE.saturated_into()), ScoringRule::RikiddoSigmoidFeeMarketEma, true);
         let asset_amount_in: BalanceOf<T> = BASE.saturated_into();
-        let min_asset_amount_out: BalanceOf<T> = 0u32.into();
-        let max_price = (BASE * 1024).saturated_into();
+        let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u32.into());
+        let max_price = Some((BASE * 1024).saturated_into());
     }: swap_exact_amount_in(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount_in,
             *assets.last().unwrap(), min_asset_amount_out, max_price)
 
@@ -411,10 +411,10 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
             Some(T::MinLiquidity::get() * 2u32.into()), ScoringRule::CPMM, false);
-        let max_amount_asset_in: BalanceOf<T> = T::MinLiquidity::get();
+        let max_asset_amount_in: Option<BalanceOf<T>> = Some(T::MinLiquidity::get());
         let asset_amount_out: BalanceOf<T> = BASE.saturated_into();
-        let max_price = T::MinLiquidity::get() * 2u32.into();
-    }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, assets[0], max_amount_asset_in,
+        let max_price = Some(T::MinLiquidity::get() * 2u32.into());
+    }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, assets[0], max_asset_amount_in,
             assets[T::MaxAssets::get() as usize - 1], asset_amount_out, max_price)
 
     swap_exact_amount_out_rikiddo {
@@ -422,10 +422,10 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
             Some(BASE.saturated_into()), ScoringRule::RikiddoSigmoidFeeMarketEma, true);
-        let max_amount_asset_in: BalanceOf<T> = (BASE * 1024).saturated_into();
+        let max_asset_amount_in: Option<BalanceOf<T>> = Some((BASE * 1024).saturated_into());
         let asset_amount_out: BalanceOf<T> = BASE.saturated_into();
-        let max_price = (BASE * 1024).saturated_into();
-    }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, *assets.last().unwrap(), max_amount_asset_in,
+        let max_price = Some((BASE * 1024).saturated_into());
+    }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, *assets.last().unwrap(), max_asset_amount_in,
             assets[0], asset_amount_out, max_price)
 }
 

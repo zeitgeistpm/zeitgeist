@@ -138,8 +138,8 @@ pub trait Swaps<AccountId> {
         asset_in: Asset<Self::MarketId>,
         asset_amount_in: Self::Balance,
         asset_out: Asset<Self::MarketId>,
-        min_asset_amount_out: Self::Balance,
-        max_price: Self::Balance,
+        min_asset_amount_out: Option<Self::Balance>,
+        max_price: Option<Self::Balance>,
     ) -> Result<Weight, DispatchError>;
 
     /// Swap - Exact amount out
@@ -159,9 +159,9 @@ pub trait Swaps<AccountId> {
         who: AccountId,
         pool_id: PoolId,
         asset_in: Asset<Self::MarketId>,
-        max_amount_asset_in: Self::Balance,
+        max_amount_asset_in: Option<Self::Balance>,
         asset_out: Asset<Self::MarketId>,
         asset_amount_out: Self::Balance,
-        max_price: Self::Balance,
+        max_price: Option<Self::Balance>,
     ) -> Result<Weight, DispatchError>;
 }
