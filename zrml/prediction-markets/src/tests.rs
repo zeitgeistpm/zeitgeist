@@ -1319,6 +1319,38 @@ fn it_resolves_a_disputed_market() {
 }
 
 #[test]
+fn check_dispute_after_market_resolve() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
+
+        run_to_block(100);
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+
+        run_to_block(115);
+
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
+
+        assert_noop!(
+            PredictionMarkets::dispute(Origin::signed(EVE), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
+#[test]
 fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
