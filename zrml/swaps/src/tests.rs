@@ -619,7 +619,7 @@ fn admin_clean_up_pool_fails_if_origin_is_not_root() {
         let idx = if let Asset::CategoricalOutcome(_, idx) = ASSET_A { idx } else { 0 };
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(MarketCommons::push_market(mock_market(69)));
-        MarketCommons::insert_market_pool(0, 0);
+        assert_ok!(MarketCommons::insert_market_pool(0, 0));
         assert_noop!(
             Swaps::admin_clean_up_pool(alice_signed(), 0, OutcomeReport::Categorical(idx)),
             BadOrigin
@@ -780,7 +780,7 @@ fn pool_exit_decreases_correct_pool_parameters_on_closed_pool() {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(MarketCommons::push_market(mock_market(69)));
-        MarketCommons::insert_market_pool(0, 0);
+        assert_ok!(MarketCommons::insert_market_pool(0, 0));
 
         assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
         assert_ok!(Swaps::close_pool(0));

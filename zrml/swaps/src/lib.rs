@@ -1200,11 +1200,11 @@ mod pallet {
 
         pub(crate) fn pool_by_id(
             pool_id: PoolId,
-        ) -> Result<Pool<BalanceOf<T>, T::MarketId>, Error<T>>
+        ) -> Result<Pool<BalanceOf<T>, T::MarketId>, DispatchError>
         where
             T: Config,
         {
-            Self::pools(pool_id).ok_or(Error::<T>::PoolDoesNotExist)
+            Self::pools(pool_id).ok_or_else(|| Error::<T>::PoolDoesNotExist.into())
         }
 
         fn inc_next_pool_id() -> Result<PoolId, DispatchError> {
@@ -1753,7 +1753,7 @@ mod pallet {
         }
 
         fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError> {
-            Ok(Self::pool_by_id(pool_id)?)
+            Self::pool_by_id(pool_id)
         }
 
         /// Remove losing assets and distribute Rikiddo pool share rewards.

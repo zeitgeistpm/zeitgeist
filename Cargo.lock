@@ -12672,9 +12672,12 @@ version = "0.3.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
+ "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
 ]
