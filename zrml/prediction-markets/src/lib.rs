@@ -349,7 +349,10 @@ mod pallet {
             let disputes = Disputes::<T>::get(market_id);
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
             let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.status != MarketStatus::Resolved, Error::<T>::InvalidMarketStatus);
+            ensure!(
+                matches!(market.status, MarketStatus::Reported | MarketStatus::Disputed),
+                Error::<T>::InvalidMarketStatus
+            );
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             CurrencyOf::<T>::reserve_named(
