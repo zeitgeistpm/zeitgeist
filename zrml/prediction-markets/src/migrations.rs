@@ -12,8 +12,10 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
-const REQUIRED_STORAGE_VERSION: u16 = 0;
-const NEXT_STORAGE_VERSION: u16 = 1;
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 0;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 1;
+const SWAPS_REQUIRED_STORAGE_VERSION: u16 = 0;
+const SWAPS_NEXT_STORAGE_VERSION: u16 = 1;
 
 pub struct MigrateMarketIdsPerClose<T>(PhantomData<T>);
 
@@ -23,7 +25,19 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
         T: Config,
     {
         let mut total_weight = T::DbWeight::get().reads(1);
-        if StorageVersion::get::<Pallet<T>>() != REQUIRED_STORAGE_VERSION {
+
+        if StorageVersion::get::<Pallet<T>>() != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "Skipping storage migration of MarketIdsPerClose*; prediction-markets already up \
+                 to date"
+            );
+            return total_weight;
+        }
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+        if utility::get_storage_version_of_swaps_pallet() != SWAPS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "Skipping storage migration of MarketIdsPerClose*; swaps already up to date"
+            );
             return total_weight;
         }
         log::info!("Starting storage migration of MarketIdsPerClose*");
@@ -107,11 +121,36 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
             total_weight = total_weight.saturating_add(weight);
         }
 
-        StorageVersion::new(NEXT_STORAGE_VERSION).put::<Pallet<T>>();
-        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
+        utility::put_storage_version_of_swaps_pallet(SWAPS_NEXT_STORAGE_VERSION);
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(2));
 
         log::info!("Completed storage migration of MarketIdsPerClose*");
         total_weight
+    }
+}
+
+// We use these utilities to prevent having to make the swaps pallet a dependency of
+// prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
+// https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
+mod utility {
+    use frame_support::{
+        storage::{storage_prefix, unhashed},
+        traits::StorageVersion,
+    };
+
+    fn storage_prefix_of_swaps_pallet() -> [u8; 32] {
+        storage_prefix(b"Swaps", b":__STORAGE_VERSION__:")
+    }
+
+    pub fn get_storage_version_of_swaps_pallet() -> StorageVersion {
+        let key = storage_prefix_of_swaps_pallet();
+        unhashed::get_or_default(&key)
+    }
+
+    pub fn put_storage_version_of_swaps_pallet(value: u16) {
+        let key = storage_prefix_of_swaps_pallet();
+        unhashed::put(&key, &StorageVersion::new(value));
     }
 }
 
@@ -133,6 +172,18 @@ mod tests {
     fn test_on_runtime_upgrade_on_untouched_chain() {
         ExtBuilder::default().build().execute_with(|| {
             MigrateMarketIdsPerClose::<Runtime>::on_runtime_upgrade();
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_updates_storage_versions() {
+        ExtBuilder::default().build().execute_with(|| {
+            MigrateMarketIdsPerClose::<Runtime>::on_runtime_upgrade();
+            assert_eq!(
+                StorageVersion::get::<Pallet<Runtime>>(),
+                PREDICTION_MARKETS_NEXT_STORAGE_VERSION
+            );
+            assert_eq!(utility::get_storage_version_of_swaps_pallet(), SWAPS_NEXT_STORAGE_VERSION);
         });
     }
 
