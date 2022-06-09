@@ -14,8 +14,8 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 0;
 const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 1;
-const SWAPS_REQUIRED_STORAGE_VERSION: u16 = 0;
-const SWAPS_NEXT_STORAGE_VERSION: u16 = 1;
+const SWAPS_REQUIRED_STORAGE_VERSION: u16 = 1;
+const SWAPS_NEXT_STORAGE_VERSION: u16 = 2;
 
 pub struct MigrateMarketIdsPerClose<T>(PhantomData<T>);
 
@@ -34,7 +34,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
             return total_weight;
         }
         total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-        if utility::get_storage_version_of_swaps_pallet() != SWAPS_REQUIRED_STORAGE_VERSION {
+        if utility::get_on_chain_storage_version_of_swaps_pallet() != SWAPS_REQUIRED_STORAGE_VERSION
+        {
             log::info!(
                 "Skipping storage migration of MarketIdsPerClose*; swaps already up to date"
             );
@@ -143,7 +144,7 @@ mod utility {
         storage_prefix(b"Swaps", b":__STORAGE_VERSION__:")
     }
 
-    pub fn get_storage_version_of_swaps_pallet() -> StorageVersion {
+    pub fn get_on_chain_storage_version_of_swaps_pallet() -> StorageVersion {
         let key = storage_prefix_of_swaps_pallet();
         unhashed::get_or_default(&key)
     }
@@ -171,6 +172,7 @@ mod tests {
     #[test]
     fn test_on_runtime_upgrade_on_untouched_chain() {
         ExtBuilder::default().build().execute_with(|| {
+            setup_chain();
             MigrateMarketIdsPerClose::<Runtime>::on_runtime_upgrade();
         });
     }
@@ -178,18 +180,23 @@ mod tests {
     #[test]
     fn on_runtime_upgrade_updates_storage_versions() {
         ExtBuilder::default().build().execute_with(|| {
+            setup_chain();
             MigrateMarketIdsPerClose::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<Pallet<Runtime>>(),
                 PREDICTION_MARKETS_NEXT_STORAGE_VERSION
             );
-            assert_eq!(utility::get_storage_version_of_swaps_pallet(), SWAPS_NEXT_STORAGE_VERSION);
+            assert_eq!(
+                utility::get_on_chain_storage_version_of_swaps_pallet(),
+                SWAPS_NEXT_STORAGE_VERSION
+            );
         });
     }
 
     #[test]
     fn test_on_runtime_upgrade_with_sample_markets() {
         ExtBuilder::default().build().execute_with(|| {
+            setup_chain();
             let _ = Currency::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
 
             // Markets which end here will have to be closed on migration:
@@ -313,6 +320,11 @@ mod tests {
             assert_eq!(Swaps::pool(4).unwrap().pool_status, PoolStatus::Closed);
             assert_eq!(Swaps::pool(5).unwrap().pool_status, PoolStatus::Closed);
         });
+    }
+
+    fn setup_chain() {
+        StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
+        utility::put_storage_version_of_swaps_pallet(SWAPS_REQUIRED_STORAGE_VERSION);
     }
 
     fn create_test_market_with_pool(
