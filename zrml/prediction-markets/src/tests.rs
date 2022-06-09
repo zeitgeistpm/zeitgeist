@@ -1319,7 +1319,7 @@ fn it_resolves_a_disputed_market() {
 }
 
 #[test]
-fn check_dispute_after_market_resolve() {
+fn dispute_fails_after_market_resolve() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(
