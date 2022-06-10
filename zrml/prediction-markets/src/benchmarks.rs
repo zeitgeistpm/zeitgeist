@@ -316,7 +316,7 @@ benchmarks! {
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len.saturating_add(1)];
-    }: _(RawOrigin::Signed(caller), market_id, weights)
+    }: _(RawOrigin::Signed(caller), market_id, min_liquidity, weights)
 
     dispute {
         let a in 0..(T::MaxDisputes::get() - 1) as u32;

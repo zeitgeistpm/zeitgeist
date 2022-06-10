@@ -1,5 +1,10 @@
 # v0.3.3
 
+- Simplify `create_cpmm_market_and_deploy_assets`,
+  `deploy_swap_pool_and_additional_liquidity` and `deploy_swap_pool_for_market`
+  by using a single `amount` parameter instead of `amount_base_asset` and
+  `amount_outcome_assets`.
+
 - The `MarketCounter` of the `market-commons` pallet is incremented by one. This
   means that `MarketCounter` is now equal to the total number of markets ever
   created, instead of equal to the id of the last market created. For details
