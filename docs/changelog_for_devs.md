@@ -5,6 +5,12 @@
   by using a single `amount` parameter instead of `amount_base_asset` and
   `amount_outcome_assets`.
 
+- The `MarketCounter` of the `market-commons` pallet is incremented by one. This
+  means that `MarketCounter` is now equal to the total number of markets ever
+  created, instead of equal to the id of the last market created. For details
+  regarding this fix, see https://github.com/zeitgeistpm/zeitgeist/pull/636 and
+  https://github.com/zeitgeistpm/zeitgeist/issues/365.
+
 - Made the `min_asset_amount_out` and `max_price` parameters of
   `swap_exact_amount_in` and the `max_asset_amount_in` and `max_price`
   parameters of `swap_exact_amount_out` optional
