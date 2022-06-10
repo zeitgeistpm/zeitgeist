@@ -341,7 +341,6 @@ mod tests {
             MarketType::Categorical(5),
             MarketDisputeMechanism::Authorized(CHARLIE),
             amount,
-            vec![amount; 5],
             vec![BASE; 6],
         ));
         let market_id = MarketCommons::latest_market_id().unwrap();

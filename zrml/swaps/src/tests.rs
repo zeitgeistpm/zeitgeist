@@ -48,6 +48,7 @@ const _99: u128 = 99 * BASE;
 const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
+const _1234: u128 = 1234 * BASE;
 const _10000: u128 = 10000 * BASE;
 
 #[test]
@@ -595,6 +596,7 @@ fn pool_join_amount_satisfies_max_in_ratio_constraints() {
             0,
             ScoringRule::CPMM,
             Some(0),
+            Some(<Runtime as crate::Config>::MinLiquidity::get()),
             Some(vec!(_2, _2, _2, _5)) // Asset weights don't divide total weight.
         ));
 
@@ -1681,6 +1683,7 @@ fn create_pool_fails_on_too_many_assets() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get()),
                 Some(weights),
             ),
             crate::Error::<Runtime>::TooManyAssets
@@ -1699,6 +1702,7 @@ fn create_pool_fails_on_too_few_assets() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get()),
                 Some(vec!(_2, _2, _2, _2)),
             ),
             crate::Error::<Runtime>::TooFewAssets
@@ -1717,6 +1721,7 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get()),
                 Some(vec!(_2, _2, _2)),
             ),
             crate::Error::<Runtime>::BaseAssetNotFound
@@ -1770,6 +1775,7 @@ fn create_pool_fails_on_weight_below_minimum_weight() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get()),
                 Some(vec!(_2, <Runtime as crate::Config>::MinWeight::get() - 1, _2, _2))
             ),
             crate::Error::<Runtime>::BelowMinimumWeight,
@@ -1791,6 +1797,7 @@ fn create_pool_fails_on_weight_above_maximum_weight() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get()),
                 Some(vec!(_2, <Runtime as crate::Config>::MaxWeight::get() + 1, _2, _2))
             ),
             crate::Error::<Runtime>::AboveMaximumWeight,
@@ -1813,10 +1820,65 @@ fn create_pool_fails_on_total_weight_above_maximum_total_weight() {
                 0,
                 ScoringRule::CPMM,
                 Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get()),
                 Some(vec![weight; 4]),
             ),
             crate::Error::<Runtime>::MaxTotalWeight,
         );
+    });
+}
+
+#[test]
+fn create_pool_fails_on_insufficient_liquidity() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _100);
+        });
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.iter().cloned().collect(),
+                ASSETS.last().unwrap().clone(),
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get() - 1),
+                Some(vec!(_2, _2, _2, _2)),
+            ),
+            crate::Error::<Runtime>::InsufficientLiquidity,
+        );
+    });
+}
+
+#[test]
+fn create_pool_transfers_the_correct_amount_of_tokens() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _10000);
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            ASSETS.iter().cloned().collect(),
+            ASSETS.last().unwrap().clone(),
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(_1234),
+            Some(vec!(_2, _2, _2, _2)),
+        ));
+
+        let pool_shares_id = Swaps::pool_shares_id(0);
+        assert_eq!(Currencies::free_balance(pool_shares_id, &BOB), _1234);
+        assert_eq!(Currencies::free_balance(ASSET_A, &BOB), _10000 - _1234);
+        assert_eq!(Currencies::free_balance(ASSET_B, &BOB), _10000 - _1234);
+        assert_eq!(Currencies::free_balance(ASSET_C, &BOB), _10000 - _1234);
+        assert_eq!(Currencies::free_balance(ASSET_D, &BOB), _10000 - _1234);
+
+        let pool_account_id = Swaps::pool_account_id(0);
+        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), _1234);
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), _1234);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), _1234);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), _1234);
     });
 }
 
@@ -1963,6 +2025,11 @@ fn create_initial_pool(scoring_rule: ScoringRule, deposit: bool) {
         0,
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(0) } else { None },
+        if scoring_rule == ScoringRule::CPMM {
+            Some(<Runtime as crate::Config>::MinLiquidity::get())
+        } else {
+            None
+        },
         if scoring_rule == ScoringRule::CPMM { Some(vec!(_2, _2, _2, _2)) } else { None },
     ));
 }
