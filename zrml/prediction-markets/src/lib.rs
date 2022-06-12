@@ -599,7 +599,7 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
-            weights: Vec<u128>,
+            mut weights: Vec<u128>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -613,6 +613,8 @@ mod pallet {
             let mut assets = Self::outcome_assets(market_id, &market);
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
+            let base_asset_weight = weights.iter().fold(0, |acc, val| acc.saturating_add(*val));
+            weights.push(base_asset_weight);
 
             let pool_id = T::Swaps::create_pool(
                 sender,
