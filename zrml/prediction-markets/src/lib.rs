@@ -551,7 +551,9 @@ mod pallet {
         ///
         /// * `market_id`: The id of the market.
         /// * `amount`: The amount of each token to add to the pool.
-        /// * `weights`: The relative denormalized weight of each asset price.
+        /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
+        ///     weights must be less of equal to _half_ of the `MaxTotalWeight` constant of the
+        ///     swaps pallet.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
@@ -590,7 +592,9 @@ mod pallet {
         ///
         /// * `market_id`: The id of the market.
         /// * `amount`: The amount of each token to add to the pool.
-        /// * `weights`: The relative denormalized weight of each asset price.
+        /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
+        ///     weights must be less of equal to _half_ of the `MaxTotalWeight` constant of the
+        ///     swaps pallet.
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
         )]
