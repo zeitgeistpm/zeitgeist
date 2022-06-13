@@ -1345,7 +1345,7 @@ mod pallet {
         #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
-            mut assets: Vec<Asset<T::MarketId>>,
+            assets: Vec<Asset<T::MarketId>>,
             base_asset: Asset<T::MarketId>,
             market_id: Self::MarketId,
             scoring_rule: ScoringRule,
@@ -1362,12 +1362,11 @@ mod pallet {
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
             let amount_unwrapped = amount.unwrap_or_else(BalanceOf::<T>::zero);
-            // Sort assets for future binary search, for example to check if an asset is included.
-            let sort_assets = assets.as_mut_slice();
-            sort_assets.sort();
-            let has_duplicates = sort_assets
+            let mut sorted_assets = assets.clone();
+            sorted_assets.sort();
+            let has_duplicates = sorted_assets
                 .iter()
-                .zip(sort_assets.iter().skip(1))
+                .zip(sorted_assets.iter().skip(1))
                 .fold(false, |acc, (&x, &y)| acc || x == y);
             ensure!(!has_duplicates, Error::<T>::SomeIdenticalAssets);
 
