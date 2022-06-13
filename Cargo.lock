@@ -12672,9 +12672,12 @@ version = "0.3.2"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "sp-arithmetic",
+ "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
 ]
@@ -12832,6 +12835,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "substrate-fixed",
+ "test-case",
  "zeitgeist-primitives",
  "zrml-liquidity-mining",
  "zrml-market-commons",

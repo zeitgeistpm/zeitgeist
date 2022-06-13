@@ -20,6 +20,8 @@ pub trait Swaps<AccountId> {
     /// * `market_id`: The market id of the market the pool belongs to.
     /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
     /// * `swap_fee`: The fee applied to each swap (in case the scoring rule doesn't provide fees).
+    /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
+    ///   `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
     /// * `weights`: These are the denormalized weights (the raw weights).
     fn create_pool(
         creator: AccountId,
@@ -28,6 +30,7 @@ pub trait Swaps<AccountId> {
         market_id: Self::MarketId,
         scoring_rule: ScoringRule,
         swap_fee: Option<Self::Balance>,
+        amount: Option<Self::Balance>,
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
@@ -135,8 +138,8 @@ pub trait Swaps<AccountId> {
         asset_in: Asset<Self::MarketId>,
         asset_amount_in: Self::Balance,
         asset_out: Asset<Self::MarketId>,
-        min_asset_amount_out: Self::Balance,
-        max_price: Self::Balance,
+        min_asset_amount_out: Option<Self::Balance>,
+        max_price: Option<Self::Balance>,
     ) -> Result<Weight, DispatchError>;
 
     /// Swap - Exact amount out
@@ -156,9 +159,9 @@ pub trait Swaps<AccountId> {
         who: AccountId,
         pool_id: PoolId,
         asset_in: Asset<Self::MarketId>,
-        max_amount_asset_in: Self::Balance,
+        max_amount_asset_in: Option<Self::Balance>,
         asset_out: Asset<Self::MarketId>,
         asset_amount_out: Self::Balance,
-        max_price: Self::Balance,
+        max_price: Option<Self::Balance>,
     ) -> Result<Weight, DispatchError>;
 }
