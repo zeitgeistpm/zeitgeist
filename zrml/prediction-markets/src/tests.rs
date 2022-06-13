@@ -1345,13 +1345,12 @@ fn it_resolves_a_disputed_market() {
     });
 }
 
-#[test_case(MarketStatus::Active; "Active market")]
-#[test_case(MarketStatus::CollectingSubsidy; "CollectingSubsidy market")]
-#[test_case(MarketStatus::InsufficientSubsidy; "InsufficientSubsidy market")]
-#[test_case(MarketStatus::Closed; "Closed market")]
-#[test_case(MarketStatus::Proposed; "Proposed market")]
-#[test_case(MarketStatus::Resolved; "Resolved market")]
-#[test_case(MarketStatus::Suspended; "Suspended market")]
+#[test_case(MarketStatus::Active; "active")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting_subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient_subsidy")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
 fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
