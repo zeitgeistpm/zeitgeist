@@ -3,12 +3,13 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    BalanceOf, Config, Event, SubsidyProviders,
+    Config, Event, SubsidyProviders,
 };
 use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
+#[allow(unused_imports)]
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -1394,14 +1395,11 @@ fn set_pool_to_stale_handles_rikiddo_pools_properly() {
     });
 }
 
-#[test_case(Some(_1 / 2), Some(_2); "with limits")]
-#[test_case(None, None; "without limits")]
-fn swap_exact_amount_in_exchanges_correct_values_with_cpmm(
-    asset_bound: Option<BalanceOf<Runtime>>,
-    max_price: Option<BalanceOf<Runtime>>,
-) {
+#[test]
+fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
-        // CPMM
+        let asset_bound = Some(_1 / 2);
+        let max_price = Some(_2);
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::swap_exact_amount_in(
@@ -1430,6 +1428,18 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm(
             0,
             [_101, _99 + 0099009900, _100, _100],
             _100,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_in_fails_if_no_limit_is_specified() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, _1, ASSET_B, None, None,),
+            crate::Error::<Runtime>::LimitMissing
         );
     });
 }
@@ -1530,12 +1540,10 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
     });
 }
 
-#[test_case(Some(_2), Some(_3); "with limits")]
-#[test_case(None, None; "without limits")]
-fn swap_exact_amount_out_exchanges_correct_values_with_cpmm(
-    asset_bound: Option<BalanceOf<Runtime>>,
-    max_price: Option<BalanceOf<Runtime>>,
-) {
+#[test]
+fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
+    let asset_bound = Some(_2);
+    let max_price = Some(_3);
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
@@ -1565,6 +1573,18 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm(
             0,
             [_101 + 0101010100, _99, _100, _100],
             _100,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_out_fails_if_no_limit_is_specified() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, None, ASSET_B, _1, None,),
+            crate::Error::<Runtime>::LimitMissing
         );
     });
 }
