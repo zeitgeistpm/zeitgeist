@@ -943,7 +943,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
     type AssetManager = AssetManager;
-    type BaseAsset = GetNativeCurrencyId;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;

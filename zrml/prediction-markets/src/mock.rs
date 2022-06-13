@@ -102,7 +102,6 @@ impl crate::Config for Runtime {
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
     type AssetManager = AssetManager;
-    type BaseAsset = GetNativeCurrencyId;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
