@@ -70,7 +70,7 @@ parameter_types! {
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;
-    pub const MinMarketDuration: u64 = 3_600_000;
+    pub const MinMarketPeriod: Moment = 3_600_000;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
     pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
