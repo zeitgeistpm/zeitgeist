@@ -1560,9 +1560,16 @@ mod pallet {
                             T::OracleBond::get(),
                         );
                         // deposit only to the real reporter what actually was slashed
-                        let negative_imbalance = T::OracleBond::get() - excess;
-                        // deposit could fail for below ExistentialDeposit or Overflow of total issuance
-                        T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)?;
+                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
+
+                        if let Err(err) =
+                            T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
+                        {
+                            log::warn!(
+                                "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
+                                err
+                            );
+                        }
                     }
 
                     report.outcome.clone()
@@ -1606,7 +1613,7 @@ mod pallet {
                         );
 
                         // negative_imbalance is the actual slash value (excess should be zero)
-                        let negative_imbalance = T::OracleBond::get() - excess;
+                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
                         overall_imbalance = overall_imbalance.saturating_add(negative_imbalance);
                     }
 
@@ -1641,18 +1648,18 @@ mod pallet {
                         .checked_div(&correct_reporters.len().saturated_into())
                         .ok_or(ArithmeticError::DivisionByZero)?;
                     for correct_reporter in &correct_reporters {
-                        let reward: BalanceOf<T> = if overall_imbalance < reward_per_each {
-                            let remainder = overall_imbalance;
-                            if !overall_imbalance.is_zero() {
-                                overall_imbalance = BalanceOf::<T>::zero();
-                            }
-                            remainder
-                        } else {
-                            overall_imbalance -= reward_per_each;
-                            reward_per_each
-                        };
-                        // deposit could fail for below ExistentialDeposit or Overflow of total issuance
-                        T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)?;
+                        let reward = overall_imbalance.min(reward_per_each); // *Should* always be equal to `reward_per_each`
+                        overall_imbalance = overall_imbalance.saturating_sub(reward);
+
+                        if let Err(err) =
+                            T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
+                        {
+                            log::warn!(
+                                "[PredictionMarkets] Cannot deposit to the correct reporter. \
+                                 error: {:?}",
+                                err
+                            );
+                        }
                     }
 
                     resolved_outcome
