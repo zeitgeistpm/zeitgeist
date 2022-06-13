@@ -1318,8 +1318,14 @@ fn it_resolves_a_disputed_market() {
     });
 }
 
-#[test]
-fn dispute_fails_after_market_resolve() {
+#[test_case(MarketStatus::Active; "Active market")]
+#[test_case(MarketStatus::CollectingSubsidy; "CollectingSubsidy market")]
+#[test_case(MarketStatus::InsufficientSubsidy; "InsufficientSubsidy market")]
+#[test_case(MarketStatus::Closed; "Closed market")]
+#[test_case(MarketStatus::Proposed; "Proposed market")]
+#[test_case(MarketStatus::Resolved; "Resolved market")]
+#[test_case(MarketStatus::Suspended; "Suspended market")]
+fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
     ExtBuilder::default().build().execute_with(|| {
         // Creates a permissionless market.
         simple_create_categorical_market::<Runtime>(
@@ -1328,20 +1334,10 @@ fn dispute_fails_after_market_resolve() {
             ScoringRule::CPMM,
         );
 
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
-
-        run_to_block(100);
-
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-
-        run_to_block(115);
-
-        let market_after = MarketCommons::market(&0).unwrap();
-        assert_eq!(market_after.status, MarketStatus::Resolved);
+        assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
+            market_inner.status = status;
+            Ok(())
+        }));
 
         assert_noop!(
             PredictionMarkets::dispute(Origin::signed(EVE), 0, OutcomeReport::Categorical(1)),
