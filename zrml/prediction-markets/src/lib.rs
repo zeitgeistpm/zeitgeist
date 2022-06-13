@@ -177,7 +177,7 @@ mod pallet {
 
             // Delete market's outcome assets, clear market and delete pool if necessary.
             let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
-                if let Some((total_accounts, accounts)) =
+                if let Ok((total_accounts, accounts)) =
                     T::AssetManager::accounts_by_currency_id(asset)
                 {
                     share_accounts = share_accounts.saturating_add(accounts.len());
