@@ -108,7 +108,7 @@ fn bench_create_pool<T: Config>(
 
     if subsidize {
         let min_subsidy = T::MinSubsidy::get();
-        let _ = T::Shares::deposit(base_asset, &caller, min_subsidy).unwrap();
+        T::Shares::deposit(base_asset, &caller, min_subsidy).unwrap();
         let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller).into())
             .unwrap();
