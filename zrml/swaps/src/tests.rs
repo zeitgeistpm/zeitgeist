@@ -51,6 +51,32 @@ const _105: u128 = 105 * BASE;
 const _1234: u128 = 1234 * BASE;
 const _10000: u128 = 10000 * BASE;
 
+#[test_case(vec![ASSET_A, ASSET_A]; "short vector")]
+#[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_A]; "start and end")]
+#[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_E]; "successive at end")]
+#[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_A, ASSET_E, ASSET_D]; "start and middle")]
+fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<<Runtime as Config>::MarketId>>) {
+    ExtBuilder::default().build().execute_with(|| {
+        assets.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _10000);
+        });
+        let asset_count = assets.len();
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                assets,
+                ASSET_A,
+                0,
+                ScoringRule::CPMM,
+                Some(0),
+                Some(<Runtime as crate::Config>::MinLiquidity::get()),
+                Some(vec![_2; asset_count]),
+            ),
+            crate::Error::<Runtime>::SomeIdenticalAssets
+        );
+    });
+}
+
 #[test]
 fn destroy_pool_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
