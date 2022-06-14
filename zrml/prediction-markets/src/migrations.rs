@@ -162,7 +162,7 @@ mod tests {
     use frame_support::{assert_err, assert_ok};
     use orml_traits::MultiCurrency;
     use zeitgeist_primitives::{
-        constants::BASE,
+        constants::{BASE, MILLISECS_PER_BLOCK},
         types::{
             Asset, BlockNumber, MarketCreation, MarketDisputeMechanism, MarketType, MultiHash,
             PoolStatus, ScoringRule,
@@ -200,7 +200,7 @@ mod tests {
             let _ = Currency::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
 
             // Markets which end here will have to be closed on migration:
-            let short_time = 5 * <Runtime as Config>::MinMarketDuration::get();
+            let short_time: MomentOf<Runtime> = (5 * MILLISECS_PER_BLOCK).into();
             let short_time_frame = PredictionMarkets::calculate_time_frame_of_moment(short_time);
             // Markets which end here will end in the future:
             let long_time = 10 * short_time;

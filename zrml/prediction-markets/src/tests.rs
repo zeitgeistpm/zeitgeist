@@ -2,7 +2,7 @@
 
 use crate::{
     mock::*, Config, Error, Event, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
-    MarketIdsPerReportBlock, BLOCKS_PER_TIME_FRAME, RESERVE_ID,
+    MarketIdsPerReportBlock, RESERVE_ID,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -659,29 +659,6 @@ fn it_allows_advisory_origin_to_approve_markets() {
 }
 
 #[test]
-fn approve_market_fails_if_market_close_is_not_far_enough_ahead() {
-    // Note that there's no need for the symmetric test with blocks, since there's no minimum
-    // duration requirement for those.
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_market(
-            Origin::signed(ALICE),
-            BOB,
-            MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get()),
-            gen_metadata(0),
-            MarketCreation::Advised,
-            MarketType::Categorical(3),
-            MarketDisputeMechanism::Authorized(CHARLIE),
-            ScoringRule::CPMM,
-        ));
-        Timestamp::set_timestamp(<Runtime as Config>::MinMarketDuration::get() / 2);
-        assert_noop!(
-            PredictionMarkets::approve_market(Origin::signed(SUDO), 0),
-            crate::Error::<Runtime>::InvalidMarketPeriod
-        );
-    });
-}
-
-#[test]
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
@@ -838,7 +815,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
 #[test]
 fn on_market_close_successfully_auto_closes_market_with_timestamps() {
     ExtBuilder::default().build().execute_with(|| {
-        let end = <Runtime as Config>::MinMarketDuration::get();
+        let end: Moment = MILLISECS_PER_BLOCK.into();
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             ALICE,
@@ -852,7 +829,8 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         let market_id = 0;
         let pool_id = MarketCommons::market_pool(&market_id).unwrap();
 
-        Timestamp::set_timestamp(end - BLOCKS_PER_TIME_FRAME * MILLISECS_PER_BLOCK as u64);
+        // (Check that the market doesn't close too soon)
+        Timestamp::set_timestamp(end - 1);
         run_to_block(1); // Trigger hook!
         let market_before_close = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_before_close.status, MarketStatus::Active);
@@ -952,8 +930,8 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
     "timestamp end greater than max market period"
 )]
 #[test_case(
-    MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get() - 1);
-    "range shorter than min market duration"
+    MarketPeriod::Timestamp(0..(MILLISECS_PER_BLOCK - 1).into());
+    "range shorter than block time"
 )]
 fn create_categorical_market_fails_if_market_period_is_invalid(
     period: MarketPeriod<BlockNumber, Moment>,
@@ -978,12 +956,13 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
 #[test]
 fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
     ExtBuilder::default().build().execute_with(|| {
-        run_to_block(33);
+        let end_block = 33;
+        run_to_block(end_block);
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
-                MarketPeriod::Block(0..33),
+                MarketPeriod::Block(0..end_block),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
@@ -993,86 +972,16 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
             crate::Error::<Runtime>::InvalidMarketPeriod,
         );
 
-        Timestamp::set_timestamp(<Runtime as Config>::MinMarketDuration::get() / 2);
+        let end_time = MILLISECS_PER_BLOCK as u64 / 2;
+        Timestamp::set_timestamp(end_time);
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
-                MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get() / 2),
+                MarketPeriod::Timestamp(0..end_time),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized(CHARLIE),
-                ScoringRule::CPMM,
-            ),
-            crate::Error::<Runtime>::InvalidMarketPeriod,
-        );
-    });
-}
-
-#[test_case(MarketPeriod::Block(2..1); "block start greater than end")]
-#[test_case(MarketPeriod::Block(3..3); "block start equal to end")]
-#[test_case(
-    MarketPeriod::Block(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "block end greater than max market period"
-)]
-#[test_case(MarketPeriod::Timestamp(2..1); "timestamp start greater than end")]
-#[test_case(MarketPeriod::Timestamp(3..3); "timestamp start equal to end")]
-#[test_case(
-    MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "timestamp end greater than max market period"
-)]
-#[test_case(
-    MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get() - 1);
-    "range shorter than min market duration"
-)]
-fn create_scalar_market_fails_if_market_period_is_invalid(
-    period: MarketPeriod<BlockNumber, Moment>,
-) {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            PredictionMarkets::create_market(
-                Origin::signed(ALICE),
-                BOB,
-                period,
-                gen_metadata(0),
-                MarketCreation::Permissionless,
-                MarketType::Scalar(123..=456),
-                MarketDisputeMechanism::Authorized(CHARLIE),
-                ScoringRule::CPMM,
-            ),
-            crate::Error::<Runtime>::InvalidMarketPeriod,
-        );
-    });
-}
-
-#[test]
-fn create_scalar_market_fails_if_end_is_not_far_enough_ahead() {
-    ExtBuilder::default().build().execute_with(|| {
-        run_to_block(33);
-        assert_noop!(
-            PredictionMarkets::create_market(
-                Origin::signed(ALICE),
-                BOB,
-                MarketPeriod::Block(0..33),
-                gen_metadata(0),
-                MarketCreation::Permissionless,
-                MarketType::Scalar(123..=456),
-                MarketDisputeMechanism::Authorized(CHARLIE),
-                ScoringRule::CPMM,
-            ),
-            crate::Error::<Runtime>::InvalidMarketPeriod,
-        );
-
-        Timestamp::set_timestamp(<Runtime as Config>::MinMarketDuration::get() / 2);
-        assert_noop!(
-            PredictionMarkets::create_market(
-                Origin::signed(ALICE),
-                BOB,
-                MarketPeriod::Timestamp(0..<Runtime as Config>::MinMarketDuration::get() / 2),
-                gen_metadata(0),
-                MarketCreation::Permissionless,
-                MarketType::Scalar(123..=456),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),

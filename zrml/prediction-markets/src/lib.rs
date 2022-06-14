@@ -109,14 +109,12 @@ mod pallet {
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) type TimeFrame = u64;
-    pub const BLOCKS_PER_TIME_FRAME: u64 = 5; // 1min
-
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
+    pub(crate) type TimeFrame = u64;
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
@@ -995,10 +993,6 @@ mod pallet {
         #[pallet::constant]
         type MinSubsidyPeriod: Get<MomentOf<Self>>;
 
-        /// The shortest marked duration allowed for timestamp based markets. Specified in ms.
-        #[pallet::constant]
-        type MinMarketDuration: Get<MomentOf<Self>>;
-
         /// The maximum number of disputes allowed on any single market.
         #[pallet::constant]
         type MaxDisputes: Get<u32>;
@@ -1379,8 +1373,7 @@ mod pallet {
         }
 
         pub(crate) fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
-            let div = BLOCKS_PER_TIME_FRAME.saturating_mul(MILLISECS_PER_BLOCK.into());
-            time.saturated_into::<TimeFrame>().saturating_div(div)
+            time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
         }
 
         fn calculate_actual_weight<F>(
@@ -1457,9 +1450,8 @@ mod pallet {
             period: &MarketPeriod<T::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
             // The start of the market is allowed to be in the past (this results in the market
-            // being active immediately), but the market's end must be in the future and the market
-            // must run for at least the minimum duration (if it uses timestamps instead of
-            // block numbers for time keeping).
+            // being active immediately), but the market's end must be at least one block/time
+            // frame in the future.
             match period {
                 MarketPeriod::Block(ref range) => {
                     ensure!(
@@ -1473,13 +1465,11 @@ mod pallet {
                     );
                 }
                 MarketPeriod::Timestamp(ref range) => {
-                    let start = range.start.max(T::MarketCommons::now());
-                    ensure!(start < range.end, Error::<T>::InvalidMarketPeriod);
-                    // Implies range.end > range.start unless `MinMarketDuration` is zero.
-                    ensure!(
-                        range.end.saturating_sub(start) >= T::MinMarketDuration::get(),
-                        Error::<T>::InvalidMarketPeriod
-                    );
+                    // Ensure that the market lasts at least one time frame into the future.
+                    let now_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+                    let end_frame = Self::calculate_time_frame_of_moment(range.end);
+                    ensure!(now_frame < end_frame, Error::<T>::InvalidMarketPeriod);
+                    ensure!(range.start < range.end, Error::<T>::InvalidMarketPeriod);
                     ensure!(
                         range.end <= T::MaxMarketPeriod::get().saturated_into(),
                         Error::<T>::InvalidMarketPeriod
