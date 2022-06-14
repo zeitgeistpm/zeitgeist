@@ -833,6 +833,8 @@ mod pallet {
         ),
         /// A pool was closed. \[pool_id\]
         PoolClosed(PoolId),
+        /// A pool was cleaned up. \[pool_id\]
+        PoolCleanedUp(PoolId),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
             PoolAssetsEvent<
@@ -1806,6 +1808,7 @@ mod pallet {
                     winner_payout_account,
                 )?);
             }
+            Self::deposit_event(Event::<T>::PoolCleanedUp(pool_id));
             // (No extra work required for scalar markets!)
             Ok(weight)
         }

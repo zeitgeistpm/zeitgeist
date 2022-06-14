@@ -1330,6 +1330,7 @@ fn provided_values_len_must_equal_assets_len() {
 #[test]
 fn clean_up_pool_leaves_only_correct_assets() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool(ScoringRule::CPMM, true);
         let pool_id = 0;
         assert_ok!(Swaps::close_pool(pool_id));
@@ -1343,6 +1344,7 @@ fn clean_up_pool_leaves_only_correct_assets() {
         let pool = Swaps::pool(pool_id).unwrap();
         assert_eq!(pool.pool_status, PoolStatus::Clean);
         assert_eq!(Swaps::pool_by_id(pool_id).unwrap().assets, vec![ASSET_A, ASSET_D]);
+        System::assert_last_event(Event::PoolCleanedUp(pool_id).into());
     });
 }
 
@@ -1908,6 +1910,21 @@ fn create_pool_transfers_the_correct_amount_of_tokens() {
 fn close_pool_fails_if_pool_does_not_exist() {
     ExtBuilder::default().build().execute_with(|| {
         assert_noop!(Swaps::close_pool(0), crate::Error::<Runtime>::PoolDoesNotExist);
+    });
+}
+
+#[test_case(PoolStatus::Closed; "closed")]
+#[test_case(PoolStatus::Clean; "clean")]
+#[test_case(PoolStatus::CollectingSubsidy; "collecting_subsidy")]
+fn close_pool_fails_if_pool_is_not_active(pool_status: PoolStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
+            pool.pool_status = pool_status;
+            Ok(())
+        }));
+        assert_noop!(Swaps::close_pool(0), crate::Error::<Runtime>::InvalidStateTransition);
     });
 }
 
