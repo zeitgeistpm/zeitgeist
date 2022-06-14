@@ -1,7 +1,7 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{
-    mock::*, Config, Error, Event, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
+    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
     MarketIdsPerReportBlock, RESERVE_ID,
 };
 use core::ops::{Range, RangeInclusive};
@@ -845,6 +845,54 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
 
         System::assert_last_event(Event::MarketClosed(market_id).into());
+    });
+}
+
+#[test]
+fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
+    // We check that `on_market_close` works correctly even if a block takes much longer than 12sec
+    // to be produced and multiple markets are involved.
+    ExtBuilder::default().build().execute_with(|| {
+        // Mock last time frame to prevent it from defaulting.
+        LastTimeFrame::<Runtime>::set(Some(0));
+
+        let end: Moment = (5 * MILLISECS_PER_BLOCK).into();
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Timestamp(0..end),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Timestamp(0..end),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+
+        // This block takes much longer than 12sec, but markets and pools still close correctly.
+        Timestamp::set_timestamp(10 * end);
+        run_to_block(1);
+
+        let market_after_close = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(0).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+        System::assert_has_event(Event::MarketClosed(0).into());
+
+        let market_after_close = MarketCommons::market(&1).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(1).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+        System::assert_has_event(Event::MarketClosed(1).into());
     });
 }
 

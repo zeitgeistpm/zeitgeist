@@ -1221,6 +1221,10 @@ mod pallet {
         ValueQuery,
     >;
 
+    /// The last time frame that was checked for markets to close.
+    #[pallet::storage]
+    pub type LastTimeFrame<T: Config> = StorageValue<_, TimeFrame>;
+
     /// A mapping of market identifiers to the block they were disputed at.
     /// A market only ends up here if it was disputed.
     #[pallet::storage]
@@ -1913,16 +1917,25 @@ mod pallet {
                 Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             ) -> DispatchResult,
         {
-            let time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
-            for market_id in MarketIdsPerCloseBlock::<T>::get(&now)
-                .iter()
-                .chain(MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter())
-            {
+            for market_id in MarketIdsPerCloseBlock::<T>::get(&now).iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
             MarketIdsPerCloseBlock::<T>::remove(&now);
-            MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
+
+            let current_time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+            // On first pass, we use current_time - 1 to ensure that the chain doesn't try to check
+            // all time frames since epoch.
+            let last_time_frame =
+                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
+            for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
+                for market_id in MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter() {
+                    let market = T::MarketCommons::market(market_id)?;
+                    mutation(market_id, market)?;
+                }
+                MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
+            }
+            LastTimeFrame::<T>::set(Some(current_time_frame));
             Ok(())
         }
 
