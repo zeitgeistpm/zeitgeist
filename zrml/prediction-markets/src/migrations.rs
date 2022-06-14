@@ -120,7 +120,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
         // All markets flagged for removal are expired proposed.
         for (market_id, market) in markets_to_reject.into_iter() {
             // do_reject_market is infallible in this context, so unwrap_or is safe.
-            let weight = Pallet::<T>::do_reject_market(&market_id, market).unwrap_or(0);
+            let weight =
+                Pallet::<T>::handle_expired_advised_market(&market_id, market).unwrap_or(0);
             total_weight = total_weight.saturating_add(weight);
         }
 

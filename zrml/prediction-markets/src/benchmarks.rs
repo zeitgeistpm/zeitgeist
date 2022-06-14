@@ -341,6 +341,15 @@ benchmarks! {
         let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
     }: { Pallet::<T>::do_reject_market(&market_id, market)? }
 
+    handle_expired_advised_market {
+        let (_, market_id) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
+        )?;
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+    }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
+
     internal_resolve_categorical_reported {
         // a = total accounts
         let a in 0..10;

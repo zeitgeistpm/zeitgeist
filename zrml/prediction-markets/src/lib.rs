@@ -1135,6 +1135,8 @@ mod pallet {
         MarketClosed(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
         MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
+        /// An advised market has ended before it was approved or rejected. \[market_id\]
+        MarketExpired(MarketIdOf<T>),
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
@@ -1376,6 +1378,19 @@ mod pallet {
             Ok(T::WeightInfo::do_reject_market())
         }
 
+        pub(crate) fn handle_expired_advised_market(
+            market_id: &MarketIdOf<T>,
+            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        ) -> Result<Weight, DispatchError> {
+            ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
+            let creator = &market.creator;
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, creator, T::AdvisoryBond::get());
+            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, creator, T::OracleBond::get());
+            T::MarketCommons::remove_market(market_id)?;
+            Self::deposit_event(Event::MarketExpired(*market_id));
+            Ok(T::WeightInfo::handle_expired_advised_market())
+        }
+
         pub(crate) fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
             time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
         }
@@ -1564,6 +1579,7 @@ mod pallet {
 
         pub(crate) fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
             T::MarketCommons::mutate_market(market_id, |market| {
+                ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
                 market.status = MarketStatus::Closed;
                 Ok(())
             })?;
@@ -1584,7 +1600,7 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             match market.status {
                 MarketStatus::Active => Self::close_market(market_id),
-                MarketStatus::Proposed => Self::do_reject_market(market_id, market),
+                MarketStatus::Proposed => Self::handle_expired_advised_market(market_id, market),
                 _ => Err(Error::<T>::InvalidMarketStatus.into()), // Should never occur!
             }
         }

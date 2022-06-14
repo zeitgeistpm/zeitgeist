@@ -739,15 +739,8 @@ fn reject_market_clears_auto_close_blocks() {
 }
 
 #[test]
-fn on_market_close_auto_rejects_ignored_advised_market() {
+fn on_market_close_auto_rejects_expired_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Advised,
-            0..33,
-            ScoringRule::CPMM,
-        );
-        let market_id = 0;
-
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
         assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
@@ -755,27 +748,25 @@ fn on_market_close_auto_rejects_ignored_advised_market() {
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_reserved_before_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
 
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..33,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+
         run_to_block(33);
 
-        let balance_reserved_after_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
         assert_eq!(
-            balance_reserved_after_alice,
+            Balances::reserved_balance_named(&RESERVE_ID, &ALICE),
             balance_reserved_before_alice
-                - <Runtime as Config>::OracleBond::get()
-                - <Runtime as Config>::AdvisoryBond::get()
         );
-        let balance_free_after_alice = Balances::free_balance(&ALICE);
-        assert_eq!(
-            balance_free_after_alice,
-            balance_free_before_alice + <Runtime as Config>::OracleBond::get()
-        );
-
+        assert_eq!(Balances::free_balance(&ALICE), balance_free_before_alice);
         assert_noop!(
             MarketCommons::market(&market_id),
             zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
         );
-        System::assert_has_event(Event::MarketDestroyed(market_id).into());
-        System::assert_has_event(Event::MarketRejected(market_id).into());
+        System::assert_has_event(Event::MarketExpired(market_id).into());
     });
 }
 
