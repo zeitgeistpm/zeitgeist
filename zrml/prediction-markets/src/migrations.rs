@@ -1,4 +1,6 @@
-use crate::{Config, MarketIdsPerCloseBlock, MarketIdsPerCloseTimeFrame, MomentOf, Pallet};
+use crate::{
+    Config, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerCloseTimeFrame, MomentOf, Pallet,
+};
 use alloc::vec;
 use frame_support::{
     dispatch::Weight,
@@ -121,6 +123,9 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
             let weight = Pallet::<T>::do_reject_market(&market_id, market).unwrap_or(0);
             total_weight = total_weight.saturating_add(weight);
         }
+
+        LastTimeFrame::<T>::set(Some(current_time_frame));
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
         StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
         utility::put_storage_version_of_swaps_pallet(SWAPS_NEXT_STORAGE_VERSION);
@@ -274,7 +279,9 @@ mod tests {
             MarketIdsPerCloseTimeFrame::<Runtime>::drain().last();
 
             run_to_block(55);
-            Timestamp::set_timestamp(7 * short_time);
+            let now_time_stamp = 7 * short_time;
+            let now_time_frame = PredictionMarkets::calculate_time_frame_of_moment(now_time_stamp);
+            Timestamp::set_timestamp(now_time_stamp);
 
             MigrateMarketIdsPerClose::<Runtime>::on_runtime_upgrade();
 
@@ -319,6 +326,8 @@ mod tests {
             assert_eq!(Swaps::pool(3).unwrap().pool_status, PoolStatus::Closed);
             assert_eq!(Swaps::pool(4).unwrap().pool_status, PoolStatus::Closed);
             assert_eq!(Swaps::pool(5).unwrap().pool_status, PoolStatus::Closed);
+
+            assert_eq!(LastTimeFrame::<Runtime>::get().unwrap(), now_time_frame);
         });
     }
 
