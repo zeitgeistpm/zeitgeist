@@ -135,6 +135,104 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
         log::info!("Completed storage migration of MarketIdsPerClose*");
         total_weight
     }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        let current_time_frame =
+            Pallet::<T>::calculate_time_frame_of_moment(T::MarketCommons::now());
+        let current_block = <frame_system::Pallet<T>>::block_number();
+
+        for (market_id, market) in T::MarketCommons::market_iter() {
+            match market.period {
+                MarketPeriod::Timestamp(range) => {
+                    let end_frame = Pallet::<T>::calculate_time_frame_of_moment(range.end);
+                    // (We're ignoring Rikiddo markets)
+                    if current_time_frame < end_frame {
+                        assert!(
+                            matches!(market.status, MarketStatus::Active | MarketStatus::Proposed),
+                            "Found unexpected status in active/proposed market {:?}: {:?}.",
+                            market_id,
+                            market.status
+                        );
+                        let ids = MarketIdsPerCloseTimeFrame::<T>::get(end_frame);
+                        assert!(
+                            ids.contains(&market_id),
+                            "Failed to find cache for market {:?}",
+                            market_id
+                        );
+                    } else {
+                        assert!(
+                            matches!(
+                                market.status,
+                                MarketStatus::Closed
+                                    | MarketStatus::Reported
+                                    | MarketStatus::Disputed
+                                    | MarketStatus::Resolved
+                            ),
+                            "Found unexpected status in market {:?}: {:?}",
+                            market_id,
+                            market.status
+                        );
+                    }
+                }
+                MarketPeriod::Block(range) => {
+                    // (We're ignoring Rikiddo markets)
+                    if current_block < range.end {
+                        assert!(
+                            matches!(market.status, MarketStatus::Active | MarketStatus::Proposed),
+                            "Found unexpected status in active/proposed market {:?}: {:?}.",
+                            market_id,
+                            market.status
+                        );
+                        let ids = MarketIdsPerCloseBlock::<T>::get(range.end);
+                        assert!(ids.contains(&market_id));
+                    } else {
+                        assert!(
+                            matches!(
+                                market.status,
+                                MarketStatus::Closed
+                                    | MarketStatus::Reported
+                                    | MarketStatus::Disputed
+                                    | MarketStatus::Resolved
+                            ),
+                            "Found unexpected status in market {:?}: {:?}",
+                            market_id,
+                            market.status
+                        );
+                    }
+                }
+            }
+        }
+
+        let last_time_frame = LastTimeFrame::<T>::get();
+        let last_time_frame_expected = Some(current_time_frame);
+        assert_eq!(
+            last_time_frame, last_time_frame_expected,
+            "found unexpected LastTimeFrame: {:?}. Expected: {:?}",
+            last_time_frame, last_time_frame_expected,
+        );
+
+        let prediction_markets_storage_version = StorageVersion::get::<Pallet<T>>();
+        assert_eq!(
+            prediction_markets_storage_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION,
+            "found unexpected prediction-markets pallet storage version. Found: {:?}. Expected: \
+             {:?}",
+            prediction_markets_storage_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION,
+        );
+        let swaps_storage_version = utility::get_on_chain_storage_version_of_swaps_pallet();
+        assert_eq!(
+            swaps_storage_version, SWAPS_NEXT_STORAGE_VERSION,
+            "found unexpected swaps pallet storage version. Found: {:?}. Expected: {:?}",
+            swaps_storage_version, SWAPS_NEXT_STORAGE_VERSION
+        );
+
+        Ok(())
+    }
 }
 
 // We use these utilities to prevent having to make the swaps pallet a dependency of
