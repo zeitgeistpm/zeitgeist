@@ -27,21 +27,23 @@ skinparam component {
 () RikiddoMVPallet
 () LiquidityMiningPalletApi
 
-SW -l- SwapsAPI
 MC - MarketsAPI
 AU - DisputeAPI
 SD - DisputeAPI
 CO - DisputeAPI
-LM - LiquidityMiningPalletApi
+LM -r- LiquidityMiningPalletApi
+LM .l.> MarketsAPI: use
+LM -[hidden]u- RikiddoMVPallet
 RI -r- RikiddoMVPallet
 PM .r.> SwapsAPI : use
 PM ..> MarketsAPI : use
 PM .l.> DisputeAPI : use
-PM .u.> LiquidityMiningPalletApi : use
+PM .r.> LiquidityMiningPalletApi : use
 AU ..> MarketsAPI : use
 CO ..> MarketsAPI : use
 SD ..> MarketsAPI : use
-SW .d.> RikiddoMVPallet : use
+SW -l- SwapsAPI
+SW ..> RikiddoMVPallet : use
 SW .u.> LiquidityMiningPalletApi : use
 SW .d.> MarketsAPI : use
 @enduml
