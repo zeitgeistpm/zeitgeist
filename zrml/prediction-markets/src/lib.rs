@@ -1205,7 +1205,7 @@ mod pallet {
     #[pallet::storage]
     pub type MarketIdsPerCloseBlock<T: Config> = StorageMap<
         _,
-        Twox64Concat,
+        Blake2_128Concat,
         T::BlockNumber,
         BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
@@ -1215,7 +1215,7 @@ mod pallet {
     #[pallet::storage]
     pub type MarketIdsPerCloseTimeFrame<T: Config> = StorageMap<
         _,
-        Twox64Concat,
+        Blake2_128Concat,
         TimeFrame,
         BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
