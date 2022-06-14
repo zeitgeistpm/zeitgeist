@@ -16,7 +16,7 @@ skinparam component {
 [prediction-markets] as PM
 [authorized] as AU
 [market-commons] as MC
-[simple-disputes] as SD
+[simple-disputes] as SD #Lightgray
 [court] as CO #Lightgray
 [swaps] as SW
 [rikiddo] as RI #Lightgray
@@ -37,9 +37,11 @@ RI -r- RikiddoMVPallet
 PM .r.> SwapsAPI : use
 PM ..> MarketsAPI : use
 PM .l.> DisputeAPI : use
-PM .d.> LiquidityMiningPalletApi : use
+PM .u.> LiquidityMiningPalletApi : use
 AU ..> MarketsAPI : use
+CO ..> MarketsAPI : use
 SD ..> MarketsAPI : use
 SW .d.> RikiddoMVPallet : use
-SW .d.> LiquidityMiningPalletApi : use
+SW .u.> LiquidityMiningPalletApi : use
+SW .d.> MarketsAPI : use
 @enduml
