@@ -1406,7 +1406,7 @@ mod pallet {
             }
 
             let pool = Pool {
-                assets,
+                assets: sorted_assets,
                 base_asset,
                 market_id,
                 pool_status: if scoring_rule == ScoringRule::CPMM {
