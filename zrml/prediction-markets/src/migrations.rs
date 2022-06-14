@@ -10,7 +10,7 @@ use frame_support::{
 };
 use zeitgeist_primitives::{
     traits::Swaps as SwapsPalletApi,
-    types::{Market, MarketPeriod, MarketStatus},
+    types::{Market, MarketPeriod, MarketStatus, PoolStatus},
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -72,7 +72,19 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
 
             match market.status {
                 MarketStatus::Active | MarketStatus::Proposed => (),
-                MarketStatus::Resolved => continue,
+                MarketStatus::Resolved => {
+                    if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
+                        // Since the market is resolved, the pool **should** be stale/closed and
+                        // cleaned up, we only need to change the state.
+                        let mut pool = match utility::get_pool::<T>(pool_id) {
+                            Some(pool) => pool,
+                            _ => continue,
+                        };
+                        pool.pool_status = PoolStatus::Clean;
+                        utility::set_pool::<T>(pool_id, pool);
+                    };
+                    continue; // No need to check the range of a resolved market!
+                }
                 _ => {
                     // Close the pool, if the market is not active or already resolved. No need to
                     // single out Rikiddo pools - we don't have any of them on our networks.
@@ -207,6 +219,26 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
                     }
                 }
             }
+
+            let pool_id = match T::MarketCommons::market_pool(&market_id) {
+                Ok(pool_id) => pool_id,
+                _ => continue,
+            };
+            let pool = match utility::get_pool::<T>(pool_id) {
+                Some(pool) => pool,
+                _ => continue,
+            };
+            // (Ignoring Rikiddo pools!)
+            let pool_status_expected = match market.status {
+                MarketStatus::Resolved => PoolStatus::Clean,
+                MarketStatus::Active | MarketStatus::Proposed => PoolStatus::Active,
+                _ => PoolStatus::Closed,
+            };
+            assert_eq!(
+                pool.pool_status, pool_status_expected,
+                "found unexpected pool status in pool {:?} of market {:?}: {:?}. Expected: {:?}",
+                pool_id, market_id, pool.pool_status, pool_status_expected
+            );
         }
 
         let last_time_frame = LastTimeFrame::<T>::get();
@@ -238,14 +270,32 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
 // We use these utilities to prevent having to make the swaps pallet a dependency of
 // prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
 // https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
+// and previous migrations.
 mod utility {
+    use crate::{BalanceOf, Config, MarketIdOf};
+    use alloc::vec::Vec;
     use frame_support::{
+        migration::{get_storage_value, put_storage_value},
         storage::{storage_prefix, unhashed},
         traits::StorageVersion,
+        Blake2_128Concat, StorageHasher,
     };
+    use parity_scale_codec::Encode;
+    use zeitgeist_primitives::types::{Pool, PoolId};
+
+    const SWAPS: &[u8] = b"Swaps";
+    const POOLS: &[u8] = b"Pools";
 
     fn storage_prefix_of_swaps_pallet() -> [u8; 32] {
         storage_prefix(b"Swaps", b":__STORAGE_VERSION__:")
+    }
+
+    fn key_to_hash<H, K>(key: K) -> Vec<u8>
+    where
+        H: StorageHasher,
+        K: Encode,
+    {
+        key.using_encoded(H::hash).as_ref().to_vec()
     }
 
     pub fn get_on_chain_storage_version_of_swaps_pallet() -> StorageVersion {
@@ -256,6 +306,18 @@ mod utility {
     pub fn put_storage_version_of_swaps_pallet(value: u16) {
         let key = storage_prefix_of_swaps_pallet();
         unhashed::put(&key, &StorageVersion::new(value));
+    }
+
+    pub fn get_pool<T: Config>(pool_id: PoolId) -> Option<Pool<BalanceOf<T>, MarketIdOf<T>>> {
+        let hash = key_to_hash::<Blake2_128Concat, PoolId>(pool_id);
+        let pool_maybe =
+            get_storage_value::<Option<Pool<BalanceOf<T>, MarketIdOf<T>>>>(SWAPS, POOLS, &hash);
+        pool_maybe.unwrap_or(None)
+    }
+
+    pub fn set_pool<T: Config>(pool_id: PoolId, pool: Pool<BalanceOf<T>, MarketIdOf<T>>) {
+        let hash = key_to_hash::<Blake2_128Concat, PoolId>(pool_id);
+        put_storage_value(SWAPS, POOLS, &hash, Some(pool));
     }
 }
 
@@ -423,7 +485,7 @@ mod tests {
             assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Active);
             assert_eq!(Swaps::pool(2).unwrap().pool_status, PoolStatus::Closed);
             assert_eq!(Swaps::pool(3).unwrap().pool_status, PoolStatus::Closed);
-            assert_eq!(Swaps::pool(4).unwrap().pool_status, PoolStatus::Closed);
+            assert_eq!(Swaps::pool(4).unwrap().pool_status, PoolStatus::Clean);
             assert_eq!(Swaps::pool(5).unwrap().pool_status, PoolStatus::Closed);
 
             assert_eq!(LastTimeFrame::<Runtime>::get().unwrap(), now_time_frame);

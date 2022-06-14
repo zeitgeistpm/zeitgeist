@@ -776,7 +776,7 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
 }
 
 #[test]
-fn pool_exit_decreases_correct_pool_parameters_on_closed_pool() {
+fn pool_exit_decreases_correct_pool_parameters_on_cleaned_up_pool() {
     // Test is the same as
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -1333,25 +1333,15 @@ fn clean_up_pool_leaves_only_correct_assets() {
         create_initial_pool(ScoringRule::CPMM, true);
         let pool_id = 0;
         assert_ok!(Swaps::close_pool(pool_id));
-
-        assert_noop!(
-            Swaps::clean_up_pool(
-                &MarketType::Categorical(1337),
-                pool_id,
-                &OutcomeReport::Categorical(1337),
-                &Default::default()
-            ),
-            crate::Error::<Runtime>::WinningAssetNotFound
-        );
-
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
-
         assert_ok!(Swaps::clean_up_pool(
             &MarketType::Categorical(4),
             pool_id,
             &OutcomeReport::Categorical(cat_idx),
             &Default::default()
         ));
+        let pool = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool.pool_status, PoolStatus::Clean);
         assert_eq!(Swaps::pool_by_id(pool_id).unwrap().assets, vec![ASSET_A, ASSET_D]);
     });
 }
@@ -1361,21 +1351,10 @@ fn clean_up_pool_handles_rikiddo_pools_properly() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
         let pool_id = 0;
-
         let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
 
-        assert_noop!(
-            Swaps::clean_up_pool(
-                &MarketType::Categorical(4),
-                pool_id,
-                &OutcomeReport::Categorical(cat_idx),
-                &Default::default()
-            ),
-            crate::Error::<Runtime>::InvalidStateTransition
-        );
-
-        // We need to forcefully closed the pool (Rikiddo pools are not allowed to be cleaned
-        // up when CollectingSubsidy.
+        // We need to forcefully close the pool (Rikiddo pools are not allowed to be cleaned
+        // up when CollectingSubsidy).
         assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
             pool.pool_status = PoolStatus::Closed;
             Ok(())
@@ -1390,6 +1369,49 @@ fn clean_up_pool_handles_rikiddo_pools_properly() {
 
         // Rikiddo instance does not exist anymore.
         assert_storage_noop!(RikiddoSigmoidFeeMarketEma::clear(pool_id).unwrap_or(()));
+    });
+}
+
+#[test_case(PoolStatus::Active; "active")]
+#[test_case(PoolStatus::Clean; "clean")]
+#[test_case(PoolStatus::CollectingSubsidy; "collecting_subsidy")]
+fn clean_up_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, false);
+        let pool_id = 0;
+        assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
+            pool.pool_status = pool_status;
+            Ok(())
+        }));
+        let pool_id = 0;
+        let cat_idx = if let Asset::CategoricalOutcome(_, cidx) = ASSET_A { cidx } else { 0 };
+        assert_noop!(
+            Swaps::clean_up_pool(
+                &MarketType::Categorical(4),
+                pool_id,
+                &OutcomeReport::Categorical(cat_idx),
+                &Default::default()
+            ),
+            crate::Error::<Runtime>::InvalidStateTransition
+        );
+    });
+}
+
+#[test]
+fn clean_up_pool_fails_if_winning_asset_is_not_found() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, true);
+        let pool_id = 0;
+        assert_ok!(Swaps::close_pool(pool_id));
+        assert_noop!(
+            Swaps::clean_up_pool(
+                &MarketType::Categorical(1337),
+                pool_id,
+                &OutcomeReport::Categorical(1337),
+                &Default::default()
+            ),
+            crate::Error::<Runtime>::WinningAssetNotFound
+        );
     });
 }
 

@@ -21,4 +21,6 @@ pub enum PoolStatus {
     CollectingSubsidy,
     /// No trading/adding liquidity is allowed.
     Closed,
+    /// The pool has been cleaned up, usually after the corresponding market has been resolved.
+    Clean,
 }

@@ -1301,12 +1301,11 @@ mod pallet {
 
         /// Calculate the exit fee percentage for `pool`.
         fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
-            // We don't charge exit fees on closed pools (no need to punish LPs for leaving the
-            // pool)!
-            if pool.pool_status == PoolStatus::Closed {
-                0u128.saturated_into()
-            } else {
-                T::ExitFee::get().saturated_into()
+            // We don't charge exit fees on closed or cleaned up pools (no need to punish LPs for
+            // leaving the pool)!
+            match pool.pool_status {
+                PoolStatus::Active => T::ExitFee::get().saturated_into(),
+                _ => 0u128.saturated_into(),
             }
         }
     }
@@ -1795,8 +1794,11 @@ mod pallet {
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = 0;
-            let pool = Self::pool(pool_id)?;
-            ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
+            Self::mutate_pool(pool_id, |pool| {
+                ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
+                pool.pool_status = PoolStatus::Clean;
+                Ok(())
+            })?;
             if let MarketType::Categorical(_) = market_type {
                 weight = weight.saturating_add(Self::clean_up_pool_categorical(
                     pool_id,
