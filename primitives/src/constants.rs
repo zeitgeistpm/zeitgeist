@@ -94,6 +94,7 @@ parameter_types! {
     pub const MaxAssets: u16 = MaxCategories::get() + 1;
     pub const MaxInRatio: Balance = (BASE / 3) + 1;
     pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+    pub const MaxSwapFee: Balance = BASE / 10; // 10%
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
     pub const MinLiquidity: Balance = 100 * BASE;

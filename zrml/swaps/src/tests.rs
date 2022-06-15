@@ -1838,6 +1838,52 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
 }
 
 #[test]
+fn create_pool_fails_if_swap_fee_is_too_high() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount =  <Runtime as crate::Config>::MinLiquidity::get();
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, amount);
+        });
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.to_vec(),
+                ASSET_D,
+                0,
+                ScoringRule::CPMM,
+                Some(<Runtime as crate::Config>::MaxSwapFee::get() + 1),
+                Some(amount),
+                Some(vec!(_2, _2, _2)),
+            ),
+            crate::Error::<Runtime>::InvalidFeeArgument
+        );
+    });
+}
+
+#[test]
+fn create_pool_fails_if_swap_fee_is_unspecified_for_cpmm() {
+    ExtBuilder::default().build().execute_with(|| {
+        let amount =  <Runtime as crate::Config>::MinLiquidity::get();
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, amount);
+        });
+        assert_noop!(
+            Swaps::create_pool(
+                BOB,
+                ASSETS.to_vec(),
+                ASSET_D,
+                0,
+                ScoringRule::CPMM,
+                None,
+                Some(amount),
+                Some(vec!(_2, _2, _2)),
+            ),
+            crate::Error::<Runtime>::InvalidFeeArgument
+        );
+    });
+}
+
+#[test]
 fn join_pool_exit_pool_does_not_create_extra_tokens() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);

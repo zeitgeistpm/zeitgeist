@@ -685,6 +685,9 @@ mod pallet {
         type MaxOutRatio: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
+        type MaxSwapFee: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
         type MaxTotalWeight: Get<u128>;
 
         #[pallet::constant]
@@ -1331,14 +1334,15 @@ mod pallet {
         /// # Arguments
         ///
         /// * `who`: The account that is the creator of the pool. Must have enough
-        /// funds for each of the assets to cover the `MinLiqudity`.
+        ///     funds for each of the assets to cover the `MinLiqudity`.
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
         /// * `market_id`: The market id of the market the pool belongs to.
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
-        /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
+        /// * `swap_fee`: The fee applied to each swap on a CPMM pool, specified as fixed-point
+        ///     ratio (0.1 equal 10% swap fee)
         /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
-        ///   `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
+        ///     `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
         /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
         #[frame_support::transactional]
         fn create_pool(
@@ -1367,7 +1371,8 @@ mod pallet {
                     amount_unwrapped >= T::MinLiquidity::get(),
                     Error::<T>::InsufficientLiquidity
                 );
-                let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                ensure!(swap_fee_unwrapped <= T::MaxSwapFee::get(), Error::<T>::InvalidFeeArgument);
                 let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                 Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
 
