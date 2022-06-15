@@ -163,20 +163,17 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
             match market.period {
                 MarketPeriod::Timestamp(range) => {
                     let end_frame = Pallet::<T>::calculate_time_frame_of_moment(range.end);
+                    let ids = MarketIdsPerCloseTimeFrame::<T>::get(end_frame);
+                    let is_cached = ids.contains(&market_id);
                     // (We're ignoring Rikiddo markets)
                     if current_time_frame < end_frame {
                         assert!(
                             matches!(market.status, MarketStatus::Active | MarketStatus::Proposed),
-                            "Found unexpected status in active/proposed market {:?}: {:?}.",
+                            "found unexpected status in active/proposed market {:?}: {:?}.",
                             market_id,
                             market.status
                         );
-                        let ids = MarketIdsPerCloseTimeFrame::<T>::get(end_frame);
-                        assert!(
-                            ids.contains(&market_id),
-                            "Failed to find cache for market {:?}",
-                            market_id
-                        );
+                        assert!(is_cached, "failed to find cache for market {:?}", market_id);
                     } else {
                         assert!(
                             matches!(
@@ -186,23 +183,32 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
                                     | MarketStatus::Disputed
                                     | MarketStatus::Resolved
                             ),
-                            "Found unexpected status in market {:?}: {:?}",
+                            "found unexpected status in market {:?}: {:?}",
                             market_id,
                             market.status
+                        );
+                        // Note: Only checks if the market is cached in this time frame. The market
+                        // might still be incorrectly cached, but we have no way of knowing this.
+                        assert!(
+                            !is_cached,
+                            "unexpectedly found cache for market {:?} in frame {:?}",
+                            market_id, end_frame,
                         );
                     }
                 }
                 MarketPeriod::Block(range) => {
                     // (We're ignoring Rikiddo markets)
+                    let end_block = range.end;
+                    let ids = MarketIdsPerCloseBlock::<T>::get(end_block);
+                    let is_cached = ids.contains(&market_id);
                     if current_block < range.end {
                         assert!(
                             matches!(market.status, MarketStatus::Active | MarketStatus::Proposed),
-                            "Found unexpected status in active/proposed market {:?}: {:?}.",
+                            "found unexpected status in active/proposed market {:?}: {:?}.",
                             market_id,
                             market.status
                         );
-                        let ids = MarketIdsPerCloseBlock::<T>::get(range.end);
-                        assert!(ids.contains(&market_id));
+                        assert!(is_cached, "failed to find cache for market {:?}", market_id);
                     } else {
                         assert!(
                             matches!(
@@ -212,9 +218,16 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerClose<T> {
                                     | MarketStatus::Disputed
                                     | MarketStatus::Resolved
                             ),
-                            "Found unexpected status in market {:?}: {:?}",
+                            "found unexpected status in market {:?}: {:?}",
                             market_id,
                             market.status
+                        );
+                        // Note: Only checks if the market is cached in this block. The market
+                        // might still be incorrectly cached, but we have no way of knowing this.
+                        assert!(
+                            !is_cached,
+                            "unexpectedly found cache for market {:?} in block {:?}",
+                            market_id, end_block,
                         );
                     }
                 }
