@@ -611,9 +611,6 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
-            // The check below is primarily to ensure that the market is
-            // not a pending advised market.
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             let mut assets = Self::outcome_assets(market_id, &market);
             let base_asset = Asset::Ztg;
@@ -870,9 +867,6 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
-            // The check below is primarily to ensure that the market is
-            // not a pending advised market.
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             let market_account = Self::market_account(market_id);
             ensure!(
@@ -1344,9 +1338,6 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
-            // The check below is primarily to ensure that the market is
-            // not a pending advised market.
-            ensure!(market.status == MarketStatus::Active, Error::<T>::MarketIsNotActive);
 
             let market_account = Self::market_account(market_id);
             CurrencyOf::<T>::transfer(
