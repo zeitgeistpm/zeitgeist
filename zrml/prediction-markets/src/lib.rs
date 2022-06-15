@@ -235,8 +235,8 @@ mod pallet {
             T::CloseOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_market_is_active(&market)?;
-            Self::close_market(&market_id)?;
             Self::clear_auto_close(&market_id)?;
+            Self::close_market(&market_id)?;
             Ok(())
         }
 
@@ -1287,6 +1287,13 @@ mod pallet {
         // Manually remove market from cache for auto close.
         fn clear_auto_close(market_id: &MarketIdOf<T>) -> DispatchResult {
             let market = T::MarketCommons::market(market_id)?;
+
+            // No-op if market isn't cached for auto close according to its state.
+            match market.status {
+                MarketStatus::Active | MarketStatus::Proposed => (),
+                _ => return Ok(()),
+            };
+
             match market.period {
                 MarketPeriod::Block(range) => {
                     MarketIdsPerCloseBlock::<T>::mutate(&range.end, |ids| {
