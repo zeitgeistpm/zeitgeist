@@ -22,6 +22,7 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_swaps::Pools;
 
 const SENTINEL_AMOUNT: u128 = BASE;
 
@@ -312,6 +313,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
             gen_metadata(50),
             MarketType::Categorical(3),
             MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
         ));
@@ -886,6 +888,7 @@ fn it_allows_to_deploy_a_pool() {
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
             0,
+            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![BASE, BASE, BASE]
         ));
@@ -904,6 +907,7 @@ fn deploy_swap_pool_for_market_fails_if_market_has_a_pool() {
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
             0,
+            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![BASE, BASE, BASE]
         ));
@@ -911,6 +915,7 @@ fn deploy_swap_pool_for_market_fails_if_market_has_a_pool() {
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(BOB),
                 0,
+                <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
                 <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
                 vec![BASE, BASE, BASE]
             ),
@@ -933,6 +938,7 @@ fn it_does_not_allow_to_deploy_a_pool_on_pending_advised_market() {
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(BOB),
                 0,
+                <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
                 <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
                 vec![BASE, BASE, BASE]
             ),
@@ -1444,12 +1450,13 @@ fn it_allows_to_redeem_shares() {
 }
 
 #[test]
-fn create_market_and_deploy_assets_results_in_expected_balances() {
+fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params() {
     let oracle = ALICE;
     let period = MarketPeriod::Block(0..42);
     let metadata = gen_metadata(42);
     let category_count = 4;
     let assets = MarketType::Categorical(category_count);
+    let swap_fee = <Runtime as zrml_swaps::Config>::MaxSwapFee::get();
     let amount = 123 * BASE;
     let pool_id = 0;
     let weights = vec![2 * BASE; 5];
@@ -1463,6 +1470,7 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
             metadata,
             assets,
             MarketDisputeMechanism::SimpleDisputes,
+            swap_fee,
             amount,
             weights,
         ));
@@ -1478,6 +1486,9 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
         assert_eq!(System::account(&pool_account).data.free, amount);
+
+        let pool = Pools::<Runtime>::get(0).unwrap();
+        assert_eq!(pool.swap_fee, Some(swap_fee));
     });
 }
 
@@ -2017,6 +2028,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(ALICE),
                 0,
+                <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
                 123 * BASE,
                 vec![BASE; 5],
             ),
@@ -2164,6 +2176,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(ALICE),
                 0,
+                <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
                 123 * BASE,
                 vec![BASE; 7],
             ),
@@ -2338,6 +2351,7 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
     PredictionMarkets::deploy_swap_pool_for_market(
         Origin::signed(FRED),
         0,
+        <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
         <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
         (0..outcome_assets_len + 1).map(|_| BASE).collect(),
     )

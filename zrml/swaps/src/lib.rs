@@ -1340,7 +1340,7 @@ mod pallet {
         /// * `market_id`: The market id of the market the pool belongs to.
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
         /// * `swap_fee`: The fee applied to each swap on a CPMM pool, specified as fixed-point
-        ///     ratio (0.1 equal 10% swap fee)
+        ///     ratio (0.1 equals 10% swap fee)
         /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
         ///     `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
         /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
