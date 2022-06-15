@@ -1,7 +1,7 @@
-use alloc::boxed::Box;
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
+    storage::PrefixIterator,
     traits::NamedReservableCurrency,
     Parameter,
 };
@@ -32,11 +32,8 @@ pub trait MarketCommonsPalletApi {
 
     /// Return an iterator over the key-value pairs of markets. Altering market storage during
     /// iteration results in undefined behavior.
-    fn market_iter() -> Box<
-        dyn Iterator<
-            Item = (Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>),
-        >,
-    >;
+    fn market_iter()
+    -> PrefixIterator<(Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>)>;
 
     /// Gets a market from the storage.
     fn market(

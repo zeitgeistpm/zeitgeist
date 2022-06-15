@@ -18,12 +18,12 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::MarketCommonsPalletApi;
-    use alloc::boxed::Box;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        storage::PrefixIterator,
         traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
@@ -124,12 +124,11 @@ mod pallet {
             }
         }
 
-        fn market_iter() -> Box<
-            dyn Iterator<
-                Item = (Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>),
-            >,
-        > {
-            Box::new(<Markets<T>>::iter())
+        fn market_iter() -> PrefixIterator<(
+            Self::MarketId,
+            Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        )> {
+            <Markets<T>>::iter()
         }
 
         fn market(
