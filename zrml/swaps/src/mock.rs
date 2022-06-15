@@ -11,8 +11,8 @@ use zeitgeist_primitives::{
     constants::{
         BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
-        MaxReserves, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy, MinWeight,
-        MinimumPeriod, SwapsPalletId, BASE, MaxSwapFee,
+        MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy,
+        MinWeight, MinimumPeriod, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,

@@ -1840,7 +1840,7 @@ fn create_pool_fails_if_base_asset_is_not_in_asset_vector() {
 #[test]
 fn create_pool_fails_if_swap_fee_is_too_high() {
     ExtBuilder::default().build().execute_with(|| {
-        let amount =  <Runtime as crate::Config>::MinLiquidity::get();
+        let amount = <Runtime as crate::Config>::MinLiquidity::get();
         ASSETS.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &BOB, amount);
         });
@@ -1863,7 +1863,7 @@ fn create_pool_fails_if_swap_fee_is_too_high() {
 #[test]
 fn create_pool_fails_if_swap_fee_is_unspecified_for_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
-        let amount =  <Runtime as crate::Config>::MinLiquidity::get();
+        let amount = <Runtime as crate::Config>::MinLiquidity::get();
         ASSETS.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &BOB, amount);
         });
