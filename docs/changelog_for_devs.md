@@ -1,15 +1,15 @@
 # v0.3.3
 
 - Introduced `MarketStatus::Closed`. Markets are automatically transitioned into
-  this state when the market ends, and the event `Event::MarketClosed` is
+  this state when the market ends, and the `Event::MarketClosed` is
   emitted. Trading is not allowed on markets that are closed.
 
 - Introduced `PoolStatus::Closed`; the pool of a market is closed when the
-  market is closed. The event `PoolClosed` is emitted when this happens.
+  market is closed. The `Event::PoolClosed` is emitted when this happens.
 
 - Replace `PoolStatus::Stale` with `PoolStatus::Clean`. This state signals that
   the corresponding market was resolved and the losing assets deleted from the
-  pool. The event `PoolCleanedUp` is emitted when the pool transitions into this
+  pool. The `Event::PoolCleanedUp` is emitted when the pool transitions into this
   state.
 
 - Simplify `create_cpmm_market_and_deploy_assets`,

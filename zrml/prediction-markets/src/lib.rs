@@ -2000,7 +2000,7 @@ mod pallet {
             Ok(())
         }
 
-        // If a market has a pool that is `Active`, then changes from `Active` to `Stale`. If
+        // If a market has a pool that is `Active`, then changes from `Active` to `Clean`. If
         // the market does not exist or the market does not have a pool, does nothing.
         fn clean_up_pool(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,

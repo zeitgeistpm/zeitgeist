@@ -742,7 +742,7 @@ fn reject_market_clears_auto_close_blocks() {
 fn on_market_close_auto_rejects_expired_advised_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
-        // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
+        // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(Currency::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
