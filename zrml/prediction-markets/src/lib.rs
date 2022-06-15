@@ -287,7 +287,6 @@ mod pallet {
             let mut status = MarketStatus::Active;
 
             T::MarketCommons::mutate_market(&market_id, |m| {
-                Self::ensure_market_period_is_valid(&m.period)?;
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
 
                 if m.scoring_rule == ScoringRule::CPMM {
