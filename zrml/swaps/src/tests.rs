@@ -1435,6 +1435,60 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm(
 }
 
 #[test]
+fn swap_exact_amount_in_exchanges_correct_values_with_cpmm_with_fees() {
+    ExtBuilder::default().build().execute_with(|| {
+        let asset_bound = Some(_1 / 2);
+        let max_price = Some(_2);
+        // ALICE swaps in BASE / 0.9; this results in adjusted_in ≈ BASE in
+        // `math::calc_out_given_in` so we can use the same numbers as in the test above!
+        let asset_amount_in = 11_111_111_111;
+        let asset_amount_out = 9_900_990_100;
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &ALICE, _25);
+            let _ = Currencies::deposit(asset, &BOB, _10000);
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            ASSETS.iter().cloned().collect(),
+            ASSETS.last().unwrap().clone(),
+            0,
+            ScoringRule::CPMM,
+            Some(BASE / 10),
+            Some(<Runtime as crate::Config>::MinLiquidity::get()),
+            Some(vec!(_2, _2, _2, _2)),
+        ));
+        assert_ok!(Swaps::swap_exact_amount_in(
+            alice_signed(),
+            0,
+            ASSET_A,
+            asset_amount_in,
+            ASSET_B,
+            asset_bound,
+            max_price,
+        ));
+        System::assert_last_event(
+            Event::SwapExactAmountIn(SwapEvent {
+                asset_amount_in,
+                asset_amount_out,
+                asset_bound,
+                asset_in: ASSET_A,
+                asset_out: ASSET_B,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                max_price,
+            })
+            .into(),
+        );
+        assert_all_parameters(
+            [_25 - asset_amount_in, _25 + asset_amount_out, _25, _25],
+            0,
+            [_100 + asset_amount_in, _100 - asset_amount_out, _100, _100],
+            _100,
+        );
+    });
+}
+
+#[test]
 fn swap_exact_amount_in_fails_if_min_asset_amount_out_is_not_satisfied_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
@@ -1564,6 +1618,59 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm(
             [239898989900, _26, _25, _25],
             0,
             [_101 + 0101010100, _99, _100, _100],
+            _100,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_out_exchanges_correct_values_with_cpmm_with_fees() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let asset_amount_out = _1;
+        let asset_amount_in = 11223344556; // 10101010100 / 0.9
+        let asset_bound = Some(_2);
+        let max_price = Some(_3);
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &ALICE, _25);
+            let _ = Currencies::deposit(asset, &BOB, _10000);
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            ASSETS.iter().cloned().collect(),
+            ASSETS.last().unwrap().clone(),
+            0,
+            ScoringRule::CPMM,
+            Some(BASE / 10),
+            Some(<Runtime as crate::Config>::MinLiquidity::get()),
+            Some(vec!(_2, _2, _2, _2)),
+        ));
+        assert_ok!(Swaps::swap_exact_amount_out(
+            alice_signed(),
+            0,
+            ASSET_A,
+            asset_bound,
+            ASSET_B,
+            asset_amount_out,
+            max_price,
+        ));
+        System::assert_last_event(
+            Event::SwapExactAmountOut(SwapEvent {
+                asset_amount_in,
+                asset_amount_out,
+                asset_bound,
+                asset_in: ASSET_A,
+                asset_out: ASSET_B,
+                cpep: CommonPoolEventParams { pool_id: 0, who: 0 },
+                max_price,
+            })
+            .into(),
+        );
+        assert_all_parameters(
+            [_25 - asset_amount_in, _25 + asset_amount_out, _25, _25],
+            0,
+            [_100 + asset_amount_in, _100 - asset_amount_out, _100, _100],
             _100,
         );
     });
