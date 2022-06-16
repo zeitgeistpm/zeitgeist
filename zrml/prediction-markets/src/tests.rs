@@ -775,15 +775,16 @@ fn on_market_close_auto_rejects_expired_advised_market() {
 fn on_market_close_successfully_auto_closes_market_with_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 33;
+        let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             ALICE,
             MarketPeriod::Block(0..33),
             gen_metadata(50),
-            MarketType::Categorical(3),
+            MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
         let market_id = 0;
         let pool_id = MarketCommons::market_pool(&market_id).unwrap();
@@ -808,15 +809,16 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
 fn on_market_close_successfully_auto_closes_market_with_timestamps() {
     ExtBuilder::default().build().execute_with(|| {
         let end: Moment = MILLISECS_PER_BLOCK.into();
+        let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             gen_metadata(50),
-            MarketType::Categorical(3),
+            MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
         let market_id = 0;
         let pool_id = MarketCommons::market_pool(&market_id).unwrap();
@@ -849,25 +851,26 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         LastTimeFrame::<Runtime>::set(Some(0));
 
         let end: Moment = (5 * MILLISECS_PER_BLOCK).into();
+        let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             gen_metadata(50),
-            MarketType::Categorical(3),
+            MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             gen_metadata(50),
-            MarketType::Categorical(3),
+            MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.

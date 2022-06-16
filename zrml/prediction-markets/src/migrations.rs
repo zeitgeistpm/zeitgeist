@@ -516,15 +516,16 @@ mod tests {
         pool_is_closed: bool,
     ) {
         let amount = 100 * BASE;
+        let category_count = 5;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             BOB,
             period,
             gen_metadata(0),
-            MarketType::Categorical(5),
+            MarketType::Categorical(category_count),
             MarketDisputeMechanism::Authorized(CHARLIE),
             amount,
-            vec![BASE; 6],
+            vec![BASE; category_count.into()],
         ));
         let market_id = MarketCommons::latest_market_id().unwrap();
         if pool_is_closed {
