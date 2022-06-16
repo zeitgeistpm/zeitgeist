@@ -4,7 +4,8 @@ use crate::{
     UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 use frame_support::{match_types, parameter_types, traits::Everything, weights::IdentityFee};
-use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter};
+use orml_traits::location::AbsoluteReserveProvider;
+use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
@@ -13,10 +14,11 @@ use xcm::latest::{
     BodyId, Junction, Junctions, MultiLocation,
 };
 use xcm_builder::{
-    AllowSubscriptionsFrom, AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowKnownQueryResponses,
-    FixedWeightBounds, LocationInverter, NativeAsset, ParentIsPreset, RelayChainAsNative,
-    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-    SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
+    AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
+    AllowTopLevelPaidExecutionFrom, FixedWeightBounds, LocationInverter, 
+    ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
+    UsingComponents,
 };
 use xcm_executor::Config;
 use zeitgeist_primitives::types::Asset;
@@ -38,8 +40,8 @@ impl Config for XcmConfig {
     type Barrier = Barrier;
     /// The outer call dispatch type.
     type Call = Call;
-    /// TODO: Combinations of (Location, Asset) pairs which are trusted as reserves
-    type IsReserve = NativeAsset;
+    // Filters multi native assets whose reserve is same with `origin`.
+    type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
     /// Means of inverting a location.
@@ -61,13 +63,13 @@ impl Config for XcmConfig {
 /// Additional filters that specify whether the XCM instruction should be executed at all.
 pub type Barrier = (
     // Execution barrier that just takes max_weight from weight_credit
-	TakeWeightCredit,
+    TakeWeightCredit,
     // Ensures that execution time is bought with BuyExecution instruction
-	AllowTopLevelPaidExecutionFrom<Everything>,
-	// Expected responses are OK.
-	AllowKnownQueryResponses<PolkadotXcm>,
-	// Subscriptions for version tracking are OK.
-	AllowSubscriptionsFrom<Everything>,
+    AllowTopLevelPaidExecutionFrom<Everything>,
+    // Expected responses are OK.
+    AllowKnownQueryResponses<PolkadotXcm>,
+    // Subscriptions for version tracking are OK.
+    AllowSubscriptionsFrom<Everything>,
 );
 type AssetT = <Runtime as orml_tokens::Config>::CurrencyId;
 
