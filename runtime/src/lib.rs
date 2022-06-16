@@ -77,7 +77,10 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    zrml_market_commons::migrations::MigrateMarketCounter<Runtime>,
+    (
+        zrml_prediction_markets::migrations::MigrateMarketIdsPerClose<Runtime>,
+        zrml_market_commons::migrations::MigrateMarketCounter<Runtime>,
+    ),
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
