@@ -13,7 +13,7 @@ use xcm::latest::{
     BodyId, Junction, Junctions, MultiLocation,
 };
 use xcm_builder::{
-    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
+    AllowSubscriptionsFrom, AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowKnownQueryResponses,
     FixedWeightBounds, LocationInverter, NativeAsset, ParentIsPreset, RelayChainAsNative,
     SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
     SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
@@ -34,7 +34,7 @@ impl Config for XcmConfig {
     /// The general asset trap - handler for when assets are left in the Holding Register at the
     /// end of execution.
     type AssetTrap = PolkadotXcm;
-    /// TODO: Additional filters that specify whether the XCM call should be executed at all.
+    /// Additional filters that specify whether the XCM instruction should be executed at all.
     type Barrier = Barrier;
     /// The outer call dispatch type.
     type Call = Call;
@@ -58,11 +58,16 @@ impl Config for XcmConfig {
     type XcmSender = XcmRouter;
 }
 
+/// Additional filters that specify whether the XCM instruction should be executed at all.
 pub type Barrier = (
-    TakeWeightCredit,
-    AllowTopLevelPaidExecutionFrom<Everything>,
-    AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
-    // ^^^ Parent and its exec plurality get free execution
+    // Execution barrier that just takes max_weight from weight_credit
+	TakeWeightCredit,
+    // Ensures that execution time is bought with BuyExecution instruction
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Expected responses are OK.
+	AllowKnownQueryResponses<PolkadotXcm>,
+	// Subscriptions for version tracking are OK.
+	AllowSubscriptionsFrom<Everything>,
 );
 type AssetT = <Runtime as orml_tokens::Config>::CurrencyId;
 
