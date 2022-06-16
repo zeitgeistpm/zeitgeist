@@ -109,7 +109,7 @@ pub trait Swaps<AccountId> {
     /// # Arguments
     ///
     /// * `market_type`: Type of the market (e.g. categorical or scalar).
-    /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
+    /// * `pool_id`: Unique pool identifier associated with the pool to be cleaned up.
     /// * `outcome_report`: The resulting outcome.
     /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
     fn clean_up_pool(
