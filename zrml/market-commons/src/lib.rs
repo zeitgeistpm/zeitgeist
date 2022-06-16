@@ -23,6 +23,7 @@ mod pallet {
         dispatch::DispatchResult,
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        storage::PrefixIterator,
         traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
@@ -121,6 +122,13 @@ mod pallet {
                 }
                 _ => Err(Error::<T>::NoMarketHasBeenCreated.into()),
             }
+        }
+
+        fn market_iter() -> PrefixIterator<(
+            Self::MarketId,
+            Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        )> {
+            <Markets<T>>::iter()
         }
 
         fn market(

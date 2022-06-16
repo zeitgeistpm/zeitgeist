@@ -78,16 +78,17 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::admin_set_pool_to_stale())]
+        /// Clean up the pool of a resolved market.
+        #[pallet::weight(T::WeightInfo::admin_clean_up_pool())]
         #[transactional]
-        pub fn admin_set_pool_to_stale(
+        pub fn admin_clean_up_pool(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
             outcome_report: OutcomeReport,
@@ -95,7 +96,7 @@ mod pallet {
             ensure_root(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
-            Self::set_pool_to_stale(
+            Self::clean_up_pool(
                 &market.market_type,
                 pool_id,
                 &outcome_report,
@@ -807,6 +808,8 @@ mod pallet {
         /// Tried to create a pool that has more assets than the upper threshhold specified by
         /// a constant.
         TooManyAssets,
+        /// Tried to create a pool with at least two identical assets.
+        SomeIdenticalAssets,
         /// The pool does not support swapping the assets in question.
         UnsupportedTrade,
         /// The outcome asset specified as the winning asset was not found in the pool.
@@ -830,6 +833,10 @@ mod pallet {
             BalanceOf<T>,
             T::AccountId,
         ),
+        /// A pool was closed. \[pool_id\]
+        PoolClosed(PoolId),
+        /// A pool was cleaned up. \[pool_id\]
+        PoolCleanedUp(PoolId),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
             PoolAssetsEvent<
@@ -1180,10 +1187,9 @@ mod pallet {
         pub(crate) fn check_if_pool_is_active(
             pool: &Pool<BalanceOf<T>, T::MarketId>,
         ) -> DispatchResult {
-            if pool.pool_status == PoolStatus::Active {
-                Ok(())
-            } else {
-                Err(Error::<T>::PoolIsNotActive.into())
+            match pool.pool_status {
+                PoolStatus::Active => Ok(()),
+                _ => Err(Error::<T>::PoolIsNotActive.into()),
             }
         }
 
@@ -1245,17 +1251,7 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        fn set_pool_to_stale_common(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            Self::mutate_pool(pool_id, |pool| {
-                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
-                pool.pool_status = PoolStatus::Stale;
-                Ok(())
-            })?;
-
-            Ok(T::DbWeight::get().reads_writes(1, 1))
-        }
-
-        fn set_pool_to_stale_categorical(
+        fn clean_up_pool_categorical(
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
@@ -1301,7 +1297,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Ok(T::WeightInfo::set_pool_to_stale_without_reward_distribution(
+            Ok(T::WeightInfo::clean_up_pool_without_reward_distribution(
                 total_assets.saturated_into(),
             )
             .saturating_add(extra_weight))
@@ -1309,12 +1305,11 @@ mod pallet {
 
         /// Calculate the exit fee percentage for `pool`.
         fn calc_exit_fee(pool: &Pool<BalanceOf<T>, T::MarketId>) -> BalanceOf<T> {
-            // We don't charge exit fees on stale pools (no need to punish LPs for leaving the
-            // pool)!
-            if pool.pool_status == PoolStatus::Stale {
-                0u128.saturated_into()
-            } else {
-                T::ExitFee::get().saturated_into()
+            // We don't charge exit fees on closed or cleaned up pools (no need to punish LPs for
+            // leaving the pool)!
+            match pool.pool_status {
+                PoolStatus::Active => T::ExitFee::get().saturated_into(),
+                _ => 0u128.saturated_into(),
             }
         }
     }
@@ -1343,7 +1338,7 @@ mod pallet {
         #[frame_support::transactional]
         fn create_pool(
             who: T::AccountId,
-            mut assets: Vec<Asset<T::MarketId>>,
+            assets: Vec<Asset<T::MarketId>>,
             base_asset: Asset<T::MarketId>,
             market_id: Self::MarketId,
             scoring_rule: ScoringRule,
@@ -1360,6 +1355,13 @@ mod pallet {
             let mut map = BTreeMap::new();
             let mut total_weight = 0;
             let amount_unwrapped = amount.unwrap_or_else(BalanceOf::<T>::zero);
+            let mut sorted_assets = assets.clone();
+            sorted_assets.sort();
+            let has_duplicates = sorted_assets
+                .iter()
+                .zip(sorted_assets.iter().skip(1))
+                .fold(false, |acc, (&x, &y)| acc || x == y);
+            ensure!(!has_duplicates, Error::<T>::SomeIdenticalAssets);
 
             if scoring_rule == ScoringRule::CPMM {
                 ensure!(amount.is_some(), Error::<T>::InvalidAmountArgument);
@@ -1396,11 +1398,8 @@ mod pallet {
                 let _ = T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
             }
 
-            // Sort assets for future binary search, for example to check if an asset is included.
-            let sort_assets = assets.as_mut_slice();
-            sort_assets.sort();
             let pool = Pool {
-                assets,
+                assets: sorted_assets,
                 base_asset,
                 market_id,
                 pool_status: if scoring_rule == ScoringRule::CPMM {
@@ -1437,6 +1436,17 @@ mod pallet {
             ));
 
             Ok(next_pool_id)
+        }
+
+        fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            Self::mutate_pool(pool_id, |pool| {
+                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
+                pool.pool_status = PoolStatus::Closed;
+                Ok(())
+            })?;
+            Self::deposit_event(Event::PoolClosed(pool_id));
+            // TODO(#603): Fix weight calculation!
+            Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
         fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
@@ -1769,12 +1779,12 @@ mod pallet {
             Self::pool_by_id(pool_id)
         }
 
-        /// Mark a pool as stale, remove losing assets and distribute Rikiddo pool share rewards.
+        /// Remove losing assets and distribute Rikiddo pool share rewards.
         ///
         /// # Arguments
         ///
         /// * `market_type`: Type of the market.
-        /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
+        /// * `pool_id`: Unique pool identifier associated with the pool to be made closed.
         /// * `outcome_report`: The reported outcome.
         /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
         ///
@@ -1783,24 +1793,28 @@ mod pallet {
         /// * Returns `Error::<T>::PoolDoesNotExist` if there is no pool with `pool_id`.
         /// * Returns `Error::<T>::WinningAssetNotFound` if the reported asset is not found in the
         ///   pool and the scoring rule is Rikiddo.
-        /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not active or already
-        ///   stale
+        /// * Returns `Error::<T>::InvalidStateTransition` if the pool is not closed
         #[frame_support::transactional]
-        fn set_pool_to_stale(
+        fn clean_up_pool(
             market_type: &MarketType,
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
         ) -> Result<Weight, DispatchError> {
             let mut weight = 0;
-            weight = weight.saturating_add(Self::set_pool_to_stale_common(pool_id)?);
+            Self::mutate_pool(pool_id, |pool| {
+                ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
+                pool.pool_status = PoolStatus::Clean;
+                Ok(())
+            })?;
             if let MarketType::Categorical(_) = market_type {
-                weight = weight.saturating_add(Self::set_pool_to_stale_categorical(
+                weight = weight.saturating_add(Self::clean_up_pool_categorical(
                     pool_id,
                     outcome_report,
                     winner_payout_account,
                 )?);
             }
+            Self::deposit_event(Event::<T>::PoolCleanedUp(pool_id));
             // (No extra work required for scalar markets!)
             Ok(weight)
         }

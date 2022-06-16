@@ -60,10 +60,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 36,
+    spec_version: 37,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 13,
+    transaction_version: 14,
     state_version: 1,
 };
 
@@ -77,7 +77,10 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    zrml_market_commons::migrations::MigrateMarketCounter<Runtime>,
+    (
+        zrml_prediction_markets::migrations::MigrateMarketIdsPerClose<Runtime>,
+        zrml_market_commons::migrations::MigrateMarketCounter<Runtime>,
+    ),
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
