@@ -1,5 +1,6 @@
 [dependencies]
 arbitrary = { default-features = false, optional = true, version = "1.0" }
+bstringify = "0.1.2"
 frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 orml-tokens = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }

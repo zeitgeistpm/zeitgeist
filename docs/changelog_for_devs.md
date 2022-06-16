@@ -1,3 +1,8 @@
+# v0.3.4
+- Asset::Ztg was renamed to Asset::ZTG. All currency symbols will be written in uppercase.
+- Added two more currencies: AUSD and KSM (or ROC on testnet)
+- Added xTokens pallet to transfer tokens accross chains
+
 # v0.3.3
 
 - Replaced `create_categorical_market` and `create_scalar_market` with

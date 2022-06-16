@@ -663,7 +663,7 @@ mod pallet {
                 (amount_base_asset).saturating_sub(MinLiquidity::get().saturated_into());
 
             if remaining_amount > zero_balance {
-                add_liqudity(remaining_amount, Asset::Ztg)?;
+                add_liqudity(remaining_amount, Asset::ZTG)?;
             }
 
             Ok(Some(
@@ -702,7 +702,7 @@ mod pallet {
             ensure!(T::MarketCommons::market_pool(&market_id).is_err(), Error::<T>::SwapPoolExists);
 
             let mut assets = Self::outcome_assets(market_id, &market);
-            let base_asset = Asset::Ztg;
+            let base_asset = Asset::ZTG;
             assets.push(base_asset);
 
             let pool_id = T::Swaps::create_pool(
@@ -1995,7 +1995,7 @@ mod pallet {
             );
 
             let mut assets = Self::outcome_assets(market_id, market);
-            let base_asset = Asset::Ztg;
+            let base_asset = Asset::ZTG;
             assets.push(base_asset);
             let total_assets = assets.len();
 

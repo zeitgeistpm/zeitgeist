@@ -141,6 +141,6 @@ fn asset(seed: (u128, u16)) -> Asset<u128> {
         }
         2 => Asset::CombinatorialOutcome,
         3 => Asset::PoolShare(SerdeWrapper(seed0)),
-        _ => Asset::Ztg,
+        _ => Asset::ZTG,
     }
 }
