@@ -1456,12 +1456,6 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm(
 #[test]
 fn swap_exact_amount_in_exchanges_correct_values_with_cpmm_with_fees() {
     ExtBuilder::default().build().execute_with(|| {
-        let asset_bound = Some(_1 / 2);
-        let max_price = Some(_2);
-        // ALICE swaps in BASE / 0.9; this results in adjusted_in ≈ BASE in
-        // `math::calc_out_given_in` so we can use the same numbers as in the test above!
-        let asset_amount_in = 11_111_111_111;
-        let asset_amount_out = 9_900_990_100;
         frame_system::Pallet::<Runtime>::set_block_number(1);
         ASSETS.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &ALICE, _25);
@@ -1477,6 +1471,13 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm_with_fees() {
             Some(<Runtime as crate::Config>::MinLiquidity::get()),
             Some(vec!(_2, _2, _2, _2)),
         ));
+
+        let asset_bound = Some(_1 / 2);
+        let max_price = Some(_2);
+        // ALICE swaps in BASE / 0.9; this results in adjusted_in ≈ BASE in
+        // `math::calc_out_given_in` so we can use the same numbers as in the test above!
+        let asset_amount_in = 11_111_111_111;
+        let asset_amount_out = 9_900_990_100;
         assert_ok!(Swaps::swap_exact_amount_in(
             alice_signed(),
             0,
@@ -1646,11 +1647,6 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm(
 fn swap_exact_amount_out_exchanges_correct_values_with_cpmm_with_fees() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        let asset_amount_out = _1;
-        let asset_amount_in = 11223344556; // 10101010100 / 0.9
-        let asset_bound = Some(_2);
-        let max_price = Some(_3);
-        frame_system::Pallet::<Runtime>::set_block_number(1);
         ASSETS.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &ALICE, _25);
             let _ = Currencies::deposit(asset, &BOB, _10000);
@@ -1665,6 +1661,11 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm_with_fees() {
             Some(<Runtime as crate::Config>::MinLiquidity::get()),
             Some(vec!(_2, _2, _2, _2)),
         ));
+
+        let asset_amount_out = _1;
+        let asset_amount_in = 11223344556; // 10101010100 / 0.9
+        let asset_bound = Some(_2);
+        let max_price = Some(_3);
         assert_ok!(Swaps::swap_exact_amount_out(
             alice_signed(),
             0,
