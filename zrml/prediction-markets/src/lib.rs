@@ -1382,13 +1382,13 @@ mod pallet {
             T::AssetManager::slash_reserved_named(
                 &RESERVE_ID,
                 Asset::Ztg,
-                &creator,
+                creator,
                 T::AdvisoryBond::get(),
             );
             T::AssetManager::unreserve_named(
                 &RESERVE_ID,
                 Asset::Ztg,
-                &creator,
+                creator,
                 T::OracleBond::get(),
             );
             T::MarketCommons::remove_market(market_id)?;
@@ -1406,13 +1406,13 @@ mod pallet {
             T::AssetManager::unreserve_named(
                 &RESERVE_ID,
                 Asset::Ztg,
-                &creator,
+                creator,
                 T::AdvisoryBond::get(),
             );
             T::AssetManager::unreserve_named(
                 &RESERVE_ID,
                 Asset::Ztg,
-                &creator,
+                creator,
                 T::OracleBond::get(),
             );
             T::MarketCommons::remove_market(market_id)?;
