@@ -1455,11 +1455,12 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
     let period = MarketPeriod::Block(0..42);
     let metadata = gen_metadata(42);
     let category_count = 4;
-    let assets = MarketType::Categorical(category_count);
+    let market_type = MarketType::Categorical(category_count);
     let swap_fee = <Runtime as zrml_swaps::Config>::MaxSwapFee::get();
     let amount = 123 * BASE;
     let pool_id = 0;
-    let weights = vec![2 * BASE; 5];
+    let weight = 2 * BASE;
+    let weights = vec![weight; 5];
 
     // Execute the combined convenience function
     ExtBuilder::default().build().execute_with(|| {
@@ -1468,12 +1469,13 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
             oracle,
             period,
             metadata,
-            assets,
+            market_type,
             MarketDisputeMechanism::SimpleDisputes,
             swap_fee,
             amount,
             weights,
         ));
+        let market_id = 0;
 
         let pool_account = Swaps::pool_account_id(pool_id);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
@@ -1488,7 +1490,27 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         assert_eq!(System::account(&pool_account).data.free, amount);
 
         let pool = Pools::<Runtime>::get(0).unwrap();
+        let assets_expected = vec![
+            Asset::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 1),
+            Asset::CategoricalOutcome(market_id, 2),
+            Asset::CategoricalOutcome(market_id, 3),
+            Asset::Ztg,
+        ];
+        assert_eq!(pool.assets, assets_expected);
+        assert_eq!(pool.base_asset, Asset::Ztg);
+        assert_eq!(pool.market_id, market_id);
+        assert_eq!(pool.scoring_rule, ScoringRule::CPMM);
         assert_eq!(pool.swap_fee, Some(swap_fee));
+        assert_eq!(pool.total_subsidy, None);
+        assert_eq!(pool.total_subsidy, None);
+        assert_eq!(pool.total_weight, Some(5 * weight));
+        let pool_weights = pool.weights.unwrap();
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 0)], weight);
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 1)], weight);
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 2)], weight);
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 3)], weight);
+        assert_eq!(pool_weights[&Asset::Ztg], weight);
     });
 }
 
