@@ -1744,7 +1744,7 @@ mod pallet {
                 m.resolved_outcome = Some(resolved_outcome.clone());
                 Ok(())
             })?;
-            //  Market is resolved so remove all disputes.
+            //  Market is resolved so remove any disputes.
             Disputes::<T>::remove(market_id);
             Self::deposit_event(Event::MarketResolved(
                 *market_id,
