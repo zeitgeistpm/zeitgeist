@@ -990,10 +990,10 @@ fn pool_exit_with_exact_pool_amount_exchanges_correct_values(
     });
 }
 
-#[test_case(49999999297, 12272234248, 0, 0; "no_fees")]
-#[test_case(45_082_061_850, 12272234293, _1_10, 0; "with_exit_fees")]
-#[test_case(46403174873, 11820024153, 0, _1_20; "with_swap_fees")]
-#[test_case(41_836_235_739, 11820024187, _1_10, _1_20; "with_both_fees")]
+#[test_case(49_999_999_297, 12_272_234_248, 0, 0; "no_fees")]
+#[test_case(45_082_061_850, 12_272_234_293, _1_10, 0; "with_exit_fees")]
+#[test_case(46_403_174_873, 11_820_024_153, 0, _1_20; "with_swap_fees")]
+#[test_case(41_836_235_739, 11_820_024_187, _1_10, _1_20; "with_both_fees")]
 fn pool_exit_with_exact_asset_amount_exchanges_correct_values(
     asset_amount: BalanceOf<Runtime>,
     pool_amount_expected: BalanceOf<Runtime>,
