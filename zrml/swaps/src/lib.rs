@@ -804,6 +804,8 @@ mod pallet {
         PoolMissingWeight,
         /// Two vectors do not have the same length (usually CPMM pool assets and weights).
         ProvidedValuesLenMustEqualAssetsLen,
+        /// The swap fee is higher than the allowed maximum.
+        SwapFeeTooHigh,
         /// Tried to create a pool that has less assets than the lower threshhold specified by
         /// a constant.
         TooFewAssets,
@@ -1372,7 +1374,7 @@ mod pallet {
                     Error::<T>::InsufficientLiquidity
                 );
                 let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
-                ensure!(swap_fee_unwrapped <= T::MaxSwapFee::get(), Error::<T>::InvalidFeeArgument);
+                ensure!(swap_fee_unwrapped <= T::MaxSwapFee::get(), Error::<T>::SwapFeeTooHigh);
                 let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                 Self::check_provided_values_len_must_equal_assets_len(&assets, &weights_unwrapped)?;
 

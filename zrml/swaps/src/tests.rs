@@ -1874,7 +1874,7 @@ fn create_pool_fails_if_swap_fee_is_too_high() {
                 Some(amount),
                 Some(vec!(_2, _2, _2)),
             ),
-            crate::Error::<Runtime>::InvalidFeeArgument
+            crate::Error::<Runtime>::SwapFeeTooHigh
         );
     });
 }
