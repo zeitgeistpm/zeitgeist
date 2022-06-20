@@ -1,7 +1,8 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{
-    mock::*, Config, Error, Event, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, RESERVE_ID,
+    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
+    MarketIdsPerReportBlock, RESERVE_ID,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -9,16 +10,17 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     traits::{Get, NamedReservableCurrency},
 };
-use more_asserts::assert_le;
 use test_case::test_case;
 
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
+    traits::Swaps as SwapsPalletApi,
     types::{
         Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
+        MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition,
+        ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -64,6 +66,79 @@ fn simple_create_scalar_market<T: crate::Config>(
         MarketDisputeMechanism::SimpleDisputes,
         scoring_rule
     ));
+}
+
+#[test]
+fn admin_move_market_to_closed_successfully_closes_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..2,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
+        let market = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+        System::assert_last_event(Event::MarketClosed(market_id).into());
+    });
+}
+
+#[test]
+fn admin_move_market_to_closed_fails_if_market_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Disputed; "disputed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+fn admin_move_market_to_closed_fails_if_market_is_not_active(market_status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = market_status;
+            Ok(())
+        }));
+        assert_noop!(
+            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id),
+            crate::Error::<Runtime>::MarketIsNotActive,
+        );
+    });
+}
+
+#[test]
+fn admin_move_market_to_closed_correctly_clears_auto_close_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            22..66,
+            ScoringRule::CPMM,
+        );
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            33..66,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0));
+        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
+        assert_eq!(auto_close.len(), 1);
+        assert_eq!(auto_close[0], 1);
+    });
 }
 
 #[test_case(654..=321; "empty range")]
@@ -338,82 +413,23 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
     });
 }
 
-#[test_case(MarketPeriod::Block(0..100); "market period block")]
-#[test_case(MarketPeriod::Timestamp(0..100); "market period timestamp")]
-fn admin_move_market_moves_active_market_to_closed(
-    market_period: MarketPeriod<BlockNumber, Moment>,
-) {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_market(
-            Origin::signed(ALICE),
-            BOB,
-            market_period,
-            gen_metadata(2),
-            MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
-            ScoringRule::CPMM,
-        ));
-        let market_id = 0;
-        let block = 50;
-        let timestamp = 50;
-        run_to_block(block);
-        Timestamp::set_timestamp(timestamp);
-        assert_ok!(PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), market_id));
-        let market = MarketCommons::market(&market_id).unwrap();
-        // Verify that the market is _closed_ in the sense that the status is `Active` and the
-        // market period has ended.
-        assert_eq!(market.status, MarketStatus::Active);
-        match market.period {
-            MarketPeriod::Block(range) => assert_le!(range.end, block),
-            MarketPeriod::Timestamp(range) => assert_le!(range.end, timestamp),
-        };
-    });
-}
-
 #[test]
-fn admin_move_market_fails_if_market_does_not_exist() {
+fn admin_destroy_market_correctly_clears_auto_close_blocks() {
     ExtBuilder::default().build().execute_with(|| {
-        assert_noop!(
-            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
-            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
-        );
-    });
-}
-
-#[test_case(MarketStatus::Active, MarketPeriod::Block(0..1); "closed with block")]
-#[test_case(MarketStatus::Active, MarketPeriod::Timestamp(0..1); "closed with timestamp")]
-#[test_case(MarketStatus::Reported, MarketPeriod::Block(0..1); "reported")]
-#[test_case(MarketStatus::Disputed, MarketPeriod::Block(0..1); "disputed")]
-#[test_case(MarketStatus::Resolved, MarketPeriod::Block(0..1); "resolved")]
-#[test_case(MarketStatus::Proposed, MarketPeriod::Block(0..1); "proposed")]
-#[test_case(MarketStatus::CollectingSubsidy, MarketPeriod::Block(0..1); "collecting subsidy")]
-#[test_case(MarketStatus::InsufficientSubsidy, MarketPeriod::Block(0..1); "insufficient subsidy")]
-fn admin_move_market_to_closed_fails_if_market_is_not_active(
-    market_status: MarketStatus,
-    market_period: MarketPeriod<BlockNumber, Moment>,
-) {
-    ExtBuilder::default().build().execute_with(|| {
-        assert_ok!(PredictionMarkets::create_market(
-            Origin::signed(ALICE),
-            BOB,
-            market_period,
-            gen_metadata(2),
+        simple_create_categorical_market::<Runtime>(
             MarketCreation::Permissionless,
-            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes,
+            22..66,
             ScoringRule::CPMM,
-        ));
-        let _ = MarketCommons::mutate_market(&0, |market| {
-            market.status = market_status;
-            Ok(())
-        });
-        run_to_block(2);
-        Timestamp::set_timestamp(2);
-        assert_noop!(
-            PredictionMarkets::admin_move_market_to_closed(Origin::signed(SUDO), 0),
-            Error::<Runtime>::MarketIsNotActive,
         );
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            33..66,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
+        assert_eq!(auto_close.len(), 1);
+        assert_eq!(auto_close[0], 1);
     });
 }
 
@@ -703,6 +719,175 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
 }
 
 #[test]
+fn reject_market_clears_auto_close_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            33..66,
+            ScoringRule::CPMM,
+        );
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            22..66,
+            ScoringRule::CPMM,
+        );
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
+        assert_eq!(auto_close.len(), 1);
+        assert_eq!(auto_close[0], 1);
+    });
+}
+
+#[test]
+fn on_market_close_auto_rejects_expired_advised_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
+        // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
+        assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_reserved_before_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Advised,
+            0..33,
+            ScoringRule::CPMM,
+        );
+        let market_id = 0;
+
+        run_to_block(33);
+
+        assert_eq!(
+            Balances::reserved_balance_named(&RESERVE_ID, &ALICE),
+            balance_reserved_before_alice
+        );
+        assert_eq!(Balances::free_balance(&ALICE), balance_free_before_alice);
+        assert_noop!(
+            MarketCommons::market(&market_id),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
+        );
+        System::assert_has_event(Event::MarketExpired(market_id).into());
+    });
+}
+
+#[test]
+fn on_market_close_successfully_auto_closes_market_with_blocks() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 33;
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Block(0..33),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+        let market_id = 0;
+        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
+
+        run_to_block(end - 1);
+        let market_before_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_before_close.status, MarketStatus::Active);
+        let pool_before_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_before_close.pool_status, PoolStatus::Active);
+
+        run_to_block(33);
+        let market_after_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+
+        System::assert_last_event(Event::MarketClosed(market_id).into());
+    });
+}
+
+#[test]
+fn on_market_close_successfully_auto_closes_market_with_timestamps() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end: Moment = MILLISECS_PER_BLOCK.into();
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Timestamp(0..end),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+        let market_id = 0;
+        let pool_id = MarketCommons::market_pool(&market_id).unwrap();
+
+        // (Check that the market doesn't close too soon)
+        Timestamp::set_timestamp(end - 1);
+        run_to_block(1); // Trigger hook!
+        let market_before_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_before_close.status, MarketStatus::Active);
+        let pool_before_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_before_close.pool_status, PoolStatus::Active);
+
+        Timestamp::set_timestamp(end);
+        run_to_block(2);
+        let market_after_close = MarketCommons::market(&market_id).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(pool_id).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+
+        System::assert_last_event(Event::MarketClosed(market_id).into());
+    });
+}
+
+#[test]
+fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
+    // We check that `on_market_close` works correctly even if a block takes much longer than 12sec
+    // to be produced and multiple markets are involved.
+    ExtBuilder::default().build().execute_with(|| {
+        // Mock last time frame to prevent it from defaulting.
+        LastTimeFrame::<Runtime>::set(Some(0));
+
+        let end: Moment = (5 * MILLISECS_PER_BLOCK).into();
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Timestamp(0..end),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Timestamp(0..end),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+
+        // This block takes much longer than 12sec, but markets and pools still close correctly.
+        Timestamp::set_timestamp(10 * end);
+        run_to_block(1);
+
+        let market_after_close = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(0).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+        System::assert_has_event(Event::MarketClosed(0).into());
+
+        let market_after_close = MarketCommons::market(&1).unwrap();
+        assert_eq!(market_after_close.status, MarketStatus::Closed);
+        let pool_after_close = Swaps::pool(1).unwrap();
+        assert_eq!(pool_after_close.pool_status, PoolStatus::Closed);
+        System::assert_has_event(Event::MarketClosed(1).into());
+    });
+}
+
+#[test]
 fn it_allows_to_buy_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
@@ -783,6 +968,10 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
     MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
     "timestamp end greater than max market period"
 )]
+#[test_case(
+    MarketPeriod::Timestamp(0..(MILLISECS_PER_BLOCK - 1).into());
+    "range shorter than block time"
+)]
 fn create_categorical_market_fails_if_market_period_is_invalid(
     period: MarketPeriod<BlockNumber, Moment>,
 ) {
@@ -803,30 +992,35 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
     });
 }
 
-#[test_case(MarketPeriod::Block(2..1); "block start greater than end")]
-#[test_case(MarketPeriod::Block(3..3); "block start equal to end")]
-#[test_case(
-    MarketPeriod::Block(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "block end greater than max market period"
-)]
-#[test_case(MarketPeriod::Timestamp(2..1); "timestamp start greater than end")]
-#[test_case(MarketPeriod::Timestamp(3..3); "timestamp start equal to end")]
-#[test_case(
-    MarketPeriod::Timestamp(0..<Runtime as Config>::MaxMarketPeriod::get() + 1);
-    "timestamp end greater than max market period"
-)]
-fn create_scalar_market_fails_if_market_period_is_invalid(
-    period: MarketPeriod<BlockNumber, Moment>,
-) {
+#[test]
+fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
     ExtBuilder::default().build().execute_with(|| {
+        let end_block = 33;
+        run_to_block(end_block);
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
                 BOB,
-                period,
+                MarketPeriod::Block(0..end_block),
                 gen_metadata(0),
                 MarketCreation::Permissionless,
-                MarketType::Scalar(123..=456),
+                MarketType::Categorical(3),
+                MarketDisputeMechanism::Authorized(CHARLIE),
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::InvalidMarketPeriod,
+        );
+
+        let end_time = MILLISECS_PER_BLOCK as u64 / 2;
+        Timestamp::set_timestamp(end_time);
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Timestamp(0..end_time),
+                gen_metadata(0),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(3),
                 MarketDisputeMechanism::Authorized(CHARLIE),
                 ScoringRule::CPMM,
             ),
@@ -1018,7 +1212,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         run_to_block(100);
 
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
 
         assert_ok!(PredictionMarkets::report(
@@ -1035,7 +1229,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         // Reset and report again as approval origin
         let _ = MarketCommons::mutate_market(&0, |market| {
-            market.status = MarketStatus::Active;
+            market.status = MarketStatus::Closed;
             market.report = None;
             Ok(())
         });
@@ -1063,7 +1257,7 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
             Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
     });
 }
@@ -1083,7 +1277,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
             Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
     });
 }
@@ -1103,7 +1297,7 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
             Error::<Runtime>::OutcomeMismatch,
         );
         let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Active);
+        assert_eq!(market.status, MarketStatus::Closed);
         assert_eq!(market.report.is_none(), true);
     });
 }
@@ -1610,6 +1804,8 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
         // set the timestamp
+        Timestamp::set_timestamp(100_000_000);
+        run_to_block(100); // Trigger hooks which close the market!
         Timestamp::set_timestamp(123_456_789);
 
         assert_noop!(
@@ -1649,8 +1845,9 @@ fn full_scalar_market_lifecycle() {
             assert_eq!(bal, 100 * BASE);
         }
 
+        Timestamp::set_timestamp(100_000_000);
+        run_to_block(100); // Trigger hooks which close the market!
         Timestamp::set_timestamp(123_456_789);
-        run_to_block(100);
 
         // report
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
@@ -2319,6 +2516,8 @@ fn report_fails_if_reporter_is_not_the_oracle() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
+        Timestamp::set_timestamp(100_000_000);
+        run_to_block(100); // Trigger hooks which close the market!
         Timestamp::set_timestamp(123_456_789);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
