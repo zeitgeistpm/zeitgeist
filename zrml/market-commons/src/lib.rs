@@ -24,7 +24,7 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
+        traits::{Hooks, NamedReservableCurrency, LockableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
     use parity_scale_codec::MaxEncodedLen;
@@ -47,7 +47,8 @@ mod pallet {
         /// Native token
         //
         // Reserve identifiers can be pallet ids or any other sequence of bytes.
-        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
+        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
+            + NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
 
         /// The identifier of individual markets.
         type MarketId: AtLeast32Bit

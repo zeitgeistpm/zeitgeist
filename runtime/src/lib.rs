@@ -941,6 +941,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
+    type VoteLockIdentifier = VoteLockIdentifier;
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
     type Shares = Tokens;

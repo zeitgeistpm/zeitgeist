@@ -10,7 +10,7 @@ use crate::{
     asset::Asset,
     types::{Balance, BlockNumber, CurrencyId, Moment},
 };
-use frame_support::{parameter_types, PalletId};
+use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
 
 // Definitions for time
@@ -78,6 +78,7 @@ parameter_types! {
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
     pub const ValidityBond: Balance = 50 * CENT;
 }

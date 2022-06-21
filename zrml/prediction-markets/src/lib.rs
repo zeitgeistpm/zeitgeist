@@ -32,6 +32,8 @@
 //! - `deploy_swap_pool_and_additional_liquidity` - Deploys a single "canonical" pool for a market,
 //!   buys a complete set of the assets used and deploys the funds as specified.
 //! - `dispute` - Submits a disputed outcome for a market.
+//! - `start_global_dispute` - `unimplemented!()`
+//! - `vote_on_dispute` - `unimplemented!()`
 //! - `redeem_shares` - Redeems the winning shares for a market.
 //! - `report` - Reports an outcome for a market.
 //! - `sell_complete_set` - Sells a complete set of outcome assets for a market.
@@ -82,11 +84,14 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
-        pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{
+            ConstU32, OptionQuery, StorageDoubleMap, StorageMap, StorageValue, ValueQuery,
+        },
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced, StorageVersion,
+            LockIdentifier, LockableCurrency, NamedReservableCurrency, OnUnbalanced,
+            StorageVersion, WithdrawReasons,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
@@ -343,11 +348,9 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
-            CurrencyOf::<T>::reserve_named(
-                &RESERVE_ID,
-                &who,
-                default_dispute_bond::<T>(disputes.len()),
-            )?;
+            let dispute_bond = default_dispute_bond::<T>(disputes.len());
+            CurrencyOf::<T>::reserve_named(&RESERVE_ID, &who, dispute_bond)?;
+
             match market.mdm {
                 MarketDisputeMechanism::Authorized(_) => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
@@ -362,9 +365,18 @@ mod pallet {
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
             let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
+
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
+
+            // num_disputes is exactly the index of the added dispute
+            ensure!(
+                <DisputeVote<T>>::get(market_id, num_disputes).is_none(),
+                Error::<T>::DisputeVoteAlreadyPresent
+            );
+            <DisputeVote<T>>::insert(market_id, num_disputes, dispute_bond);
+
             <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
@@ -378,6 +390,48 @@ mod pallet {
                 num_disputes,
                 T::MaxDisputes::get(),
             )
+        }
+
+        /// Starts a global dispute.
+        /// TODO Maybe start an automatic global dispute when a sufficient dispute number is reached => then this extrinsic is not required
+        /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
+        ///
+        #[pallet::weight(10_000_000)]
+        pub fn start_global_dispute(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
+            let _sender = ensure_signed(origin)?;
+            let _market = T::MarketCommons::market(&market_id)?;
+            // TODO(#489): Implement global disputes!
+            Ok(())
+        }
+
+        /// Votes on a dispute after a global dispute has been started.
+        #[pallet::weight(10_000_000)]
+        pub fn vote_on_dispute(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            dispute_index: u32,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+
+            ensure!(
+                amount <= CurrencyOf::<T>::free_balance(&sender),
+                Error::<T>::InsufficientFundsForVote
+            );
+
+            CurrencyOf::<T>::extend_lock(
+                T::VoteLockIdentifier::get(),
+                &sender,
+                amount,
+                WithdrawReasons::all(),
+            );
+
+            Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
+            Ok(())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
@@ -1004,6 +1058,10 @@ mod pallet {
         #[pallet::constant]
         type PalletId: Get<PalletId>;
 
+        /// The vote lock identifier for disputes
+        #[pallet::constant]
+        type VoteLockIdentifier: Get<LockIdentifier>;
+
         /// The base amount of currency that must be bonded to ensure the oracle reports
         ///  in a timely manner.
         #[pallet::constant]
@@ -1046,10 +1104,14 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
+        /// An initial vote balance was already made for this dispute.
+        DisputeVoteAlreadyPresent,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
         InsufficientShareBalance,
+        /// Sender does not have enough funds for the vote on a dispute.
+        InsufficientFundsForVote,
         /// An invalid Hash was included in a multihash parameter.
         InvalidMultihash,
         /// An invalid market type was found.
@@ -1146,6 +1208,8 @@ mod pallet {
             BalanceOf<T>,
             <T as frame_system::Config>::AccountId,
         ),
+        /// A vote happened on a dispute. \[market_id, dispute_index, vote_amount\]
+        VotedOnDispute(MarketIdOf<T>, u32, BalanceOf<T>),
     }
 
     #[pallet::hooks]
@@ -1194,6 +1258,17 @@ mod pallet {
         MarketIdOf<T>,
         BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
         ValueQuery,
+    >;
+
+    #[pallet::storage]
+    pub type DisputeVote<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        Blake2_128Concat,
+        u32,
+        BalanceOf<T>,
+        OptionQuery,
     >;
 
     /// A mapping of market identifiers to the block their market ends on.
