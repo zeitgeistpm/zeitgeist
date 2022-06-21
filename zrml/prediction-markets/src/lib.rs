@@ -1930,17 +1930,23 @@ mod pallet {
                 Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             ) -> DispatchResult,
         {
+            // If we are at genesis the timestamp is 0. No market can exist, we skip the evaluation.
+            // Without this check, new chains starting from genesis will hang up, since the loop
+            // below will run over an interval of 0 to the current time frame.
+            let current_time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+            if current_time_frame == 0u64 { return Ok(()) }
+
             for market_id in MarketIdsPerCloseBlock::<T>::get(&now).iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
-            MarketIdsPerCloseBlock::<T>::remove(&now);
 
-            let current_time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+            MarketIdsPerCloseBlock::<T>::remove(&now);
             // On first pass, we use current_time - 1 to ensure that the chain doesn't try to check
             // all time frames since epoch.
             let last_time_frame =
                 LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
+
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
                 for market_id in MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter() {
                     let market = T::MarketCommons::market(market_id)?;
@@ -1948,6 +1954,7 @@ mod pallet {
                 }
                 MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
             }
+
             LastTimeFrame::<T>::set(Some(current_time_frame));
             Ok(())
         }
