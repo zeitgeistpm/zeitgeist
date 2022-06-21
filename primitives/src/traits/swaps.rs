@@ -34,6 +34,9 @@ pub trait Swaps<AccountId> {
         weights: Option<Vec<u128>>,
     ) -> Result<PoolId, DispatchError>;
 
+    /// Close the specified pool.
+    fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
+
     /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
     fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
@@ -100,19 +103,16 @@ pub trait Swaps<AccountId> {
     /// Returns the pool instance of a corresponding `pool_id`.
     fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError>;
 
-    /// Pool will be marked as `PoolStatus::Stale`. If market is categorical, removes everything
-    /// that is not ZTG or winning assets from the selected pool. Additionally, it distributes
-    /// the rewards to all pool share holders.
-    ///
-    /// Does nothing if pool is already stale. Returns `Err` if `pool_id` does not exist.
+    /// If the market is categorical, removes everything that is not ZTG or winning assets from the
+    /// selected pool. Additionally, it distributes the rewards to all pool share holders.
     ///
     /// # Arguments
     ///
     /// * `market_type`: Type of the market (e.g. categorical or scalar).
-    /// * `pool_id`: Unique pool identifier associated with the pool to be made stale.
+    /// * `pool_id`: Unique pool identifier associated with the pool to be cleaned up.
     /// * `outcome_report`: The resulting outcome.
     /// * `winner_payout_account`: The account that exchanges winning assets against rewards.
-    fn set_pool_to_stale(
+    fn clean_up_pool(
         market_type: &MarketType,
         pool_id: PoolId,
         outcome_report: &OutcomeReport,
