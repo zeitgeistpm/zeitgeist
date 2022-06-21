@@ -911,16 +911,24 @@ fn market_close_manager_skips_the_genesis_block_with_timestamp_zero() {
         >|
          -> DispatchResult { Ok(()) };
 
+        // Blocknumber = 0 and timestamp = 0
+        assert_eq!(Timestamp::get(), 0);
         assert_ok!(PredictionMarkets::market_close_manager(0, noop_mutation));
         assert_eq!(LastTimeFrame::<Runtime>::get(), None);
 
+        // Blocknumer = 0 and timestamp != 0
         Timestamp::set_timestamp(end);
+        assert_ok!(PredictionMarkets::market_close_manager(0, noop_mutation));
+        assert_eq!(LastTimeFrame::<Runtime>::get(), None);
 
-        assert_ok!(PredictionMarkets::market_close_manager(1, noop_mutation));
+        // Blocknumer != 0 and timestamp != 0
+        run_to_block(1);
+        assert_ok!(PredictionMarkets::market_close_manager(0, noop_mutation));
         assert_eq!(
             LastTimeFrame::<Runtime>::get(),
             Some(Timestamp::now() / crate::TimeFrame::from(MILLISECS_PER_BLOCK))
         );
+        assert!(LastTimeFrame::<Runtime>::get() != Some(0));
     });
 }
 

@@ -1943,8 +1943,10 @@ mod pallet {
             // If we are at genesis the timestamp is 0. No market can exist, we skip the evaluation.
             // Without this check, new chains starting from genesis will hang up, since the loop
             // below will run over an interval of 0 to the current time frame.
+            // We check the block number and the timestamp, since technically the timestamp is
+            // undefined at genesis.
             let current_time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
-            if current_time_frame == 0u64 {
+            if current_time_frame == 0 || now == T::BlockNumber::zero() {
                 return Ok(());
             }
 
