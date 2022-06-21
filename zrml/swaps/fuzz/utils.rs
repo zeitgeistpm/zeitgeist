@@ -4,7 +4,7 @@
 )]
 
 use zeitgeist_primitives::constants::{
-    MaxAssets, MaxTotalWeight, MaxWeight, MinAssets, MinWeight, BASE,
+    MaxAssets, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinWeight, BASE,
 };
 
 use arbitrary::{Arbitrary, Result, Unstructured};
@@ -42,6 +42,7 @@ pub struct ValidPoolData {
     pub base_asset: (u128, u16),
     pub market_id: u128,
     pub swap_fee: u128,
+    pub amount: u128,
     pub weights: Vec<u128>,
 }
 
@@ -54,6 +55,7 @@ impl ValidPoolData {
             self.market_id,
             ScoringRule::CPMM,
             Some(self.swap_fee),
+            Some(self.amount),
             Some(self.weights),
         ) {
             Ok(pool_id) => pool_id,
@@ -82,8 +84,9 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         let origin = rng.gen::<u128>();
         let market_id = rng.gen::<u128>();
         let swap_fee = rng.gen_range(0..BASE);
+        let amount = MinLiquidity::get();
 
-        Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, weights })
+        Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, amount, weights })
     }
 }
 
@@ -160,14 +163,25 @@ pub struct GeneralPoolData {
 }
 
 #[derive(Debug, Arbitrary)]
-pub struct SwapExactAmountData {
+pub struct SwapExactAmountInData {
     pub origin: u128,
     pub pool_creation: ValidPoolData,
     pub asset_in: (u128, u16),
     pub asset_amount_in: u128,
     pub asset_out: (u128, u16),
+    pub asset_amount_out: Option<u128>,
+    pub max_price: Option<u128>,
+}
+
+#[derive(Debug, Arbitrary)]
+pub struct SwapExactAmountOutData {
+    pub origin: u128,
+    pub pool_creation: ValidPoolData,
+    pub asset_in: (u128, u16),
+    pub asset_amount_in: Option<u128>,
+    pub asset_out: (u128, u16),
     pub asset_amount_out: u128,
-    pub max_price: u128,
+    pub max_price: Option<u128>,
 }
 
 #[derive(Debug, Arbitrary)]
@@ -177,5 +191,6 @@ pub struct PoolCreationData {
     pub base_asset: (u128, u16),
     pub market_id: u128,
     pub swap_fee: Option<u128>,
+    pub amount: Option<u128>,
     pub weights: Option<Vec<u128>>,
 }

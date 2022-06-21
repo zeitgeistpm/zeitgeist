@@ -18,6 +18,7 @@ fuzz_target!(|data: PoolCreationData| {
             data.market_id,
             ScoringRule::CPMM,
             data.swap_fee,
+            data.amount,
             data.weights,
         );
     });

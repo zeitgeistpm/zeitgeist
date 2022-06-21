@@ -5,11 +5,11 @@ use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 
 mod utils;
 use orml_traits::MultiCurrency;
-use utils::{construct_asset, SwapExactAmountData};
+use utils::{construct_asset, SwapExactAmountOutData};
 use zeitgeist_primitives::constants::MinLiquidity;
 use zrml_swaps::mock::Shares;
 
-fuzz_target!(|data: SwapExactAmountData| {
+fuzz_target!(|data: SwapExactAmountOutData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
@@ -22,7 +22,11 @@ fuzz_target!(|data: SwapExactAmountData| {
             );
         }
         let pool_id = data.pool_creation._create_pool();
-        let _ = Shares::deposit(construct_asset(data.asset_in), &data.origin, data.asset_amount_in);
+
+        if let Some(amount) = data.asset_amount_in {
+            let _ = Shares::deposit(construct_asset(data.asset_in), &data.origin, amount);
+        }
+
         let _ = Swaps::swap_exact_amount_out(
             Origin::signed(data.origin),
             pool_id,

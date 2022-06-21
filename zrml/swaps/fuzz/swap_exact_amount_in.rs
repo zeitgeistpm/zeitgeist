@@ -3,14 +3,14 @@
 use libfuzzer_sys::fuzz_target;
 use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 
-use utils::SwapExactAmountData;
+use utils::SwapExactAmountInData;
 mod utils;
 use orml_traits::MultiCurrency;
 use utils::construct_asset;
 use zeitgeist_primitives::constants::MinLiquidity;
 use zrml_swaps::mock::Shares;
 
-fuzz_target!(|data: SwapExactAmountData| {
+fuzz_target!(|data: SwapExactAmountInData| {
     let mut ext = ExtBuilder::default().build();
     let _ = ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
