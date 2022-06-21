@@ -33,9 +33,12 @@ std = [
     "substrate-fixed/std",
     "zeitgeist-primitives/std",
 ]
+try-runtime = [
+  "frame-support/try-runtime",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-rikiddo"
-version = "0.3.2"
+version = "0.3.3"

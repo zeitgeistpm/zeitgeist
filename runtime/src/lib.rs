@@ -60,10 +60,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 36,
+    spec_version: 37,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 13,
+    transaction_version: 14,
     state_version: 1,
 };
 
@@ -77,7 +77,10 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    zrml_authorized::migrations::MigrateAuthorizedStorage<Runtime>,
+    (
+        zrml_prediction_markets::migrations::MigrateMarketIdsPerClose<Runtime>,
+        zrml_market_commons::migrations::MigrateMarketCounter<Runtime>,
+    ),
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -299,41 +302,41 @@ cfg_if::cfg_if! {
             fn contains(call: &Call) -> bool {
                 match call {
                     // Allowed calls:
-                    Call::System(_)
-                    | Call::Sudo(_)
-                    | Call::Timestamp(_)
+                    Call::AdvisoryCommittee(_)
+                    | Call::AdvisoryCommitteeMembership(_)
                     | Call::AuthorInherent(_)
                     | Call::AuthorMapping(_)
+                    | Call::Balances(_)
+                    | Call::Council(_)
+                    | Call::CouncilMembership(_)
+                    | Call::Crowdloan(_)
+                    | Call::Currency(_)
+                    | Call::Democracy(_)
                     | Call::DmpQueue(_)
+                    | Call::Identity(_)
+                    | Call::MultiSig(_)
+                    | Call::ParachainStaking(_)
                     | Call::ParachainSystem(_)
                     | Call::PolkadotXcm(_)
+                    | Call::Preimage(_)
+                    | Call::Proxy(_)
+                    | Call::Scheduler(_)
+                    | Call::Sudo(_)
+                    | Call::System(_)
+                    | Call::TechnicalCommittee(_)
+                    | Call::TechnicalCommitteeMembership(_)
+                    | Call::Timestamp(_)
+                    | Call::Treasury(_)
+                    | Call::Utility(_)
+                    | Call::Vesting(_)
                     | Call::XcmpQueue(_) => true,
 
                     // Prohibited calls:
-                    Call::ParachainStaking(_)
-                    | Call::Crowdloan(_)
-                    | Call::Balances(_)
-                    | Call::Treasury(_)
-                    | Call::AdvisoryCommittee(_)
-                    | Call::AdvisoryCommitteeMembership(_)
-                    | Call::Council(_)
-                    | Call::CouncilMembership(_)
-                    | Call::TechnicalCommittee(_)
-                    | Call::TechnicalCommitteeMembership(_)
-                    | Call::MultiSig(_)
-                    | Call::Democracy(_)
-                    | Call::Scheduler(_)
-                    | Call::Preimage(_)
-                    | Call::Identity(_)
-                    | Call::Utility(_)
-                    | Call::Proxy(_)
-                    | Call::Currency(_)
-                    | Call::Authorized(_)
+                    Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(_)
-                    | Call::Vesting(_) => false,
+                    | Call::PredictionMarkets(_) => false,
                 }
             }
         }
@@ -343,52 +346,54 @@ cfg_if::cfg_if! {
             fn contains(call: &Call) -> bool {
                 match call {
                     // Allowed calls:
-                    Call::System(_) | Call::Grandpa(_) | Call::Sudo(_) | Call::Timestamp(_) => true,
-
-                    // Prohibited calls:
-                    Call::Balances(_)
-                    | Call::Treasury(_)
-                    | Call::AdvisoryCommittee(_)
+                    Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Balances(_)
                     | Call::Council(_)
                     | Call::CouncilMembership(_)
+                    | Call::Currency(_)
+                    | Call::Democracy(_)
+                    | Call::Grandpa(_)
+                    | Call::Identity(_)
+                    | Call::MultiSig(_)
+                    | Call::Preimage(_)
+                    | Call::Proxy(_)
+                    | Call::Scheduler(_)
+                    | Call::Sudo(_)
+                    | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
-                    | Call::MultiSig(_)
-                    | Call::Democracy(_)
-                    | Call::Scheduler(_)
-                    | Call::Preimage(_)
-                    | Call::Identity(_)
+                    | Call::Timestamp(_)
+                    | Call::Treasury(_)
                     | Call::Utility(_)
-                    | Call::Proxy(_)
-                    | Call::Currency(_)
-                    | Call::Authorized(_)
+                    | Call::Vesting(_) => true,
+
+                    // Prohibited calls:
+                    Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(_)
-                    | Call::Vesting(_) => false,
+                    | Call::PredictionMarkets(_) => false,
                 }
             }
         }
     // Unrestricted (no "txfilter" feature) chains.
-    // Currently disables Rikiddo and Court markets as well as LiquidityMining.
+    // Currently disables Rikiddo and markets using Court or SimpleDisputes dispute mechanism.
     // Will be relaxed for testnet once runtimes are separated.
     } else {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
-                use zrml_prediction_markets::Call::{create_categorical_market, create_cpmm_market_and_deploy_assets, create_scalar_market};
+                use zrml_prediction_markets::Call::{create_market, create_cpmm_market_and_deploy_assets};
+                use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes}};
 
                 match call {
                     Call::PredictionMarkets(inner_call) => {
                         match inner_call {
                             // Disable Rikiddo markets
-                            create_categorical_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
-                            create_scalar_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
-                            // Disable Court dispute resolution mechanism
-                            create_categorical_market { mdm: MarketDisputeMechanism::Court, .. } => false,
-                            create_scalar_market { mdm: MarketDisputeMechanism::Court, .. } => false,
-                            create_cpmm_market_and_deploy_assets { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                            // Disable Court & SimpleDisputes dispute resolution mechanism
+                            create_market { mdm: Court | SimpleDisputes, .. } => false,
+                            create_cpmm_market_and_deploy_assets { mdm: Court | SimpleDisputes, .. } => false,
                             _ => true
                         }
                     }
@@ -1337,6 +1342,19 @@ impl_runtime_apis! {
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
+        }
+    }
+
+    #[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
+            log::info!("try-runtime::on_runtime_upgrade.");
+            let weight = Executive::try_runtime_upgrade().unwrap();
+            (weight, RuntimeBlockWeights::get().max_block)
+        }
+
+        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
+            Executive::execute_block_no_check(block)
         }
     }
 }

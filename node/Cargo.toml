@@ -36,6 +36,10 @@ sp-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com
 sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
+# Try-Runtime
+
+try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+
 # Benchmark
 
 frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
@@ -148,6 +152,10 @@ runtime-benchmarks = [
     "polkadot-service?/runtime-benchmarks",
     "zeitgeist-runtime/runtime-benchmarks"
 ]
+try-runtime = [
+    "zeitgeist-runtime/try-runtime",
+    "try-runtime-cli",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
@@ -156,7 +164,7 @@ description = "An evolving blockchain for prediction markets and futarchy."
 edition = "2021"
 homepage = "https://zeitgeist.pm"
 name = "zeitgeist-node"
-version = "0.3.2"
+version = "0.3.3"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

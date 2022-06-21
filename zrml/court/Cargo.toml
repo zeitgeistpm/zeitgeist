@@ -32,9 +32,12 @@ std = [
     "zeitgeist-primitives/std",
     "zrml-market-commons/std"
 ]
+try-runtime = [
+  "frame-support/try-runtime",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-court"
-version = "0.3.2"
+version = "0.3.3"

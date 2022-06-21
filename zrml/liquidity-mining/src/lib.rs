@@ -83,7 +83,7 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] per_block_distribution: BalanceOf<T>,
         ) -> DispatchResult {
-            let _ = ensure_root(origin)?;
+            ensure_root(origin)?;
             <PerBlockIncentive<T>>::put(per_block_distribution);
             Ok(())
         }

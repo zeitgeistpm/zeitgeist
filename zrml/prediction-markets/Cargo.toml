@@ -31,6 +31,7 @@ zrml-swaps = { optional = true, path = "../swaps" }
 [dev-dependencies]
 zrml-prediction-markets = { features = ["mock"], path = "." }
 test-case = "2.0.2"
+more-asserts = "0.2"
 
 [features]
 default = ["std"]
@@ -67,9 +68,12 @@ std = [
     "zrml-market-commons/std",
     "zrml-simple-disputes/std",
 ]
+try-runtime = [
+  "frame-support/try-runtime",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets"
-version = "0.3.2"
+version = "0.3.3"
