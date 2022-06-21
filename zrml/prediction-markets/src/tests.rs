@@ -933,7 +933,6 @@ fn market_close_manager_skips_the_genesis_block_with_timestamp_zero() {
             Some(Timestamp::now() / crate::TimeFrame::from(MILLISECS_PER_BLOCK))
         );
         assert!(LastTimeFrame::<Runtime>::get() != Some(0));
-        println!("{:?}", LastTimeFrame::<Runtime>::get())
     });
 }
 
