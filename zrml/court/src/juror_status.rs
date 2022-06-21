@@ -6,6 +6,7 @@
     Clone,
     Debug,
     PartialEq,
+    Eq,
 )]
 pub enum JurorStatus {
     Ok,
