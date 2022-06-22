@@ -888,6 +888,55 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
 }
 
 #[test]
+fn market_close_manager_skips_the_genesis_block_with_timestamp_zero() {
+    // We ensure that a timestamp of zero will not be stored at genesis into LastTimeFrame storage.
+    let end: Moment = (5 * MILLISECS_PER_BLOCK).into();
+    ExtBuilder::default().build().execute_with(|| {
+        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
+            Origin::signed(ALICE),
+            ALICE,
+            MarketPeriod::Timestamp(0..end),
+            gen_metadata(50),
+            MarketType::Categorical(3),
+            MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+        ));
+
+        let noop_mutation = |_: &crate::MarketIdOf<Runtime>,
+                             _: Market<
+            <Runtime as frame_system::Config>::AccountId,
+            <Runtime as frame_system::Config>::BlockNumber,
+            crate::MomentOf<Runtime>,
+        >|
+         -> DispatchResult { Ok(()) };
+
+        // Blocknumber = 0 and timestamp = 0
+        assert_eq!(Timestamp::get(), 0);
+        assert_ok!(PredictionMarkets::market_close_manager(0, noop_mutation));
+        assert_eq!(LastTimeFrame::<Runtime>::get(), None);
+
+        // Blocknumber != 0 and timestamp = 0
+        assert_eq!(Timestamp::get(), 0);
+        assert_ok!(PredictionMarkets::market_close_manager(1, noop_mutation));
+        assert_eq!(LastTimeFrame::<Runtime>::get(), None);
+
+        // Blocknumer = 0 and timestamp != 0
+        Timestamp::set_timestamp(end);
+        assert_ok!(PredictionMarkets::market_close_manager(0, noop_mutation));
+        assert_eq!(LastTimeFrame::<Runtime>::get(), None);
+
+        // Blocknumer != 0 and timestamp != 0
+        assert_ok!(PredictionMarkets::market_close_manager(1, noop_mutation));
+        assert_eq!(
+            LastTimeFrame::<Runtime>::get(),
+            Some(Timestamp::now() / crate::TimeFrame::from(MILLISECS_PER_BLOCK))
+        );
+        assert!(LastTimeFrame::<Runtime>::get() != Some(0));
+    });
+}
+
+#[test]
 fn it_allows_to_buy_a_complete_set() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
