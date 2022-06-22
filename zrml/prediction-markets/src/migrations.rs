@@ -33,12 +33,9 @@ impl<T: Config> OnRuntimeUpgrade for RemoveDisputesOfResolvedMarkets<T> {
         for (market_id, market) in T::MarketCommons::market_iter() {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
-            match market.status {
-                MarketStatus::Resolved => {
-                    Disputes::<T>::remove(market_id);
-                }
-                _ => {}
-            };
+            if market.status == MarketStatus::Resolved {
+                Disputes::<T>::remove(market_id);
+            }
         }
         StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
@@ -55,12 +52,9 @@ impl<T: Config> OnRuntimeUpgrade for RemoveDisputesOfResolvedMarkets<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         for (market_id, market) in T::MarketCommons::market_iter() {
-            match market.status {
-                MarketStatus::Resolved => {
-                    let disputes = Disputes::<T>::get(market_id);
-                    assert_eq!(disputes.len(), 0);
-                }
-                _ => {}
+            if market.status == MarketStatus::Resolved {
+                let disputes = Disputes::<T>::get(market_id);
+                assert_eq!(disputes.len(), 0);
             }
         }
 
