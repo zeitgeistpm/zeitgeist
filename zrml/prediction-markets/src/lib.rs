@@ -341,6 +341,10 @@ mod pallet {
             let disputes = Disputes::<T>::get(market_id);
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
             let market = T::MarketCommons::market(&market_id)?;
+            ensure!(
+                matches!(market.status, MarketStatus::Reported | MarketStatus::Disputed),
+                Error::<T>::InvalidMarketStatus
+            );
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             CurrencyOf::<T>::reserve_named(
@@ -1930,7 +1934,10 @@ mod pallet {
             Ok(())
         }
 
-        fn market_close_manager<F>(now: T::BlockNumber, mut mutation: F) -> DispatchResult
+        pub(crate) fn market_close_manager<F>(
+            now: T::BlockNumber,
+            mut mutation: F,
+        ) -> DispatchResult
         where
             F: FnMut(
                 &MarketIdOf<T>,
@@ -1941,13 +1948,24 @@ mod pallet {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
+
             MarketIdsPerCloseBlock::<T>::remove(&now);
 
+            // If we are at genesis the timestamp is 0. No market can exist, we skip the evaluation.
+            // Without this check, new chains starting from genesis will hang up, since the loop
+            // below will run over an interval of 0 to the current time frame.
+            // We check the block number and the timestamp, since technically the timestamp is
+            // undefined at genesis.
             let current_time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+            if current_time_frame == 0 || now == T::BlockNumber::zero() {
+                return Ok(());
+            }
+
             // On first pass, we use current_time - 1 to ensure that the chain doesn't try to check
             // all time frames since epoch.
             let last_time_frame =
                 LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
+
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
                 for market_id in MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter() {
                     let market = T::MarketCommons::market(market_id)?;
@@ -1955,6 +1973,7 @@ mod pallet {
                 }
                 MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
             }
+
             LastTimeFrame::<T>::set(Some(current_time_frame));
             Ok(())
         }

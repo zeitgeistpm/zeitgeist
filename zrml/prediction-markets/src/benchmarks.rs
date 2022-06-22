@@ -99,10 +99,10 @@ fn generate_accounts_with_assets<T: Config>(
     for i in 0..acc_total {
         let acc = account("AssetHolder", i, 0);
         if mut_acc_asset > 0 {
-            let _ = T::Shares::deposit(asset, &acc, min_liquidity)?;
+            T::Shares::deposit(asset, &acc, min_liquidity)?;
             mut_acc_asset -= 1;
         } else {
-            let _ = T::Shares::deposit(fake_asset, &acc, min_liquidity)?;
+            T::Shares::deposit(fake_asset, &acc, min_liquidity)?;
         }
     }
 
@@ -120,7 +120,7 @@ fn setup_resolve_common_categorical<T: Config>(
         MarketType::Categorical(categories),
         OutcomeReport::Categorical(categories.saturating_sub(1)),
     )?;
-    let _ = generate_accounts_with_assets::<T>(
+    generate_accounts_with_assets::<T>(
         acc_total,
         acc_asset,
         Asset::CategoricalOutcome(market_id, categories.saturating_sub(1)),
@@ -185,7 +185,7 @@ fn setup_resolve_common_scalar<T: Config>(
         MarketType::Scalar(0u128..=u128::MAX),
         OutcomeReport::Scalar(u128::MAX),
     )?;
-    let _ = generate_accounts_with_assets::<T>(
+    generate_accounts_with_assets::<T>(
         acc_total,
         acc_asset,
         Asset::ScalarOutcome(market_id, ScalarPosition::Long),
@@ -229,7 +229,7 @@ benchmarks! {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
 
         let destroy_origin = T::DestroyOrigin::successful_origin();
@@ -330,7 +330,7 @@ benchmarks! {
         let origin = caller.clone();
         let disputes = crate::Disputes::<T>::get(&market_id);
         let market = T::MarketCommons::market(&Default::default()).unwrap();
-        let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+        T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
     }
 
     do_reject_market {
@@ -384,7 +384,7 @@ benchmarks! {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
@@ -413,7 +413,7 @@ benchmarks! {
             let disputes = crate::Disputes::<T>::get(&market_id);
             let origin = caller.clone();
             let market = T::MarketCommons::market(&Default::default()).unwrap();
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;

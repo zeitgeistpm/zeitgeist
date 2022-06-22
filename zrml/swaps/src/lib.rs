@@ -391,7 +391,7 @@ mod pallet {
                 who: who.clone(),
             };
 
-            let _ = crate::utils::pool::<_, _, _, _, T>(params)?;
+            crate::utils::pool::<_, _, _, _, T>(params)?;
             Ok(Some(T::WeightInfo::pool_join(pool.assets.len().saturated_into())).into())
         }
 
@@ -776,6 +776,8 @@ mod pallet {
         LimitIn,
         /// Subsidy amount is too small.
         InvalidSubsidyAmount,
+        /// No limit was specified for a swap.
+        LimitMissing,
         /// A transferal of funds out of a swaps pool was below a threshhold specified by the
         /// receiver.
         LimitOut,
@@ -1402,7 +1404,7 @@ mod pallet {
                 rikiddo_instance.ma_short.config.ema_period = EMA_SHORT;
                 rikiddo_instance.ma_long.config.ema_period = EMA_LONG;
                 rikiddo_instance.ma_long.config.ema_period_estimate_after = Some(EMA_SHORT);
-                let _ = T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
+                T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
             }
 
             let pool = Pool {
@@ -1854,6 +1856,10 @@ mod pallet {
                 T::Shares::free_balance(asset_in, &who) >= asset_amount_in,
                 Error::<T>::InsufficientBalance
             );
+            ensure!(
+                min_asset_amount_out.is_some() || max_price.is_some(),
+                Error::<T>::LimitMissing,
+            );
 
             let params = SwapExactAmountParams {
                 asset_amounts: || {
@@ -1922,7 +1928,7 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            let _ = swap_exact_amount::<_, _, T>(params)?;
+            swap_exact_amount::<_, _, T>(params)?;
 
             if pool.scoring_rule == ScoringRule::CPMM {
                 Ok(T::WeightInfo::swap_exact_amount_in_cpmm())
@@ -1942,6 +1948,7 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing,);
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
@@ -2009,7 +2016,7 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            let _ = swap_exact_amount::<_, _, T>(params)?;
+            swap_exact_amount::<_, _, T>(params)?;
 
             if pool.scoring_rule == ScoringRule::CPMM {
                 Ok(T::WeightInfo::swap_exact_amount_out_cpmm())
