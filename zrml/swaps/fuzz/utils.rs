@@ -127,7 +127,18 @@ fn create_random_assets_and_weights(
         };
         weights.push(weight);
 
-        let asset = (rng.gen::<u128>(), rng.gen::<u16>());
+        let mut asset = (rng.gen::<u128>(), rng.gen::<u16>());
+        while assets
+            .clone()
+            .into_iter()
+            .map(construct_asset)
+            .collect::<Vec<_>>()
+            .contains(&construct_asset(asset))
+        {
+            // another try for finding a non-duplicated asset
+            asset = (rng.gen::<u128>(), rng.gen::<u16>());
+        }
+
         assets.push(asset);
     }
     // Need to shuffle the vector, because earlier numbers have a higher probability of being
