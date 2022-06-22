@@ -1,18 +1,11 @@
-use crate::{
-    Config, Disputes, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerCloseTimeFrame, MomentOf,
-    Pallet,
-};
-use alloc::vec;
+use crate::{Config, Disputes, Pallet};
 use frame_support::{
     dispatch::Weight,
     log,
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
 };
-use zeitgeist_primitives::{
-    traits::Swaps as SwapsPalletApi,
-    types::{Market, MarketPeriod, MarketStatus, PoolStatus},
-};
+use zeitgeist_primitives::types::MarketStatus;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 1;
@@ -87,13 +80,13 @@ impl<T: Config> OnRuntimeUpgrade for RemoveDisputesOfResolvedMarkets<T> {
 mod tests {
     use super::*;
     use crate::{mock::*, MomentOf};
-    use frame_support::{assert_err, assert_ok};
+    use frame_support::assert_ok;
     use orml_traits::MultiCurrency;
     use zeitgeist_primitives::{
         constants::{BASE, MILLISECS_PER_BLOCK},
         types::{
-            Asset, BlockNumber, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketType,
-            MultiHash, OutcomeReport, PoolStatus, ScoringRule,
+            Asset, BlockNumber, MarketCreation, MarketDispute, MarketDisputeMechanism,
+            MarketPeriod, MarketType, MultiHash, OutcomeReport, ScoringRule,
         },
     };
 
@@ -126,10 +119,10 @@ mod tests {
             // Markets which end here will have to be closed on migration:
             let short_time: MomentOf<Runtime> = (5 * MILLISECS_PER_BLOCK).into();
 
-            create_test_market_with_pool(
+            create_test_market(
                 MarketPeriod::Timestamp(0..short_time),
+                MarketCreation::Permissionless,
                 MarketStatus::Resolved,
-                true,
             );
 
             run_to_block(55);
@@ -139,7 +132,7 @@ mod tests {
             // be cleaned in storage migration.
             let market_dispute =
                 MarketDispute { at: 55, by: CHARLIE, outcome: OutcomeReport::Categorical(0) };
-            let res = crate::Disputes::<Runtime>::try_mutate(0, |disputes| {
+            let _res = crate::Disputes::<Runtime>::try_mutate(0, |disputes| {
                 disputes.try_push(market_dispute)
             });
 
@@ -156,33 +149,6 @@ mod tests {
 
     fn setup_chain() {
         StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
-    }
-
-    fn create_test_market_with_pool(
-        period: MarketPeriod<BlockNumber, MomentOf<Runtime>>,
-        market_status: MarketStatus,
-        pool_is_closed: bool,
-    ) {
-        let amount = 100 * BASE;
-        assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
-            Origin::signed(ALICE),
-            BOB,
-            period,
-            gen_metadata(0),
-            MarketType::Categorical(5),
-            MarketDisputeMechanism::Authorized(CHARLIE),
-            amount,
-            vec![BASE; 6],
-        ));
-        let market_id = MarketCommons::latest_market_id().unwrap();
-        if pool_is_closed {
-            let pool_id = MarketCommons::market_pool(&market_id).unwrap();
-            assert_ok!(Swaps::close_pool(pool_id));
-        }
-        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
-            market.status = market_status;
-            Ok(())
-        }));
     }
 
     fn create_test_market(
