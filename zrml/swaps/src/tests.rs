@@ -39,6 +39,7 @@ const _2: u128 = 2 * BASE;
 const _3: u128 = 3 * BASE;
 const _4: u128 = 4 * BASE;
 const _5: u128 = 5 * BASE;
+const _6: u128 = 6 * BASE;
 const _8: u128 = 8 * BASE;
 const _9: u128 = 9 * BASE;
 const _10: u128 = 10 * BASE;
@@ -51,8 +52,29 @@ const _99: u128 = 99 * BASE;
 const _100: u128 = 100 * BASE;
 const _101: u128 = 101 * BASE;
 const _105: u128 = 105 * BASE;
+const _125: u128 = 125 * BASE;
+const _150: u128 = 150 * BASE;
 const _1234: u128 = 1234 * BASE;
 const _10000: u128 = 10000 * BASE;
+
+// Macro for comparing fixed point u128.
+#[allow(unused_macros)]
+macro_rules! assert_approx {
+    ($left:expr, $right:expr, $precision:expr $(,)?) => {
+        match (&$left, &$right, &$precision) {
+            (left_val, right_val, precision_val) => {
+                let diff = if *left_val > *right_val {
+                    *left_val - *right_val
+                } else {
+                    *right_val - *left_val
+                };
+                if diff > $precision {
+                    panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
+                }
+            }
+        }
+    };
+}
 
 #[test_case(vec![ASSET_A, ASSET_A]; "short vector")]
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_A]; "start and end")]
@@ -548,16 +570,63 @@ fn nothing_except_exit_pool_is_allowed_in_closed_cpmm_pools() {
     });
 }
 
-#[test]
-fn get_spot_price_returns_correct_results() {
+#[test_case(_3, _3, _100, _100, 0, 10_000_000_000)]
+#[test_case(_3, _3, _100, _150, 0, 6_666_666_667)]
+#[test_case(_3, _4, _100, _100, 0, 13_333_333_333)]
+#[test_case(_3, _4, _100, _150, 0, 8_888_888_889)]
+#[test_case(_3, _6, _125, _150, 0, 16_666_666_667)]
+#[test_case(_3, _6, _125, _100, 0, 25_000_000_000)]
+#[test_case(_3, _3, _100, _100, _1_10, 11_111_111_111)]
+#[test_case(_3, _3, _100, _150, _1_10, 7_407_407_408)]
+#[test_case(_3, _4, _100, _100, _1_10, 14_814_814_814)]
+#[test_case(_3, _4, _100, _150, _1_10, 9_876_543_210)]
+#[test_case(_3, _6, _125, _150, _1_10, 18_518_518_519)]
+#[test_case(_3, _6, _125, _100, _1_10, 27_777_777_778)]
+fn get_spot_price_returns_correct_results_cpmm(
+    weight_in: u128,
+    weight_out: u128,
+    balance_in: BalanceOf<Runtime>,
+    balance_out: BalanceOf<Runtime>,
+    swap_fee: BalanceOf<Runtime>,
+    expected_spot_price: BalanceOf<Runtime>,
+) {
     ExtBuilder::default().build().execute_with(|| {
-        // CPMM.
-        create_initial_pool(ScoringRule::CPMM, Some(0), true);
-        assert_eq!(Swaps::get_spot_price(0, ASSETS[0], ASSETS[1]), Ok(BASE));
+        // We always swap ASSET_A for ASSET_B, but we vary the weights, balances and swap fees.
+        ASSETS.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _100));
+        });
+        let amount_in_pool = <Runtime as crate::Config>::MinLiquidity::get();
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            ASSETS.iter().cloned().collect(),
+            ASSETS.last().unwrap().clone(),
+            0,
+            ScoringRule::CPMM,
+            Some(swap_fee),
+            Some(amount_in_pool),
+            Some(vec!(weight_in, weight_out, _2, _3))
+        ));
+        let pool_id = 0;
+        let pool_account = Swaps::pool_account_id(pool_id);
 
-        // Rikiddo.
+        // Modify pool balances according to test data.
+        assert_ok!(Currencies::deposit(ASSET_A, &pool_account, balance_in - amount_in_pool));
+        assert_ok!(Currencies::deposit(ASSET_B, &pool_account, balance_out - amount_in_pool));
+
+        let abs_tol = 100;
+        assert_approx!(
+            Swaps::get_spot_price(pool_id, ASSET_A, ASSET_B).unwrap(),
+            expected_spot_price,
+            abs_tol,
+        );
+    });
+}
+
+#[test]
+fn get_spot_price_returns_correct_results_rikiddo() {
+    ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
-        let pool_id = 1;
+        let pool_id = 0;
         assert_noop!(
             Swaps::get_spot_price(pool_id, ASSETS[0], ASSETS[0]),
             crate::Error::<Runtime>::PoolIsNotActive
@@ -2342,25 +2411,6 @@ fn subsidize_and_start_rikiddo_pool(
     assert_ok!(Currencies::deposit(ASSET_D, who, min_subsidy + extra));
     assert_ok!(Swaps::pool_join_subsidy(Origin::signed(*who), pool_id, min_subsidy));
     assert_eq!(Swaps::end_subsidy_phase(pool_id).unwrap().result, true);
-}
-
-// Macro for comparing fixed point u128.
-#[allow(unused_macros)]
-macro_rules! assert_approx {
-    ($left:expr, $right:expr, $precision:expr $(,)?) => {
-        match (&$left, &$right, &$precision) {
-            (left_val, right_val, precision_val) => {
-                let diff = if *left_val > *right_val {
-                    *left_val - *right_val
-                } else {
-                    *right_val - *left_val
-                };
-                if diff > $precision {
-                    panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
-                }
-            }
-        }
-    };
 }
 
 fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {

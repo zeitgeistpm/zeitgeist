@@ -807,6 +807,8 @@ mod pallet {
         PoolMissingWeight,
         /// Two vectors do not have the same length (usually CPMM pool assets and weights).
         ProvidedValuesLenMustEqualAssetsLen,
+        /// The swap fee is missing from a Cpmm pool.
+        SwapFeeMissing,
         /// The swap fee is higher than the allowed maximum.
         SwapFeeTooHigh,
         /// Tried to create a pool that has less assets than the lower threshhold specified by
@@ -1093,13 +1095,14 @@ mod pallet {
                 let balance_out = T::Shares::free_balance(asset_out, &pool_account);
                 let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
                 let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
+                let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
 
                 return Ok(crate::math::calc_spot_price(
                     balance_in.saturated_into(),
                     in_weight,
                     balance_out.saturated_into(),
                     out_weight,
-                    0,
+                    swap_fee.saturated_into(),
                 )?
                 .saturated_into());
             }
