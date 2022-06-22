@@ -128,13 +128,7 @@ fn create_random_assets_and_weights(
         weights.push(weight);
 
         let mut asset = (rng.gen::<u128>(), rng.gen::<u16>());
-        while assets
-            .clone()
-            .into_iter()
-            .map(construct_asset)
-            .collect::<Vec<_>>()
-            .contains(&construct_asset(asset))
-        {
+        while assets.clone().into_iter().map(construct_asset).any(|a| a == construct_asset(asset)) {
             // another try for finding a non-duplicated asset
             asset = (rng.gen::<u128>(), rng.gen::<u16>());
         }
