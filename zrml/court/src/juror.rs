@@ -9,6 +9,7 @@ use crate::JurorStatus;
     Clone,
     Debug,
     PartialEq,
+    Eq,
 )]
 pub struct Juror {
     pub(crate) status: JurorStatus,

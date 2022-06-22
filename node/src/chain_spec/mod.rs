@@ -185,7 +185,13 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
 /// The extensions for the [`ChainSpec`].
 #[cfg(feature = "parachain")]
 #[derive(
-    Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, sc_chain_spec::ChainSpecExtension,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    sc_chain_spec::ChainSpecExtension,
 )]
 #[serde(deny_unknown_fields)]
 pub struct Extensions {
