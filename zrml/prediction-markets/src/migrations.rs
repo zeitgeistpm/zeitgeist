@@ -35,6 +35,7 @@ impl<T: Config> OnRuntimeUpgrade for RemoveDisputesOfResolvedMarkets<T> {
 
             if market.status == MarketStatus::Resolved {
                 Disputes::<T>::remove(market_id);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             }
         }
         StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
@@ -119,24 +120,37 @@ mod tests {
                 MarketStatus::Resolved,
             );
 
-            run_to_block(55);
+            create_test_market(
+                MarketPeriod::Timestamp(0..short_time),
+                MarketCreation::Permissionless,
+                MarketStatus::Resolved,
+            );
 
             // add one simple dispute for alreay resolved market to simulate a case
             // where there is pendig dispute(s) for resolver market and that should
             // be cleaned in storage migration.
             let market_dispute =
-                MarketDispute { at: 55, by: CHARLIE, outcome: OutcomeReport::Categorical(0) };
+                MarketDispute { at: 1, by: CHARLIE, outcome: OutcomeReport::Categorical(0) };
             let _res = crate::Disputes::<Runtime>::try_mutate(0, |disputes| {
+                let _ = disputes.try_push(market_dispute.clone());
+                disputes.try_push(market_dispute.clone())
+            });
+            let _res = crate::Disputes::<Runtime>::try_mutate(1, |disputes| {
+                let _ = disputes.try_push(market_dispute.clone());
                 disputes.try_push(market_dispute)
             });
 
             let disputes = crate::Disputes::<Runtime>::get(&0);
-            assert_eq!(disputes.len(), 1);
+            assert_eq!(disputes.len(), 2);
 
+            let disputes = crate::Disputes::<Runtime>::get(&1);
+            assert_eq!(disputes.len(), 2);
             RemoveDisputesOfResolvedMarkets::<Runtime>::on_runtime_upgrade();
 
             assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Resolved);
             let disputes = crate::Disputes::<Runtime>::get(&0);
+            assert_eq!(disputes.len(), 0);
+            let disputes = crate::Disputes::<Runtime>::get(&1);
             assert_eq!(disputes.len(), 0);
         });
     }
