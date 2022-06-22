@@ -1539,6 +1539,33 @@ fn it_resolves_a_disputed_market() {
     });
 }
 
+#[test_case(MarketStatus::Active; "active")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting_subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient_subsidy")]
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates a permissionless market.
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..1,
+            ScoringRule::CPMM,
+        );
+
+        assert_ok!(MarketCommons::mutate_market(&0, |market_inner| {
+            market_inner.status = status;
+            Ok(())
+        }));
+
+        assert_noop!(
+            PredictionMarkets::dispute(Origin::signed(EVE), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
 #[test]
 fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
     ExtBuilder::default().build().execute_with(|| {
