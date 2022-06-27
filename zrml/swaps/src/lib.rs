@@ -1373,7 +1373,7 @@ mod pallet {
                             amount_unwrapped >= T::MinLiquidity::get(),
                             Error::<T>::InsufficientLiquidity
                         );
-                        let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                        swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                         let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                         Self::check_provided_values_len_must_equal_assets_len(
                             &assets,
