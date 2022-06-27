@@ -896,15 +896,16 @@ fn market_close_manager_skips_the_genesis_block_with_timestamp_zero() {
     // We ensure that a timestamp of zero will not be stored at genesis into LastTimeFrame storage.
     let end: Moment = (5 * MILLISECS_PER_BLOCK).into();
     ExtBuilder::default().build().execute_with(|| {
+        let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             ALICE,
             MarketPeriod::Timestamp(0..end),
             gen_metadata(50),
-            MarketType::Categorical(3),
+            MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
-            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 4],
+            vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
 
         let noop_mutation = |_: &crate::MarketIdOf<Runtime>,
