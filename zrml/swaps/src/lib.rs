@@ -1373,7 +1373,7 @@ mod pallet {
                             amount_unwrapped >= T::MinLiquidity::get(),
                             Error::<T>::InsufficientLiquidity
                         );
-                        let _ = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                        swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
                         let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                         Self::check_provided_values_len_must_equal_assets_len(
                             &assets,
@@ -1416,8 +1416,7 @@ mod pallet {
                         rikiddo_instance.ma_short.config.ema_period = EMA_SHORT;
                         rikiddo_instance.ma_long.config.ema_period = EMA_LONG;
                         rikiddo_instance.ma_long.config.ema_period_estimate_after = Some(EMA_SHORT);
-                        let _ =
-                            T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
+                        T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
 
                         let pool_status = PoolStatus::CollectingSubsidy;
                         let total_subsidy = Some(<BalanceOf<T>>::zero());
