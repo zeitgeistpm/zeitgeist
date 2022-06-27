@@ -96,7 +96,7 @@ fn create_random_assets_and_weights(
     let mut assets: Vec<(u8, u128, u16)> = Vec::with_capacity(assets_len);
     let mut weights: Vec<u128> = Vec::with_capacity(assets_len);
 
-    assert!(MaxWeight::get() > MaxTotalWeight::get())
+    assert!(MaxWeight::get() <= MaxTotalWeight::get());
 
     let mut weight_sum = 0;
 
