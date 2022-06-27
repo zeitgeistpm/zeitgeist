@@ -2334,6 +2334,31 @@ fn pool_exit_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
     });
 }
 
+#[test]
+fn create_pool_correctly_associates_weights_with_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _10000);
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            vec![ASSET_D, ASSET_B, ASSET_C, ASSET_A],
+            ASSET_A,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(<Runtime as crate::Config>::MinLiquidity::get()),
+            Some(vec!(_1, _2, _3, _4)),
+        ));
+        let pool = Swaps::pool(0).unwrap();
+        let pool_weights = pool.weights.unwrap();
+        assert_eq!(pool_weights[&ASSET_A], _4);
+        assert_eq!(pool_weights[&ASSET_B], _2);
+        assert_eq!(pool_weights[&ASSET_C], _3);
+        assert_eq!(pool_weights[&ASSET_D], _1);
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }

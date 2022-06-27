@@ -316,7 +316,7 @@ benchmarks! {
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
-        let weights = vec![MinWeight::get(); weight_len.saturating_add(1)];
+        let weights = vec![MinWeight::get(); weight_len];
     }: _(RawOrigin::Signed(caller), market_id, max_swap_fee, min_liquidity, weights)
 
     dispute {

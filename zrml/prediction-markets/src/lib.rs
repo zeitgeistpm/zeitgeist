@@ -564,7 +564,9 @@ mod pallet {
         /// * `market_id`: The id of the market.
         /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
-        /// * `weights`: The relative denormalized weight of each asset price.
+        /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
+        ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
+        ///     swaps pallet.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
@@ -605,7 +607,9 @@ mod pallet {
         /// * `market_id`: The id of the market.
         /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
-        /// * `weights`: The relative denormalized weight of each asset price.
+        /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
+        ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
+        ///     swaps pallet.
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
         )]
@@ -615,7 +619,7 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
-            weights: Vec<u128>,
+            mut weights: Vec<u128>,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
@@ -626,6 +630,8 @@ mod pallet {
             let mut assets = Self::outcome_assets(market_id, &market);
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
+            let base_asset_weight = weights.iter().fold(0u128, |acc, val| acc.saturating_add(*val));
+            weights.push(base_asset_weight);
 
             let pool_id = T::Swaps::create_pool(
                 sender,
