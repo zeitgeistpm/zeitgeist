@@ -1083,7 +1083,7 @@ mod pallet {
             ensure!(pool.assets.binary_search(&asset_out).is_ok(), Error::<T>::AssetNotInPool);
             let pool_account = Self::pool_account_id(pool_id);
 
-            if let ScoringRule::CPMM = pool.scoring_rule {
+            if pool.scoring_rule == ScoringRule::CPMM {
                 let balance_in = T::Shares::free_balance(asset_in, &pool_account);
                 let balance_out = T::Shares::free_balance(asset_out, &pool_account);
                 let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
@@ -1940,10 +1940,11 @@ mod pallet {
             };
             swap_exact_amount::<_, _, T>(params)?;
 
-            if pool.scoring_rule == ScoringRule::CPMM {
-                Ok(T::WeightInfo::swap_exact_amount_in_cpmm())
-            } else {
-                Ok(T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()))
+            match pool.scoring_rule {
+                ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_in_cpmm()),
+                ScoringRule::RikiddoSigmoidFeeMarketEma => Ok(
+                    T::WeightInfo::swap_exact_amount_in_rikiddo(pool.assets.len().saturated_into()),
+                ),
             }
         }
 
@@ -1962,53 +1963,58 @@ mod pallet {
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
-                    let asset_amount_in = if pool.scoring_rule == ScoringRule::CPMM {
-                        ensure!(
-                            asset_amount_out
-                                <= bmul(
-                                    balance_out.saturated_into(),
-                                    T::MaxOutRatio::get().saturated_into()
-                                )?
-                                .saturated_into(),
-                            Error::<T>::MaxOutRatio,
-                        );
+                    let asset_amount_in = match pool.scoring_rule {
+                        ScoringRule::CPMM => {
+                            ensure!(
+                                asset_amount_out
+                                    <= bmul(
+                                        balance_out.saturated_into(),
+                                        T::MaxOutRatio::get().saturated_into()
+                                    )?
+                                    .saturated_into(),
+                                Error::<T>::MaxOutRatio,
+                            );
 
-                        let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
-                        crate::math::calc_in_given_out(
-                            balance_in.saturated_into(),
-                            Self::pool_weight_rslt(&pool, &asset_in)?,
-                            balance_out.saturated_into(),
-                            Self::pool_weight_rslt(&pool, &asset_out)?,
-                            asset_amount_out.saturated_into(),
-                            pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
-                        )?
-                        .saturated_into()
-                    } else {
-                        let base_asset = pool.base_asset;
-                        ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
-                        ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
-
-                        let mut outstanding_before =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
-                        let mut outstanding_after =
-                            Vec::<BalanceOf<T>>::with_capacity(pool.assets.len().saturating_sub(1));
-
-                        for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                            let total_amount = T::Shares::total_issuance(*asset);
-                            outstanding_before.push(total_amount);
-
-                            if *asset == asset_out {
-                                outstanding_after.push(total_amount + asset_amount_out);
-                            } else {
-                                outstanding_after.push(total_amount);
-                            }
+                            let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
+                            crate::math::calc_in_given_out(
+                                balance_in.saturated_into(),
+                                Self::pool_weight_rslt(&pool, &asset_in)?,
+                                balance_out.saturated_into(),
+                                Self::pool_weight_rslt(&pool, &asset_out)?,
+                                asset_amount_out.saturated_into(),
+                                pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
+                            )?
+                            .saturated_into()
                         }
+                        ScoringRule::RikiddoSigmoidFeeMarketEma => {
+                            let base_asset = pool.base_asset;
+                            ensure!(asset_in == base_asset, Error::<T>::UnsupportedTrade);
+                            ensure!(asset_in != asset_out, Error::<T>::UnsupportedTrade);
 
-                        let cost_before =
-                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
-                        let cost_after =
-                            T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
-                        cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
+                            let mut outstanding_before = Vec::<BalanceOf<T>>::with_capacity(
+                                pool.assets.len().saturating_sub(1),
+                            );
+                            let mut outstanding_after = Vec::<BalanceOf<T>>::with_capacity(
+                                pool.assets.len().saturating_sub(1),
+                            );
+
+                            for asset in pool.assets.iter().filter(|e| **e != base_asset) {
+                                let total_amount = T::Shares::total_issuance(*asset);
+                                outstanding_before.push(total_amount);
+
+                                if *asset == asset_out {
+                                    outstanding_after.push(total_amount + asset_amount_out);
+                                } else {
+                                    outstanding_after.push(total_amount);
+                                }
+                            }
+
+                            let cost_before =
+                                T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_before)?;
+                            let cost_after =
+                                T::RikiddoSigmoidFeeMarketEma::cost(pool_id, &outstanding_after)?;
+                            cost_after.checked_sub(&cost_before).ok_or(ArithmeticError::Overflow)?
+                        }
                     };
 
                     if let Some(maai) = max_asset_amount_in {
@@ -2028,10 +2034,13 @@ mod pallet {
             };
             swap_exact_amount::<_, _, T>(params)?;
 
-            if pool.scoring_rule == ScoringRule::CPMM {
-                Ok(T::WeightInfo::swap_exact_amount_out_cpmm())
-            } else {
-                Ok(T::WeightInfo::swap_exact_amount_out_rikiddo(pool.assets.len().saturated_into()))
+            match pool.scoring_rule {
+                ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_out_cpmm()),
+                ScoringRule::RikiddoSigmoidFeeMarketEma => {
+                    Ok(T::WeightInfo::swap_exact_amount_out_rikiddo(
+                        pool.assets.len().saturated_into(),
+                    ))
+                }
             }
         }
     }
