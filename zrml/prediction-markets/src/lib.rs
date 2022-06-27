@@ -290,7 +290,9 @@ mod pallet {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
 
                 match m.scoring_rule {
-                    ScoringRule::CPMM => m.status = MarketStatus::Active,
+                    ScoringRule::CPMM => {
+                        m.status = MarketStatus::Active;
+                    }
                     ScoringRule::RikiddoSigmoidFeeMarketEma => {
                         m.status = MarketStatus::CollectingSubsidy;
                         status = MarketStatus::CollectingSubsidy;
