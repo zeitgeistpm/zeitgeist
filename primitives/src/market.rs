@@ -89,7 +89,7 @@ where
 }
 
 /// Defines the type of market creation.
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum MarketCreation {
     // A completely permissionless market that requires a higher
     // validity bond. May resolve as `Invalid`.
@@ -166,7 +166,7 @@ pub enum MarketStatus {
 
 /// Defines the type of market.
 /// All markets also have themin_assets_out `Invalid` resolution.
-#[derive(Clone, Decode, Encode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum MarketType {
     /// A market with a number of categorical outcomes.
     Categorical(u16),

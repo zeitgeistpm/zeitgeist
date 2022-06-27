@@ -7,6 +7,11 @@ sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, g
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
+[dev-dependencies]
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate"}
+sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+
 [features]
 default = ["std"]
 std = [
@@ -25,4 +30,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-market-commons"
-version = "0.3.2"
+version = "0.3.3"

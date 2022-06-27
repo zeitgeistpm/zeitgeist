@@ -24,6 +24,7 @@ zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]
 zrml-swaps = { features = ["mock"], path = "." }
+test-case = "2.0.2"
 more-asserts = "0.2"
 
 [features]
@@ -63,4 +64,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-swaps"
-version = "0.3.2"
+version = "0.3.3"

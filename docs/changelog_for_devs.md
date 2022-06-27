@@ -1,4 +1,41 @@
+# v0.3.4
+
+- Changed the `weights` parameter of `deploy_swap_pool_and_additional_liquidity`
+  and `deploy_swap_pool_for_market` to be a vector whose length is equal to the
+  number of outcome tokens (one item shorter than before). The `weights` now
+  refer to the weights of the outcome tokens only, and the user can no longer
+  control the weight of the base asset. Instead, the weight of the base asset is
+  equal to the sum of the weights of the outcome tokens, thereby ensuring that
+  (assuming equal balances) the spot prices of the outcome tokens sum up to 1.
+
 # v0.3.3
+
+- Introduced `MarketStatus::Closed`. Markets are automatically transitioned into
+  this state when the market ends, and the `Event::MarketClosed` is
+  emitted. Trading is not allowed on markets that are closed.
+
+- Introduced `PoolStatus::Closed`; the pool of a market is closed when the
+  market is closed. The `Event::PoolClosed` is emitted when this happens.
+
+- Replace `PoolStatus::Stale` with `PoolStatus::Clean`. This state signals that
+  the corresponding market was resolved and the losing assets deleted from the
+  pool. The `Event::PoolCleanedUp` is emitted when the pool transitions into this
+  state.
+
+- Simplify `create_cpmm_market_and_deploy_assets`,
+  `deploy_swap_pool_and_additional_liquidity` and `deploy_swap_pool_for_market`
+  by using a single `amount` parameter instead of `amount_base_asset` and
+  `amount_outcome_assets`.
+
+- The `MarketCounter` of the `market-commons` pallet is incremented by one. This
+  means that `MarketCounter` is now equal to the total number of markets ever
+  created, instead of equal to the id of the last market created. For details
+  regarding this fix, see https://github.com/zeitgeistpm/zeitgeist/pull/636 and
+  https://github.com/zeitgeistpm/zeitgeist/issues/365.
+
+- Made the `min_asset_amount_out` and `max_price` parameters of
+  `swap_exact_amount_in` and the `max_asset_amount_in` and `max_price`
+  parameters of `swap_exact_amount_out` optional
 
 - Replaced `create_categorical_market` and `create_scalar_market` with
   `create_market`, which uses a `market_type` parameter to determine what market

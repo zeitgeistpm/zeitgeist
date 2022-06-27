@@ -1,6 +1,7 @@
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
+    storage::PrefixIterator,
     traits::NamedReservableCurrency,
     Parameter,
 };
@@ -29,6 +30,11 @@ pub trait MarketCommonsPalletApi {
     /// Returns `Err` if no market has bees created
     fn latest_market_id() -> Result<Self::MarketId, DispatchError>;
 
+    /// Return an iterator over the key-value pairs of markets. Altering market storage during
+    /// iteration results in undefined behavior.
+    fn market_iter()
+    -> PrefixIterator<(Self::MarketId, Market<Self::AccountId, Self::BlockNumber, Self::Moment>)>;
+
     /// Gets a market from the storage.
     fn market(
         market_id: &Self::MarketId,
@@ -50,7 +56,7 @@ pub trait MarketCommonsPalletApi {
     // MarketPool
 
     /// Connects a pool identified by `pool_id` to a market identified by `market_id`.
-    fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId);
+    fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) -> DispatchResult;
 
     /// Removes the pool id associated with a given `market_id`
     fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult;
