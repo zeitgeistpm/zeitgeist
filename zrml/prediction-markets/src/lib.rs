@@ -289,12 +289,13 @@ mod pallet {
             T::MarketCommons::mutate_market(&market_id, |m| {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
 
-                if m.scoring_rule == ScoringRule::CPMM {
-                    m.status = MarketStatus::Active;
-                } else {
-                    m.status = MarketStatus::CollectingSubsidy;
-                    status = MarketStatus::CollectingSubsidy;
-                    extra_weight = Self::start_subsidy(m, market_id)?;
+                match m.scoring_rule {
+                    ScoringRule::CPMM => m.status = MarketStatus::Active,
+                    ScoringRule::RikiddoSigmoidFeeMarketEma => {
+                        m.status = MarketStatus::CollectingSubsidy;
+                        status = MarketStatus::CollectingSubsidy;
+                        extra_weight = Self::start_subsidy(m, market_id)?;
+                    }
                 }
 
                 CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &m.creator, T::AdvisoryBond::get());
@@ -500,10 +501,9 @@ mod pallet {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
                     CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
 
-                    if scoring_rule == ScoringRule::CPMM {
-                        MarketStatus::Active
-                    } else {
-                        MarketStatus::CollectingSubsidy
+                    match scoring_rule {
+                        ScoringRule::CPMM => MarketStatus::Active,
+                        ScoringRule::RikiddoSigmoidFeeMarketEma => MarketStatus::CollectingSubsidy,
                     }
                 }
                 MarketCreation::Advised => {
