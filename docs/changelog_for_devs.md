@@ -1,5 +1,15 @@
 # v0.3.4
 
+- Implemented swap fees for CPMM pools. This means that the following extrinsics
+  now have a (non-optional) `swap_fee` parameter:
+
+  - `create_cpmm_market_and_deploy_assets`
+  - `deploy_swap_pool_and_additional_liquidity`
+  - `deploy_swap_pool_for_market`
+
+  Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
+  on-chain constant `MaxSwapFee`.
+
 - Changed the `weights` parameter of `deploy_swap_pool_and_additional_liquidity`
   and `deploy_swap_pool_for_market` to be a vector whose length is equal to the
   number of outcome tokens (one item shorter than before). The `weights` now
@@ -11,16 +21,16 @@
 # v0.3.3
 
 - Introduced `MarketStatus::Closed`. Markets are automatically transitioned into
-  this state when the market ends, and the `Event::MarketClosed` is
-  emitted. Trading is not allowed on markets that are closed.
+  this state when the market ends, and the `Event::MarketClosed` is emitted.
+  Trading is not allowed on markets that are closed.
 
 - Introduced `PoolStatus::Closed`; the pool of a market is closed when the
   market is closed. The `Event::PoolClosed` is emitted when this happens.
 
 - Replace `PoolStatus::Stale` with `PoolStatus::Clean`. This state signals that
   the corresponding market was resolved and the losing assets deleted from the
-  pool. The `Event::PoolCleanedUp` is emitted when the pool transitions into this
-  state.
+  pool. The `Event::PoolCleanedUp` is emitted when the pool transitions into
+  this state.
 
 - Simplify `create_cpmm_market_and_deploy_assets`,
   `deploy_swap_pool_and_additional_liquidity` and `deploy_swap_pool_for_market`
