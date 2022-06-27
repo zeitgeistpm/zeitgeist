@@ -1416,8 +1416,7 @@ mod pallet {
                         rikiddo_instance.ma_short.config.ema_period = EMA_SHORT;
                         rikiddo_instance.ma_long.config.ema_period = EMA_LONG;
                         rikiddo_instance.ma_long.config.ema_period_estimate_after = Some(EMA_SHORT);
-                        let _ =
-                            T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
+                        T::RikiddoSigmoidFeeMarketEma::create(next_pool_id, rikiddo_instance)?;
 
                         let pool_status = PoolStatus::CollectingSubsidy;
                         let total_subsidy = Some(<BalanceOf<T>>::zero());
