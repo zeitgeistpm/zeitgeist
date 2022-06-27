@@ -7,7 +7,6 @@ use utils::ExactAmountData;
 mod utils;
 use orml_traits::MultiCurrency;
 use utils::construct_asset;
-use zeitgeist_primitives::constants::MinLiquidity;
 use zrml_swaps::mock::Shares;
 
 fuzz_target!(|data: ExactAmountData| {
@@ -20,7 +19,7 @@ fuzz_target!(|data: ExactAmountData| {
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 // In order to successfully join the pool, data.asset_amount more tokens needed
-                MinLiquidity::get().saturating_add(data.asset_amount),
+                data.pool_creation.amount.saturating_add(data.asset_amount),
             );
         }
         let pool_id = data.pool_creation._create_pool();

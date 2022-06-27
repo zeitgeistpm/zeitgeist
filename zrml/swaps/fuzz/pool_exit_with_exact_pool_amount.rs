@@ -6,10 +6,7 @@ use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 mod utils;
 use orml_traits::MultiCurrency;
 use utils::{construct_asset, ExactAmountData};
-use zeitgeist_primitives::{
-    constants::MinLiquidity,
-    types::{Asset, SerdeWrapper},
-};
+use zeitgeist_primitives::types::{Asset, SerdeWrapper};
 use zrml_swaps::mock::Shares;
 
 fuzz_target!(|data: ExactAmountData| {
@@ -21,7 +18,7 @@ fuzz_target!(|data: ExactAmountData| {
             let _ = Shares::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
-                MinLiquidity::get(),
+                data.pool_creation.amount,
             );
         }
 

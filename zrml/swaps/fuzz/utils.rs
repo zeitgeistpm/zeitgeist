@@ -83,7 +83,7 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
         let origin = rng.gen::<u128>();
         let market_id = rng.gen::<u128>();
         let swap_fee = rng.gen_range(0..BASE);
-        let amount = MinLiquidity::get();
+        let amount = rng.gen_range(MinLiquidity::get()..u128::MAX);
 
         Ok(ValidPoolData { origin, assets, base_asset, market_id, swap_fee, amount, weights })
     }
