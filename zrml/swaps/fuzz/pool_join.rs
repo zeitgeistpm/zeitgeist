@@ -25,8 +25,12 @@ fuzz_target!(|data: GeneralPoolData| {
         }
         let pool_id = data.pool_creation._create_pool();
         // join a pool with a valid pool id
-        let _ =
-            Swaps::pool_join(Origin::signed(data.origin), pool_id, data.pool_amount, data.assets);
+        let _ = Swaps::pool_join(
+            Origin::signed(data.origin),
+            pool_id,
+            data.pool_amount,
+            data.asset_bounds,
+        );
     });
 
     let _ = ext.commit_all();

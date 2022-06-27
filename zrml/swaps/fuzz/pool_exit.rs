@@ -32,8 +32,12 @@ fuzz_target!(|data: GeneralPoolData| {
             &pool_creator,
             data.pool_amount,
         );
-        let _ =
-            Swaps::pool_exit(Origin::signed(data.origin), pool_id, data.pool_amount, data.assets);
+        let _ = Swaps::pool_exit(
+            Origin::signed(data.origin),
+            pool_id,
+            data.pool_amount,
+            data.asset_bounds,
+        );
     });
     let _ = ext.commit_all();
 });

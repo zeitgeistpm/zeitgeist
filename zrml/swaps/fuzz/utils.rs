@@ -19,9 +19,8 @@ use zeitgeist_primitives::{
 };
 use zrml_swaps::mock::Swaps;
 
-pub fn construct_asset(seed: (u128, u16)) -> Asset<u128> {
-    let (seed0, seed1) = seed;
-    let module = seed0 % 4;
+pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
+    let (module, seed0, seed1) = seed;
     match module {
         0 => Asset::CategoricalOutcome(seed0, seed1),
         1 => {
@@ -38,8 +37,8 @@ pub fn construct_asset(seed: (u128, u16)) -> Asset<u128> {
 #[derive(Debug)]
 pub struct ValidPoolData {
     pub origin: u128,
-    pub assets: Vec<(u128, u16)>,
-    pub base_asset: (u128, u16),
+    pub assets: Vec<(u8, u128, u16)>,
+    pub base_asset: (u8, u128, u16),
     pub market_id: u128,
     pub swap_fee: u128,
     pub amount: u128,
@@ -93,8 +92,8 @@ impl<'a> arbitrary::Arbitrary<'a> for ValidPoolData {
 fn create_random_assets_and_weights(
     assets_len: usize,
     rng: &mut ThreadRng,
-) -> Result<(Vec<(u128, u16)>, Vec<u128>)> {
-    let mut assets: Vec<(u128, u16)> = Vec::with_capacity(assets_len);
+) -> Result<(Vec<(u8, u128, u16)>, Vec<u128>)> {
+    let mut assets: Vec<(u8, u128, u16)> = Vec::with_capacity(assets_len);
     let mut weights: Vec<u128> = Vec::with_capacity(assets_len);
 
     if MaxWeight::get() > MaxTotalWeight::get() {
@@ -127,10 +126,10 @@ fn create_random_assets_and_weights(
         };
         weights.push(weight);
 
-        let mut asset = (rng.gen::<u128>(), rng.gen::<u16>());
+        let mut asset = (rng.gen::<u8>(), rng.gen::<u128>(), rng.gen::<u16>());
         while assets.clone().into_iter().map(construct_asset).any(|a| a == construct_asset(asset)) {
             // another try for finding a non-duplicated asset
-            asset = (rng.gen::<u128>(), rng.gen::<u16>());
+            asset = (rng.gen::<u8>(), rng.gen::<u128>(), rng.gen::<u16>());
         }
 
         assets.push(asset);
@@ -145,7 +144,7 @@ fn create_random_assets_and_weights(
 pub struct ExactAmountData {
     pub origin: u128,
     pub pool_creation: ValidPoolData,
-    pub asset: (u128, u16),
+    pub asset: (u8, u128, u16),
     pub pool_amount: u128,
     pub asset_amount: u128,
 }
@@ -154,7 +153,7 @@ pub struct ExactAmountData {
 pub struct ExactAssetAmountData {
     pub origin: u128,
     pub pool_creation: ValidPoolData,
-    pub asset: (u128, u16),
+    pub asset: (u8, u128, u16),
     pub asset_amount: u128,
     pub pool_amount: u128,
 }
@@ -164,16 +163,16 @@ pub struct GeneralPoolData {
     pub origin: u128,
     pub pool_creation: ValidPoolData,
     pub pool_amount: u128,
-    pub assets: Vec<u128>,
+    pub asset_bounds: Vec<u128>,
 }
 
 #[derive(Debug, Arbitrary)]
 pub struct SwapExactAmountInData {
     pub origin: u128,
     pub pool_creation: ValidPoolData,
-    pub asset_in: (u128, u16),
+    pub asset_in: (u8, u128, u16),
     pub asset_amount_in: u128,
-    pub asset_out: (u128, u16),
+    pub asset_out: (u8, u128, u16),
     pub asset_amount_out: Option<u128>,
     pub max_price: Option<u128>,
 }
@@ -182,9 +181,9 @@ pub struct SwapExactAmountInData {
 pub struct SwapExactAmountOutData {
     pub origin: u128,
     pub pool_creation: ValidPoolData,
-    pub asset_in: (u128, u16),
+    pub asset_in: (u8, u128, u16),
     pub asset_amount_in: Option<u128>,
-    pub asset_out: (u128, u16),
+    pub asset_out: (u8, u128, u16),
     pub asset_amount_out: u128,
     pub max_price: Option<u128>,
 }
@@ -192,8 +191,8 @@ pub struct SwapExactAmountOutData {
 #[derive(Debug, Arbitrary)]
 pub struct PoolCreationData {
     pub origin: u128,
-    pub assets: Vec<(u128, u16)>,
-    pub base_asset: (u128, u16),
+    pub assets: Vec<(u8, u128, u16)>,
+    pub base_asset: (u8, u128, u16),
     pub market_id: u128,
     pub swap_fee: Option<u128>,
     pub amount: Option<u128>,
