@@ -22,7 +22,7 @@ fuzz_target!(|data: GeneralPoolData| {
                 data.pool_creation.amount,
             );
         }
-        let pool_id = data.pool_creation._create_pool();
+        let pool_id = data.pool_creation.create_pool();
         // join a pool with a valid pool id
         let _ = Swaps::pool_join(
             Origin::signed(data.origin),

@@ -22,7 +22,7 @@ fuzz_target!(|data: ExactAssetAmountData| {
                 data.pool_creation.amount.saturating_add(data.asset_amount),
             );
         }
-        let pool_id = data.pool_creation._create_pool();
+        let pool_id = data.pool_creation.create_pool();
         let _ = Swaps::pool_join_with_exact_asset_amount(
             Origin::signed(data.origin),
             pool_id,

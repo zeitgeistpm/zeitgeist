@@ -20,7 +20,7 @@ fuzz_target!(|data: SwapExactAmountOutData| {
                 data.pool_creation.amount,
             );
         }
-        let pool_id = data.pool_creation._create_pool();
+        let pool_id = data.pool_creation.create_pool();
 
         if let Some(amount) = data.asset_amount_in {
             let _ = Shares::deposit(construct_asset(data.asset_in), &data.origin, amount);

@@ -21,7 +21,7 @@ use zrml_swaps::mock::Swaps;
 
 pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
     let (module, seed0, seed1) = seed;
-    match module {
+    match module % 5 {
         0 => Asset::CategoricalOutcome(seed0, seed1),
         1 => {
             let scalar_position =
@@ -46,7 +46,9 @@ pub struct ValidPoolData {
 }
 
 impl ValidPoolData {
-    pub fn _create_pool(self) -> PoolId {
+    // This function is called in the swap fuzz tests.
+    #[allow(dead_code)]
+    pub fn create_pool(self) -> PoolId {
         match Swaps::create_pool(
             self.origin,
             self.assets.into_iter().map(construct_asset).collect(),

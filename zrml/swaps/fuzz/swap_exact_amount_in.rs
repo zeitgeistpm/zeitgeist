@@ -21,7 +21,7 @@ fuzz_target!(|data: SwapExactAmountInData| {
                 data.pool_creation.amount,
             );
         }
-        let pool_id = data.pool_creation._create_pool();
+        let pool_id = data.pool_creation.create_pool();
         let _ = Shares::deposit(construct_asset(data.asset_in), &data.origin, data.asset_amount_in);
         let _ = Swaps::swap_exact_amount_in(
             Origin::signed(data.origin),
