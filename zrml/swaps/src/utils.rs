@@ -184,14 +184,12 @@ where
     // Allow little tolerance
     match p.pool.scoring_rule {
         ScoringRule::CPMM => {
-            ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+            ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation)
         }
-        ScoringRule::RikiddoSigmoidFeeMarketEma => {
-            ensure!(
-                spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
-                Error::<T>::MathApproximation
-            );
-        }
+        ScoringRule::RikiddoSigmoidFeeMarketEma => ensure!(
+            spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
+            Error::<T>::MathApproximation
+        ),
     }
 
     if let Some(max_price) = p.max_price {
@@ -199,14 +197,12 @@ where
     }
 
     match p.pool.scoring_rule {
-        ScoringRule::CPMM => {
-            ensure!(
-                spot_price_before
-                    <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
-                        .saturated_into(),
-                Error::<T>::MathApproximation
-            );
-        }
+        ScoringRule::CPMM => ensure!(
+            spot_price_before
+                <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
+                    .saturated_into(),
+            Error::<T>::MathApproximation
+        ),
         ScoringRule::RikiddoSigmoidFeeMarketEma => {
             // Currently the only allowed trades are base_currency <-> event asset. We count the
             // volume in base_currency.
