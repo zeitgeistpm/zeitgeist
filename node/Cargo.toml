@@ -105,6 +105,7 @@ zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 [features]
 default = []
+pallet-sudo = []
 parachain = [
     "zeitgeist-runtime/parachain",
 

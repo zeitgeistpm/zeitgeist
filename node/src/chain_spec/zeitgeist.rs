@@ -1,6 +1,8 @@
+#[cfg(feature = "pallet-sudo")]
+use crate::chain_spec::root_key_staging_mainnet;
 use crate::chain_spec::{
     additional_chain_spec_staging_mainnet, endowed_accounts_staging_mainnet, generic_genesis,
-    root_key_staging_mainnet, telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
+    telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
 };
 use sc_service::ChainType;
 
@@ -20,6 +22,7 @@ pub fn zeitgeist_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_mainnet(),
+                #[cfg(feature = "pallet-sudo")]
                 root_key_staging_mainnet(),
                 zeitgeist_wasm,
             )
