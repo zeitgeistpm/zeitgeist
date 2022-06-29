@@ -1,5 +1,5 @@
 use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
-use frame_support::dispatch::DispatchResult;
+use frame_support::{dispatch::DispatchResult, storage::PrefixIterator};
 use sp_runtime::DispatchError;
 
 pub trait DisputeApi {
@@ -31,6 +31,13 @@ pub trait DisputeApi {
     /// returned, this means that the dispute could not be resolved.
     fn on_resolution(
         disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+        market_id: &Self::MarketId,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+    ) -> Result<Option<OutcomeReport>, DispatchError>;
+
+    fn on_global_dispute_resolution(
+        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+        dispute_votes: PrefixIterator<(u32, Self::Balance)>,
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;

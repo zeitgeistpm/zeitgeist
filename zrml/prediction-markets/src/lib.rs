@@ -450,10 +450,7 @@ mod pallet {
                 voting.locked_balance()
             });
             if lock_needed.is_zero() {
-                CurrencyOf::<T>::remove_lock(
-                    T::VoteLockIdentifier::get(),
-                    &sender,
-                );
+                CurrencyOf::<T>::remove_lock(T::VoteLockIdentifier::get(), &sender);
             } else {
                 CurrencyOf::<T>::set_lock(
                     T::VoteLockIdentifier::get(),
@@ -1767,7 +1764,8 @@ mod pallet {
                             T::Court::on_resolution(&disputes, market_id, market)?
                         }
                         MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                            let dispute_votes = <DisputeVote<T>>::iter_prefix(market_id);
+                            T::SimpleDisputes::on_global_dispute_resolution(&disputes, &dispute_votes, market_id, market)?
                         }
                     };
                     let resolved_outcome =

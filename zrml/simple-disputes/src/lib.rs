@@ -19,10 +19,11 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        storage::PrefixIterator,
         traits::{Currency, Get, Hooks, IsType},
         PalletId,
     };
-    use sp_runtime::DispatchError;
+    use sp_runtime::{traits::Zero, DispatchError};
     use zeitgeist_primitives::{
         traits::DisputeApi,
         types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
@@ -106,8 +107,33 @@ mod pallet {
             if market.status != MarketStatus::Disputed {
                 return Err(Error::<T>::InvalidMarketStatus.into());
             }
-            if let Some(last_dispute) = disputes.last() {
-                Ok(Some(last_dispute.outcome.clone()))
+
+            if let Some(winning_dispute) = disputes.last() {
+                Ok(Some(winning_dispute.outcome.clone()))
+            } else {
+                Err(Error::<T>::InvalidMarketStatus.into())
+            }
+        }
+
+        fn on_global_dispute_resolution(
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            dispute_votes: PrefixIterator<(u32, BalanceOf<T>)>,
+            _: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+        ) -> Result<Option<OutcomeReport>, DispatchError> {
+            if market.mdm != MarketDisputeMechanism::SimpleDisputes {
+                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
+            }
+            if market.status != MarketStatus::Disputed {
+                return Err(Error::<T>::InvalidMarketStatus.into());
+            }
+            let (index, _) =
+                dispute_votes.fold((0u32, <BalanceOf<T>>::zero()), |(i0, b0), (i1, b1)| {
+                    if b0 > b1 { (i0, b0) } else { (i1, b1) }
+                });
+
+            if let Some(winning_dispute) = disputes.get(index as usize) {
+                Ok(Some(winning_dispute.outcome.clone()))
             } else {
                 Err(Error::<T>::InvalidMarketStatus.into())
             }
