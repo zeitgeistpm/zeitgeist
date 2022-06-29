@@ -2004,7 +2004,9 @@ mod pallet {
             // Resolve any disputed markets.
             for id in MarketIdsPerDisputeBlock::<T>::get(&block).iter() {
                 let market = T::MarketCommons::market(id)?;
-                cb(id, &market)?;
+                if let MarketStatus::Disputed = market.status {
+                    cb(id, &market)?;
+                }
             }
 
             Ok(())

@@ -2400,6 +2400,83 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 }
 
 #[test]
+fn on_resolution_only_called_once_for_permissionless_market()
+ {
+    ExtBuilder::default().build().execute_with(|| {
+        let range_end = 100;
+        let create_market_for_alice = || {
+            assert_ok!(PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(0..range_end),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ));
+        };
+        // create three markets for alice for 3 bonds
+        create_market_for_alice();
+        create_market_for_alice();
+        create_market_for_alice();
+
+        // Reserve a sentinel amount to check that we don't unreserve too much.
+        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        let alice_balance_before = Balances::free_balance(&ALICE);
+        assert_eq!(
+            Balances::reserved_balance(&ALICE),
+            SENTINEL_AMOUNT + 3 * (ValidityBond::get() + OracleBond::get())
+        );
+
+        let last_dispute_block = range_end + 3;
+
+        run_to_block(range_end);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(last_dispute_block - 2);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        run_to_block(last_dispute_block - 1);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(last_dispute_block);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+
+        run_to_block(last_dispute_block - 2 + DisputePeriod::get());
+        // ensure that on_resolution isn't called
+        assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Disputed);
+
+        run_to_block(last_dispute_block - 1 + DisputePeriod::get());
+        // ensure that on_resolution isn't called
+        assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Disputed);
+
+        run_to_block(last_dispute_block + DisputePeriod::get());
+        assert_eq!(MarketCommons::market(&0).unwrap().status, MarketStatus::Resolved);
+        assert_eq!(MarketCommons::market(&1).unwrap().status, MarketStatus::Closed);
+        assert_eq!(MarketCommons::market(&2).unwrap().status, MarketStatus::Closed);
+
+        // Ensure that Alice only unreserves ValidityBond one time
+        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + 2 * (ValidityBond::get() + OracleBond::get()));
+        // Check that validity bond didn't get slashed, but oracle bond did
+        assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
+    });
+}
+
+#[test]
 fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_market_on_oracle_report()
  {
     ExtBuilder::default().build().execute_with(|| {
