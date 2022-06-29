@@ -2400,8 +2400,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
 }
 
 #[test]
-fn on_resolution_only_called_once_for_permissionless_market()
- {
+fn on_resolution_only_called_once_for_permissionless_market() {
     ExtBuilder::default().build().execute_with(|| {
         let range_end = 100;
         let create_market_for_alice = || {
@@ -2470,7 +2469,10 @@ fn on_resolution_only_called_once_for_permissionless_market()
         assert_eq!(MarketCommons::market(&2).unwrap().status, MarketStatus::Closed);
 
         // Ensure that Alice only unreserves ValidityBond one time
-        assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + 2 * (ValidityBond::get() + OracleBond::get()));
+        assert_eq!(
+            Balances::reserved_balance(&ALICE),
+            SENTINEL_AMOUNT + 2 * (ValidityBond::get() + OracleBond::get())
+        );
         // Check that validity bond didn't get slashed, but oracle bond did
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
     });
