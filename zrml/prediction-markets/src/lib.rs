@@ -399,22 +399,8 @@ mod pallet {
             )
         }
 
-        /// Starts a global dispute.
-        /// TODO Maybe start an automatic global dispute when a sufficient dispute number is reached => then this extrinsic is not required
-        /// NOTE: Requires the market to be already disputed `MaxDisputes` amount of times.
-        ///
-        #[pallet::weight(10_000_000)]
-        pub fn start_global_dispute(
-            origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            let _sender = ensure_signed(origin)?;
-            let _market = T::MarketCommons::market(&market_id)?;
-            // TODO(#489): Implement global disputes!
-            Ok(())
-        }
-
-        /// Votes on a dispute after a global dispute has been started.
+        /// Votes on a dispute after there are already two disputes and the 'DisputePeriod' is not over.
+        /// NOTE: In the 'DisputePeriod' voting on a dispute is allowed.
         #[pallet::weight(10_000_000)]
         pub fn vote_on_dispute(
             origin: OriginFor<T>,
@@ -422,22 +408,60 @@ mod pallet {
             dispute_index: u32,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
+            // TODO(#489): Implement global disputes!
             let sender = ensure_signed(origin)?;
-            let market = T::MarketCommons::market(&market_id)?;
-
             ensure!(
                 amount <= CurrencyOf::<T>::free_balance(&sender),
                 Error::<T>::InsufficientFundsForVote
             );
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
+            let disputes = Disputes::<T>::get(market_id);
+            let num_disputes: u32 = disputes.len().saturated_into();
+            ensure!(num_disputes > 1u32, Error::<T>::NotEnoughDisputes);
+            // dispute vote is already present because of the dispute bond of the disputor
+            let dispute_vote = <DisputeVote<T>>::get(market_id, dispute_index)
+                .ok_or(Error::<T>::DisputeVoteNotAllowed)?;
 
             CurrencyOf::<T>::extend_lock(
                 T::VoteLockIdentifier::get(),
                 &sender,
                 amount,
-                WithdrawReasons::all(),
+                WithdrawReasons::TRANSFER,
             );
 
+            let dispute_vote = dispute_vote.saturating_add(amount);
+            <DisputeVote<T>>::insert(market_id, num_disputes, dispute_vote);
+
             Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
+            Ok(())
+        }
+
+        /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
+        #[pallet::weight(10_000_000)]
+        pub fn unlock_dispute_vote(
+            origin: OriginFor<T>,
+            _market_id: MarketIdOf<T>,
+        ) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+
+            let lock_needed = VotingOf::<T>::mutate(sender, |voting| {
+                voting.rejig(frame_system::Pallet::<T>::block_number());
+                voting.locked_balance()
+            });
+            if lock_needed.is_zero() {
+                CurrencyOf::<T>::remove_lock(
+                    T::VoteLockIdentifier::get(),
+                    &sender,
+                );
+            } else {
+                CurrencyOf::<T>::set_lock(
+                    T::VoteLockIdentifier::get(),
+                    &sender,
+                    lock_needed,
+                    WithdrawReasons::TRANSFER,
+                );
+            }
             Ok(())
         }
 
@@ -1118,6 +1142,8 @@ mod pallet {
         CannotDisputeSameOutcome,
         /// An initial vote balance was already made for this dispute.
         DisputeVoteAlreadyPresent,
+        /// The vote on this dispute index is not allowed.
+        DisputeVoteNotAllowed,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
@@ -1152,6 +1178,8 @@ mod pallet {
         MarketStartTooLate,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
+        /// The minimum number of disputes for voting is not reached.
+        NotEnoughDisputes,
         /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.

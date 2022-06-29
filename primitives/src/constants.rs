@@ -66,7 +66,7 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
-    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const DisputePeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;
