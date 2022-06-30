@@ -355,7 +355,7 @@ mod pallet {
                 &who,
                 default_dispute_bond::<T>(disputes.len()),
             )?;
-            match market.mdm {
+            match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized(_) => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
                 }
@@ -396,7 +396,7 @@ mod pallet {
         /// * `period`: The active period of the market.
         /// * `metadata`: A hash pointer to the metadata of the market.
         /// * `market_type`: The type of the market.
-        /// * `mdm`: The market dispute mechanism.
+        /// * `dispute_mechanism`: The market dispute mechanism.
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
@@ -418,7 +418,7 @@ mod pallet {
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             market_type: MarketType,
-            mdm: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
         ) -> DispatchResultWithPostInfo {
@@ -431,7 +431,7 @@ mod pallet {
                 metadata,
                 MarketCreation::Permissionless,
                 market_type.clone(),
-                mdm,
+                dispute_mechanism,
                 ScoringRule::CPMM,
             )?
             .actual_weight
@@ -469,7 +469,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            mdm: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -520,7 +520,7 @@ mod pallet {
                 creator_fee: 0,
                 creator: sender,
                 market_type,
-                mdm,
+                dispute_mechanism,
                 metadata: Vec::from(multihash),
                 oracle,
                 period: period.clone(),
@@ -1656,7 +1656,7 @@ mod pallet {
                 MarketStatus::Disputed => {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
                     // the oracle's report.
-                    let resolved_outcome_option = match market.mdm {
+                    let resolved_outcome_option = match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized(_) => {
                             T::Authorized::on_resolution(&disputes, market_id, market)?
                         }

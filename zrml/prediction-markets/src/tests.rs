@@ -1621,7 +1621,7 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
 }
 
 #[test]
-fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
+fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
