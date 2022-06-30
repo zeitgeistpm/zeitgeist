@@ -87,8 +87,9 @@ mod pallet {
         },
         storage::{with_transaction, TransactionOutcome},
         traits::{
-            Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType, LockableCurrency, NamedReservableCurrency, OnUnbalanced,
-            StorageVersion, WithdrawReasons,
+            Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
+            LockableCurrency, NamedReservableCurrency, OnUnbalanced, StorageVersion,
+            WithdrawReasons,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
@@ -368,7 +369,11 @@ mod pallet {
                 MarketDisputeMechanism::GlobalDisputes => {
                     T::GlobalDisputes::on_dispute(&disputes, &market_id, &market)?;
                     // num_disputes is exactly the index of the added dispute
-                    let _weight = T::GlobalDisputes::init_dispute_vote(&market_id, num_disputes, dispute_bond);
+                    let _weight = T::GlobalDisputes::init_dispute_vote(
+                        &market_id,
+                        num_disputes,
+                        dispute_bond,
+                    );
                 }
             }
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
@@ -1037,6 +1042,16 @@ mod pallet {
 
         /// See [`SimpleDisputesPalletApi`].
         type SimpleDisputes: DisputeApi<
+            AccountId = Self::AccountId,
+            Balance = BalanceOf<Self>,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+            Origin = Self::Origin,
+        >;
+
+        /// See [`GlobalDisputesPalletApi`].
+        type GlobalDisputes: DisputeApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
             BlockNumber = Self::BlockNumber,

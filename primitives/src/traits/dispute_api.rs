@@ -1,5 +1,5 @@
 use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
-use frame_support::{dispatch::DispatchResult, storage::PrefixIterator};
+use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
 
 pub trait DisputeApi {

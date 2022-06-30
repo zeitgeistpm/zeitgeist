@@ -212,8 +212,9 @@ macro_rules! create_zeitgeist_runtime {
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 53,
                 RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
+                GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 56,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 57,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 58,
 
                 $($additional_pallets)*
             }
@@ -329,6 +330,7 @@ cfg_if::cfg_if! {
 
                     // Prohibited calls:
                     Call::Authorized(_)
+                    | Call::GlobalDisputes(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
@@ -366,6 +368,7 @@ cfg_if::cfg_if! {
 
                     // Prohibited calls:
                     Call::Authorized(_)
+                    | Call::GlobalDisputes(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
@@ -387,7 +390,7 @@ cfg_if::cfg_if! {
                         match inner_call {
                             // Disable Rikiddo markets
                             create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                            // Disable Court & SimpleDisputes dispute resolution mechanism
+                            // Disable Court & SimpleDisputes & GlobalDisputes dispute resolution mechanism
                             create_market { mdm: Court | SimpleDisputes | GlobalDisputes, .. } => false,
                             create_cpmm_market_and_deploy_assets { mdm: Court | SimpleDisputes | GlobalDisputes, .. } => false,
                             _ => true
@@ -942,6 +945,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type ResolveOrigin = EnsureRoot<AccountId>;
     type Shares = Tokens;
     type SimpleDisputes = SimpleDisputes;
+    type GlobalDisputes = GlobalDisputes;
     type Slash = ();
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
@@ -967,6 +971,13 @@ impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
+}
+
+impl zrml_global_disputes::Config for Runtime {
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type PalletId = GlobalDisputesPalletId;
+    type VoteLockIdentifier = VoteLockIdentifier;
 }
 
 impl zrml_swaps::Config for Runtime {
@@ -1409,6 +1420,7 @@ where
             LiquidityMiningPalletId::get(),
             PmPalletId::get(),
             SimpleDisputesPalletId::get(),
+            GlobalDisputesPalletId::get(),
             SwapsPalletId::get(),
         ];
 
