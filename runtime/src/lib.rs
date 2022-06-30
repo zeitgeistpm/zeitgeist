@@ -374,7 +374,7 @@ cfg_if::cfg_if! {
             }
         }
     // Unrestricted (no "txfilter" feature) chains.
-    // Currently disables Rikiddo and markets using Court or SimpleDisputes dispute mechanism.
+    // Currently disables Rikiddo and markets using Court or SimpleDisputes or GlobalDisputes dispute mechanism.
     // Will be relaxed for testnet once runtimes are separated.
     } else {
         impl Contains<Call> for IsCallable {
@@ -388,8 +388,8 @@ cfg_if::cfg_if! {
                             // Disable Rikiddo markets
                             create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                             // Disable Court & SimpleDisputes dispute resolution mechanism
-                            create_market { mdm: Court | SimpleDisputes, .. } => false,
-                            create_cpmm_market_and_deploy_assets { mdm: Court | SimpleDisputes, .. } => false,
+                            create_market { mdm: Court | SimpleDisputes | GlobalDisputes, .. } => false,
+                            create_cpmm_market_and_deploy_assets { mdm: Court | SimpleDisputes | GlobalDisputes, .. } => false,
                             _ => true
                         }
                     }

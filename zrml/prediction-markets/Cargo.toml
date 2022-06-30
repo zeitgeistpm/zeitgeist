@@ -13,6 +13,7 @@ zrml-court = { default-features = false, path = "../court" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
+zrml-global-disputes = { default-features = false, path = "../global-disputes" }
 
 # Mock
 
@@ -67,6 +68,7 @@ std = [
     "zrml-liquidity-mining/std",
     "zrml-market-commons/std",
     "zrml-simple-disputes/std",
+    "zrml-global-disputes/std",
 ]
 try-runtime = [
   "frame-support/try-runtime",

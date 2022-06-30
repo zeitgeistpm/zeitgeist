@@ -34,11 +34,4 @@ pub trait DisputeApi {
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
-
-    fn on_global_dispute_resolution(
-        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-        dispute_votes: PrefixIterator<(u32, Self::Balance)>,
-        market_id: &Self::MarketId,
-        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
-    ) -> Result<Option<OutcomeReport>, DispatchError>;
 }

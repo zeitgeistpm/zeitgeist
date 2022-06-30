@@ -88,6 +88,11 @@ parameter_types! {
     pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
 }
 
+// Global disputes parameters
+parameter_types! {
+    pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
+}
+
 // Swaps parameters
 parameter_types! {
     pub const ExitFee: Balance = 3 * BASE / 1000; // 0.3%

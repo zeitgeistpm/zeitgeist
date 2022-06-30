@@ -99,6 +99,7 @@ zrml-market-commons = { default-features = false, path = "../zrml/market-commons
 zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
 zrml-rikiddo = { default-features = false, path = "../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
+zrml-global-disputes = { default-features = false, path = "../zrml/global-disputes" }
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
 
@@ -176,6 +177,7 @@ runtime-benchmarks = [
     "zrml-liquidity-mining/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
     "zrml-simple-disputes/runtime-benchmarks",
+    "zrml-global-disputes/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
 ]
 std = [
@@ -272,6 +274,7 @@ std = [
     "zrml-prediction-markets/std",
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
+    "zrml-global-disputes/std",
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
@@ -318,6 +321,7 @@ try-runtime = [
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
+    "zrml-global-disputes/try-runtime",
     "zrml-swaps/try-runtime",
 
     # Parachain
