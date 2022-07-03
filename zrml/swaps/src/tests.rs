@@ -2359,6 +2359,93 @@ fn create_pool_correctly_associates_weights_with_assets() {
     });
 }
 
+#[test]
+fn single_asset_join_and_exit_are_inverse() {
+    // Sanity check for verifying that single-asset join/exits are inverse and that the user can't
+    // steal tokens from the pool using these functions.
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0);
+        let asset = ASSET_B;
+        let amount_in = _1;
+        create_initial_pool(ScoringRule::CPMM, Some(0), true);
+        let pool_id = 0;
+        assert_ok!(Currencies::deposit(asset, &ALICE, amount_in));
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            asset,
+            amount_in,
+            0,
+        ));
+        let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(pool_id), &ALICE);
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            asset,
+            pool_amount,
+            0,
+        ));
+        let amount_out = Currencies::free_balance(asset, &ALICE);
+        assert_le!(amount_out, amount_in);
+        assert_approx!(amount_out, amount_in, 1_000);
+    });
+}
+
+#[test]
+fn single_asset_operations_are_equivalent_to_swaps() {
+    // This is a sanity test that verifies that performing a single-asset join followed by a
+    // single-asset exit is equivalent to a swap provided that no fees are taken. The claim made in
+    // the Balancer whitepaper that this is true even if swap fees but no exit fees are taken, is
+    // incorrect, except if the pool contains only two assets of equal weight.
+    let amount_in = _1;
+    let asset_in = ASSET_A;
+    let asset_out = ASSET_B;
+    let swap_fee = 0;
+
+    let amount_out_single_asset_ops = ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0);
+        create_initial_pool(ScoringRule::CPMM, Some(swap_fee), true);
+        let pool_id = 0;
+        assert_ok!(Currencies::deposit(asset_in, &ALICE, amount_in));
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            asset_in,
+            amount_in,
+            0,
+        ));
+        let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(pool_id), &ALICE);
+        println!("{}", pool_amount);
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            asset_out,
+            pool_amount,
+            0,
+        ));
+        Currencies::free_balance(asset_out, &ALICE)
+    });
+
+    let amount_out_swap = ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, Some(swap_fee), true);
+        let pool_id = 0;
+        assert_ok!(Currencies::deposit(asset_in, &ALICE, amount_in));
+        assert_ok!(Swaps::swap_exact_amount_in(
+            Origin::signed(ALICE),
+            pool_id,
+            asset_in,
+            amount_in,
+            asset_out,
+            Some(0),
+            None,
+        ));
+        Currencies::free_balance(asset_out, &ALICE)
+    });
+
+    let dust = 1_000;
+    assert_approx!(amount_out_single_asset_ops, amount_out_swap, dust);
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
