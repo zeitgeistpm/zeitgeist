@@ -372,7 +372,6 @@ mod pallet {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
 
-            Self::check_if_pool_is_active(&pool)?;
             let params = PoolParams {
                 asset_bounds: max_assets_in,
                 event: |evt| Self::deposit_event(Event::PoolJoin(evt)),
@@ -769,6 +768,8 @@ mod pallet {
         InvalidStateTransition,
         /// Could not create CPMM pool since no weights were supplied.
         InvalidWeightArgument,
+        /// Could not create CPMM pool since no status was supplied.
+        InvalidStatusArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
         /// Subsidy amount is too small.
@@ -839,6 +840,8 @@ mod pallet {
         PoolClosed(PoolId),
         /// A pool was cleaned up. \[pool_id\]
         PoolCleanedUp(PoolId),
+        /// A pool was opened. \[pool_id\]
+        PoolOpen(PoolId),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
             PoolAssetsEvent<
@@ -1347,6 +1350,7 @@ mod pallet {
             swap_fee: Option<BalanceOf<T>>,
             amount: Option<BalanceOf<T>>,
             weights: Option<Vec<u128>>,
+            active: Option<bool>,
         ) -> Result<PoolId, DispatchError> {
             ensure!(assets.len() <= usize::from(T::MaxAssets::get()), Error::<T>::TooManyAssets);
             ensure!(assets.len() >= usize::from(T::MinAssets::get()), Error::<T>::TooFewAssets);
@@ -1379,6 +1383,7 @@ mod pallet {
                             &assets,
                             &weights_unwrapped,
                         )?;
+                        let active_unwrapped = active.ok_or(Error::<T>::InvalidStatusArgument)?;
 
                         for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
                             let free_balance = T::Shares::free_balance(asset, &who);
@@ -1399,7 +1404,8 @@ mod pallet {
                         );
                         T::Shares::deposit(pool_shares_id, &who, amount_unwrapped)?;
 
-                        let pool_status = PoolStatus::Active;
+                        let pool_status =
+                            if active_unwrapped { PoolStatus::Active } else { PoolStatus::Closed };
                         let total_subsidy = None;
                         let total_weight = Some(total_weight);
                         let weights = Some(map);
@@ -1652,6 +1658,17 @@ mod pallet {
                     Err(err) => TransactionOutcome::Rollback(Err(err)),
                 }
             })
+        }
+
+        fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            Self::mutate_pool(pool_id, |pool| {
+                ensure!(pool.pool_status == PoolStatus::Closed, Error::<T>::InvalidStateTransition);
+                pool.pool_status = PoolStatus::Active;
+                Ok(())
+            })?;
+            Self::deposit_event(Event::PoolOpen(pool_id));
+            // TODO(#603): Fix weight calculation!
+            Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
         /// Pool - Exit with exact pool amount

@@ -637,6 +637,7 @@ mod pallet {
                 Some(Zero::zero()),
                 Some(amount),
                 Some(weights),
+                Some(true),
             )?;
 
             // This errors if a pool already exists!
@@ -2068,6 +2069,7 @@ mod pallet {
                 base_asset,
                 market_id,
                 market.scoring_rule,
+                None,
                 None,
                 None,
                 None,
