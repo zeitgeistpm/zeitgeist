@@ -692,8 +692,8 @@ impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
     type AddOrigin = EnsureRootOrThreeFourthsCouncil;
     type Event = Event;
     type MaxMembers = CouncilMaxMembers;
-    type MembershipChanged = AdvisoryCommittee;
-    type MembershipInitialized = AdvisoryCommittee;
+    type MembershipChanged = Council;
+    type MembershipInitialized = Council;
     type PrimeOrigin = EnsureRootOrThreeFourthsCouncil;
     type RemoveOrigin = EnsureRootOrThreeFourthsCouncil;
     type ResetOrigin = EnsureRootOrThreeFourthsCouncil;
