@@ -383,7 +383,7 @@ cfg_if::cfg_if! {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
                 use zrml_prediction_markets::Call::{create_market, create_cpmm_market_and_deploy_assets};
-                use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes}};
+                use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes, GlobalDisputes}};
 
                 match call {
                     Call::PredictionMarkets(inner_call) => {
@@ -940,7 +940,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
-    type VoteLockIdentifier = VoteLockIdentifier;
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
     type Shares = Tokens;
@@ -978,6 +977,8 @@ impl zrml_global_disputes::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
+    type MaxDisputeLocks = MaxDisputeLocks;
+    type LockPeriod = LockPeriod;
 }
 
 impl zrml_swaps::Config for Runtime {

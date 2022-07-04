@@ -20,11 +20,12 @@ use zeitgeist_primitives::{
     constants::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxTotalWeight,
-        MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, VoteLockIdentifier, BASE, CENT,
+        GetNativeCurrencyId, GlobalDisputesPalletId, LiquidityMiningPalletId, LockPeriod,
+        MaxAssets, MaxCategories, MaxDisputeLocks, MaxDisputes, MaxInRatio, MaxMarketPeriod,
+        MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
+        VoteLockIdentifier, BASE, CENT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -71,6 +72,7 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
+        GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -99,11 +101,11 @@ impl crate::Config for Runtime {
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
-    type VoteLockIdentifier = VoteLockIdentifier;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
     type Shares = Tokens;
     type SimpleDisputes = SimpleDisputes;
+    type GlobalDisputes = GlobalDisputes;
     type Slash = ();
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
@@ -230,6 +232,15 @@ impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
+}
+
+impl zrml_global_disputes::Config for Runtime {
+    type Event = Event;
+    type MarketCommons = MarketCommons;
+    type PalletId = GlobalDisputesPalletId;
+    type VoteLockIdentifier = VoteLockIdentifier;
+    type MaxDisputeLocks = MaxDisputeLocks;
+    type LockPeriod = LockPeriod;
 }
 
 impl zrml_swaps::Config for Runtime {

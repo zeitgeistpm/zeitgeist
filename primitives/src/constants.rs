@@ -78,7 +78,6 @@ parameter_types! {
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
-    pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
     pub const ValidityBond: Balance = 50 * CENT;
 }
@@ -91,6 +90,9 @@ parameter_types! {
 // Global disputes parameters
 parameter_types! {
     pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
+    pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
+    pub const MaxDisputeLocks: u32 = 100;
+    pub const LockPeriod: BlockNumber = 2 * BLOCKS_PER_DAY;
 }
 
 // Swaps parameters

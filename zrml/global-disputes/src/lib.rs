@@ -73,9 +73,7 @@ mod pallet {
             let end_block = now.saturating_add(T::LockPeriod::get());
 
             <LockInfoOf<T>>::try_mutate(&sender, |locks_info| {
-                locks_info
-                    .try_push((market_id, end_block, amount))
-                    .map_err(|_| <Error<T>>::StorageOverflow)
+                locks_info.try_push((end_block, amount)).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
             CurrencyOf::<T>::extend_lock(
@@ -94,23 +92,20 @@ mod pallet {
 
         /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
         #[pallet::weight(10_000_000)]
-        pub fn unlock_dispute_vote(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
+        pub fn unlock_dispute_vote(origin: OriginFor<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             let now = frame_system::Pallet::<T>::block_number();
 
             let mut locks_info = <LockInfoOf<T>>::get(&sender);
             // remove all items which are expired
-            locks_info.retain(|(_, end_block, _)| now < *end_block);
+            locks_info.retain(|(end_block, _)| now < *end_block);
 
             let lock_needed: BalanceOf<T> = locks_info
                 .clone()
                 .into_inner()
                 .iter()
-                .map(|(_, _, balance)| balance)
+                .map(|(_, locked_balance)| locked_balance)
                 .fold(Zero::zero(), |b0, b1| b0.max(*b1));
 
             <LockInfoOf<T>>::insert(&sender, locks_info);
@@ -250,11 +245,12 @@ mod pallet {
         }
     }
 
-    impl<T> GlobalDisputesPalletApi for Pallet<T> where T: Config {}
-
-    impl<T: Config> Pallet<T> {
+    impl<T> GlobalDisputesPalletApi for Pallet<T>
+    where
+        T: Config,
+    {
         /// This is the initial voting balance of the dispute
-        pub fn init_dispute_vote(
+        fn init_dispute_vote(
             market_id: &MarketIdOf<T>,
             dispute_index: u32,
             vote_balance: BalanceOf<T>,
@@ -292,7 +288,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::AccountId,
-        BoundedVec<(MarketIdOf<T>, T::BlockNumber, BalanceOf<T>), T::MaxDisputeLocks>,
+        BoundedVec<(T::BlockNumber, BalanceOf<T>), T::MaxDisputeLocks>,
         ValueQuery,
     >;
 
