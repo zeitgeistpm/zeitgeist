@@ -22,7 +22,7 @@ mod pallet {
         ensure,
         pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, ValueQuery, Weight},
         traits::{Currency, Get, Hooks, IsType, LockIdentifier, LockableCurrency, WithdrawReasons},
-        Blake2_128Concat, PalletId,
+        Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::{
@@ -66,8 +66,18 @@ mod pallet {
             ensure!(<Whitelist<T>>::get(market_id), Error::<T>::DisputeVoteNotAllowed);
 
             // dispute vote is already present because of the dispute bond of the disputor
-            let dispute_vote = <DisputeVote<T>>::get(market_id, dispute_index)
-                .ok_or(Error::<T>::DisputeVoteNotAllowed)?;
+            let dispute_vote = <DisputeVotes<T>>::get(market_id, dispute_index)
+                .ok_or(Error::<T>::DisputeDoesNotExist)?;
+
+            let now = frame_system::Pallet::<T>::block_number();
+            let end_block = now.saturating_add(T::LockPeriod::get());
+            match LockInfoOf::<T>::get(&sender) {
+                Some((_, prev_balance)) => {
+                    let locked_balance = amount.max(prev_balance);
+                    <LockInfoOf<T>>::insert(&sender, (end_block, locked_balance));
+                }
+                None => <LockInfoOf<T>>::insert(&sender, (end_block, amount)),
+            }
 
             CurrencyOf::<T>::extend_lock(
                 T::VoteLockIdentifier::get(),
@@ -77,7 +87,7 @@ mod pallet {
             );
 
             let dispute_vote = dispute_vote.saturating_add(amount);
-            <DisputeVote<T>>::insert(market_id, dispute_index, dispute_vote);
+            <DisputeVotes<T>>::insert(market_id, dispute_index, dispute_vote);
 
             Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
             Ok(())
@@ -91,10 +101,13 @@ mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            let lock_needed = VotingOf::<T>::mutate(sender, |voting| {
-                voting.rejig(frame_system::Pallet::<T>::block_number());
-                voting.locked_balance()
-            });
+            let mut lock_needed = Zero::zero();
+            if let Some((end_block, balance)) = LockInfoOf::<T>::get(&sender) {
+                let now = frame_system::Pallet::<T>::block_number();
+                if now < end_block {
+                    lock_needed = balance;
+                }
+            }
             if lock_needed.is_zero() {
                 CurrencyOf::<T>::remove_lock(T::VoteLockIdentifier::get(), &sender);
             } else {
@@ -127,6 +140,12 @@ mod pallet {
         /// The vote lock identifier for disputes
         #[pallet::constant]
         type VoteLockIdentifier: Get<LockIdentifier>;
+
+        #[pallet::constant]
+        type MaxDisputeVotes: Get<u16>;
+
+        #[pallet::constant]
+        type LockPeriod: Get<Self::BlockNumber>;
     }
 
     #[pallet::error]
@@ -140,6 +159,8 @@ mod pallet {
         DisputeVoteAlreadyPresent,
         /// The vote on this dispute index is not allowed.
         DisputeVoteNotAllowed,
+        /// The dispute specified with market id and dispute index is not present.
+        DisputeDoesNotExist,
         /// Sender does not have enough funds for the vote on a dispute.
         InsufficientFundsForVote,
     }
@@ -197,12 +218,20 @@ mod pallet {
             if market.status != MarketStatus::Disputed {
                 return Err(Error::<T>::InvalidMarketStatus.into());
             }
-            let (index, _) = <DisputeVote<T>>::iter_prefix(market_id).fold(
-                (0u32, <BalanceOf<T>>::zero()),
-                |(i0, b0), (i1, b1)| {
-                    if b0 > b1 { (i0, b0) } else { (i1, b1) }
-                },
-            );
+            let index = if !<Whitelist<T>>::get(market_id) {
+                0u32
+            } else {
+                let (index, _) = <DisputeVotes<T>>::iter_prefix(market_id).fold(
+                    (0u32, <BalanceOf<T>>::zero()),
+                    |(i0, b0), (i1, b1)| {
+                        if b0 > b1 { (i0, b0) } else { (i1, b1) }
+                    },
+                );
+                index
+            };
+
+            DisputeVotes::<T>::remove_prefix(market_id, None);
+            <Whitelist<T>>::remove(market_id);
 
             if let Some(winning_dispute) = disputes.get(index as usize) {
                 Ok(Some(winning_dispute.outcome.clone()))
@@ -221,8 +250,8 @@ mod pallet {
             dispute_index: u32,
             vote_balance: BalanceOf<T>,
         ) -> Weight {
-            if <DisputeVote<T>>::get(market_id, dispute_index).is_none() {
-                <DisputeVote<T>>::insert(market_id, dispute_index, vote_balance);
+            if <DisputeVotes<T>>::get(market_id, dispute_index).is_none() {
+                <DisputeVotes<T>>::insert(market_id, dispute_index, vote_balance);
                 // TODO storage read and write weight
                 return 0;
             }
@@ -236,7 +265,7 @@ mod pallet {
 
     /// Maps the market id to the dispute index and the vote balance.  
     #[pallet::storage]
-    pub type DisputeVote<T: Config> = StorageDoubleMap<
+    pub type DisputeVotes<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
@@ -245,6 +274,13 @@ mod pallet {
         BalanceOf<T>,
         OptionQuery,
     >;
+
+    /// All lock information (market_id, end_block, balance) for a particular voter.
+    ///
+    /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
+    #[pallet::storage]
+    pub type LockInfoOf<T: Config> =
+        StorageMap<_, Twox64Concat, T::AccountId, (T::BlockNumber, BalanceOf<T>), OptionQuery>;
 
     #[pallet::storage]
     pub type Whitelist<T: Config> =
