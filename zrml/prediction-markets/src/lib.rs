@@ -82,14 +82,11 @@ mod pallet {
     use frame_support::{
         dispatch::{DispatchResultWithPostInfo, Weight},
         ensure, log,
-        pallet_prelude::{
-            ConstU32, OptionQuery, StorageDoubleMap, StorageMap, StorageValue, ValueQuery,
-        },
+        pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{
             Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            LockableCurrency, NamedReservableCurrency, OnUnbalanced, StorageVersion,
-            WithdrawReasons,
+            NamedReservableCurrency, OnUnbalanced, StorageVersion,
         },
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };

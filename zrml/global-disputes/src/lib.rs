@@ -22,7 +22,7 @@ mod pallet {
         ensure,
         pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, ValueQuery, Weight},
         traits::{Currency, Get, Hooks, IsType, LockIdentifier, LockableCurrency, WithdrawReasons},
-        Blake2_128Concat, PalletId, Twox64Concat,
+        Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::{
@@ -71,13 +71,12 @@ mod pallet {
 
             let now = frame_system::Pallet::<T>::block_number();
             let end_block = now.saturating_add(T::LockPeriod::get());
-            match LockInfoOf::<T>::get(&sender) {
-                Some((_, prev_balance)) => {
-                    let locked_balance = amount.max(prev_balance);
-                    <LockInfoOf<T>>::insert(&sender, (end_block, locked_balance));
-                }
-                None => <LockInfoOf<T>>::insert(&sender, (end_block, amount)),
-            }
+
+            <LockInfoOf<T>>::try_mutate(&sender, |locks_info| {
+                locks_info
+                    .try_push((market_id, end_block, amount))
+                    .map_err(|_| <Error<T>>::StorageOverflow)
+            })?;
 
             CurrencyOf::<T>::extend_lock(
                 T::VoteLockIdentifier::get(),
@@ -101,13 +100,21 @@ mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            let mut lock_needed = Zero::zero();
-            if let Some((end_block, balance)) = LockInfoOf::<T>::get(&sender) {
-                let now = frame_system::Pallet::<T>::block_number();
-                if now < end_block {
-                    lock_needed = balance;
-                }
-            }
+            let now = frame_system::Pallet::<T>::block_number();
+
+            let mut locks_info = <LockInfoOf<T>>::get(&sender);
+            // remove all items which are expired
+            locks_info.retain(|(_, end_block, _)| now < *end_block);
+
+            let lock_needed: BalanceOf<T> = locks_info
+                .clone()
+                .into_inner()
+                .iter()
+                .map(|(_, _, balance)| balance)
+                .fold(Zero::zero(), |b0, b1| b0.max(*b1));
+
+            <LockInfoOf<T>>::insert(&sender, locks_info);
+
             if lock_needed.is_zero() {
                 CurrencyOf::<T>::remove_lock(T::VoteLockIdentifier::get(), &sender);
             } else {
@@ -142,7 +149,7 @@ mod pallet {
         type VoteLockIdentifier: Get<LockIdentifier>;
 
         #[pallet::constant]
-        type MaxDisputeVotes: Get<u16>;
+        type MaxDisputeLocks: Get<u32>;
 
         #[pallet::constant]
         type LockPeriod: Get<Self::BlockNumber>;
@@ -163,6 +170,8 @@ mod pallet {
         DisputeDoesNotExist,
         /// Sender does not have enough funds for the vote on a dispute.
         InsufficientFundsForVote,
+        /// The storage has overflown.
+        StorageOverflow,
     }
 
     #[pallet::event]
@@ -279,8 +288,13 @@ mod pallet {
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]
-    pub type LockInfoOf<T: Config> =
-        StorageMap<_, Twox64Concat, T::AccountId, (T::BlockNumber, BalanceOf<T>), OptionQuery>;
+    pub type LockInfoOf<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        T::AccountId,
+        BoundedVec<(MarketIdOf<T>, T::BlockNumber, BalanceOf<T>), T::MaxDisputeLocks>,
+        ValueQuery,
+    >;
 
     #[pallet::storage]
     pub type Whitelist<T: Config> =
