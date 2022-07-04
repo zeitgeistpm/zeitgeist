@@ -102,6 +102,7 @@ fn bench_create_pool<T: Config>(
         if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
         if scoring_rule == ScoringRule::CPMM { Some(T::MinLiquidity::get()) } else { None },
         if scoring_rule == ScoringRule::CPMM { Some(weights) } else { None },
+        if scoring_rule == ScoringRule::CPMM { Some(true) } else { None },
     )
     .unwrap();
     let pool_id = <NextPoolId<T>>::get() - 1;
