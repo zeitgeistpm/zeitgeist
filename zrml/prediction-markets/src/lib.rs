@@ -1618,14 +1618,6 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
-            if market.creation == MarketCreation::Permissionless {
-                CurrencyOf::<T>::unreserve_named(
-                    &RESERVE_ID,
-                    &market.creator,
-                    T::ValidityBond::get(),
-                );
-            }
-
             let mut total_weight = 0;
             let disputes = Disputes::<T>::get(market_id);
 
@@ -1723,6 +1715,15 @@ mod pallet {
                 }
                 _ => return Err(Error::<T>::InvalidMarketStatus.into()),
             };
+
+            if market.creation == MarketCreation::Permissionless {
+                CurrencyOf::<T>::unreserve_named(
+                    &RESERVE_ID,
+                    &market.creator,
+                    T::ValidityBond::get(),
+                );
+            }
+
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(clean_up_weight);
             T::LiquidityMining::distribute_market_incentives(market_id)?;
@@ -2004,9 +2005,7 @@ mod pallet {
             // Resolve any disputed markets.
             for id in MarketIdsPerDisputeBlock::<T>::get(&block).iter() {
                 let market = T::MarketCommons::market(id)?;
-                if let MarketStatus::Disputed = market.status {
-                    cb(id, &market)?;
-                }
+                cb(id, &market)?;
             }
 
             Ok(())
