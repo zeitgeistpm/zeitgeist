@@ -286,3 +286,31 @@ mod pallet {
         ValueQuery,
     >;
 }
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub(crate) fn market_mock<T>(
+    ai: T::AccountId,
+) -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+where
+    T: crate::Config,
+{
+    use frame_support::traits::Get;
+    use sp_runtime::traits::AccountIdConversion;
+    use zeitgeist_primitives::types::ScoringRule;
+
+    zeitgeist_primitives::types::Market {
+        creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
+        creator_fee: 0,
+        creator: T::PalletId::get().into_account(),
+        market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
+        mdm: zeitgeist_primitives::types::MarketDisputeMechanism::GlobalDisputes,
+        metadata: Default::default(),
+        oracle: T::PalletId::get().into_account(),
+        period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        report: None,
+        resolved_outcome: None,
+        scoring_rule: ScoringRule::CPMM,
+        status: zeitgeist_primitives::types::MarketStatus::Disputed,
+    }
+}
+

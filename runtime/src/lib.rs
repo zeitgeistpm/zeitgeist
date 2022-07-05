@@ -1109,6 +1109,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, zrml_swaps, Swaps);
             list_benchmark!(list, extra, zrml_authorized, Authorized);
             list_benchmark!(list, extra, zrml_court, Court);
+            list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
             list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
             list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
 
@@ -1182,6 +1183,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, zrml_swaps, Swaps);
             add_benchmark!(params, batches, zrml_authorized, Authorized);
             add_benchmark!(params, batches, zrml_court, Court);
+            add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
             add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
 
