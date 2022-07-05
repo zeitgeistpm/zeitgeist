@@ -20,7 +20,7 @@ use zeitgeist_primitives::{
     constants::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, GlobalDisputesPalletId, LiquidityMiningPalletId, LockPeriod,
+        GetNativeCurrencyId, GlobalDisputesPalletId, LiquidityMiningPalletId,
         MaxAssets, MaxCategories, MaxDisputeLocks, MaxDisputes, MaxInRatio, MaxMarketPeriod,
         MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxTotalWeight, MaxWeight, MinAssets,
         MinCategories, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,

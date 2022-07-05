@@ -21,6 +21,7 @@ pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
 pub const EVE: AccountIdTest = 3;
+pub const DAVE: AccountIdTest = 4;
 
 construct_runtime!(
     pub enum Runtime

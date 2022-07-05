@@ -4,7 +4,7 @@ use crate::{
     global_disputes_pallet_api::GlobalDisputesPalletApi,
     mock::{
         Balances, ExtBuilder, GlobalDisputes, MarketCommons, Origin, Runtime, ALICE, BOB, CHARLIE,
-        EVE,
+        DAVE, EVE,
     },
     DisputeVotes, Error, LockInfoOf,
 };
@@ -200,6 +200,23 @@ fn vote_fails_if_dispute_does_not_exist() {
         assert_noop!(
             GlobalDisputes::vote(Origin::signed(ALICE), market_id, 42u32, 50 * BASE),
             Error::<Runtime>::DisputeDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn vote_fails_for_insufficient_funds() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        assert_ok!(MarketCommons::push_market(market));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+
+        assert_noop!(
+            GlobalDisputes::vote(Origin::signed(DAVE), market_id, 0u32, 50 * BASE),
+            Error::<Runtime>::InsufficientFundsForVote
         );
     });
 }

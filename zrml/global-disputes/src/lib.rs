@@ -9,6 +9,7 @@ extern crate alloc;
 mod global_disputes_pallet_api;
 mod mock;
 mod tests;
+mod benchmarks;
 
 pub use global_disputes_pallet_api::GlobalDisputesPalletApi;
 pub use pallet::*;
@@ -36,7 +37,7 @@ mod pallet {
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    type BalanceOf<T> =
+    pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
     pub(crate) type CurrencyOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
@@ -128,7 +129,7 @@ mod pallet {
                     WithdrawReasons::all(),
                 );
             }
-            // TODO emit event
+
             Ok(())
         }
     }
