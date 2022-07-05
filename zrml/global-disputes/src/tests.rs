@@ -1,17 +1,25 @@
 #![cfg(test)]
 
 use crate::{
-    mock::{ExtBuilder, Runtime, GlobalDisputes},
-    Error,
+    global_disputes_pallet_api::GlobalDisputesPalletApi,
+    mock::{
+        Balances, ExtBuilder, GlobalDisputes, MarketCommons, Origin, Runtime, ALICE, BOB, CHARLIE,
+        EVE,
+    },
+    DisputeVotes, Error, LockInfoOf,
 };
-use frame_support::assert_noop;
+use frame_support::{assert_noop, assert_ok};
+use pallet_balances::BalanceLock;
+use test_case::test_case;
 use zeitgeist_primitives::{
+    constants::{VoteLockIdentifier, BASE},
     traits::DisputeApi,
     types::{
         Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, OutcomeReport, ScoringRule,
     },
 };
+use zrml_market_commons::MarketCommonsPalletApi;
 
 const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     creation: MarketCreation::Permissionless,
@@ -28,9 +36,13 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     status: MarketStatus::Disputed,
 };
 
+fn the_lock(amount: u128) -> BalanceLock<u128> {
+    BalanceLock { id: VoteLockIdentifier::get(), amount, reasons: pallet_balances::Reasons::All }
+}
+
 #[test]
 fn on_dispute_denies_non_global_disputes_markets() {
-    ExtBuilder.build().execute_with(|| {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.mdm = MarketDisputeMechanism::Court;
         assert_noop!(
@@ -41,8 +53,8 @@ fn on_dispute_denies_non_global_disputes_markets() {
 }
 
 #[test]
-fn on_resolution_denies_non_simple_disputes_markets() {
-    ExtBuilder.build().execute_with(|| {
+fn on_resolution_denies_non_global_disputes_markets() {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.mdm = MarketDisputeMechanism::Court;
         assert_noop!(
@@ -52,18 +64,327 @@ fn on_resolution_denies_non_simple_disputes_markets() {
     });
 }
 
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Active; "active")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+fn on_resolution_denies_non_disputed_markets(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = status;
+        assert_noop!(
+            GlobalDisputes::on_resolution(&[], &0, &market),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
 #[test]
-fn on_resolution_sets_the_last_dispute_of_disputed_markets_as_the_canonical_outcome() {
-    ExtBuilder.build().execute_with(|| {
+fn on_resolution_sets_the_highest_vote_of_disputed_markets_as_the_canonical_outcome() {
+    ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
         market.status = MarketStatus::Disputed;
         let disputes = [
             MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
             MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(40) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(60) },
         ];
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 2, 30 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 3, 40 * BASE);
+
+        // 30 + 50 = 80, which is the highest vote for OutcomeReport::Scalar(40)
+        assert_ok!(GlobalDisputes::vote(Origin::signed(ALICE), market_id, 2u32, 50 * BASE));
+
         assert_eq!(
             &GlobalDisputes::on_resolution(&disputes, &0, &market).unwrap().unwrap(),
-            &disputes.last().unwrap().outcome
+            &disputes.get(2).unwrap().outcome
         )
+    });
+}
+
+#[test]
+fn on_resolution_clears_dispute_votes() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        let disputes = [
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(40) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(60) },
+        ];
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+
+        let mut dispute_votes = <DisputeVotes<Runtime>>::iter();
+        assert_eq!(dispute_votes.next(), Some((market_id, 0u32, 10 * BASE)));
+        assert_eq!(dispute_votes.next(), None);
+
+        assert_ok!(GlobalDisputes::on_resolution(&disputes, &0, &market));
+
+        assert_eq!(<DisputeVotes<Runtime>>::iter_keys().next(), None);
+    });
+}
+
+#[test]
+fn unlock_clears_lock_info() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        let disputes = [
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(40) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(60) },
+        ];
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+
+        assert_ok!(GlobalDisputes::vote(Origin::signed(ALICE), market_id, 0u32, 50 * BASE));
+
+        assert_ok!(GlobalDisputes::on_resolution(&disputes, &market_id, &market));
+
+        assert!(!<LockInfoOf<Runtime>>::get(ALICE).is_empty());
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(ALICE)));
+
+        assert!(<LockInfoOf<Runtime>>::get(ALICE).is_empty());
+    });
+}
+
+#[test_case(MarketStatus::Closed; "closed")]
+#[test_case(MarketStatus::Reported; "reported")]
+#[test_case(MarketStatus::Active; "active")]
+#[test_case(MarketStatus::Resolved; "resolved")]
+#[test_case(MarketStatus::Proposed; "proposed")]
+#[test_case(MarketStatus::CollectingSubsidy; "collecting subsidy")]
+#[test_case(MarketStatus::InsufficientSubsidy; "insufficient subsidy")]
+fn vote_denies_non_disputed_markets(status: MarketStatus) {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = status;
+        assert_ok!(MarketCommons::push_market(market));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+        assert_noop!(
+            GlobalDisputes::vote(Origin::signed(ALICE), market_id, 0u32, 50 * BASE),
+            Error::<Runtime>::InvalidMarketStatus
+        );
+    });
+}
+
+#[test]
+fn vote_fails_if_dispute_does_not_exist() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        assert_ok!(MarketCommons::push_market(market));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 2, 30 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 3, 40 * BASE);
+
+        assert_noop!(
+            GlobalDisputes::vote(Origin::signed(ALICE), market_id, 42u32, 50 * BASE),
+            Error::<Runtime>::DisputeDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn vote_fails_if_dispute_len_below_two() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        assert_ok!(MarketCommons::push_market(DEFAULT_MARKET));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+
+        assert_noop!(
+            GlobalDisputes::vote(Origin::signed(ALICE), market_id, 0u32, 50 * BASE),
+            Error::<Runtime>::NotEnoughDisputes
+        );
+
+        GlobalDisputes::init_dispute_vote(&market_id, 0u32, 10 * BASE);
+
+        assert_noop!(
+            GlobalDisputes::vote(Origin::signed(ALICE), market_id, 0u32, 50 * BASE),
+            Error::<Runtime>::NotEnoughDisputes
+        );
+    });
+}
+
+#[test]
+fn locking_works_for_one_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        let disputes = [
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(40) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(60) },
+        ];
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 2, 30 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 3, 40 * BASE);
+
+        assert_ok!(GlobalDisputes::vote(Origin::signed(ALICE), market_id, 0u32, 50 * BASE));
+        assert_ok!(GlobalDisputes::vote(Origin::signed(BOB), market_id, 1u32, 40 * BASE));
+        assert_ok!(GlobalDisputes::vote(Origin::signed(CHARLIE), market_id, 2u32, 30 * BASE));
+        assert_ok!(GlobalDisputes::vote(Origin::signed(EVE), market_id, 3u32, 20 * BASE));
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+        assert_eq!(Balances::locks(CHARLIE), vec![the_lock(30 * BASE)]);
+        assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
+
+        assert_ok!(GlobalDisputes::on_resolution(&disputes, &market_id, &market));
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(ALICE)));
+        assert!(Balances::locks(ALICE).is_empty());
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+        assert_eq!(Balances::locks(CHARLIE), vec![the_lock(30 * BASE)]);
+        assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(BOB)));
+        assert!(Balances::locks(BOB).is_empty());
+        assert_eq!(Balances::locks(CHARLIE), vec![the_lock(30 * BASE)]);
+        assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(CHARLIE)));
+        assert!(Balances::locks(CHARLIE).is_empty());
+        assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(EVE)));
+        assert!(Balances::locks(EVE).is_empty());
+    });
+}
+
+#[test]
+fn locking_works_for_two_markets_with_stronger_first_unlock() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        let disputes = [
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(40) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(60) },
+        ];
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id_1 = MarketCommons::latest_market_id().unwrap();
+
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id_2 = MarketCommons::latest_market_id().unwrap();
+
+        GlobalDisputes::init_dispute_vote(&market_id_1, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id_1, 1, 20 * BASE);
+
+        GlobalDisputes::init_dispute_vote(&market_id_2, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id_2, 1, 20 * BASE);
+
+        assert_ok!(GlobalDisputes::vote(Origin::signed(ALICE), market_id_1, 0u32, 50 * BASE));
+        assert_ok!(GlobalDisputes::vote(Origin::signed(BOB), market_id_1, 1u32, 40 * BASE));
+
+        assert_ok!(GlobalDisputes::vote(Origin::signed(ALICE), market_id_2, 0u32, 30 * BASE));
+        assert_ok!(GlobalDisputes::vote(Origin::signed(BOB), market_id_2, 1u32, 20 * BASE));
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+
+        // market_id_1 has stronger locks
+        assert_ok!(GlobalDisputes::on_resolution(&disputes, &market_id_1, &market));
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(ALICE)));
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(30 * BASE)]);
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(BOB)));
+        assert_eq!(Balances::locks(BOB), vec![the_lock(20 * BASE)]);
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(30 * BASE)]);
+
+        assert_ok!(GlobalDisputes::on_resolution(&disputes, &market_id_2, &market));
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(ALICE)));
+        assert!(Balances::locks(ALICE).is_empty());
+        assert_eq!(Balances::locks(BOB), vec![the_lock(20 * BASE)]);
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(BOB)));
+        assert!(Balances::locks(BOB).is_empty());
+    });
+}
+
+#[test]
+fn locking_works_for_two_markets_with_weaker_first_unlock() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        let disputes = [
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(0) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(20) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(40) },
+            MarketDispute { at: 0, by: 0, outcome: OutcomeReport::Scalar(60) },
+        ];
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id_1 = MarketCommons::latest_market_id().unwrap();
+
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id_2 = MarketCommons::latest_market_id().unwrap();
+
+        GlobalDisputes::init_dispute_vote(&market_id_1, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id_1, 1, 20 * BASE);
+
+        GlobalDisputes::init_dispute_vote(&market_id_2, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id_2, 1, 20 * BASE);
+
+        assert_ok!(GlobalDisputes::vote(Origin::signed(ALICE), market_id_1, 0u32, 50 * BASE));
+        assert_ok!(GlobalDisputes::vote(Origin::signed(BOB), market_id_1, 1u32, 40 * BASE));
+
+        assert_ok!(GlobalDisputes::vote(Origin::signed(ALICE), market_id_2, 0u32, 30 * BASE));
+        assert_ok!(GlobalDisputes::vote(Origin::signed(BOB), market_id_2, 1u32, 20 * BASE));
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+
+        // market_id_2 has weaker locks
+        assert_ok!(GlobalDisputes::on_resolution(&disputes, &market_id_2, &market));
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(ALICE)));
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(BOB)));
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+
+        assert_ok!(GlobalDisputes::on_resolution(&disputes, &market_id_1, &market));
+
+        assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(ALICE)));
+        assert!(Balances::locks(ALICE).is_empty());
+        assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
+
+        assert_ok!(GlobalDisputes::unlock(Origin::signed(BOB)));
+        assert!(Balances::locks(BOB).is_empty());
     });
 }

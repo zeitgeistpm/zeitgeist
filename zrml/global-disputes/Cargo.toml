@@ -13,6 +13,8 @@ pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
+test-case = "2.0.2"
+
 [features]
 default = ["std"]
 runtime-benchmarks = [

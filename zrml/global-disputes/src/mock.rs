@@ -8,14 +8,19 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, GlobalDisputesPalletId, LockPeriod, MaxDisputeLocks, MaxReserves,
-        MinimumPeriod, VoteLockIdentifier,
+        BlockHashCount, GlobalDisputesPalletId, MaxDisputeLocks, MaxReserves,
+        MinimumPeriod, VoteLockIdentifier, BASE,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
     },
 };
+
+pub const ALICE: AccountIdTest = 0;
+pub const BOB: AccountIdTest = 1;
+pub const CHARLIE: AccountIdTest = 2;
+pub const EVE: AccountIdTest = 3;
 
 construct_runtime!(
     pub enum Runtime
@@ -37,7 +42,6 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
-    type LockPeriod = LockPeriod;
     type MaxDisputeLocks = MaxDisputeLocks;
 }
 
@@ -93,10 +97,31 @@ impl pallet_timestamp::Config for Runtime {
     type WeightInfo = ();
 }
 
-pub struct ExtBuilder;
+pub struct ExtBuilder {
+    balances: Vec<(AccountIdTest, Balance)>,
+}
+
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self {
+            balances: vec![
+                (ALICE, 1_000 * BASE),
+                (BOB, 1_000 * BASE),
+                (CHARLIE, 1_000 * BASE),
+                (EVE, 1_000 * BASE),
+            ],
+        }
+    }
+}
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into()
+        let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+        pallet_balances::GenesisConfig::<Runtime> { balances: self.balances }
+            .assimilate_storage(&mut t)
+            .unwrap();
+
+        t.into()
     }
 }
