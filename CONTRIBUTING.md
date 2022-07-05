@@ -48,6 +48,9 @@ discretion of [zeitgeistpm] members.
 -   Dispatches that don't use `#[transactional]` macro **must** contain a
     comment including `MARK(non-transactional): ...` followed by a short
     explanation why the dispatch doesn't require `#[transactional]`
-
+- Functions are written in snake case, i.e. `my_function`, anything else is declared in CamelCase (starting with a capital first letter).
+- Indentations consist of spaces, unless the language used requires tabs.
+- Anything that is publicly visible must be documented. This encompasses but is not limited to whole crates (top level documentation), public types and functions, dispatachble functions (functions that can be called by transactions), the `Error` and `Event` enum as well as the `Config` trait.
+- Any newly added or modified functionality must be subject to at least one test case. A full code coverage is the targeted goal.
 [rules]: #Rules
 [zeitgeistpm]: https://github.com/zeitgeistpm
