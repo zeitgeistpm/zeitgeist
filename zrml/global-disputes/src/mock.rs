@@ -7,7 +7,10 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, MaxReserves, MinimumPeriod, GlobalDisputesPalletId, VoteLockIdentifier},
+    constants::{
+        BlockHashCount, GlobalDisputesPalletId, LockPeriod, MaxDisputeLocks, MaxReserves,
+        MinimumPeriod, VoteLockIdentifier,
+    },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
@@ -34,6 +37,8 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
+    type LockPeriod = LockPeriod;
+    type MaxDisputeLocks = MaxDisputeLocks;
 }
 
 impl frame_system::Config for Runtime {

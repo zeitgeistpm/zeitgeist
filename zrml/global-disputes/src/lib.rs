@@ -48,13 +48,12 @@ mod pallet {
         /// Votes on a dispute after there are already two disputes and the 'DisputePeriod' is not over.
         /// NOTE: In the 'DisputePeriod' voting on a dispute is allowed.
         #[pallet::weight(10_000_000)]
-        pub fn vote_on_dispute(
+        pub fn vote(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             #[pallet::compact] dispute_index: u32,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
-            // TODO(#489): Implement global disputes!
             let sender = ensure_signed(origin)?;
             ensure!(
                 amount <= CurrencyOf::<T>::free_balance(&sender),
@@ -83,8 +82,8 @@ mod pallet {
                 WithdrawReasons::TRANSFER,
             );
 
-            let dispute_vote = dispute_vote.saturating_add(amount);
-            <DisputeVotes<T>>::insert(market_id, dispute_index, dispute_vote);
+            let vote_balance = dispute_vote.saturating_add(amount);
+            <DisputeVotes<T>>::insert(market_id, dispute_index, vote_balance);
 
             Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
             Ok(())
@@ -92,7 +91,7 @@ mod pallet {
 
         /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
         #[pallet::weight(10_000_000)]
-        pub fn unlock_dispute_vote(origin: OriginFor<T>) -> DispatchResult {
+        pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
             let now = frame_system::Pallet::<T>::block_number();
@@ -257,11 +256,11 @@ mod pallet {
         ) -> Weight {
             if <DisputeVotes<T>>::get(market_id, dispute_index).is_none() {
                 <DisputeVotes<T>>::insert(market_id, dispute_index, vote_balance);
-                // TODO storage read and write weight
-                return 0;
+                return T::DbWeight::get()
+                    .writes(1 as Weight)
+                    .saturating_add(T::DbWeight::get().reads(1 as Weight));
             }
-            // TODO storage read weight
-            0
+            T::DbWeight::get().reads(1 as Weight)
         }
     }
 
