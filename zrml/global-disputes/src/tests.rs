@@ -124,7 +124,6 @@ fn on_resolution_clears_dispute_votes() {
         assert_ok!(MarketCommons::push_market(market.clone()));
         let market_id = MarketCommons::latest_market_id().unwrap();
         GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
-        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
 
         let mut dispute_votes = <DisputeVotes<Runtime>>::iter();
         assert_eq!(dispute_votes.next(), Some((market_id, 0u32, 10 * BASE)));
