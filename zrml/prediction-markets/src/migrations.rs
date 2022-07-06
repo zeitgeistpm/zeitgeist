@@ -111,7 +111,6 @@ mod tests {
             setup_chain();
             let _ = Currency::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
 
-            // Markets which end here will have to be closed on migration:
             let short_time: MomentOf<Runtime> = (5 * MILLISECS_PER_BLOCK).into();
 
             create_test_market(
@@ -126,7 +125,7 @@ mod tests {
                 MarketStatus::Resolved,
             );
 
-            // add one simple dispute for alreay resolved market to simulate a case
+            // Add one simple dispute for alreay resolved market to simulate a case
             // where there is pendig dispute(s) for resolver market and that should
             // be cleaned in storage migration.
             let market_dispute =
