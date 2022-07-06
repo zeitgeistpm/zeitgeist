@@ -40,6 +40,8 @@ fn the_lock(amount: u128) -> BalanceLock<u128> {
     BalanceLock { id: VoteLockIdentifier::get(), amount, reasons: pallet_balances::Reasons::All }
 }
 
+// TODO test min dispute vote amount
+
 #[test]
 fn on_dispute_denies_non_global_disputes_markets() {
     ExtBuilder::default().build().execute_with(|| {
@@ -155,11 +157,11 @@ fn unlock_clears_lock_info() {
 
         assert_ok!(GlobalDisputes::on_resolution(&disputes, &market_id, &market));
 
-        assert!(!<LockInfoOf<Runtime>>::get(ALICE).is_empty());
+        assert!(<LockInfoOf<Runtime>>::get(ALICE, market_id).is_some());
 
         assert_ok!(GlobalDisputes::unlock(Origin::signed(ALICE)));
 
-        assert!(<LockInfoOf<Runtime>>::get(ALICE).is_empty());
+        assert!(<LockInfoOf<Runtime>>::get(ALICE, market_id).is_none());
     });
 }
 

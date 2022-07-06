@@ -6,25 +6,26 @@
 
 extern crate alloc;
 
+mod benchmarks;
 mod global_disputes_pallet_api;
 mod mock;
 mod tests;
-mod benchmarks;
+mod weights;
 
 pub use global_disputes_pallet_api::GlobalDisputesPalletApi;
 pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::GlobalDisputesPalletApi;
+    use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
     use alloc::vec::Vec;
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{OptionQuery, StorageDoubleMap, StorageMap, ValueQuery, Weight},
+        pallet_prelude::{OptionQuery, StorageDoubleMap, Weight},
         traits::{Currency, Get, Hooks, IsType, LockIdentifier, LockableCurrency, WithdrawReasons},
-        Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
+        Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::{
@@ -49,7 +50,8 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         /// Votes on a dispute after there are already two disputes and the 'DisputePeriod' is not over.
         /// NOTE: In the 'DisputePeriod' voting on a dispute is allowed.
-        #[pallet::weight(10_000_000)]
+        #[frame_support::transactional]
+        #[pallet::weight(T::WeightInfo::vote())]
         pub fn vote(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -61,20 +63,22 @@ mod pallet {
                 amount <= CurrencyOf::<T>::free_balance(&sender),
                 Error::<T>::InsufficientFundsForVote
             );
+            ensure!(amount >= T::MinDisputeVoteAmount::get(), Error::<T>::InsufficientAmount);
+
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
             // for voting there must be at least two disputes
             let mut iter = <DisputeVotes<T>>::iter_prefix(market_id).take(2);
-            ensure!(iter.next() != None && iter.next() != None, Error::<T>::NotEnoughDisputes);
+            ensure!(iter.next().is_some() && iter.next().is_some(), Error::<T>::NotEnoughDisputes);
 
             // dispute vote is already present because of the dispute bond of the disputor
             let dispute_vote = <DisputeVotes<T>>::get(market_id, dispute_index)
                 .ok_or(Error::<T>::DisputeDoesNotExist)?;
 
-            <LockInfoOf<T>>::try_mutate(&sender, |locks_info| {
-                locks_info.try_push((market_id, amount)).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
+            <LockInfoOf<T>>::mutate(&sender, market_id, |locked_balance| {
+                *locked_balance = Some(locked_balance.map_or(amount, |x| x.max(amount)));
+            });
 
             CurrencyOf::<T>::extend_lock(
                 T::VoteLockIdentifier::get(),
@@ -91,32 +95,25 @@ mod pallet {
         }
 
         /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
-        #[pallet::weight(10_000_000)]
+        #[frame_support::transactional]
+        #[pallet::weight(T::WeightInfo::unlock())]
         pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            let mut locks_info = <LockInfoOf<T>>::get(&sender);
-
-            let mut disputed_markets = Vec::new();
-            // find all disputes which are not resolved yet
-            for (market_id, _) in <DisputeVotes<T>>::iter_keys() {
-                disputed_markets.push(market_id);
+            let mut lock_needed = Zero::zero();
+            let mut resolved_markets = Vec::new();
+            for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&sender) {
+                if <DisputeVotes<T>>::iter_prefix(market_id).take(1).next().is_none() {
+                    resolved_markets.push(market_id);
+                    continue;
+                }
+                if locked_balance > lock_needed {
+                    lock_needed = locked_balance;
+                }
             }
 
-            // remove all items which are resolved
-            locks_info.retain(|(market_id, _)| disputed_markets.contains(market_id));
-
-            let lock_needed: BalanceOf<T> = locks_info
-                .clone()
-                .into_inner()
-                .iter()
-                .map(|(_, locked_balance)| locked_balance)
-                .fold(Zero::zero(), |b0, b1| b0.max(*b1));
-
-            if !locks_info.len().is_zero() {
-                <LockInfoOf<T>>::insert(&sender, locks_info);
-            } else {
-                <LockInfoOf<T>>::remove(&sender);
+            for market_id in resolved_markets {
+                <LockInfoOf<T>>::remove(&sender, market_id);
             }
 
             if lock_needed.is_zero() {
@@ -155,6 +152,11 @@ mod pallet {
 
         #[pallet::constant]
         type MaxDisputeLocks: Get<u32>;
+
+        #[pallet::constant]
+        type MinDisputeVoteAmount: Get<BalanceOf<Self>>;
+
+        type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]
@@ -172,8 +174,8 @@ mod pallet {
         DisputeDoesNotExist,
         /// Sender does not have enough funds for the vote on a dispute.
         InsufficientFundsForVote,
-        /// The storage has overflown.
-        StorageOverflow,
+        /// Sender tried to vote with an insufficient amount.
+        InsufficientAmount,
     }
 
     #[pallet::event]
@@ -278,12 +280,14 @@ mod pallet {
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]
-    pub type LockInfoOf<T: Config> = StorageMap<
+    pub type LockInfoOf<T: Config> = StorageDoubleMap<
         _,
         Twox64Concat,
         T::AccountId,
-        BoundedVec<(MarketIdOf<T>, BalanceOf<T>), T::MaxDisputeLocks>,
-        ValueQuery,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        BalanceOf<T>,
+        OptionQuery,
     >;
 }
 
@@ -313,4 +317,3 @@ where
         status: zeitgeist_primitives::types::MarketStatus::Disputed,
     }
 }
-
