@@ -14,6 +14,7 @@ use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_call
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, SaturatedConversion};
+use zeitgeist_primitives::constants::MinDisputeVoteAmount;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn deposit<T>(caller: &T::AccountId)
@@ -30,7 +31,7 @@ where
     deposit::<T>(caller);
     let market_id = Default::default();
     let dispute_index = Default::default();
-    let amount: BalanceOf<T> = 1000u128.saturated_into();
+    let amount: BalanceOf<T> = MinDisputeVoteAmount::get().saturated_into();
     Pallet::<T>::init_dispute_vote(&market_id, dispute_index, 10u128.saturated_into());
     Pallet::<T>::init_dispute_vote(&market_id, dispute_index + 1, 20u128.saturated_into());
     let market = market_mock::<T>(caller.clone());
@@ -45,10 +46,10 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let market_id = Default::default();
         let dispute_index = Default::default();
-        let amount: BalanceOf<T> = 1000u128.saturated_into();
+        let amount: BalanceOf<T> = MinDisputeVoteAmount::get().saturated_into();
+        deposit::<T>(&caller);
         Pallet::<T>::init_dispute_vote(&market_id, dispute_index, 10u128.saturated_into());
         Pallet::<T>::init_dispute_vote(&market_id, dispute_index + 1, 20u128.saturated_into());
-        deposit::<T>(&caller);
         let market = market_mock::<T>(caller.clone());
         T::MarketCommons::push_market(market).unwrap();
     }: _(RawOrigin::Signed(caller), market_id, dispute_index, amount)

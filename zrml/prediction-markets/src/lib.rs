@@ -106,8 +106,8 @@ mod pallet {
             ScoringRule, SubsidyUntil,
         },
     };
-    use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_global_disputes::GlobalDisputesPalletApi;
+    use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;

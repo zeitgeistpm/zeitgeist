@@ -10,7 +10,7 @@ mod benchmarks;
 mod global_disputes_pallet_api;
 mod mock;
 mod tests;
-mod weights;
+pub mod weights;
 
 pub use global_disputes_pallet_api::GlobalDisputesPalletApi;
 pub use pallet::*;

@@ -978,6 +978,8 @@ impl zrml_global_disputes::Config for Runtime {
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
     type MaxDisputeLocks = MaxDisputeLocks;
+    type MinDisputeVoteAmount = MinDisputeVoteAmount;
+    type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }
 
 impl zrml_swaps::Config for Runtime {

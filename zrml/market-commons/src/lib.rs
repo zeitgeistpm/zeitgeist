@@ -24,7 +24,7 @@ mod pallet {
         ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
         storage::PrefixIterator,
-        traits::{Hooks, NamedReservableCurrency, LockableCurrency, StorageVersion, Time},
+        traits::{Hooks, LockableCurrency, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
     use parity_scale_codec::MaxEncodedLen;
