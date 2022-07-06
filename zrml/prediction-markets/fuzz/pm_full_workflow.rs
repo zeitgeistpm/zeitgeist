@@ -23,7 +23,7 @@ fuzz_target!(|data: Data| {
             data.create_scalar_market_metadata,
             market_creation(data.create_scalar_market_creation),
             MarketType::Scalar(data.create_scalar_market_outcome_range),
-            market_dispute_mechanism(data.create_scalar_market_mdm),
+            market_dispute_mechanism(data.create_scalar_market_dispute_mechanism),
             ScoringRule::CPMM,
         );
 
@@ -75,7 +75,7 @@ struct Data {
     create_scalar_market_metadata: MultiHash,
     create_scalar_market_creation: u8,
     create_scalar_market_outcome_range: RangeInclusive<u128>,
-    create_scalar_market_mdm: u8,
+    create_scalar_market_dispute_mechanism: u8,
 
     buy_complete_set_origin: u8,
     buy_complete_set_market_id: u8,

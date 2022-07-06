@@ -65,7 +65,7 @@ fn create_market_common<T: Config>(
         metadata,
         creation,
         market_type: options,
-        mdm: MarketDisputeMechanism::SimpleDisputes,
+        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
         scoring_rule,
     }
     .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;

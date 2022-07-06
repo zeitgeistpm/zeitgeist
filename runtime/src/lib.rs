@@ -388,8 +388,8 @@ cfg_if::cfg_if! {
                             // Disable Rikiddo markets
                             create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                             // Disable Court & SimpleDisputes dispute resolution mechanism
-                            create_market { mdm: Court | SimpleDisputes, .. } => false,
-                            create_cpmm_market_and_deploy_assets { mdm: Court | SimpleDisputes, .. } => false,
+                            create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                            create_cpmm_market_and_deploy_assets { dispute_mechanism: Court | SimpleDisputes, .. } => false,
                             _ => true
                         }
                     }

@@ -36,7 +36,7 @@ pub struct Market<AI, BN, M> {
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
-    pub mdm: MarketDisputeMechanism<AI>,
+    pub dispute_mechanism: MarketDisputeMechanism<AI>,
 }
 
 impl<AI, BN, M> Market<AI, BN, M> {
@@ -271,7 +271,7 @@ mod tests {
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,
-            mdm: MarketDisputeMechanism::Authorized(9),
+            dispute_mechanism: MarketDisputeMechanism::Authorized(9),
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
     }

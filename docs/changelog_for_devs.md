@@ -7,6 +7,7 @@
   control the weight of the base asset. Instead, the weight of the base asset is
   equal to the sum of the weights of the outcome tokens, thereby ensuring that
   (assuming equal balances) the spot prices of the outcome tokens sum up to 1.
+- Changed `Market` struct's `mdm` to `dispute_mechanism`.
 
 # v0.3.3
 
