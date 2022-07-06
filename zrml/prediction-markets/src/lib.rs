@@ -637,8 +637,8 @@ mod pallet {
                 Some(Zero::zero()),
                 Some(amount),
                 Some(weights),
-                Some(true),
             )?;
+            T::Swaps::open_pool(pool_id)?;
 
             // This errors if a pool already exists!
             T::MarketCommons::insert_market_pool(market_id, pool_id)?;
@@ -2069,7 +2069,6 @@ mod pallet {
                 base_asset,
                 market_id,
                 market.scoring_rule,
-                None,
                 None,
                 None,
                 None,

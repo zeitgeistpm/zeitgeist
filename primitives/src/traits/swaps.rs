@@ -32,7 +32,6 @@ pub trait Swaps<AccountId> {
         swap_fee: Option<Self::Balance>,
         amount: Option<Self::Balance>,
         weights: Option<Vec<u128>>,
-        active: Option<bool>,
     ) -> Result<PoolId, DispatchError>;
 
     /// Close the specified pool.
