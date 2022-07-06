@@ -73,7 +73,7 @@ mod pallet {
             ensure!(iter.next().is_some() && iter.next().is_some(), Error::<T>::NotEnoughDisputes);
 
             // dispute vote is already present because of the dispute bond of the disputor
-            let dispute_vote = <DisputeVotes<T>>::get(market_id, dispute_index)
+            let vote_balance = <DisputeVotes<T>>::get(market_id, dispute_index)
                 .ok_or(Error::<T>::DisputeDoesNotExist)?;
 
             <LockInfoOf<T>>::mutate(&sender, market_id, |locked_balance| {
@@ -84,11 +84,14 @@ mod pallet {
                 T::VoteLockIdentifier::get(),
                 &sender,
                 amount,
-                WithdrawReasons::all(),
+                WithdrawReasons::TRANSFER,
             );
 
-            let vote_balance = dispute_vote.saturating_add(amount);
-            <DisputeVotes<T>>::insert(market_id, dispute_index, vote_balance);
+            <DisputeVotes<T>>::insert(
+                market_id,
+                dispute_index,
+                vote_balance.saturating_add(amount),
+            );
 
             Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
             Ok(())
@@ -100,16 +103,14 @@ mod pallet {
         pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
             let sender = ensure_signed(origin)?;
 
-            let mut lock_needed = Zero::zero();
+            let mut lock_needed: BalanceOf<T> = Zero::zero();
             let mut resolved_markets = Vec::new();
             for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&sender) {
                 if <DisputeVotes<T>>::iter_prefix(market_id).take(1).next().is_none() {
                     resolved_markets.push(market_id);
                     continue;
                 }
-                if locked_balance > lock_needed {
-                    lock_needed = locked_balance;
-                }
+                lock_needed = lock_needed.max(locked_balance);
             }
 
             for market_id in resolved_markets {
@@ -123,7 +124,7 @@ mod pallet {
                     T::VoteLockIdentifier::get(),
                     &sender,
                     lock_needed,
-                    WithdrawReasons::all(),
+                    WithdrawReasons::TRANSFER,
                 );
             }
 
@@ -276,7 +277,7 @@ mod pallet {
         OptionQuery,
     >;
 
-    /// All lock information (market_id, end_block, balance) for a particular voter.
+    /// All lock information (market id and locked balance) for a particular voter.
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]
@@ -292,9 +293,7 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>(
-    ai: T::AccountId,
-) -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>() -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
 where
     T: crate::Config,
 {

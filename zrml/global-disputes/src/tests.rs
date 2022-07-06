@@ -37,7 +37,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
 };
 
 fn the_lock(amount: u128) -> BalanceLock<u128> {
-    BalanceLock { id: VoteLockIdentifier::get(), amount, reasons: pallet_balances::Reasons::All }
+    BalanceLock { id: VoteLockIdentifier::get(), amount, reasons: pallet_balances::Reasons::Misc }
 }
 
 // TODO test min dispute vote amount
