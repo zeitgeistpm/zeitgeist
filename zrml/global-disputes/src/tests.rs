@@ -12,7 +12,7 @@ use frame_support::{assert_noop, assert_ok};
 use pallet_balances::BalanceLock;
 use test_case::test_case;
 use zeitgeist_primitives::{
-    constants::{VoteLockIdentifier, BASE},
+    constants::{MinDisputeVoteAmount, VoteLockIdentifier, BASE},
     traits::DisputeApi,
     types::{
         Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -40,7 +40,29 @@ fn the_lock(amount: u128) -> BalanceLock<u128> {
     BalanceLock { id: VoteLockIdentifier::get(), amount, reasons: pallet_balances::Reasons::Misc }
 }
 
-// TODO test min dispute vote amount
+#[test]
+fn vote_fails_if_insufficient_amount() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 2, 30 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 3, 40 * BASE);
+
+        assert_noop!(
+            GlobalDisputes::vote(
+                Origin::signed(ALICE),
+                market_id,
+                2u32,
+                MinDisputeVoteAmount::get() - 1,
+            ),
+            Error::<Runtime>::InsufficientAmount
+        );
+    });
+}
 
 #[test]
 fn on_dispute_denies_non_global_disputes_markets() {

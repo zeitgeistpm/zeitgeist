@@ -107,8 +107,8 @@ mod pallet {
                 return Err(Error::<T>::InvalidMarketStatus.into());
             }
 
-            if let Some(winning_dispute) = disputes.last() {
-                Ok(Some(winning_dispute.outcome.clone()))
+            if let Some(last_dispute) = disputes.last() {
+                Ok(Some(last_dispute.outcome.clone()))
             } else {
                 Err(Error::<T>::InvalidMarketStatus.into())
             }
