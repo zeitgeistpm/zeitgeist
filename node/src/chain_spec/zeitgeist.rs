@@ -1,4 +1,4 @@
-#[cfg(feature = "pallet-sudo")]
+#[cfg(not(feature = "without-sudo"))]
 use crate::chain_spec::root_key_staging_mainnet;
 use crate::chain_spec::{
     additional_chain_spec_staging_mainnet, endowed_accounts_staging_mainnet, generic_genesis,
@@ -22,7 +22,7 @@ pub fn zeitgeist_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_mainnet(),
-                #[cfg(feature = "pallet-sudo")]
+                #[cfg(not(feature = "without-sudo"))]
                 root_key_staging_mainnet(),
                 zeitgeist_wasm,
             )

@@ -1,4 +1,4 @@
-#[cfg(feature = "pallet-sudo")]
+#[cfg(not(feature = "without-sudo"))]
 use crate::chain_spec::root_key_staging_testnet;
 use crate::chain_spec::{
     additional_chain_spec_staging_testnet, endowed_accounts_staging_testnet, generic_genesis,
@@ -22,7 +22,7 @@ pub fn battery_station_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_testnet(),
-                #[cfg(feature = "pallet-sudo")]
+                #[cfg(not(feature = "without-sudo"))]
                 root_key_staging_testnet(),
                 zeitgeist_wasm,
             )

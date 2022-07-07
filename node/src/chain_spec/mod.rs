@@ -91,7 +91,7 @@ struct EndowedAccountWithBalance(AccountId, Balance);
 fn generic_genesis(
     acs: AdditionalChainSpec,
     endowed_accounts: Vec<EndowedAccountWithBalance>,
-    #[cfg(feature = "pallet-sudo")] root_key: AccountId,
+    #[cfg(not(feature = "without-sudo"))] root_key: AccountId,
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
@@ -154,8 +154,8 @@ fn generic_genesis(
         #[cfg(feature = "parachain")]
         // Default should use the pallet configuration
         polkadot_xcm: PolkadotXcmConfig::default(),
-        #[cfg(feature = "pallet-sudo")]
-        sudo: zeitgeist_runtime::SudoConfig { key: None },
+        #[cfg(not(feature = "without-sudo"))]
+        sudo: zeitgeist_runtime::SudoConfig { key: Some(root_key) },
         system: zeitgeist_runtime::SystemConfig { code: wasm_binary.to_vec() },
         technical_committee: Default::default(),
         technical_committee_membership: zeitgeist_runtime::TechnicalCommitteeMembershipConfig {
@@ -274,7 +274,7 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
     ]
 }
 
-#[cfg(feature = "pallet-sudo")]
+#[cfg(not(feature = "without-sudo"))]
 fn root_key_staging_testnet() -> AccountId {
     hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into()
 }
@@ -304,7 +304,7 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
     ]
 }
 
-#[cfg(feature = "pallet-sudo")]
+#[cfg(not(feature = "without-sudo"))]
 fn root_key_staging_mainnet() -> AccountId {
     // dDykRtA8VyuVVtWTD5PWst3f33L1NMVKseQEji8e3B4ZCHrjK
     hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into()

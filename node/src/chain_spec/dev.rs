@@ -54,7 +54,7 @@ pub fn dev_config(
                 .into_iter()
                 .map(|acc| EndowedAccountWithBalance(acc, INITIAL_BALANCE))
                 .collect(),
-                #[cfg(feature = "pallet-sudo")]
+                #[cfg(not(feature = "without-sudo"))]
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 zeitgeist_wasm,
             )

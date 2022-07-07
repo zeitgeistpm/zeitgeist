@@ -105,7 +105,6 @@ zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 [features]
 default = []
-pallet-sudo = []
 parachain = [
     "zeitgeist-runtime/parachain",
 
@@ -157,6 +156,7 @@ try-runtime = [
     "zeitgeist-runtime/try-runtime",
     "try-runtime-cli",
 ]
+without-sudo = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

@@ -259,13 +259,13 @@ macro_rules! create_zeitgeist_runtime_with_additional_pallets {
     }
 }
 
-#[cfg(feature = "pallet-sudo")]
+#[cfg(not(feature = "without-sudo"))]
 create_zeitgeist_runtime_with_additional_pallets!(
     // Others
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
 
-#[cfg(not(feature = "pallet-sudo"))]
+#[cfg(feature = "without-sudo")]
 create_zeitgeist_runtime_with_additional_pallets!();
 
 // Configure Pallets
@@ -335,7 +335,6 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Proxy(_)
                     | Call::Scheduler(_)
-                    | Call::Sudo(_)
                     | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
@@ -344,6 +343,9 @@ cfg_if::cfg_if! {
                     | Call::Utility(_)
                     | Call::Vesting(_)
                     | Call::XcmpQueue(_) => true,
+
+                    #[cfg(not(feature = "without-sudo"))]
+                    Call::Sudo(_) => true,
 
                     // Prohibited calls:
                     Call::Authorized(_)
@@ -373,7 +375,6 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Proxy(_)
                     | Call::Scheduler(_)
-                    | Call::Sudo(_)
                     | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
@@ -382,12 +383,15 @@ cfg_if::cfg_if! {
                     | Call::Utility(_)
                     | Call::Vesting(_) => true,
 
+                    #[cfg(not(feature = "without-sudo"))]
+                    Call::Sudo(_) => true,
+
                     // Prohibited calls:
                     Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(_) => false,
+                    | Call::PredictionMarkets(_)=> false,
                 }
             }
         }
@@ -815,7 +819,7 @@ impl pallet_scheduler::Config for Runtime {
     type NoPreimagePostponement = NoPreimagePostponement;
 }
 
-#[cfg(feature = "pallet-sudo")]
+#[cfg(not(feature = "without-sudo"))]
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
     type Event = Event;
