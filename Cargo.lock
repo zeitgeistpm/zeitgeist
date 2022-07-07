@@ -12849,7 +12849,11 @@ name = "zrml-swaps-fuzz"
 version = "0.0.0"
 dependencies = [
  "arbitrary",
+ "frame-support",
  "libfuzzer-sys",
+ "orml-traits",
+ "rand 0.8.5",
+ "sp-runtime",
  "zeitgeist-primitives",
  "zrml-swaps",
 ]

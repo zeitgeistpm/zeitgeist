@@ -1569,6 +1569,8 @@ fn it_resolves_a_disputed_market() {
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
+        let disputes = crate::Disputes::<Runtime>::get(&0);
+        assert_eq!(disputes.len(), 0);
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
@@ -1631,7 +1633,7 @@ fn dispute_fails_unless_reported_or_disputed_market(status: MarketStatus) {
 }
 
 #[test]
-fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
+fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
@@ -1672,10 +1674,14 @@ fn it_resolves_a_disputed_market_to_default_if_mdm_failed() {
 
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         let eve_reserved = Balances::reserved_balance(&EVE);
+        let disputes = crate::Disputes::<Runtime>::get(&0);
+        assert_eq!(disputes.len(), 3);
 
         run_to_block(115);
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
+        let disputes = crate::Disputes::<Runtime>::get(&0);
+        assert_eq!(disputes.len(), 0);
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
         // make sure rewards are right
@@ -1988,6 +1994,8 @@ fn full_scalar_market_lifecycle() {
 
         let market_after_resolve = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
+        let disputes = crate::Disputes::<Runtime>::get(&0);
+        assert_eq!(disputes.len(), 0);
 
         // give EVE some shares
         assert_ok!(Tokens::transfer(
@@ -2217,6 +2225,8 @@ fn authorized_correctly_resolves_disputed_market() {
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
+        let disputes = crate::Disputes::<Runtime>::get(&0);
+        assert_eq!(disputes.len(), 0);
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 

@@ -473,7 +473,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if market.mdm != MarketDisputeMechanism::Court {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
@@ -497,7 +497,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.mdm != MarketDisputeMechanism::Court {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();

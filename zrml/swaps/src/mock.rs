@@ -1,4 +1,8 @@
 #![cfg(feature = "mock")]
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
 
 use crate as zrml_swaps;
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
@@ -54,6 +58,8 @@ construct_runtime!(
     }
 );
 
+pub type Shares = Currencies;
+
 impl crate::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFeeMock;
@@ -75,7 +81,7 @@ impl crate::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currencies;
+    type Shares = Shares;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 

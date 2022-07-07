@@ -77,6 +77,7 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    zrml_prediction_markets::migrations::RemoveDisputesOfResolvedMarkets<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -388,8 +389,8 @@ cfg_if::cfg_if! {
                             // Disable Rikiddo markets
                             create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                             // Disable Court & SimpleDisputes dispute resolution mechanism
-                            create_market { mdm: Court | SimpleDisputes, .. } => false,
-                            create_cpmm_market_and_deploy_assets { mdm: Court | SimpleDisputes, .. } => false,
+                            create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                            create_cpmm_market_and_deploy_assets { dispute_mechanism: Court | SimpleDisputes, .. } => false,
                             _ => true
                         }
                     }
@@ -692,8 +693,8 @@ impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
     type AddOrigin = EnsureRootOrThreeFourthsCouncil;
     type Event = Event;
     type MaxMembers = CouncilMaxMembers;
-    type MembershipChanged = AdvisoryCommittee;
-    type MembershipInitialized = AdvisoryCommittee;
+    type MembershipChanged = Council;
+    type MembershipInitialized = Council;
     type PrimeOrigin = EnsureRootOrThreeFourthsCouncil;
     type RemoveOrigin = EnsureRootOrThreeFourthsCouncil;
     type ResetOrigin = EnsureRootOrThreeFourthsCouncil;
