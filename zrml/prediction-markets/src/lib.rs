@@ -1709,15 +1709,20 @@ mod pallet {
                         }
                     }
 
-                    // fold all the imbalances into one and reward the correct reporters.
-                    let reward_per_each = overall_imbalance
-                        .peek()
-                        .checked_div(&correct_reporters.len().saturated_into())
-                        .ok_or(ArithmeticError::DivisionByZero)?;
-                    for correct_reporter in &correct_reporters {
-                        let (amount, leftover) = overall_imbalance.split(reward_per_each);
-                        CurrencyOf::<T>::resolve_creating(correct_reporter, amount);
-                        overall_imbalance = leftover;
+                    // Fold all the imbalances into one and reward the correct reporters. The
+                    // number of correct reporters might be zero if the market defaults to the
+                    // report after abandoned dispute. In that case, the rewards remain slashed.
+                    let correct_reporters_count = correct_reporters.len();
+                    if correct_reporters_count != 0 {
+                        let reward_per_each = overall_imbalance
+                            .peek()
+                            .checked_div(&correct_reporters_count.saturated_into())
+                            .ok_or(ArithmeticError::DivisionByZero)?;
+                        for correct_reporter in &correct_reporters {
+                            let (amount, leftover) = overall_imbalance.split(reward_per_each);
+                            CurrencyOf::<T>::resolve_creating(correct_reporter, amount);
+                            overall_imbalance = leftover;
+                        }
                     }
 
                     resolved_outcome
