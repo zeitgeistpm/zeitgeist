@@ -112,7 +112,7 @@ mod pallet {
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     pub(crate) type TimeFrame = u64;
     pub(crate) type BalanceOf<T> =
@@ -196,6 +196,7 @@ mod pallet {
             Self::clear_auto_close(&market_id)?;
             Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
+            Disputes::<T>::remove(market_id);
 
             Self::deposit_event(Event::MarketDestroyed(market_id));
 
@@ -1744,6 +1745,7 @@ mod pallet {
                 m.resolved_outcome = Some(resolved_outcome.clone());
                 Ok(())
             })?;
+            Disputes::<T>::remove(market_id);
             Self::deposit_event(Event::MarketResolved(
                 *market_id,
                 MarketStatus::Resolved,
