@@ -288,7 +288,9 @@
     "_enum": [
       "Active",
       "CollectingSubsidy",
-      "Stale"
+      "Closed",
+      "Clean",
+      "Initialized"
     ]
   },
   "RegistrationInfo": {
