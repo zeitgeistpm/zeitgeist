@@ -2225,10 +2225,11 @@ fn authorized_correctly_resolves_disputed_market() {
 #[test]
 fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
     ExtBuilder::default().build().execute_with(|| {
+        let end = 1;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
-            MarketPeriod::Block(0..1),
+            MarketPeriod::Block(0..end),
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
@@ -2237,13 +2238,13 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        run_to_block(100);
+        run_to_block(end + DisputePeriod::get());
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_to_block(102);
+        run_to_block(<frame_system::Pallet<Runtime>>::block_number() + 1);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
@@ -2255,7 +2256,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        run_to_block(<frame_system::Pallet<T>>::block_number() + DisputePeriod::get());
+        run_to_block(<frame_system::Pallet<Runtime>>::block_number() + DisputePeriod::get());
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(&0);
