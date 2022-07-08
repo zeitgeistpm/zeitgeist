@@ -530,7 +530,7 @@ impl parachain_staking::Config for Runtime {
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
     type RevokeDelegationDelay = RevokeDelegationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
-    type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
 }
 
 impl orml_currencies::Config for Runtime {
