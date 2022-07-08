@@ -303,8 +303,8 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
             hex!["b449a256f73e59602eb742071a07e4d94aaae91e6872f28e161f34982a0bfc0d"].into(),
             DEFAULT_COLLATOR_BALANCE_MAINNET.unwrap(),
         ),
-        #[cfg(not(feature = "without-sudo"))]
         // dE2nxuZc5e7xBbU1cGikmtVGws9niNPUayigoDdyqB7hzHQ6X
+        #[cfg(not(feature = "without-sudo"))]
         EndowedAccountWithBalance(
             hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into(),
             DEFAULT_SUDO_BALANCE_MAINNET,
