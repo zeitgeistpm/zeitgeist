@@ -2255,7 +2255,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        run_to_block(115);
+        run_to_block(<frame_system::Pallet<T>>::block_number() + DisputePeriod::get());
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(&0);
