@@ -232,7 +232,7 @@ macro_rules! create_zeitgeist_runtime_with_additional_pallets {
             // Consensus
             ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
-            AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 112,
+            AuthorFilter: pallet_author_slot_filter::{Config, Call, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
 
             // XCM
