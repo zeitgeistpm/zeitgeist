@@ -807,7 +807,7 @@ mod pallet {
         PoolMissingWeight,
         /// Two vectors do not have the same length (usually CPMM pool assets and weights).
         ProvidedValuesLenMustEqualAssetsLen,
-        /// The swap fee is missing from a Cpmm pool.
+        /// No swap fee information found for CPMM pool
         SwapFeeMissing,
         /// The swap fee is higher than the allowed maximum.
         SwapFeeTooHigh,
