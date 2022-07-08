@@ -13,4 +13,4 @@ zrml-swaps-runtime-api = { default-features = false, features = ["std"], path = 
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-swaps-rpc"
-version = "0.3.3"
+version = "0.3.4"
