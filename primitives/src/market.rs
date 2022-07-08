@@ -135,7 +135,7 @@ pub enum MarketPeriod<BN, M> {
 impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> {
     fn max_encoded_len() -> usize {
         // Since it is an enum, the biggest element is the only one of interest here.
-        BN::max_encoded_len().max(M::max_encoded_len()).saturating_mul(2)
+        BN::max_encoded_len().max(M::max_encoded_len()).saturating_mul(2).saturating_add(1)
     }
 }
 
@@ -176,7 +176,7 @@ pub enum MarketType {
 
 impl MaxEncodedLen for MarketType {
     fn max_encoded_len() -> usize {
-        u128::max_encoded_len().saturating_mul(2)
+        u128::max_encoded_len().saturating_mul(2).saturating_add(1)
     }
 }
 
@@ -274,5 +274,18 @@ mod tests {
             dispute_mechanism: MarketDisputeMechanism::Authorized(9),
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
+    }
+    #[test]
+    fn max_encoded_len_market_type() {
+        // `MarketType::Scalar` is the largest enum variant.
+        let market_type = MarketType::Scalar(1u128..=2);
+        let len = parity_scale_codec::Encode::encode(&market_type).len();
+        assert_eq!(MarketType::max_encoded_len(), len);
+    }
+    #[test]
+    fn max_encoded_len_market_period() {
+        let market_period: MarketPeriod<u32, u32> = MarketPeriod::Block(Default::default());
+        let len = parity_scale_codec::Encode::encode(&market_period).len();
+        assert_eq!(MarketPeriod::<u32, u32>::max_encoded_len(), len);
     }
 }
