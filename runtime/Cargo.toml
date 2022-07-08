@@ -325,6 +325,7 @@ try-runtime = [
     "pallet-author-slot-filter?/try-runtime",
     "parachain-staking?/try-runtime",
 ]
+without-sudo=[]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

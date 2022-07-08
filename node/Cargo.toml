@@ -156,6 +156,7 @@ try-runtime = [
     "zeitgeist-runtime/try-runtime",
     "try-runtime-cli",
 ]
+without-sudo = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

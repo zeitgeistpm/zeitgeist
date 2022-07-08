@@ -60,10 +60,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 37,
+    spec_version: 38,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 14,
+    transaction_version: 15,
     state_version: 1,
 };
 
@@ -198,9 +198,8 @@ macro_rules! create_zeitgeist_runtime {
 
                 // Other Parity pallets
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 31,
-                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 32,
-                Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 33,
+                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 31,
+                Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 32,
 
                 // Third-party
                 Currency: orml_currencies::{Call, Pallet, Storage} = 40,
@@ -222,34 +221,53 @@ macro_rules! create_zeitgeist_runtime {
     }
 }
 
-#[cfg(feature = "parachain")]
-create_zeitgeist_runtime!(
-    // System
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
+macro_rules! create_zeitgeist_runtime_with_additional_pallets {
+    ($($additional_pallets:tt)*) => {
+        #[cfg(feature = "parachain")]
+        create_zeitgeist_runtime!(
+            // System
+            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+            ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
 
-    // Consensus
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 112,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
+            // Consensus
+            ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
+            AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
+            AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 112,
+            AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
 
-    // XCM
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
-    PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 122,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
+            // XCM
+            CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
+            DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
+            PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 122,
+            XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
 
-    // Third-party
-    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
+            // Third-party
+            Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
+
+            // Others
+            $($additional_pallets)*
+        );
+
+        #[cfg(not(feature = "parachain"))]
+        create_zeitgeist_runtime!(
+            // Consensus
+            Aura: pallet_aura::{Config<T>, Pallet, Storage} = 100,
+            Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 101,
+
+            // Others
+            $($additional_pallets)*
+        );
+    }
+}
+
+#[cfg(not(feature = "without-sudo"))]
+create_zeitgeist_runtime_with_additional_pallets!(
+    // Others
+    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
 
-#[cfg(not(feature = "parachain"))]
-create_zeitgeist_runtime!(
-    // Consensus
-    Aura: pallet_aura::{Config<T>, Pallet, Storage} = 100,
-    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 101,
-);
+#[cfg(feature = "without-sudo")]
+create_zeitgeist_runtime_with_additional_pallets!();
 
 // Configure Pallets
 #[cfg(feature = "parachain")]
@@ -318,7 +336,6 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Proxy(_)
                     | Call::Scheduler(_)
-                    | Call::Sudo(_)
                     | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
@@ -327,6 +344,9 @@ cfg_if::cfg_if! {
                     | Call::Utility(_)
                     | Call::Vesting(_)
                     | Call::XcmpQueue(_) => true,
+
+                    #[cfg(not(feature = "without-sudo"))]
+                    Call::Sudo(_) => true,
 
                     // Prohibited calls:
                     Call::Authorized(_)
@@ -356,7 +376,6 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Proxy(_)
                     | Call::Scheduler(_)
-                    | Call::Sudo(_)
                     | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
@@ -365,12 +384,15 @@ cfg_if::cfg_if! {
                     | Call::Utility(_)
                     | Call::Vesting(_) => true,
 
+                    #[cfg(not(feature = "without-sudo"))]
+                    Call::Sudo(_) => true,
+
                     // Prohibited calls:
                     Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(_) => false,
+                    | Call::PredictionMarkets(_)=> false,
                 }
             }
         }
@@ -798,6 +820,7 @@ impl pallet_scheduler::Config for Runtime {
     type NoPreimagePostponement = NoPreimagePostponement;
 }
 
+#[cfg(not(feature = "without-sudo"))]
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
     type Event = Event;
