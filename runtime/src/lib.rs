@@ -320,6 +320,7 @@ cfg_if::cfg_if! {
                     Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
                     | Call::AuthorInherent(_)
+                    | Call::AuthorFilter(_)
                     | Call::AuthorMapping(_)
                     | Call::Balances(_)
                     | Call::Council(_)
