@@ -15,6 +15,7 @@ mod parameters;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
+mod tests;
 
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
