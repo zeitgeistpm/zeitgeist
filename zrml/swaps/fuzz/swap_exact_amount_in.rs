@@ -22,12 +22,8 @@ fuzz_target!(|data: SwapExactAmountInData| {
             .unwrap();
         }
         let pool_id = data.pool_creation.create_pool();
-        AssetManager::deposit(
-            construct_asset(data.asset_in),
-            &data.origin,
-            data.asset_amount_in,
-        )
-        .unwrap();
+        AssetManager::deposit(construct_asset(data.asset_in), &data.origin, data.asset_amount_in)
+            .unwrap();
         let _ = Swaps::swap_exact_amount_in(
             Origin::signed(data.origin),
             pool_id,
