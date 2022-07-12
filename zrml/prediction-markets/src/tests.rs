@@ -2238,7 +2238,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        run_to_block(end + DisputePeriod::get());
+        run_to_block(end);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
