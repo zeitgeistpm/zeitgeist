@@ -84,11 +84,9 @@ impl crate::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
-pub type AccountId = AccountIdTest;
-
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
-    type AccountId = AccountId;
+    type AccountId = AccountIdTest;
     type BaseCallFilter = Everything;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();

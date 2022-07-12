@@ -1,10 +1,10 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use zeitgeist_primitives::traits::ZeitgeistAssetManager;
+use orml_traits::currency::MultiCurrency;
 
 use utils::GeneralPoolData;
-use zrml_swaps::mock::{AccountId, ExtBuilder, Origin, Swaps};
+use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 mod utils;
 use utils::construct_asset;
 use zrml_swaps::mock::AssetManager;
@@ -15,11 +15,12 @@ fuzz_target!(|data: GeneralPoolData| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            <AssetManager as ZeitgeistAssetManager<AccountId>>::deposit(
+            AssetManager::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 data.pool_creation.amount,
-            );
+            )
+            .unwrap();
         }
         let pool_id = data.pool_creation.create_pool();
         // join a pool with a valid pool id
