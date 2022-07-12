@@ -157,56 +157,64 @@ where
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
-    if p.pool.scoring_rule == ScoringRule::CPMM {
-        T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-        T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
-    } else {
-        let base_asset = p.pool.base_asset;
-
-        if p.asset_in == base_asset {
+    match p.pool.scoring_rule {
+        ScoringRule::CPMM => {
             T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-            T::AssetManager::deposit(p.asset_out, &p.who, asset_amount_out)?;
-        } else if p.asset_out == base_asset {
-            // We can use the lightweight withdraw here, since event assets are not reserved.
-            T::AssetManager::withdraw(p.asset_in, &p.who, asset_amount_in)?;
             T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
-        } else {
-            // Just for safety, should already be checked in p.asset_amounts.
-            return Err(Error::<T>::UnsupportedTrade.into());
+        }
+        ScoringRule::RikiddoSigmoidFeeMarketEma => {
+            let base_asset = p.pool.base_asset;
+
+            if p.asset_in == base_asset {
+                T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+                T::AssetManager::deposit(p.asset_out, &p.who, asset_amount_out)?;
+            } else if p.asset_out == base_asset {
+                // We can use the lightweight withdraw here, since event assets are not reserved.
+                T::AssetManager::withdraw(p.asset_in, &p.who, asset_amount_in)?;
+                T::AssetManager::transfer(
+                    p.asset_out,
+                    p.pool_account_id,
+                    &p.who,
+                    asset_amount_out,
+                )?;
+            } else {
+                // Just for safety, should already be checked in p.asset_amounts.
+                return Err(Error::<T>::UnsupportedTrade.into());
+            }
         }
     }
 
     let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
 
     // Allow little tolerance
-    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-        ensure!(
+    match p.pool.scoring_rule {
+        ScoringRule::CPMM => {
+            ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation)
+        }
+        ScoringRule::RikiddoSigmoidFeeMarketEma => ensure!(
             spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
             Error::<T>::MathApproximation
-        );
-    } else {
-        ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+        ),
     }
 
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
     }
 
-    if p.pool.scoring_rule == ScoringRule::CPMM {
-        ensure!(
+    match p.pool.scoring_rule {
+        ScoringRule::CPMM => ensure!(
             spot_price_before
                 <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
                     .saturated_into(),
             Error::<T>::MathApproximation
-        );
-    }
-
-    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-        // Currently the only allowed trades are base_currency <-> event asset. We count the
-        // volume in base_currency.
-        let base_asset = p.pool.base_asset;
-        let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
-        T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
+        ),
+        ScoringRule::RikiddoSigmoidFeeMarketEma => {
+            // Currently the only allowed trades are base_currency <-> event asset. We count the
+            // volume in base_currency.
+            let base_asset = p.pool.base_asset;
+            let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
+            T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
+        }
     }
 
     (p.event)(SwapEvent {

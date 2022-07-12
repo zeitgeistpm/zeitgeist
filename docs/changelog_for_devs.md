@@ -1,3 +1,14 @@
+# v0.3.4
+
+- Changed the `weights` parameter of `deploy_swap_pool_and_additional_liquidity`
+  and `deploy_swap_pool_for_market` to be a vector whose length is equal to the
+  number of outcome tokens (one item shorter than before). The `weights` now
+  refer to the weights of the outcome tokens only, and the user can no longer
+  control the weight of the base asset. Instead, the weight of the base asset is
+  equal to the sum of the weights of the outcome tokens, thereby ensuring that
+  (assuming equal balances) the spot prices of the outcome tokens sum up to 1.
+- Changed `Market` struct's `mdm` to `dispute_mechanism`.
+
 # v0.3.3
 
 - Introduced `MarketStatus::Closed`. Markets are automatically transitioned into

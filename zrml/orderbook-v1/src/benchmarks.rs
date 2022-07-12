@@ -19,7 +19,7 @@ fn generate_funded_account<T: Config>(seed: Option<u32>) -> Result<T::AccountId,
     let acc = if let Some(s) = seed { account("AssetHolder", 0, s) } else { whitelisted_caller() };
 
     let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), 0);
-    let _ = T::Shares::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
+    T::Shares::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
     let _ = T::Currency::deposit_creating(&acc, BASE.saturating_mul(1_000).saturated_into());
     Ok(acc)
 }

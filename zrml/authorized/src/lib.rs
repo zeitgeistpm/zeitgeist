@@ -58,7 +58,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-            if let MarketDisputeMechanism::Authorized(ref account_id) = market.mdm {
+            if let MarketDisputeMechanism::Authorized(ref account_id) = market.dispute_mechanism {
                 if account_id != &who {
                     return Err(Error::<T>::NotAuthorizedForThisMarket.into());
                 }
@@ -172,7 +172,7 @@ where
         creator_fee: 0,
         creator: T::PalletId::get().into_account(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        mdm: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),

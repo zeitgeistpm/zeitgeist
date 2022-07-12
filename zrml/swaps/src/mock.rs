@@ -1,4 +1,8 @@
 #![cfg(feature = "mock")]
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
 
 use crate as zrml_swaps;
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
@@ -53,6 +57,8 @@ construct_runtime!(
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
     }
 );
+
+pub type Shares = Currencies;
 
 impl crate::Config for Runtime {
     type Event = Event;

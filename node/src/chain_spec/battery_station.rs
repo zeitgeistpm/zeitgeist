@@ -1,6 +1,8 @@
+#[cfg(not(feature = "without-sudo"))]
+use crate::chain_spec::root_key_staging_testnet;
 use crate::chain_spec::{
     additional_chain_spec_staging_testnet, endowed_accounts_staging_testnet, generic_genesis,
-    root_key_staging_testnet, telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
+    telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,
 };
 use sc_service::ChainType;
 
@@ -20,6 +22,7 @@ pub fn battery_station_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_testnet(),
+                #[cfg(not(feature = "without-sudo"))]
                 root_key_staging_testnet(),
                 zeitgeist_wasm,
             )

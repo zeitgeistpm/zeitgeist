@@ -108,7 +108,7 @@ fn bench_create_pool<T: Config>(
 
     if subsidize {
         let min_subsidy = T::MinSubsidy::get();
-        let _ = T::AssetManager::deposit(base_asset, &caller, min_subsidy).unwrap();
+        T::AssetManager::deposit(base_asset, &caller, min_subsidy).unwrap();
         let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller).into())
             .unwrap();
@@ -127,7 +127,7 @@ benchmarks! {
                 creator_fee: 0,
                 creator: caller.clone(),
                 market_type: MarketType::Categorical(5),
-                mdm: MarketDisputeMechanism::Authorized(caller.clone()),
+                dispute_mechanism: MarketDisputeMechanism::Authorized(caller.clone()),
                 metadata: vec![0; 50],
                 oracle: caller.clone(),
                 period: MarketPeriod::Block(0u32.into()..1u32.into()),

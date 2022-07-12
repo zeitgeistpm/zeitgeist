@@ -3,12 +3,13 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    BalanceOf, Config, Event, SubsidyProviders,
+    Config, Event, SubsidyProviders,
 };
 use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
+#[allow(unused_imports)]
 use test_case::test_case;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -1443,14 +1444,11 @@ fn clean_up_pool_fails_if_winning_asset_is_not_found() {
     });
 }
 
-#[test_case(Some(_1 / 2), Some(_2); "with limits")]
-#[test_case(None, None; "without limits")]
-fn swap_exact_amount_in_exchanges_correct_values_with_cpmm(
-    asset_bound: Option<BalanceOf<Runtime>>,
-    max_price: Option<BalanceOf<Runtime>>,
-) {
+#[test]
+fn swap_exact_amount_in_exchanges_correct_values_with_cpmm() {
     ExtBuilder::default().build().execute_with(|| {
-        // CPMM
+        let asset_bound = Some(_1 / 2);
+        let max_price = Some(_2);
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
         assert_ok!(Swaps::swap_exact_amount_in(
@@ -1479,6 +1477,18 @@ fn swap_exact_amount_in_exchanges_correct_values_with_cpmm(
             0,
             [_101, _99 + 0099009900, _100, _100],
             _100,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_in_fails_if_no_limit_is_specified() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::swap_exact_amount_in(alice_signed(), 0, ASSET_A, _1, ASSET_B, None, None,),
+            crate::Error::<Runtime>::LimitMissing
         );
     });
 }
@@ -1579,12 +1589,10 @@ fn swap_exact_amount_in_exchanges_correct_values_with_rikiddo() {
     });
 }
 
-#[test_case(Some(_2), Some(_3); "with limits")]
-#[test_case(None, None; "without limits")]
-fn swap_exact_amount_out_exchanges_correct_values_with_cpmm(
-    asset_bound: Option<BalanceOf<Runtime>>,
-    max_price: Option<BalanceOf<Runtime>>,
-) {
+#[test]
+fn swap_exact_amount_out_exchanges_correct_values_with_cpmm() {
+    let asset_bound = Some(_2);
+    let max_price = Some(_3);
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
@@ -1614,6 +1622,18 @@ fn swap_exact_amount_out_exchanges_correct_values_with_cpmm(
             0,
             [_101 + 0101010100, _99, _100, _100],
             _100,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_out_fails_if_no_limit_is_specified() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, true);
+        assert_noop!(
+            Swaps::swap_exact_amount_out(alice_signed(), 0, ASSET_A, None, ASSET_B, _1, None,),
+            crate::Error::<Runtime>::LimitMissing
         );
     });
 }
@@ -2072,6 +2092,31 @@ fn pool_exit_with_exact_pool_amount_fails_if_max_asset_amount_is_violated() {
     });
 }
 
+#[test]
+fn create_pool_correctly_associates_weights_with_assets() {
+    ExtBuilder::default().build().execute_with(|| {
+        ASSETS.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _10000);
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            vec![ASSET_D, ASSET_B, ASSET_C, ASSET_A],
+            ASSET_A,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(<Runtime as crate::Config>::MinLiquidity::get()),
+            Some(vec!(_1, _2, _3, _4)),
+        ));
+        let pool = Swaps::pool(0).unwrap();
+        let pool_weights = pool.weights.unwrap();
+        assert_eq!(pool_weights[&ASSET_A], _4);
+        assert_eq!(pool_weights[&ASSET_B], _2);
+        assert_eq!(pool_weights[&ASSET_C], _3);
+        assert_eq!(pool_weights[&ASSET_D], _1);
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
@@ -2168,7 +2213,7 @@ fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
         creator_fee: 0,
         creator: ALICE,
         market_type: MarketType::Categorical(categories),
-        mdm: MarketDisputeMechanism::Authorized(ALICE),
+        dispute_mechanism: MarketDisputeMechanism::Authorized(ALICE),
         metadata: vec![0; 50],
         oracle: ALICE,
         period: MarketPeriod::Block(0..1),
