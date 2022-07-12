@@ -139,7 +139,8 @@
     "_enum": {
       "Authorized": "AccountId",
       "Court": null,
-      "SimpleDisputes": null
+      "SimpleDisputes": null,
+      "GlobalDisputes": null,
     }
   },
   "MarketId": "u128",
