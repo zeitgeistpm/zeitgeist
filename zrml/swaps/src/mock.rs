@@ -58,7 +58,7 @@ construct_runtime!(
     }
 );
 
-pub type Shares = Currencies;
+pub type AssetManager = Currencies;
 
 impl crate::Config for Runtime {
     type Event = Event;
@@ -80,13 +80,15 @@ impl crate::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type AssetManager = Currencies;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
+pub type AccountId = AccountIdTest;
+
 impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
-    type AccountId = AccountIdTest;
+    type AccountId = AccountId;
     type BaseCallFilter = Everything;
     type BlockHashCount = BlockHashCount;
     type BlockLength = ();
