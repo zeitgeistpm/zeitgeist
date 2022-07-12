@@ -37,4 +37,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-authorized"
-version = "0.3.3"
+version = "0.3.4"

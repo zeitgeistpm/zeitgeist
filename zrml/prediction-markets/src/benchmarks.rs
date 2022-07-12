@@ -17,7 +17,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::{MinLiquidity, MinWeight, BASE},
+    constants::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
         Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
@@ -65,7 +65,7 @@ fn create_market_common<T: Config>(
         metadata,
         creation,
         market_type: options,
-        mdm: MarketDisputeMechanism::SimpleDisputes,
+        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
         scoring_rule,
     }
     .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
@@ -310,13 +310,14 @@ benchmarks! {
             MarketType::Categorical(a.saturated_into()),
             ScoringRule::CPMM
         )?;
+        let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
         let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
-    }: _(RawOrigin::Signed(caller), market_id, min_liquidity, weights)
+    }: _(RawOrigin::Signed(caller), market_id, max_swap_fee, min_liquidity, weights)
 
     dispute {
         let a in 0..(T::MaxDisputes::get() - 1) as u32;

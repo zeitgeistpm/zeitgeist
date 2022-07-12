@@ -685,6 +685,9 @@ mod pallet {
         type MaxOutRatio: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
+        type MaxSwapFee: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
         type MaxTotalWeight: Get<u128>;
 
         #[pallet::constant]
@@ -805,6 +808,10 @@ mod pallet {
         PoolMissingWeight,
         /// Two vectors do not have the same length (usually CPMM pool assets and weights).
         ProvidedValuesLenMustEqualAssetsLen,
+        /// No swap fee information found for CPMM pool
+        SwapFeeMissing,
+        /// The swap fee is higher than the allowed maximum.
+        SwapFeeTooHigh,
         /// Tried to create a pool that has less assets than the lower threshhold specified by
         /// a constant.
         TooFewAssets,
@@ -1091,13 +1098,14 @@ mod pallet {
                 let balance_out = T::Shares::free_balance(asset_out, &pool_account);
                 let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
                 let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
+                let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
 
                 return Ok(crate::math::calc_spot_price(
                     balance_in.saturated_into(),
                     in_weight,
                     balance_out.saturated_into(),
                     out_weight,
-                    0,
+                    swap_fee.saturated_into(),
                 )?
                 .saturated_into());
             }
@@ -1331,14 +1339,15 @@ mod pallet {
         /// # Arguments
         ///
         /// * `who`: The account that is the creator of the pool. Must have enough
-        /// funds for each of the assets to cover the `MinLiqudity`.
+        ///     funds for each of the assets to cover the `MinLiqudity`.
         /// * `assets`: The assets that are used in the pool.
         /// * `base_asset`: The base asset in a prediction market swap pool (usually a currency).
         /// * `market_id`: The market id of the market the pool belongs to.
         /// * `scoring_rule`: The scoring rule that's used to determine the asset prices.
-        /// * `swap_fee`: The fee applied to each swap (mandatory if scoring rule is CPMM).
+        /// * `swap_fee`: The fee applied to each swap on a CPMM pool, specified as fixed-point
+        ///     ratio (0.1 equals 10% swap fee)
         /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
-        ///   `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
+        ///     `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
         /// * `weights`: These are the raw/denormalized weights (mandatory if scoring rule is CPMM).
         #[frame_support::transactional]
         fn create_pool(
@@ -1376,7 +1385,11 @@ mod pallet {
                             amount_unwrapped >= T::MinLiquidity::get(),
                             Error::<T>::InsufficientLiquidity
                         );
-                        ensure!(swap_fee.is_some(), Error::<T>::InvalidFeeArgument);
+                        let swap_fee_unwrapped = swap_fee.ok_or(Error::<T>::InvalidFeeArgument)?;
+                        ensure!(
+                            swap_fee_unwrapped <= T::MaxSwapFee::get(),
+                            Error::<T>::SwapFeeTooHigh
+                        );
                         let weights_unwrapped = weights.ok_or(Error::<T>::InvalidWeightArgument)?;
                         Self::check_provided_values_len_must_equal_assets_len(
                             &assets,

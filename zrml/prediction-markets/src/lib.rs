@@ -112,7 +112,7 @@ mod pallet {
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     pub(crate) type TimeFrame = u64;
     pub(crate) type BalanceOf<T> =
@@ -196,6 +196,7 @@ mod pallet {
             Self::clear_auto_close(&market_id)?;
             Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
+            Disputes::<T>::remove(market_id);
 
             Self::deposit_event(Event::MarketDestroyed(market_id));
 
@@ -355,7 +356,7 @@ mod pallet {
                 &who,
                 default_dispute_bond::<T>(disputes.len()),
             )?;
-            match market.mdm {
+            match market.dispute_mechanism {
                 MarketDisputeMechanism::Authorized(_) => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
                 }
@@ -396,7 +397,8 @@ mod pallet {
         /// * `period`: The active period of the market.
         /// * `metadata`: A hash pointer to the metadata of the market.
         /// * `market_type`: The type of the market.
-        /// * `mdm`: The market dispute mechanism.
+        /// * `dispute_mechanism`: The market dispute mechanism.
+        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
@@ -418,7 +420,8 @@ mod pallet {
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             market_type: MarketType,
-            mdm: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
         ) -> DispatchResultWithPostInfo {
@@ -431,7 +434,7 @@ mod pallet {
                 metadata,
                 MarketCreation::Permissionless,
                 market_type.clone(),
-                mdm,
+                dispute_mechanism,
                 ScoringRule::CPMM,
             )?
             .actual_weight
@@ -446,6 +449,7 @@ mod pallet {
             let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liquidity(
                 origin,
                 market_id,
+                swap_fee,
                 amount,
                 weights.clone(),
             )?
@@ -469,7 +473,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            mdm: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -520,7 +524,7 @@ mod pallet {
                 creator_fee: 0,
                 creator: sender,
                 market_type,
-                mdm,
+                dispute_mechanism,
                 metadata: Vec::from(multihash),
                 oracle,
                 period: period.clone(),
@@ -561,6 +565,7 @@ mod pallet {
         /// # Arguments
         ///
         /// * `market_id`: The id of the market.
+        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
@@ -580,6 +585,7 @@ mod pallet {
         pub fn deploy_swap_pool_and_additional_liquidity(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
         ) -> DispatchResultWithPostInfo {
@@ -588,7 +594,7 @@ mod pallet {
                 .actual_weight
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weights_len = weights.len();
-            Self::deploy_swap_pool_for_market(origin, market_id, amount, weights)?;
+            Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?;
             Ok(Some(weight_bcs.saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
                 weights_len.saturated_into(),
             )))
@@ -602,6 +608,7 @@ mod pallet {
         /// # Arguments
         ///
         /// * `market_id`: The id of the market.
+        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
@@ -613,6 +620,7 @@ mod pallet {
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             mut weights: Vec<u128>,
         ) -> DispatchResult {
@@ -634,7 +642,7 @@ mod pallet {
                 base_asset,
                 market_id,
                 ScoringRule::CPMM,
-                Some(Zero::zero()),
+                Some(swap_fee),
                 Some(amount),
                 Some(weights),
             )?;
@@ -1657,7 +1665,7 @@ mod pallet {
                 MarketStatus::Disputed => {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
                     // the oracle's report.
-                    let resolved_outcome_option = match market.mdm {
+                    let resolved_outcome_option = match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized(_) => {
                             T::Authorized::on_resolution(&disputes, market_id, market)?
                         }
@@ -1745,6 +1753,7 @@ mod pallet {
                 m.resolved_outcome = Some(resolved_outcome.clone());
                 Ok(())
             })?;
+            Disputes::<T>::remove(market_id);
             Self::deposit_event(Event::MarketResolved(
                 *market_id,
                 MarketStatus::Resolved,

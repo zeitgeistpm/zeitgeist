@@ -21,10 +21,10 @@ use zeitgeist_primitives::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxTotalWeight,
-        MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, BASE, CENT,
+        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
+        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, ReportingPeriod,
+        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, BASE, CENT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -242,6 +242,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
+    type MaxSwapFee = MaxSwapFee;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
