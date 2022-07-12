@@ -388,6 +388,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
             gen_metadata(50),
             MarketType::Categorical(3),
             MarketDisputeMechanism::SimpleDisputes,
+            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 3],
         ));
@@ -783,6 +784,7 @@ fn on_market_close_successfully_auto_closes_market_with_blocks() {
             gen_metadata(50),
             MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
+            0,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
@@ -817,6 +819,7 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
             gen_metadata(50),
             MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
+            0,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
@@ -859,6 +862,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             gen_metadata(50),
             MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
+            0,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
@@ -869,6 +873,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
             gen_metadata(50),
             MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
+            0,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
@@ -904,6 +909,7 @@ fn market_close_manager_skips_the_genesis_block_with_timestamp_zero() {
             gen_metadata(50),
             MarketType::Categorical(category_count),
             MarketDisputeMechanism::SimpleDisputes,
+            123,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
@@ -1134,6 +1140,7 @@ fn it_allows_to_deploy_a_pool() {
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
             0,
+            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 2],
         ));
@@ -1152,6 +1159,7 @@ fn deploy_swap_pool_for_market_fails_if_market_has_a_pool() {
         assert_ok!(PredictionMarkets::deploy_swap_pool_for_market(
             Origin::signed(BOB),
             0,
+            <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 2],
         ));
@@ -1159,6 +1167,7 @@ fn deploy_swap_pool_for_market_fails_if_market_has_a_pool() {
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(BOB),
                 0,
+                <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
                 <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
                 vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 2],
             ),
@@ -1181,6 +1190,7 @@ fn it_does_not_allow_to_deploy_a_pool_on_pending_advised_market() {
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(BOB),
                 0,
+                <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
                 <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
                 vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); 2],
             ),
@@ -1725,15 +1735,19 @@ fn it_allows_to_redeem_shares() {
 }
 
 #[test]
-fn create_market_and_deploy_assets_results_in_expected_balances() {
+fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params() {
     let oracle = ALICE;
     let period = MarketPeriod::Block(0..42);
     let metadata = gen_metadata(42);
     let category_count = 4;
-    let assets = MarketType::Categorical(category_count);
+    let market_type = MarketType::Categorical(category_count);
+    let swap_fee = <Runtime as zrml_swaps::Config>::MaxSwapFee::get();
     let amount = 123 * BASE;
     let pool_id = 0;
-    let weights = vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()];
+    let weight = <Runtime as zrml_swaps::Config>::MinWeight::get();
+    let weights = vec![weight; category_count.into()];
+    let base_asset_weight = (category_count as u128) * weight;
+    let total_weight = 2 * base_asset_weight;
 
     // Execute the combined convenience function
     ExtBuilder::default().build().execute_with(|| {
@@ -1742,11 +1756,13 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
             oracle,
             period,
             metadata,
-            assets,
+            market_type,
             MarketDisputeMechanism::SimpleDisputes,
+            swap_fee,
             amount,
             weights,
         ));
+        let market_id = 0;
 
         let pool_account = Swaps::pool_account_id(pool_id);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
@@ -1759,6 +1775,29 @@ fn create_market_and_deploy_assets_results_in_expected_balances() {
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), amount);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 3), &pool_account), amount);
         assert_eq!(System::account(&pool_account).data.free, amount);
+
+        let pool = Pools::<Runtime>::get(0).unwrap();
+        let assets_expected = vec![
+            Asset::CategoricalOutcome(market_id, 0),
+            Asset::CategoricalOutcome(market_id, 1),
+            Asset::CategoricalOutcome(market_id, 2),
+            Asset::CategoricalOutcome(market_id, 3),
+            Asset::Ztg,
+        ];
+        assert_eq!(pool.assets, assets_expected);
+        assert_eq!(pool.base_asset, Asset::Ztg);
+        assert_eq!(pool.market_id, market_id);
+        assert_eq!(pool.scoring_rule, ScoringRule::CPMM);
+        assert_eq!(pool.swap_fee, Some(swap_fee));
+        assert_eq!(pool.total_subsidy, None);
+        assert_eq!(pool.total_subsidy, None);
+        assert_eq!(pool.total_weight, Some(total_weight));
+        let pool_weights = pool.weights.unwrap();
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 0)], weight);
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 1)], weight);
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 2)], weight);
+        assert_eq!(pool_weights[&Asset::CategoricalOutcome(market_id, 3)], weight);
+        assert_eq!(pool_weights[&Asset::Ztg], base_asset_weight);
     });
 }
 
@@ -2299,6 +2338,7 @@ fn deploy_swap_pool_correctly_sets_weight_of_base_asset() {
             gen_metadata(50),
             MarketType::Categorical(3),
             MarketDisputeMechanism::SimpleDisputes,
+            1,
             <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
             weights,
         ));
@@ -2325,13 +2365,17 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
-        let _ = Balances::set_balance(Origin::root(), ALICE, 246 * BASE, 0);
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 123 * BASE));
+        let amount = 123 * BASE;
+        assert_ok!(Balances::set_balance(Origin::root(), ALICE, 2 * amount, 0));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, amount));
+        // Attempt to create a pool with four weights; but we need five instead (base asset not
+        // counted).
         assert_noop!(
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(ALICE),
                 0,
-                123 * BASE,
+                1,
+                amount,
                 vec![
                     <Runtime as zrml_swaps::Config>::MinWeight::get();
                     (category_count - 1).into()
@@ -2356,15 +2400,17 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
-        let _ = Balances::set_balance(Origin::root(), ALICE, 246 * BASE, 0);
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 123 * BASE));
-        // Attempt to create a pool with seven weights; but we need six instead (five for the
-        // outcome tokens, one for the base asset).
+        let amount = 123 * BASE;
+        assert_ok!(Balances::set_balance(Origin::root(), ALICE, 2 * amount, 0));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, amount));
+        // Attempt to create a pool with six weights; but we need five instead (base asset not
+        // counted).
         assert_noop!(
             PredictionMarkets::deploy_swap_pool_for_market(
                 Origin::signed(ALICE),
                 0,
-                123 * BASE,
+                <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
+                amount,
                 vec![
                     <Runtime as zrml_swaps::Config>::MinWeight::get();
                     (category_count + 1).into()
@@ -2661,6 +2707,7 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
     PredictionMarkets::deploy_swap_pool_for_market(
         Origin::signed(FRED),
         0,
+        <Runtime as zrml_swaps::Config>::MaxSwapFee::get(),
         <Runtime as zrml_swaps::Config>::MinLiquidity::get(),
         vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); outcome_assets_len],
     )

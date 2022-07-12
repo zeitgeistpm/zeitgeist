@@ -1008,6 +1008,7 @@ impl zrml_swaps::Config for Runtime {
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
+    type MaxSwapFee = MaxSwapFee;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;

@@ -11,7 +11,10 @@ use arbitrary::{Arbitrary, Result, Unstructured};
 
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 
-use zeitgeist_primitives::types::{Asset, ScalarPosition, SerdeWrapper};
+use zeitgeist_primitives::{
+    constants::MaxSwapFee,
+    types::{Asset, ScalarPosition, SerdeWrapper},
+};
 
 use zeitgeist_primitives::{
     traits::Swaps as SwapsTrait,
@@ -32,6 +35,10 @@ pub fn construct_asset(seed: (u8, u128, u16)) -> Asset<u128> {
         3 => Asset::PoolShare(SerdeWrapper(seed0)),
         _ => Asset::Ztg,
     }
+}
+
+fn construct_swap_fee(swap_fee: u128) -> Option<u128> {
+    Some(swap_fee % MaxSwapFee::get())
 }
 
 #[derive(Debug)]
@@ -55,7 +62,7 @@ impl ValidPoolData {
             construct_asset(self.base_asset),
             self.market_id,
             ScoringRule::CPMM,
-            Some(self.swap_fee),
+            construct_swap_fee(self.swap_fee),
             Some(self.amount),
             Some(self.weights),
         ) {
