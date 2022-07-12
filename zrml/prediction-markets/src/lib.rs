@@ -1762,7 +1762,7 @@ mod pallet {
                             );
 
                             // negative_imbalance is the actual slash value (excess should be zero)
-                            let negative_imbalance = actual_bond - excess;
+                            let negative_imbalance = actual_bond.saturating_sub(excess);
                             overall_imbalance =
                                 overall_imbalance.saturating_add(negative_imbalance);
                         }
