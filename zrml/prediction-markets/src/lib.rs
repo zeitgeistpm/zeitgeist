@@ -95,7 +95,7 @@ mod pallet {
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
-        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
+        DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{PmPalletId, MILLISECS_PER_BLOCK},
