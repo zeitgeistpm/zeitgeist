@@ -15,13 +15,12 @@ fuzz_target!(|data: ExactAmountData| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            AssetManager::deposit(
+            let _ = AssetManager::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 // In order to successfully join the pool, data.asset_amount more tokens needed
                 data.pool_creation.amount.saturating_add(data.asset_amount),
-            )
-            .unwrap();
+            );
         }
         let pool_id = data.pool_creation.create_pool();
         let _ = Swaps::pool_join_with_exact_pool_amount(

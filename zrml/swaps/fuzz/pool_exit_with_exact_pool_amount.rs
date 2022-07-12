@@ -15,23 +15,21 @@ fuzz_target!(|data: ExactAmountData| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            AssetManager::deposit(
+            let _ = AssetManager::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 data.pool_creation.amount,
-            )
-            .unwrap();
+            );
         }
 
         let pool_creator = data.pool_creation.origin;
         let pool_id = data.pool_creation.create_pool();
         // to exit a pool, origin also needs to have the pool tokens of the pool that they're exiting
-        AssetManager::deposit(
+        let _ = AssetManager::deposit(
             Asset::PoolShare(SerdeWrapper(pool_id)),
             &pool_creator,
             data.pool_amount,
-        )
-        .unwrap();
+        );
         let _ = Swaps::pool_exit_with_exact_pool_amount(
             Origin::signed(data.origin),
             pool_id,

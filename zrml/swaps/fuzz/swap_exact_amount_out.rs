@@ -13,17 +13,16 @@ fuzz_target!(|data: SwapExactAmountOutData| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            AssetManager::deposit(
+            let _ = AssetManager::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 data.pool_creation.amount,
-            )
-            .unwrap();
+            );
         }
         let pool_id = data.pool_creation.create_pool();
 
         if let Some(amount) = data.asset_amount_in {
-            AssetManager::deposit(construct_asset(data.asset_in), &data.origin, amount).unwrap();
+            let _ = AssetManager::deposit(construct_asset(data.asset_in), &data.origin, amount);
         }
 
         let _ = Swaps::swap_exact_amount_out(
