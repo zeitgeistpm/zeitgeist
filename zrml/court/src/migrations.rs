@@ -9,9 +9,9 @@ use frame_support::{
 const COURT_REQUIRED_STORAGE_VERSION: u16 = 0;
 const COURT_NEXT_STORAGE_VERSION: u16 = 1;
 
-pub struct JurorsConuntedStorageMapMigration<T>(PhantomData<T>);
+pub struct JurorsCountedStorageMapMigration<T>(PhantomData<T>);
 
-impl<T: Config> OnRuntimeUpgrade for JurorsConuntedStorageMapMigration<T> {
+impl<T: Config> OnRuntimeUpgrade for JurorsCountedStorageMapMigration<T> {
     fn on_runtime_upgrade() -> Weight
     where
         T: Config,
@@ -24,8 +24,9 @@ impl<T: Config> OnRuntimeUpgrade for JurorsConuntedStorageMapMigration<T> {
         }
         log::info!("Starting storage migration of jurors of court");
         Jurors::<T>::initialize_counter();
-        total_weight =
-            total_weight.saturating_add(T::DbWeight::get().writes(Jurors::<T>::count() as u64));
+        total_weight = total_weight.saturating_add(
+            T::DbWeight::get().writes(Jurors::<T>::count().saturating_add(1) as u64),
+        );
 
         StorageVersion::new(COURT_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
@@ -62,7 +63,7 @@ mod tests {
     fn test_on_runtime_upgrade_on_untouched_chain() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
-            JurorsConuntedStorageMapMigration::<Runtime>::on_runtime_upgrade();
+            JurorsCountedStorageMapMigration::<Runtime>::on_runtime_upgrade();
         });
     }
 
@@ -70,7 +71,7 @@ mod tests {
     fn on_runtime_upgrade_updates_storage_versions() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
-            JurorsConuntedStorageMapMigration::<Runtime>::on_runtime_upgrade();
+            JurorsCountedStorageMapMigration::<Runtime>::on_runtime_upgrade();
             assert_eq!(StorageVersion::get::<Pallet<Runtime>>(), COURT_NEXT_STORAGE_VERSION,);
         });
     }
@@ -85,15 +86,12 @@ mod tests {
                 b"Court",
                 b"Jurors",
                 &alice_hash,
-                alice_juror,
+                alice_juror.clone(),
             );
-            let juror: Option<Juror> =
-                frame_support::migration::get_storage_value(b"Court", b"Jurors", &alice_hash);
-            assert!(juror.is_some());
-            assert!(Jurors::<Runtime>::get(&ALICE).is_some());
             assert_eq!(Jurors::<Runtime>::count(), 0_u32);
-            JurorsConuntedStorageMapMigration::<Runtime>::on_runtime_upgrade();
+            JurorsCountedStorageMapMigration::<Runtime>::on_runtime_upgrade();
             assert_eq!(Jurors::<Runtime>::count(), 1_u32);
+            assert_eq!(Jurors::<Runtime>::get(&ALICE), Some(alice_juror));
         });
     }
 
