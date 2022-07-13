@@ -5123,7 +5123,7 @@ dependencies = [
 [[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19#3ce73acad85fb10b3325ebfbbdb2c1d75b0bd981"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5143,7 +5143,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19#3ce73acad85fb10b3325ebfbbdb2c1d75b0bd981"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5160,7 +5160,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19#3ce73acad85fb10b3325ebfbbdb2c1d75b0bd981"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5175,7 +5175,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19#3ce73acad85fb10b3325ebfbbdb2c1d75b0bd981"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5193,7 +5193,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19#3ce73acad85fb10b3325ebfbbdb2c1d75b0bd981"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -12410,7 +12410,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-node"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "cfg-if 1.0.0",
  "clap",
@@ -12490,7 +12490,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-primitives"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "arbitrary",
  "frame-support",
@@ -12508,7 +12508,7 @@ dependencies = [
 
 [[package]]
 name = "zeitgeist-runtime"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "cfg-if 1.0.0",
  "cumulus-pallet-dmp-queue",
@@ -12614,7 +12614,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-authorized"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12631,7 +12631,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-court"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "arrayvec 0.7.2",
  "frame-benchmarking",
@@ -12669,7 +12669,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-liquidity-mining"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12687,7 +12687,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-market-commons"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -12703,7 +12703,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-orderbook-v1"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12732,7 +12732,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12779,7 +12779,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-prediction-markets-runtime-api"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -12788,7 +12788,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-rikiddo"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "arbitrary",
  "cfg-if 1.0.0",
@@ -12821,7 +12821,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-simple-disputes"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12838,7 +12838,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -12869,14 +12869,18 @@ name = "zrml-swaps-fuzz"
 version = "0.0.0"
 dependencies = [
  "arbitrary",
+ "frame-support",
  "libfuzzer-sys",
+ "orml-traits",
+ "rand 0.8.5",
+ "sp-runtime",
  "zeitgeist-primitives",
  "zrml-swaps",
 ]
 
 [[package]]
 name = "zrml-swaps-rpc"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -12891,7 +12895,7 @@ dependencies = [
 
 [[package]]
 name = "zrml-swaps-runtime-api"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

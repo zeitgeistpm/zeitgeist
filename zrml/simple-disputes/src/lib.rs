@@ -89,7 +89,7 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
-            if market.mdm != MarketDisputeMechanism::SimpleDisputes {
+            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
             }
             Ok(())
@@ -100,7 +100,7 @@ mod pallet {
             _: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.mdm != MarketDisputeMechanism::SimpleDisputes {
+            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
             }
             if market.status != MarketStatus::Disputed {

@@ -1,4 +1,8 @@
 #![cfg(feature = "mock")]
+#![allow(
+    // Mocks are only used for fuzzing and unit tests
+    clippy::integer_arithmetic
+)]
 
 use crate as zrml_swaps;
 use frame_support::{construct_runtime, parameter_types, traits::Everything};
@@ -11,8 +15,8 @@ use zeitgeist_primitives::{
     constants::{
         BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
-        MaxReserves, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy, MinWeight,
-        MinimumPeriod, SwapsPalletId, BASE,
+        MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy,
+        MinWeight, MinimumPeriod, SwapsPalletId, BASE,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -54,6 +58,8 @@ construct_runtime!(
     }
 );
 
+pub type AssetManager = Currencies;
+
 impl crate::Config for Runtime {
     type Event = Event;
     type ExitFee = ExitFeeMock;
@@ -65,6 +71,7 @@ impl crate::Config for Runtime {
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
+    type MaxSwapFee = MaxSwapFee;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
@@ -74,7 +81,7 @@ impl crate::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currencies;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -124,6 +131,8 @@ impl orml_tokens::Config for Runtime {
     type OnDust = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Runtime {
