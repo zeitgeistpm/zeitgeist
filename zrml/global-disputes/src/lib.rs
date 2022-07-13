@@ -23,7 +23,7 @@ mod pallet {
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{OptionQuery, StorageDoubleMap, Weight},
+        pallet_prelude::{DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, Weight},
         traits::{Currency, Get, Hooks, IsType, LockIdentifier, LockableCurrency, WithdrawReasons},
         Blake2_128Concat, PalletId, Twox64Concat,
     };
@@ -52,12 +52,12 @@ mod pallet {
         /// NOTE: In the 'DisputePeriod' voting on a dispute is allowed.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::vote())]
-        pub fn vote(
+        pub fn vote_on_dispute(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             #[pallet::compact] dispute_index: u32,
             #[pallet::compact] amount: BalanceOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(
                 amount <= CurrencyOf::<T>::free_balance(&sender),
@@ -94,18 +94,21 @@ mod pallet {
             );
 
             Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
-            Ok(())
+            Ok(Some(T::WeightInfo::vote()).into())
         }
 
         /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::unlock())]
-        pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
-            let sender = ensure_signed(origin)?;
+        pub fn unlock_vote_balance(
+            origin: OriginFor<T>,
+            voter: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
 
             let mut lock_needed: BalanceOf<T> = Zero::zero();
             let mut resolved_markets = Vec::new();
-            for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&sender) {
+            for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&voter) {
                 if <DisputeVotes<T>>::iter_prefix(market_id).take(1).next().is_none() {
                     resolved_markets.push(market_id);
                     continue;
@@ -114,21 +117,21 @@ mod pallet {
             }
 
             for market_id in resolved_markets {
-                <LockInfoOf<T>>::remove(&sender, market_id);
+                <LockInfoOf<T>>::remove(&voter, market_id);
             }
 
             if lock_needed.is_zero() {
-                CurrencyOf::<T>::remove_lock(T::VoteLockIdentifier::get(), &sender);
+                CurrencyOf::<T>::remove_lock(T::VoteLockIdentifier::get(), &voter);
             } else {
                 CurrencyOf::<T>::set_lock(
                     T::VoteLockIdentifier::get(),
-                    &sender,
+                    &voter,
                     lock_needed,
                     WithdrawReasons::TRANSFER,
                 );
             }
 
-            Ok(())
+            Ok(Some(T::WeightInfo::unlock()).into())
         }
     }
 
