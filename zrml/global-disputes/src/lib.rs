@@ -19,7 +19,7 @@ pub use pallet::*;
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
     use alloc::vec::Vec;
-    use core::marker::PhantomData;
+    use core::{cmp::Ordering, marker::PhantomData};
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
@@ -51,7 +51,7 @@ mod pallet {
         /// Votes on a dispute after there are already two disputes and the 'DisputePeriod' is not over.
         /// NOTE: In the 'DisputePeriod' voting on a dispute is allowed.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::vote())]
+        #[pallet::weight(T::WeightInfo::vote_on_dispute())]
         pub fn vote_on_dispute(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -94,12 +94,12 @@ mod pallet {
             );
 
             Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
-            Ok(Some(T::WeightInfo::vote()).into())
+            Ok(Some(T::WeightInfo::vote_on_dispute()).into())
         }
 
         /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::unlock())]
+        #[pallet::weight(T::WeightInfo::unlock_vote_balance())]
         pub fn unlock_vote_balance(
             origin: OriginFor<T>,
             voter: T::AccountId,
@@ -131,7 +131,7 @@ mod pallet {
                 );
             }
 
-            Ok(Some(T::WeightInfo::unlock()).into())
+            Ok(Some(T::WeightInfo::unlock_vote_balance()).into())
         }
     }
 
@@ -233,13 +233,11 @@ mod pallet {
             let (index, _) = <DisputeVotes<T>>::drain_prefix(market_id).fold(
                 (0u32, <BalanceOf<T>>::zero()),
                 |(i0, b0), (i1, b1)| {
-                    if b0 > b1 {
-                        (i0, b0)
-                    } else if b0 == b1 {
+                    match b0.cmp(&b1) {
+                        Ordering::Greater => (i0, b0),
+                        Ordering::Less => (i1, b1),
                         // if the vote balance is the same on multiple outcomes, the in time last should be taken, because it's the one with the most dispute bond and less voting time
-                        (i0.max(i1), b0)
-                    } else {
-                        (i1, b1)
+                        Ordering::Equal => (i0.max(i1), b0),
                     }
                 },
             );
