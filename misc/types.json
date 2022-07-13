@@ -140,7 +140,7 @@
       "Authorized": "AccountId",
       "Court": null,
       "SimpleDisputes": null,
-      "GlobalDisputes": null,
+      "GlobalDisputes": null
     }
   },
   "MarketId": "u128",
