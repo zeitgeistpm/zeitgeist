@@ -26,7 +26,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     creator_fee: 0,
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    mdm: MarketDisputeMechanism::GlobalDisputes,
+    dispute_mechanism: MarketDisputeMechanism::GlobalDisputes,
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
@@ -64,11 +64,12 @@ fn vote_fails_if_insufficient_amount() {
     });
 }
 
+// TODO use test_case for every other market dispute mechanism
 #[test]
 fn on_dispute_denies_non_global_disputes_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::Court;
+        market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
             GlobalDisputes::on_dispute(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveGlobalDisputesMechanism
@@ -80,7 +81,7 @@ fn on_dispute_denies_non_global_disputes_markets() {
 fn on_resolution_denies_non_global_disputes_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::Court;
+        market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
             GlobalDisputes::on_resolution(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveGlobalDisputesMechanism

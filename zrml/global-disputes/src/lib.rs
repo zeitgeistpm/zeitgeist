@@ -208,7 +208,7 @@ mod pallet {
             _market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
-            if market.mdm != MarketDisputeMechanism::GlobalDisputes {
+            if market.dispute_mechanism != MarketDisputeMechanism::GlobalDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveGlobalDisputesMechanism.into());
             }
 
@@ -220,7 +220,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.mdm != MarketDisputeMechanism::GlobalDisputes {
+            if market.dispute_mechanism != MarketDisputeMechanism::GlobalDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveGlobalDisputesMechanism.into());
             }
             if market.status != MarketStatus::Disputed {
@@ -293,7 +293,8 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>() -> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>()
+-> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
 where
     T: crate::Config,
 {
@@ -306,7 +307,7 @@ where
         creator_fee: 0,
         creator: T::PalletId::get().into_account(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        mdm: zeitgeist_primitives::types::MarketDisputeMechanism::GlobalDisputes,
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::GlobalDisputes,
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
