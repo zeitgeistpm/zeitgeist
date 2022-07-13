@@ -771,8 +771,6 @@ mod pallet {
         InvalidStateTransition,
         /// Could not create CPMM pool since no weights were supplied.
         InvalidWeightArgument,
-        /// Could not create CPMM pool since no status was supplied.
-        InvalidStatusArgument,
         /// A transferal of funds into a swaps pool was above a threshhold specified by the sender.
         LimitIn,
         /// Subsidy amount is too small.
