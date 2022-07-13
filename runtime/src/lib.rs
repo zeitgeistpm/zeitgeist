@@ -77,7 +77,7 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    zrml_court::migrations::JurorsConuntedStorageMapMigration<Runtime>,
+    zrml_court::migrations::JurorsCountedStorageMapMigration<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
