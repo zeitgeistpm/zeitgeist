@@ -273,13 +273,14 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         assert_eq!(next_pool_before, 0);
 
         let amount = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSETS.last().unwrap();
         ASSETS.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, amount));
         });
         assert_ok!(Swaps::create_pool(
             BOB,
             ASSETS.iter().cloned().collect(),
-            ASSETS.last().unwrap().clone(),
+            *base_asset,
             0,
             ScoringRule::CPMM,
             Some(1),
@@ -292,7 +293,10 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
 
         let pool = Swaps::pools(0).unwrap();
 
-        assert_eq!(pool.assets, ASSETS.iter().cloned().collect::<Vec<_>>());
+        assert_eq!(pool.assets, ASSETS);
+        assert_eq!(pool.base_asset, *base_asset);
+        assert_eq!(pool.market_id, 0);
+        assert_eq!(pool.pool_status, PoolStatus::Initialized);
         assert_eq!(pool.scoring_rule, ScoringRule::CPMM);
         assert_eq!(pool.swap_fee, Some(1));
         assert_eq!(pool.total_subsidy, None);
