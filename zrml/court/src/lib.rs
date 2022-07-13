@@ -12,6 +12,7 @@ mod benchmarks;
 mod court_pallet_api;
 mod juror;
 mod juror_status;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -58,7 +59,7 @@ mod pallet {
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
