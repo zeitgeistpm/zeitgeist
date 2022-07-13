@@ -5,9 +5,9 @@ use zrml_swaps::mock::{ExtBuilder, Origin, Swaps};
 
 use utils::ExactAssetAmountData;
 mod utils;
-use orml_traits::MultiCurrency;
+use orml_traits::currency::MultiCurrency;
 use utils::construct_asset;
-use zrml_swaps::mock::Shares;
+use zrml_swaps::mock::AssetManager;
 
 fuzz_target!(|data: ExactAssetAmountData| {
     let mut ext = ExtBuilder::default().build();
@@ -15,7 +15,7 @@ fuzz_target!(|data: ExactAssetAmountData| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
-            let _ = Shares::deposit(
+            let _ = AssetManager::deposit(
                 construct_asset(*a),
                 &data.pool_creation.origin,
                 // In order to successfully join the pool, data.asset_amount more tokens needed

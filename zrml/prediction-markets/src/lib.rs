@@ -84,14 +84,11 @@ mod pallet {
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{
-            Currency, EnsureOrigin, ExistenceRequirement, Get, Hooks, Imbalance, IsType,
-            NamedReservableCurrency, OnUnbalanced, StorageVersion,
-        },
+        traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use orml_traits::MultiCurrency;
+    use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
@@ -99,7 +96,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::{PmPalletId, MILLISECS_PER_BLOCK},
-        traits::{DisputeApi, Swaps, ZeitgeistMultiReservableCurrency},
+        traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
@@ -114,15 +111,12 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
+    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
     pub(crate) type TimeFrame = u64;
-    pub(crate) type BalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-    pub(crate) type CurrencyOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    type NegativeImbalanceOf<T> =
-        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
@@ -163,7 +157,12 @@ mod pallet {
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
             let slash_market_creator = |amount| {
-                CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, &market.creator, amount);
+                T::AssetManager::slash_reserved_named(
+                    &RESERVE_ID,
+                    Asset::Ztg,
+                    &market.creator,
+                    amount,
+                );
             };
             if market_status == MarketStatus::Proposed {
                 slash_market_creator(T::AdvisoryBond::get());
@@ -178,16 +177,28 @@ mod pallet {
             }
 
             // Delete market's outcome assets, clear market and delete pool if necessary.
-            let mut destroy_asset = |asset: Asset<_>| -> usize {
-                let (total_accounts, accounts) = T::Shares::accounts_by_currency_id(asset);
-                share_accounts = share_accounts.saturating_add(accounts.len());
-                T::Shares::destroy_all(asset, accounts.iter().cloned());
-                total_accounts
+            let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
+                if let Ok((total_accounts, accounts)) =
+                    T::AssetManager::accounts_by_currency_id(asset)
+                {
+                    share_accounts = share_accounts.saturating_add(accounts.len());
+                    let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
+                    Some(total_accounts)
+                } else {
+                    // native currency case
+                    None
+                }
             };
             for asset in outcome_assets.into_iter() {
-                total_accounts = destroy_asset(asset);
+                if let Some(total) = destroy_asset(asset) {
+                    total_accounts = total;
+                }
             }
-            CurrencyOf::<T>::slash(&market_account, CurrencyOf::<T>::free_balance(&market_account));
+            T::AssetManager::slash(
+                Asset::Ztg,
+                &market_account,
+                T::AssetManager::free_balance(Asset::Ztg, &market_account),
+            );
             if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
                 T::Swaps::destroy_pool(pool_id)?;
                 T::MarketCommons::remove_market_pool(&market_id)?;
@@ -301,7 +312,12 @@ mod pallet {
                     }
                 }
 
-                CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &m.creator, T::AdvisoryBond::get());
+                T::AssetManager::unreserve_named(
+                    &RESERVE_ID,
+                    Asset::Ztg,
+                    &m.creator,
+                    T::AdvisoryBond::get(),
+                );
                 Ok(())
             })?;
 
@@ -351,8 +367,9 @@ mod pallet {
             );
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
-            CurrencyOf::<T>::reserve_named(
+            T::AssetManager::reserve_named(
                 &RESERVE_ID,
+                Asset::Ztg,
                 &who,
                 default_dispute_bond::<T>(disputes.len()),
             )?;
@@ -398,6 +415,7 @@ mod pallet {
         /// * `metadata`: A hash pointer to the metadata of the market.
         /// * `market_type`: The type of the market.
         /// * `dispute_mechanism`: The market dispute mechanism.
+        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
@@ -420,6 +438,7 @@ mod pallet {
             metadata: MultiHash,
             market_type: MarketType,
             dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
         ) -> DispatchResultWithPostInfo {
@@ -447,6 +466,7 @@ mod pallet {
             let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liquidity(
                 origin,
                 market_id,
+                swap_fee,
                 amount,
                 weights.clone(),
             )?
@@ -502,7 +522,12 @@ mod pallet {
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
+                    T::AssetManager::reserve_named(
+                        &RESERVE_ID,
+                        Asset::Ztg,
+                        &sender,
+                        required_bond,
+                    )?;
 
                     match scoring_rule {
                         ScoringRule::CPMM => MarketStatus::Active,
@@ -511,7 +536,12 @@ mod pallet {
                 }
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
-                    CurrencyOf::<T>::reserve_named(&RESERVE_ID, &sender, required_bond)?;
+                    T::AssetManager::reserve_named(
+                        &RESERVE_ID,
+                        Asset::Ztg,
+                        &sender,
+                        required_bond,
+                    )?;
                     MarketStatus::Proposed
                 }
             };
@@ -562,6 +592,7 @@ mod pallet {
         /// # Arguments
         ///
         /// * `market_id`: The id of the market.
+        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
@@ -581,6 +612,7 @@ mod pallet {
         pub fn deploy_swap_pool_and_additional_liquidity(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
         ) -> DispatchResultWithPostInfo {
@@ -589,7 +621,7 @@ mod pallet {
                 .actual_weight
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weights_len = weights.len();
-            Self::deploy_swap_pool_for_market(origin, market_id, amount, weights)?;
+            Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?;
             Ok(Some(weight_bcs.saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
                 weights_len.saturated_into(),
             )))
@@ -603,6 +635,7 @@ mod pallet {
         /// # Arguments
         ///
         /// * `market_id`: The id of the market.
+        /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
@@ -614,6 +647,7 @@ mod pallet {
         pub fn deploy_swap_pool_for_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
+            #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             mut weights: Vec<u128>,
         ) -> DispatchResult {
@@ -635,7 +669,7 @@ mod pallet {
                 base_asset,
                 market_id,
                 ScoringRule::CPMM,
-                Some(Zero::zero()),
+                Some(swap_fee),
                 Some(amount),
                 Some(weights),
             )?;
@@ -669,14 +703,16 @@ mod pallet {
             let winning_assets = match resolved_outcome {
                 OutcomeReport::Categorical(category_index) => {
                     let winning_currency_id = Asset::CategoricalOutcome(market_id, category_index);
-                    let winning_balance = T::Shares::free_balance(winning_currency_id, &sender);
+                    let winning_balance =
+                        T::AssetManager::free_balance(winning_currency_id, &sender);
 
                     ensure!(winning_balance > BalanceOf::<T>::zero(), Error::<T>::NoWinningBalance);
 
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        CurrencyOf::<T>::free_balance(&market_account) >= winning_balance,
+                        T::AssetManager::free_balance(Asset::Ztg, &market_account)
+                            >= winning_balance,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
 
@@ -685,8 +721,8 @@ mod pallet {
                 OutcomeReport::Scalar(value) => {
                     let long_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Long);
                     let short_currency_id = Asset::ScalarOutcome(market_id, ScalarPosition::Short);
-                    let long_balance = T::Shares::free_balance(long_currency_id, &sender);
-                    let short_balance = T::Shares::free_balance(short_currency_id, &sender);
+                    let long_balance = T::AssetManager::free_balance(long_currency_id, &sender);
+                    let short_balance = T::AssetManager::free_balance(short_currency_id, &sender);
 
                     ensure!(
                         long_balance > BalanceOf::<T>::zero()
@@ -729,7 +765,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        CurrencyOf::<T>::free_balance(&market_account)
+                        T::AssetManager::free_balance(Asset::Ztg, &market_account)
                             >= long_payout + short_payout,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -743,18 +779,13 @@ mod pallet {
 
             for (currency_id, payout, balance) in winning_assets {
                 // Destroy the shares.
-                T::Shares::slash(currency_id, &sender, balance);
+                T::AssetManager::slash(currency_id, &sender, balance);
 
                 // Pay out the winner.
-                let remaining_bal = CurrencyOf::<T>::free_balance(&market_account);
+                let remaining_bal = T::AssetManager::free_balance(Asset::Ztg, &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
-                CurrencyOf::<T>::transfer(
-                    &market_account,
-                    &sender,
-                    actual_payout,
-                    ExistenceRequirement::AllowDeath,
-                )?;
+                T::AssetManager::transfer(Asset::Ztg, &market_account, &sender, actual_payout)?;
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
                 if balance != <BalanceOf<T>>::zero() {
@@ -883,7 +914,7 @@ mod pallet {
 
             let market_account = Self::market_account(market_id);
             ensure!(
-                CurrencyOf::<T>::free_balance(&market_account) >= amount,
+                T::AssetManager::free_balance(Asset::Ztg, &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
             );
 
@@ -894,22 +925,17 @@ mod pallet {
                 // Ensures that the sender has sufficient amount of each
                 // share in the set.
                 ensure!(
-                    T::Shares::free_balance(*asset, &sender) >= amount,
+                    T::AssetManager::free_balance(*asset, &sender) >= amount,
                     Error::<T>::InsufficientShareBalance,
                 );
             }
 
             // write last.
             for asset in assets.iter() {
-                T::Shares::slash(*asset, &sender, amount);
+                T::AssetManager::slash(*asset, &sender, amount);
             }
 
-            CurrencyOf::<T>::transfer(
-                &market_account,
-                &sender,
-                amount,
-                ExistenceRequirement::AllowDeath,
-            )?;
+            T::AssetManager::transfer(Asset::Ztg, &market_account, &sender, amount)?;
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
@@ -1006,11 +1032,11 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
-        /// Shares
-        type Shares: ZeitgeistMultiReservableCurrency<
+        /// Shares of outcome assets and native currency
+        type AssetManager: ZeitgeistAssetManager<
             Self::AccountId,
-            Balance = BalanceOf<Self>,
             CurrencyId = Asset<MarketIdOf<Self>>,
+            ReserveIdentifier = [u8; 8],
         >;
 
         /// The module identifier.
@@ -1038,9 +1064,6 @@ mod pallet {
             Moment = MomentOf<Self>,
             Origin = Self::Origin,
         >;
-
-        /// Slash
-        type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
         /// Swaps pallet API
         type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
@@ -1346,23 +1369,21 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
-            ensure!(CurrencyOf::<T>::free_balance(&who) >= amount, Error::<T>::NotEnoughBalance);
+            ensure!(
+                T::AssetManager::free_balance(Asset::Ztg, &who) >= amount,
+                Error::<T>::NotEnoughBalance
+            );
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             Self::ensure_market_is_active(&market)?;
 
             let market_account = Self::market_account(market_id);
-            CurrencyOf::<T>::transfer(
-                &who,
-                &market_account,
-                amount,
-                ExistenceRequirement::KeepAlive,
-            )?;
+            T::AssetManager::transfer(Asset::Ztg, &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {
-                T::Shares::deposit(*asset, &who, amount)?;
+                T::AssetManager::deposit(*asset, &who, amount)?;
             }
 
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
@@ -1378,10 +1399,18 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
-            let (imbalance, _) =
-                CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, creator, T::AdvisoryBond::get());
-            T::Slash::on_unbalanced(imbalance);
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, creator, T::OracleBond::get());
+            T::AssetManager::slash_reserved_named(
+                &RESERVE_ID,
+                Asset::Ztg,
+                creator,
+                T::AdvisoryBond::get(),
+            );
+            T::AssetManager::unreserve_named(
+                &RESERVE_ID,
+                Asset::Ztg,
+                creator,
+                T::OracleBond::get(),
+            );
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketRejected(*market_id));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
@@ -1394,8 +1423,18 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, creator, T::AdvisoryBond::get());
-            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, creator, T::OracleBond::get());
+            T::AssetManager::unreserve_named(
+                &RESERVE_ID,
+                Asset::Ztg,
+                creator,
+                T::AdvisoryBond::get(),
+            );
+            T::AssetManager::unreserve_named(
+                &RESERVE_ID,
+                Asset::Ztg,
+                creator,
+                T::OracleBond::get(),
+            );
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketExpired(*market_id));
             Ok(T::WeightInfo::handle_expired_advised_market())
@@ -1565,10 +1604,12 @@ mod pallet {
                                 return 0;
                             }
                             let (total_accounts, accounts) =
-                                T::Shares::accounts_by_currency_id(asset);
+                                T::AssetManager::accounts_by_currency_id(asset)
+                                    .unwrap_or((0usize, vec![]));
                             total_asset_accounts =
                                 total_asset_accounts.saturating_add(accounts.len());
-                            T::Shares::destroy_all(asset, accounts.iter().cloned());
+
+                            let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
                             total_accounts
                         } else {
                             0
@@ -1620,8 +1661,9 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
-                CurrencyOf::<T>::unreserve_named(
+                T::AssetManager::unreserve_named(
                     &RESERVE_ID,
+                    Asset::Ztg,
                     &market.creator,
                     T::ValidityBond::get(),
                 );
@@ -1636,20 +1678,30 @@ mod pallet {
                 MarketStatus::Reported => {
                     // the oracle bond gets returned if the reporter was the oracle
                     if report.by == market.oracle {
-                        CurrencyOf::<T>::unreserve_named(
+                        T::AssetManager::unreserve_named(
                             &RESERVE_ID,
+                            Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
-                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                        let excess = T::AssetManager::slash_reserved_named(
                             &RESERVE_ID,
+                            Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
                         );
+                        // deposit only to the real reporter what actually was slashed
+                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
 
-                        // give it to the real reporter
-                        CurrencyOf::<T>::resolve_creating(&report.by, imbalance);
+                        if let Err(err) =
+                            T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
+                        {
+                            log::warn!(
+                                "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
+                                err
+                            );
+                        }
                     }
 
                     report.outcome.clone()
@@ -1673,53 +1725,75 @@ mod pallet {
 
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
-                    let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
+                    let mut overall_imbalance = BalanceOf::<T>::zero();
 
                     // If the oracle reported right, return the OracleBond, otherwise slash it to
                     // pay the correct reporters.
                     if report.outcome == resolved_outcome {
-                        CurrencyOf::<T>::unreserve_named(
+                        T::AssetManager::unreserve_named(
                             &RESERVE_ID,
+                            Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
-                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                        let excess = T::AssetManager::slash_reserved_named(
                             &RESERVE_ID,
+                            Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
                         );
 
-                        overall_imbalance.subsume(imbalance);
+                        // negative_imbalance is the actual slash value (excess should be zero)
+                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
+                        overall_imbalance = overall_imbalance.saturating_add(negative_imbalance);
                     }
 
                     for (i, dispute) in disputes.iter().enumerate() {
                         let actual_bond = default_dispute_bond::<T>(i);
                         if dispute.outcome == resolved_outcome {
-                            CurrencyOf::<T>::unreserve_named(&RESERVE_ID, &dispute.by, actual_bond);
-
-                            correct_reporters.push(dispute.by.clone());
-                        } else {
-                            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                            T::AssetManager::unreserve_named(
                                 &RESERVE_ID,
+                                Asset::Ztg,
                                 &dispute.by,
                                 actual_bond,
                             );
-                            overall_imbalance.subsume(imbalance);
+
+                            correct_reporters.push(dispute.by.clone());
+                        } else {
+                            let excess = T::AssetManager::slash_reserved_named(
+                                &RESERVE_ID,
+                                Asset::Ztg,
+                                &dispute.by,
+                                actual_bond,
+                            );
+
+                            // negative_imbalance is the actual slash value (excess should be zero)
+                            let negative_imbalance = actual_bond.saturating_sub(excess);
+                            overall_imbalance =
+                                overall_imbalance.saturating_add(negative_imbalance);
                         }
                     }
 
                     // Fold all the imbalances into one and reward the correct reporters. The
                     // number of correct reporters might be zero if the market defaults to the
                     // report after abandoned dispute. In that case, the rewards remain slashed.
-                    if let Some(reward_per_each) = overall_imbalance
-                        .peek()
-                        .checked_div(&correct_reporters.len().saturated_into())
+                    if let Some(reward_per_each) =
+                        overall_imbalance.checked_div(&correct_reporters.len().saturated_into())
                     {
                         for correct_reporter in &correct_reporters {
-                            let (amount, leftover) = overall_imbalance.split(reward_per_each);
-                            CurrencyOf::<T>::resolve_creating(correct_reporter, amount);
-                            overall_imbalance = leftover;
+                            let reward = overall_imbalance.min(reward_per_each); // *Should* always be equal to `reward_per_each`
+                            overall_imbalance = overall_imbalance.saturating_sub(reward);
+
+                            if let Err(err) =
+                                T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
+                            {
+                                log::warn!(
+                                    "[PredictionMarkets] Cannot deposit to the correct reporter. \
+                                     error: {:?}",
+                                    err
+                                );
+                            }
                         }
                     }
 
@@ -1852,16 +1926,18 @@ mod pallet {
                                         if m.creation == MarketCreation::Permissionless {
                                             let required_bond =
                                                 T::ValidityBond::get() + T::OracleBond::get();
-                                            CurrencyOf::<T>::unreserve_named(
+                                            T::AssetManager::unreserve_named(
                                                 &RESERVE_ID,
+                                                Asset::Ztg,
                                                 &m.creator,
                                                 required_bond,
                                             );
                                         } else if m.creation == MarketCreation::Advised {
                                             // AdvisoryBond was already returned when the market
                                             // was approved. Approval is inevitable to reach this.
-                                            CurrencyOf::<T>::unreserve_named(
+                                            T::AssetManager::unreserve_named(
                                                 &RESERVE_ID,
+                                                Asset::Ztg,
                                                 &m.creator,
                                                 T::OracleBond::get(),
                                             );
