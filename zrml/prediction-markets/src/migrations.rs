@@ -109,7 +109,7 @@ mod tests {
     fn test_on_runtime_upgrade_with_sample_markets() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
-            let _ = Currency::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
+            let _ = AssetManager::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
 
             let short_time: MomentOf<Runtime> = (5 * MILLISECS_PER_BLOCK).into();
 

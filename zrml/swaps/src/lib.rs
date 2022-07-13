@@ -63,7 +63,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::BASE,
-        traits::{MarketId, Swaps, ZeitgeistMultiReservableCurrency},
+        traits::{MarketId, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
             ScoringRule, SerdeWrapper,
@@ -80,8 +80,9 @@ mod pallet {
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
-    pub(crate) type BalanceOf<T> =
-        <<T as Config>::Shares as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -139,7 +140,7 @@ mod pallet {
                 transfer_asset: |amount, amount_bound, asset| {
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
-                    T::Shares::transfer(asset, &pool_account_id, &who, amount)?;
+                    T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
                     Ok(())
                 },
                 transfer_pool: || {
@@ -199,7 +200,7 @@ mod pallet {
                         real_amount = subsidy;
                     }
 
-                    let missing = T::Shares::unreserve(base_asset, &who, real_amount);
+                    let missing = T::AssetManager::unreserve(base_asset, &who, real_amount);
                     transferred = real_amount.saturating_sub(missing);
                     let zero_balance = <BalanceOf<T>>::zero();
 
@@ -382,7 +383,7 @@ mod pallet {
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
                     ensure!(amount <= amount_bound, Error::<T>::LimitIn);
-                    T::Shares::transfer(asset, &who, &pool_account_id, amount)?;
+                    T::AssetManager::transfer(asset, &who, &pool_account_id, amount)?;
                     T::LiquidityMining::add_shares(who.clone(), pool.market_id, amount);
                     Ok(())
                 },
@@ -422,7 +423,7 @@ mod pallet {
                     Error::<T>::InvalidScoringRule
                 );
                 let base_asset = pool.base_asset;
-                T::Shares::reserve(base_asset, &who, amount)?;
+                T::AssetManager::reserve(base_asset, &who, amount)?;
 
                 let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
                 <SubsidyProviders<T>>::try_mutate::<_, _, _, DispatchError, _>(
@@ -731,8 +732,8 @@ mod pallet {
             >,
         >;
 
-        /// The custom `MultiReservableCurrency` type
-        type Shares: ZeitgeistMultiReservableCurrency<
+        /// Shares of outcome assets and native currency
+        type AssetManager: ZeitgeistAssetManager<
             Self::AccountId,
             CurrencyId = Asset<Self::MarketId>,
         >;
@@ -969,17 +970,17 @@ mod pallet {
 
             // Total pool shares
             let shares_id = Self::pool_shares_id(pool_id);
-            let total_pool_shares = T::Shares::total_issuance(shares_id);
+            let total_pool_shares = T::AssetManager::total_issuance(shares_id);
 
             // Total AMM balance
             let pool_account = Self::pool_account_id(pool_id);
-            let total_amm_funds = T::Shares::free_balance(base_asset, &pool_account);
+            let total_amm_funds = T::AssetManager::free_balance(base_asset, &pool_account);
 
             // Total winning shares
             // The pool account still holds the winning asset, burn it.
-            let free_balance = T::Shares::free_balance(winning_asset, &pool_account);
-            let _ = T::Shares::withdraw(winning_asset, &pool_account, free_balance);
-            let total_winning_assets = T::Shares::total_issuance(winning_asset);
+            let free_balance = T::AssetManager::free_balance(winning_asset, &pool_account);
+            let _ = T::AssetManager::withdraw(winning_asset, &pool_account, free_balance);
+            let total_winning_assets = T::AssetManager::total_issuance(winning_asset);
 
             // Profit = AMM balance - total winning shares
             let amm_profit_checked = total_amm_funds.checked_sub(&total_winning_assets);
@@ -1002,7 +1003,7 @@ mod pallet {
 
             // Iterate through every share holder and exchange shares for rewards.
             let (total_accounts_num, share_accounts) =
-                T::Shares::accounts_by_currency_id(shares_id);
+                T::AssetManager::accounts_by_currency_id(shares_id).unwrap_or((0usize, vec![]));
             let share_accounts_num = share_accounts.len();
 
             for share_holder in share_accounts {
@@ -1021,7 +1022,7 @@ mod pallet {
                 // Same for bmul.
                 let holder_reward = holder_reward_unadjusted.saturating_sub(1);
 
-                let transfer_result = T::Shares::transfer(
+                let transfer_result = T::AssetManager::transfer(
                     base_asset,
                     &pool_account,
                     &share_holder_account,
@@ -1030,7 +1031,8 @@ mod pallet {
 
                 // Should be impossible.
                 if let Err(err) = transfer_result {
-                    let current_amm_holding = T::Shares::free_balance(base_asset, &pool_account);
+                    let current_amm_holding =
+                        T::AssetManager::free_balance(base_asset, &pool_account);
                     log::error!(
                         "[Swaps] The AMM failed to pay out the share holder reward.
                         market_id: {:?}, pool_id: {:?}, current AMM holding: {:?},
@@ -1044,7 +1046,7 @@ mod pallet {
                     );
 
                     if current_amm_holding < holder_reward.saturated_into() {
-                        let _ = T::Shares::transfer(
+                        let _ = T::AssetManager::transfer(
                             base_asset,
                             &pool_account,
                             &share_holder_account,
@@ -1056,12 +1058,16 @@ mod pallet {
                 // We can use the lightweight withdraw here, since pool shares are not reserved.
                 // We can ignore the result since the balance to transfer is the query result of
                 // the free balance (always sufficient).
-                let _ = T::Shares::withdraw(shares_id, &share_holder_account, share_holder_balance);
+                let _ = T::AssetManager::withdraw(
+                    shares_id,
+                    &share_holder_account,
+                    share_holder_balance,
+                );
             }
 
-            let remaining_pool_funds = T::Shares::free_balance(base_asset, &pool_account);
+            let remaining_pool_funds = T::AssetManager::free_balance(base_asset, &pool_account);
             // Transfer winner payout - Infallible since the balance was just read from storage.
-            let _ = T::Shares::transfer(
+            let _ = T::AssetManager::transfer(
                 base_asset,
                 &pool_account,
                 winner_payout_account,
@@ -1091,8 +1097,8 @@ mod pallet {
             let pool_account = Self::pool_account_id(pool_id);
 
             if pool.scoring_rule == ScoringRule::CPMM {
-                let balance_in = T::Shares::free_balance(asset_in, &pool_account);
-                let balance_out = T::Shares::free_balance(asset_out, &pool_account);
+                let balance_in = T::AssetManager::free_balance(asset_in, &pool_account);
+                let balance_out = T::AssetManager::free_balance(asset_out, &pool_account);
                 let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
                 let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
                 let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
@@ -1123,7 +1129,7 @@ mod pallet {
             let mut balance_out = <BalanceOf<T>>::zero();
 
             for asset in pool.assets.iter().filter(|asset| **asset != base_asset) {
-                let issuance = T::Shares::total_issuance(*asset);
+                let issuance = T::AssetManager::total_issuance(*asset);
 
                 if *asset == asset_in {
                     balance_in = issuance;
@@ -1174,9 +1180,9 @@ mod pallet {
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
             // Check that the account has at least as many free shares as we wish to burn!
-            T::Shares::ensure_can_withdraw(shares_id, from, amount)
+            T::AssetManager::ensure_can_withdraw(shares_id, from, amount)
                 .map_err(|_| Error::<T>::InsufficientBalance)?;
-            T::Shares::slash(shares_id, from, amount);
+            T::AssetManager::slash(shares_id, from, amount);
             Ok(())
         }
 
@@ -1209,7 +1215,7 @@ mod pallet {
             amount: BalanceOf<T>,
         ) -> DispatchResult {
             let shares_id = Self::pool_shares_id(pool_id);
-            T::Shares::deposit(shares_id, to, amount)
+            T::AssetManager::deposit(shares_id, to, amount)
         }
 
         pub(crate) fn pool_shares_id(pool_id: PoolId) -> Asset<T::MarketId> {
@@ -1394,7 +1400,7 @@ mod pallet {
                         )?;
 
                         for (asset, weight) in assets.iter().copied().zip(weights_unwrapped) {
-                            let free_balance = T::Shares::free_balance(asset, &who);
+                            let free_balance = T::AssetManager::free_balance(asset, &who);
                             ensure!(
                                 free_balance >= amount_unwrapped,
                                 Error::<T>::InsufficientBalance
@@ -1403,14 +1409,19 @@ mod pallet {
                             ensure!(weight <= T::MaxWeight::get(), Error::<T>::AboveMaximumWeight);
                             map.insert(asset, weight);
                             total_weight = total_weight.check_add_rslt(&weight)?;
-                            T::Shares::transfer(asset, &who, &pool_account, amount_unwrapped)?;
+                            T::AssetManager::transfer(
+                                asset,
+                                &who,
+                                &pool_account,
+                                amount_unwrapped,
+                            )?;
                         }
 
                         ensure!(
                             total_weight <= T::MaxTotalWeight::get(),
                             Error::<T>::MaxTotalWeight
                         );
-                        T::Shares::deposit(pool_shares_id, &who, amount_unwrapped)?;
+                        T::AssetManager::deposit(pool_shares_id, &who, amount_unwrapped)?;
 
                         let pool_status = PoolStatus::Active;
                         let total_subsidy = None;
@@ -1478,12 +1489,14 @@ mod pallet {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
             for asset in pool.assets.into_iter() {
-                let amount = T::Shares::free_balance(asset, &pool_account);
-                T::Shares::slash(asset, &pool_account, amount);
+                let amount = T::AssetManager::free_balance(asset, &pool_account);
+                T::AssetManager::slash(asset, &pool_account, amount);
             }
             let pool_share_id = Self::pool_shares_id(pool_id);
-            let (_, liquidity_providers) = T::Shares::accounts_by_currency_id(pool_share_id);
-            T::Shares::destroy_all(pool_share_id, liquidity_providers.iter().cloned());
+            let (_, liquidity_providers) =
+                T::AssetManager::accounts_by_currency_id(pool_share_id).unwrap_or((0usize, vec![]));
+            let _ =
+                T::AssetManager::destroy_all(pool_share_id, liquidity_providers.iter().cloned());
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
             // TODO(#603): Fix weight calculation.
@@ -1508,7 +1521,7 @@ mod pallet {
 
                 let mut providers_and_pool_shares = vec![];
                 for provider in <SubsidyProviders<T>>::drain_prefix(pool_id) {
-                    T::Shares::unreserve(base_asset, &provider.0, provider.1);
+                    T::AssetManager::unreserve(base_asset, &provider.0, provider.1);
                     total_providers = total_providers.saturating_add(1);
                     providers_and_pool_shares.push(provider);
                 }
@@ -1565,21 +1578,21 @@ mod pallet {
                         let subsidy = provider.1;
 
                         if !account_created {
-                            T::Shares::unreserve(base_asset, &provider_address, subsidy);
-                            T::Shares::transfer(
+                            T::AssetManager::unreserve(base_asset, &provider_address, subsidy);
+                            T::AssetManager::transfer(
                                 base_asset,
                                 &provider_address,
                                 &pool_account,
                                 subsidy,
                             )?;
                             total_balance = subsidy;
-                            T::Shares::deposit(pool_shares_id, &provider_address, subsidy)?;
+                            T::AssetManager::deposit(pool_shares_id, &provider_address, subsidy)?;
                             account_created = true;
                             providers_and_pool_shares.push((provider_address, subsidy));
                             continue;
                         }
 
-                        let remaining = T::Shares::repatriate_reserved(
+                        let remaining = T::AssetManager::repatriate_reserved(
                             base_asset,
                             &provider_address,
                             &pool_account,
@@ -1600,7 +1613,7 @@ mod pallet {
                             );
                         }
 
-                        T::Shares::deposit(pool_shares_id, &provider_address, transferred)?;
+                        T::AssetManager::deposit(pool_shares_id, &provider_address, transferred)?;
                         total_balance = total_balance.saturating_add(transferred);
                         providers_and_pool_shares.push((provider_address, transferred));
                     }
@@ -1617,7 +1630,11 @@ mod pallet {
                         )?;
 
                     for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                        T::Shares::deposit(*asset, &pool_account, outstanding_assets_per_event)?;
+                        T::AssetManager::deposit(
+                            *asset,
+                            &pool_account,
+                            outstanding_assets_per_event,
+                        )?;
                     }
 
                     pool.pool_status = PoolStatus::Active;
@@ -1869,7 +1886,7 @@ mod pallet {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             ensure!(
-                T::Shares::free_balance(asset_in, &who) >= asset_amount_in,
+                T::AssetManager::free_balance(asset_in, &who) >= asset_amount_in,
                 Error::<T>::InsufficientBalance
             );
             ensure!(
@@ -1881,8 +1898,10 @@ mod pallet {
                 asset_amounts: || {
                     let asset_amount_out = match pool.scoring_rule {
                         ScoringRule::CPMM => {
-                            let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
-                            let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
+                            let balance_out =
+                                T::AssetManager::free_balance(asset_out, &pool_account_id);
+                            let balance_in =
+                                T::AssetManager::free_balance(asset_in, &pool_account_id);
                             ensure!(
                                 asset_amount_in
                                     <= bmul(
@@ -1915,7 +1934,7 @@ mod pallet {
                             );
 
                             for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                                let total_amount = T::Shares::total_issuance(*asset);
+                                let total_amount = T::AssetManager::total_issuance(*asset);
                                 outstanding_before.push(total_amount);
 
                                 if *asset == asset_in {
@@ -1974,7 +1993,7 @@ mod pallet {
             ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing,);
             let params = SwapExactAmountParams {
                 asset_amounts: || {
-                    let balance_out = T::Shares::free_balance(asset_out, &pool_account_id);
+                    let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
                     let asset_amount_in = match pool.scoring_rule {
                         ScoringRule::CPMM => {
                             ensure!(
@@ -1987,7 +2006,8 @@ mod pallet {
                                 Error::<T>::MaxOutRatio,
                             );
 
-                            let balance_in = T::Shares::free_balance(asset_in, &pool_account_id);
+                            let balance_in =
+                                T::AssetManager::free_balance(asset_in, &pool_account_id);
                             crate::math::calc_in_given_out(
                                 balance_in.saturated_into(),
                                 Self::pool_weight_rslt(&pool, &asset_in)?,
@@ -2011,7 +2031,7 @@ mod pallet {
                             );
 
                             for asset in pool.assets.iter().filter(|e| **e != base_asset) {
-                                let total_amount = T::Shares::total_issuance(*asset);
+                                let total_amount = T::AssetManager::total_issuance(*asset);
                                 outstanding_before.push(total_amount);
 
                                 if *asset == asset_out {

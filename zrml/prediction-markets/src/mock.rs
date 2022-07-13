@@ -64,7 +64,7 @@ construct_runtime!(
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
-        Currency: orml_currencies::{Call, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
@@ -101,9 +101,8 @@ impl crate::Config for Runtime {
     type PalletId = PmPalletId;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
-    type Shares = Tokens;
+    type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
-    type Slash = ();
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -155,6 +154,8 @@ impl orml_tokens::Config for Runtime {
     type OnDust = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Runtime {
@@ -252,7 +253,7 @@ impl zrml_swaps::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currency;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
