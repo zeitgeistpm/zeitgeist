@@ -2265,7 +2265,7 @@ fn open_pool_fails_if_pool_is_not_closed(pool_status: PoolStatus) {
             pool.pool_status = pool_status;
             Ok(())
         }));
-        assert_noop!(Swaps::open_pool(0), crate::Error::<Runtime>::InvalidStateTransition);
+        assert_noop!(Swaps::open_pool(pool_id), crate::Error::<Runtime>::InvalidStateTransition);
     });
 }
 
