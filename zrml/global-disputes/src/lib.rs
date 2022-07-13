@@ -230,7 +230,14 @@ mod pallet {
             let (index, _) = <DisputeVotes<T>>::drain_prefix(market_id).fold(
                 (0u32, <BalanceOf<T>>::zero()),
                 |(i0, b0), (i1, b1)| {
-                    if b0 > b1 { (i0, b0) } else { (i1, b1) }
+                    if b0 > b1 {
+                        (i0, b0)
+                    } else if b0 == b1 {
+                        // if the vote balance is the same on multiple outcomes, the in time last should be taken, because it's the one with the most dispute bond and less voting time
+                        (i0.max(i1), b0)
+                    } else {
+                        (i1, b1)
+                    }
                 },
             );
 
@@ -252,6 +259,7 @@ mod pallet {
             dispute_index: u32,
             vote_balance: BalanceOf<T>,
         ) -> Weight {
+            // TODO(#603) fix weight calc
             if <DisputeVotes<T>>::get(market_id, dispute_index).is_none() {
                 <DisputeVotes<T>>::insert(market_id, dispute_index, vote_balance);
                 return T::DbWeight::get()
