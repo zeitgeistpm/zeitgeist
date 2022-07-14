@@ -370,6 +370,10 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let pool = Self::pool_by_id(pool_id)?;
+            ensure!(
+                matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                Error::<T>::InvalidPoolStatus,
+            );
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
 
             let params = PoolParams {
@@ -764,6 +768,8 @@ mod pallet {
         InvalidAmountArgument,
         /// Could not create CPMM pool since no fee was supplied.
         InvalidFeeArgument,
+        /// Dispatch called on pool with invalid status.
+        InvalidPoolStatus,
         /// A function that is only valid for pools with specific scoring rules was called for a
         /// pool with another scoring rule.
         InvalidScoringRule,

@@ -515,51 +515,43 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
     });
 }
 
-#[test]
-fn single_asset_operations_and_swaps_fail_on_closed_cpmm_pools() {
+#[test_case(PoolStatus::Initialized; "Initialized")]
+#[test_case(PoolStatus::Closed; "Closed")]
+#[test_case(PoolStatus::Clean; "Clean")]
+fn single_asset_operations_and_swaps_fail_on_invalid_status_before_clean(status: PoolStatus) {
     ExtBuilder::default().build().execute_with(|| {
-        use zeitgeist_primitives::traits::Swaps as _;
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
+        let pool_id = 0;
         // For this test, we need to give Alice some pool shares, as well. We don't do this in
         // `create_initial_pool_...` so that there are exacly 100 pool shares, making computations
         // in other tests easier.
-        let _ = Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25);
-        assert_ok!(Swaps::pool_join(alice_signed(), 0, _1, vec!(_1, _1, _1, _1),));
+        assert_ok!(Currencies::deposit(Swaps::pool_shares_id(0), &ALICE, _25));
+        assert_ok!(Swaps::mutate_pool(pool_id, |pool| {
+            pool.pool_status = status;
+            Ok(())
+        }));
 
-        assert_ok!(Swaps::close_pool(0));
-        assert_ok!(Swaps::clean_up_pool(
-            &MarketType::Categorical(0),
-            0,
-            &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
-                idx
-            } else {
-                0
-            }),
-            &Default::default()
-        ));
-
-        assert_ok!(Swaps::pool_exit(alice_signed(), 0, _1, vec!(_1_2, _1_2)));
         assert_noop!(
-            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, _1, _2),
+            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), pool_id, ASSET_A, _1, _2),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
-            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, _1, _1_2),
+            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), pool_id, ASSET_A, _1, _1_2),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
-            Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_E, 1, 1),
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), pool_id, ASSET_E, 1, 1),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         assert_noop!(
-            Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_E, 1, 1),
+            Swaps::pool_join_with_exact_pool_amount(alice_signed(), pool_id, ASSET_E, 1, 1),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         assert_ok!(Currencies::deposit(ASSET_A, &ALICE, u64::MAX.into()));
         assert_noop!(
             Swaps::swap_exact_amount_in(
                 alice_signed(),
-                0,
+                pool_id,
                 ASSET_A,
                 u64::MAX.into(),
                 ASSET_B,
@@ -571,7 +563,85 @@ fn single_asset_operations_and_swaps_fail_on_closed_cpmm_pools() {
         assert_noop!(
             Swaps::swap_exact_amount_out(
                 alice_signed(),
-                0,
+                pool_id,
+                ASSET_A,
+                Some(u64::MAX.into()),
+                ASSET_B,
+                _1,
+                Some(_1),
+            ),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+    });
+}
+
+#[test]
+fn pool_join_fails_if_pool_is_closed() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
+        let pool_id = 0;
+        assert_ok!(Swaps::close_pool(pool_id));
+        assert_noop!(
+            Swaps::pool_join(Origin::signed(ALICE), pool_id, _1, vec![_1, _1, _1, _1]),
+            crate::Error::<Runtime>::InvalidPoolStatus,
+        );
+    });
+}
+
+#[test]
+fn most_operations_fail_if_pool_is_clean() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(0), true);
+        let pool_id = 0;
+        assert_ok!(Swaps::close_pool(pool_id));
+        assert_ok!(Swaps::clean_up_pool(
+            &MarketType::Categorical(0),
+            pool_id,
+            &OutcomeReport::Categorical(if let Asset::CategoricalOutcome(_, idx) = ASSET_A {
+                idx
+            } else {
+                0
+            }),
+            &Default::default()
+        ));
+
+        assert_noop!(
+            Swaps::pool_join(Origin::signed(ALICE), pool_id, _1, vec![_10]),
+            crate::Error::<Runtime>::InvalidPoolStatus,
+        );
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(alice_signed(), pool_id, ASSET_A, _1, _2),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::pool_exit_with_exact_pool_amount(alice_signed(), pool_id, ASSET_A, _1, _1_2),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::pool_join_with_exact_asset_amount(alice_signed(), pool_id, ASSET_E, 1, 1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::pool_join_with_exact_pool_amount(alice_signed(), pool_id, ASSET_E, 1, 1),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_ok!(Currencies::deposit(ASSET_A, &ALICE, u64::MAX.into()));
+        assert_noop!(
+            Swaps::swap_exact_amount_in(
+                alice_signed(),
+                pool_id,
+                ASSET_A,
+                u64::MAX.into(),
+                ASSET_B,
+                Some(_1),
+                Some(_1),
+            ),
+            crate::Error::<Runtime>::PoolIsNotActive
+        );
+        assert_noop!(
+            Swaps::swap_exact_amount_out(
+                alice_signed(),
+                pool_id,
                 ASSET_A,
                 Some(u64::MAX.into()),
                 ASSET_B,
