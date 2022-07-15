@@ -2294,8 +2294,7 @@ fn close_pool_fails_if_pool_does_not_exist() {
 #[test_case(PoolStatus::Closed; "closed")]
 #[test_case(PoolStatus::Clean; "clean")]
 #[test_case(PoolStatus::CollectingSubsidy; "collecting_subsidy")]
-#[test_case(PoolStatus::Initialized; "initialized")]
-fn close_pool_fails_if_pool_is_not_active(pool_status: PoolStatus) {
+fn close_pool_fails_if_pool_is_not_active_or_initialized(pool_status: PoolStatus) {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
         let pool_id = 0;

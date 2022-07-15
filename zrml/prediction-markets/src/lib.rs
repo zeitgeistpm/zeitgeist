@@ -193,6 +193,7 @@ mod pallet {
                 T::MarketCommons::remove_market_pool(&market_id)?;
             }
 
+            Self::clear_auto_open(&market_id)?;
             Self::clear_auto_close(&market_id)?;
             Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
@@ -236,6 +237,7 @@ mod pallet {
             T::CloseOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_market_is_active(&market)?;
+            Self::clear_auto_open(&market_id)?;
             Self::clear_auto_close(&market_id)?;
             Self::close_market(&market_id)?;
             Ok(())
@@ -821,6 +823,7 @@ mod pallet {
         ) -> DispatchResult {
             T::ApprovalOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
+            Self::clear_auto_open(&market_id)?;
             Self::clear_auto_close(&market_id)?;
             Self::do_reject_market(&market_id, market)?;
             Ok(())
@@ -1361,6 +1364,32 @@ mod pallet {
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.end);
                     MarketIdsPerCloseTimeFrame::<T>::mutate(&time_frame, |ids| {
+                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                    });
+                }
+            };
+            Ok(())
+        }
+
+        // Manually remove market from cache for auto open.
+        fn clear_auto_open(market_id: &MarketIdOf<T>) -> DispatchResult {
+            let market = T::MarketCommons::market(market_id)?;
+
+            // No-op if market isn't cached for auto open according to its state.
+            match market.status {
+                MarketStatus::Active | MarketStatus::Proposed => (),
+                _ => return Ok(()),
+            };
+
+            match market.period {
+                MarketPeriod::Block(range) => {
+                    MarketIdsPerOpenBlock::<T>::mutate(&range.start, |ids| {
+                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                    });
+                }
+                MarketPeriod::Timestamp(range) => {
+                    let time_frame = Self::calculate_time_frame_of_moment(range.start);
+                    MarketIdsPerOpenTimeFrame::<T>::mutate(&time_frame, |ids| {
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                     });
                 }
