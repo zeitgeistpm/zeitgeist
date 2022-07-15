@@ -646,7 +646,33 @@ mod pallet {
                 Some(amount),
                 Some(weights),
             )?;
-            T::Swaps::open_pool(pool_id)?;
+
+            // Open the pool now or cache it for later
+            match market.period {
+                MarketPeriod::Block(ref range) => {
+                    let current_block = <frame_system::Pallet<T>>::block_number();
+                    let open_block = range.start;
+                    if current_block < open_block {
+                        MarketIdsPerOpenBlock::<T>::try_mutate(&open_block, |ids| {
+                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+                        })?;
+                    } else {
+                        T::Swaps::open_pool(pool_id)?;
+                    }
+                }
+                MarketPeriod::Timestamp(ref range) => {
+                    let current_time_frame =
+                        Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+                    let open_time_frame = Self::calculate_time_frame_of_moment(range.start);
+                    if current_time_frame < open_time_frame {
+                        MarketIdsPerOpenTimeFrame::<T>::try_mutate(&open_time_frame, |ids| {
+                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+                        })?;
+                    } else {
+                        T::Swaps::open_pool(pool_id)?;
+                    }
+                }
+            };
 
             // This errors if a pool already exists!
             T::MarketCommons::insert_market_pool(market_id, pool_id)?;
@@ -1214,6 +1240,24 @@ mod pallet {
         Blake2_128Concat,
         MarketIdOf<T>,
         BoundedVec<MarketDispute<T::AccountId, T::BlockNumber>, T::MaxDisputes>,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
+    pub type MarketIdsPerOpenBlock<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::BlockNumber,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
+    pub type MarketIdsPerOpenTimeFrame<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        TimeFrame,
+        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
         ValueQuery,
     >;
 
