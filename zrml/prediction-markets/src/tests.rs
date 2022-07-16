@@ -2445,6 +2445,60 @@ fn authorized_correctly_resolves_disputed_market() {
 }
 
 #[test]
+fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 1;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..end),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            MarketDisputeMechanism::Authorized(FRED),
+            ScoringRule::CPMM,
+        ));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
+
+        run_to_block(end);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+        run_to_block(<frame_system::Pallet<Runtime>>::block_number() + 1);
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Disputed);
+
+        let charlie_reserved = Balances::reserved_balance(&CHARLIE);
+        assert_eq!(charlie_reserved, DisputeBond::get());
+
+        run_to_block(<frame_system::Pallet<Runtime>>::block_number() + DisputePeriod::get());
+        let market_after = MarketCommons::market(&0).unwrap();
+        assert_eq!(market_after.status, MarketStatus::Resolved);
+        let disputes = crate::Disputes::<Runtime>::get(&0);
+        assert_eq!(disputes.len(), 0);
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+
+        // Make sure rewards are right:
+        //
+        // - Bob reported "correctly" and in time, so Alice and Bob don't get slashed
+        // - Charlie started a dispute which was abandoned, hence he's slashed
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - charlie_reserved);
+        let alice_balance = Balances::free_balance(&ALICE);
+        assert_eq!(alice_balance, 1_000 * BASE);
+        let bob_balance = Balances::free_balance(&BOB);
+        assert_eq!(bob_balance, 1_000 * BASE);
+    });
+}
+
+#[test]
 fn approve_market_correctly_unreserves_advisory_bond() {
     ExtBuilder::default().build().execute_with(|| {
         assert_ok!(PredictionMarkets::create_market(
