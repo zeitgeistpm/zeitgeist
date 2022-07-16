@@ -8,7 +8,7 @@ use core::ops::{Range, RangeInclusive};
 use frame_support::{
     assert_err, assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchResult},
-    traits::{Get, NamedReservableCurrency},
+    traits::{Get, OnInitialize, NamedReservableCurrency},
 };
 use test_case::test_case;
 
@@ -1068,7 +1068,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
 }
 
 #[test]
-fn market_close_manager_skips_the_genesis_block_with_timestamp_zero() {
+fn on_initialize_skips_the_genesis_block() {
     // We ensure that a timestamp of zero will not be stored at genesis into LastTimeFrame storage.
     let end: Moment = (5 * MILLISECS_PER_BLOCK).into();
     ExtBuilder::default().build().execute_with(|| {
@@ -1085,31 +1085,18 @@ fn market_close_manager_skips_the_genesis_block_with_timestamp_zero() {
             vec![<Runtime as zrml_swaps::Config>::MinWeight::get(); category_count.into()],
         ));
 
-        let noop_mutation = |_: &crate::MarketIdOf<Runtime>,
-                             _: Market<
-            <Runtime as frame_system::Config>::AccountId,
-            <Runtime as frame_system::Config>::BlockNumber,
-            crate::MomentOf<Runtime>,
-        >|
-         -> DispatchResult { Ok(()) };
-
         // Blocknumber = 0 and timestamp = 0
         assert_eq!(Timestamp::get(), 0);
-        assert_ok!(PredictionMarkets::market_close_manager(0, noop_mutation));
-        assert_eq!(LastTimeFrame::<Runtime>::get(), None);
-
-        // Blocknumber != 0 and timestamp = 0
-        assert_eq!(Timestamp::get(), 0);
-        assert_ok!(PredictionMarkets::market_close_manager(1, noop_mutation));
+        PredictionMarkets::on_initialize(0);
         assert_eq!(LastTimeFrame::<Runtime>::get(), None);
 
         // Blocknumer = 0 and timestamp != 0
         Timestamp::set_timestamp(end);
-        assert_ok!(PredictionMarkets::market_close_manager(0, noop_mutation));
+        PredictionMarkets::on_initialize(0);
         assert_eq!(LastTimeFrame::<Runtime>::get(), None);
 
         // Blocknumer != 0 and timestamp != 0
-        assert_ok!(PredictionMarkets::market_close_manager(1, noop_mutation));
+        PredictionMarkets::on_initialize(1);
         assert_eq!(
             LastTimeFrame::<Runtime>::get(),
             Some(Timestamp::now() / crate::TimeFrame::from(MILLISECS_PER_BLOCK))

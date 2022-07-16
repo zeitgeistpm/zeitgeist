@@ -1205,11 +1205,42 @@ mod pallet {
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let _ = with_transaction(|| {
-                let close = Self::market_close_manager(now, |market_id, market| {
-                    let weight = Self::on_market_close(market_id, market)?;
-                    total_weight = total_weight.saturating_add(weight);
-                    Ok(())
-                });
+                // If we are at genesis the timestamp is undefined. No market can exist, we skip the
+                // evaluation. Without this check, new chains starting from genesis will hang up,
+                // since the loops in `market_open_manager` and `market_close_manager` below will
+                // run over an interval of 0 to the current time frame.
+                let current_time_frame =
+                    Self::calculate_time_frame_of_moment(T::MarketCommons::now());
+                if now == T::BlockNumber::zero() {
+                    return TransactionOutcome::Commit(Ok(()));
+                }
+
+                // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
+                // check all time frames since epoch.
+                let last_time_frame = LastTimeFrame::<T>::get()
+                    .unwrap_or_else(|| current_time_frame.saturating_sub(1));
+
+                let open = Self::market_open_manager(
+                    now,
+                    last_time_frame,
+                    current_time_frame,
+                    |market_id, market| {
+                        let weight = Self::on_market_open(market_id, market)?;
+                        total_weight = total_weight.saturating_add(weight);
+                        Ok(())
+                    },
+                );
+
+                let close = Self::market_close_manager(
+                    now,
+                    last_time_frame,
+                    current_time_frame,
+                    |market_id, market| {
+                        let weight = Self::on_market_close(market_id, market)?;
+                        total_weight = total_weight.saturating_add(weight);
+                        Ok(())
+                    },
+                );
 
                 let resolve = Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
@@ -1217,7 +1248,9 @@ mod pallet {
                     Ok(())
                 });
 
-                match close.and(resolve) {
+                LastTimeFrame::<T>::set(Some(current_time_frame));
+
+                match open.and(close).and(resolve) {
                     Err(err) => {
                         Self::deposit_event(Event::BadOnInitialize);
                         log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
@@ -1668,6 +1701,17 @@ mod pallet {
             Ok([total_accounts, total_asset_accounts, total_categories])
         }
 
+        pub(crate) fn open_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
+            // Is no-op if market has no pool. This should never happen, but it's safer to not
+            // error in this case.
+            let mut total_weight = T::DbWeight::get().reads(1); // (For the `market_pool` read)
+            if let Ok(pool_id) = T::MarketCommons::market_pool(market_id) {
+                let open_pool_weight = T::Swaps::open_pool(pool_id)?;
+                total_weight = total_weight.saturating_add(open_pool_weight);
+            }
+            Ok(total_weight)
+        }
+
         pub(crate) fn close_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
             T::MarketCommons::mutate_market(market_id, |market| {
                 ensure!(market.status == MarketStatus::Active, Error::<T>::InvalidMarketStatus);
@@ -1682,6 +1726,16 @@ mod pallet {
             Self::deposit_event(Event::MarketClosed(*market_id));
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             Ok(total_weight)
+        }
+
+        fn on_market_open(
+            market_id: &MarketIdOf<T>,
+            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+        ) -> Result<Weight, DispatchError> {
+            match market.status {
+                MarketStatus::Active => Self::open_market(market_id),
+                _ => Err(Error::<T>::InvalidMarketStatus.into()), // Should never occur!
+            }
         }
 
         /// Handle market state transitions at the end of its active phase.
@@ -2018,8 +2072,10 @@ mod pallet {
             Ok(())
         }
 
-        pub(crate) fn market_close_manager<F>(
-            now: T::BlockNumber,
+        pub(crate) fn market_open_manager<F>(
+            block_number: T::BlockNumber,
+            last_time_frame: TimeFrame,
+            current_time_frame: TimeFrame,
             mut mutation: F,
         ) -> DispatchResult
         where
@@ -2028,27 +2084,40 @@ mod pallet {
                 Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             ) -> DispatchResult,
         {
-            for market_id in MarketIdsPerCloseBlock::<T>::get(&now).iter() {
+            for market_id in MarketIdsPerOpenBlock::<T>::get(&block_number).iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
+            MarketIdsPerOpenBlock::<T>::remove(&block_number);
 
-            MarketIdsPerCloseBlock::<T>::remove(&now);
-
-            // If we are at genesis the timestamp is 0. No market can exist, we skip the evaluation.
-            // Without this check, new chains starting from genesis will hang up, since the loop
-            // below will run over an interval of 0 to the current time frame.
-            // We check the block number and the timestamp, since technically the timestamp is
-            // undefined at genesis.
-            let current_time_frame = Self::calculate_time_frame_of_moment(T::MarketCommons::now());
-            if current_time_frame == 0 || now == T::BlockNumber::zero() {
-                return Ok(());
+            for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
+                for market_id in MarketIdsPerOpenTimeFrame::<T>::get(&time_frame).iter() {
+                    let market = T::MarketCommons::market(market_id)?;
+                    mutation(market_id, market)?;
+                }
+                MarketIdsPerOpenTimeFrame::<T>::remove(&time_frame);
             }
 
-            // On first pass, we use current_time - 1 to ensure that the chain doesn't try to check
-            // all time frames since epoch.
-            let last_time_frame =
-                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
+            Ok(())
+        }
+
+        pub(crate) fn market_close_manager<F>(
+            block_number: T::BlockNumber,
+            last_time_frame: TimeFrame,
+            current_time_frame: TimeFrame,
+            mut mutation: F,
+        ) -> DispatchResult
+        where
+            F: FnMut(
+                &MarketIdOf<T>,
+                Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            ) -> DispatchResult,
+        {
+            for market_id in MarketIdsPerCloseBlock::<T>::get(&block_number).iter() {
+                let market = T::MarketCommons::market(market_id)?;
+                mutation(market_id, market)?;
+            }
+            MarketIdsPerCloseBlock::<T>::remove(&block_number);
 
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
                 for market_id in MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter() {
@@ -2057,8 +2126,6 @@ mod pallet {
                 }
                 MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
             }
-
-            LastTimeFrame::<T>::set(Some(current_time_frame));
             Ok(())
         }
 
