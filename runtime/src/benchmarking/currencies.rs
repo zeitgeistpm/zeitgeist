@@ -18,7 +18,7 @@
 
 use super::utils::{lookup_of_account, set_balance};
 use crate::{
-    AccountId, Amount, Balance, Currency, CurrencyId, ExistentialDeposit, GetNativeCurrencyId,
+    AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit, GetNativeCurrencyId,
     Runtime,
 };
 use zeitgeist_primitives::{constants::BASE, types::Asset};
@@ -48,7 +48,7 @@ runtime_benchmarks! {
         let to_lookup = lookup_of_account(to.clone());
     }: transfer(RawOrigin::Signed(from), to_lookup, ASSET, amount)
     verify {
-        assert_eq!(<Currency as MultiCurrency<_>>::total_balance(ASSET, &to), amount);
+        assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(ASSET, &to), amount);
     }
 
     // `transfer` native currency and in worst case
@@ -63,7 +63,7 @@ runtime_benchmarks! {
         let to_lookup = lookup_of_account(to.clone());
     }: transfer(RawOrigin::Signed(from), to_lookup, NATIVE, amount)
     verify {
-        assert_eq!(<Currency as MultiCurrency<_>>::total_balance(NATIVE, &to), amount);
+        assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(NATIVE, &to), amount);
     }
 
     // `transfer_native_currency` in worst case
@@ -79,7 +79,7 @@ runtime_benchmarks! {
         let to_lookup = lookup_of_account(to.clone());
     }: _(RawOrigin::Signed(from), to_lookup, amount)
     verify {
-        assert_eq!(<Currency as MultiCurrency<_>>::total_balance(NATIVE, &to), amount);
+        assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(NATIVE, &to), amount);
     }
 
     // `update_balance` for non-native currency
@@ -90,7 +90,7 @@ runtime_benchmarks! {
         let who_lookup = lookup_of_account(who.clone());
     }: update_balance(RawOrigin::Root, who_lookup, ASSET, amount)
     verify {
-        assert_eq!(<Currency as MultiCurrency<_>>::total_balance(ASSET, &who), balance);
+        assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(ASSET, &who), balance);
     }
 
     // `update_balance` for native currency
@@ -103,7 +103,7 @@ runtime_benchmarks! {
         let who_lookup = lookup_of_account(who.clone());
     }: update_balance(RawOrigin::Root, who_lookup, NATIVE, amount)
     verify {
-        assert_eq!(<Currency as MultiCurrency<_>>::total_balance(NATIVE, &who), balance);
+        assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(NATIVE, &who), balance);
     }
 
     // `update_balance` for native currency
@@ -117,7 +117,7 @@ runtime_benchmarks! {
         set_balance(NATIVE, &who, balance);
     }: update_balance(RawOrigin::Root, who_lookup, NATIVE, -amount)
     verify {
-        assert_eq!(<Currency as MultiCurrency<_>>::free_balance(NATIVE, &who), 0);
+        assert_eq!(<AssetManager as MultiCurrency<_>>::free_balance(NATIVE, &who), 0);
     }
 }
 

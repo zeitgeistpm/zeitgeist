@@ -37,7 +37,7 @@ fn generate_accounts_with_assets<T: Config>(
 
         for j in 0..acc_asset {
             let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), j);
-            T::Shares::deposit(asset, &acc, acc_amount)?;
+            T::AssetManager::deposit(asset, &acc, acc_amount)?;
         }
 
         accounts.push(acc);
@@ -66,7 +66,7 @@ fn generate_assets<T: Config>(
         let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
         assets.push(asset);
 
-        T::Shares::deposit(asset, owner, asset_amount_unwrapped).unwrap()
+        T::AssetManager::deposit(asset, owner, asset_amount_unwrapped).unwrap()
     }
 
     assets
@@ -112,7 +112,7 @@ fn bench_create_pool<T: Config>(
 
     if subsidize {
         let min_subsidy = T::MinSubsidy::get();
-        T::Shares::deposit(base_asset, &caller, min_subsidy).unwrap();
+        T::AssetManager::deposit(base_asset, &caller, min_subsidy).unwrap();
         let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller).into())
             .unwrap();

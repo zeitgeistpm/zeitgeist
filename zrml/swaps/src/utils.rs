@@ -30,17 +30,17 @@ where
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(p.pool_id);
 
-    let asset_balance = T::Shares::free_balance(p.asset, &pool_account);
+    let asset_balance = T::AssetManager::free_balance(p.asset, &pool_account);
     (p.ensure_balance)(asset_balance)?;
 
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
-    let total_issuance = T::Shares::total_issuance(pool_shares_id);
+    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
     Pallet::<T>::burn_pool_shares(p.pool_id, &p.who, pool_amount)?;
-    T::Shares::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
+    T::AssetManager::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         asset: p.asset,
@@ -67,16 +67,16 @@ where
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(p.pool_id);
-    let total_issuance = T::Shares::total_issuance(pool_shares_id);
+    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
-    let asset_balance = T::Shares::free_balance(p.asset, p.pool_account_id);
+    let asset_balance = T::AssetManager::free_balance(p.asset, p.pool_account_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
     Pallet::<T>::mint_pool_shares(p.pool_id, &p.who, pool_amount)?;
-    T::Shares::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
+    T::AssetManager::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         asset: p.asset,
@@ -100,7 +100,7 @@ where
 {
     ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
-    let total_issuance = T::Shares::total_issuance(pool_shares_id);
+    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
     let ratio: BalanceOf<T> =
         bdiv(p.pool_amount.saturated_into(), total_issuance.saturated_into())?.saturated_into();
@@ -110,7 +110,7 @@ where
     let mut transferred = Vec::with_capacity(p.asset_bounds.len());
 
     for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
-        let balance = T::Shares::free_balance(asset, p.pool_account_id);
+        let balance = T::AssetManager::free_balance(asset, p.pool_account_id);
         let amount = bmul(ratio.saturated_into(), balance.saturated_into())?.saturated_into();
         let fee = (p.fee)(amount)?;
         let amount_minus_fee = amount.check_sub_rslt(&fee)?;
@@ -159,19 +159,24 @@ where
 
     match p.pool.scoring_rule {
         ScoringRule::CPMM => {
-            T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-            T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+            T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+            T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
         }
         ScoringRule::RikiddoSigmoidFeeMarketEma => {
             let base_asset = p.pool.base_asset;
 
             if p.asset_in == base_asset {
-                T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-                T::Shares::deposit(p.asset_out, &p.who, asset_amount_out)?;
+                T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+                T::AssetManager::deposit(p.asset_out, &p.who, asset_amount_out)?;
             } else if p.asset_out == base_asset {
                 // We can use the lightweight withdraw here, since event assets are not reserved.
-                T::Shares::withdraw(p.asset_in, &p.who, asset_amount_in)?;
-                T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+                T::AssetManager::withdraw(p.asset_in, &p.who, asset_amount_in)?;
+                T::AssetManager::transfer(
+                    p.asset_out,
+                    p.pool_account_id,
+                    &p.who,
+                    asset_amount_out,
+                )?;
             } else {
                 // Just for safety, should already be checked in p.asset_amounts.
                 return Err(Error::<T>::UnsupportedTrade.into());

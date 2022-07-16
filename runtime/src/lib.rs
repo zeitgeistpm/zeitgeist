@@ -202,7 +202,7 @@ macro_rules! create_zeitgeist_runtime {
                 Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 32,
 
                 // Third-party
-                Currency: orml_currencies::{Call, Pallet, Storage} = 40,
+                AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
 
                 // Zeitgeist
@@ -326,7 +326,7 @@ cfg_if::cfg_if! {
                     | Call::Council(_)
                     | Call::CouncilMembership(_)
                     | Call::Crowdloan(_)
-                    | Call::Currency(_)
+                    | Call::AssetManager(_)
                     | Call::Democracy(_)
                     | Call::DmpQueue(_)
                     | Call::Identity(_)
@@ -369,7 +369,7 @@ cfg_if::cfg_if! {
                     | Call::Balances(_)
                     | Call::Council(_)
                     | Call::CouncilMembership(_)
-                    | Call::Currency(_)
+                    | Call::AssetManager(_)
                     | Call::Democracy(_)
                     | Call::Grandpa(_)
                     | Call::Identity(_)
@@ -575,6 +575,8 @@ impl orml_tokens::Config for Runtime {
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 #[cfg(feature = "parachain")]
@@ -964,9 +966,8 @@ impl zrml_prediction_markets::Config for Runtime {
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
-    type Shares = Tokens;
+    type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
-    type Slash = ();
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
@@ -1017,7 +1018,7 @@ impl zrml_swaps::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currency;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
