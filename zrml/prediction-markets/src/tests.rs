@@ -2447,7 +2447,8 @@ fn authorized_correctly_resolves_disputed_market() {
 #[test]
 fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
     ExtBuilder::default().build().execute_with(|| {
-        let end = 1;
+        let end = 2;
+        let market_id = 0;
         assert_ok!(PredictionMarkets::create_market(
             Origin::signed(ALICE),
             BOB,
@@ -2458,32 +2459,32 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
             MarketDisputeMechanism::Authorized(FRED),
             ScoringRule::CPMM,
         ));
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), market_id, CENT));
 
         run_to_block(end);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
-            0,
+            market_id,
             OutcomeReport::Categorical(1)
         ));
-        run_to_block(<frame_system::Pallet<Runtime>>::block_number() + 1);
+        run_blocks(1);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
-            0,
+            market_id,
             OutcomeReport::Categorical(0)
         ));
-        let market = MarketCommons::market(&0).unwrap();
+        let market = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        run_to_block(<frame_system::Pallet<Runtime>>::block_number() + DisputePeriod::get());
-        let market_after = MarketCommons::market(&0).unwrap();
+        run_blocks(<Runtime as Config>::DisputePeriod::get());
+        let market_after = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 0);
-        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
+        assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), market_id));
 
         // Make sure rewards are right:
         //
