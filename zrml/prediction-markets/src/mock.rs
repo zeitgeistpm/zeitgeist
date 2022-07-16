@@ -23,8 +23,8 @@ use zeitgeist_primitives::{
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
         MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, ReportingPeriod,
-        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, BASE, CENT,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        StakeWeight, SwapsPalletId, BASE, CENT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -46,6 +46,7 @@ ord_parameter_types! {
 }
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
+    pub const ReportingPeriod: u32 = 11;
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -298,6 +299,10 @@ pub fn run_to_block(n: BlockNumber) {
         PredictionMarkets::on_initialize(System::block_number());
         Balances::on_initialize(System::block_number());
     }
+}
+
+pub fn run_blocks(n: BlockNumber) {
+    run_to_block(System::block_number() + n);
 }
 
 sp_api::mock_impl_runtime_apis! {

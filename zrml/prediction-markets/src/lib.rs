@@ -1205,13 +1205,14 @@ mod pallet {
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let _ = with_transaction(|| {
-                // If we are at genesis the timestamp is undefined. No market can exist, we skip the
+                // If we are at genesis or the first block the timestamp might be undefined. No
+                // market needs to be opened or closed on blocks #0 or #1, so we skip the
                 // evaluation. Without this check, new chains starting from genesis will hang up,
                 // since the loops in `market_open_manager` and `market_close_manager` below will
                 // run over an interval of 0 to the current time frame.
                 let current_time_frame =
                     Self::calculate_time_frame_of_moment(T::MarketCommons::now());
-                if now == T::BlockNumber::zero() {
+                if now <= 1u32.into() {
                     return TransactionOutcome::Commit(Ok(()));
                 }
 
