@@ -1,3 +1,10 @@
+# v0.3.5
+
+- Added `Initialized` status for pools. A pool now starts in `Initialized`
+  status and must be opened using `Swaps::open_pool`. While the pool is
+  `Initialized`, it is allowed to call `pool_join` and `pool_exit`, but trading
+  and single-asset operations are prohibited.
+
 # v0.3.4
 
 - Implemented swap fees for CPMM pools. This means that the following extrinsics
