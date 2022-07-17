@@ -1234,7 +1234,7 @@ mod pallet {
                 // `on_initialize` is called, so calling `now()` during `on_initialize` gives us
                 // the timestamp of the previous block.
                 let current_time_frame =
-                    Self::calculate_time_frame_of_moment(T::MarketCommons::now()) + 1;
+                    Self::calculate_time_frame_of_moment(T::MarketCommons::now()).saturating_add(1);
 
                 // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
                 // check all time frames since epoch.
