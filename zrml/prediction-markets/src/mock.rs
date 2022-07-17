@@ -24,7 +24,7 @@ use zeitgeist_primitives::{
         MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
         MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, BASE, CENT,
+        StakeWeight, SwapsPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -304,6 +304,13 @@ pub fn run_to_block(n: BlockNumber) {
 
 pub fn run_blocks(n: BlockNumber) {
     run_to_block(System::block_number() + n);
+}
+
+// Our `on_initialize` compensates for the fact that `on_initialize` takes the timestamp from the
+// previous block. Therefore, manually setting timestamp during tests becomes cumbersome without a
+// utility function like this.
+pub fn set_timestamp_for_on_initialize(time: Moment) {
+    Timestamp::set_timestamp(time - MILLISECS_PER_BLOCK as u64);
 }
 
 sp_api::mock_impl_runtime_apis! {

@@ -932,13 +932,13 @@ fn on_market_open_successfully_auto_opens_market_with_timestamps() {
         let pool_id = MarketCommons::market_pool(&market_id).unwrap();
 
         // (Check that the market doesn't close too soon)
-        Timestamp::set_timestamp(start - 1);
+        set_timestamp_for_on_initialize(start - 1);
         run_blocks(1); // Trigger hook!
         let pool_before_close = Swaps::pool(pool_id).unwrap();
         assert_eq!(pool_before_close.pool_status, PoolStatus::Initialized);
 
-        Timestamp::set_timestamp(start);
-        run_blocks(1);
+        set_timestamp_for_on_initialize(start);
+        run_blocks(1); // Trigger hook!
         let pool_after_close = Swaps::pool(pool_id).unwrap();
         assert_eq!(pool_after_close.pool_status, PoolStatus::Active);
     });
@@ -947,7 +947,7 @@ fn on_market_open_successfully_auto_opens_market_with_timestamps() {
 #[test]
 fn on_market_close_successfully_auto_closes_market_with_timestamps() {
     ExtBuilder::default().build().execute_with(|| {
-        let end: Moment = MILLISECS_PER_BLOCK.into();
+        let end: Moment = (2 * MILLISECS_PER_BLOCK).into();
         let category_count = 3;
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
@@ -964,14 +964,14 @@ fn on_market_close_successfully_auto_closes_market_with_timestamps() {
         let pool_id = MarketCommons::market_pool(&market_id).unwrap();
 
         // (Check that the market doesn't close too soon)
-        Timestamp::set_timestamp(end - 1);
+        set_timestamp_for_on_initialize(end - 1);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
         let market_before_close = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_before_close.status, MarketStatus::Active);
         let pool_before_close = Swaps::pool(pool_id).unwrap();
         assert_eq!(pool_before_close.pool_status, PoolStatus::Active);
 
-        Timestamp::set_timestamp(end);
+        set_timestamp_for_on_initialize(end);
         run_blocks(1);
         let market_after_close = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after_close.status, MarketStatus::Closed);
@@ -1017,7 +1017,7 @@ fn on_market_open_successfully_auto_opens_multiple_markets_after_stall() {
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.
-        Timestamp::set_timestamp(end / 2);
+        set_timestamp_for_on_initialize(end / 2);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
         assert_eq!(Swaps::pool(0).unwrap().pool_status, PoolStatus::Active);
         assert_eq!(Swaps::pool(1).unwrap().pool_status, PoolStatus::Active);
@@ -1058,7 +1058,7 @@ fn on_market_close_successfully_auto_closes_multiple_markets_after_stall() {
         ));
 
         // This block takes much longer than 12sec, but markets and pools still close correctly.
-        Timestamp::set_timestamp(10 * end);
+        set_timestamp_for_on_initialize(10 * end);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2!
 
         let market_after_close = MarketCommons::market(&0).unwrap();
@@ -1105,7 +1105,7 @@ fn on_initialize_skips_the_genesis_block() {
         assert_eq!(LastTimeFrame::<Runtime>::get(), None);
 
         // Blocknumer != 0, 1
-        Timestamp::set_timestamp(end);
+        set_timestamp_for_on_initialize(end);
         PredictionMarkets::on_initialize(2);
         assert_eq!(LastTimeFrame::<Runtime>::get(), Some(blocks.into()));
     });
@@ -1236,7 +1236,6 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
         );
 
         let end_time = MILLISECS_PER_BLOCK as u64 / 2;
-        Timestamp::set_timestamp(end_time);
         assert_noop!(
             PredictionMarkets::create_market(
                 Origin::signed(ALICE),
@@ -2108,9 +2107,9 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT));
 
         // set the timestamp
-        Timestamp::set_timestamp(100_000_000);
+        set_timestamp_for_on_initialize(100_000_000);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2.
-        Timestamp::set_timestamp(123_456_789);
+        set_timestamp_for_on_initialize(123_456_789);
 
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT),
@@ -2149,10 +2148,10 @@ fn full_scalar_market_lifecycle() {
             assert_eq!(bal, 100 * BASE);
         }
 
-        Timestamp::set_timestamp(100_000_000);
+        set_timestamp_for_on_initialize(100_000_000);
         let report_at = 33;
         run_to_block(report_at); // Trigger `on_initialize`; must be at least block #2.
-        Timestamp::set_timestamp(123_456_789);
+        set_timestamp_for_on_initialize(123_456_789);
 
         // report
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
@@ -2794,7 +2793,6 @@ fn report_fails_on_market_state_closed_for_advised_market() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
-        Timestamp::set_timestamp(123_456_789); // Market is now "closed".
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::MarketIsNotClosed,
@@ -2903,7 +2901,6 @@ fn report_fails_on_market_state_resolved() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
-        Timestamp::set_timestamp(123_456_789);
         let _ = MarketCommons::mutate_market(&0, |market| {
             market.status = MarketStatus::Resolved;
             Ok(())
@@ -2928,10 +2925,10 @@ fn report_fails_if_reporter_is_not_the_oracle() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
-        Timestamp::set_timestamp(100_000_000);
+        set_timestamp_for_on_initialize(100_000_000);
         // Trigger hooks which close the market.
         run_to_block(2);
-        Timestamp::set_timestamp(100_056_789);
+        set_timestamp_for_on_initialize(100_056_789);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle,

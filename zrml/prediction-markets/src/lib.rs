@@ -1221,16 +1221,20 @@ mod pallet {
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
             let _ = with_transaction(|| {
-                // If we are at genesis or the first block the timestamp might be undefined. No
+                // If we are at genesis or the first block the timestamp is be undefined. No
                 // market needs to be opened or closed on blocks #0 or #1, so we skip the
                 // evaluation. Without this check, new chains starting from genesis will hang up,
                 // since the loops in `market_open_manager` and `market_close_manager` below will
                 // run over an interval of 0 to the current time frame.
-                let current_time_frame =
-                    Self::calculate_time_frame_of_moment(T::MarketCommons::now());
                 if now <= 1u32.into() {
                     return TransactionOutcome::Commit(Ok(()));
                 }
+
+                // We add one to the count, because `pallet-timestamp` sets the timestamp _after_
+                // `on_initialize` is called, so calling `now()` during `on_initialize` gives us
+                // the timestamp of the previous block.
+                let current_time_frame =
+                    Self::calculate_time_frame_of_moment(T::MarketCommons::now()) + 1;
 
                 // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
                 // check all time frames since epoch.
