@@ -1,83 +1,88 @@
 [build-dependencies]
-substrate-wasm-builder = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+substrate-wasm-builder = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
 [dependencies]
-frame-executive = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, optional = true, git = "https://github.com/PureStake/open-runtime-module-library" }
-orml-currencies = { default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
-orml-tokens = { default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
-orml-traits = { default-features = false, git = "https://github.com/PureStake/open-runtime-module-library" }
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-collective = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-democracy = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-identity = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-membership = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-multisig = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-preimage = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-sudo = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-treasury = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-utility = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-vesting = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "2.0.0" }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
-sp-api = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-block-builder = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-core = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-inherents = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-offchain = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-session = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-version = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-substrate-fixed = { rev = "5984ba9b9433d5007597c7f03f65ea5bf6d08601", default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
+frame-executive = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+orml-benchmarking = { branch = "2022-06-v0.9.19", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-currencies = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-tokens = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-collective = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-democracy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-identity = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-membership = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-multisig = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-preimage = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-proxy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-sudo = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-treasury = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-utility = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-vesting = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+sp-api = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-block-builder = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-core = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-inherents = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-offchain = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-session = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-version = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
+
+# Try-Runtime
+
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate"}
 
 # Benchmark
 
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
-frame-system-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
+frame-system-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
 
 # Cumulus
 
-cumulus-pallet-dmp-queue = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-pallet-parachain-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-pallet-xcmp-queue = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-primitives-timestamp = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-cumulus-primitives-utility = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
-parachain-info = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-pallet-dmp-queue = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-pallet-parachain-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-pallet-xcmp-queue = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-primitives-core = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-primitives-timestamp = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+cumulus-primitives-utility = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
+parachain-info = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 
 # Parachain
 
-nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-author-mapping = { rev = "223c5bc09bc2b23e967f6d7794166b9566d50f4f", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
-pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/PureStake/crowdloan-rewards", optional = true }
-parachain-staking = { rev = "223c5bc09bc2b23e967f6d7794166b9566d50f4f", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
+nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+pallet-author-mapping = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
+pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+pallet-crowdloan-rewards = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/crowdloan-rewards", optional = true }
+parachain-staking = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 
 # Polkadot
 
-pallet-xcm = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-xcm = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-xcm-builder = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
-xcm-executor = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+xcm-builder = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+xcm-executor = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 
 # Standalone
 
-pallet-aura = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-grandpa = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-aura = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-grandpa = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-consensus-aura = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 
 # Utility
 cfg-if = { version = "1.0.0" }
@@ -98,7 +103,7 @@ zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
 
 [dev-dependencies]
-sp-io = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
 [features]
 default = ["std"]
@@ -137,6 +142,7 @@ parachain = [
 ]
 
 runtime-benchmarks = [
+    "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system-benchmarking",
@@ -155,6 +161,7 @@ runtime-benchmarks = [
     "pallet-membership/runtime-benchmarks",
     "pallet-multisig/runtime-benchmarks",
     "pallet-preimage/runtime-benchmarks",
+    "pallet-proxy/runtime-benchmarks",
     "pallet-scheduler/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks",
     "pallet-treasury/runtime-benchmarks",
@@ -189,6 +196,7 @@ std = [
     "pallet-membership/std",
     "pallet-multisig/std",
     "pallet-preimage/std",
+    "pallet-proxy/std",
     "pallet-randomness-collective-flip/std",
     "pallet-scheduler/std",
     "pallet-sudo/std",
@@ -210,6 +218,9 @@ std = [
     "sp-transaction-pool/std",
     "sp-version/std",
     "substrate-fixed/std",
+
+    # Try-Runtime
+    "frame-try-runtime/std",
 
     # Benchmark
 
@@ -264,15 +275,63 @@ std = [
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
-txfilter = [
-    "log"
+txfilter = []
+try-runtime = [
+    "frame-executive/try-runtime",
+    "frame-try-runtime",
+
+    # For every pallet in the runtime include try-runtime
+
+    # System runtime pallets
+    "frame-system/try-runtime",
+    "pallet-timestamp/try-runtime",
+    "pallet-randomness-collective-flip/try-runtime",
+    "pallet-scheduler/try-runtime",
+    "pallet-preimage/try-runtime",
+
+    # Money runtime pallets
+    "pallet-balances/try-runtime",
+    "pallet-transaction-payment/try-runtime",
+    "pallet-treasury/try-runtime",
+    "pallet-vesting/try-runtime",
+    "pallet-multisig/try-runtime",
+
+    # Governance runtime pallets
+    "pallet-democracy/try-runtime",
+    "pallet-collective/try-runtime",
+    "pallet-membership/try-runtime",
+
+    # Other Parity runtime pallets
+    "pallet-identity/try-runtime",
+    "pallet-sudo/try-runtime",
+    "pallet-utility/try-runtime",
+    
+    # ORML runtime pallets
+    "orml-currencies/try-runtime",
+    "orml-tokens/try-runtime",
+
+    # Zeitgeist runtime pallets
+    "zrml-authorized/try-runtime",
+    "zrml-court/try-runtime",
+    "zrml-liquidity-mining/try-runtime",
+    "zrml-market-commons/try-runtime",
+    "zrml-prediction-markets/try-runtime",
+    "zrml-rikiddo/try-runtime",
+    "zrml-simple-disputes/try-runtime",
+    "zrml-swaps/try-runtime",
+
+    # Parachain
+    "pallet-author-mapping?/try-runtime",
+    "pallet-author-slot-filter?/try-runtime",
+    "parachain-staking?/try-runtime",
 ]
+without-sudo=[]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.1"
+version = "0.3.4"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

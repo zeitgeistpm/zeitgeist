@@ -12,28 +12,30 @@ pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
+mod tests;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
 
-#[cfg(feature = "parachain")]
-pub use parachain_params::*;
+pub use frame_system::{
+    Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
+    CheckTxVersion, CheckWeight,
+};
+pub use pallet_transaction_payment::ChargeTransactionPayment;
 pub use parameters::*;
+#[cfg(feature = "parachain")]
+pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
     construct_runtime,
-    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly},
-    weights::{constants::RocksDbWeight, IdentityFee},
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_api::impl_runtime_apis;
-use sp_core::{
-    crypto::KeyTypeId,
-    u32_trait::{_1, _2, _3, _4},
-    OpaqueMetadata,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str, generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
@@ -46,7 +48,6 @@ use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
-use zrml_swaps::migrations::MigratePoolBaseAsset;
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{Everything, Nothing},
@@ -60,10 +61,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
     impl_name: create_runtime_str!("zeitgeist"),
     authoring_version: 1,
-    spec_version: 35,
+    spec_version: 38,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 12,
+    transaction_version: 15,
     state_version: 1,
 };
 
@@ -77,22 +78,23 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    MigratePoolBaseAsset<Runtime>,
+    zrml_court::migrations::JurorsCountedStorageMapMigration<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
-type SignedExtra = (
-    frame_system::CheckNonZeroSender<Runtime>,
-    frame_system::CheckSpecVersion<Runtime>,
-    frame_system::CheckTxVersion<Runtime>,
-    frame_system::CheckGenesis<Runtime>,
-    frame_system::CheckEra<Runtime>,
-    frame_system::CheckNonce<Runtime>,
-    frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+pub type SignedExtra = (
+    CheckNonZeroSender<Runtime>,
+    CheckSpecVersion<Runtime>,
+    CheckTxVersion<Runtime>,
+    CheckGenesis<Runtime>,
+    CheckEra<Runtime>,
+    CheckNonce<Runtime>,
+    CheckWeight<Runtime>,
+    ChargeTransactionPayment<Runtime>,
 );
-type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
+pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 
 // Governance
 type AdvisoryCommitteeInstance = pallet_collective::Instance1;
@@ -105,58 +107,58 @@ type TechnicalCommitteeMembershipInstance = pallet_membership::Instance3;
 // Council vote proportions
 // At least 50%
 type EnsureRootOrHalfCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
 
 // At least 66%
 type EnsureRootOrTwoThirdsCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
 
 // At least 75%
 type EnsureRootOrThreeFourthsCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_3, _4, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
 
 // At least 100%
 type EnsureRootOrAllCouncil =
-    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>>;
+    EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
 
 // Technical committee vote proportions
 // At least 50%
 #[cfg(feature = "parachain")]
 type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _2, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 2>,
 >;
 
 // At least 66%
 type EnsureRootOrTwoThirdsTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 2, 3>,
 >;
 
 // At least 100%
 type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
 >;
 
 // Advisory committee vote proportions
 // At least 50%
 type EnsureRootOrHalfAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _2, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
 >;
 
 // Technical committee vote proportions
 // At least 66%
 type EnsureRootOrTwoThirdsAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_2, _3, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 2, 3>,
 >;
 
 // At least 100%
 type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
     EnsureRoot<AccountId>,
-    EnsureProportionAtLeast<_1, _1, AccountId, AdvisoryCommitteeInstance>,
+    EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 1>,
 >;
 
 // Construct runtime
@@ -197,11 +199,11 @@ macro_rules! create_zeitgeist_runtime {
 
                 // Other Parity pallets
                 Identity: pallet_identity::{Call, Event<T>, Pallet, Storage} = 30,
-                Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 31,
-                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 32,
+                Utility: pallet_utility::{Call, Event, Pallet, Storage} = 31,
+                Proxy: pallet_proxy::{Call, Event<T>, Pallet, Storage} = 32,
 
                 // Third-party
-                Currency: orml_currencies::{Call, Event<T>, Pallet, Storage} = 40,
+                AssetManager: orml_currencies::{Call, Pallet, Storage} = 40,
                 Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage} = 41,
 
                 // Zeitgeist
@@ -220,34 +222,53 @@ macro_rules! create_zeitgeist_runtime {
     }
 }
 
-#[cfg(feature = "parachain")]
-create_zeitgeist_runtime!(
-    // System
-    ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
-    ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
+macro_rules! create_zeitgeist_runtime_with_additional_pallets {
+    ($($additional_pallets:tt)*) => {
+        #[cfg(feature = "parachain")]
+        create_zeitgeist_runtime!(
+            // System
+            ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
+            ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
 
-    // Consensus
-    ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
-    AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
-    AuthorFilter: pallet_author_slot_filter::{Config, Event, Pallet, Storage} = 112,
-    AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
+            // Consensus
+            ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
+            AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
+            AuthorFilter: pallet_author_slot_filter::{Call, Config, Event, Pallet, Storage} = 112,
+            AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
 
-    // XCM
-    CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
-    DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
-    PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 122,
-    XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
+            // XCM
+            CumulusXcm: cumulus_pallet_xcm::{Event<T>, Origin, Pallet} = 120,
+            DmpQueue: cumulus_pallet_dmp_queue::{Call, Event<T>, Pallet, Storage} = 121,
+            PolkadotXcm: pallet_xcm::{Call, Config, Event<T>, Origin, Pallet, Storage} = 122,
+            XcmpQueue: cumulus_pallet_xcmp_queue::{Call, Event<T>, Pallet, Storage} = 123,
 
-    // Third-party
-    Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
+            // Third-party
+            Crowdloan: pallet_crowdloan_rewards::{Call, Config<T>, Event<T>, Pallet, Storage} = 130,
+
+            // Others
+            $($additional_pallets)*
+        );
+
+        #[cfg(not(feature = "parachain"))]
+        create_zeitgeist_runtime!(
+            // Consensus
+            Aura: pallet_aura::{Config<T>, Pallet, Storage} = 100,
+            Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 101,
+
+            // Others
+            $($additional_pallets)*
+        );
+    }
+}
+
+#[cfg(not(feature = "without-sudo"))]
+create_zeitgeist_runtime_with_additional_pallets!(
+    // Others
+    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
 
-#[cfg(not(feature = "parachain"))]
-create_zeitgeist_runtime!(
-    // Consensus
-    Aura: pallet_aura::{Config<T>, Pallet, Storage} = 100,
-    Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 101,
-);
+#[cfg(feature = "without-sudo")]
+create_zeitgeist_runtime_with_additional_pallets!();
 
 // Configure Pallets
 #[cfg(feature = "parachain")]
@@ -283,6 +304,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type Event = Event;
     type ExecuteOverweightOrigin = EnsureRootOrHalfTechnicalCommittee;
     type VersionWrapper = ();
+    type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
     type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
 
@@ -296,40 +318,44 @@ cfg_if::cfg_if! {
             fn contains(call: &Call) -> bool {
                 match call {
                     // Allowed calls:
-                    Call::System(_)
-                    | Call::Sudo(_)
-                    | Call::Timestamp(_)
-                    | Call::AuthorInherent(_)
-                    | Call::AuthorMapping(_)
-                    | Call::DmpQueue(_)
-                    | Call::ParachainSystem(_)
-                    | Call::PolkadotXcm(_)
-                    | Call::XcmpQueue(_) => true,
-
-                    // Prohibited calls:
-                    Call::ParachainStaking(_)
-                    | Call::Crowdloan(_)
-                    | Call::Balances(_)
-                    | Call::Treasury(_)
-                    | Call::AdvisoryCommittee(_)
+                    Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
+                    | Call::AuthorInherent(_)
+                    | Call::AuthorFilter(_)
+                    | Call::AuthorMapping(_)
+                    | Call::Balances(_)
                     | Call::Council(_)
                     | Call::CouncilMembership(_)
+                    | Call::Crowdloan(_)
+                    | Call::AssetManager(_)
+                    | Call::Democracy(_)
+                    | Call::DmpQueue(_)
+                    | Call::Identity(_)
+                    | Call::MultiSig(_)
+                    | Call::ParachainStaking(_)
+                    | Call::ParachainSystem(_)
+                    | Call::PolkadotXcm(_)
+                    | Call::Preimage(_)
+                    | Call::Proxy(_)
+                    | Call::Scheduler(_)
+                    | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
-                    | Call::MultiSig(_)
-                    | Call::Democracy(_)
-                    | Call::Scheduler(_)
-                    | Call::Preimage(_)
-                    | Call::Identity(_)
+                    | Call::Timestamp(_)
+                    | Call::Treasury(_)
                     | Call::Utility(_)
-                    | Call::Currency(_)
-                    | Call::Authorized(_)
+                    | Call::Vesting(_)
+                    | Call::XcmpQueue(_) => true,
+
+                    #[cfg(not(feature = "without-sudo"))]
+                    Call::Sudo(_) => true,
+
+                    // Prohibited calls:
+                    Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(_)
-                    | Call::Vesting(_) => false,
+                    | Call::PredictionMarkets(_) => false,
                 }
             }
         }
@@ -339,51 +365,56 @@ cfg_if::cfg_if! {
             fn contains(call: &Call) -> bool {
                 match call {
                     // Allowed calls:
-                    Call::System(_) | Call::Grandpa(_) | Call::Sudo(_) | Call::Timestamp(_) => true,
-
-                    // Prohibited calls:
-                    Call::Balances(_)
-                    | Call::Treasury(_)
-                    | Call::AdvisoryCommittee(_)
+                    Call::AdvisoryCommittee(_)
                     | Call::AdvisoryCommitteeMembership(_)
+                    | Call::Balances(_)
                     | Call::Council(_)
                     | Call::CouncilMembership(_)
+                    | Call::AssetManager(_)
+                    | Call::Democracy(_)
+                    | Call::Grandpa(_)
+                    | Call::Identity(_)
+                    | Call::MultiSig(_)
+                    | Call::Preimage(_)
+                    | Call::Proxy(_)
+                    | Call::Scheduler(_)
+                    | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
-                    | Call::MultiSig(_)
-                    | Call::Democracy(_)
-                    | Call::Scheduler(_)
-                    | Call::Preimage(_)
-                    | Call::Identity(_)
+                    | Call::Timestamp(_)
+                    | Call::Treasury(_)
                     | Call::Utility(_)
-                    | Call::Currency(_)
-                    | Call::Authorized(_)
+                    | Call::Vesting(_) => true,
+
+                    #[cfg(not(feature = "without-sudo"))]
+                    Call::Sudo(_) => true,
+
+                    // Prohibited calls:
+                    Call::Authorized(_)
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
-                    | Call::PredictionMarkets(_)
-                    | Call::Vesting(_) => false,
+                    | Call::PredictionMarkets(_)=> false,
                 }
             }
         }
     // Unrestricted (no "txfilter" feature) chains.
-    // Currently disables Rikiddo and Court markets as well as LiquidityMining.
+    // Currently disables Rikiddo and markets using Court or SimpleDisputes dispute mechanism.
     // Will be relaxed for testnet once runtimes are separated.
     } else {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
-                use zrml_prediction_markets::Call::{create_categorical_market, create_cpmm_market_and_deploy_assets, create_scalar_market};
+                use zrml_prediction_markets::Call::{create_market, create_cpmm_market_and_deploy_assets};
+                use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes}};
 
                 match call {
                     Call::PredictionMarkets(inner_call) => {
                         match inner_call {
                             // Disable Rikiddo markets
-                            create_categorical_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
-                            create_scalar_market { scoring_rule: ScoringRule::RikiddoSigmoidFeeMarketEma, .. } => false,
-                            // Disable Court dispute resolution mechanism
-                            create_categorical_market { mdm: MarketDisputeMechanism::Court, .. } => false,
-                            create_scalar_market { mdm: MarketDisputeMechanism::Court, .. } => false,
-                            create_cpmm_market_and_deploy_assets { mdm: MarketDisputeMechanism::Court, .. } => false,
+                            create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
+                            // Disable Court & SimpleDisputes dispute resolution mechanism
+                            create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                            create_cpmm_market_and_deploy_assets { dispute_mechanism: Court | SimpleDisputes, .. } => false,
                             _ => true
                         }
                     }
@@ -523,11 +554,10 @@ impl parachain_staking::Config for Runtime {
     type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
     type RevokeDelegationDelay = RevokeDelegationDelay;
     type RewardPaymentDelay = RewardPaymentDelay;
-    type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
 }
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
@@ -542,8 +572,12 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = MaxLocks;
+    type MaxReserves = MaxReserves;
     type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 #[cfg(feature = "parachain")]
@@ -685,8 +719,8 @@ impl pallet_membership::Config<CouncilMembershipInstance> for Runtime {
     type AddOrigin = EnsureRootOrThreeFourthsCouncil;
     type Event = Event;
     type MaxMembers = CouncilMaxMembers;
-    type MembershipChanged = AdvisoryCommittee;
-    type MembershipInitialized = AdvisoryCommittee;
+    type MembershipChanged = Council;
+    type MembershipInitialized = Council;
     type PrimeOrigin = EnsureRootOrThreeFourthsCouncil;
     type RemoveOrigin = EnsureRootOrThreeFourthsCouncil;
     type ResetOrigin = EnsureRootOrThreeFourthsCouncil;
@@ -727,6 +761,53 @@ impl pallet_preimage::Config for Runtime {
     type ByteDeposit = PreimageByteDeposit;
 }
 
+impl InstanceFilter<Call> for ProxyType {
+    fn filter(&self, c: &Call) -> bool {
+        match self {
+            ProxyType::Any => true,
+            ProxyType::CancelProxy => {
+                matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+            }
+            ProxyType::Governance => matches!(
+                c,
+                Call::Democracy(..)
+                    | Call::Council(..)
+                    | Call::TechnicalCommittee(..)
+                    | Call::AdvisoryCommittee(..)
+                    | Call::Treasury(..)
+            ),
+            #[cfg(feature = "parachain")]
+            ProxyType::Staking => matches!(c, Call::ParachainStaking(..)),
+            #[cfg(not(feature = "parachain"))]
+            ProxyType::Staking => false,
+        }
+    }
+
+    fn is_superset(&self, o: &Self) -> bool {
+        match (self, o) {
+            (x, y) if x == y => true,
+            (ProxyType::Any, _) => true,
+            (_, ProxyType::Any) => false,
+            _ => false,
+        }
+    }
+}
+
+impl pallet_proxy::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type Currency = Balances;
+    type ProxyType = ProxyType;
+    type ProxyDepositBase = ProxyDepositBase;
+    type ProxyDepositFactor = ProxyDepositFactor;
+    type MaxProxies = ConstU32<32>;
+    type WeightInfo = weights::pallet_proxy::WeightInfo<Runtime>;
+    type MaxPending = ConstU32<32>;
+    type CallHasher = BlakeTwo256;
+    type AnnouncementDepositBase = AnnouncementDepositBase;
+    type AnnouncementDepositFactor = AnnouncementDepositFactor;
+}
+
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl pallet_scheduler::Config for Runtime {
@@ -743,6 +824,7 @@ impl pallet_scheduler::Config for Runtime {
     type NoPreimagePostponement = NoPreimagePostponement;
 }
 
+#[cfg(not(feature = "without-sudo"))]
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
     type Event = Event;
@@ -759,10 +841,10 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-    type FeeMultiplierUpdate = ();
+    type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
-    type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
 }
 
@@ -878,15 +960,15 @@ impl zrml_prediction_markets::Config for Runtime {
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
+    type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
-    type Shares = Tokens;
+    type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
-    type Slash = ();
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
@@ -922,19 +1004,22 @@ impl zrml_swaps::Config for Runtime {
     // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
     type LiquidityMining = NoopLiquidityMining;
     // type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MinAssets = MinAssets;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
+    type MaxSwapFee = MaxSwapFee;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currency;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -1031,6 +1116,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
             list_benchmark!(list, extra, pallet_multisig, MultiSig);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_proxy, Proxy);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_timestamp, Timestamp);
             list_benchmark!(list, extra, pallet_treasury, Treasury);
@@ -1044,6 +1130,7 @@ impl_runtime_apis! {
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
+                    list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
                     list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                     list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                     list_benchmark!(list, extra, parachain_staking, ParachainStaking);
@@ -1102,6 +1189,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
             add_benchmark!(params, batches, pallet_multisig, MultiSig);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);
@@ -1116,6 +1204,7 @@ impl_runtime_apis! {
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
+                    add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
                     add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                     add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                     add_benchmark!(params, batches, parachain_staking, ParachainStaking);
@@ -1277,6 +1366,19 @@ impl_runtime_apis! {
 
         fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
             Asset::PoolShare(SerdeWrapper(pool_id))
+        }
+    }
+
+    #[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
+            log::info!("try-runtime::on_runtime_upgrade.");
+            let weight = Executive::try_runtime_upgrade().unwrap();
+            (weight, RuntimeBlockWeights::get().max_block)
+        }
+
+        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
+            Executive::execute_block_no_check(block)
         }
     }
 }

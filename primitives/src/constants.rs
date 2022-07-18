@@ -74,6 +74,8 @@ parameter_types! {
     pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
+    // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
+    pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
@@ -92,10 +94,12 @@ parameter_types! {
     pub const MaxAssets: u16 = MaxCategories::get() + 1;
     pub const MaxInRatio: Balance = (BASE / 3) + 1;
     pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+    pub const MaxSwapFee: Balance = BASE / 10; // 10%
     pub const MaxTotalWeight: Balance = 50 * BASE;
     pub const MaxWeight: Balance = 50 * BASE;
     pub const MinLiquidity: Balance = 100 * BASE;
     pub const MinSubsidy: Balance = MinLiquidity::get();
+    pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
     pub const MinWeight: Balance = BASE;
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
 }

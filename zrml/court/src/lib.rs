@@ -13,6 +13,7 @@ mod benchmarks;
 mod court_pallet_api;
 mod juror;
 mod juror_status;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -33,7 +34,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
@@ -59,7 +60,7 @@ mod pallet {
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
@@ -77,8 +78,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        // `transactional` attribute is not used simply because
-        // `remove_juror_from_all_courts_of_all_markets` is infallible.
+        // MARK(non-transactional): `remove_juror_from_all_courts_of_all_markets` is infallible.
         #[pallet::weight(T::WeightInfo::exit_court())]
         pub fn exit_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -88,15 +88,14 @@ mod pallet {
             Ok(())
         }
 
-        // `transactional` attribute is not used here because once `reserve_named` is
-        // successful, `insert` won't fail.
+        // MARK(non-transactional): Once `reserve_named` is successful, `insert` won't fail.
         #[pallet::weight(T::WeightInfo::join_court())]
         pub fn join_court(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
             if Jurors::<T>::get(&who).is_some() {
                 return Err(Error::<T>::JurorAlreadyExists.into());
             }
-            let jurors_num = Jurors::<T>::iter().count();
+            let jurors_num = Jurors::<T>::count() as usize;
             let jurors_num_plus_one = jurors_num.checked_add(1).ok_or(ArithmeticError::Overflow)?;
             let stake = Self::current_required_stake(jurors_num_plus_one);
             CurrencyOf::<T>::reserve_named(&RESERVE_ID, &who, stake)?;
@@ -106,12 +105,11 @@ mod pallet {
             Ok(())
         }
 
-        // `transactional` attribute is not used here because no fallible storage operation
-        // is performed.
+        // MARK(non-transactional): No fallible storage operation is performed.
         #[pallet::weight(T::WeightInfo::vote())]
         pub fn vote(
             origin: OriginFor<T>,
-            market_id: MarketIdOf<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -477,7 +475,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if market.mdm != MarketDisputeMechanism::Court {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
@@ -500,8 +498,8 @@ mod pallet {
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError> {
-            if market.mdm != MarketDisputeMechanism::Court {
+        ) -> Result<Option<OutcomeReport>, DispatchError> {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
@@ -521,7 +519,7 @@ mod pallet {
             Self::slash_losers_to_award_winners(&valid_winners_and_losers, &first)?;
             Votes::<T>::remove_prefix(market_id, None);
             RequestedJurors::<T>::remove_prefix(market_id, None);
-            Ok(first)
+            Ok(Some(first))
         }
     }
 
@@ -529,7 +527,7 @@ mod pallet {
 
     /// Accounts that stake funds to decide outcomes.
     #[pallet::storage]
-    pub type Jurors<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
+    pub type Jurors<T: Config> = CountedStorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
 
     /// An extra layer of pseudo randomness.
     #[pallet::storage]

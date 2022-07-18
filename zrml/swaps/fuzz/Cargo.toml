@@ -1,7 +1,55 @@
 [[bin]]
 doc = false
-name = "swaps_full_workflow"
-path = "swaps_full_workflow.rs"
+name = "create_pool"
+path = "create_pool.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "pool_join"
+path = "pool_join.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "pool_join_with_exact_pool_amount"
+path = "pool_join_with_exact_pool_amount.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "pool_join_with_exact_asset_amount"
+path = "pool_join_with_exact_asset_amount.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "swap_exact_amount_in"
+path = "swap_exact_amount_in.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "swap_exact_amount_out"
+path = "swap_exact_amount_out.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "pool_exit_with_exact_asset_amount"
+path = "pool_exit_with_exact_asset_amount.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "pool_exit_with_exact_pool_amount"
+path = "pool_exit_with_exact_pool_amount.rs"
+test = false
+
+[[bin]]
+doc = false
+name = "pool_exit"
+path = "pool_exit.rs"
 test = false
 
 [dependencies]
@@ -9,6 +57,10 @@ arbitrary = { features = ["derive"], version = "1.0" }
 libfuzzer-sys = "0.4"
 zrml-swaps = { features = ["mock"], path = ".." }
 zeitgeist-primitives = { path = "../../../primitives" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+rand = "0.8.4"
 
 [package]
 authors = ["Automatically generated"]

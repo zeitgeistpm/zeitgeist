@@ -22,10 +22,10 @@ use zeitgeist_primitives::{
 use zeitgeist_runtime::SS58Prefix;
 #[cfg(feature = "parachain")]
 use {
-    sp_runtime::{Perbill, Percent},
+    sp_runtime::Perbill,
     zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
     zeitgeist_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, MinCollatorStk, PolkadotXcmConfig,
+        CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
     },
 };
 
@@ -81,6 +81,7 @@ cfg_if::cfg_if! {
 }
 
 const DEFAULT_INITIAL_BALANCE_TESTNET: u128 = 10_000 * BASE;
+#[cfg(not(feature = "without-sudo"))]
 const DEFAULT_SUDO_BALANCE_MAINNET: u128 = 100 * BASE;
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
@@ -92,7 +93,7 @@ struct EndowedAccountWithBalance(AccountId, Balance);
 fn generic_genesis(
     acs: AdditionalChainSpec,
     endowed_accounts: Vec<EndowedAccountWithBalance>,
-    root_key: AccountId,
+    #[cfg(not(feature = "without-sudo"))] root_key: AccountId,
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
@@ -107,7 +108,7 @@ fn generic_genesis(
         },
         #[cfg(feature = "parachain")]
         author_filter: zeitgeist_runtime::AuthorFilterConfig {
-            eligible_ratio: Percent::from_percent(50),
+            eligible_count: EligibilityValue::new_unchecked(50),
         },
         #[cfg(feature = "parachain")]
         author_mapping: zeitgeist_runtime::AuthorMappingConfig {
@@ -155,6 +156,7 @@ fn generic_genesis(
         #[cfg(feature = "parachain")]
         // Default should use the pallet configuration
         polkadot_xcm: PolkadotXcmConfig::default(),
+        #[cfg(not(feature = "without-sudo"))]
         sudo: zeitgeist_runtime::SudoConfig { key: Some(root_key) },
         system: zeitgeist_runtime::SystemConfig { code: wasm_binary.to_vec() },
         technical_committee: Default::default(),
@@ -185,7 +187,13 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
 /// The extensions for the [`ChainSpec`].
 #[cfg(feature = "parachain")]
 #[derive(
-    Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, sc_chain_spec::ChainSpecExtension,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    sc_chain_spec::ChainSpecExtension,
 )]
 #[serde(deny_unknown_fields)]
 pub struct Extensions {
@@ -268,6 +276,7 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
     ]
 }
 
+#[cfg(not(feature = "without-sudo"))]
 fn root_key_staging_testnet() -> AccountId {
     hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into()
 }
@@ -295,6 +304,7 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
             DEFAULT_COLLATOR_BALANCE_MAINNET.unwrap(),
         ),
         // dE2nxuZc5e7xBbU1cGikmtVGws9niNPUayigoDdyqB7hzHQ6X
+        #[cfg(not(feature = "without-sudo"))]
         EndowedAccountWithBalance(
             hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into(),
             DEFAULT_SUDO_BALANCE_MAINNET,
@@ -302,6 +312,7 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
     ]
 }
 
+#[cfg(not(feature = "without-sudo"))]
 fn root_key_staging_mainnet() -> AccountId {
     // dDykRtA8VyuVVtWTD5PWst3f33L1NMVKseQEji8e3B4ZCHrjK
     hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into()

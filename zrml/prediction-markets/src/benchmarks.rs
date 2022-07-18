@@ -11,14 +11,14 @@ use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    traits::{Currency, EnsureOrigin, Get, Hooks},
+    traits::{EnsureOrigin, Get, Hooks},
     BoundedVec,
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::{MinLiquidity, MinWeight, BASE},
+    constants::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
         Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
@@ -42,7 +42,7 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    let _ = CurrencyOf::<T>::deposit_creating(&caller, (u128::MAX).saturated_into());
+    let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
     let mut metadata = [0u8; 50];
@@ -60,33 +60,16 @@ fn create_market_common<T: Config>(
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, oracle, period, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
-
-    if let MarketType::Categorical(categories) = options {
-        let _ = Call::<T>::create_categorical_market {
-            oracle,
-            period,
-            metadata,
-            creation,
-            categories,
-            mdm: MarketDisputeMechanism::SimpleDisputes,
-            scoring_rule,
-        }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    } else if let MarketType::Scalar(range) = options {
-        let _ = Call::<T>::create_scalar_market {
-            oracle,
-            period,
-            metadata,
-            creation,
-            outcome_range: range,
-            mdm: MarketDisputeMechanism::SimpleDisputes,
-            scoring_rule,
-        }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    } else {
-        panic!("create_market_common: Unsupported market type: {:?}", options);
+    let _ = Call::<T>::create_market {
+        oracle,
+        period,
+        metadata,
+        creation,
+        market_type: options,
+        dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
+        scoring_rule,
     }
-
+    .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let market_id = T::MarketCommons::latest_market_id()?;
     Ok((caller, market_id))
 }
@@ -117,10 +100,10 @@ fn generate_accounts_with_assets<T: Config>(
     for i in 0..acc_total {
         let acc = account("AssetHolder", i, 0);
         if mut_acc_asset > 0 {
-            let _ = T::Shares::deposit(asset, &acc, min_liquidity)?;
+            T::AssetManager::deposit(asset, &acc, min_liquidity)?;
             mut_acc_asset -= 1;
         } else {
-            let _ = T::Shares::deposit(fake_asset, &acc, min_liquidity)?;
+            T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
         }
     }
 
@@ -138,7 +121,7 @@ fn setup_resolve_common_categorical<T: Config>(
         MarketType::Categorical(categories),
         OutcomeReport::Categorical(categories.saturating_sub(1)),
     )?;
-    let _ = generate_accounts_with_assets::<T>(
+    generate_accounts_with_assets::<T>(
         acc_total,
         acc_asset,
         Asset::CategoricalOutcome(market_id, categories.saturating_sub(1)),
@@ -203,7 +186,7 @@ fn setup_resolve_common_scalar<T: Config>(
         MarketType::Scalar(0u128..=u128::MAX),
         OutcomeReport::Scalar(u128::MAX),
     )?;
-    let _ = generate_accounts_with_assets::<T>(
+    generate_accounts_with_assets::<T>(
         acc_total,
         acc_asset,
         Asset::ScalarOutcome(market_id, ScalarPosition::Long),
@@ -247,12 +230,12 @@ benchmarks! {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
 
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(destroy_origin)? }
 
     admin_destroy_reported_market{
         // a = total accounts
@@ -265,9 +248,9 @@ benchmarks! {
 
         let c_u16 = c.saturated_into();
         let (caller, market_id) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(destroy_origin)? }
 
     admin_move_market_to_closed {
         let (caller, market_id) = create_market_common::<T>(
@@ -312,26 +295,13 @@ benchmarks! {
         let amount = BASE * 1_000;
     }: _(RawOrigin::Signed(caller), market_id, amount.saturated_into())
 
-    cancel_pending_market {
-        let (caller, market_id) = create_market_common::<T>(
-            MarketCreation::Advised,
+    // Beware! We're only benchmarking categorical markets (scalar market creation is essentially
+    // the same).
+    create_market {
+        let (caller, oracle, period, metadata, creation) =
+            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
+    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
-        )?;
-    }: _(RawOrigin::Signed(caller), market_id)
-
-    create_categorical_market {
-        let (caller, oracle, period, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-        let categories = T::MaxCategories::get();
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, categories,
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
-
-    create_scalar_market {
-        let (caller, oracle, period, metadata, creation) =
-            create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-        let outcome_range = 0u128..=u128::MAX;
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation, outcome_range,
             MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 
     deploy_swap_pool_for_market {
@@ -341,13 +311,14 @@ benchmarks! {
             MarketType::Categorical(a.saturated_into()),
             ScoringRule::CPMM
         )?;
+        let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
         let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
-        let weights = vec![MinWeight::get(); weight_len.saturating_add(1)];
-    }: _(RawOrigin::Signed(caller), market_id, weights)
+        let weights = vec![MinWeight::get(); weight_len];
+    }: _(RawOrigin::Signed(caller), market_id, max_swap_fee, min_liquidity, weights)
 
     dispute {
         let a in 0..(T::MaxDisputes::get() - 1) as u32;
@@ -360,8 +331,26 @@ benchmarks! {
         let origin = caller.clone();
         let disputes = crate::Disputes::<T>::get(&market_id);
         let market = T::MarketCommons::market(&Default::default()).unwrap();
-        let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+        T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
     }
+
+    do_reject_market {
+        let (_, market_id) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
+        )?;
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+    }: { Pallet::<T>::do_reject_market(&market_id, market)? }
+
+    handle_expired_advised_market {
+        let (_, market_id) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM
+        )?;
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+    }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
 
     internal_resolve_categorical_reported {
         // a = total accounts
@@ -396,7 +385,7 @@ benchmarks! {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(&market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
@@ -425,7 +414,7 @@ benchmarks! {
             let disputes = crate::Disputes::<T>::get(&market_id);
             let origin = caller.clone();
             let market = T::MarketCommons::market(&Default::default()).unwrap();
-            let _ = T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;

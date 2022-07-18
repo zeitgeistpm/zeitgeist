@@ -1,3 +1,81 @@
+# v0.3.5
+
+- Added `Initialized` status for pools. A pool now starts in `Initialized`
+  status and must be opened using `Swaps::open_pool`. While the pool is
+  `Initialized`, it is allowed to call `pool_join` and `pool_exit`, but trading
+  and single-asset operations are prohibited.
+
+# v0.3.4
+
+- Implemented swap fees for CPMM pools. This means that the following extrinsics
+  now have a (non-optional) `swap_fee` parameter:
+
+  - `create_cpmm_market_and_deploy_assets`
+  - `deploy_swap_pool_and_additional_liquidity`
+  - `deploy_swap_pool_for_market`
+
+  Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
+  on-chain constant `MaxSwapFee`.
+
+- Changed the `weights` parameter of `deploy_swap_pool_and_additional_liquidity`
+  and `deploy_swap_pool_for_market` to be a vector whose length is equal to the
+  number of outcome tokens (one item shorter than before). The `weights` now
+  refer to the weights of the outcome tokens only, and the user can no longer
+  control the weight of the base asset. Instead, the weight of the base asset is
+  equal to the sum of the weights of the outcome tokens, thereby ensuring that
+  (assuming equal balances) the spot prices of the outcome tokens sum up to 1.
+- Changed `Market` struct's `mdm` to `dispute_mechanism`.
+
+# v0.3.3
+
+- Introduced `MarketStatus::Closed`. Markets are automatically transitioned into
+  this state when the market ends, and the `Event::MarketClosed` is emitted.
+  Trading is not allowed on markets that are closed.
+
+- Introduced `PoolStatus::Closed`; the pool of a market is closed when the
+  market is closed. The `Event::PoolClosed` is emitted when this happens.
+
+- Replace `PoolStatus::Stale` with `PoolStatus::Clean`. This state signals that
+  the corresponding market was resolved and the losing assets deleted from the
+  pool. The `Event::PoolCleanedUp` is emitted when the pool transitions into
+  this state.
+
+- Simplify `create_cpmm_market_and_deploy_assets`,
+  `deploy_swap_pool_and_additional_liquidity` and `deploy_swap_pool_for_market`
+  by using a single `amount` parameter instead of `amount_base_asset` and
+  `amount_outcome_assets`.
+
+- The `MarketCounter` of the `market-commons` pallet is incremented by one. This
+  means that `MarketCounter` is now equal to the total number of markets ever
+  created, instead of equal to the id of the last market created. For details
+  regarding this fix, see https://github.com/zeitgeistpm/zeitgeist/pull/636 and
+  https://github.com/zeitgeistpm/zeitgeist/issues/365.
+
+- Made the `min_asset_amount_out` and `max_price` parameters of
+  `swap_exact_amount_in` and the `max_asset_amount_in` and `max_price`
+  parameters of `swap_exact_amount_out` optional
+
+- Replaced `create_categorical_market` and `create_scalar_market` with
+  `create_market`, which uses a `market_type` parameter to determine what market
+  we create
+
+# v0.3.2
+
+- Added a field for `market_account` to `MarketCreated` event and `pool_account`
+  field to `PoolCreate` event.
+
+- Changed all call parameters of type `u16`, `BalanceOf`, `MarketId` and
+  `PoolId` in extrinsics to
+  [compact encoding](https://docs.substrate.io/v3/advanced/scale-codec/#compactgeneral-integers).
+
+- Removed the `cancel_pending_market` function and the corresponding event
+  `MarketCancelled`.
+
+- Renamed `admin_set_pool_as_stale` to `admin_set_pool_to_stale` and changed the
+  call parameters: Instead of specifying a `market_type` and `pool_id`, we now
+  use a `market_id`. This fixes a problem where it's possible to specify an
+  incorrect market type.
+
 # v0.3.1
 
 - Removed function parameter `keep_outcome_assets` from dispatchables
@@ -55,9 +133,9 @@
 - `LiquidityMining` was replaced with a dummy implementation and the calls to
   that pallet are filtered. We also plan to losen this constraint with the
   introduction of separate runtimes.
-  
-- When tokens are redeemed an event is emitted: `TokensRedeemed`. The fields 
-  are (in that order): `market_id, currency_id, amount_redeemed, payout, who`.
-  This should also be regarded as an informative event, as stated before in 
-  this document balance changes should only be executed by events emitted by
-  the pallets that manage the balances.
+
+- When tokens are redeemed an event is emitted: `TokensRedeemed`. The fields are
+  (in that order): `market_id, currency_id, amount_redeemed, payout, who`. This
+  should also be regarded as an informative event, as stated before in this
+  document balance changes should only be executed by events emitted by the
+  pallets that manage the balances.

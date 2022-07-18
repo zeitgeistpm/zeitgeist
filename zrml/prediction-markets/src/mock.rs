@@ -18,13 +18,13 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::{
-        AdvisoryBond, AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount,
-        CourtCaseDuration, CourtPalletId, DisputeBond, DisputeFactor, ExistentialDeposit,
-        ExistentialDeposits, ExitFee, GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets,
-        MaxCategories, MaxDisputes, MaxInRatio, MaxOutRatio, MaxReserves, MaxSubsidyPeriod,
+        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
+        CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
+        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
         MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, OracleBond, PmPalletId, ReportingPeriod,
-        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, ValidityBond, BASE,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, ReportingPeriod,
+        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, BASE, CENT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -47,6 +47,11 @@ ord_parameter_types! {
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
+    pub const MinSubsidyPerAccount: Balance = BASE;
+    pub const AdvisoryBond: Balance = 11 * CENT;
+    pub const OracleBond: Balance = 25 * CENT;
+    pub const ValidityBond: Balance = 53 * CENT;
+    pub const DisputeBond: Balance = 109 * CENT;
 }
 
 construct_runtime!(
@@ -59,7 +64,7 @@ construct_runtime!(
         Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
-        Currency: orml_currencies::{Call, Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
@@ -89,15 +94,15 @@ impl crate::Config for Runtime {
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
+    type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
-    type Shares = Tokens;
+    type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
-    type Slash = ();
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -131,7 +136,6 @@ impl frame_system::Config for Runtime {
 }
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
     type GetNativeCurrencyId = GetNativeCurrencyId;
     type MultiCurrency = Tokens;
     type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances>;
@@ -146,8 +150,12 @@ impl orml_tokens::Config for Runtime {
     type Event = Event;
     type ExistentialDeposits = ExistentialDeposits;
     type MaxLocks = ();
+    type MaxReserves = MaxReserves;
     type OnDust = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type OnNewTokenAccount = ();
+    type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Runtime {
@@ -230,19 +238,22 @@ impl zrml_swaps::Config for Runtime {
     type FixedTypeU = <Runtime as zrml_rikiddo::Config>::FixedTypeU;
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
+    type MarketCommons = MarketCommons;
     type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
+    type MaxSwapFee = MaxSwapFee;
     type MaxTotalWeight = MaxTotalWeight;
     type MaxWeight = MaxWeight;
     type MinAssets = MinAssets;
     type MinLiquidity = MinLiquidity;
     type MinSubsidy = MinSubsidy;
+    type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type Shares = Currency;
+    type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
@@ -295,5 +306,38 @@ sp_api::mock_impl_runtime_apis! {
         fn market_outcome_share_id(_: MarketId, _: u16) -> Asset<MarketId> {
             Asset::PoolShare(SerdeWrapper(1))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Config;
+
+    // We run this test to ensure that bonds are mutually non-equal (some of the tests in
+    // `tests.rs` require this to be true).
+    #[test]
+    fn test_bonds_are_pairwise_non_equal() {
+        assert_ne!(
+            <Runtime as Config>::AdvisoryBond::get(),
+            <Runtime as Config>::OracleBond::get()
+        );
+        assert_ne!(
+            <Runtime as Config>::AdvisoryBond::get(),
+            <Runtime as Config>::ValidityBond::get()
+        );
+        assert_ne!(
+            <Runtime as Config>::AdvisoryBond::get(),
+            <Runtime as Config>::DisputeBond::get()
+        );
+        assert_ne!(
+            <Runtime as Config>::OracleBond::get(),
+            <Runtime as Config>::ValidityBond::get()
+        );
+        assert_ne!(<Runtime as Config>::OracleBond::get(), <Runtime as Config>::DisputeBond::get());
+        assert_ne!(
+            <Runtime as Config>::ValidityBond::get(),
+            <Runtime as Config>::DisputeBond::get()
+        );
     }
 }

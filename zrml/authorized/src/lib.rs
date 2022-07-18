@@ -6,6 +6,7 @@ extern crate alloc;
 
 mod authorized_pallet_api;
 mod benchmarks;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -19,20 +20,21 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        pallet_prelude::StorageDoubleMap,
+        ensure,
+        pallet_prelude::{OptionQuery, StorageMap},
         traits::{Currency, Get, Hooks, IsType, StorageVersion},
-        Blake2_128Concat, PalletId,
+        PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
         traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
+        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -49,30 +51,21 @@ mod pallet {
         #[pallet::weight(T::WeightInfo::authorize_market_outcome())]
         pub fn authorize_market_outcome(
             origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let markets = T::MarketCommons::markets();
-            let market_id = if let Some(rslt) = markets.iter().find(|el| {
-                if let MarketDisputeMechanism::Authorized(ref account_id) = el.1.mdm {
-                    account_id == &who
-                } else {
-                    false
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
+            ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
+            if let MarketDisputeMechanism::Authorized(ref account_id) = market.dispute_mechanism {
+                if account_id != &who {
+                    return Err(Error::<T>::NotAuthorizedForThisMarket.into());
                 }
-            }) {
-                rslt.0
             } else {
-                return Err(Error::<T>::AccountIsNotLinkedToAnyAuthorizedMarket.into());
-            };
-
-            Outcomes::<T>::insert(market_id, who, outcome);
-
-            // An already stored market was probably modified with a different
-            // authorized account.
-            if Outcomes::<T>::iter_prefix(market_id).count() > 1 {
-                return Err(Error::<T>::MarketsCanNotHaveMoreThanOneAuthorizedAccount.into());
+                return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
-
+            AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
             Ok(())
         }
     }
@@ -98,14 +91,14 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// An account trying to register an outcome is not tied to any authorized market.
-        AccountIsNotLinkedToAnyAuthorizedMarket,
-        /// On dispute or resolution, someone tried to pass a non-authorized market type
-        MarketDoesNotHaveAuthorizedMechanism,
-        /// It is not possible to have more than one stored outcome for the same market.
-        MarketsCanNotHaveMoreThanOneAuthorizedAccount,
-        /// On resolution, someone tried to pass a unknown account id or market id.
-        UnknownOutcome,
+        /// An unauthorized account attempts to submit a report.
+        NotAuthorizedForThisMarket,
+        /// The market unexpectedly has the incorrect dispute mechanism.
+        MarketDoesNotHaveDisputeMechanismAuthorized,
+        /// An account attempts to submit a report to an undisputed market.
+        MarketIsNotDisputed,
+        /// The report does not match the market's type.
+        OutcomeMismatch,
     }
 
     #[pallet::event]
@@ -136,51 +129,31 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if let MarketDisputeMechanism::Authorized(_) = market.mdm {
-                Ok(())
-            } else {
-                Err(Error::<T>::MarketDoesNotHaveAuthorizedMechanism.into())
-            }
+            Ok(())
         }
 
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<OutcomeReport, DispatchError> {
-            let market_ai = if let MarketDisputeMechanism::Authorized(ref el) = market.mdm {
-                el
-            } else {
-                return Err(Error::<T>::MarketDoesNotHaveAuthorizedMechanism.into());
-            };
-
-            let outcome = if let Some(el) = Outcomes::<T>::get(market_id, market_ai) {
-                el
-            } else {
-                return Err(Error::<T>::UnknownOutcome.into());
-            };
-
-            Outcomes::<T>::remove(market_id, market_ai);
-
-            Ok(outcome)
+            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+        ) -> Result<Option<OutcomeReport>, DispatchError> {
+            let result = AuthorizedOutcomeReports::<T>::get(market_id);
+            if result.is_some() {
+                AuthorizedOutcomeReports::<T>::remove(market_id);
+            }
+            Ok(result)
         }
     }
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}
 
-    /// Reported outcomes of accounts that are linked through
-    /// `MarketDisputeMechanism::Authorized(..)`.
+    /// Maps the market id to the outcome reported by the authorized account.    
     #[pallet::storage]
-    pub type Outcomes<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        Blake2_128Concat,
-        T::AccountId,
-        OutcomeReport,
-    >;
+    #[pallet::getter(fn outcomes)]
+    pub type AuthorizedOutcomeReports<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, OutcomeReport, OptionQuery>;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -199,13 +172,13 @@ where
         creator_fee: 0,
         creator: T::PalletId::get().into_account(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        mdm: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
-        status: zeitgeist_primitives::types::MarketStatus::Closed,
+        status: zeitgeist_primitives::types::MarketStatus::Disputed,
     }
 }

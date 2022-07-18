@@ -2,14 +2,15 @@ use crate::{
     service::{AdditionalRuntimeApiCollection, CommonRuntimeApiCollection, ExecutorDispatch},
     KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
+use cumulus_client_cli::CollatorOptions;
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
     prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use cumulus_relay_chain_interface::RelayChainInterface;
-use cumulus_relay_chain_local::build_relay_chain_interface;
+use cumulus_relay_chain_inprocess_interface::build_inprocess_relay_chain;
+use cumulus_relay_chain_interface::{RelayChainError, RelayChainInterface};
 use nimbus_consensus::{BuildNimbusConsensusParams, NimbusConsensus};
 use nimbus_primitives::NimbusId;
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
@@ -24,7 +25,7 @@ use zeitgeist_primitives::types::Hash;
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
 type FullBackend = TFullBackend<Block>;
-type FullClient<RuntimeApi, Executor> =
+pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
     FullClient<RuntimeApi, Executor>,
@@ -194,7 +195,7 @@ where
 async fn do_new_full<RuntimeApi, Executor, BIC>(
     parachain_config: Configuration,
     polkadot_config: Configuration,
-    id: polkadot_primitives::v0::Id,
+    id: polkadot_primitives::v2::Id,
     build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
@@ -231,12 +232,16 @@ where
     let backend = params.backend.clone();
     let mut task_manager = params.task_manager;
 
-    let (relay_chain_interface, collator_key) =
-        build_relay_chain_interface(polkadot_config, telemetry_worker_handle, &mut task_manager)
-            .map_err(|e| match e {
-                polkadot_service::Error::Sub(x) => x,
-                s => format!("{}", s).into(),
-            })?;
+    let (relay_chain_interface, collator_key) = build_inprocess_relay_chain(
+        polkadot_config,
+        &parachain_config,
+        telemetry_worker_handle,
+        &mut task_manager,
+    )
+    .map_err(|e| match e {
+        RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
+        s => s.to_string().into(),
+    })?;
 
     let block_announce_validator = BlockAnnounceValidator::new(relay_chain_interface.clone(), id);
 
@@ -315,7 +320,9 @@ where
             spawner,
             parachain_consensus,
             import_queue,
-            collator_key,
+            collator_key: collator_key.ok_or_else(|| {
+                sc_service::error::Error::Other("Collator Key is None".to_string())
+            })?,
             relay_chain_slot_duration,
         };
 
@@ -329,6 +336,7 @@ where
             relay_chain_interface,
             relay_chain_slot_duration,
             import_queue,
+            collator_options: CollatorOptions { relay_chain_rpc_url: Default::default() },
         };
 
         start_full_node(params)?;

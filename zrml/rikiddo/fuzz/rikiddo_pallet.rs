@@ -48,7 +48,7 @@ fuzz_target!(|data: Data| {
         let pool_id = 0;
         let mut current_block = 0;
         let _ = Rikiddo::create(pool_id, rikiddo);
-        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
+        <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
 
         // Initialize ma_short and ma_long ema
         for (idx, volume) in data.update_volumes.iter().enumerate() {
@@ -57,8 +57,7 @@ fuzz_target!(|data: Data| {
             if idx % 2 == 1 {
                 current_block += 1;
                 run_to_block(current_block);
-                let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), current_block)
-                    .unwrap();
+                <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), current_block).unwrap();
             }
         }
 

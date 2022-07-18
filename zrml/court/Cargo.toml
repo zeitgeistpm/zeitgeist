@@ -1,20 +1,20 @@
 [dependencies]
 arrayvec = { default-features = false, version = "0.7" }
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "2.0.0" }
+frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
+frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 rand = { default-features = false, features = ["alloc", "std_rng"], version = "0.8" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.17", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
-pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate"}
-sp-io = { branch = "moonbeam-polkadot-v0.9.17", git = "https://github.com/purestake/substrate" }
+pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate"}
+sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
 [features]
 default = ["std"]
@@ -32,9 +32,12 @@ std = [
     "zeitgeist-primitives/std",
     "zrml-market-commons/std"
 ]
+try-runtime = [
+  "frame-support/try-runtime",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-court"
-version = "0.3.1"
+version = "0.3.4"

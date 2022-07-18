@@ -25,7 +25,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     creator_fee: 0,
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    mdm: MarketDisputeMechanism::Court,
+    dispute_mechanism: MarketDisputeMechanism::Court,
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
@@ -109,7 +109,7 @@ fn join_court_will_not_insert_an_already_stored_juror() {
 fn on_dispute_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::SimpleDisputes;
+        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         assert_noop!(
             Court::on_dispute(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
@@ -121,7 +121,7 @@ fn on_dispute_denies_non_court_markets() {
 fn on_resolution_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::SimpleDisputes;
+        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         assert_noop!(
             Court::on_resolution(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
@@ -178,7 +178,7 @@ fn on_resolution_decides_market_outcome_based_on_the_majority() {
         Court::vote(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)).unwrap();
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(2)).unwrap();
         let outcome = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
-        assert_eq!(outcome, OutcomeReport::Scalar(1))
+        assert_eq!(outcome, Some(OutcomeReport::Scalar(1)));
     });
 }
 

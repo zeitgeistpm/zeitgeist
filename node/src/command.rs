@@ -1,10 +1,13 @@
-use crate::{
+use super::{
     cli::{Cli, Subcommand},
+    command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
     service::{new_partial, ExecutorDispatch},
 };
+use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
-use zeitgeist_runtime::RuntimeApi;
+use std::sync::Arc;
+use zeitgeist_runtime::{Block, RuntimeApi};
 #[cfg(feature = "parachain")]
 use {
     sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
@@ -25,19 +28,48 @@ pub fn run() -> sc_cli::Result<()> {
     }
 
     match &cli.subcommand {
-        #[cfg(feature = "runtime-benchmarks")]
         Some(Subcommand::Benchmark(cmd)) => {
-            if cfg!(feature = "runtime-benchmarks") {
-                let runner = cli.create_runner(cmd)?;
+            let runner = cli.create_runner(cmd)?;
 
-                runner.sync_run(|config| {
-                    cmd.run::<zeitgeist_runtime::Block, ExecutorDispatch>(config)
-                })
-            } else {
-                Err("Benchmarking wasn't enabled when building the node. You can enable it with \
-                     `--features runtime-benchmarks`."
-                    .into())
-            }
+            runner.sync_run(|config| {
+                let PartialComponents { client, backend, .. } =
+                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+
+                // This switch needs to be in the client, since the client decides
+                // which sub-commands it wants to support.
+                match cmd {
+                    BenchmarkCmd::Pallet(cmd) => {
+                        if !cfg!(feature = "runtime-benchmarks") {
+                            return Err("Runtime benchmarking wasn't enabled when building the \
+                                        node. You can enable it with `--features \
+                                        runtime-benchmarks`."
+                                .into());
+                        }
+
+                        cmd.run::<Block, ExecutorDispatch>(config)
+                    }
+                    BenchmarkCmd::Block(cmd) => cmd.run(client),
+                    BenchmarkCmd::Storage(cmd) => {
+                        let db = backend.expose_db();
+                        let storage = backend.expose_storage();
+
+                        cmd.run(config, client, db, storage)
+                    }
+                    BenchmarkCmd::Overhead(cmd) => {
+                        if cfg!(feature = "parachain") {
+                            Err("Overhead is only supported in standalone chain".into())
+                        } else {
+                            let ext_builder = BenchmarkExtrinsicBuilder::new(client.clone());
+                            cmd.run(
+                                config,
+                                client,
+                                inherent_benchmark_data()?,
+                                Arc::new(ext_builder),
+                            )
+                        }
+                    }
+                }
+            })
         }
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
@@ -178,9 +210,33 @@ pub fn run() -> sc_cli::Result<()> {
             runner.async_run(|config| {
                 let PartialComponents { client, task_manager, backend, .. } =
                     new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-                Ok((cmd.run(client, backend), task_manager))
+
+                let aux_revert = Box::new(move |client, _, blocks| {
+                    sc_finality_grandpa::revert(client, blocks)?;
+                    Ok(())
+                });
+
+                Ok((cmd.run(client, backend, Some(aux_revert)), task_manager))
             })
         }
+        #[cfg(feature = "try-runtime")]
+        Some(Subcommand::TryRuntime(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            runner.async_run(|config| {
+                // we don't need any of the components of new_partial, just a runtime, or a task
+                // manager to do `async_run`.
+                let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                let task_manager =
+                    sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                        .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
+
+                Ok((cmd.run::<Block, ExecutorDispatch>(config), task_manager))
+            })
+        }
+        #[cfg(not(feature = "try-runtime"))]
+        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
+                                             You can enable it with `--features try-runtime`."
+            .into()),
         None => none_command(&cli),
     }
 }
@@ -214,7 +270,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         );
 
         let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<
-            polkadot_primitives::v0::AccountId,
+            polkadot_primitives::v2::AccountId,
         >::into_account(&parachain_id);
 
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
