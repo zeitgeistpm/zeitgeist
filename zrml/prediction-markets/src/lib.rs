@@ -67,7 +67,6 @@
 extern crate alloc;
 
 mod benchmarks;
-pub mod migrations;
 pub mod mock;
 mod tests;
 pub mod weights;
@@ -92,7 +91,7 @@ mod pallet {
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
-        ArithmeticError, DispatchError, DispatchResult, SaturatedConversion,
+        DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
         constants::{PmPalletId, MILLISECS_PER_BLOCK},
@@ -1798,22 +1797,25 @@ mod pallet {
                         }
                     }
 
-                    // fold all the imbalances into one and reward the correct reporters.
-                    let reward_per_each = overall_imbalance
-                        .checked_div(&correct_reporters.len().saturated_into())
-                        .ok_or(ArithmeticError::DivisionByZero)?;
-                    for correct_reporter in &correct_reporters {
-                        let reward = overall_imbalance.min(reward_per_each); // *Should* always be equal to `reward_per_each`
-                        overall_imbalance = overall_imbalance.saturating_sub(reward);
+                    // Fold all the imbalances into one and reward the correct reporters. The
+                    // number of correct reporters might be zero if the market defaults to the
+                    // report after abandoned dispute. In that case, the rewards remain slashed.
+                    if let Some(reward_per_each) =
+                        overall_imbalance.checked_div(&correct_reporters.len().saturated_into())
+                    {
+                        for correct_reporter in &correct_reporters {
+                            let reward = overall_imbalance.min(reward_per_each); // *Should* always be equal to `reward_per_each`
+                            overall_imbalance = overall_imbalance.saturating_sub(reward);
 
-                        if let Err(err) =
-                            T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
-                        {
-                            log::warn!(
-                                "[PredictionMarkets] Cannot deposit to the correct reporter. \
-                                 error: {:?}",
-                                err
-                            );
+                            if let Err(err) =
+                                T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
+                            {
+                                log::warn!(
+                                    "[PredictionMarkets] Cannot deposit to the correct reporter. \
+                                     error: {:?}",
+                                    err
+                                );
+                            }
                         }
                     }
 

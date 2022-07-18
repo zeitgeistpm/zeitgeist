@@ -14,7 +14,8 @@ use frame_support::{
     PalletId,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
-use sp_runtime::{traits::AccountIdConversion, Perbill, Permill};
+use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
+use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
@@ -126,6 +127,14 @@ parameter_types! {
     // Transaction payment
     pub const OperationalFeeMultiplier: u8 = 5;
     pub const TransactionByteFee: Balance = 100 * MICRO;
+    pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(10);
+    // With a target block time of 12 seconds (7200 blocks per day)
+    // the weight fees can increase by at most ~21.46% per day, given extreme congestion.
+    // See https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html for details.
+    pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(3, 100_000);
+    // Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
+    // that this value is not too low.
+    pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
 
     // Treasury
     pub const Burn: Permill = Permill::from_percent(50);
@@ -139,3 +148,8 @@ parameter_types! {
     // Vesting
     pub const MinVestedTransfer: Balance = CENT;
 }
+
+// Parameterized slow adjusting fee updated based on
+// https://research.web3.foundation/en/latest/polkadot/overview/2-token-economics.html#-2.-slow-adjusting-mechanism
+pub type SlowAdjustingFeeUpdate<R> =
+    TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;

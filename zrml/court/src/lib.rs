@@ -12,6 +12,7 @@ mod benchmarks;
 mod court_pallet_api;
 mod juror;
 mod juror_status;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -32,7 +33,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
@@ -58,7 +59,7 @@ mod pallet {
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
@@ -93,7 +94,7 @@ mod pallet {
             if Jurors::<T>::get(&who).is_some() {
                 return Err(Error::<T>::JurorAlreadyExists.into());
             }
-            let jurors_num = Jurors::<T>::iter().count();
+            let jurors_num = Jurors::<T>::count() as usize;
             let jurors_num_plus_one = jurors_num.checked_add(1).ok_or(ArithmeticError::Overflow)?;
             let stake = Self::current_required_stake(jurors_num_plus_one);
             CurrencyOf::<T>::reserve_named(&RESERVE_ID, &who, stake)?;
@@ -525,7 +526,7 @@ mod pallet {
 
     /// Accounts that stake funds to decide outcomes.
     #[pallet::storage]
-    pub type Jurors<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
+    pub type Jurors<T: Config> = CountedStorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
 
     /// An extra layer of pseudo randomness.
     #[pallet::storage]
