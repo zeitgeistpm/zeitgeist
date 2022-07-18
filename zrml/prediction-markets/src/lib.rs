@@ -672,6 +672,7 @@ mod pallet {
                 Some(amount),
                 Some(weights),
             )?;
+            T::Swaps::open_pool(pool_id)?;
 
             // This errors if a pool already exists!
             T::MarketCommons::insert_market_pool(market_id, pool_id)?;

@@ -58,6 +58,8 @@ pub trait Swaps<AccountId> {
     /// * `pool_id`: Unique pool identifier associated with the pool to be destroyed.
     fn destroy_pool_in_subsidy_phase(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
+    fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
+
     /// Pool - Exit with exact pool amount
     ///
     /// Takes an asset from `pool_id` and transfers to `origin`. Differently from `pool_exit`,

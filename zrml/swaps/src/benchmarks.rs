@@ -106,6 +106,10 @@ fn bench_create_pool<T: Config>(
     .unwrap();
     let pool_id = <NextPoolId<T>>::get() - 1;
 
+    if scoring_rule == ScoringRule::CPMM {
+        let _ = Pallet::<T>::open_pool(pool_id);
+    }
+
     if subsidize {
         let min_subsidy = T::MinSubsidy::get();
         T::AssetManager::deposit(base_asset, &caller, min_subsidy).unwrap();
