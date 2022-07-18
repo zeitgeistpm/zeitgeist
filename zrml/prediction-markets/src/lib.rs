@@ -1845,29 +1845,22 @@ mod pallet {
             let one_read = T::DbWeight::get().reads(1);
             let one_write = T::DbWeight::get().writes(1);
 
-            let retain_closure =
-                |subsidy_info: &SubsidyUntil<T::BlockNumber, MomentOf<T>, MarketIdOf<T>>| {
-                    let market_ready = match &subsidy_info.period {
-                        MarketPeriod::Block(period) => period.start <= current_block,
-                        MarketPeriod::Timestamp(period) => period.start <= current_time,
-                    };
+            let retain_closure = |subsidy_info: &SubsidyUntil<
+                T::BlockNumber,
+                MomentOf<T>,
+                MarketIdOf<T>,
+            >| {
+                let market_ready = match &subsidy_info.period {
+                    MarketPeriod::Block(period) => period.start <= current_block,
+                    MarketPeriod::Timestamp(period) => period.start <= current_time,
+                };
 
-                    if market_ready {
-                        let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
-                        total_weight.saturating_add(one_read);
+                if market_ready {
+                    let pool_id = T::MarketCommons::market_pool(&subsidy_info.market_id);
+                    total_weight.saturating_add(one_read);
 
-                        if let Err(err) = pool_id {
-                            log::error!(
-                                "[PredictionMarkets] Cannot find pool associated to market.
-                            market_id: {:?}, error: {:?}",
-                                pool_id,
-                                err
-                            );
-                            return true;
-                        }
-
-                        let end_subsidy_result =
-                            T::Swaps::end_subsidy_phase(pool_id.unwrap_or(u128::MAX));
+                    if let Ok(pool_id) = pool_id {
+                        let end_subsidy_result = T::Swaps::end_subsidy_phase(pool_id);
 
                         if let Ok(result) = end_subsidy_result {
                             total_weight = total_weight.saturating_add(result.weight);
@@ -1900,9 +1893,8 @@ mod pallet {
                                 ));
                             } else {
                                 // Insufficient subsidy, cleanly remove pool and close market.
-                                let destroy_result = T::Swaps::destroy_pool_in_subsidy_phase(
-                                    pool_id.unwrap_or(u128::MAX),
-                                );
+                                let destroy_result =
+                                    T::Swaps::destroy_pool_in_subsidy_phase(pool_id);
 
                                 if let Err(err) = destroy_result {
                                     log::error!(
@@ -1981,10 +1973,19 @@ mod pallet {
                                 err
                             );
                         }
+                    } else if let Err(err) = pool_id {
+                        log::error!(
+                            "[PredictionMarkets] Cannot find pool associated to market.
+                            market_id: {:?}, error: {:?}",
+                            subsidy_info.market_id,
+                            err
+                        );
+                        return true;
                     }
+                }
 
-                    true
-                };
+                true
+            };
 
             let mut weight_basis = 0;
             <MarketsCollectingSubsidy<T>>::mutate(
