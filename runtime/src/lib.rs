@@ -12,6 +12,7 @@ pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
+mod tests;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
@@ -840,7 +841,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-    type FeeMultiplierUpdate = ();
+    type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
