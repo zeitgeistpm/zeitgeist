@@ -12,6 +12,7 @@ pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
+mod tests;
 mod weights;
 #[cfg(feature = "parachain")]
 mod xcm_config;
@@ -77,7 +78,7 @@ type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
-    zrml_prediction_markets::migrations::RemoveDisputesOfResolvedMarkets<Runtime>,
+    zrml_court::migrations::JurorsCountedStorageMapMigration<Runtime>,
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -840,7 +841,7 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-    type FeeMultiplierUpdate = ();
+    type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
     type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
