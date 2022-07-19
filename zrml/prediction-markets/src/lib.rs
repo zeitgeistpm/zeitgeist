@@ -1223,8 +1223,8 @@ mod pallet {
             // If we are at genesis or the first block the timestamp is be undefined. No
             // market needs to be opened or closed on blocks #0 or #1, so we skip the
             // evaluation. Without this check, new chains starting from genesis will hang up,
-            // since the loops in `market_open_manager` and `market_close_manager` below will
-            // run over an interval of 0 to the current time frame.
+            // since the loops in the `market_status_manager` calls below will run over an interval
+            // of 0 to the current time frame.
             if now <= 1u32.into() {
                 return total_weight;
             }
@@ -1241,7 +1241,11 @@ mod pallet {
                 LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
 
             let _ = with_transaction(|| {
-                let open = Self::market_open_manager(
+                let open = Self::market_status_manager::<
+                    _,
+                    MarketIdsPerOpenBlock<T>,
+                    MarketIdsPerOpenTimeFrame<T>,
+                >(
                     now,
                     last_time_frame,
                     current_time_frame,
@@ -1252,7 +1256,11 @@ mod pallet {
                     },
                 );
 
-                let close = Self::market_close_manager(
+                let close = Self::market_status_manager::<
+                    _,
+                    MarketIdsPerCloseBlock<T>,
+                    MarketIdsPerCloseTimeFrame<T>,
+                >(
                     now,
                     last_time_frame,
                     current_time_frame,
@@ -2149,7 +2157,7 @@ mod pallet {
             Ok(())
         }
 
-        pub(crate) fn market_open_manager<F>(
+        pub(crate) fn market_status_manager<F, MarketIdsPerBlock, MarketIdsPerTimeFrame>(
             block_number: T::BlockNumber,
             last_time_frame: TimeFrame,
             current_time_frame: TimeFrame,
@@ -2160,49 +2168,31 @@ mod pallet {
                 &MarketIdOf<T>,
                 Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             ) -> DispatchResult,
+            MarketIdsPerBlock: frame_support::StorageMap<
+                T::BlockNumber,
+                BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+                Query = BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+            >,
+            MarketIdsPerTimeFrame: frame_support::StorageMap<
+                TimeFrame,
+                BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+                Query = BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+            >,
         {
-            for market_id in MarketIdsPerOpenBlock::<T>::get(&block_number).iter() {
+            for market_id in MarketIdsPerBlock::get(&block_number).iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
-            MarketIdsPerOpenBlock::<T>::remove(&block_number);
+            MarketIdsPerBlock::remove(&block_number);
 
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerOpenTimeFrame::<T>::get(&time_frame).iter() {
+                for market_id in MarketIdsPerTimeFrame::get(&time_frame).iter() {
                     let market = T::MarketCommons::market(market_id)?;
                     mutation(market_id, market)?;
                 }
-                MarketIdsPerOpenTimeFrame::<T>::remove(&time_frame);
+                MarketIdsPerTimeFrame::remove(&time_frame);
             }
 
-            Ok(())
-        }
-
-        pub(crate) fn market_close_manager<F>(
-            block_number: T::BlockNumber,
-            last_time_frame: TimeFrame,
-            current_time_frame: TimeFrame,
-            mut mutation: F,
-        ) -> DispatchResult
-        where
-            F: FnMut(
-                &MarketIdOf<T>,
-                Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            ) -> DispatchResult,
-        {
-            for market_id in MarketIdsPerCloseBlock::<T>::get(&block_number).iter() {
-                let market = T::MarketCommons::market(market_id)?;
-                mutation(market_id, market)?;
-            }
-            MarketIdsPerCloseBlock::<T>::remove(&block_number);
-
-            for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter() {
-                    let market = T::MarketCommons::market(market_id)?;
-                    mutation(market_id, market)?;
-                }
-                MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
-            }
             Ok(())
         }
 
