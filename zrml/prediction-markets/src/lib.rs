@@ -1249,8 +1249,8 @@ mod pallet {
                     now,
                     last_time_frame,
                     current_time_frame,
-                    |market_id, market| {
-                        let weight = Self::on_market_open(market_id, market)?;
+                    |market_id, _| {
+                        let weight = Self::open_market(market_id)?;
                         total_weight = total_weight.saturating_add(weight);
                         Ok(())
                     },
@@ -1773,16 +1773,6 @@ mod pallet {
             Self::deposit_event(Event::MarketClosed(*market_id));
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             Ok(total_weight)
-        }
-
-        fn on_market_open(
-            market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> Result<Weight, DispatchError> {
-            match market.status {
-                MarketStatus::Active => Self::open_market(market_id),
-                _ => Err(Error::<T>::InvalidMarketStatus.into()), // Should never occur!
-            }
         }
 
         /// Handle market state transitions at the end of its active phase.
