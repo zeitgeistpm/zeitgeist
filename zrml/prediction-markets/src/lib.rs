@@ -366,7 +366,13 @@ mod pallet {
                 Error::<T>::InvalidMarketStatus
             );
             let num_disputes: u32 = disputes.len().saturated_into();
-            Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
+            Self::validate_dispute(
+                &disputes,
+                &market,
+                num_disputes,
+                &outcome,
+                &market.dispute_mechanism,
+            )?;
             let dispute_bond = default_dispute_bond::<T>(disputes.len());
             T::AssetManager::reserve_named(&RESERVE_ID, Asset::Ztg, &who, dispute_bond)?;
 
@@ -1511,17 +1517,39 @@ mod pallet {
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
             report: &Report<T::AccountId, T::BlockNumber>,
             outcome: &OutcomeReport,
+            dispute_mechanism: &MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
-                ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
+                match dispute_mechanism {
+                    MarketDisputeMechanism::GlobalDisputes => {
+                        for d in disputes {
+                            ensure!(&d.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
+                        }
+                    }
+                    MarketDisputeMechanism::SimpleDisputes
+                    | MarketDisputeMechanism::Authorized(_)
+                    | MarketDisputeMechanism::Court => {
+                        ensure!(
+                            &last_dispute.outcome != outcome,
+                            Error::<T>::CannotDisputeSameOutcome
+                        );
+                    }
+                };
             } else {
                 ensure!(&report.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
             }
+
             Ok(())
         }
 
         #[inline]
-        fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
+        fn ensure_disputes_does_not_exceed_max_disputes(
+            num_disputes: u32,
+            dispute_mechanism: &MarketDisputeMechanism<T::AccountId>,
+        ) -> DispatchResult {
+            if let MarketDisputeMechanism::GlobalDisputes = dispute_mechanism {
+                return Ok(());
+            }
             ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
             Ok(())
         }
@@ -2192,11 +2220,17 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             num_disputes: u32,
             outcome_report: &OutcomeReport,
+            dispute_mechanism: &MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             ensure!(market.matches_outcome_report(outcome_report), Error::<T>::OutcomeMismatch);
-            Self::ensure_can_not_dispute_the_same_outcome(disputes, report, outcome_report)?;
-            Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
+            Self::ensure_can_not_dispute_the_same_outcome(
+                disputes,
+                report,
+                outcome_report,
+                dispute_mechanism,
+            )?;
+            Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes, dispute_mechanism)?;
             Ok(())
         }
     }
