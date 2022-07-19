@@ -1324,7 +1324,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
         ValueQuery,
     >;
 
@@ -1334,7 +1334,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         TimeFrame,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
         ValueQuery,
     >;
 
