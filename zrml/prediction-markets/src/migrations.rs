@@ -256,7 +256,6 @@ mod tests {
         });
     }
 
-    // TODO Set and check the open market caches!
     #[test]
     fn test_on_runtime_upgrade_with_sample_markets() {
         ExtBuilder::default().build().execute_with(|| {
