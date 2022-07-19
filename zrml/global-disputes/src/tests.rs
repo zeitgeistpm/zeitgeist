@@ -59,7 +59,7 @@ fn vote_fails_if_insufficient_amount() {
                 2u32,
                 MinDisputeVoteAmount::get() - 1,
             ),
-            Error::<Runtime>::InsufficientAmount
+            Error::<Runtime>::AmountTooLow
         );
     });
 }
@@ -407,7 +407,7 @@ fn vote_fails_for_insufficient_funds() {
 
         assert_noop!(
             GlobalDisputes::vote_on_dispute(Origin::signed(DAVE), market_id, 0u32, 50 * BASE),
-            Error::<Runtime>::InsufficientFundsForVote
+            Error::<Runtime>::InsufficientAmount
         );
     });
 }

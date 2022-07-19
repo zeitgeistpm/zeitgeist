@@ -12662,7 +12662,6 @@ dependencies = [
  "scale-info",
  "sp-io",
  "sp-runtime",
- "sp-std",
  "test-case",
  "zeitgeist-primitives",
  "zrml-market-commons",

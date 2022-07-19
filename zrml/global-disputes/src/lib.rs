@@ -4,6 +4,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 mod benchmarks;
 mod global_disputes_pallet_api;
 mod mock;
@@ -16,6 +18,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
+    use alloc::vec::Vec;
     use core::{cmp::Ordering, marker::PhantomData};
     use frame_support::{
         dispatch::DispatchResult,
@@ -29,7 +32,6 @@ mod pallet {
         traits::{Saturating, Zero},
         DispatchError,
     };
-    use sp_std::vec::Vec;
     use zeitgeist_primitives::{
         traits::DisputeApi,
         types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
