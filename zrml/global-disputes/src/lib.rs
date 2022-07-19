@@ -166,16 +166,14 @@ mod pallet {
         InvalidMarketStatus,
         /// On dispute or resolution, someone tried to pass a non-global-disputes market type
         MarketDoesNotHaveGlobalDisputesMechanism,
-        /// An initial vote balance was already made for this dispute.
-        DisputeVoteAlreadyPresent,
         /// The vote on this dispute index is not allowed, because there are not at least two disputes.
         NotEnoughDisputes,
         /// The dispute specified with market id and dispute index is not present.
         DisputeDoesNotExist,
         /// Sender does not have enough funds for the vote on a dispute.
-        InsufficientFundsForVote,
-        /// Sender tried to vote with an insufficient amount.
         InsufficientAmount,
+        /// Sender tried to vote with an amount below a defined minium.
+        AmountTooLow,
     }
 
     #[pallet::event]
