@@ -366,13 +366,7 @@ mod pallet {
                 Error::<T>::InvalidMarketStatus
             );
             let num_disputes: u32 = disputes.len().saturated_into();
-            Self::validate_dispute(
-                &disputes,
-                &market,
-                num_disputes,
-                &outcome,
-                &market.dispute_mechanism,
-            )?;
+            Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             let dispute_bond = default_dispute_bond::<T>(disputes.len());
             T::AssetManager::reserve_named(&RESERVE_ID, Asset::Ztg, &who, dispute_bond)?;
 
@@ -2220,7 +2214,6 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             num_disputes: u32,
             outcome_report: &OutcomeReport,
-            dispute_mechanism: &MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             ensure!(market.matches_outcome_report(outcome_report), Error::<T>::OutcomeMismatch);
@@ -2228,9 +2221,12 @@ mod pallet {
                 disputes,
                 report,
                 outcome_report,
-                dispute_mechanism,
+                &market.dispute_mechanism,
             )?;
-            Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes, dispute_mechanism)?;
+            Self::ensure_disputes_does_not_exceed_max_disputes(
+                num_disputes,
+                &market.dispute_mechanism,
+            )?;
             Ok(())
         }
     }
