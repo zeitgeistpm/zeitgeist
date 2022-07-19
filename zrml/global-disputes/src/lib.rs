@@ -17,7 +17,6 @@ pub use pallet::*;
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
     use core::{cmp::Ordering, marker::PhantomData};
-    use sp_std::vec::Vec;
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
@@ -30,6 +29,7 @@ mod pallet {
         traits::{Saturating, Zero},
         DispatchError,
     };
+    use sp_std::vec::Vec;
     use zeitgeist_primitives::{
         traits::DisputeApi,
         types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
