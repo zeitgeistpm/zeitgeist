@@ -8,7 +8,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, GlobalDisputesPalletId, MaxDisputeLocks, MaxReserves, MinDisputeVoteAmount,
+        BlockHashCount, GlobalDisputesPalletId, MaxReserves, MinDisputeVoteAmount,
         MinimumPeriod, VoteLockIdentifier, BASE,
     },
     types::{
@@ -43,7 +43,6 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
-    type MaxDisputeLocks = MaxDisputeLocks;
     type MinDisputeVoteAmount = MinDisputeVoteAmount;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }

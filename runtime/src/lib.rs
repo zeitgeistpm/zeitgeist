@@ -1004,7 +1004,6 @@ impl zrml_global_disputes::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
-    type MaxDisputeLocks = MaxDisputeLocks;
     type MinDisputeVoteAmount = MinDisputeVoteAmount;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }

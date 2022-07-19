@@ -91,7 +91,6 @@ parameter_types! {
 parameter_types! {
     pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
     pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
-    pub const MaxDisputeLocks: u32 = 100;
     pub const MinDisputeVoteAmount: Balance = 10 * CENT;
 }
 

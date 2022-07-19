@@ -21,7 +21,7 @@ use zeitgeist_primitives::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, GlobalDisputesPalletId, LiquidityMiningPalletId, MaxAssets,
-        MaxCategories, MaxDisputeLocks, MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio,
+        MaxCategories, MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio,
         MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
         MinCategories, MinDisputeVoteAmount, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
         MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight,
@@ -240,7 +240,6 @@ impl zrml_global_disputes::Config for Runtime {
     type MarketCommons = MarketCommons;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
-    type MaxDisputeLocks = MaxDisputeLocks;
     type MinDisputeVoteAmount = MinDisputeVoteAmount;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }

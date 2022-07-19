@@ -152,9 +152,7 @@ mod pallet {
         #[pallet::constant]
         type VoteLockIdentifier: Get<LockIdentifier>;
 
-        #[pallet::constant]
-        type MaxDisputeLocks: Get<u32>;
-
+        /// The minimum required amount to vote on a dispute.
         #[pallet::constant]
         type MinDisputeVoteAmount: Get<BalanceOf<Self>>;
 
