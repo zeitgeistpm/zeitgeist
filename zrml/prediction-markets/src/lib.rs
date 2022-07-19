@@ -68,6 +68,7 @@ extern crate alloc;
 
 mod benchmarks;
 pub mod mock;
+pub mod migrations;
 mod tests;
 pub mod weights;
 
@@ -108,7 +109,7 @@ mod pallet {
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
