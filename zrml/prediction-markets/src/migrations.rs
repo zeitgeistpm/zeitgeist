@@ -127,11 +127,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
             let pool = match utility::get_pool::<T>(pool_id) {
                 Some(pool) => pool,
                 None => {
-                    log::warn!(
-                        "no pool found. market_id: {:?}. pool_id: {:?}",
-                        market_id,
-                        pool_id,
-                    );
+                    log::warn!("no pool found. market_id: {:?}. pool_id: {:?}", market_id, pool_id,);
                     continue;
                 }
             };
