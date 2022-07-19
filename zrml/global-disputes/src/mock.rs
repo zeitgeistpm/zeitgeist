@@ -8,8 +8,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::{
-        BlockHashCount, GlobalDisputesPalletId, MaxReserves, MinDisputeVoteAmount,
-        MinimumPeriod, VoteLockIdentifier, BASE,
+        BlockHashCount, GlobalDisputesPalletId, MaxReserves, MinDisputeVoteAmount, MinimumPeriod,
+        VoteLockIdentifier, BASE,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
