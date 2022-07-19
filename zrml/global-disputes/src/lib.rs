@@ -59,9 +59,9 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(
                 amount <= CurrencyOf::<T>::free_balance(&sender),
-                Error::<T>::InsufficientFundsForVote
+                Error::<T>::InsufficientAmount
             );
-            ensure!(amount >= T::MinDisputeVoteAmount::get(), Error::<T>::InsufficientAmount);
+            ensure!(amount >= T::MinDisputeVoteAmount::get(), Error::<T>::AmountTooLow);
 
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
