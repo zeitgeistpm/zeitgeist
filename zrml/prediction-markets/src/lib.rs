@@ -1357,7 +1357,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
         ValueQuery,
     >;
 
@@ -1367,7 +1367,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
         ValueQuery,
     >;
 
