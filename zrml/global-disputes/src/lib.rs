@@ -4,8 +4,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate alloc;
-
 mod benchmarks;
 mod global_disputes_pallet_api;
 mod mock;
@@ -18,8 +16,8 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
-    use alloc::vec::Vec;
     use core::{cmp::Ordering, marker::PhantomData};
+    use sp_std::vec::Vec;
     use frame_support::{
         dispatch::DispatchResult,
         ensure,
