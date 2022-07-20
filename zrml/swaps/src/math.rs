@@ -1,3 +1,5 @@
+#![allow(clippy::let_and_return)]
+
 use crate::{
     check_arithm_rslt::CheckArithmRslt,
     fixed::{bdiv, bmul, bpow},

@@ -1,6 +1,7 @@
 #![allow(
     // Mocks are only used for fuzzing and unit tests
-    clippy::integer_arithmetic
+    clippy::integer_arithmetic,
+    clippy::type_complexity,
 )]
 
 use zeitgeist_primitives::constants::{

@@ -52,7 +52,7 @@ fn distribute_market_incentives_removes_market_and_distributes_all_incentives_to
         // In this case, each market have the same amount of incentives
         let market_incentives = ExtBuilder::default().per_block_incentives / 2;
         // Perpetual balance for the entire campaign
-        let entire_market_perpetual_balance = market_incentives * 1 / 1000;
+        let entire_market_perpetual_balance = market_incentives / 1000;
         // Account only stayed 1 block out of 4 (25%), i.e, lost 75% of the perpetual balance
         let actual_market_perpetual_balance = entire_market_perpetual_balance / 4;
         // Ordinary balance
