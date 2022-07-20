@@ -8,7 +8,7 @@ use crate::{
     },
     DisputeVotes, Error, LockInfoOf,
 };
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
 use pallet_balances::BalanceLock;
 use test_case::test_case;
 use zeitgeist_primitives::{
@@ -135,6 +135,127 @@ fn on_resolution_sets_the_last_dispute_for_same_vote_balances_as_the_canonical_o
             &GlobalDisputes::on_resolution(&disputes, &0, &market).unwrap().unwrap(),
             &disputes.get(3).unwrap().outcome
         );
+    });
+}
+
+#[test]
+fn reserve_before_init_dispute_vote_is_not_allowed_for_voting() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+
+        let disputor = &ALICE;
+        let free_balance_disputor_before = Balances::free_balance(disputor);
+        let arbitrary_amount = 42 * BASE;
+        let reserved_balance_disputor = free_balance_disputor_before - arbitrary_amount;
+
+        assert_ok!(Balances::reserve(disputor, reserved_balance_disputor));
+        assert_eq!(
+            Balances::free_balance(disputor),
+            free_balance_disputor_before - reserved_balance_disputor
+        );
+
+        GlobalDisputes::init_dispute_vote(&market_id, 0, reserved_balance_disputor);
+
+        GlobalDisputes::init_dispute_vote(&market_id, 1, reserved_balance_disputor * 2);
+
+        assert_noop!(
+            GlobalDisputes::vote_on_dispute(
+                Origin::signed(*disputor),
+                market_id,
+                0u32,
+                arbitrary_amount + 1
+            ),
+            Error::<Runtime>::InsufficientAmount
+        );
+
+        assert_ok!(GlobalDisputes::vote_on_dispute(
+            Origin::signed(*disputor),
+            market_id,
+            0u32,
+            arbitrary_amount
+        ));
+
+        assert_eq!(
+            Balances::free_balance(disputor),
+            free_balance_disputor_before - reserved_balance_disputor
+        );
+        assert_eq!(Balances::reserved_balance(disputor), reserved_balance_disputor);
+        assert_eq!(Balances::locks(*disputor), vec![the_lock(arbitrary_amount)]);
+    });
+}
+
+#[test]
+fn transfer_fails_with_fully_locked_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+
+        let disputor = &ALICE;
+        let free_balance_disputor_before = Balances::free_balance(disputor);
+        let arbitrary_amount = 42 * BASE;
+
+        assert_ok!(GlobalDisputes::vote_on_dispute(
+            Origin::signed(*disputor),
+            market_id,
+            0u32,
+            free_balance_disputor_before - arbitrary_amount
+        ));
+
+        assert_eq!(Balances::free_balance(disputor), free_balance_disputor_before);
+        assert_eq!(
+            Balances::locks(*disputor),
+            vec![the_lock(free_balance_disputor_before - arbitrary_amount)]
+        );
+
+        assert_noop!(
+            Balances::transfer(Origin::signed(*disputor), BOB, arbitrary_amount + 1),
+            pallet_balances::Error::<Runtime>::LiquidityRestrictions
+        );
+        assert_ok!(Balances::transfer(Origin::signed(*disputor), BOB, arbitrary_amount));
+    });
+}
+
+#[test]
+fn reserve_fails_with_fully_locked_balance() {
+    ExtBuilder::default().build().execute_with(|| {
+        let mut market = DEFAULT_MARKET;
+        market.status = MarketStatus::Disputed;
+        assert_ok!(MarketCommons::push_market(market.clone()));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+
+        GlobalDisputes::init_dispute_vote(&market_id, 0, 10 * BASE);
+        GlobalDisputes::init_dispute_vote(&market_id, 1, 20 * BASE);
+
+        let disputor = &ALICE;
+        let free_balance_disputor_before = Balances::free_balance(disputor);
+        let arbitrary_amount = 42 * BASE;
+
+        assert_ok!(GlobalDisputes::vote_on_dispute(
+            Origin::signed(*disputor),
+            market_id,
+            0u32,
+            free_balance_disputor_before - arbitrary_amount
+        ));
+
+        assert_eq!(Balances::free_balance(disputor), free_balance_disputor_before);
+        assert_eq!(
+            Balances::locks(*disputor),
+            vec![the_lock(free_balance_disputor_before - arbitrary_amount)]
+        );
+
+        assert_noop!(
+            Balances::reserve(disputor, arbitrary_amount + 1),
+            pallet_balances::Error::<Runtime>::LiquidityRestrictions
+        );
+        assert_ok!(Balances::reserve(disputor, arbitrary_amount));
     });
 }
 
