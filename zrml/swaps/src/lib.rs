@@ -2057,7 +2057,8 @@ mod pallet {
                                 outstanding_before.push(total_amount);
 
                                 if *asset == asset_out {
-                                    outstanding_after.push(total_amount.saturating_add(asset_amount_out));
+                                    outstanding_after
+                                        .push(total_amount.saturating_add(asset_amount_out));
                                 } else {
                                     outstanding_after.push(total_amount);
                                 }

@@ -1917,8 +1917,8 @@ mod pallet {
 
                                         // Unreserve funds reserved during market creation
                                         if m.creation == MarketCreation::Permissionless {
-                                            let required_bond =
-                                                T::ValidityBond::get().saturating_add(T::OracleBond::get());
+                                            let required_bond = T::ValidityBond::get()
+                                                .saturating_add(T::OracleBond::get());
                                             T::AssetManager::unreserve_named(
                                                 &RESERVE_ID,
                                                 Asset::Ztg,
