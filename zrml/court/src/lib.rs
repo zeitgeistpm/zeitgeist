@@ -287,8 +287,10 @@ mod pallet {
 
             let slash_and_remove_juror = |ai: &T::AccountId| {
                 let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, ai);
-                // Division will never overflow
-                let slash = all_reserved / BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR);
+                // Unsigned division will never overflow
+                let slash = all_reserved
+                    .checked_div(&BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR))
+                    .ok_or(DispatchError::Other("Zero division"))?;
                 let _ = CurrencyOf::<T>::repatriate_reserved_named(
                     &RESERVE_ID,
                     ai,
@@ -373,8 +375,10 @@ mod pallet {
                     total_winners = total_winners.saturating_add(BalanceOf::<T>::from(1u8));
                 } else {
                     let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, jai);
-                    // Division will never overflow
-                    let slash = all_reserved / BalanceOf::<T>::from(2u8);
+                    // Unsigned division will never overflow
+                    let slash = all_reserved
+                        .checked_div(&BalanceOf::<T>::from(2u8))
+                        .ok_or(DispatchError::Other("Zero division"))?;
                     CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, jai, slash);
                     total_incentives = total_incentives.saturating_add(slash);
                 }
