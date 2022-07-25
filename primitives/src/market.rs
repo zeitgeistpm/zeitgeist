@@ -112,7 +112,6 @@ pub enum MarketDisputeMechanism<AI> {
     Authorized(AI),
     Court,
     SimpleDisputes,
-    GlobalDisputes,
 }
 
 /// Defines whether the period is represented as a blocknumber or a timestamp.

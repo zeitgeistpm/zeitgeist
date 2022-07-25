@@ -35,7 +35,7 @@ mod pallet {
         traits::{One, Saturating, Zero},
         DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::types::{MarketStatus, OutcomeReport};
+    use zeitgeist_primitives::types::OutcomeReport;
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -312,7 +312,7 @@ where
         creator_fee: 0,
         creator: T::PalletId::get().into_account(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::GlobalDisputes,
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Court,
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),

@@ -380,17 +380,11 @@ mod pallet {
                 MarketDisputeMechanism::SimpleDisputes => {
                     T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?
                 }
-                MarketDisputeMechanism::GlobalDisputes => {
-                    T::GlobalDisputes::on_dispute(&disputes, &market_id, &market)?;
-                    // num_disputes is exactly the index of the added dispute
-                    // TODO(#603) weight calculation
-                    let _weight = T::GlobalDisputes::init_vote_outcome(
-                        &market_id,
-                        num_disputes,
-                        dispute_bond,
-                    );
-                }
             }
+
+            // TODO use a better mechanism to limit the amount of outcomes (crowdfunding or auction?)
+            T::GlobalDisputes::push_voting_outcome(&market_id, outcome.clone(), dispute_bond)?;
+
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
             let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
@@ -402,6 +396,7 @@ mod pallet {
             <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
+
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
                 MarketStatus::Disputed,
@@ -1076,12 +1071,8 @@ mod pallet {
 
         /// See [`GlobalDisputesPalletApi`].
         type GlobalDisputes: GlobalDisputesPalletApi<
-            AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
-            BlockNumber = Self::BlockNumber,
             MarketId = MarketIdOf<Self>,
-            Moment = MomentOf<Self>,
-            Origin = Self::Origin,
         >;
 
         /// Swaps pallet API
@@ -1511,24 +1502,10 @@ mod pallet {
             disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
             report: &Report<T::AccountId, T::BlockNumber>,
             outcome: &OutcomeReport,
-            dispute_mechanism: &MarketDisputeMechanism<T::AccountId>,
         ) -> DispatchResult {
+            // TODO find out to handle with this after simple_disputes is deleted
             if let Some(last_dispute) = disputes.last() {
-                match dispute_mechanism {
-                    MarketDisputeMechanism::GlobalDisputes => {
-                        for d in disputes {
-                            ensure!(&d.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
-                        }
-                    }
-                    MarketDisputeMechanism::SimpleDisputes
-                    | MarketDisputeMechanism::Authorized(_)
-                    | MarketDisputeMechanism::Court => {
-                        ensure!(
-                            &last_dispute.outcome != outcome,
-                            Error::<T>::CannotDisputeSameOutcome
-                        );
-                    }
-                };
+                ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
             } else {
                 ensure!(&report.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
             }
@@ -1537,13 +1514,8 @@ mod pallet {
         }
 
         #[inline]
-        fn ensure_disputes_does_not_exceed_max_disputes(
-            num_disputes: u32,
-            dispute_mechanism: &MarketDisputeMechanism<T::AccountId>,
-        ) -> DispatchResult {
-            if let MarketDisputeMechanism::GlobalDisputes = dispute_mechanism {
-                return Ok(());
-            }
+        fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
+            // TODO how to handle this with global disputes?
             ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
             Ok(())
         }
@@ -1759,9 +1731,6 @@ mod pallet {
                         }
                         MarketDisputeMechanism::SimpleDisputes => {
                             T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
-                        }
-                        MarketDisputeMechanism::GlobalDisputes => {
-                            T::GlobalDisputes::on_resolution(&disputes, market_id, market)?
                         }
                     };
                     let resolved_outcome =
@@ -2217,16 +2186,8 @@ mod pallet {
         ) -> DispatchResult {
             let report = market.report.as_ref().ok_or(Error::<T>::MarketIsNotReported)?;
             ensure!(market.matches_outcome_report(outcome_report), Error::<T>::OutcomeMismatch);
-            Self::ensure_can_not_dispute_the_same_outcome(
-                disputes,
-                report,
-                outcome_report,
-                &market.dispute_mechanism,
-            )?;
-            Self::ensure_disputes_does_not_exceed_max_disputes(
-                num_disputes,
-                &market.dispute_mechanism,
-            )?;
+            Self::ensure_can_not_dispute_the_same_outcome(disputes, report, outcome_report)?;
+            Self::ensure_disputes_does_not_exceed_max_disputes(num_disputes)?;
             Ok(())
         }
     }

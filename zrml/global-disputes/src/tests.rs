@@ -25,7 +25,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     creator_fee: 0,
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    dispute_mechanism: MarketDisputeMechanism::GlobalDisputes,
+    dispute_mechanism: MarketDisputeMechanism::Court,
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
