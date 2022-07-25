@@ -22,6 +22,7 @@ pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
 pub const EVE: AccountIdTest = 3;
 pub const DAVE: AccountIdTest = 4;
+pub const POOR_PAUL: AccountIdTest = 5;
 
 construct_runtime!(
     pub enum Runtime
@@ -118,6 +119,7 @@ impl Default for ExtBuilder {
                 (BOB, 1_000 * BASE),
                 (CHARLIE, 1_000 * BASE),
                 (EVE, 1_000 * BASE),
+                (POOR_PAUL, 0),
             ],
         }
     }

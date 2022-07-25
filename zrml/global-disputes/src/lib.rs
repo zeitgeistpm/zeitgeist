@@ -63,9 +63,6 @@ mod pallet {
             );
             ensure!(amount >= T::MinDisputeVoteAmount::get(), Error::<T>::AmountTooLow);
 
-            let market = T::MarketCommons::market(&market_id)?;
-            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
-
             ensure!(
                 <Outcomes<T>>::get(market_id).len() >= T::MinOutcomes::get() as usize,
                 Error::<T>::NotEnoughOutcomes
@@ -169,11 +166,6 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// 1. Any resolution must either have a `Disputed` or `Reported` market status
-        /// 2. If status is `Disputed`, then at least one dispute must exist
-        InvalidMarketStatus,
-        /// On dispute or resolution, someone tried to pass a non-global-disputes market type.
-        MarketDoesNotHaveGlobalDisputesMechanism,
         /// The vote on this outcome index is not allowed, because there are not at least a minimum number of outcomes.
         NotEnoughOutcomes,
         /// The dispute specified with market id and outcome index is not present.
@@ -211,7 +203,7 @@ mod pallet {
             <Outcomes<T>>::get(market_id).get(0usize).map(|o| (0u32, o.clone()))
         }
 
-        fn get_more_recent_outcome_index(x: u32, y: u32) -> u32 {
+        fn get_outcome_index_for_same_balance(x: u32, y: u32) -> u32 {
             // return more recent element => is last added, so the higher index
             x.max(y)
         }
@@ -248,7 +240,7 @@ mod pallet {
                 |(o0, b0), (o1, b1)| match b0.cmp(&b1) {
                     Ordering::Greater => (o0, b0),
                     Ordering::Less => (o1, b1),
-                    Ordering::Equal => (Self::get_more_recent_outcome_index(o0, o1), b0),
+                    Ordering::Equal => (Self::get_outcome_index_for_same_balance(o0, o1), b0),
                 },
             );
 
@@ -256,6 +248,9 @@ mod pallet {
                 .get(winning_outcome_index as usize)
                 .map(|o| o.clone())
                 .unwrap_or(default_outcome);
+
+            <Outcomes<T>>::remove(market_id);
+
             Ok(winning_outcome)
         }
     }
