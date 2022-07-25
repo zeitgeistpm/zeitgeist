@@ -241,6 +241,7 @@ impl zrml_global_disputes::Config for Runtime {
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
     type MinDisputeVoteAmount = MinDisputeVoteAmount;
+    type MinOutcomes = MaxDisputes;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }
 

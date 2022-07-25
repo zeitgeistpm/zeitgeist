@@ -384,7 +384,7 @@ mod pallet {
                     T::GlobalDisputes::on_dispute(&disputes, &market_id, &market)?;
                     // num_disputes is exactly the index of the added dispute
                     // TODO(#603) weight calculation
-                    let _weight = T::GlobalDisputes::init_dispute_vote(
+                    let _weight = T::GlobalDisputes::init_vote_outcome(
                         &market_id,
                         num_disputes,
                         dispute_bond,

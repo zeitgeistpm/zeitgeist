@@ -28,7 +28,7 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_global_disputes (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn vote_on_dispute() -> Weight;
+    fn vote_on_outcome() -> Weight;
     fn unlock_vote_balance() -> Weight;
 }
 
@@ -40,7 +40,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: GlobalDisputes DisputeVotes (r:3 w:1)
     // Storage: GlobalDisputes LockInfoOf (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn vote_on_dispute() -> Weight {
+    fn vote_on_outcome() -> Weight {
         (54_000_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(7 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))

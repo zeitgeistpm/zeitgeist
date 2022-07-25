@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use crate::{self as zrml_global_disputes};
-use frame_support::{construct_runtime, traits::Everything};
+use frame_support::{construct_runtime, parameter_types, traits::Everything};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -38,12 +38,19 @@ construct_runtime!(
     }
 );
 
+parameter_types! {
+    pub const MinOutcomes: u32 = 2;
+    pub const MaxOutcomeLimit: u32 = 100;
+}
+
 impl crate::Config for Runtime {
     type Event = ();
     type MarketCommons = MarketCommons;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
     type MinDisputeVoteAmount = MinDisputeVoteAmount;
+    type MinOutcomes = MinOutcomes;
+    type MaxOutcomeLimit = MaxOutcomeLimit;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 

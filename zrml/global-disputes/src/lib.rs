@@ -14,29 +14,28 @@ pub mod weights;
 
 pub use global_disputes_pallet_api::GlobalDisputesPalletApi;
 pub use pallet::*;
+pub use zrml_market_commons::MarketCommonsPalletApi;
 
 #[frame_support::pallet]
 mod pallet {
+    use super::MarketCommonsPalletApi;
     use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
     use alloc::vec::Vec;
     use core::{cmp::Ordering, marker::PhantomData};
     use frame_support::{
-        dispatch::DispatchResult,
         ensure,
-        pallet_prelude::{DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, Weight},
+        pallet_prelude::{
+            DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap, ValueQuery,
+        },
         traits::{Currency, Get, Hooks, IsType, LockIdentifier, LockableCurrency, WithdrawReasons},
-        Blake2_128Concat, PalletId, Twox64Concat,
+        Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::{
-        traits::{Saturating, Zero},
-        DispatchError,
+        traits::{One, Saturating, Zero},
+        DispatchError, SaturatedConversion,
     };
-    use zeitgeist_primitives::{
-        traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
-    };
-    use zrml_market_commons::MarketCommonsPalletApi;
+    use zeitgeist_primitives::types::{MarketStatus, OutcomeReport};
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -44,18 +43,17 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-    pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Votes on a dispute after there are already two disputes and the 'DisputePeriod' is not over.
         /// NOTE: In the 'DisputePeriod' voting on a dispute is allowed.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::vote_on_dispute())]
-        pub fn vote_on_dispute(
+        #[pallet::weight(T::WeightInfo::vote_on_outcome())]
+        pub fn vote_on_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            #[pallet::compact] dispute_index: u32,
+            outcome_index: u32,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -68,13 +66,14 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
-            // for voting there must be at least two disputes
-            let mut iter = <DisputeVotes<T>>::iter_prefix(market_id).take(2);
-            ensure!(iter.next().is_some() && iter.next().is_some(), Error::<T>::NotEnoughDisputes);
+            ensure!(
+                <Outcomes<T>>::get(market_id).len() >= T::MinOutcomes::get() as usize,
+                Error::<T>::NotEnoughOutcomes
+            );
 
             // dispute vote is already present because of the dispute bond of the disputor
-            let vote_balance = <DisputeVotes<T>>::get(market_id, dispute_index)
-                .ok_or(Error::<T>::DisputeDoesNotExist)?;
+            let vote_balance = <OutcomeVotes<T>>::get(market_id, outcome_index)
+                .ok_or(Error::<T>::OutcomeDoesNotExist)?;
 
             <LockInfoOf<T>>::mutate(&sender, market_id, |locked_balance| {
                 *locked_balance = Some(locked_balance.map_or(amount, |x| x.max(amount)));
@@ -87,14 +86,14 @@ mod pallet {
                 WithdrawReasons::TRANSFER,
             );
 
-            <DisputeVotes<T>>::insert(
+            <OutcomeVotes<T>>::insert(
                 market_id,
-                dispute_index,
+                outcome_index,
                 vote_balance.saturating_add(amount),
             );
 
-            Self::deposit_event(Event::VotedOnDispute(market_id, dispute_index, amount));
-            Ok(Some(T::WeightInfo::vote_on_dispute()).into())
+            Self::deposit_event(Event::VotedOnOutcome(market_id, outcome_index, amount));
+            Ok(Some(T::WeightInfo::vote_on_outcome()).into())
         }
 
         /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
@@ -109,7 +108,7 @@ mod pallet {
             let mut lock_needed: BalanceOf<T> = Zero::zero();
             let mut resolved_markets = Vec::new();
             for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&voter) {
-                if <DisputeVotes<T>>::iter_prefix(market_id).take(1).next().is_none() {
+                if <OutcomeVotes<T>>::iter_prefix(market_id).take(1).next().is_none() {
                     resolved_markets.push(market_id);
                     continue;
                 }
@@ -158,6 +157,13 @@ mod pallet {
         #[pallet::constant]
         type MinDisputeVoteAmount: Get<BalanceOf<Self>>;
 
+        /// The minimum number of outcomes required to allow voting.
+        #[pallet::constant]
+        type MinOutcomes: Get<u32>;
+
+        #[pallet::constant]
+        type MaxOutcomeLimit: Get<u32>;
+
         type WeightInfo: WeightInfoZeitgeist;
     }
 
@@ -166,16 +172,22 @@ mod pallet {
         /// 1. Any resolution must either have a `Disputed` or `Reported` market status
         /// 2. If status is `Disputed`, then at least one dispute must exist
         InvalidMarketStatus,
-        /// On dispute or resolution, someone tried to pass a non-global-disputes market type
+        /// On dispute or resolution, someone tried to pass a non-global-disputes market type.
         MarketDoesNotHaveGlobalDisputesMechanism,
-        /// The vote on this dispute index is not allowed, because there are not at least two disputes.
-        NotEnoughDisputes,
-        /// The dispute specified with market id and dispute index is not present.
-        DisputeDoesNotExist,
-        /// Sender does not have enough funds for the vote on a dispute.
+        /// The vote on this outcome index is not allowed, because there are not at least a minimum number of outcomes.
+        NotEnoughOutcomes,
+        /// The dispute specified with market id and outcome index is not present.
+        OutcomeDoesNotExist,
+        /// Sender does not have enough funds for the vote on an outcome.
         InsufficientAmount,
         /// Sender tried to vote with an amount below a defined minium.
         AmountTooLow,
+        /// The vote outcome is already present.
+        VoteOutcomeAlreadyExists,
+        /// There is no default outcome set in the first place to resolve to.
+        NoDefaultOutcome,
+        /// The number of maximum outcomes is reached.
+        MaxOutcomeLimitReached,
     }
 
     #[pallet::event]
@@ -184,65 +196,24 @@ mod pallet {
     where
         T: Config,
     {
-        /// A vote happened on a dispute. \[market_id, dispute_index, vote_amount\]
-        VotedOnDispute(MarketIdOf<T>, u32, BalanceOf<T>),
+        /// A vote happened on an Outcome. \[market_id, outcome_index, vote_amount\]
+        VotedOnOutcome(MarketIdOf<T>, u32, BalanceOf<T>),
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
-    impl<T> DisputeApi for Pallet<T>
-    where
-        T: Config,
-    {
-        type AccountId = T::AccountId;
-        type Balance = BalanceOf<T>;
-        type BlockNumber = T::BlockNumber;
-        type MarketId = MarketIdOf<T>;
-        type Moment = MomentOf<T>;
-        type Origin = T::Origin;
-
-        fn on_dispute(
-            _disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> DispatchResult {
-            if market.dispute_mechanism != MarketDisputeMechanism::GlobalDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveGlobalDisputesMechanism.into());
-            }
-
-            Ok(())
+    impl<T: Config> Pallet<T> {
+        fn get_default_outcome_and_index(
+            market_id: &MarketIdOf<T>,
+        ) -> Option<(u32, OutcomeReport)> {
+            // return first element if the BoundedVec is not empty, otherwise None
+            <Outcomes<T>>::get(market_id).get(0usize).map(|o| (0u32, o.clone()))
         }
 
-        fn on_resolution(
-            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            market_id: &Self::MarketId,
-            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
-        ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.dispute_mechanism != MarketDisputeMechanism::GlobalDisputes {
-                return Err(Error::<T>::MarketDoesNotHaveGlobalDisputesMechanism.into());
-            }
-            if market.status != MarketStatus::Disputed {
-                return Err(Error::<T>::InvalidMarketStatus.into());
-            }
-
-            let (index, _) = <DisputeVotes<T>>::drain_prefix(market_id).fold(
-                (0u32, <BalanceOf<T>>::zero()),
-                |(i0, b0), (i1, b1)| {
-                    match b0.cmp(&b1) {
-                        Ordering::Greater => (i0, b0),
-                        Ordering::Less => (i1, b1),
-                        // if the vote balance is the same on multiple outcomes, the in time last should be taken, because it's the one with the most dispute bond and less voting time
-                        Ordering::Equal => (i0.max(i1), b0),
-                    }
-                },
-            );
-
-            if let Some(winning_dispute) = disputes.get(index as usize) {
-                Ok(Some(winning_dispute.outcome.clone()))
-            } else {
-                Err(Error::<T>::InvalidMarketStatus.into())
-            }
+        fn get_more_recent_outcome_index(x: u32, y: u32) -> u32 {
+            // return more recent element => is last added, so the higher index
+            x.max(y)
         }
     }
 
@@ -250,29 +221,60 @@ mod pallet {
     where
         T: Config,
     {
-        /// This is the initial voting balance of the dispute
-        fn init_dispute_vote(
+        type Balance = BalanceOf<T>;
+        type MarketId = MarketIdOf<T>;
+
+        /// This is the initial voting balance of the outcome
+        fn push_voting_outcome(
             market_id: &MarketIdOf<T>,
-            dispute_index: u32,
+            outcome: OutcomeReport,
             vote_balance: BalanceOf<T>,
-        ) -> Weight {
-            // TODO(#603) fix weight calc
-            if <DisputeVotes<T>>::get(market_id, dispute_index).is_none() {
-                <DisputeVotes<T>>::insert(market_id, dispute_index, vote_balance);
-                return T::DbWeight::get()
-                    .writes(1 as Weight)
-                    .saturating_add(T::DbWeight::get().reads(1 as Weight));
-            }
-            T::DbWeight::get().reads(1 as Weight)
+        ) -> Result<(), DispatchError> {
+            let mut outcomes = <Outcomes<T>>::get(market_id);
+            ensure!(!outcomes.iter().any(|o| *o == outcome), Error::<T>::VoteOutcomeAlreadyExists);
+            ensure!(outcomes.try_push(outcome).is_ok(), Error::<T>::MaxOutcomeLimitReached);
+            let outcome_index = outcomes.len().saturated_into::<u32>().saturating_sub(One::one());
+            <Outcomes<T>>::insert(market_id, outcomes);
+            <OutcomeVotes<T>>::insert(market_id, outcome_index, vote_balance);
+            Ok(())
+        }
+
+        fn get_voting_winner(market_id: &Self::MarketId) -> Result<OutcomeReport, DispatchError> {
+            let (default_outcome_index, default_outcome) =
+                Self::get_default_outcome_and_index(market_id)
+                    .ok_or(<Error<T>>::NoDefaultOutcome)?;
+            let (winning_outcome_index, _) = <OutcomeVotes<T>>::drain_prefix(market_id).fold(
+                (default_outcome_index, <BalanceOf<T>>::zero()),
+                |(o0, b0), (o1, b1)| match b0.cmp(&b1) {
+                    Ordering::Greater => (o0, b0),
+                    Ordering::Less => (o1, b1),
+                    Ordering::Equal => (Self::get_more_recent_outcome_index(o0, o1), b0),
+                },
+            );
+
+            let winning_outcome = <Outcomes<T>>::get(market_id)
+                .get(winning_outcome_index as usize)
+                .map(|o| o.clone())
+                .unwrap_or(default_outcome);
+            Ok(winning_outcome)
         }
     }
 
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
+    #[pallet::storage]
+    pub type Outcomes<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        BoundedVec<OutcomeReport, T::MaxOutcomeLimit>,
+        ValueQuery,
+    >;
+
     /// Maps the market id to the dispute index and the vote balance.  
     #[pallet::storage]
-    pub type DisputeVotes<T: Config> = StorageDoubleMap<
+    pub type OutcomeVotes<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
@@ -298,8 +300,11 @@ mod pallet {
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
-pub(crate) fn market_mock<T>()
--> zeitgeist_primitives::types::Market<T::AccountId, T::BlockNumber, MomentOf<T>>
+pub(crate) fn market_mock<T>() -> zeitgeist_primitives::types::Market<
+    T::AccountId,
+    T::BlockNumber,
+    <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment,
+>
 where
     T: crate::Config,
 {

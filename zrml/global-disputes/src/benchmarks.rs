@@ -34,23 +34,23 @@ where
     let market_id = 0u128.saturated_into();
     let dispute_index = 0u32;
     let amount: BalanceOf<T> = MinDisputeVoteAmount::get().saturated_into();
-    Pallet::<T>::init_dispute_vote(&market_id, 0u32, 10u128.saturated_into());
-    Pallet::<T>::init_dispute_vote(&market_id, 1u32, 20u128.saturated_into());
+    Pallet::<T>::init_vote_outcome(&market_id, 0u32, 10u128.saturated_into());
+    Pallet::<T>::init_vote_outcome(&market_id, 1u32, 20u128.saturated_into());
     T::MarketCommons::push_market(market_mock::<T>()).unwrap();
-    Call::<T>::vote_on_dispute { market_id, dispute_index, amount }
+    Call::<T>::vote_on_outcome { market_id, dispute_index, amount }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())
         .unwrap();
 }
 
 benchmarks! {
-    vote_on_dispute {
+    vote_on_outcome {
         let caller: T::AccountId = whitelisted_caller();
         let market_id = 0u128.saturated_into();
         let dispute_index = 0u32;
         let amount: BalanceOf<T> = MinDisputeVoteAmount::get().saturated_into();
         deposit::<T>(&caller);
-        Pallet::<T>::init_dispute_vote(&market_id, 0u32, 10u128.saturated_into());
-        Pallet::<T>::init_dispute_vote(&market_id, 1u32, 20u128.saturated_into());
+        Pallet::<T>::init_vote_outcome(&market_id, 0u32, 10u128.saturated_into());
+        Pallet::<T>::init_vote_outcome(&market_id, 1u32, 20u128.saturated_into());
         T::MarketCommons::push_market(market_mock::<T>()).unwrap();
     }: _(RawOrigin::Signed(caller), market_id, dispute_index, amount)
 
