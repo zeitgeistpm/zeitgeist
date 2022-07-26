@@ -93,6 +93,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
                             );
                         }
                     }
+                    total_weight =
+                        total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
                 } else {
                     log::warn!(
                         "found pool with unexpected status. market_id: {:?}. pool_id: {:?}",
