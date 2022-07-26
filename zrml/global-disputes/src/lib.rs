@@ -46,8 +46,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Votes on a dispute after there are already two disputes and the 'DisputePeriod' is not over.
-        /// NOTE: In the 'DisputePeriod' voting on a dispute is allowed.
+        /// Votes on an outcome in a market with an `amount`.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::vote_on_outcome())]
         pub fn vote_on_outcome(
@@ -93,7 +92,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::vote_on_outcome()).into())
         }
 
-        /// Unlock the dispute vote value of a global dispute when the 'DisputePeriod' is over.
+        /// Unlock the expired (winner chosen) vote values.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::unlock_vote_balance())]
         pub fn unlock_vote_balance(
@@ -158,6 +157,7 @@ mod pallet {
         #[pallet::constant]
         type MinOutcomes: Get<u32>;
 
+        /// The maximum number of possible outcomes.
         #[pallet::constant]
         type MaxOutcomeLimit: Get<u32>;
 
@@ -216,11 +216,11 @@ mod pallet {
         type Balance = BalanceOf<T>;
         type MarketId = MarketIdOf<T>;
 
-        /// This is the initial voting balance of the outcome
+        /// Add outcomes (with initial vote balance) to the voting mechanism.
         fn push_voting_outcome(
-            market_id: &MarketIdOf<T>,
+            market_id: &Self::MarketId,
             outcome: OutcomeReport,
-            vote_balance: BalanceOf<T>,
+            vote_balance: Self::Balance,
         ) -> Result<(), DispatchError> {
             let mut outcomes = <Outcomes<T>>::get(market_id);
             ensure!(!outcomes.iter().any(|o| *o == outcome), Error::<T>::VoteOutcomeAlreadyExists);
@@ -231,6 +231,7 @@ mod pallet {
             Ok(())
         }
 
+        /// Determine the outcome with the most amount of tokens.
         fn get_voting_winner(market_id: &Self::MarketId) -> Result<OutcomeReport, DispatchError> {
             let (default_outcome_index, default_outcome) =
                 Self::get_default_outcome_and_index(market_id)
