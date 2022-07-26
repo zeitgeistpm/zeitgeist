@@ -19,6 +19,10 @@ Please observe the following ground-rules when making contributions:
 - Comments in a review should be resolved by the author
 - Please use _squash and merge_ to merge pull requests; feel free to remove
   trivial items like "Fix typo", etc. from the commit summary
+- Don't modify RuntimeVersion under normal circumstances; changes to
+  RuntimeVersion are made in a specific PR at the end of the release cycle
+- Summarize any interface changes in docs/changelog_for_devs.md and format the
+  file using prettier -w docs/changelog_for_devs.md
 
 ## Labels
 
@@ -38,6 +42,13 @@ Labels are used to denote status (`s:*`) and priority (`p:*`) of pull requests.
 
 The `t:*` labels are used to specify types of issues. Their use is placed at the
 discretion of [zeitgeistpm] members.
+
+If the PR results in a change to the substrate `RuntimeVersion`, mark the PR
+with the following labels according to
+[RuntimeVersion](https://docs.rs/sp-version/latest/sp_version/struct.RuntimeVersion.html):
+![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:authorship-interface-changed-:warning:)
+![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:spec-changed-:warning:)
+![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:transactions-changed-:warning:)
 
 ## Style Guide
 
