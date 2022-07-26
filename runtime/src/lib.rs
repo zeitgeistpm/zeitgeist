@@ -402,22 +402,22 @@ cfg_if::cfg_if! {
             }
         }
     // Unrestricted (no "txfilter" feature) chains.
-    // Currently disables Rikiddo and markets using Court or SimpleDisputes or GlobalDisputes dispute mechanism.
+    // Currently disables Rikiddo and markets using Court or SimpleDisputes dispute mechanism.
     // Will be relaxed for testnet once runtimes are separated.
     } else {
         impl Contains<Call> for IsCallable {
             fn contains(call: &Call) -> bool {
                 use zrml_prediction_markets::Call::{create_market, create_cpmm_market_and_deploy_assets};
-                use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes, GlobalDisputes}};
+                use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes}};
 
                 match call {
                     Call::PredictionMarkets(inner_call) => {
                         match inner_call {
                             // Disable Rikiddo markets
                             create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                            // Disable Court & SimpleDisputes & GlobalDisputes dispute resolution mechanism
-                            create_market { dispute_mechanism: Court | SimpleDisputes | GlobalDisputes, .. } => false,
-                            create_cpmm_market_and_deploy_assets { dispute_mechanism: Court | SimpleDisputes | GlobalDisputes, .. } => false,
+                            // Disable Court & SimpleDisputes dispute resolution mechanism
+                            create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
+                            create_cpmm_market_and_deploy_assets { dispute_mechanism: Court | SimpleDisputes, .. } => false,
                             _ => true
                         }
                     }
@@ -1006,6 +1006,7 @@ impl zrml_global_disputes::Config for Runtime {
     type VoteLockIdentifier = VoteLockIdentifier;
     type MinDisputeVoteAmount = MinDisputeVoteAmount;
     type MinOutcomes = MaxDisputes;
+    type MaxOutcomeLimit = MaxOutcomeLimit;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }
 
