@@ -4,7 +4,7 @@
     clippy::integer_arithmetic
 )]
 
-use crate::VERSION;
+use crate::common::VERSION;
 use frame_support::{
     parameter_types,
     weights::{

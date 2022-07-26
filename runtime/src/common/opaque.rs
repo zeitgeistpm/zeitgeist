@@ -3,7 +3,7 @@
 //! of data like extrinsics, allowing for them to continue syncing the network through upgrades
 //! to even the core data structures.
 
-use crate::Header;
+use crate::common::Header;
 use alloc::vec::Vec;
 use sp_runtime::{generic, impl_opaque_keys};
 
@@ -12,14 +12,14 @@ pub type Block = generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
 #[cfg(feature = "parachain")]
 impl_opaque_keys! {
     pub struct SessionKeys {
-        pub nimbus: crate::AuthorInherent,
+        pub nimbus: crate::common::AuthorInherent,
     }
 }
 
 #[cfg(not(feature = "parachain"))]
 impl_opaque_keys! {
     pub struct SessionKeys {
-        pub aura: crate::Aura,
-        pub grandpa: crate::Grandpa,
+        pub aura: crate::common::Aura,
+        pub grandpa: crate::common::Grandpa,
     }
 }

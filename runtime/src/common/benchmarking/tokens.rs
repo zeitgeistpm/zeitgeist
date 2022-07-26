@@ -1,5 +1,5 @@
 // This file was originally fetched from Acala
-// https://github.com/AcalaNetwork/Acala/blob/6e0dae03040db2a1ef168a2ecba357c7b628874c/runtime/mandala/src/benchmarking/currencies.rs
+// https://github.com/AcalaNetwork/Acala/blob/6e0dae03040db2a1ef168a2ecba357c7b628874c/runtime/mandala/src/benchmarks/currencies.rs
 
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
@@ -92,7 +92,7 @@ runtime_benchmarks! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::benchmarking::utils::tests::new_test_ext;
+    use crate::benchmarks::utils::tests::new_test_ext;
     use orml_benchmarking::impl_benchmark_test_suite;
 
     impl_benchmark_test_suite!(new_test_ext(),);
