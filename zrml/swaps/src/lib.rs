@@ -1484,7 +1484,7 @@ mod pallet {
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
                 ensure!(
-                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active,),
+                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
                     Error::<T>::InvalidStateTransition,
                 );
                 pool.pool_status = PoolStatus::Closed;

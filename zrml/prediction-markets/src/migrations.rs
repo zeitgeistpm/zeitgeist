@@ -47,6 +47,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
             }
 
             // No need to migrate if there's no pool.
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             let pool_id = match T::MarketCommons::market_pool(&market_id) {
                 Ok(pool_id) => pool_id,
                 Err(_) => continue,
@@ -59,6 +60,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
                 }
             };
             if not_yet_open {
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
                 let mut pool = match utility::get_pool::<T>(pool_id) {
                     Some(pool) => pool,
                     None => {
@@ -73,6 +75,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
                 if pool.pool_status == PoolStatus::Active {
                     pool.pool_status = PoolStatus::Initialized;
                     utility::set_pool::<T>(pool_id, pool);
+                    total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
                     // We also need to cache the market for auto-open.
                     match market.period {
