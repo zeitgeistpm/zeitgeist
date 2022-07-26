@@ -86,7 +86,7 @@ mod pallet {
         traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
@@ -382,9 +382,6 @@ mod pallet {
                 }
             }
 
-            // TODO use a better mechanism to limit the amount of outcomes (crowdfunding or auction?)
-            T::GlobalDisputes::push_voting_outcome(&market_id, outcome.clone(), dispute_bond)?;
-
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
             Self::set_market_as_disputed(&market, &market_id)?;
             let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
@@ -407,6 +404,67 @@ mod pallet {
                 num_disputes,
                 T::MaxDisputes::get(),
             )
+        }
+
+        #[pallet::weight(5000)]
+        #[transactional]
+        pub fn start_global_dispute(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            let market = T::MarketCommons::market(&market_id)?;
+            // TODO maybe transition to a GlobalDisputes state?
+            // TODO How to handle the on_resolution when Court and Authorized failed? When does Authorized and Court fail?
+            ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
+
+            let disputes = <Disputes<T>>::get(market_id);
+            ensure!(
+                disputes.len() == T::MaxDisputes::get() as usize,
+                Error::<T>::MaxDisputesNeeded
+            );
+
+            // add report outcome to voting choices
+            if let Some(report) = market.report {
+                if let Err(err) = T::GlobalDisputes::push_voting_outcome(
+                    &market_id,
+                    report.outcome.clone(),
+                    Zero::zero(),
+                ) {
+                    // error happens if the maximum number of outcomes is reached
+                    log::error!(
+                        "[PredictionMarkets] Cannot push report outcome to the voting outcomes. \
+                         market id.
+                    market_id: {:?}, error: {:?}",
+                        &market_id,
+                        err
+                    );
+                }
+            }
+
+            for (index, MarketDispute { at: _, by: _, outcome }) in disputes.iter().enumerate() {
+                let dispute_bond = default_dispute_bond::<T>(index);
+                if let Err(err) = T::GlobalDisputes::push_voting_outcome(
+                    &market_id,
+                    outcome.clone(),
+                    dispute_bond,
+                ) {
+                    // error happens if the maximum number of outcomes is reached
+                    log::error!(
+                        "[PredictionMarkets] Cannot push dispute outcome to the voting outcomes. \
+                         market id.
+                    market_id: {:?}, error: {:?}",
+                        &market_id,
+                        err
+                    );
+                }
+            }
+
+            // TODO use a better mechanism to limit the amount of outcomes (crowdfunding or auction?)
+            // TODO push additionally highest crowd outcomes (which are not already dispute outcomes)
+
+            Ok(().into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
@@ -1124,6 +1182,8 @@ mod pallet {
         MarketStartTooLate,
         /// The maximum number of disputes has been reached.
         MaxDisputesReached,
+        /// The maximum number of disputes is needed for this operation.
+        MaxDisputesNeeded,
         /// The number of categories for a categorical market is too low.
         NotEnoughCategories,
         /// The user has no winning balance.
@@ -1503,7 +1563,7 @@ mod pallet {
             report: &Report<T::AccountId, T::BlockNumber>,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
-            // TODO find out to handle with this after simple_disputes is deleted
+            // TODO when simple disputes is deleted, should we allow duplicated outcomes of the disputes?
             if let Some(last_dispute) = disputes.last() {
                 ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
             } else {

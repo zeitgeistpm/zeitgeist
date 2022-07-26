@@ -80,25 +80,6 @@ fn vote_fails_if_insufficient_amount() {
 }
 
 #[test]
-fn push_voting_outcome_fails_for_duplicated_outcome() {
-    ExtBuilder::default().build().execute_with(|| {
-        let mut market = DEFAULT_MARKET;
-        market.status = MarketStatus::Disputed;
-        assert_ok!(MarketCommons::push_market(market.clone()));
-        let market_id = MarketCommons::latest_market_id().unwrap();
-        assert_ok!(GlobalDisputes::push_voting_outcome(
-            &market_id,
-            OutcomeReport::Scalar(20),
-            10 * BASE
-        ));
-        assert_noop!(
-            GlobalDisputes::push_voting_outcome(&market_id, OutcomeReport::Scalar(20), 10 * BASE),
-            Error::<Runtime>::VoteOutcomeAlreadyExists
-        );
-    });
-}
-
-#[test]
 fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonical_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;

@@ -174,8 +174,6 @@ mod pallet {
         InsufficientAmount,
         /// Sender tried to vote with an amount below a defined minium.
         AmountTooLow,
-        /// The vote outcome is already present.
-        VoteOutcomeAlreadyExists,
         /// There is no default outcome set in the first place to resolve to.
         NoDefaultOutcome,
         /// The number of maximum outcomes is reached.
@@ -223,11 +221,31 @@ mod pallet {
             vote_balance: Self::Balance,
         ) -> Result<(), DispatchError> {
             let mut outcomes = <Outcomes<T>>::get(market_id);
-            ensure!(!outcomes.iter().any(|o| *o == outcome), Error::<T>::VoteOutcomeAlreadyExists);
-            ensure!(outcomes.try_push(outcome).is_ok(), Error::<T>::MaxOutcomeLimitReached);
-            let outcome_index = outcomes.len().saturated_into::<u32>().saturating_sub(One::one());
-            <Outcomes<T>>::insert(market_id, outcomes);
-            <OutcomeVotes<T>>::insert(market_id, outcome_index, vote_balance);
+            let mut outcome_index: Option<u32> = None;
+            for (i, o) in outcomes.iter().enumerate() {
+                if *o == outcome {
+                    outcome_index = Some(i.saturated_into::<u32>());
+                    break;
+                }
+            }
+            match outcome_index {
+                None => {
+                    ensure!(outcomes.try_push(outcome).is_ok(), Error::<T>::MaxOutcomeLimitReached);
+                    let outcome_index =
+                        outcomes.len().saturated_into::<u32>().saturating_sub(One::one());
+                    <Outcomes<T>>::insert(market_id, outcomes);
+                    <OutcomeVotes<T>>::insert(market_id, outcome_index, vote_balance);
+                }
+                Some(i) => {
+                    if let Some(prev_vote_balance) = <OutcomeVotes<T>>::get(market_id, i) {
+                        <OutcomeVotes<T>>::insert(
+                            market_id,
+                            i,
+                            prev_vote_balance.saturating_add(vote_balance),
+                        );
+                    }
+                }
+            }
             Ok(())
         }
 
