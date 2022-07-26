@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},

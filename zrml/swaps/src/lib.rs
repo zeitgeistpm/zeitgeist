@@ -4,6 +4,7 @@
 //! liquidity providers to deposit full outcome shares and earn fees.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 

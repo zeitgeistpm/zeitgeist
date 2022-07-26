@@ -3,6 +3,7 @@
     // Mocks are only used for fuzzing and unit tests
     clippy::integer_arithmetic
 )]
+#![allow(clippy::type_complexity)]
 #![no_main]
 
 use arbitrary::Arbitrary;

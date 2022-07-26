@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use alloc::vec::Vec;
 use frame_support::traits::Get;
 use orml_tokens::{AccountData, Accounts, TotalIssuance};

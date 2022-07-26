@@ -23,6 +23,7 @@ pub trait Swaps<AccountId> {
     /// * `amount`: The amount of each asset added to the pool; **may** be `None` only if
     ///   `scoring_rule` is `RikiddoSigmoidFeeMarketEma`.
     /// * `weights`: These are the denormalized weights (the raw weights).
+    #[allow(clippy::too_many_arguments)]
     fn create_pool(
         creator: AccountId,
         assets: Vec<Asset<Self::MarketId>>,

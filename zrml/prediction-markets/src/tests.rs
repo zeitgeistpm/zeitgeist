@@ -1,4 +1,5 @@
 #![cfg(all(feature = "mock", test))]
+#![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
     mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
@@ -1440,7 +1441,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
-        assert_eq!(market.report.is_none(), true);
+        assert!(market.report.is_none());
 
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -1485,7 +1486,7 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
         );
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
-        assert_eq!(market.report.is_none(), true);
+        assert!(market.report.is_none());
     });
 }
 
@@ -1505,7 +1506,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
         );
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
-        assert_eq!(market.report.is_none(), true);
+        assert!(market.report.is_none());
     });
 }
 
@@ -1525,7 +1526,7 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
         );
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
-        assert_eq!(market.report.is_none(), true);
+        assert!(market.report.is_none());
     });
 }
 
@@ -2157,7 +2158,7 @@ fn full_scalar_market_lifecycle() {
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
 
         let market_after_report = MarketCommons::market(&0).unwrap();
-        assert_eq!(market_after_report.report.is_some(), true);
+        assert!(market_after_report.report.is_some());
         let report = market_after_report.report.unwrap();
         assert_eq!(report.at, report_at);
         assert_eq!(report.by, BOB);
@@ -2302,7 +2303,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
             ScoringRule::CPMM
         ));
         deploy_swap_pool(MarketCommons::market(&0).unwrap(), 0).unwrap();
-        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, 1 * BASE));
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, BASE));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * BASE));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
 
@@ -2977,7 +2978,7 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
         OutcomeReport::Scalar(reported_value)
     ));
     let market_after_report = MarketCommons::market(&0).unwrap();
-    assert_eq!(market_after_report.report.is_some(), true);
+    assert!(market_after_report.report.is_some());
     let report = market_after_report.report.unwrap();
     assert_eq!(report.at, 100);
     assert_eq!(report.by, BOB);
