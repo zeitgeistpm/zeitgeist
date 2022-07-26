@@ -46,9 +46,9 @@ discretion of [zeitgeistpm] members.
 If the PR results in a change to the substrate `RuntimeVersion`, mark the PR
 with the following labels according to
 [RuntimeVersion](https://docs.rs/sp-version/latest/sp_version/struct.RuntimeVersion.html):
-![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:authorship-interface-changed-:warning:)
-![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:spec-changed-:warning:)
-![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:transactions-changed-:warning:)
+![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:authorship-interface-changed%20:warning:)
+![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:spec-changed%20:warning:)
+![label: Content](https://img.shields.io/github/labels/zeitgeistpm/zeitgeist/i:transactions-changed%20:warning:)
 
 ## Style Guide
 
