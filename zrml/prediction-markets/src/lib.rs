@@ -118,6 +118,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    type CacheSize = ConstU32<64>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1313,7 +1314,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1322,7 +1323,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         TimeFrame,
-        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1332,7 +1333,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1342,7 +1343,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         TimeFrame,
-        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1357,7 +1358,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1367,7 +1368,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -2160,13 +2161,13 @@ mod pallet {
             ) -> DispatchResult,
             MarketIdsPerBlock: frame_support::StorageMap<
                 T::BlockNumber,
-                BoundedVec<MarketIdOf<T>, ConstU32<64>>,
-                Query = BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+                BoundedVec<MarketIdOf<T>, CacheSize>,
+                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
             >,
             MarketIdsPerTimeFrame: frame_support::StorageMap<
                 TimeFrame,
-                BoundedVec<MarketIdOf<T>, ConstU32<64>>,
-                Query = BoundedVec<MarketIdOf<T>, ConstU32<64>>,
+                BoundedVec<MarketIdOf<T>, CacheSize>,
+                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
             >,
         {
             for market_id in MarketIdsPerBlock::get(&block_number).iter() {
