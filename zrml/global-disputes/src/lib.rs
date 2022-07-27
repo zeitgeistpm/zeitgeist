@@ -44,7 +44,7 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         /// Votes on an outcome on a vote identifier with an `amount`.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::vote_on_dispute())]
+        #[pallet::weight(T::WeightInfo::vote_on_outcome())]
         pub fn vote_on_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] vote_id: VoteId,
@@ -118,7 +118,7 @@ mod pallet {
             );
 
             Self::deposit_event(Event::VotedOnOutcome(vote_id, outcome_index, amount));
-            Ok(Some(T::WeightInfo::vote_on_dispute()).into())
+            Ok(Some(T::WeightInfo::vote_on_outcome()).into())
         }
 
         /// Unlock the expired (winner chosen) vote values.
