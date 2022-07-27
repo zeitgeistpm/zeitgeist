@@ -60,19 +60,58 @@ mod pallet {
                 amount <= CurrencyOf::<T>::free_balance(&sender),
                 Error::<T>::InsufficientAmount
             );
-            ensure!(amount >= T::MinDisputeVoteAmount::get(), Error::<T>::AmountTooLow);
+            ensure!(amount >= T::MinOutcomeVoteAmount::get(), Error::<T>::AmountTooLow);
 
             ensure!(
                 <Outcomes<T>>::get(market_id).len() >= T::MinOutcomes::get() as usize,
                 Error::<T>::NotEnoughOutcomes
             );
 
-            // dispute vote is already present because of the dispute bond of the disputor
             let vote_balance = <OutcomeVotes<T>>::get(market_id, outcome_index)
                 .ok_or(Error::<T>::OutcomeDoesNotExist)?;
 
-            <LockInfoOf<T>>::mutate(&sender, market_id, |locked_balance| {
-                *locked_balance = Some(locked_balance.map_or(amount, |x| x.max(amount)));
+            <LockInfoOf<T>>::mutate(&sender, market_id, |lock_info| {
+                if let Some((prev_index, prev_amount)) = lock_info {
+                    if outcome_index != *prev_index {
+                        <OutcomeVotes<T>>::insert(
+                            market_id,
+                            prev_index,
+                            vote_balance.saturating_sub(amount),
+                        );
+                        <OutcomeVotes<T>>::insert(
+                            market_id,
+                            outcome_index,
+                            vote_balance.saturating_add(amount),
+                        );
+                    } else {
+                        match amount.cmp(prev_amount) {
+                            Ordering::Greater => {
+                                let diff = amount.saturating_sub(*prev_amount);
+                                <OutcomeVotes<T>>::insert(
+                                    market_id,
+                                    outcome_index,
+                                    vote_balance.saturating_add(diff),
+                                );
+                            }
+                            Ordering::Less => {
+                                let diff = prev_amount.saturating_sub(amount);
+                                <OutcomeVotes<T>>::insert(
+                                    market_id,
+                                    outcome_index,
+                                    vote_balance.saturating_sub(diff),
+                                );
+                            }
+                            Ordering::Equal => (),
+                        }
+                    }
+                } else {
+                    <OutcomeVotes<T>>::insert(
+                        market_id,
+                        outcome_index,
+                        vote_balance.saturating_add(amount),
+                    );
+                }
+                *lock_info = Some((outcome_index, amount));
             });
 
             CurrencyOf::<T>::extend_lock(
@@ -80,12 +119,6 @@ mod pallet {
                 &sender,
                 amount,
                 WithdrawReasons::TRANSFER,
-            );
-
-            <OutcomeVotes<T>>::insert(
-                market_id,
-                outcome_index,
-                vote_balance.saturating_add(amount),
             );
 
             Self::deposit_event(Event::VotedOnOutcome(market_id, outcome_index, amount));
@@ -103,7 +136,7 @@ mod pallet {
 
             let mut lock_needed: BalanceOf<T> = Zero::zero();
             let mut resolved_markets = Vec::new();
-            for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&voter) {
+            for (market_id, (_, locked_balance)) in <LockInfoOf<T>>::iter_prefix(&voter) {
                 if <OutcomeVotes<T>>::iter_prefix(market_id).take(1).next().is_none() {
                     resolved_markets.push(market_id);
                     continue;
@@ -145,13 +178,13 @@ mod pallet {
         #[pallet::constant]
         type PalletId: Get<PalletId>;
 
-        /// The vote lock identifier for disputes
+        /// The vote lock identifier for a voting outcome.
         #[pallet::constant]
         type VoteLockIdentifier: Get<LockIdentifier>;
 
-        /// The minimum required amount to vote on a dispute.
+        /// The minimum required amount to vote on an outcome.
         #[pallet::constant]
-        type MinDisputeVoteAmount: Get<BalanceOf<Self>>;
+        type MinOutcomeVoteAmount: Get<BalanceOf<Self>>;
 
         /// The minimum number of outcomes required to allow voting.
         #[pallet::constant]
@@ -168,7 +201,7 @@ mod pallet {
     pub enum Error<T> {
         /// The vote on this outcome index is not allowed, because there are not at least a minimum number of outcomes.
         NotEnoughOutcomes,
-        /// The dispute specified with market id and outcome index is not present.
+        /// The outcome specified with market id and outcome index is not present.
         OutcomeDoesNotExist,
         /// Sender does not have enough funds for the vote on an outcome.
         InsufficientAmount,
@@ -265,7 +298,7 @@ mod pallet {
 
             let winning_outcome = <Outcomes<T>>::get(market_id)
                 .get(winning_outcome_index as usize)
-                .map(|o| o.clone())
+                .cloned()
                 .unwrap_or(default_outcome);
 
             <Outcomes<T>>::remove(market_id);
@@ -286,7 +319,7 @@ mod pallet {
         ValueQuery,
     >;
 
-    /// Maps the market id to the dispute index and the vote balance.  
+    /// Maps the market id to the outcome index and the vote balance.  
     #[pallet::storage]
     pub type OutcomeVotes<T: Config> = StorageDoubleMap<
         _,
@@ -298,7 +331,7 @@ mod pallet {
         OptionQuery,
     >;
 
-    /// All lock information (market id and locked balance) for a particular voter.
+    /// All lock information (market id, outcome index and locked balance) for a particular voter.
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]
@@ -308,7 +341,7 @@ mod pallet {
         T::AccountId,
         Blake2_128Concat,
         MarketIdOf<T>,
-        BalanceOf<T>,
+        (u32, BalanceOf<T>),
         OptionQuery,
     >;
 }
