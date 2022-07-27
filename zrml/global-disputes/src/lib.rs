@@ -19,7 +19,7 @@ pub use pallet::*;
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
     use alloc::vec::Vec;
-    use core::{cmp::Ordering, marker::PhantomData};
+    use core::marker::PhantomData;
     use frame_support::{
         ensure,
         pallet_prelude::{
@@ -37,6 +37,7 @@ mod pallet {
     use zeitgeist_primitives::types::OutcomeReport;
 
     pub(crate) type VoteId = u128;
+    pub(crate) type OutcomeIndex = u128;
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -48,7 +49,7 @@ mod pallet {
         pub fn vote_on_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] vote_id: VoteId,
-            outcome_index: u32,
+            outcome_index: OutcomeIndex,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -60,49 +61,40 @@ mod pallet {
                 Error::<T>::NotEnoughOutcomes
             );
 
-            let vote_balance = <OutcomeVotes<T>>::get(vote_id, outcome_index)
+            let mut outcome_vote_sum = <OutcomeVotes<T>>::get(vote_id, outcome_index)
                 .ok_or(Error::<T>::OutcomeDoesNotExist)?;
 
             <LockInfoOf<T>>::mutate(&sender, vote_id, |lock_info| {
-                let sub_vote_balance = |i, a| {
-                    Self::update_vote_balance(
-                        vote_id,
-                        vote_balance,
-                        i,
-                        a,
-                        <BalanceOf<T>>::saturating_sub,
-                    );
+                let mut add_to_outcome_sum = |a| {
+                    outcome_vote_sum = outcome_vote_sum.saturating_add(a);
+                    <HighestVotes<T>>::mutate(vote_id, |highest| {
+                        *highest = Some(highest.map_or(
+                            (outcome_index, outcome_vote_sum),
+                            |(prev_i, prev_highest_sum)| {
+                                if outcome_vote_sum >= prev_highest_sum {
+                                    (outcome_index, outcome_vote_sum)
+                                } else {
+                                    (prev_i, prev_highest_sum)
+                                }
+                            },
+                        ));
+                    });
+                    <OutcomeVotes<T>>::insert(vote_id, outcome_index, outcome_vote_sum);
                 };
-                let add_vote_balance = |i, a| {
-                    Self::update_vote_balance(
-                        vote_id,
-                        vote_balance,
-                        i,
-                        a,
-                        <BalanceOf<T>>::saturating_add,
-                    );
-                };
-                if let Some((prev_index, prev_amount)) = lock_info {
-                    if outcome_index != *prev_index {
-                        sub_vote_balance(*prev_index, amount);
-                        add_vote_balance(outcome_index, amount);
-                    } else {
-                        match amount.cmp(prev_amount) {
-                            Ordering::Greater => {
-                                let diff = amount.saturating_sub(*prev_amount);
-                                add_vote_balance(outcome_index, diff);
-                            }
-                            Ordering::Less => {
-                                let diff = prev_amount.saturating_sub(amount);
-                                sub_vote_balance(outcome_index, diff);
-                            }
-                            Ordering::Equal => (),
+                if let Some((prev_index, prev_highest_amount)) = lock_info {
+                    if amount >= *prev_highest_amount {
+                        if outcome_index == *prev_index {
+                            let diff = amount.saturating_sub(*prev_highest_amount);
+                            add_to_outcome_sum(diff);
+                        } else {
+                            add_to_outcome_sum(amount);
                         }
+                        *lock_info = Some((outcome_index, amount));
                     }
                 } else {
-                    add_vote_balance(outcome_index, amount);
+                    add_to_outcome_sum(amount);
+                    *lock_info = Some((outcome_index, amount));
                 }
-                *lock_info = Some((outcome_index, amount));
             });
 
             T::Currency::extend_lock(
@@ -127,9 +119,12 @@ mod pallet {
 
             let mut lock_needed: BalanceOf<T> = Zero::zero();
             let mut resolved_ids = Vec::new();
-            for (vote_id, (_, locked_balance)) in <LockInfoOf<T>>::iter_prefix(&voter) {
-                if <OutcomeVotes<T>>::iter_prefix(vote_id).take(1).next().is_none() {
+            for (vote_id, (outcome_index, locked_balance)) in <LockInfoOf<T>>::iter_prefix(&voter) {
+                if <HighestVotes<T>>::get(vote_id).is_none() {
                     resolved_ids.push(vote_id);
+                    if <OutcomeVotes<T>>::get(vote_id, outcome_index).is_some() {
+                        <OutcomeVotes<T>>::remove(vote_id, outcome_index);
+                    }
                     continue;
                 }
                 lock_needed = lock_needed.max(locked_balance);
@@ -201,6 +196,8 @@ mod pallet {
         MaxOutcomeLimitReached,
         /// The maximum number of vote id's is reached.
         MaxVoteIds,
+        /// There are no votes to determine the winner.
+        NoVotesPresent,
     }
 
     #[pallet::event]
@@ -210,33 +207,16 @@ mod pallet {
         T: Config,
     {
         /// A vote happened on an outcome. \[vote_id, outcome_index, vote_amount\]
-        VotedOnOutcome(VoteId, u32, BalanceOf<T>),
+        VotedOnOutcome(VoteId, u128, BalanceOf<T>),
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
     impl<T: Config> Pallet<T> {
-        fn get_default_outcome_and_index(vote_id: VoteId) -> Option<(u32, OutcomeReport)> {
+        fn get_default_outcome(vote_id: VoteId) -> Option<OutcomeReport> {
             // return first element if the BoundedVec is not empty, otherwise None
-            <Outcomes<T>>::get(vote_id).get(0usize).map(|o| (0u32, o.clone()))
-        }
-
-        fn get_outcome_index_for_same_balance(x: u32, y: u32) -> u32 {
-            // return more recent element => is last added, so the higher index
-            x.max(y)
-        }
-
-        fn update_vote_balance<F>(
-            vote_id: VoteId,
-            vote_balance: BalanceOf<T>,
-            outcome_index: u32,
-            amount: BalanceOf<T>,
-            saturating_f: F,
-        ) where
-            F: FnOnce(BalanceOf<T>, BalanceOf<T>) -> BalanceOf<T>,
-        {
-            <OutcomeVotes<T>>::insert(vote_id, outcome_index, saturating_f(vote_balance, amount));
+            <Outcomes<T>>::get(vote_id).get(0usize).map(|o| o.clone())
         }
     }
 
@@ -258,6 +238,7 @@ mod pallet {
             Ok(vote_id)
         }
 
+        // TODO use market id for push as parameter (to push exactly on market) but also keep in mind to allow multiple global disputes on the same market id
         /// Add outcomes (with initial vote balance) to the voting mechanism on the latest vote id.
         fn push_voting_outcome(
             outcome: OutcomeReport,
@@ -265,10 +246,10 @@ mod pallet {
         ) -> Result<(), DispatchError> {
             let vote_id = Self::get_latest_vote_id();
             let mut outcomes = <Outcomes<T>>::get(vote_id);
-            let mut outcome_index: Option<u32> = None;
+            let mut outcome_index: Option<u128> = None;
             for (i, o) in outcomes.iter().enumerate() {
                 if *o == outcome {
-                    outcome_index = Some(i.saturated_into::<u32>());
+                    outcome_index = Some(i.saturated_into::<u128>());
                     break;
                 }
             }
@@ -276,7 +257,7 @@ mod pallet {
                 None => {
                     ensure!(outcomes.try_push(outcome).is_ok(), Error::<T>::MaxOutcomeLimitReached);
                     let outcome_index =
-                        outcomes.len().saturated_into::<u32>().saturating_sub(One::one());
+                        outcomes.len().saturated_into::<u128>().saturating_sub(One::one());
                     <Outcomes<T>>::insert(vote_id, outcomes);
                     <OutcomeVotes<T>>::insert(vote_id, outcome_index, vote_balance);
                 }
@@ -295,16 +276,10 @@ mod pallet {
 
         /// Determine the outcome with the most amount of tokens.
         fn get_voting_winner(vote_id: VoteId) -> Result<OutcomeReport, DispatchError> {
-            let (default_outcome_index, default_outcome) =
-                Self::get_default_outcome_and_index(vote_id).ok_or(<Error<T>>::NoDefaultOutcome)?;
-            let (winning_outcome_index, _) = <OutcomeVotes<T>>::drain_prefix(vote_id).fold(
-                (default_outcome_index, <BalanceOf<T>>::zero()),
-                |(o0, b0), (o1, b1)| match b0.cmp(&b1) {
-                    Ordering::Greater => (o0, b0),
-                    Ordering::Less => (o1, b1),
-                    Ordering::Equal => (Self::get_outcome_index_for_same_balance(o0, o1), b0),
-                },
-            );
+            let default_outcome =
+                Self::get_default_outcome(vote_id).ok_or(<Error<T>>::NoDefaultOutcome)?;
+            let (winning_outcome_index, _) =
+                <HighestVotes<T>>::get(vote_id).ok_or(<Error<T>>::NoVotesPresent)?;
 
             let winning_outcome = <Outcomes<T>>::get(vote_id)
                 .get(winning_outcome_index as usize)
@@ -312,6 +287,7 @@ mod pallet {
                 .unwrap_or(default_outcome);
 
             <Outcomes<T>>::remove(vote_id);
+            <HighestVotes<T>>::remove(vote_id);
 
             Ok(winning_outcome)
         }
@@ -323,6 +299,10 @@ mod pallet {
     /// Use unique identifier to allow multiple global disputes on the same market id.
     #[pallet::storage]
     pub type NextVoteId<T: Config> = StorageValue<_, VoteId, ValueQuery>;
+
+    #[pallet::storage]
+    pub type HighestVotes<T: Config> =
+        StorageMap<_, Blake2_128Concat, VoteId, (OutcomeIndex, BalanceOf<T>), OptionQuery>;
 
     /// Maps the vote id to the outcome reports.
     #[pallet::storage]
@@ -341,7 +321,7 @@ mod pallet {
         Blake2_128Concat,
         VoteId,
         Blake2_128Concat,
-        u32,
+        OutcomeIndex,
         BalanceOf<T>,
         OptionQuery,
     >;
@@ -356,7 +336,7 @@ mod pallet {
         T::AccountId,
         Blake2_128Concat,
         VoteId,
-        (u32, BalanceOf<T>),
+        (OutcomeIndex, BalanceOf<T>),
         OptionQuery,
     >;
 }
