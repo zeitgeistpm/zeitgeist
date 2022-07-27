@@ -44,7 +44,7 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         /// Votes on an outcome on a vote identifier with an `amount`.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::vote_on_outcome())]
+        #[pallet::weight(T::WeightInfo::vote_on_dispute())]
         pub fn vote_on_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] vote_id: VoteId,
@@ -64,27 +64,33 @@ mod pallet {
                 .ok_or(Error::<T>::OutcomeDoesNotExist)?;
 
             <LockInfoOf<T>>::mutate(&sender, vote_id, |lock_info| {
+                let sub_vote_balance = |i, a| {
+                    Self::update_vote_balance(
+                        vote_id,
+                        vote_balance,
+                        i,
+                        a,
+                        <BalanceOf<T>>::saturating_sub,
+                    );
+                };
+                let add_vote_balance = |i, a| {
+                    Self::update_vote_balance(
+                        vote_id,
+                        vote_balance,
+                        i,
+                        a,
+                        <BalanceOf<T>>::saturating_add,
+                    );
+                };
                 if let Some((prev_index, prev_amount)) = lock_info {
                     if outcome_index != *prev_index {
-                        <OutcomeVotes<T>>::insert(
-                            vote_id,
-                            prev_index,
-                            vote_balance.saturating_sub(amount),
-                        );
-                        <OutcomeVotes<T>>::insert(
-                            vote_id,
-                            outcome_index,
-                            vote_balance.saturating_add(amount),
-                        );
+                        sub_vote_balance(*prev_index, amount);
+                        add_vote_balance(outcome_index, amount);
                     } else {
                         match amount.cmp(prev_amount) {
                             Ordering::Greater => {
                                 let diff = amount.saturating_sub(*prev_amount);
-                                <OutcomeVotes<T>>::insert(
-                                    vote_id,
-                                    outcome_index,
-                                    vote_balance.saturating_add(diff),
-                                );
+                                add_vote_balance(outcome_index, diff);
                             }
                             Ordering::Less => {
                                 let diff = prev_amount.saturating_sub(amount);
@@ -93,16 +99,13 @@ mod pallet {
                                     outcome_index,
                                     vote_balance.saturating_sub(diff),
                                 );
+                                sub_vote_balance(outcome_index, diff);
                             }
                             Ordering::Equal => (),
                         }
                     }
                 } else {
-                    <OutcomeVotes<T>>::insert(
-                        vote_id,
-                        outcome_index,
-                        vote_balance.saturating_add(amount),
-                    );
+                    add_vote_balance(outcome_index, amount);
                 }
                 *lock_info = Some((outcome_index, amount));
             });
@@ -115,7 +118,7 @@ mod pallet {
             );
 
             Self::deposit_event(Event::VotedOnOutcome(vote_id, outcome_index, amount));
-            Ok(Some(T::WeightInfo::vote_on_outcome()).into())
+            Ok(Some(T::WeightInfo::vote_on_dispute()).into())
         }
 
         /// Unlock the expired (winner chosen) vote values.
@@ -227,6 +230,18 @@ mod pallet {
         fn get_outcome_index_for_same_balance(x: u32, y: u32) -> u32 {
             // return more recent element => is last added, so the higher index
             x.max(y)
+        }
+
+        fn update_vote_balance<F>(
+            vote_id: VoteId,
+            vote_balance: BalanceOf<T>,
+            outcome_index: u32,
+            amount: BalanceOf<T>,
+            saturating_f: F,
+        ) where
+            F: FnOnce(BalanceOf<T>, BalanceOf<T>) -> BalanceOf<T>,
+        {
+            <OutcomeVotes<T>>::insert(vote_id, outcome_index, saturating_f(vote_balance, amount));
         }
     }
 

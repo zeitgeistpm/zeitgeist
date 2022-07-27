@@ -93,6 +93,7 @@ parameter_types! {
     pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
     pub const MaxOutcomeLimit: u32 = 10;
+    pub const MinOutcomes: u32 = 2;
 }
 
 // Swaps parameters
