@@ -425,13 +425,13 @@ mod pallet {
                 Error::<T>::MaxDisputesNeeded
             );
 
+            let _ = T::GlobalDisputes::get_next_vote_id()?;
+
             // add report outcome to voting choices
             if let Some(report) = market.report {
-                if let Err(err) = T::GlobalDisputes::push_voting_outcome(
-                    &market_id,
-                    report.outcome.clone(),
-                    Zero::zero(),
-                ) {
+                if let Err(err) =
+                    T::GlobalDisputes::push_voting_outcome(report.outcome, Zero::zero())
+                {
                     // error happens if the maximum number of outcomes is reached
                     log::error!(
                         "[PredictionMarkets] Cannot push report outcome to the voting outcomes. \
@@ -445,11 +445,9 @@ mod pallet {
 
             for (index, MarketDispute { at: _, by: _, outcome }) in disputes.iter().enumerate() {
                 let dispute_bond = default_dispute_bond::<T>(index);
-                if let Err(err) = T::GlobalDisputes::push_voting_outcome(
-                    &market_id,
-                    outcome.clone(),
-                    dispute_bond,
-                ) {
+                if let Err(err) =
+                    T::GlobalDisputes::push_voting_outcome(outcome.clone(), dispute_bond)
+                {
                     // error happens if the maximum number of outcomes is reached
                     log::error!(
                         "[PredictionMarkets] Cannot push dispute outcome to the voting outcomes. \
@@ -1128,10 +1126,7 @@ mod pallet {
         >;
 
         /// See [`GlobalDisputesPalletApi`].
-        type GlobalDisputes: GlobalDisputesPalletApi<
-            Balance = BalanceOf<Self>,
-            MarketId = MarketIdOf<Self>,
-        >;
+        type GlobalDisputes: GlobalDisputesPalletApi<Balance = BalanceOf<Self>>;
 
         /// Swaps pallet API
         type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;

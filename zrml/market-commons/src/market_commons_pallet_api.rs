@@ -2,7 +2,7 @@ use frame_support::{
     dispatch::{DispatchError, DispatchResult},
     pallet_prelude::{MaybeSerializeDeserialize, Member},
     storage::PrefixIterator,
-    traits::{LockableCurrency, NamedReservableCurrency},
+    traits::NamedReservableCurrency,
     Parameter,
 };
 use parity_scale_codec::MaxEncodedLen;
@@ -13,8 +13,7 @@ use zeitgeist_primitives::types::{Market, PoolId};
 pub trait MarketCommonsPalletApi {
     type AccountId;
     type BlockNumber: AtLeast32Bit;
-    type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
-        + NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
+    type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
     type MarketId: AtLeast32Bit
         + Copy
         + Default
