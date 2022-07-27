@@ -28,7 +28,7 @@ where
 {
     deposit::<T>(caller);
     let vote_id = 0u128.saturated_into();
-    let outcome_index = 0u32;
+    let outcome_index = 0u128;
     let amount: BalanceOf<T> = MinOutcomeVoteAmount::get().saturated_into();
     Pallet::<T>::push_voting_outcome(OutcomeReport::Scalar(0), 10u128.saturated_into()).unwrap();
     Pallet::<T>::push_voting_outcome(OutcomeReport::Scalar(20), 20u128.saturated_into()).unwrap();
@@ -41,7 +41,7 @@ benchmarks! {
     vote_on_outcome {
         let caller: T::AccountId = whitelisted_caller();
         let vote_id = 0u128.saturated_into();
-        let outcome_index = 0u32;
+        let outcome_index = 0u128;
         let amount: BalanceOf<T> = MinOutcomeVoteAmount::get().saturated_into();
         deposit::<T>(&caller);
 

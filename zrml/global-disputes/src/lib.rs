@@ -123,6 +123,8 @@ mod pallet {
                 if <HighestVotes<T>>::get(vote_id).is_none() {
                     resolved_ids.push(vote_id);
                     if <OutcomeVotes<T>>::get(vote_id, outcome_index).is_some() {
+                        // TODO if there is no lock for the outcome index, then the storage for this is never removed
+                        // TODO maybe think about removing prefix with a limit of 5
                         <OutcomeVotes<T>>::remove(vote_id, outcome_index);
                     }
                     continue;
@@ -216,7 +218,7 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         fn get_default_outcome(vote_id: VoteId) -> Option<OutcomeReport> {
             // return first element if the BoundedVec is not empty, otherwise None
-            <Outcomes<T>>::get(vote_id).get(0usize).map(|o| o.clone())
+            <Outcomes<T>>::get(vote_id).get(0usize).cloned()
         }
     }
 
@@ -326,7 +328,7 @@ mod pallet {
         OptionQuery,
     >;
 
-    /// All lock information (vote id, outcome index and locked balance) for a particular voter.
+    /// All highest lock information (vote id, outcome index and locked balance) for a particular voter.
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]

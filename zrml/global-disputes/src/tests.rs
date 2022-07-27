@@ -241,7 +241,7 @@ fn get_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canonical_o
             GlobalDisputes::get_voting_winner(latest_vote_id).unwrap(),
             OutcomeReport::Scalar(40)
         );
-        
+
         assert_eq!(<Outcomes<Runtime>>::get(latest_vote_id), vec![]);
 
         reinitialize_outcomes();
