@@ -94,11 +94,6 @@ mod pallet {
                             }
                             Ordering::Less => {
                                 let diff = prev_amount.saturating_sub(amount);
-                                <OutcomeVotes<T>>::insert(
-                                    vote_id,
-                                    outcome_index,
-                                    vote_balance.saturating_sub(diff),
-                                );
                                 sub_vote_balance(outcome_index, diff);
                             }
                             Ordering::Equal => (),
