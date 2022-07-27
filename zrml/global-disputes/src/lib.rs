@@ -128,17 +128,17 @@ mod pallet {
             ensure_signed(origin)?;
 
             let mut lock_needed: BalanceOf<T> = Zero::zero();
-            let mut resolved_markets = Vec::new();
-            for (market_id, (_, locked_balance)) in <LockInfoOf<T>>::iter_prefix(&voter) {
-                if <OutcomeVotes<T>>::iter_prefix(market_id).take(1).next().is_none() {
-                    resolved_markets.push(market_id);
+            let mut resolved_ids = Vec::new();
+            for (vote_id, (_, locked_balance)) in <LockInfoOf<T>>::iter_prefix(&voter) {
+                if <OutcomeVotes<T>>::iter_prefix(vote_id).take(1).next().is_none() {
+                    resolved_ids.push(vote_id);
                     continue;
                 }
                 lock_needed = lock_needed.max(locked_balance);
             }
 
-            for market_id in resolved_markets {
-                <LockInfoOf<T>>::remove(&voter, market_id);
+            for vote_id in resolved_ids {
+                <LockInfoOf<T>>::remove(&voter, vote_id);
             }
 
             if lock_needed.is_zero() {
@@ -161,7 +161,7 @@ mod pallet {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        /// The identifier of individual markets.
+        /// The currency to allow locking funds for voting.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         /// The pallet identifier.
@@ -191,7 +191,7 @@ mod pallet {
     pub enum Error<T> {
         /// The vote on this outcome index is not allowed, because there are not at least a minimum number of outcomes.
         NotEnoughOutcomes,
-        /// The outcome specified with market id and outcome index is not present.
+        /// The outcome specified with vote id and outcome index is not present.
         OutcomeDoesNotExist,
         /// Sender does not have enough funds for the vote on an outcome.
         InsufficientAmount,
@@ -314,7 +314,7 @@ mod pallet {
     #[pallet::storage]
     pub type NextVoteId<T: Config> = StorageValue<_, VoteId, ValueQuery>;
 
-    /// Maps the market id to the outcome reports.
+    /// Maps the vote id to the outcome reports.
     #[pallet::storage]
     pub type Outcomes<T: Config> = StorageMap<
         _,
@@ -324,7 +324,7 @@ mod pallet {
         ValueQuery,
     >;
 
-    /// Maps the market id to the outcome index and the vote balance.  
+    /// Maps the vote id to the outcome index and the vote balance.  
     #[pallet::storage]
     pub type OutcomeVotes<T: Config> = StorageDoubleMap<
         _,
@@ -336,7 +336,7 @@ mod pallet {
         OptionQuery,
     >;
 
-    /// All lock information (market id, outcome index and locked balance) for a particular voter.
+    /// All lock information (vote id, outcome index and locked balance) for a particular voter.
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]
