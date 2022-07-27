@@ -521,7 +521,7 @@ mod pallet {
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
-                    let required_bond = T::ValidityBond::get() + T::OracleBond::get();
+                    let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         Asset::Ztg,
@@ -535,7 +535,7 @@ mod pallet {
                     }
                 }
                 MarketCreation::Advised => {
-                    let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
+                    let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         Asset::Ztg,
@@ -767,7 +767,7 @@ mod pallet {
                     // ever not true then we have an accounting problem.
                     ensure!(
                         T::AssetManager::free_balance(Asset::Ztg, &market_account)
-                            >= long_payout + short_payout,
+                            >= long_payout.saturating_add(short_payout),
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
 
@@ -1917,8 +1917,8 @@ mod pallet {
 
                                         // Unreserve funds reserved during market creation
                                         if m.creation == MarketCreation::Permissionless {
-                                            let required_bond =
-                                                T::ValidityBond::get() + T::OracleBond::get();
+                                            let required_bond = T::ValidityBond::get()
+                                                .saturating_add(T::OracleBond::get());
                                             T::AssetManager::unreserve_named(
                                                 &RESERVE_ID,
                                                 Asset::Ztg,

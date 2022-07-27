@@ -435,7 +435,7 @@ mod pallet {
                     &who,
                     |user_subsidy| {
                         if let Some(prev_val) = user_subsidy {
-                            *prev_val += amount;
+                            *prev_val = prev_val.saturating_add(amount);
                         } else {
                             // If the account adds subsidy for the first time, ensure that it's
                             // larger than the minimum amount.
@@ -446,7 +446,7 @@ mod pallet {
                             *user_subsidy = Some(amount);
                         }
 
-                        pool.total_subsidy = Some(total_subsidy + amount);
+                        pool.total_subsidy = Some(total_subsidy.saturating_add(amount));
                         Ok(())
                     },
                 )?;
@@ -2057,7 +2057,8 @@ mod pallet {
                                 outstanding_before.push(total_amount);
 
                                 if *asset == asset_out {
-                                    outstanding_after.push(total_amount + asset_amount_out);
+                                    outstanding_after
+                                        .push(total_amount.saturating_add(asset_amount_out));
                                 } else {
                                     outstanding_after.push(total_amount);
                                 }

@@ -39,10 +39,10 @@ fn default_prepare_calculation() -> (u8, f64, Vec<f64>, Vec<<Runtime as Config>:
 // Adds volume for Timestamp 0 and 2 and returns the new sigmoid fee
 fn default_fill_market_volume() -> f64 {
     let frac_dec_places = <Runtime as Config>::BalanceFractionalDecimals::get();
-    let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
+    <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
     assert_ok!(Rikiddo::update_volume(0, 1000));
     run_to_block(1);
-    let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
+    <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
     assert_eq!(Rikiddo::update_volume(0, 1000).unwrap(), Some(10u128.pow(frac_dec_places as u32)));
 
     let fee = Rikiddo::fee(0).unwrap();
@@ -107,11 +107,11 @@ fn rikiddo_pallet_update_market_data_returns_correct_result() {
             Rikiddo::update_volume(0, 1000),
             crate::Error::<Runtime>::RikiddoNotFoundForPool
         );
-        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
+        <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
         assert_ok!(Rikiddo::create(0, rikiddo));
         assert_ok!(Rikiddo::update_volume(0, 1000));
         run_to_block(1);
-        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
+        <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
         assert_eq!(
             Rikiddo::update_volume(0, 1000).unwrap(),
             Some(10u128.pow(<Runtime as Config>::BalanceFractionalDecimals::get() as u32))
@@ -131,7 +131,7 @@ fn rikiddo_pallet_fee_return_correct_result() {
         rikiddo.ma_short.config.ema_period = Timespan::Seconds(1);
         rikiddo.ma_long.config.ema_period = Timespan::Seconds(1);
         assert_noop!(Rikiddo::fee(0), crate::Error::<Runtime>::RikiddoNotFoundForPool);
-        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
+        <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
         assert_ok!(Rikiddo::create(0, rikiddo));
         let fee_reference_balance: Balance =
             FixedS::from_num(initial_fee).to_fixed_decimal(frac_dec_places).unwrap();
@@ -152,7 +152,7 @@ fn rikiddo_pallet_fee_return_correct_result() {
         // Now we check if the fee has changed, since enough volume data was collected
         assert_ok!(Rikiddo::update_volume(0, 1000));
         run_to_block(1);
-        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
+        <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 2).unwrap();
         assert_ok!(Rikiddo::update_volume(0, 1000));
         assert_ne!(Rikiddo::fee(0).unwrap(), fee_pallet_balance);
     });
