@@ -51,55 +51,52 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
                 Err(_) => continue,
             };
 
-            let not_yet_open = match market.period {
-                MarketPeriod::Block(ref range) => current_block < range.start,
+            // Don't continue unless the market is not yet open.
+            if match market.period {
+                MarketPeriod::Block(ref range) => current_block >= range.start,
                 MarketPeriod::Timestamp(ref range) => {
-                    current_time_frame < Pallet::<T>::calculate_time_frame_of_moment(range.start)
+                    current_time_frame >= Pallet::<T>::calculate_time_frame_of_moment(range.start)
+                }
+            } {
+                continue;
+            }
+
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+            let mut pool = match utility::get_pool::<T>(pool_id) {
+                Some(pool) => pool,
+                None => {
+                    log::warn!("no pool found. market_id: {:?}. pool_id: {:?}", market_id, pool_id,);
+                    continue;
                 }
             };
-            if not_yet_open {
-                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-                let mut pool = match utility::get_pool::<T>(pool_id) {
-                    Some(pool) => pool,
-                    None => {
-                        log::warn!(
-                            "no pool found. market_id: {:?}. pool_id: {:?}",
-                            market_id,
-                            pool_id,
-                        );
-                        continue;
-                    }
-                };
-                if pool.pool_status == PoolStatus::Active {
-                    pool.pool_status = PoolStatus::Initialized;
-                    utility::set_pool::<T>(pool_id, pool);
-                    total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            if pool.pool_status == PoolStatus::Active {
+                pool.pool_status = PoolStatus::Initialized;
+                utility::set_pool::<T>(pool_id, pool);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
-                    // We also need to cache the market for auto-open.
-                    match market.period {
-                        MarketPeriod::Block(ref range) => {
-                            let _ = MarketIdsPerOpenBlock::<T>::try_mutate(&range.start, |ids| {
+                // We also need to cache the market for auto-open.
+                match market.period {
+                    MarketPeriod::Block(ref range) => {
+                        let _ = MarketIdsPerOpenBlock::<T>::try_mutate(&range.start, |ids| {
+                            ids.try_push(market_id)
+                        });
+                    }
+                    MarketPeriod::Timestamp(ref range) => {
+                        let open_time_frame =
+                            Pallet::<T>::calculate_time_frame_of_moment(range.start);
+                        let _ =
+                            MarketIdsPerOpenTimeFrame::<T>::try_mutate(&open_time_frame, |ids| {
                                 ids.try_push(market_id)
                             });
-                        }
-                        MarketPeriod::Timestamp(ref range) => {
-                            let open_time_frame =
-                                Pallet::<T>::calculate_time_frame_of_moment(range.start);
-                            let _ = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
-                                &open_time_frame,
-                                |ids| ids.try_push(market_id),
-                            );
-                        }
                     }
-                    total_weight =
-                        total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                } else {
-                    log::warn!(
-                        "found pool with unexpected status. market_id: {:?}. pool_id: {:?}",
-                        market_id,
-                        pool_id,
-                    );
                 }
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            } else {
+                log::warn!(
+                    "found pool with unexpected status. market_id: {:?}. pool_id: {:?}",
+                    market_id,
+                    pool_id,
+                );
             }
         }
 
