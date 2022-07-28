@@ -39,12 +39,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
             Pallet::<T>::calculate_time_frame_of_moment(T::MarketCommons::now());
         total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
 
-        for (market_id, market) in T::MarketCommons::market_iter() {
+        for (market_id, market) in T::MarketCommons::market_iter()
+            .filter(|(_, market)| market.status == MarketStatus::Active)
+        {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-
-            if market.status != MarketStatus::Active {
-                continue;
-            }
 
             // No need to migrate if there's no pool.
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
