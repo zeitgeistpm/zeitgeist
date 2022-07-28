@@ -48,6 +48,14 @@ use {
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::XcmConfig,
 };
+#[cfg(feature = "runtime-battery-station")]
+use {
+    super::battery_station::*,
+};
+#[cfg(feature = "runtime-zeitgeist")]
+use {
+    super::zeitgeist::*,
+};
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
@@ -154,7 +162,7 @@ type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
 >;
 
 // Construct runtime
-macro_rules! create_zeitgeist_runtime {
+macro_rules! create_runtime {
     ($($additional_pallets:tt)*) => {
         // Pallets are enumerated based on the dependency graph.
         //
@@ -214,10 +222,10 @@ macro_rules! create_zeitgeist_runtime {
     }
 }
 
-macro_rules! create_zeitgeist_runtime_with_additional_pallets {
+macro_rules! create_runtime_with_additional_pallets {
     ($($additional_pallets:tt)*) => {
         #[cfg(feature = "parachain")]
-        create_zeitgeist_runtime!(
+        create_runtime!(
             // System
             ParachainSystem: cumulus_pallet_parachain_system::{Call, Config, Event<T>, Inherent, Pallet, Storage, ValidateUnsigned} = 100,
             ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
@@ -242,7 +250,7 @@ macro_rules! create_zeitgeist_runtime_with_additional_pallets {
         );
 
         #[cfg(not(feature = "parachain"))]
-        create_zeitgeist_runtime!(
+        create_runtime!(
             // Consensus
             Aura: pallet_aura::{Config<T>, Pallet, Storage} = 100,
             Grandpa: pallet_grandpa::{Call, Config, Event, Pallet, Storage} = 101,
@@ -253,14 +261,8 @@ macro_rules! create_zeitgeist_runtime_with_additional_pallets {
     }
 }
 
-#[cfg(not(feature = "without-sudo"))]
-create_zeitgeist_runtime_with_additional_pallets!(
-    // Others
-    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
-);
-
-#[cfg(feature = "without-sudo")]
-create_zeitgeist_runtime_with_additional_pallets!();
+pub(crate) use create_runtime;
+pub(crate) use create_runtime_with_additional_pallets;
 
 // Configure Pallets
 #[cfg(feature = "parachain")]
@@ -276,8 +278,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
     type Event = Event;
     type OnSystemEvent = ();
     type OutboundXcmpMessageSource = XcmpQueue;
-    type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
-    type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
+    type ReservedDmpWeight = crate::common::parachain_params::ReservedDmpWeight;
+    type ReservedXcmpWeight = crate::common::parachain_params::ReservedXcmpWeight;
     type SelfParaId = parachain_info::Pallet<Runtime>;
     type XcmpMessageHandler = XcmpQueue;
 }
@@ -298,124 +300,6 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type VersionWrapper = ();
     type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
     type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
-}
-
-#[derive(scale_info::TypeInfo)]
-pub struct IsCallable;
-
-cfg_if::cfg_if! {
-    if #[cfg(all(feature = "parachain", feature = "txfilter"))] {
-        // Restricted parachain.
-        impl Contains<Call> for IsCallable {
-            fn contains(call: &Call) -> bool {
-                match call {
-                    // Allowed calls:
-                    Call::AdvisoryCommittee(_)
-                    | Call::AdvisoryCommitteeMembership(_)
-                    | Call::AuthorInherent(_)
-                    | Call::AuthorFilter(_)
-                    | Call::AuthorMapping(_)
-                    | Call::Balances(_)
-                    | Call::Council(_)
-                    | Call::CouncilMembership(_)
-                    | Call::Crowdloan(_)
-                    | Call::AssetManager(_)
-                    | Call::Democracy(_)
-                    | Call::DmpQueue(_)
-                    | Call::Identity(_)
-                    | Call::MultiSig(_)
-                    | Call::ParachainStaking(_)
-                    | Call::ParachainSystem(_)
-                    | Call::PolkadotXcm(_)
-                    | Call::Preimage(_)
-                    | Call::Proxy(_)
-                    | Call::Scheduler(_)
-                    | Call::System(_)
-                    | Call::TechnicalCommittee(_)
-                    | Call::TechnicalCommitteeMembership(_)
-                    | Call::Timestamp(_)
-                    | Call::Treasury(_)
-                    | Call::Utility(_)
-                    | Call::Vesting(_)
-                    | Call::XcmpQueue(_) => true,
-
-                    #[cfg(not(feature = "without-sudo"))]
-                    Call::Sudo(_) => true,
-
-                    // Prohibited calls:
-                    Call::Authorized(_)
-                    | Call::Court(_)
-                    | Call::LiquidityMining(_)
-                    | Call::Swaps(_)
-                    | Call::PredictionMarkets(_) => false,
-                }
-            }
-        }
-    // Restricted standalone chain.
-    } else if #[cfg(all(feature = "txfilter", not(feature = "parachain")))] {
-        impl Contains<Call> for IsCallable {
-            fn contains(call: &Call) -> bool {
-                match call {
-                    // Allowed calls:
-                    Call::AdvisoryCommittee(_)
-                    | Call::AdvisoryCommitteeMembership(_)
-                    | Call::Balances(_)
-                    | Call::Council(_)
-                    | Call::CouncilMembership(_)
-                    | Call::AssetManager(_)
-                    | Call::Democracy(_)
-                    | Call::Grandpa(_)
-                    | Call::Identity(_)
-                    | Call::MultiSig(_)
-                    | Call::Preimage(_)
-                    | Call::Proxy(_)
-                    | Call::Scheduler(_)
-                    | Call::System(_)
-                    | Call::TechnicalCommittee(_)
-                    | Call::TechnicalCommitteeMembership(_)
-                    | Call::Timestamp(_)
-                    | Call::Treasury(_)
-                    | Call::Utility(_)
-                    | Call::Vesting(_) => true,
-
-                    #[cfg(not(feature = "without-sudo"))]
-                    Call::Sudo(_) => true,
-
-                    // Prohibited calls:
-                    Call::Authorized(_)
-                    | Call::Court(_)
-                    | Call::LiquidityMining(_)
-                    | Call::Swaps(_)
-                    | Call::PredictionMarkets(_)=> false,
-                }
-            }
-        }
-    // Unrestricted (no "txfilter" feature) chains.
-    // Currently disables Rikiddo and markets using Court or SimpleDisputes dispute mechanism.
-    // Will be relaxed for testnet once runtimes are separated.
-    } else {
-        impl Contains<Call> for IsCallable {
-            fn contains(call: &Call) -> bool {
-                use zrml_prediction_markets::Call::{create_market, create_cpmm_market_and_deploy_assets};
-                use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes}};
-
-                match call {
-                    Call::PredictionMarkets(inner_call) => {
-                        match inner_call {
-                            // Disable Rikiddo markets
-                            create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                            // Disable Court & SimpleDisputes dispute resolution mechanism
-                            create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                            create_cpmm_market_and_deploy_assets { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                            _ => true
-                        }
-                    }
-                    Call::LiquidityMining(_) => false,
-                    _ => true
-                }
-            }
-        }
-    }
 }
 
 impl frame_system::Config for Runtime {
@@ -814,12 +698,6 @@ impl pallet_scheduler::Config for Runtime {
     type OriginPrivilegeCmp = EqualPrivilegeOnly;
     type PreimageProvider = Preimage;
     type NoPreimagePostponement = NoPreimagePostponement;
-}
-
-#[cfg(not(feature = "without-sudo"))]
-impl pallet_sudo::Config for Runtime {
-    type Call = Call;
-    type Event = Event;
 }
 
 impl pallet_timestamp::Config for Runtime {

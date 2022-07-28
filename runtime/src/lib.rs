@@ -6,7 +6,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod common;
+mod common;
 #[cfg(feature = "runtime-battery-station")]
 pub mod battery_station;
 #[cfg(feature = "runtime-zeitgeist")]
