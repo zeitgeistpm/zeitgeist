@@ -1,27 +1,28 @@
 [workspace]
 members = [
-    "node",
-    "primitives",
-    "runtime",
-    "zrml/authorized",
-    "zrml/court",
-    "zrml/liquidity-mining",
-    "zrml/market-commons",
-    "zrml/orderbook-v1",
-    "zrml/orderbook-v1/fuzz",
-    "zrml/prediction-markets",
-    "zrml/prediction-markets/fuzz",
-    "zrml/prediction-markets/runtime-api",
-    "zrml/rikiddo",
-    "zrml/rikiddo/fuzz",
-    "zrml/simple-disputes",
-    "zrml/swaps",
-    "zrml/swaps/fuzz",
-    "zrml/swaps/rpc",
-    "zrml/swaps/runtime-api",
+  "node",
+  "primitives",
+  "runtime",
+  "zrml/authorized",
+  "zrml/court",
+  "zrml/liquidity-mining",
+  "zrml/market-commons",
+  "zrml/orderbook-v1",
+  "zrml/orderbook-v1/fuzz",
+  "zrml/prediction-markets",
+  "zrml/prediction-markets/fuzz",
+  "zrml/prediction-markets/runtime-api",
+  "zrml/rikiddo",
+  "zrml/rikiddo/fuzz",
+  "zrml/simple-disputes",
+  "zrml/swaps",
+  "zrml/swaps/fuzz",
+  "zrml/swaps/rpc",
+  "zrml/swaps/runtime-api",
+  "zrml/furnace",
 ]
 resolver = "2"
 
 [patch."https://github.com/purestake/moonbeam"]
-pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
+pallet-author-mapping = {git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping"}
+parachain-staking = {git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping"}

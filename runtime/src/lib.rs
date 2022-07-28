@@ -47,6 +47,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
+
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
@@ -215,6 +216,7 @@ macro_rules! create_zeitgeist_runtime {
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
+                Furnace: zrml_furnace::{Call, Event<T>, Pallet, Storage} = 58,
 
                 $($additional_pallets)*
             }
@@ -1021,6 +1023,13 @@ impl zrml_swaps::Config for Runtime {
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
+}
+
+impl zrml_furnace::Config for Runtime {
+    type Event = Event;
+    type AssetManager = AssetManager;
+    type MarketCommons = MarketCommons;
+    type Currency = Balances;
 }
 
 // Implementation of runtime's apis
