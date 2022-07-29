@@ -14,14 +14,19 @@ pub use pallet::*;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+
+
 #[frame_support::pallet]
 pub mod pallet {
     use frame_support::{pallet_prelude::*, traits::NamedReservableCurrency};
     use frame_system::pallet_prelude::*;
+    use sp_runtime::SaturatedConversion;
     use orml_traits::MultiCurrency;
     use zeitgeist_primitives::{traits::ZeitgeistAssetManager, types::Asset};
-
     use zrml_market_commons::MarketCommonsPalletApi;
+
+    // 200 ZTG for the right to cross.
+    const BURN_AMOUNT: u128 = 200 * zeitgeist_primitives::constants::BASE;
 
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
@@ -75,11 +80,11 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// WARNING!!: Burns the given amount of ZTG.
+        /// Burns 200 ZTG in return for the ability to claim your zeitgeist avatar.
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn burn(
             origin: OriginFor<T>,
-            #[pallet::compact] amount: BalanceOf<T>,
+            //#[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -87,6 +92,7 @@ pub mod pallet {
                 Err(Error::<T>::HasAlreadyBurned)?;
             }
 
+            let amount: BalanceOf<T> = BURN_AMOUNT.saturated_into();
             let free = T::AssetManager::free_balance(Asset::Ztg, &who);
 
             if free < amount {
