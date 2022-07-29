@@ -945,32 +945,32 @@ fn pool_join_or_exit_raises_on_zero_value() {
 
         assert_noop!(
             Swaps::pool_join(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_exit(alice_signed(), 0, 0, vec!(_1, _1, _1, _1)),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_join_with_exact_pool_amount(alice_signed(), 0, ASSET_A, 0, 0),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_join_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 0, 0),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(alice_signed(), 0, ASSET_A, 0, 0),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::ZeroAmount
         );
 
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(alice_signed(), 0, ASSET_A, 0, 0),
-            crate::Error::<Runtime>::MathApproximation
+            crate::Error::<Runtime>::ZeroAmount
         );
     });
 }
@@ -2683,8 +2683,9 @@ fn single_asset_operations_are_equivalent_to_swaps() {
 fn swaps_cannot_reduce_balances_to_zero() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
+        let pool_id = 0;
         // Artificially set one of the balances close to zero.
-        let pool_account_id = Swaps::pool_account_id(0);
+        let pool_account_id = Swaps::pool_account_id(pool_id);
         let almost_zero = 1;
         assert_ok!(Currencies::withdraw(
             ASSET_A,
@@ -2694,14 +2695,50 @@ fn swaps_cannot_reduce_balances_to_zero() {
         assert_noop!(
             Swaps::swap_exact_amount_out(
                 alice_signed(),
-                0,
+                pool_id,
                 ASSET_B,
                 Some(u128::MAX),
                 ASSET_A,
-                1,
+                almost_zero,
                 Some(u128::MAX),
             ),
             crate::Error::<Runtime>::MaxOutRatio,
+        );
+    });
+}
+
+#[test]
+fn single_asset_operations_cannot_reduce_balances_to_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool(ScoringRule::CPMM, Some(0), true);
+        let pool_id = 0;
+        // Artificially set one of the balances close to zero.
+        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let almost_zero = 1;
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            Currencies::free_balance(ASSET_A, &pool_account_id) - almost_zero,
+        ));
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(
+                Origin::signed(BOB),
+                pool_id,
+                ASSET_B,
+                almost_zero,
+                u128::MAX,
+            ),
+            crate::Error::<Runtime>::ZeroAmount,
+        );
+        assert_noop!(
+            Swaps::pool_exit_with_exact_pool_amount(
+                Origin::signed(BOB),
+                pool_id,
+                ASSET_B,
+                _100,
+                almost_zero,
+            ),
+            crate::Error::<Runtime>::MaxInRatio,
         );
     });
 }
@@ -2719,6 +2756,32 @@ fn pool_join_with_uneven_balances() {
         assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), _110);
         assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), _110);
         assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), _110);
+    });
+}
+
+#[test]
+fn pool_exit_can_reduce_pool_balance_to_zero() {
+    ExtBuilder::default().build().execute_with(|| {
+        // This test demonstrates that (in the absence of exit fees), `pool_exit` can reduce
+        // balances in the pool to zero without reducing the total issuance of liquidity shares to
+        // zero.
+        <Runtime as Config>::ExitFee::set(&0u128);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
+        let pool_id = 0;
+        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_shares_id = Swaps::pool_shares_id(pool_id);
+        let liquidity_shares_left = 1;
+        assert_ok!(Swaps::pool_exit(
+            Origin::signed(BOB),
+            pool_id,
+            _100 - liquidity_shares_left,
+            vec![0; 4]
+        ));
+        assert_eq!(Currencies::total_issuance(pool_shares_id), liquidity_shares_left);
+        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), 0);
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), 0);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), 0);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), 0);
     });
 }
 
