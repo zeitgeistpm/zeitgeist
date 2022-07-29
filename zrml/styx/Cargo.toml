@@ -38,5 +38,5 @@ try-runtime = [
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
-name = "zrml-furnace"
+name = "zrml-styx"
 version = "0.3.4"

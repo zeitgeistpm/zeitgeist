@@ -14,19 +14,17 @@ pub use pallet::*;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-
-
 #[frame_support::pallet]
 pub mod pallet {
     use frame_support::{pallet_prelude::*, traits::NamedReservableCurrency};
     use frame_system::pallet_prelude::*;
-    use sp_runtime::SaturatedConversion;
     use orml_traits::MultiCurrency;
+    use sp_runtime::SaturatedConversion;
     use zeitgeist_primitives::{traits::ZeitgeistAssetManager, types::Asset};
     use zrml_market_commons::MarketCommonsPalletApi;
 
     // 200 ZTG for the right to cross.
-    const BURN_AMOUNT: u128 = 200 * zeitgeist_primitives::constants::BASE;
+    const CROSSING_FEE: u128 = 200 * zeitgeist_primitives::constants::BASE;
 
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
@@ -59,13 +57,15 @@ pub mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
+    /// Keep track of crossings. Accounts are only able to cross once.
     #[pallet::storage]
-    pub type Burns<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool>;
+    pub type Crossings<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        CurrencyBurned(
+        /// A account crossed and claimed their right to create their avatar.
+        AccountCrossed(
             T::AccountId,
             Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
             BalanceOf<T>,
@@ -74,25 +74,24 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// Account does not have enough balance to cross.
         FundDoesNotHaveEnoughFreeBalance,
-        HasAlreadyBurned,
+        /// Account has already crossed.
+        HasAlreadyCrossed,
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Burns 200 ZTG in return for the ability to claim your zeitgeist avatar.
+        /// Burns 200 ZTG to cross, granting the ability to claim your zeitgeist avatar.
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn burn(
-            origin: OriginFor<T>,
-            //#[pallet::compact] amount: BalanceOf<T>,
-        ) -> DispatchResult {
+        pub fn cross(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
-            if Burns::<T>::contains_key(&who) {
-                Err(Error::<T>::HasAlreadyBurned)?;
+            if Crossings::<T>::contains_key(&who) {
+                Err(Error::<T>::HasAlreadyCrossed)?;
             }
 
-            let amount: BalanceOf<T> = BURN_AMOUNT.saturated_into();
+            let amount: BalanceOf<T> = CROSSING_FEE.saturated_into();
             let free = T::AssetManager::free_balance(Asset::Ztg, &who);
 
             if free < amount {
@@ -100,9 +99,9 @@ pub mod pallet {
             }
 
             T::AssetManager::slash(Asset::Ztg, &who, amount);
-            Burns::<T>::insert(&who, true);
+            Crossings::<T>::insert(&who, true);
 
-            Self::deposit_event(Event::CurrencyBurned(who, Asset::Ztg, amount));
+            Self::deposit_event(Event::AccountCrossed(who, Asset::Ztg, amount));
 
             Ok(())
         }

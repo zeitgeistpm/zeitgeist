@@ -12484,8 +12484,8 @@ dependencies = [
  "try-runtime-cli",
  "zeitgeist-primitives",
  "zeitgeist-runtime",
- "zrml-furnace",
  "zrml-liquidity-mining",
+ "zrml-styx",
  "zrml-swaps-rpc",
 ]
 
@@ -12582,12 +12582,12 @@ dependencies = [
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
- "zrml-furnace",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
  "zrml-rikiddo",
  "zrml-simple-disputes",
+ "zrml-styx",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]
@@ -12643,24 +12643,6 @@ dependencies = [
  "pallet-timestamp",
  "parity-scale-codec",
  "rand 0.8.5",
- "scale-info",
- "sp-io",
- "sp-runtime",
- "zeitgeist-primitives",
- "zrml-market-commons",
-]
-
-[[package]]
-name = "zrml-furnace"
-version = "0.3.4"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-traits",
- "pallet-balances",
- "pallet-timestamp",
- "parity-scale-codec",
  "scale-info",
  "sp-io",
  "sp-runtime",
@@ -12826,6 +12808,24 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-market-commons",
+]
+
+[[package]]
+name = "zrml-styx"
+version = "0.3.4"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-traits",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",

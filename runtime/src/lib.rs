@@ -216,7 +216,7 @@ macro_rules! create_zeitgeist_runtime {
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
-                Furnace: zrml_furnace::{Call, Event<T>, Pallet, Storage} = 58,
+                Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
 
                 $($additional_pallets)*
             }
@@ -1025,7 +1025,7 @@ impl zrml_swaps::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
-impl zrml_furnace::Config for Runtime {
+impl zrml_styx::Config for Runtime {
     type Event = Event;
     type AssetManager = AssetManager;
     type MarketCommons = MarketCommons;

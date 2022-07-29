@@ -100,7 +100,7 @@ log = {optional = true, version = "0.4.14"}
 
 zeitgeist-primitives = {path = "../primitives"}
 zeitgeist-runtime = {path = "../runtime"}
-zrml-furnace = {path = "../zrml/furnace"}
+zrml-styx = {path = "../zrml/styx"}
 zrml-liquidity-mining = {path = "../zrml/liquidity-mining"}
 zrml-swaps-rpc = {path = "../zrml/swaps/rpc"}
 
