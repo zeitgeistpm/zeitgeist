@@ -18,7 +18,7 @@ pub use parameters::*;
 #[cfg(feature = "parachain")]
 pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{vec};
 use frame_support::{
     traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
@@ -149,7 +149,7 @@ type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
 // Construct runtime
 macro_rules! create_runtime {
     ($($additional_pallets:tt)*) => {
-        use alloc::{boxed::Box, vec, vec::Vec};
+        use alloc::{boxed::Box, vec::Vec};
         // Pallets are enumerated based on the dependency graph.
         //
         // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because

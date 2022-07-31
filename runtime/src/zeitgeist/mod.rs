@@ -12,23 +12,21 @@ pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
 use frame_support::{
     construct_runtime,
-    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
-    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
+    traits::Contains,
 };
-use frame_system::EnsureRoot;
-use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
+
+
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
-    create_runtime_str, generic,
-    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
+    create_runtime_str,
+    traits::{Block as BlockT},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
+
 use sp_version::RuntimeVersion;
-use zeitgeist_primitives::{constants::*, types::*};
+use zeitgeist_primitives::{types::*};
 #[cfg(feature = "parachain")]
 use {
     frame_support::traits::{Everything, Nothing},

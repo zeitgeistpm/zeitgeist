@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod multiplier_tests {
-    use crate::parameters::{MinimumMultiplier, SlowAdjustingFeeUpdate, TargetBlockFullness};
+    use crate::common::parameters::{MinimumMultiplier, SlowAdjustingFeeUpdate, TargetBlockFullness};
     use frame_support::{
         parameter_types,
         weights::{DispatchClass, Weight},
