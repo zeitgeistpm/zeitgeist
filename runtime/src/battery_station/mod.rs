@@ -1,21 +1,40 @@
-#![cfg(feature = "runtime-battery-station")]
-#[macro_use]
+#![cfg(feature = "testnet")]
 
-use frame_support::{construct_runtime, traits::Contains};
-use super::common::{create_runtime, create_runtime_with_additional_pallets};
+use super::common::*;
+pub use frame_system::{
+    Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
+    CheckTxVersion, CheckWeight,
+};
+pub use pallet_transaction_payment::ChargeTransactionPayment;
+pub use parameters::*;
+#[cfg(feature = "parachain")]
+pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
+
+use frame_support::{
+    construct_runtime,
+    traits::Contains,
+};
+
+use sp_api::impl_runtime_apis;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_runtime::{
+    create_runtime_str,
+    traits::{Block as BlockT},
+    transaction_validity::{TransactionSource, TransactionValidity},
+    ApplyExtrinsicResult,
+};
+
+use sp_version::RuntimeVersion;
+use zeitgeist_primitives::types::*;
+#[cfg(feature = "parachain")]
+use nimbus_primitives::{CanAuthor, NimbusId};
+
 
 pub mod parachain_params;
 pub mod parameters;
 
-create_runtime_with_additional_pallets!(
-    // Others
-    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
-);
-
-impl pallet_sudo::Config for Runtime {
-    type Call = Call;
-    type Event = Event;
-}
+create_runtime_with_additional_pallets!();
+create_runtime_apis!();
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
@@ -47,6 +66,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Proxy(_)
                     | Call::Scheduler(_)
+                    | Call::Sudo(_)
                     | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
@@ -55,7 +75,6 @@ cfg_if::cfg_if! {
                     | Call::Utility(_)
                     | Call::Vesting(_)
                     | Call::XcmpQueue(_) => true,
-                    | Call::Sudo(_) => true,
 
                     // Prohibited calls:
                     Call::Authorized(_)
@@ -85,6 +104,7 @@ cfg_if::cfg_if! {
                     | Call::Preimage(_)
                     | Call::Proxy(_)
                     | Call::Scheduler(_)
+                    | Call::Sudo(_)
                     | Call::System(_)
                     | Call::TechnicalCommittee(_)
                     | Call::TechnicalCommitteeMembership(_)
@@ -92,7 +112,6 @@ cfg_if::cfg_if! {
                     | Call::Treasury(_)
                     | Call::Utility(_)
                     | Call::Vesting(_) => true,
-                    | Call::Sudo(_) => true,
 
                     // Prohibited calls:
                     Call::Authorized(_)
@@ -130,3 +149,14 @@ cfg_if::cfg_if! {
         }
     }
 }
+
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+    spec_name: create_runtime_str!("zeitgeist"),
+    impl_name: create_runtime_str!("zeitgeist"),
+    authoring_version: 1,
+    spec_version: 38,
+    impl_version: 1,
+    apis: RUNTIME_API_VERSIONS,
+    transaction_version: 15,
+    state_version: 1,
+};

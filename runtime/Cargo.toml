@@ -106,7 +106,7 @@ zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runti
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
 [features]
-default = ["std", "runtime-zeitgeist"]
+default = ["std"]
 parachain = [
     # Cumulus
 
@@ -140,7 +140,6 @@ parachain = [
 
     "log"
 ]
-runtime-battery-station=[]
 runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
@@ -178,7 +177,6 @@ runtime-benchmarks = [
     "zrml-simple-disputes/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
 ]
-runtime-zeitgeist=[]
 std = [
     "frame-executive/std",
     "frame-support/std",
@@ -276,6 +274,7 @@ std = [
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
+testnet=[]
 txfilter = []
 try-runtime = [
     "frame-executive/try-runtime",
