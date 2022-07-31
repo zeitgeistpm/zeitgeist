@@ -1,18 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::too_many_arguments)]
+
+extern crate alloc;
+
+mod mock;
+mod tests;
 
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// <https://docs.substrate.io/v3/runtime/frame>
 pub use pallet::*;
-
-// #[cfg(test)]
-// mod mock;
-
-// #[cfg(test)]
-// mod tests;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -32,7 +29,6 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-
         /// The origin that is allowed to destroy markets.
         type SetBurnAmountOrigin: EnsureOrigin<Self::Origin>;
 
@@ -63,11 +59,14 @@ pub mod pallet {
     pub type Crossings<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool>;
 
     #[pallet::type_value]
-    pub fn DefaultBurnAmount<T: Config>() -> BalanceOf<T> { (zeitgeist_primitives::constants::BASE * 100).saturated_into() }
+    pub fn DefaultBurnAmount<T: Config>() -> BalanceOf<T> {
+        (zeitgeist_primitives::constants::BASE * 100).saturated_into()
+    }
 
     /// An extra layer of pseudo randomness.
     #[pallet::storage]
-    pub type BurnAmount<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery, DefaultBurnAmount<T>>;
+    pub type BurnAmount<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultBurnAmount<T>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -122,6 +121,4 @@ pub mod pallet {
             Ok(())
         }
     }
-
-    
 }
