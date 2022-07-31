@@ -35,8 +35,17 @@ use {
 pub mod parachain_params;
 pub mod parameters;
 
-create_runtime_with_additional_pallets!();
-create_runtime_apis!();
+
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+    spec_name: create_runtime_str!("zeitgeist"),
+    impl_name: create_runtime_str!("zeitgeist"),
+    authoring_version: 1,
+    spec_version: 38,
+    impl_version: 1,
+    apis: RUNTIME_API_VERSIONS,
+    transaction_version: 15,
+    state_version: 1,
+};
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
@@ -150,13 +159,5 @@ cfg_if::cfg_if! {
     }
 }
 
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("zeitgeist"),
-    impl_name: create_runtime_str!("zeitgeist"),
-    authoring_version: 1,
-    spec_version: 38,
-    impl_version: 1,
-    apis: RUNTIME_API_VERSIONS,
-    transaction_version: 15,
-    state_version: 1,
-};
+create_runtime_with_additional_pallets!();
+create_runtime_apis!();
