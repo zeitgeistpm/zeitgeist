@@ -1027,6 +1027,7 @@ impl zrml_swaps::Config for Runtime {
 
 impl zrml_styx::Config for Runtime {
     type Event = Event;
+    type SetBurnAmountOrigin = EnsureRootOrHalfCouncil;
     type AssetManager = AssetManager;
     type MarketCommons = MarketCommons;
     type Currency = Balances;

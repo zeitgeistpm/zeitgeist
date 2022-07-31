@@ -23,9 +23,6 @@ pub mod pallet {
     use zeitgeist_primitives::{traits::ZeitgeistAssetManager, types::Asset};
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    // 200 ZTG for the right to cross.
-    const CROSSING_FEE: u128 = 200 * zeitgeist_primitives::constants::BASE;
-
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
@@ -35,6 +32,10 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
+
+        /// The origin that is allowed to destroy markets.
+        type SetBurnAmountOrigin: EnsureOrigin<Self::Origin>;
+
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
@@ -60,6 +61,13 @@ pub mod pallet {
     /// Keep track of crossings. Accounts are only able to cross once.
     #[pallet::storage]
     pub type Crossings<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool>;
+
+    #[pallet::type_value]
+    pub fn DefaultBurnAmount<T: Config>() -> BalanceOf<T> { (zeitgeist_primitives::constants::BASE * 100).saturated_into() }
+
+    /// An extra layer of pseudo randomness.
+    #[pallet::storage]
+    pub type BurnAmount<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery, DefaultBurnAmount<T>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -91,7 +99,7 @@ pub mod pallet {
                 Err(Error::<T>::HasAlreadyCrossed)?;
             }
 
-            let amount: BalanceOf<T> = CROSSING_FEE.saturated_into();
+            let amount: BalanceOf<T> = BurnAmount::<T>::get().saturated_into();
             let free = T::AssetManager::free_balance(Asset::Ztg, &who);
 
             if free < amount {
@@ -105,5 +113,15 @@ pub mod pallet {
 
             Ok(())
         }
+
+        /// Set the burn amount. Needs 50% council vote.
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn set_burn_amount(origin: OriginFor<T>, _amount: BalanceOf<T>) -> DispatchResult {
+            T::SetBurnAmountOrigin::ensure_origin(origin)?;
+            BurnAmount::<T>::put(_amount);
+            Ok(())
+        }
     }
+
+    
 }
