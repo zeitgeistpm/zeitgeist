@@ -11,17 +11,27 @@ pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
     CheckTxVersion, CheckWeight,
 };
-pub use pallet_transaction_payment::ChargeTransactionPayment;
 #[cfg(feature = "parachain")]
-pub use {pallet_author_slot_filter::EligibilityValue};
+pub use pallet_author_slot_filter::EligibilityValue;
+pub use pallet_transaction_payment::ChargeTransactionPayment;
 
-use alloc::{vec};
+#[cfg(all(feature = "testnet", feature = "parachain"))]
+use super::battery_station::parachain_params::*;
+#[cfg(feature = "testnet")]
+use super::battery_station::{parameters::*, *};
+#[cfg(all(not(feature = "testnet"), feature = "parachain"))]
+use super::zeitgeist::parachain_params::*;
+#[cfg(not(feature = "testnet"))]
+use super::zeitgeist::{parameters::*, *};
+use alloc::vec;
 use frame_support::{
     traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
+#[cfg(not(feature = "parachain"))]
+use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
     generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
@@ -38,16 +48,6 @@ use {
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::XcmConfig,
 };
-#[cfg(not(feature = "parachain"))]
-use sp_core::crypto::KeyTypeId;
-#[cfg(feature = "testnet")]
-use super::battery_station::{*, parameters::*};
-#[cfg(all(feature = "testnet", feature = "parachain"))]
-use super::battery_station::parachain_params::*;
-#[cfg(not(feature = "testnet"))]
-use super::zeitgeist::{*, parameters::*};
-#[cfg(all(not(feature = "testnet"), feature = "parachain"))]
-use super::zeitgeist::parachain_params::*;
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -151,7 +151,7 @@ macro_rules! create_runtime {
         //
         // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
         // `PredictionMarkets` depends on `SimpleDisputes`.
-        
+
         construct_runtime!(
             pub enum Runtime where
                 Block = crate::common::Block,
@@ -889,7 +889,7 @@ macro_rules! create_runtime_apis {
                     ParachainSystem::collect_collation_info(header)
                 }
             }
-        
+
             #[cfg(feature = "parachain")]
             // Required to satisify trait bounds at the client implementation.
             impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
@@ -897,7 +897,7 @@ macro_rules! create_runtime_apis {
                     panic!("AuthorFilterAPI is no longer supported. Please update your client.")
                 }
             }
-        
+
             #[cfg(feature = "parachain")]
             impl nimbus_primitives::NimbusApi<Block> for Runtime {
                 fn can_author(
@@ -905,7 +905,7 @@ macro_rules! create_runtime_apis {
                     slot: u32,
                     parent_header: &<Block as BlockT>::Header
                 ) -> bool {
-        
+
                     // Ensure that an update is enforced when we are close to maximum block number
                     let block_number = if let Some(bn) = parent_header.number.checked_add(1) {
                         bn
@@ -913,7 +913,7 @@ macro_rules! create_runtime_apis {
                         log::error!("ERROR: No block numbers left");
                         return false;
                     };
-        
+
                     use frame_support::traits::OnInitialize;
                     System::initialize(
                         &block_number,
@@ -921,7 +921,7 @@ macro_rules! create_runtime_apis {
                         &parent_header.digest,
                     );
                     RandomnessCollectiveFlip::on_initialize(block_number);
-        
+
                     // Because the staking solution calculates the next staking set at the beginning
                     // of the first block in the new round, the only way to accurately predict the
                     // authors is to compute the selection during prediction.
@@ -947,7 +947,7 @@ macro_rules! create_runtime_apis {
                     }
                 }
             }
-        
+
             #[cfg(feature = "runtime-benchmarks")]
             impl frame_benchmarking::Benchmark<Block> for Runtime {
                 fn benchmark_metadata(extra: bool) -> (
@@ -958,9 +958,9 @@ macro_rules! create_runtime_apis {
                     use frame_support::traits::StorageInfoTrait;
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::list_benchmark as orml_list_benchmark;
-        
+
                     let mut list = Vec::<BenchmarkList>::new();
-        
+
                     list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
                     orml_list_benchmark!(list, extra, orml_currencies, benchmarks::currencies);
@@ -983,7 +983,7 @@ macro_rules! create_runtime_apis {
                     list_benchmark!(list, extra, zrml_court, Court);
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
-        
+
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
                             list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
@@ -995,10 +995,10 @@ macro_rules! create_runtime_apis {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
                         }
                     }
-        
+
                     (list, AllPalletsWithSystem::storage_info())
                 }
-        
+
                 fn dispatch_benchmark(
                     config: frame_benchmarking::BenchmarkConfig,
                 ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
@@ -1007,10 +1007,10 @@ macro_rules! create_runtime_apis {
                     };
                     use frame_system_benchmarking::Pallet as SystemBench;
                     use orml_benchmarking::{add_benchmark as orml_add_benchmark};
-        
+
                     impl frame_system_benchmarking::Config for Runtime {}
                     impl BaselineConfig for Runtime {}
-        
+
                     let whitelist: Vec<TrackedStorageKey> = vec![
                         hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac")
                             .to_vec()
@@ -1030,10 +1030,10 @@ macro_rules! create_runtime_apis {
                         hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da946c154ffd9992e395af90b5b13cc6f295c77033fce8a9045824a6690bbf99c6db269502f0a8d1d2a008542d5690a0749").to_vec().into(),
                         hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
                     ];
-        
+
                     let mut batches = Vec::<BenchmarkBatch>::new();
                     let params = (&config, &whitelist);
-        
+
                     add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
                     orml_add_benchmark!(params, batches, orml_currencies, benchmarks::currencies);
@@ -1056,8 +1056,8 @@ macro_rules! create_runtime_apis {
                     add_benchmark!(params, batches, zrml_court, Court);
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
-        
-        
+
+
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
                             add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
@@ -1069,20 +1069,20 @@ macro_rules! create_runtime_apis {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);
                         }
                     }
-        
+
                     if batches.is_empty() {
                         return Err("Benchmark not found for this pallet.".into());
                     }
                     Ok(batches)
                 }
             }
-        
+
             impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
                 fn account_nonce(account: AccountId) -> Index {
                     System::account_nonce(account)
                 }
             }
-        
+
             impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
                 fn query_fee_details(
                     uxt: <Block as BlockT>::Extrinsic,
@@ -1090,7 +1090,7 @@ macro_rules! create_runtime_apis {
                 ) -> pallet_transaction_payment::FeeDetails<Balance> {
                     TransactionPayment::query_fee_details(uxt, len)
                 }
-        
+
                 fn query_info(
                     uxt: <Block as BlockT>::Extrinsic,
                     len: u32,
@@ -1098,76 +1098,76 @@ macro_rules! create_runtime_apis {
                     TransactionPayment::query_info(uxt, len)
                 }
             }
-        
+
             impl sp_api::Core<Block> for Runtime {
                 fn execute_block(block: Block) {
                     Executive::execute_block(block)
                 }
-        
+
                 fn initialize_block(header: &<Block as BlockT>::Header) {
                     Executive::initialize_block(header)
                 }
-        
+
                 fn version() -> RuntimeVersion {
                     VERSION
                 }
             }
-        
+
             impl sp_api::Metadata<Block> for Runtime {
                 fn metadata() -> OpaqueMetadata {
                     OpaqueMetadata::new(Runtime::metadata().into())
                 }
             }
-        
+
             impl sp_block_builder::BlockBuilder<Block> for Runtime {
                 fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
                     Executive::apply_extrinsic(extrinsic)
                 }
-        
+
                 fn check_inherents(
                     block: Block,
                     data: sp_inherents::InherentData,
                 ) -> sp_inherents::CheckInherentsResult {
                     data.check_extrinsics(&block)
                 }
-        
+
                 fn finalize_block() -> <Block as BlockT>::Header {
                     Executive::finalize_block()
                 }
-        
+
                 fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
                     data.create_extrinsics()
                 }
             }
-        
+
             #[cfg(not(feature = "parachain"))]
             impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
                 fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
                     Aura::authorities().into_inner()
                 }
-        
+
                 fn slot_duration() -> sp_consensus_aura::SlotDuration {
                     sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
                 }
             }
-        
+
             #[cfg(not(feature = "parachain"))]
             impl sp_finality_grandpa::GrandpaApi<Block> for Runtime {
                 fn current_set_id() -> pallet_grandpa::fg_primitives::SetId {
                     Grandpa::current_set_id()
                 }
-        
+
                 fn generate_key_ownership_proof(
                     _set_id: pallet_grandpa::fg_primitives::SetId,
                     _authority_id: pallet_grandpa::AuthorityId,
                 ) -> Option<pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof> {
                     None
                 }
-        
+
                 fn grandpa_authorities() -> pallet_grandpa::AuthorityList {
                     Grandpa::grandpa_authorities()
                 }
-        
+
                 fn submit_report_equivocation_unsigned_extrinsic(
                     _equivocation_proof: pallet_grandpa::fg_primitives::EquivocationProof<
                         <Block as BlockT>::Hash,
@@ -1178,23 +1178,23 @@ macro_rules! create_runtime_apis {
                     None
                 }
             }
-        
+
             impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
                 fn offchain_worker(header: &<Block as BlockT>::Header) {
                     Executive::offchain_worker(header)
                 }
             }
-        
+
             impl sp_session::SessionKeys<Block> for Runtime {
                 fn decode_session_keys(encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
                     opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
                 }
-        
+
                 fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
                     opaque::SessionKeys::generate(seed)
                 }
             }
-        
+
             impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
                 fn validate_transaction(
                     source: TransactionSource,
@@ -1215,16 +1215,16 @@ macro_rules! create_runtime_apis {
                 ) -> SerdeWrapper<Balance> {
                     SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
                 }
-        
+
                 fn pool_account_id(pool_id: PoolId) -> AccountId {
                     Swaps::pool_account_id(pool_id)
                 }
-        
+
                 fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
                     Asset::PoolShare(SerdeWrapper(pool_id))
                 }
             }
-        
+
             #[cfg(feature = "try-runtime")]
             impl frame_try_runtime::TryRuntime<Block> for Runtime {
                 fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
@@ -1232,12 +1232,12 @@ macro_rules! create_runtime_apis {
                     let weight = Executive::try_runtime_upgrade().unwrap();
                     (weight, RuntimeBlockWeights::get().max_block)
                 }
-        
+
                 fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
                     Executive::execute_block_no_check(block)
                 }
             }
-            
+
             $($additional_apis)*
         }
 

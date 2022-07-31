@@ -10,25 +10,21 @@ pub use parameters::*;
 #[cfg(feature = "parachain")]
 pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
-use frame_support::{
-    construct_runtime,
-    traits::Contains,
-};
+use frame_support::{construct_runtime, traits::Contains};
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
     create_runtime_str,
-    traits::{Block as BlockT},
+    traits::Block as BlockT,
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
 
-use sp_version::RuntimeVersion;
-use zeitgeist_primitives::types::*;
 #[cfg(feature = "parachain")]
 use nimbus_primitives::{CanAuthor, NimbusId};
-
+use sp_version::RuntimeVersion;
+use zeitgeist_primitives::types::*;
 
 pub mod parachain_params;
 pub mod parameters;
@@ -47,13 +43,15 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-
 // Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
 // dispute mechanism.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
-        use zrml_prediction_markets::Call::{create_market, create_cpmm_market_and_deploy_assets};
-        use zeitgeist_primitives::types::{ScoringRule::RikiddoSigmoidFeeMarketEma, MarketDisputeMechanism::{Court, SimpleDisputes}};
+        use zeitgeist_primitives::types::{
+            MarketDisputeMechanism::{Court, SimpleDisputes},
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+        };
+        use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
 
         match call {
             Call::Court(_) => false,
@@ -64,11 +62,14 @@ impl Contains<Call> for IsCallable {
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
                     // Disable Court & SimpleDisputes dispute resolution mechanism
                     create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    create_cpmm_market_and_deploy_assets { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    _ => true
+                    create_cpmm_market_and_deploy_assets {
+                        dispute_mechanism: Court | SimpleDisputes,
+                        ..
+                    } => false,
+                    _ => true,
                 }
             }
-            _ => true
+            _ => true,
         }
     }
 }

@@ -5,8 +5,10 @@
 )]
 #![cfg(feature = "parachain")]
 
-use super::{parameters::MAXIMUM_BLOCK_WEIGHT, AccountId, Balances, Origin, ParachainInfo, ParachainSystem, XcmpQueue};
-use zeitgeist_primitives::constants::{BASE, BLOCKS_PER_MINUTE};
+use super::{
+    parameters::MAXIMUM_BLOCK_WEIGHT, AccountId, Balances, Origin, ParachainInfo, ParachainSystem,
+    XcmpQueue,
+};
 use frame_support::{match_types, parameter_types, traits::Everything, weights::Weight};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
@@ -18,7 +20,10 @@ use xcm_builder::{
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
     SovereignSignedViaLocation, TakeWeightCredit,
 };
-use zeitgeist_primitives::{constants::MICRO, types::Balance};
+use zeitgeist_primitives::{
+    constants::{BASE, BLOCKS_PER_MINUTE, MICRO},
+    types::Balance,
+};
 
 match_types! {
     pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
