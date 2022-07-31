@@ -13,7 +13,7 @@ test_package_with_feature primitives std
 
 no_runtime_benchmarks=('court' 'market-commons' 'rikiddo')
 
-cargo test --package zeitgeist-runtime --lib -- common::tests::multiplier--nocapture
+cargo test --package zeitgeist-runtime --lib -- common::tests::multiplier --nocapture
 
 for package in zrml/*
 do

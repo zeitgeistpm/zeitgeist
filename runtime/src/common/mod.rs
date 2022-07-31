@@ -4,6 +4,7 @@ pub mod opaque;
 #[cfg(feature = "parachain")]
 mod parachain_params;
 mod parameters;
+#[cfg(test)]
 mod tests;
 mod weights;
 #[cfg(feature = "parachain")]
