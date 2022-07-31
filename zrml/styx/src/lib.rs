@@ -75,6 +75,12 @@ pub mod pallet {
             Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
             BalanceOf<T>,
         ),
+        /// The crossing fee was changed.
+        CrossingFeeChanged(
+            T::AccountId,
+            Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+            BalanceOf<T>,
+        ),
     }
 
     #[pallet::error]
@@ -113,9 +119,11 @@ pub mod pallet {
 
         /// Set the burn amount. Needs 50% council vote.
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn set_burn_amount(origin: OriginFor<T>, _amount: BalanceOf<T>) -> DispatchResult {
+        pub fn set_burn_amount(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin.clone())?;
             T::SetBurnAmountOrigin::ensure_origin(origin)?;
-            BurnAmount::<T>::put(_amount);
+            BurnAmount::<T>::put(amount);
+            Self::deposit_event(Event::CrossingFeeChanged(who, Asset::Ztg, amount));
             Ok(())
         }
     }
