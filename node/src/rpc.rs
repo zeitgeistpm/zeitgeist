@@ -11,7 +11,7 @@ use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use std::sync::Arc;
 use zeitgeist_primitives::types::{AccountId, Balance, Index as Nonce, MarketId, PoolId};
-use zeitgeist_runtime::opaque::Block;
+use zeitgeist_runtime::Block;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {

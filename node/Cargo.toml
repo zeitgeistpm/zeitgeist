@@ -152,11 +152,13 @@ runtime-benchmarks = [
     "polkadot-service?/runtime-benchmarks",
     "zeitgeist-runtime/runtime-benchmarks"
 ]
+testnet = [
+    "zeitgeist-runtime/testnet"
+]
 try-runtime = [
     "zeitgeist-runtime/try-runtime",
     "try-runtime-cli",
 ]
-without-sudo = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]

@@ -5,7 +5,7 @@ mod service_standalone;
 
 use sp_runtime::traits::BlakeTwo256;
 use zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId};
-use zeitgeist_runtime::opaque::Block;
+use zeitgeist_runtime::Block;
 
 #[cfg(feature = "parachain")]
 pub use service_parachain::{new_full, new_partial, FullClient, ParachainPartialComponents};

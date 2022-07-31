@@ -81,8 +81,6 @@ cfg_if::cfg_if! {
 }
 
 const DEFAULT_INITIAL_BALANCE_TESTNET: u128 = 10_000 * BASE;
-#[cfg(not(feature = "without-sudo"))]
-const DEFAULT_SUDO_BALANCE_MAINNET: u128 = 100 * BASE;
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
 
@@ -93,7 +91,7 @@ struct EndowedAccountWithBalance(AccountId, Balance);
 fn generic_genesis(
     acs: AdditionalChainSpec,
     endowed_accounts: Vec<EndowedAccountWithBalance>,
-    #[cfg(not(feature = "without-sudo"))] root_key: AccountId,
+    #[cfg(feature = "testnet")] root_key: AccountId,
     wasm_binary: &[u8],
 ) -> zeitgeist_runtime::GenesisConfig {
     zeitgeist_runtime::GenesisConfig {
@@ -156,7 +154,7 @@ fn generic_genesis(
         #[cfg(feature = "parachain")]
         // Default should use the pallet configuration
         polkadot_xcm: PolkadotXcmConfig::default(),
-        #[cfg(not(feature = "without-sudo"))]
+        #[cfg(feature = "testnet")]
         sudo: zeitgeist_runtime::SudoConfig { key: Some(root_key) },
         system: zeitgeist_runtime::SystemConfig { code: wasm_binary.to_vec() },
         technical_committee: Default::default(),
@@ -276,7 +274,7 @@ fn endowed_accounts_staging_testnet() -> Vec<EndowedAccountWithBalance> {
     ]
 }
 
-#[cfg(not(feature = "without-sudo"))]
+#[cfg(feature = "testnet")]
 fn root_key_staging_testnet() -> AccountId {
     hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into()
 }
@@ -303,19 +301,7 @@ fn endowed_accounts_staging_mainnet() -> Vec<EndowedAccountWithBalance> {
             hex!["b449a256f73e59602eb742071a07e4d94aaae91e6872f28e161f34982a0bfc0d"].into(),
             DEFAULT_COLLATOR_BALANCE_MAINNET.unwrap(),
         ),
-        // dE2nxuZc5e7xBbU1cGikmtVGws9niNPUayigoDdyqB7hzHQ6X
-        #[cfg(not(feature = "without-sudo"))]
-        EndowedAccountWithBalance(
-            hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into(),
-            DEFAULT_SUDO_BALANCE_MAINNET,
-        ),
     ]
-}
-
-#[cfg(not(feature = "without-sudo"))]
-fn root_key_staging_mainnet() -> AccountId {
-    // dDykRtA8VyuVVtWTD5PWst3f33L1NMVKseQEji8e3B4ZCHrjK
-    hex!["203ef582312dae988433920791ce584daeca819a76d000175dc6d7d1a0fb1413"].into()
 }
 
 #[cfg(feature = "parachain")]
