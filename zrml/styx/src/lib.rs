@@ -67,7 +67,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Burns 200 ZTG to cross, granting the ability to claim your zeitgeist avatar.
+        /// Burns ZTG(styx.burnAmount()) to cross, granting the ability to claim your zeitgeist avatar.
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn cross(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
