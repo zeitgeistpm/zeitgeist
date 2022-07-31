@@ -24,3 +24,8 @@ pub mod zeitgeist;
 pub use battery_station::Runtime;
 #[cfg(feature = "runtime-zeitgeist")]
 pub use zeitgeist::Runtime;
+
+// Expose functions and types required to construct node CLI
+pub use common::{opaque::Block, SignedPayload};
+#[cfg(feature = "std")]
+pub use common::native_version;
