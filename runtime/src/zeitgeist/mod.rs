@@ -1,12 +1,48 @@
 #![cfg(feature = "runtime-zeitgeist")]
 
-use frame_support::{construct_runtime, traits::Contains};
-use super::common::{create_runtime, create_runtime_with_additional_pallets};
+use super::common::*;
+pub use frame_system::{
+    Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
+    CheckTxVersion, CheckWeight,
+};
+pub use pallet_transaction_payment::ChargeTransactionPayment;
+pub use parameters::*;
+#[cfg(feature = "parachain")]
+pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
+
+use frame_support::{
+    construct_runtime,
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
+};
+use frame_system::EnsureRoot;
+use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
+use sp_api::impl_runtime_apis;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_runtime::{
+    create_runtime_str, generic,
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
+    transaction_validity::{TransactionSource, TransactionValidity},
+    ApplyExtrinsicResult,
+};
+#[cfg(feature = "std")]
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
+use zeitgeist_primitives::{constants::*, types::*};
+#[cfg(feature = "parachain")]
+use {
+    frame_support::traits::{Everything, Nothing},
+    frame_system::EnsureSigned,
+    nimbus_primitives::{CanAuthor, NimbusId},
+    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
+    xcm_config::XcmConfig,
+};
 
 pub mod parachain_params;
 pub mod parameters;
 
 create_runtime_with_additional_pallets!();
+create_runtime_apis!();
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
@@ -119,3 +155,14 @@ cfg_if::cfg_if! {
         }
     }
 }
+
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+    spec_name: create_runtime_str!("zeitgeist"),
+    impl_name: create_runtime_str!("zeitgeist"),
+    authoring_version: 1,
+    spec_version: 38,
+    impl_version: 1,
+    apis: RUNTIME_API_VERSIONS,
+    transaction_version: 15,
+    state_version: 1,
+};

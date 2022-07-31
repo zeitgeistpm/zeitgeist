@@ -20,23 +20,18 @@ pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use frame_support::{
-    construct_runtime,
     traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    create_runtime_str, generic,
-    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT},
-    transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult,
+    generic,
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
 };
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
-use sp_version::RuntimeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
@@ -57,22 +52,11 @@ use {
     super::zeitgeist::*,
 };
 
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("zeitgeist"),
-    impl_name: create_runtime_str!("zeitgeist"),
-    authoring_version: 1,
-    spec_version: 38,
-    impl_version: 1,
-    apis: RUNTIME_API_VERSIONS,
-    transaction_version: 15,
-    state_version: 1,
-};
-
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
 type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-type Executive = frame_executive::Executive<
+pub type Executive = frame_executive::Executive<
     Runtime,
     Block,
     frame_system::ChainContext<Runtime>,
@@ -896,365 +880,373 @@ impl zrml_swaps::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
-// Implementation of runtime's apis
-impl_runtime_apis! {
-    #[cfg(feature = "parachain")]
-    impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-        fn collect_collation_info(
-            header: &<Block as BlockT>::Header
-        ) -> cumulus_primitives_core::CollationInfo {
-            ParachainSystem::collect_collation_info(header)
-        }
-    }
-
-    #[cfg(feature = "parachain")]
-    // Required to satisify trait bounds at the client implementation.
-    impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
-        fn can_author(_: NimbusId, _: u32, _: &<Block as BlockT>::Header) -> bool {
-            panic!("AuthorFilterAPI is no longer supported. Please update your client.")
-        }
-    }
-
-    #[cfg(feature = "parachain")]
-    impl nimbus_primitives::NimbusApi<Block> for Runtime {
-        fn can_author(
-            author: nimbus_primitives::NimbusId,
-            slot: u32,
-            parent_header: &<Block as BlockT>::Header
-        ) -> bool {
-
-            // Ensure that an update is enforced when we are close to maximum block number
-            let block_number = if let Some(bn) = parent_header.number.checked_add(1) {
-                bn
-            } else {
-                log::error!("ERROR: No block numbers left");
-                return false;
-            };
-
-            use frame_support::traits::OnInitialize;
-            System::initialize(
-                &block_number,
-                &parent_header.hash(),
-                &parent_header.digest,
-            );
-            RandomnessCollectiveFlip::on_initialize(block_number);
-
-            // Because the staking solution calculates the next staking set at the beginning
-            // of the first block in the new round, the only way to accurately predict the
-            // authors is to compute the selection during prediction.
-            if parachain_staking::Pallet::<Self>::round().should_update(block_number) {
-                // get author account id
-                use nimbus_primitives::AccountLookup;
-                let author_account_id = if let Some(account) =
-                    pallet_author_mapping::Pallet::<Self>::lookup_account(&author) {
-                    account
-                } else {
-                    // return false if author mapping not registered like in can_author impl
-                    return false
-                };
-                // predict eligibility post-selection by computing selection results now
-                let (eligible, _) =
-                    pallet_author_slot_filter::compute_pseudo_random_subset::<Self>(
-                        parachain_staking::Pallet::<Self>::compute_top_candidates(),
-                        &slot
+// Implement runtime apis
+macro_rules! create_runtime_apis {
+    ($($additional_apis:tt)*) => {
+        impl_runtime_apis! {
+            #[cfg(feature = "parachain")]
+            impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+                fn collect_collation_info(
+                    header: &<Block as BlockT>::Header
+                ) -> cumulus_primitives_core::CollationInfo {
+                    ParachainSystem::collect_collation_info(header)
+                }
+            }
+        
+            #[cfg(feature = "parachain")]
+            // Required to satisify trait bounds at the client implementation.
+            impl nimbus_primitives::AuthorFilterAPI<Block, NimbusId> for Runtime {
+                fn can_author(_: NimbusId, _: u32, _: &<Block as BlockT>::Header) -> bool {
+                    panic!("AuthorFilterAPI is no longer supported. Please update your client.")
+                }
+            }
+        
+            #[cfg(feature = "parachain")]
+            impl nimbus_primitives::NimbusApi<Block> for Runtime {
+                fn can_author(
+                    author: nimbus_primitives::NimbusId,
+                    slot: u32,
+                    parent_header: &<Block as BlockT>::Header
+                ) -> bool {
+        
+                    // Ensure that an update is enforced when we are close to maximum block number
+                    let block_number = if let Some(bn) = parent_header.number.checked_add(1) {
+                        bn
+                    } else {
+                        log::error!("ERROR: No block numbers left");
+                        return false;
+                    };
+        
+                    use frame_support::traits::OnInitialize;
+                    System::initialize(
+                        &block_number,
+                        &parent_header.hash(),
+                        &parent_header.digest,
                     );
-                eligible.contains(&author_account_id)
-            } else {
-                AuthorInherent::can_author(&author, &slot)
+                    RandomnessCollectiveFlip::on_initialize(block_number);
+        
+                    // Because the staking solution calculates the next staking set at the beginning
+                    // of the first block in the new round, the only way to accurately predict the
+                    // authors is to compute the selection during prediction.
+                    if parachain_staking::Pallet::<Self>::round().should_update(block_number) {
+                        // get author account id
+                        use nimbus_primitives::AccountLookup;
+                        let author_account_id = if let Some(account) =
+                            pallet_author_mapping::Pallet::<Self>::lookup_account(&author) {
+                            account
+                        } else {
+                            // return false if author mapping not registered like in can_author impl
+                            return false
+                        };
+                        // predict eligibility post-selection by computing selection results now
+                        let (eligible, _) =
+                            pallet_author_slot_filter::compute_pseudo_random_subset::<Self>(
+                                parachain_staking::Pallet::<Self>::compute_top_candidates(),
+                                &slot
+                            );
+                        eligible.contains(&author_account_id)
+                    } else {
+                        AuthorInherent::can_author(&author, &slot)
+                    }
+                }
             }
-        }
-    }
-
-    #[cfg(feature = "runtime-benchmarks")]
-    impl frame_benchmarking::Benchmark<Block> for Runtime {
-        fn benchmark_metadata(extra: bool) -> (
-            Vec<frame_benchmarking::BenchmarkList>,
-            Vec<frame_support::traits::StorageInfo>,
-        ) {
-            use frame_benchmarking::{list_benchmark, baseline::Pallet as BaselineBench, Benchmarking, BenchmarkList};
-            use frame_support::traits::StorageInfoTrait;
-            use frame_system_benchmarking::Pallet as SystemBench;
-            use orml_benchmarking::list_benchmark as orml_list_benchmark;
-
-            let mut list = Vec::<BenchmarkList>::new();
-
-            list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
-            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-            orml_list_benchmark!(list, extra, orml_currencies, benchmarks::currencies);
-            orml_list_benchmark!(list, extra, orml_tokens, benchmarks::tokens);
-            list_benchmark!(list, extra, pallet_balances, Balances);
-            list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
-            list_benchmark!(list, extra, pallet_democracy, Democracy);
-            list_benchmark!(list, extra, pallet_identity, Identity);
-            list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
-            list_benchmark!(list, extra, pallet_multisig, MultiSig);
-            list_benchmark!(list, extra, pallet_preimage, Preimage);
-            list_benchmark!(list, extra, pallet_proxy, Proxy);
-            list_benchmark!(list, extra, pallet_scheduler, Scheduler);
-            list_benchmark!(list, extra, pallet_timestamp, Timestamp);
-            list_benchmark!(list, extra, pallet_treasury, Treasury);
-            list_benchmark!(list, extra, pallet_utility, Utility);
-            list_benchmark!(list, extra, pallet_vesting, Vesting);
-            list_benchmark!(list, extra, zrml_swaps, Swaps);
-            list_benchmark!(list, extra, zrml_authorized, Authorized);
-            list_benchmark!(list, extra, zrml_court, Court);
-            list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
-            list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
-
-            cfg_if::cfg_if! {
-                if #[cfg(feature = "parachain")] {
-                    list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
-                    list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
-                    list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
-                    list_benchmark!(list, extra, parachain_staking, ParachainStaking);
-                    list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
-                } else {
-                    list_benchmark!(list, extra, pallet_grandpa, Grandpa);
+        
+            #[cfg(feature = "runtime-benchmarks")]
+            impl frame_benchmarking::Benchmark<Block> for Runtime {
+                fn benchmark_metadata(extra: bool) -> (
+                    Vec<frame_benchmarking::BenchmarkList>,
+                    Vec<frame_support::traits::StorageInfo>,
+                ) {
+                    use frame_benchmarking::{list_benchmark, baseline::Pallet as BaselineBench, Benchmarking, BenchmarkList};
+                    use frame_support::traits::StorageInfoTrait;
+                    use frame_system_benchmarking::Pallet as SystemBench;
+                    use orml_benchmarking::list_benchmark as orml_list_benchmark;
+        
+                    let mut list = Vec::<BenchmarkList>::new();
+        
+                    list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
+                    list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+                    orml_list_benchmark!(list, extra, orml_currencies, benchmarks::currencies);
+                    orml_list_benchmark!(list, extra, orml_tokens, benchmarks::tokens);
+                    list_benchmark!(list, extra, pallet_balances, Balances);
+                    list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
+                    list_benchmark!(list, extra, pallet_democracy, Democracy);
+                    list_benchmark!(list, extra, pallet_identity, Identity);
+                    list_benchmark!(list, extra, pallet_membership, AdvisoryCommitteeMembership);
+                    list_benchmark!(list, extra, pallet_multisig, MultiSig);
+                    list_benchmark!(list, extra, pallet_preimage, Preimage);
+                    list_benchmark!(list, extra, pallet_proxy, Proxy);
+                    list_benchmark!(list, extra, pallet_scheduler, Scheduler);
+                    list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+                    list_benchmark!(list, extra, pallet_treasury, Treasury);
+                    list_benchmark!(list, extra, pallet_utility, Utility);
+                    list_benchmark!(list, extra, pallet_vesting, Vesting);
+                    list_benchmark!(list, extra, zrml_swaps, Swaps);
+                    list_benchmark!(list, extra, zrml_authorized, Authorized);
+                    list_benchmark!(list, extra, zrml_court, Court);
+                    list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
+                    list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
+        
+                    cfg_if::cfg_if! {
+                        if #[cfg(feature = "parachain")] {
+                            list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
+                            list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
+                            list_benchmark!(list, extra, parachain_staking, ParachainStaking);
+                            list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
+                        } else {
+                            list_benchmark!(list, extra, pallet_grandpa, Grandpa);
+                        }
+                    }
+        
+                    (list, AllPalletsWithSystem::storage_info())
+                }
+        
+                fn dispatch_benchmark(
+                    config: frame_benchmarking::BenchmarkConfig,
+                ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
+                    use frame_benchmarking::{
+                        add_benchmark, baseline::{Pallet as BaselineBench, Config as BaselineConfig}, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
+                    };
+                    use frame_system_benchmarking::Pallet as SystemBench;
+                    use orml_benchmarking::{add_benchmark as orml_add_benchmark};
+        
+                    impl frame_system_benchmarking::Config for Runtime {}
+                    impl BaselineConfig for Runtime {}
+        
+                    let whitelist: Vec<TrackedStorageKey> = vec![
+                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac")
+                            .to_vec()
+                            .into(),
+                        hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80")
+                            .to_vec()
+                            .into(),
+                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a")
+                            .to_vec()
+                            .into(),
+                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850")
+                            .to_vec()
+                            .into(),
+                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7")
+                            .to_vec()
+                            .into(),
+                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da946c154ffd9992e395af90b5b13cc6f295c77033fce8a9045824a6690bbf99c6db269502f0a8d1d2a008542d5690a0749").to_vec().into(),
+                        hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
+                    ];
+        
+                    let mut batches = Vec::<BenchmarkBatch>::new();
+                    let params = (&config, &whitelist);
+        
+                    add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
+                    add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
+                    orml_add_benchmark!(params, batches, orml_currencies, benchmarks::currencies);
+                    orml_add_benchmark!(params, batches, orml_tokens, benchmarks::tokens);
+                    add_benchmark!(params, batches, pallet_balances, Balances);
+                    add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
+                    add_benchmark!(params, batches, pallet_democracy, Democracy);
+                    add_benchmark!(params, batches, pallet_identity, Identity);
+                    add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
+                    add_benchmark!(params, batches, pallet_multisig, MultiSig);
+                    add_benchmark!(params, batches, pallet_preimage, Preimage);
+                    add_benchmark!(params, batches, pallet_proxy, Proxy);
+                    add_benchmark!(params, batches, pallet_scheduler, Scheduler);
+                    add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+                    add_benchmark!(params, batches, pallet_treasury, Treasury);
+                    add_benchmark!(params, batches, pallet_utility, Utility);
+                    add_benchmark!(params, batches, pallet_vesting, Vesting);
+                    add_benchmark!(params, batches, zrml_swaps, Swaps);
+                    add_benchmark!(params, batches, zrml_authorized, Authorized);
+                    add_benchmark!(params, batches, zrml_court, Court);
+                    add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
+                    add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
+        
+        
+                    cfg_if::cfg_if! {
+                        if #[cfg(feature = "parachain")] {
+                            add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
+                            add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
+                            add_benchmark!(params, batches, parachain_staking, ParachainStaking);
+                            add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
+                        } else {
+                            add_benchmark!(params, batches, pallet_grandpa, Grandpa);
+                        }
+                    }
+        
+                    if batches.is_empty() {
+                        return Err("Benchmark not found for this pallet.".into());
+                    }
+                    Ok(batches)
+                }
+            }
+        
+            impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
+                fn account_nonce(account: AccountId) -> Index {
+                    System::account_nonce(account)
+                }
+            }
+        
+            impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
+                fn query_fee_details(
+                    uxt: <Block as BlockT>::Extrinsic,
+                    len: u32,
+                ) -> pallet_transaction_payment::FeeDetails<Balance> {
+                    TransactionPayment::query_fee_details(uxt, len)
+                }
+        
+                fn query_info(
+                    uxt: <Block as BlockT>::Extrinsic,
+                    len: u32,
+                ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
+                    TransactionPayment::query_info(uxt, len)
+                }
+            }
+        
+            impl sp_api::Core<Block> for Runtime {
+                fn execute_block(block: Block) {
+                    Executive::execute_block(block)
+                }
+        
+                fn initialize_block(header: &<Block as BlockT>::Header) {
+                    Executive::initialize_block(header)
+                }
+        
+                fn version() -> RuntimeVersion {
+                    VERSION
+                }
+            }
+        
+            impl sp_api::Metadata<Block> for Runtime {
+                fn metadata() -> OpaqueMetadata {
+                    OpaqueMetadata::new(Runtime::metadata().into())
+                }
+            }
+        
+            impl sp_block_builder::BlockBuilder<Block> for Runtime {
+                fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
+                    Executive::apply_extrinsic(extrinsic)
+                }
+        
+                fn check_inherents(
+                    block: Block,
+                    data: sp_inherents::InherentData,
+                ) -> sp_inherents::CheckInherentsResult {
+                    data.check_extrinsics(&block)
+                }
+        
+                fn finalize_block() -> <Block as BlockT>::Header {
+                    Executive::finalize_block()
+                }
+        
+                fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
+                    data.create_extrinsics()
+                }
+            }
+        
+            #[cfg(not(feature = "parachain"))]
+            impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
+                fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
+                    Aura::authorities().into_inner()
+                }
+        
+                fn slot_duration() -> sp_consensus_aura::SlotDuration {
+                    sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+                }
+            }
+        
+            #[cfg(not(feature = "parachain"))]
+            impl sp_finality_grandpa::GrandpaApi<Block> for Runtime {
+                fn current_set_id() -> pallet_grandpa::fg_primitives::SetId {
+                    Grandpa::current_set_id()
+                }
+        
+                fn generate_key_ownership_proof(
+                    _set_id: pallet_grandpa::fg_primitives::SetId,
+                    _authority_id: pallet_grandpa::AuthorityId,
+                ) -> Option<pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof> {
+                    None
+                }
+        
+                fn grandpa_authorities() -> pallet_grandpa::AuthorityList {
+                    Grandpa::grandpa_authorities()
+                }
+        
+                fn submit_report_equivocation_unsigned_extrinsic(
+                    _equivocation_proof: pallet_grandpa::fg_primitives::EquivocationProof<
+                        <Block as BlockT>::Hash,
+                        sp_runtime::traits::NumberFor<Block>,
+                    >,
+                    _key_owner_proof: pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof,
+                ) -> Option<()> {
+                    None
+                }
+            }
+        
+            impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
+                fn offchain_worker(header: &<Block as BlockT>::Header) {
+                    Executive::offchain_worker(header)
+                }
+            }
+        
+            impl sp_session::SessionKeys<Block> for Runtime {
+                fn decode_session_keys(encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
+                    opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
+                }
+        
+                fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
+                    opaque::SessionKeys::generate(seed)
+                }
+            }
+        
+            impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
+                fn validate_transaction(
+                    source: TransactionSource,
+                    tx: <Block as BlockT>::Extrinsic,
+                    block_hash: <Block as BlockT>::Hash,
+                ) -> TransactionValidity {
+                    Executive::validate_transaction(source, tx, block_hash)
                 }
             }
 
-            (list, AllPalletsWithSystem::storage_info())
-        }
-
-        fn dispatch_benchmark(
-            config: frame_benchmarking::BenchmarkConfig,
-        ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-            use frame_benchmarking::{
-                add_benchmark, baseline::{Pallet as BaselineBench, Config as BaselineConfig}, vec, BenchmarkBatch, Benchmarking, TrackedStorageKey, Vec
-            };
-            use frame_system_benchmarking::Pallet as SystemBench;
-            use orml_benchmarking::{add_benchmark as orml_add_benchmark};
-
-            impl frame_system_benchmarking::Config for Runtime {}
-            impl BaselineConfig for Runtime {}
-
-            let whitelist: Vec<TrackedStorageKey> = vec![
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac")
-                    .to_vec()
-                    .into(),
-                hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80")
-                    .to_vec()
-                    .into(),
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a")
-                    .to_vec()
-                    .into(),
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850")
-                    .to_vec()
-                    .into(),
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7")
-                    .to_vec()
-                    .into(),
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da946c154ffd9992e395af90b5b13cc6f295c77033fce8a9045824a6690bbf99c6db269502f0a8d1d2a008542d5690a0749").to_vec().into(),
-                hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
-            ];
-
-            let mut batches = Vec::<BenchmarkBatch>::new();
-            let params = (&config, &whitelist);
-
-            add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
-            add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-            orml_add_benchmark!(params, batches, orml_currencies, benchmarks::currencies);
-            orml_add_benchmark!(params, batches, orml_tokens, benchmarks::tokens);
-            add_benchmark!(params, batches, pallet_balances, Balances);
-            add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
-            add_benchmark!(params, batches, pallet_democracy, Democracy);
-            add_benchmark!(params, batches, pallet_identity, Identity);
-            add_benchmark!(params, batches, pallet_membership, AdvisoryCommitteeMembership);
-            add_benchmark!(params, batches, pallet_multisig, MultiSig);
-            add_benchmark!(params, batches, pallet_preimage, Preimage);
-            add_benchmark!(params, batches, pallet_proxy, Proxy);
-            add_benchmark!(params, batches, pallet_scheduler, Scheduler);
-            add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-            add_benchmark!(params, batches, pallet_treasury, Treasury);
-            add_benchmark!(params, batches, pallet_utility, Utility);
-            add_benchmark!(params, batches, pallet_vesting, Vesting);
-            add_benchmark!(params, batches, zrml_swaps, Swaps);
-            add_benchmark!(params, batches, zrml_authorized, Authorized);
-            add_benchmark!(params, batches, zrml_court, Court);
-            add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
-            add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
-
-
-            cfg_if::cfg_if! {
-                if #[cfg(feature = "parachain")] {
-                    add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
-                    add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
-                    add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
-                    add_benchmark!(params, batches, parachain_staking, ParachainStaking);
-                    add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
-                } else {
-                    add_benchmark!(params, batches, pallet_grandpa, Grandpa);
+            impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, AccountId, Balance, MarketId>
+            for Runtime
+            {
+                fn get_spot_price(
+                    pool_id: PoolId,
+                    asset_in: Asset<MarketId>,
+                    asset_out: Asset<MarketId>,
+                ) -> SerdeWrapper<Balance> {
+                    SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
+                }
+        
+                fn pool_account_id(pool_id: PoolId) -> AccountId {
+                    Swaps::pool_account_id(pool_id)
+                }
+        
+                fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
+                    Asset::PoolShare(SerdeWrapper(pool_id))
                 }
             }
-
-            if batches.is_empty() {
-                return Err("Benchmark not found for this pallet.".into());
+        
+            #[cfg(feature = "try-runtime")]
+            impl frame_try_runtime::TryRuntime<Block> for Runtime {
+                fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
+                    log::info!("try-runtime::on_runtime_upgrade.");
+                    let weight = Executive::try_runtime_upgrade().unwrap();
+                    (weight, RuntimeBlockWeights::get().max_block)
+                }
+        
+                fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
+                    Executive::execute_block_no_check(block)
+                }
             }
-            Ok(batches)
-        }
-    }
-
-    impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-        fn account_nonce(account: AccountId) -> Index {
-            System::account_nonce(account)
-        }
-    }
-
-    impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance> for Runtime {
-        fn query_fee_details(
-            uxt: <Block as BlockT>::Extrinsic,
-            len: u32,
-        ) -> pallet_transaction_payment::FeeDetails<Balance> {
-            TransactionPayment::query_fee_details(uxt, len)
-        }
-
-        fn query_info(
-            uxt: <Block as BlockT>::Extrinsic,
-            len: u32,
-        ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
-            TransactionPayment::query_info(uxt, len)
-        }
-    }
-
-    impl sp_api::Core<Block> for Runtime {
-        fn execute_block(block: Block) {
-            Executive::execute_block(block)
-        }
-
-        fn initialize_block(header: &<Block as BlockT>::Header) {
-            Executive::initialize_block(header)
-        }
-
-        fn version() -> RuntimeVersion {
-            VERSION
-        }
-    }
-
-    impl sp_api::Metadata<Block> for Runtime {
-        fn metadata() -> OpaqueMetadata {
-            OpaqueMetadata::new(Runtime::metadata().into())
-        }
-    }
-
-    impl sp_block_builder::BlockBuilder<Block> for Runtime {
-        fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
-            Executive::apply_extrinsic(extrinsic)
-        }
-
-        fn check_inherents(
-            block: Block,
-            data: sp_inherents::InherentData,
-        ) -> sp_inherents::CheckInherentsResult {
-            data.check_extrinsics(&block)
-        }
-
-        fn finalize_block() -> <Block as BlockT>::Header {
-            Executive::finalize_block()
-        }
-
-        fn inherent_extrinsics(data: sp_inherents::InherentData) -> Vec<<Block as BlockT>::Extrinsic> {
-            data.create_extrinsics()
-        }
-    }
-
-    #[cfg(not(feature = "parachain"))]
-    impl sp_consensus_aura::AuraApi<Block, sp_consensus_aura::sr25519::AuthorityId> for Runtime {
-        fn authorities() -> Vec<sp_consensus_aura::sr25519::AuthorityId> {
-            Aura::authorities().into_inner()
-        }
-
-        fn slot_duration() -> sp_consensus_aura::SlotDuration {
-            sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
-        }
-    }
-
-    #[cfg(not(feature = "parachain"))]
-    impl sp_finality_grandpa::GrandpaApi<Block> for Runtime {
-        fn current_set_id() -> pallet_grandpa::fg_primitives::SetId {
-            Grandpa::current_set_id()
-        }
-
-        fn generate_key_ownership_proof(
-            _set_id: pallet_grandpa::fg_primitives::SetId,
-            _authority_id: pallet_grandpa::AuthorityId,
-        ) -> Option<pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof> {
-            None
-        }
-
-        fn grandpa_authorities() -> pallet_grandpa::AuthorityList {
-            Grandpa::grandpa_authorities()
-        }
-
-        fn submit_report_equivocation_unsigned_extrinsic(
-            _equivocation_proof: pallet_grandpa::fg_primitives::EquivocationProof<
-                <Block as BlockT>::Hash,
-                sp_runtime::traits::NumberFor<Block>,
-            >,
-            _key_owner_proof: pallet_grandpa::fg_primitives::OpaqueKeyOwnershipProof,
-        ) -> Option<()> {
-            None
-        }
-    }
-
-    impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
-        fn offchain_worker(header: &<Block as BlockT>::Header) {
-            Executive::offchain_worker(header)
-        }
-    }
-
-    impl sp_session::SessionKeys<Block> for Runtime {
-        fn decode_session_keys(encoded: Vec<u8>) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
-            opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
-        }
-
-        fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
-            opaque::SessionKeys::generate(seed)
-        }
-    }
-
-    impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
-        fn validate_transaction(
-            source: TransactionSource,
-            tx: <Block as BlockT>::Extrinsic,
-            block_hash: <Block as BlockT>::Hash,
-        ) -> TransactionValidity {
-            Executive::validate_transaction(source, tx, block_hash)
-        }
-    }
-
-    impl zrml_swaps_runtime_api::SwapsApi<Block, PoolId, AccountId, Balance, MarketId>
-      for Runtime
-    {
-        fn get_spot_price(
-            pool_id: PoolId,
-            asset_in: Asset<MarketId>,
-            asset_out: Asset<MarketId>,
-        ) -> SerdeWrapper<Balance> {
-            SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
-        }
-
-        fn pool_account_id(pool_id: PoolId) -> AccountId {
-            Swaps::pool_account_id(pool_id)
-        }
-
-        fn pool_shares_id(pool_id: PoolId) -> Asset<SerdeWrapper<MarketId>> {
-            Asset::PoolShare(SerdeWrapper(pool_id))
-        }
-    }
-
-    #[cfg(feature = "try-runtime")]
-    impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
-            log::info!("try-runtime::on_runtime_upgrade.");
-            let weight = Executive::try_runtime_upgrade().unwrap();
-            (weight, RuntimeBlockWeights::get().max_block)
-        }
-
-        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
-            Executive::execute_block_no_check(block)
+            
+            $($additional_apis)*
         }
     }
 }
+
+pub(crate) use create_runtime_apis;
 
 // Check the timestamp and parachain inherents
 #[cfg(feature = "parachain")]
