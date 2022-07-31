@@ -1,5 +1,5 @@
 #[cfg(feature = "runtime-benchmarks")]
-mod benchmarks;
+pub(crate) mod benchmarks;
 pub mod opaque;
 #[cfg(test)]
 mod tests;
@@ -963,8 +963,8 @@ macro_rules! create_runtime_apis {
 
                     list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-                    orml_list_benchmark!(list, extra, orml_currencies, benchmarks::currencies);
-                    orml_list_benchmark!(list, extra, orml_tokens, benchmarks::tokens);
+                    orml_list_benchmark!(list, extra, orml_currencies, crate::common::benchmarks::currencies);
+                    orml_list_benchmark!(list, extra, orml_tokens, crate::common::benchmarks::tokens);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
@@ -1036,8 +1036,8 @@ macro_rules! create_runtime_apis {
 
                     add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-                    orml_add_benchmark!(params, batches, orml_currencies, benchmarks::currencies);
-                    orml_add_benchmark!(params, batches, orml_tokens, benchmarks::tokens);
+                    orml_add_benchmark!(params, batches, orml_currencies, crate::common::benchmarks::currencies);
+                    orml_add_benchmark!(params, batches, orml_tokens, crate::common::benchmarks::tokens);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);

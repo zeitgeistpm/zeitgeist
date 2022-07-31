@@ -18,10 +18,13 @@
 
 use super::utils::{lookup_of_account, set_balance};
 use crate::{
-    AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit, GetNativeCurrencyId,
+    common::{AccountId, Amount, AssetManager, Balance, CurrencyId},
     Runtime,
 };
-use zeitgeist_primitives::{constants::BASE, types::Asset};
+use zeitgeist_primitives::{
+    constants::{ExistentialDeposit, GetNativeCurrencyId, BASE},
+    types::Asset,
+};
 
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_system::RawOrigin;

@@ -17,7 +17,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use super::utils::{lookup_of_account, set_balance as update_balance};
-use crate::{AccountId, Balance, CurrencyId, Runtime, Tokens};
+use crate::{
+    common::{AccountId, Balance, CurrencyId, Tokens},
+    Runtime,
+};
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
