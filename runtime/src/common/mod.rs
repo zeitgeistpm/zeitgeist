@@ -1,9 +1,6 @@
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarks;
 pub mod opaque;
-#[cfg(feature = "parachain")]
-mod parachain_params;
-mod parameters;
 #[cfg(test)]
 mod tests;
 mod weights;
@@ -15,9 +12,8 @@ pub use frame_system::{
     CheckTxVersion, CheckWeight,
 };
 pub use pallet_transaction_payment::ChargeTransactionPayment;
-pub use parameters::*;
 #[cfg(feature = "parachain")]
-pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
+pub use {pallet_author_slot_filter::EligibilityValue};
 
 use alloc::{vec};
 use frame_support::{
@@ -45,13 +41,13 @@ use {
     xcm_config::XcmConfig,
 };
 #[cfg(feature = "runtime-battery-station")]
-use {
-    super::battery_station::*,
-};
+use super::battery_station::{*, parameters::*};
+#[cfg(all(feature = "runtime-battery-station", feature = "parachain"))]
+use super::battery_station::parachain_params::*;
 #[cfg(feature = "runtime-zeitgeist")]
-use {
-    super::zeitgeist::*,
-};
+use super::zeitgeist::{*, parameters::*};
+#[cfg(all(feature = "runtime-zeitgeist", feature = "parachain"))]
+use super::zeitgeist::parachain_params::*;
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -1244,44 +1240,44 @@ macro_rules! create_runtime_apis {
             
             $($additional_apis)*
         }
+
+        // Check the timestamp and parachain inherents
+        #[cfg(feature = "parachain")]
+        struct CheckInherents;
+
+        #[cfg(feature = "parachain")]
+        impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
+            fn check_inherents(
+                block: &Block,
+                relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
+            ) -> sp_inherents::CheckInherentsResult {
+                let relay_chain_slot = relay_state_proof
+                    .read_slot()
+                    .expect("Could not read the relay chain slot from the proof");
+
+                let inherent_data =
+                    cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+                        relay_chain_slot,
+                        core::time::Duration::from_secs(6),
+                    )
+                    .create_inherent_data()
+                    .expect("Could not create the timestamp inherent data");
+
+                inherent_data.check_extrinsics(block)
+            }
+        }
+
+        // Nimbus's Executive wrapper allows relay validators to verify the seal digest
+        #[cfg(feature = "parachain")]
+        cumulus_pallet_parachain_system::register_validate_block! {
+            Runtime = Runtime,
+            BlockExecutor = pallet_author_inherent::BlockExecutor::<Runtime, Executive>,
+            CheckInherents = CheckInherents,
+        }
     }
 }
 
 pub(crate) use create_runtime_apis;
-
-// Check the timestamp and parachain inherents
-#[cfg(feature = "parachain")]
-struct CheckInherents;
-
-#[cfg(feature = "parachain")]
-impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
-    fn check_inherents(
-        block: &Block,
-        relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
-    ) -> sp_inherents::CheckInherentsResult {
-        let relay_chain_slot = relay_state_proof
-            .read_slot()
-            .expect("Could not read the relay chain slot from the proof");
-
-        let inherent_data =
-            cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
-                relay_chain_slot,
-                core::time::Duration::from_secs(6),
-            )
-            .create_inherent_data()
-            .expect("Could not create the timestamp inherent data");
-
-        inherent_data.check_extrinsics(block)
-    }
-}
-
-// Nimbus's Executive wrapper allows relay validators to verify the seal digest
-#[cfg(feature = "parachain")]
-cumulus_pallet_parachain_system::register_validate_block! {
-    Runtime = Runtime,
-    BlockExecutor = pallet_author_inherent::BlockExecutor::<Runtime, Executive>,
-    CheckInherents = CheckInherents,
-}
 
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {

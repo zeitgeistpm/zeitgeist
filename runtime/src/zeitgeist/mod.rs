@@ -33,7 +33,6 @@ use {
     frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
-    xcm_config::XcmConfig,
 };
 
 pub mod parachain_params;
