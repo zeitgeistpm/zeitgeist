@@ -13,7 +13,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use frame_support::{pallet_prelude::*, traits::NamedReservableCurrency};
+    use frame_support::{pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use orml_traits::MultiCurrency;
     use sp_runtime::SaturatedConversion;

@@ -1030,7 +1030,6 @@ impl zrml_styx::Config for Runtime {
     type SetBurnAmountOrigin = EnsureRootOrHalfCouncil;
     type AssetManager = AssetManager;
     type MarketCommons = MarketCommons;
-    type Currency = Balances;
 }
 
 // Implementation of runtime's apis
