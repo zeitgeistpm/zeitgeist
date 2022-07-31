@@ -13,19 +13,13 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use frame_support::pallet_prelude::*;
+    use frame_support::{
+        pallet_prelude::*,
+        traits::{Currency, NamedReservableCurrency},
+    };
     use frame_system::pallet_prelude::*;
-    use orml_traits::MultiCurrency;
     use sp_runtime::SaturatedConversion;
-    use zeitgeist_primitives::{traits::ZeitgeistAssetManager, types::Asset};
-    use zrml_market_commons::MarketCommonsPalletApi;
-
-    pub(crate) type MarketIdOf<T> =
-        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
-
-    pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
+    use zeitgeist_primitives::types::Balance;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -34,18 +28,7 @@ pub mod pallet {
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        /// Common market parameters
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
-
-        /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
-            Self::AccountId,
-            CurrencyId = Asset<MarketIdOf<Self>>,
-            ReserveIdentifier = [u8; 8],
-        >;
+        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
     }
 
     #[pallet::pallet]
@@ -57,30 +40,21 @@ pub mod pallet {
     pub type Crossings<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool>;
 
     #[pallet::type_value]
-    pub fn DefaultBurnAmount<T: Config>() -> BalanceOf<T> {
+    pub fn DefaultBurnAmount<T: Config>() -> Balance {
         (zeitgeist_primitives::constants::BASE * 100).saturated_into()
     }
 
     /// An extra layer of pseudo randomness.
     #[pallet::storage]
-    pub type BurnAmount<T: Config> =
-        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultBurnAmount<T>>;
+    pub type BurnAmount<T: Config> = StorageValue<_, Balance, ValueQuery, DefaultBurnAmount<T>>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A account crossed and claimed their right to create their avatar.
-        AccountCrossed(
-            T::AccountId,
-            Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
-            BalanceOf<T>,
-        ),
+        AccountCrossed(T::AccountId, Balance),
         /// The crossing fee was changed.
-        CrossingFeeChanged(
-            T::AccountId,
-            Asset<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
-            BalanceOf<T>,
-        ),
+        CrossingFeeChanged(T::AccountId, Balance),
     }
 
     #[pallet::error]
@@ -102,28 +76,31 @@ pub mod pallet {
                 Err(Error::<T>::HasAlreadyCrossed)?;
             }
 
-            let amount: BalanceOf<T> = BurnAmount::<T>::get().saturated_into();
-            let free = T::AssetManager::free_balance(Asset::Ztg, &who);
+            let amount = BurnAmount::<T>::get().saturated_into();
+            let free = T::Currency::free_balance(&who);
 
             if free < amount {
                 Err(Error::<T>::FundDoesNotHaveEnoughFreeBalance)?;
             }
 
-            T::AssetManager::slash(Asset::Ztg, &who, amount);
+            T::Currency::slash(&who, amount);
             Crossings::<T>::insert(&who, true);
 
-            Self::deposit_event(Event::AccountCrossed(who, Asset::Ztg, amount));
+            Self::deposit_event(Event::AccountCrossed(who, amount.saturated_into()));
 
             Ok(())
         }
 
         /// Set the burn amount. Needs 50% council vote.
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn set_burn_amount(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+        pub fn set_burn_amount(origin: OriginFor<T>, amount: Balance) -> DispatchResult {
             let who = ensure_signed(origin.clone())?;
             T::SetBurnAmountOrigin::ensure_origin(origin)?;
+
             BurnAmount::<T>::put(amount);
-            Self::deposit_event(Event::CrossingFeeChanged(who, Asset::Ztg, amount));
+
+            Self::deposit_event(Event::CrossingFeeChanged(who, amount));
+
             Ok(())
         }
     }

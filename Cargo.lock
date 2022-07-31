@@ -12825,9 +12825,6 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -12835,7 +12832,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
- "zrml-market-commons",
  "zrml-styx",
 ]
 
