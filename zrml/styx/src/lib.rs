@@ -34,8 +34,6 @@ pub mod pallet {
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
-
         /// Common market parameters
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,

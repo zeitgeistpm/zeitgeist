@@ -15,6 +15,7 @@ use frame_support::{
 fn create_runtime_ok() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
-        assert_ok!(Ok(()));
+        let result: Result<(), &str> = Ok(());
+        assert_ok!(result);
     });
 }
