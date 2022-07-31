@@ -1,4 +1,4 @@
-#![cfg(feature = "runtime-zeitgeist")]
+#![cfg(not(feature = "testnet"))]
 
 use super::common::*;
 pub use frame_system::{
@@ -26,13 +26,10 @@ use sp_runtime::{
 };
 
 use sp_version::RuntimeVersion;
-use zeitgeist_primitives::{types::*};
+use zeitgeist_primitives::types::*;
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{Everything, Nothing},
-    frame_system::EnsureSigned,
     nimbus_primitives::{CanAuthor, NimbusId},
-    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
 };
 
 pub mod parachain_params;

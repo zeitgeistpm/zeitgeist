@@ -22,7 +22,6 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
     generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
@@ -36,17 +35,18 @@ use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 use {
     frame_support::traits::{Everything, Nothing},
     frame_system::EnsureSigned,
-    nimbus_primitives::{CanAuthor, NimbusId},
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::XcmConfig,
 };
-#[cfg(feature = "runtime-battery-station")]
+#[cfg(not(feature = "parachain"))]
+use sp_core::crypto::KeyTypeId;
+#[cfg(feature = "testnet")]
 use super::battery_station::{*, parameters::*};
-#[cfg(all(feature = "runtime-battery-station", feature = "parachain"))]
+#[cfg(all(feature = "testnet", feature = "parachain"))]
 use super::battery_station::parachain_params::*;
-#[cfg(feature = "runtime-zeitgeist")]
+#[cfg(not(feature = "testnet"))]
 use super::zeitgeist::{*, parameters::*};
-#[cfg(all(feature = "runtime-zeitgeist", feature = "parachain"))]
+#[cfg(all(not(feature = "testnet"), feature = "parachain"))]
 use super::zeitgeist::parachain_params::*;
 
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;

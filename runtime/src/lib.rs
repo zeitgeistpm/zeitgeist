@@ -6,23 +6,16 @@ extern crate alloc;
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-// Prohibit trying to build both runtimes or no runtime at all
-#[cfg(any(
-    all(feature = "runtime-battery-station", feature = "runtime-zeitgeist"),
-    not(any(feature = "runtime-battery-station", feature = "runtime-zeitgeist"))
-))]
-compile_error!("Only exactly one feature of the following is required: runtime-battery-station, runtime-zeitgeist (default)");
-
 mod common;
-#[cfg(feature = "runtime-battery-station")]
+#[cfg(feature = "testnet")]
 pub mod battery_station;
-#[cfg(feature = "runtime-zeitgeist")]
+#[cfg(not(feature = "testnet"))]
 pub mod zeitgeist;
 
 // Expose runtime
-#[cfg(feature = "runtime-battery-station")]
+#[cfg(feature = "testnet")]
 pub use battery_station::Runtime;
-#[cfg(feature = "runtime-zeitgeist")]
+#[cfg(not(feature = "testnet"))]
 pub use zeitgeist::Runtime;
 
 // Expose functions and types required to construct node CLI
