@@ -275,7 +275,6 @@ std = [
     "zrml-swaps/std",
 ]
 testnet=["pallet-sudo"]
-txfilter = []
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
