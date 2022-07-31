@@ -82,6 +82,7 @@ type Executive = frame_executive::Executive<
 >;
 
 type Header = generic::Header<BlockNumber, BlakeTwo256>;
+pub(crate) type NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
 type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
 pub type SignedExtra = (
     CheckNonZeroSender<Runtime>,
@@ -164,15 +165,17 @@ type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
 // Construct runtime
 macro_rules! create_runtime {
     ($($additional_pallets:tt)*) => {
+        use alloc::{boxed::Box, vec, vec::Vec};
         // Pallets are enumerated based on the dependency graph.
         //
         // For example, `PredictionMarkets` is pĺaced after `SimpleDisputes` because
         // `PredictionMarkets` depends on `SimpleDisputes`.
+        
         construct_runtime!(
             pub enum Runtime where
-                Block = Block,
-                NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>,
-                UncheckedExtrinsic = UncheckedExtrinsic,
+                Block = crate::common::Block,
+                NodeBlock = crate::common::NodeBlock,
+                UncheckedExtrinsic = crate::common::UncheckedExtrinsic,
             {
                 // System
                 System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
