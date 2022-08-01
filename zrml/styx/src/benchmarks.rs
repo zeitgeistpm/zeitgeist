@@ -11,8 +11,8 @@ use crate::Config;
 use crate::Pallet as Styx;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{
-  dispatch::UnfilteredDispatchable,
-  traits::{Currency, EnsureOrigin}
+    dispatch::UnfilteredDispatchable,
+    traits::{Currency, EnsureOrigin},
 };
 use frame_system::RawOrigin;
 use sp_runtime::SaturatedConversion;
