@@ -357,6 +357,7 @@ cfg_if::cfg_if! {
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
+                    | Call::Styx(_)
                     | Call::PredictionMarkets(_) => false,
                 }
             }
@@ -396,6 +397,7 @@ cfg_if::cfg_if! {
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
+                    | Call::Styx(_)
                     | Call::PredictionMarkets(_)=> false,
                 }
             }
