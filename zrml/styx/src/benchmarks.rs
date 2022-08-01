@@ -16,21 +16,22 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use sp_runtime::SaturatedConversion;
+use zeitgeist_primitives::constants::BASE;
 
 benchmarks! {
   cross {
-    let caller: T::AccountId = whitelisted_caller();
-    let balance = 900_000_000_000_000_000u128.saturated_into();
-    T::Currency::deposit_creating(&caller, balance);
+      let caller: T::AccountId = whitelisted_caller();
+      let balance = (90_000_000 * BASE).saturated_into();
+      T::Currency::deposit_creating(&caller, balance);
   }: _(RawOrigin::Signed(caller))
 
   set_burn_amount {
-    let origin = T::SetBurnAmountOrigin::successful_origin();
-    let caller: T::AccountId = whitelisted_caller();
-    let balance = 100_000_000_000_000u128.saturated_into();
-    let amount = 200_000_000_000u128.saturated_into();
-    T::Currency::deposit_creating(&caller, balance);
-    let call = Call::<T>::set_burn_amount { amount };
+      let origin = T::SetBurnAmountOrigin::successful_origin();
+      let caller: T::AccountId = whitelisted_caller();
+      let balance = 100_000_000_000_000u128.saturated_into();
+      let amount = 200_000_000_000u128.saturated_into();
+      T::Currency::deposit_creating(&caller, balance);
+      let call = Call::<T>::set_burn_amount { amount };
   }: { call.dispatch_bypass_filter(origin)? }
 }
 

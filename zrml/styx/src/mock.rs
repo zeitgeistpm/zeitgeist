@@ -8,10 +8,8 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, MaxReserves, MinimumPeriod, BASE},
-    types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, UncheckedExtrinsicTest,
-    },
+    constants::{BlockHashCount, MaxReserves, BASE},
+    types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
 };
 
 pub const ALICE: AccountIdTest = 0;
@@ -33,7 +31,6 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Styx: zrml_styx::{Event<T>, Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
-        Timestamp: pallet_timestamp::{Pallet}
     }
 );
 
@@ -80,13 +77,6 @@ impl pallet_balances::Config for Runtime {
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
-    type WeightInfo = ();
-}
-
-impl pallet_timestamp::Config for Runtime {
-    type MinimumPeriod = MinimumPeriod;
-    type Moment = Moment;
-    type OnTimestampSet = ();
     type WeightInfo = ();
 }
 

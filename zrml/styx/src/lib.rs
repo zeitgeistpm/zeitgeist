@@ -45,7 +45,7 @@ pub mod pallet {
 
     /// Keep track of crossings. Accounts are only able to cross once.
     #[pallet::storage]
-    pub type Crossings<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool>;
+    pub type Crossings<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, ()>;
 
     #[pallet::type_value]
     pub fn DefaultBurnAmount<T: Config>() -> Balance {
@@ -92,7 +92,7 @@ pub mod pallet {
             }
 
             T::Currency::slash(&who, amount);
-            Crossings::<T>::insert(&who, true);
+            Crossings::<T>::insert(&who, ());
 
             Self::deposit_event(Event::AccountCrossed(who, amount.saturated_into()));
 
