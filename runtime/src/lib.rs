@@ -1031,6 +1031,7 @@ impl zrml_styx::Config for Runtime {
     type Event = Event;
     type SetBurnAmountOrigin = EnsureRootOrHalfCouncil;
     type Currency = Balances;
+    type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
 }
 
 // Implementation of runtime's apis
@@ -1137,6 +1138,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, zrml_court, Court);
             list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
             list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
+            list_benchmark!(list, extra, zrml_styx, Styx);
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
@@ -1210,6 +1212,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, zrml_court, Court);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
             add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
+            add_benchmark!(params, batches, zrml_styx, Styx);
 
 
             cfg_if::cfg_if! {

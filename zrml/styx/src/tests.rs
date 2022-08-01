@@ -19,7 +19,7 @@ fn should_set_burn_amount() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         assert_ok!(Styx::set_burn_amount(Origin::signed(SUDO), 144u128));
-        System::assert_last_event(Event::CrossingFeeChanged(SUDO, 144u128).into());
+        System::assert_last_event(Event::CrossingFeeChanged(144u128).into());
         assert_eq!(crate::BurnAmount::<Runtime>::get(), 144u128);
     });
 }

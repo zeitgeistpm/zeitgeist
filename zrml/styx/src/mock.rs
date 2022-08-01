@@ -41,6 +41,7 @@ impl crate::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
     type SetBurnAmountOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {

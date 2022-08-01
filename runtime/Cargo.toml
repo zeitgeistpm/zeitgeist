@@ -168,6 +168,7 @@ runtime-benchmarks = [
   "zrml-prediction-markets/runtime-benchmarks",
   "zrml-simple-disputes/runtime-benchmarks",
   "zrml-swaps/runtime-benchmarks",
+  "zrml-styx/runtime-benchmarks",
 ]
 std = [
   "frame-executive/std",
@@ -275,6 +276,7 @@ try-runtime = [
   "zrml-rikiddo/try-runtime",
   "zrml-simple-disputes/try-runtime",
   "zrml-swaps/try-runtime", # Parachain
+  "zrml-styx/try-runtime", # Parachain
   "pallet-author-mapping?/try-runtime",
   "pallet-author-slot-filter?/try-runtime",
   "parachain-staking?/try-runtime",
