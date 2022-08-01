@@ -20,7 +20,6 @@ pallet-preimage = { branch = "moonbeam-polkadot-v0.9.19", default-features = fal
 pallet-proxy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-scheduler = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-pallet-sudo = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -91,16 +90,17 @@ log = { version = "0.4.8", default-features = false, optional = true }
 
 # Zeitgeist
 
-zeitgeist-primitives = { default-features = false, path = "../primitives" }
-zrml-authorized = { default-features = false, path = "../zrml/authorized" }
-zrml-court = { default-features = false, path = "../zrml/court" }
-zrml-liquidity-mining = { default-features = false, path = "../zrml/liquidity-mining" }
-zrml-market-commons = { default-features = false, path = "../zrml/market-commons" }
-zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
-zrml-rikiddo = { default-features = false, path = "../zrml/rikiddo" }
-zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
-zrml-swaps = { default-features = false, path = "../zrml/swaps" }
-zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
+common-runtime = { default-features = false, path = "../common" }
+zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zrml-authorized = { default-features = false, path = "../../zrml/authorized" }
+zrml-court = { default-features = false, path = "../../zrml/court" }
+zrml-liquidity-mining = { default-features = false, path = "../../zrml/liquidity-mining" }
+zrml-market-commons = { default-features = false, path = "../../zrml/market-commons" }
+zrml-prediction-markets = { default-features = false, path = "../../zrml/prediction-markets" }
+zrml-rikiddo = { default-features = false, path = "../../zrml/rikiddo" }
+zrml-simple-disputes = { default-features = false, path = "../../zrml/simple-disputes" }
+zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
+zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
 
 [dev-dependencies]
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
@@ -198,7 +198,6 @@ std = [
     "pallet-proxy/std",
     "pallet-randomness-collective-flip/std",
     "pallet-scheduler/std",
-    "pallet-sudo/std",
     "pallet-timestamp/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
     "pallet-transaction-payment/std",
@@ -274,7 +273,6 @@ std = [
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
-testnet=["pallet-sudo"]
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
@@ -302,7 +300,6 @@ try-runtime = [
 
     # Other Parity runtime pallets
     "pallet-identity/try-runtime",
-    "pallet-sudo/try-runtime",
     "pallet-utility/try-runtime",
     
     # ORML runtime pallets

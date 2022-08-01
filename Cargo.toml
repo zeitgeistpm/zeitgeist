@@ -2,7 +2,9 @@
 members = [
     "node",
     "primitives",
-    "runtime",
+    "runtime/common",
+    "runtime/battery-station",
+    "runtime/zeitgeist",
     "zrml/authorized",
     "zrml/court",
     "zrml/liquidity-mining",

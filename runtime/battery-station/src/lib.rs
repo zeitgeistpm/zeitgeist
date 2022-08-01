@@ -1,4 +1,10 @@
-#![cfg(feature = "testnet")]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![recursion_limit = "256"]
+
+extern crate alloc;
+
+#[cfg(feature = "std")]
+include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use super::common::*;
 pub use frame_system::{
@@ -6,9 +12,62 @@ pub use frame_system::{
     CheckTxVersion, CheckWeight,
 };
 pub use pallet_transaction_payment::ChargeTransactionPayment;
-pub use parameters::*;
 #[cfg(feature = "parachain")]
-pub use {pallet_author_slot_filter::EligibilityValue, parachain_params::*};
+pub use {pallet_author_slot_filter::EligibilityValue};
+
+// Expose runtime
+pub use {api, parameters::SS58Prefix, Call, Runtime, RuntimeApi, VERSION};
+#[cfg(feature = "std")]
+pub use {
+    AdvisoryCommitteeMembershipConfig, BalancesConfig, CouncilMembershipConfig, GenesisConfig,
+    LiquidityMiningConfig, SudoConfig, SystemConfig, TechnicalCommitteeMembershipConfig,
+};
+#[cfg(all(feature = "std", not(feature = "parachain")))]
+pub use battery_station::{AuraConfig, GrandpaConfig};
+
+// Expose functions and types required to construct node CLI
+#[cfg(feature = "std")]
+pub use common::native_version;
+pub use common::{
+    opaque::Block, ChargeTransactionPayment, CheckEra, CheckGenesis, CheckNonZeroSender,
+    CheckNonce, CheckSpecVersion, CheckTxVersion, CheckWeight, SignedExtra, SignedPayload,
+    SystemCall, UncheckedExtrinsic,
+};
+
+pub use frame_system::{
+    Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
+    CheckTxVersion, CheckWeight,
+};
+#[cfg(feature = "parachain")]
+pub use pallet_author_slot_filter::EligibilityValue;
+pub use pallet_transaction_payment::ChargeTransactionPayment;
+
+use alloc::vec;
+use frame_support::{
+    traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
+    weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
+};
+use frame_system::EnsureRoot;
+use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
+#[cfg(not(feature = "parachain"))]
+use sp_core::crypto::KeyTypeId;
+use sp_runtime::{
+    generic,
+    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
+};
+#[cfg(feature = "std")]
+use sp_version::NativeVersion;
+use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
+use zeitgeist_primitives::{constants::*, types::*};
+use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
+#[cfg(feature = "parachain")]
+use {
+    frame_support::traits::{Everything, Nothing},
+    frame_system::EnsureSigned,
+    xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
+    xcm_config::XcmConfig,
+};
+
 
 use frame_support::{construct_runtime, traits::Contains};
 
@@ -26,6 +85,8 @@ use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::types::*;
 
+#[cfg(feature = "parachain")]
+mod xcm_config;
 pub mod parachain_params;
 pub mod parameters;
 
