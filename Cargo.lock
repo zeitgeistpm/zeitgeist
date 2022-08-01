@@ -446,6 +446,7 @@ name = "battery-station-runtime"
 version = "0.3.4"
 dependencies = [
  "cfg-if 1.0.0",
+ "common-runtime",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
@@ -1247,10 +1248,13 @@ name = "common-runtime"
 version = "0.3.4"
 dependencies = [
  "cfg-if 1.0.0",
+ "cumulus-pallet-xcmp-queue",
  "frame-support",
  "frame-system",
  "orml-currencies",
  "orml-tokens",
+ "pallet-author-mapping",
+ "pallet-author-slot-filter",
  "pallet-balances",
  "pallet-collective",
  "pallet-democracy",
@@ -1267,6 +1271,7 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
+ "parachain-staking",
 ]
 
 [[package]]

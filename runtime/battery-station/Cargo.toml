@@ -91,6 +91,7 @@ log = { version = "0.4.8", default-features = false, optional = true }
 
 # Zeitgeist
 
+common-runtime = { default-features = false, path = "../common" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-authorized = { default-features = false, path = "../../zrml/authorized" }
 zrml-court = { default-features = false, path = "../../zrml/court" }
@@ -138,7 +139,8 @@ parachain = [
 
     # Misc
 
-    "log"
+    "common-runtime/parachain",
+    "log",
 ]
 runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
@@ -301,7 +303,6 @@ try-runtime = [
 
     # Other Parity runtime pallets
     "pallet-identity/try-runtime",
-    "pallet-sudo/try-runtime",
     "pallet-utility/try-runtime",
     
     # ORML runtime pallets

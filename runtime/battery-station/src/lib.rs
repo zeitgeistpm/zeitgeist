@@ -6,41 +6,13 @@ extern crate alloc;
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use super::common::*;
-pub use frame_system::{
-    Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
-    CheckTxVersion, CheckWeight,
-};
-pub use pallet_transaction_payment::ChargeTransactionPayment;
+use common_runtime::{create_runtime_with_additional_pallets, create_runtime, impl_config_traits, create_runtime_api, decl_common_types, create_common_benchmark_logic, create_common_tests};
 #[cfg(feature = "parachain")]
 pub use {pallet_author_slot_filter::EligibilityValue};
-
-// Expose runtime
-pub use {api, parameters::SS58Prefix, Call, Runtime, RuntimeApi, VERSION};
-#[cfg(feature = "std")]
-pub use {
-    AdvisoryCommitteeMembershipConfig, BalancesConfig, CouncilMembershipConfig, GenesisConfig,
-    LiquidityMiningConfig, SudoConfig, SystemConfig, TechnicalCommitteeMembershipConfig,
-};
-#[cfg(all(feature = "std", not(feature = "parachain")))]
-pub use battery_station::{AuraConfig, GrandpaConfig};
-
-// Expose functions and types required to construct node CLI
-#[cfg(feature = "std")]
-pub use common::native_version;
-pub use common::{
-    opaque::Block, ChargeTransactionPayment, CheckEra, CheckGenesis, CheckNonZeroSender,
-    CheckNonce, CheckSpecVersion, CheckTxVersion, CheckWeight, SignedExtra, SignedPayload,
-    SystemCall, UncheckedExtrinsic,
-};
-
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
     CheckTxVersion, CheckWeight,
 };
-#[cfg(feature = "parachain")]
-pub use pallet_author_slot_filter::EligibilityValue;
-pub use pallet_transaction_payment::ChargeTransactionPayment;
 
 use alloc::vec;
 use frame_support::{
@@ -49,10 +21,7 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-#[cfg(not(feature = "parachain"))]
-use sp_core::crypto::KeyTypeId;
 use sp_runtime::{
-    generic,
     traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
 };
 #[cfg(feature = "std")]
@@ -67,9 +36,13 @@ use {
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::XcmConfig,
 };
+use pallet_transaction_payment::ChargeTransactionPayment;
+use crate::parameters::*;
+#[cfg(feature = "parachain")]
+use crate::parachain_params::*;
 
 
-use frame_support::{construct_runtime, traits::Contains};
+use frame_support::{construct_runtime};
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -83,12 +56,11 @@ use sp_runtime::{
 #[cfg(feature = "parachain")]
 use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
-use zeitgeist_primitives::types::*;
 
 #[cfg(feature = "parachain")]
 mod xcm_config;
-pub mod parachain_params;
-pub mod parameters;
+mod parachain_params;
+mod parameters;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
@@ -135,13 +107,20 @@ impl Contains<Call> for IsCallable {
     }
 }
 
+decl_common_types!();
+
 create_runtime_with_additional_pallets!(
     // Others
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
-create_runtime_apis!();
 
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
     type Event = Event;
 }
+
+
+impl_config_traits!();
+create_runtime_api!();
+create_common_benchmark_logic!();
+create_common_tests!();

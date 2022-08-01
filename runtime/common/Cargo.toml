@@ -1,9 +1,12 @@
 [dependencies]
 # Pallets
+cumulus-pallet-xcmp-queue = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/cumulus", optional = true }
 frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 orml-currencies = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 orml-tokens = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+pallet-author-mapping = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
+pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-democracy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -20,6 +23,7 @@ pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.
 pallet-treasury = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-utility = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-vesting = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+parachain-staking = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 
 # Utility
 cfg-if = { version = "1.0.0" }
@@ -27,10 +31,13 @@ cfg-if = { version = "1.0.0" }
 [features]
 default=["std"]
 std=[
+    "cumulus-pallet-xcmp-queue?/std",
     "frame-system/std",
     "frame-support/std",
     "orml-currencies/std",
     "orml-tokens/std",
+    "pallet-author-mapping?/std",
+    "pallet-author-slot-filter?/std",
     "pallet-balances/std",
     "pallet-collective/std",
     "pallet-democracy/std",
@@ -47,6 +54,13 @@ std=[
     "pallet-treasury/std",
     "pallet-utility/std",
     "pallet-vesting/std",
+    "parachain-staking?/std",
+]
+parachain=[
+    "cumulus-pallet-xcmp-queue",
+    "pallet-author-mapping",
+    "pallet-author-slot-filter",
+    "parachain-staking",
 ]
 
 [package]

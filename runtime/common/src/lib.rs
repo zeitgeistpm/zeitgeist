@@ -156,15 +156,15 @@ macro_rules! decl_common_types {
             #[cfg(feature = "parachain")]
             impl_opaque_keys! {
                 pub struct SessionKeys {
-                    pub nimbus: crate::common::AuthorInherent,
+                    pub nimbus: crate::AuthorInherent,
                 }
             }
 
             #[cfg(not(feature = "parachain"))]
             impl_opaque_keys! {
                 pub struct SessionKeys {
-                    pub aura: crate::common::Aura,
-                    pub grandpa: crate::common::Grandpa,
+                    pub aura: crate::Aura,
+                    pub grandpa: crate::Grandpa,
                 }
             }
         }
@@ -183,9 +183,9 @@ macro_rules! create_runtime {
 
         construct_runtime!(
             pub enum Runtime where
-                Block = crate::common::Block,
-                NodeBlock = crate::common::NodeBlock,
-                UncheckedExtrinsic = crate::common::UncheckedExtrinsic,
+                Block = crate::Block,
+                NodeBlock = crate::NodeBlock,
+                UncheckedExtrinsic = crate::UncheckedExtrinsic,
             {
                 // System
                 System: frame_system::{Call, Config, Event<T>, Pallet, Storage} = 0,
@@ -294,8 +294,8 @@ macro_rules! impl_config_traits {
             type Event = Event;
             type OnSystemEvent = ();
             type OutboundXcmpMessageSource = XcmpQueue;
-            type ReservedDmpWeight = crate::common::parachain_params::ReservedDmpWeight;
-            type ReservedXcmpWeight = crate::common::parachain_params::ReservedXcmpWeight;
+            type ReservedDmpWeight = crate::parachain_params::ReservedDmpWeight;
+            type ReservedXcmpWeight = crate::parachain_params::ReservedXcmpWeight;
             type SelfParaId = parachain_info::Pallet<Runtime>;
             type XcmpMessageHandler = XcmpQueue;
         }
@@ -913,7 +913,7 @@ macro_rules! impl_config_traits {
 
 // Implement runtime apis
 #[macro_export]
-macro_rules! create_runtime_apis {
+macro_rules! create_runtime_api {
     ($($additional_apis:tt)*) => {
         impl_runtime_apis! {
             #[cfg(feature = "parachain")]
@@ -998,8 +998,8 @@ macro_rules! create_runtime_apis {
 
                     list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
                     list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-                    orml_list_benchmark!(list, extra, orml_currencies, crate::common::benchmarks::currencies);
-                    orml_list_benchmark!(list, extra, orml_tokens, crate::common::benchmarks::tokens);
+                    orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
+                    orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
                     list_benchmark!(list, extra, pallet_balances, Balances);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
@@ -1071,8 +1071,8 @@ macro_rules! create_runtime_apis {
 
                     add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
                     add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-                    orml_add_benchmark!(params, batches, orml_currencies, crate::common::benchmarks::currencies);
-                    orml_add_benchmark!(params, batches, orml_tokens, crate::common::benchmarks::tokens);
+                    orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
+                    orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
                     add_benchmark!(params, batches, pallet_balances, Balances);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
@@ -1316,8 +1316,8 @@ macro_rules! create_runtime_apis {
 macro_rules! create_common_benchmark_logic {
     {} => {
         #[cfg(feature = "runtime-benchmarks")]
-        mod benchmarks {
-            mod currencies {
+        pub(crate) mod benchmarks {
+            pub(crate) mod currencies {
                 use super::utils::{lookup_of_account, set_balance};
                 use crate::{AccountId, Amount, AssetManager, Balance, CurrencyId, Runtime};
                 use zeitgeist_primitives::{
@@ -1433,7 +1433,7 @@ macro_rules! create_common_benchmark_logic {
                 }
             }
 
-            mod tokens {
+            pub(crate) mod tokens {
                 use super::utils::{lookup_of_account, set_balance as update_balance};
                 use crate::{AccountId, Balance, CurrencyId, Tokens, Runtime};
                 use frame_benchmarking::{account, whitelisted_caller};
@@ -1517,7 +1517,7 @@ macro_rules! create_common_benchmark_logic {
                 }
             }
 
-            mod utils {
+            pub(crate) mod utils {
                 use crate::{AccountId, AssetManager, Balance, CurrencyId, Runtime,
                 };
                 use frame_support::assert_ok;
@@ -1552,7 +1552,7 @@ macro_rules! create_common_benchmark_logic {
 #[macro_export]
 macro_rules! create_common_tests {
     {} => {
-        #[cfg(tests)]
+        #[cfg(test)]
         mod common_tests {
             mod transaction_fee_multiplier {
                 use crate::parameters::{MinimumMultiplier, SlowAdjustingFeeUpdate, TargetBlockFullness};
