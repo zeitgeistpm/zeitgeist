@@ -105,7 +105,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] amount: Balance,
         ) -> DispatchResult {
-            T::SetBurnAmountOrigin::ensure_origin(origin.clone())?;
+            T::SetBurnAmountOrigin::ensure_origin(origin)?;
             BurnAmount::<T>::put(amount);
 
             Self::deposit_event(Event::CrossingFeeChanged(amount));
