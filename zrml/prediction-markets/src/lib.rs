@@ -119,7 +119,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    type CacheSize = ConstU32<64>;
+    pub type CacheSize = ConstU32<64>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -2210,12 +2210,14 @@ mod pallet {
                     cb(id, &market)?;
                 }
             }
+            MarketIdsPerReportBlock::<T>::remove(&block);
 
             // Resolve any disputed markets.
             for id in MarketIdsPerDisputeBlock::<T>::get(&block).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
+            MarketIdsPerDisputeBlock::<T>::remove(&block);
 
             Ok(())
         }
@@ -2318,7 +2320,7 @@ mod pallet {
         )
     }
 
-    fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
+    pub fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
         if let Some(pos) = items.iter().position(|i| i == item) {
             items.swap_remove(pos);
         }

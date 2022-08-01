@@ -12731,6 +12731,7 @@ dependencies = [
  "sp-arithmetic",
  "sp-io",
  "sp-runtime",
+ "sp-std",
  "substrate-fixed",
  "test-case",
  "zeitgeist-primitives",

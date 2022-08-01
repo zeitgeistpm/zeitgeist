@@ -1,10 +1,18 @@
-use crate::{Config, MarketIdsPerOpenBlock, MarketIdsPerOpenTimeFrame, Pallet};
+use crate::{
+    Config, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerOpenTimeFrame,
+    MarketIdsPerReportBlock, Pallet,
+};
 use frame_support::{
     dispatch::Weight,
     log,
     pallet_prelude::PhantomData,
-    traits::{Get, OnRuntimeUpgrade, StorageVersion},
+    storage::PrefixIterator,
+    traits::{ConstU32, Get, OnRuntimeUpgrade, StorageVersion},
+    BoundedVec, Twox64Concat,
 };
+use sp_runtime::traits::Saturating;
+extern crate alloc;
+use alloc::vec::Vec;
 use zeitgeist_primitives::types::{MarketPeriod, MarketStatus, PoolStatus};
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -14,6 +22,8 @@ const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 2;
 const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 3;
 
 pub struct MigrateMarketPoolsBeforeOpen<T>(PhantomData<T>);
+
+pub struct CleanUpStorageForResolvedOrClosedMarkets<T>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
     fn on_runtime_upgrade() -> Weight
@@ -157,7 +167,72 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketPoolsBeforeOpen<T> {
                 );
             }
         }
+        Ok(())
+    }
+}
 
+impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T> {
+    fn on_runtime_upgrade() -> Weight
+    where
+        T: Config,
+    {
+        let mut total_weight = T::DbWeight::get().reads(1);
+
+        if StorageVersion::get::<Pallet<T>>() != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+            log::info!("Skipping storage cleanup; prediction-markets already up to date");
+            return total_weight;
+        }
+
+        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+        log::info!("Starting storage cleanup of CleanUpStorageForResolvedOrClosedMarkets");
+
+        let dispute_period = T::DisputePeriod::get();
+        let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
+        let block = current_block.saturating_sub(dispute_period);
+
+        let market_ids_per_dispute_iterator: PrefixIterator<(
+            T::BlockNumber,
+            BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        )> = frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
+            b"PredictionMarkets",
+            b"MarketIdsPerDisputeBlock",
+        );
+
+        let market_ids_tobe_removed_per_dispute: Vec<_> =
+            market_ids_per_dispute_iterator.filter(|v| v.0 <= block).collect();
+        for (k, _v) in market_ids_tobe_removed_per_dispute {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            MarketIdsPerDisputeBlock::<T>::remove(k);
+        }
+
+        let market_ids_per_report_iterator: PrefixIterator<(
+            T::BlockNumber,
+            BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        )> = frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
+            b"PredictionMarkets",
+            b"MarketIdsPerReportBlock",
+        );
+
+        let market_ids_tobe_removed_per_report: Vec<_> =
+            market_ids_per_report_iterator.filter(|v| v.0 <= block).collect();
+        for (k, _v) in market_ids_tobe_removed_per_report {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            MarketIdsPerReportBlock::<T>::remove(k);
+        }
+        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+
+        log::info!("Completed storage cleanup of CleanUpStorageForResolvedOrClosedMarkets");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
         Ok(())
     }
 }
@@ -219,20 +294,25 @@ mod utility {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{mock::*, MomentOf};
+    use crate::{mock::*, CacheSize, MomentOf};
     use frame_support::assert_ok;
     use orml_traits::MultiCurrency;
     use zeitgeist_primitives::{
         constants::{BASE, MILLISECS_PER_BLOCK},
         traits::Swaps as SwapsApi,
-        types::{Asset, BlockNumber, MarketDisputeMechanism, MarketType, MultiHash, PoolStatus},
+        types::{
+            Asset, BlockNumber, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+            MarketType, MultiHash, PoolStatus, ScoringRule,
+        },
     };
+    use zrml_market_commons::MarketCommonsPalletApi;
 
     #[test]
     fn test_on_runtime_upgrade_on_untouched_chain() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
             MigrateMarketPoolsBeforeOpen::<Runtime>::on_runtime_upgrade();
+            CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
         });
     }
 
@@ -241,6 +321,7 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
             MigrateMarketPoolsBeforeOpen::<Runtime>::on_runtime_upgrade();
+            CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<Pallet<Runtime>>(),
                 PREDICTION_MARKETS_NEXT_STORAGE_VERSION
@@ -253,7 +334,7 @@ mod tests {
     }
 
     #[test]
-    fn test_on_runtime_upgrade_with_sample_markets() {
+    fn test_market_ids_per_open_block_on_runtime_upgrade_with_sample_markets() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
             assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 1_000 * BASE));
@@ -296,6 +377,40 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_cleanup_storage_for_resolved_or_closed_market_on_runtime_upgrade_with_sample_markets() {
+        ExtBuilder::default().build().execute_with(|| {
+            setup_chain();
+            let _ = AssetManager::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
+
+            let short_time: MomentOf<Runtime> = (5 * MILLISECS_PER_BLOCK).into();
+
+            create_test_market(
+                MarketPeriod::Timestamp(0..short_time),
+                MarketCreation::Permissionless,
+                MarketStatus::Resolved,
+            );
+
+            create_test_market(
+                MarketPeriod::Timestamp(0..short_time),
+                MarketCreation::Permissionless,
+                MarketStatus::Resolved,
+            );
+
+            System::set_block_number(1);
+            let market_ids = BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0, 1])
+                .expect("BoundedVec creation failed");
+            MarketIdsPerDisputeBlock::<Runtime>::insert(1, market_ids.clone());
+            MarketIdsPerReportBlock::<Runtime>::insert(1, market_ids);
+            System::set_block_number(1 + <Runtime as crate::Config>::DisputePeriod::get());
+            assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(1).len(), 2);
+            assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(1).len(), 2);
+            CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
+            assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(1).len(), 0);
+            assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(1).len(), 0);
+        });
+    }
+
     fn setup_chain() {
         StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
         utility::put_storage_version_of_swaps_pallet(SWAPS_REQUIRED_STORAGE_VERSION);
@@ -320,6 +435,28 @@ mod tests {
         let market_id = MarketCommons::latest_market_id().unwrap();
         let pool_id = MarketCommons::market_pool(&market_id).unwrap();
         Swaps::open_pool(pool_id).unwrap();
+    }
+
+    fn create_test_market(
+        period: MarketPeriod<BlockNumber, MomentOf<Runtime>>,
+        market_creation: MarketCreation,
+        market_status: MarketStatus,
+    ) {
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            period,
+            gen_metadata(0),
+            market_creation,
+            MarketType::Categorical(5),
+            MarketDisputeMechanism::Authorized(CHARLIE),
+            ScoringRule::CPMM,
+        ));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+        assert_ok!(MarketCommons::mutate_market(&market_id, |market| {
+            market.status = market_status;
+            Ok(())
+        }));
     }
 
     fn gen_metadata(byte: u8) -> MultiHash {
