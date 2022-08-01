@@ -1,18 +1,12 @@
-use crate::*;
 use sp_runtime::DispatchError;
-use zeitgeist_primitives::types::OutcomeReport;
+use zeitgeist_primitives::types::{OutcomeReport, VoteId};
 
-pub trait GlobalDisputesPalletApi {
-    type Balance;
-
-    fn get_latest_vote_id() -> VoteId;
-
-    fn get_next_vote_id() -> Result<VoteId, DispatchError>;
-
+pub trait GlobalDisputesPalletApi<MarketId, Balance> {
     fn push_voting_outcome(
+        id: (&MarketId, &VoteId),
         outcome: OutcomeReport,
-        vote_balance: Self::Balance,
+        vote_balance: Balance,
     ) -> Result<(), DispatchError>;
 
-    fn get_voting_winner(vote_id: VoteId) -> Result<OutcomeReport, DispatchError>;
+    fn get_voting_winner(id: (&MarketId, &VoteId)) -> Result<OutcomeReport, DispatchError>;
 }

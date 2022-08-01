@@ -12664,6 +12664,7 @@ dependencies = [
  "sp-runtime",
  "test-case",
  "zeitgeist-primitives",
+ "zrml-market-commons",
 ]
 
 [[package]]

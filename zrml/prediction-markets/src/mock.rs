@@ -237,6 +237,7 @@ impl zrml_simple_disputes::Config for Runtime {
 
 impl zrml_global_disputes::Config for Runtime {
     type Event = Event;
+    type MarketCommons = MarketCommons;
     type Currency = Balances;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;

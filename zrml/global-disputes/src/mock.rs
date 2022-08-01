@@ -12,7 +12,8 @@ use zeitgeist_primitives::{
         VoteLockIdentifier, BASE,
     },
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, UncheckedExtrinsicTest,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
+        UncheckedExtrinsicTest,
     },
 };
 
@@ -30,6 +31,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -38,11 +40,12 @@ construct_runtime!(
 
 parameter_types! {
     pub const MinOutcomes: u32 = 2;
-    pub const MaxOutcomeLimit: u32 = 100;
+    pub const MaxOutcomeLimit: u32 = u32::MAX;
 }
 
 impl crate::Config for Runtime {
     type Event = ();
+    type MarketCommons = MarketCommons;
     type Currency = Balances;
     type PalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
@@ -96,6 +99,12 @@ impl pallet_timestamp::Config for Runtime {
     type Moment = Moment;
     type OnTimestampSet = ();
     type WeightInfo = ();
+}
+
+impl zrml_market_commons::Config for Runtime {
+    type Currency = Balances;
+    type MarketId = MarketId;
+    type Timestamp = Timestamp;
 }
 
 pub struct ExtBuilder {
