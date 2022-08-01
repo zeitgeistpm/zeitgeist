@@ -12,9 +12,31 @@ pub use service_parachain::{new_full, new_partial, FullClient, ParachainPartialC
 #[cfg(not(feature = "parachain"))]
 pub use service_standalone::{new_full, new_partial, FullClient};
 
-pub struct ExecutorDispatch;
 
-impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
+#[cfg(feature = "with-battery-station-runtime")]
+pub struct BatteryStationExecutorDispatch;
+
+#[cfg(feature = "with-battery-station-runtime")]
+impl sc_executor::NativeExecutionDispatch for BatteryStationExecutorDispatch {
+    #[cfg(feature = "runtime-benchmarks")]
+    type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type ExtendHostFunctions = ();
+
+    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+        battery_station_runtime::api::dispatch(method, data)
+    }
+
+    fn native_version() -> sc_executor::NativeVersion {
+        battery_station_runtime::native_version()
+    }
+}
+
+#[cfg(feature = "with-zeitgeist-runtime")]
+pub struct ZeitgeistExecutorDispatch;
+
+#[cfg(feature = "with-zeitgeist-runtime")]
+impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutorDispatch {
     #[cfg(feature = "runtime-benchmarks")]
     type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
     #[cfg(not(feature = "runtime-benchmarks"))]
@@ -27,6 +49,26 @@ impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
     fn native_version() -> sc_executor::NativeVersion {
         zeitgeist_runtime::native_version()
     }
+}
+
+/// Can be called for a `Configuration` to check if it is a configuration for
+/// the `Zeitgeist` network.
+pub trait IdentifyVariant {
+	/// Returns `true` if this is a configuration for the `Battery Station` network.
+	fn is_battery_station(&self) -> bool;
+
+	/// Returns `true` if this is a configuration for the `Zeitgeist` network.
+	fn is_zeitgeist(&self) -> bool;
+}
+
+impl IdentifyVariant for Box<dyn ChainSpec> {
+	fn is_battery_station(&self) -> bool {
+		self.id().starts_with("battery_station")
+	}
+
+	fn is_zeitgeist(&self) -> bool {
+		self.id().starts_with("zeitgeist")
+	}
 }
 
 /// A set of common runtime APIs between standalone an parachain runtimes.
