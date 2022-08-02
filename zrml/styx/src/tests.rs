@@ -12,9 +12,8 @@ fn cross_slashes_funds_and_stores_crossing() {
         assert_ok!(Styx::cross(Origin::signed(ALICE)));
         let balance_after_crossing = Balances::free_balance(&ALICE);
         let diff = original_balance - balance_after_crossing;
-        let tx_fee_margin = 5_000_000_000u128;
-        assert_eq!(Crossings::<Runtime>::contains_key(&ALICE), true);
-        assert!(diff >= burn_amount && diff <= burn_amount + tx_fee_margin);
+        assert!(Crossings::<Runtime>::contains_key(&ALICE));
+        assert_eq!(diff, burn_amount);
     });
 }
 
