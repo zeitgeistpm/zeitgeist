@@ -85,9 +85,8 @@ pub mod pallet {
             }
 
             let amount = BurnAmount::<T>::get().saturated_into();
-            let free = T::Currency::free_balance(&who);
 
-            if free < amount {
+            if !T::Currency::can_slash(&who, amount) {
                 Err(Error::<T>::FundDoesNotHaveEnoughFreeBalance)?;
             }
 
@@ -99,7 +98,7 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Set the burn amount. Needs 50% council vote.
+        /// Set the burn amount. Ensures SetBurnAmountOrigin.
         #[pallet::weight(T::WeightInfo::set_burn_amount())]
         pub fn set_burn_amount(
             origin: OriginFor<T>,
