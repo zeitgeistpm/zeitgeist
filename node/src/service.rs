@@ -145,3 +145,65 @@ cfg_if::cfg_if! {
         }
     }
 }
+
+/// Builds a new object suitable for chain operations.
+#[allow(clippy::type_complexity)]
+pub fn new_chain_ops(
+	config: &mut Configuration,
+) -> Result<
+	(
+		Arc<Client>,
+		Arc<FullBackend>,
+		sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+		TaskManager,
+	),
+	ServiceError,
+> {
+	match &config.chain_spec {
+		#[cfg(feature = "with-zeitgeist-runtime")]
+		spec if spec.is_zeitgeist() => {
+			new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutorDispatch>(config)
+		}
+		#[cfg(feature = "with-battery-station-runtime")]
+		spec if spec.is_battery_station() => {
+			new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutorDispatch>(config)
+		}
+		_ => panic!("Invalid chain spec"),
+	}
+}
+
+#[allow(clippy::type_complexity)]
+fn new_chain_ops_inner<RuntimeApi, Executor>(
+	mut config: &mut Configuration,
+) -> Result<
+	(
+		Arc<Client>,
+		Arc<FullBackend>,
+		sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+		TaskManager,
+	),
+	ServiceError,
+>
+where
+	Client: From<Arc<crate::FullClient<RuntimeApi, Executor>>>,
+	RuntimeApi:
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	Executor: NativeExecutionDispatch + 'static,
+{
+	config.keystore = sc_service::config::KeystoreConfig::InMemory;
+	let PartialComponents {
+		client,
+		backend,
+		import_queue,
+		task_manager,
+		..
+	} = new_partial::<RuntimeApi, Executor>(config, config.chain_spec.is_dev())?;
+	Ok((
+		Arc::new(Client::from(client)),
+		backend,
+		import_queue,
+		task_manager,
+	))
+}

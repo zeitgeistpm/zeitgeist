@@ -1,7 +1,7 @@
 use super::{
     cli::{Cli, Subcommand},
     command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
-    service::{new_partial, ExecutorDispatch},
+    service::{new_partial, new_chain_ops, ExecutorDispatch},
 };
 use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
@@ -77,29 +77,24 @@ pub fn run() -> sc_cli::Result<()> {
         }
         Some(Subcommand::CheckBlock(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, import_queue, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-                Ok((cmd.run(client, import_queue), task_manager))
-            })
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, import_queue), task_manager))
+			})
         }
         Some(Subcommand::ExportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-                Ok((cmd.run(client, config.database), task_manager))
-            })
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, config.database), task_manager))
+			})
         }
         #[cfg(feature = "parachain")]
         Some(Subcommand::ExportHeader(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
             runner.sync_run(|config| {
-                let PartialComponents { client, .. }: crate::service::ParachainPartialComponents<
-                    ExecutorDispatch,
-                    RuntimeApi,
-                > = crate::service::new_partial(&config)?;
+                let (client, _, _, _) = new_chain_ops(&mut config)?;
 
                 match client.block(&cmd.input.parse()?) {
                     Ok(Some(block)) => {
@@ -163,19 +158,17 @@ pub fn run() -> sc_cli::Result<()> {
         }
         Some(Subcommand::ExportState(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-                Ok((cmd.run(client, config.chain_spec), task_manager))
-            })
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, config.chain_spec), task_manager))
+			})
         }
         Some(Subcommand::ImportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, import_queue, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-                Ok((cmd.run(client, import_queue), task_manager))
-            })
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, import_queue), task_manager))
+			})
         }
         Some(Subcommand::Key(cmd)) => cmd.run(&cli),
         #[cfg(feature = "parachain")]

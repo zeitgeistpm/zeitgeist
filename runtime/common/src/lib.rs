@@ -1554,7 +1554,7 @@ macro_rules! create_common_tests {
     {} => {
         #[cfg(test)]
         mod common_tests {
-            mod transaction_fee_multiplier {
+            mod fee_multiplier {
                 use crate::parameters::{MinimumMultiplier, SlowAdjustingFeeUpdate, TargetBlockFullness};
                 use frame_support::{
                     parameter_types,
