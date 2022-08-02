@@ -6,7 +6,6 @@ orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "htt
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-std = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 zrml-authorized = { default-features = false, path = "../authorized" }
@@ -62,7 +61,6 @@ std = [
     "parity-scale-codec/std",
     "sp-arithmetic/std",
     "sp-runtime/std",
-    "sp-std/std",
     "zeitgeist-primitives/std",
     "zrml-authorized/std",
     "zrml-court/std",

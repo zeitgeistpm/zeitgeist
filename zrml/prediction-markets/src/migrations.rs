@@ -1,13 +1,13 @@
 use crate::{
-    Config, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerOpenTimeFrame,
-    MarketIdsPerReportBlock, Pallet,
+    CacheSize, Config, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
+    MarketIdsPerOpenTimeFrame, MarketIdsPerReportBlock, Pallet,
 };
 use frame_support::{
     dispatch::Weight,
     log,
     pallet_prelude::PhantomData,
     storage::PrefixIterator,
-    traits::{ConstU32, Get, OnRuntimeUpgrade, StorageVersion},
+    traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec, Twox64Concat,
 };
 use sp_runtime::traits::Saturating;
@@ -188,11 +188,10 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
 
         let dispute_period = T::DisputePeriod::get();
         let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
-        let block = current_block.saturating_sub(dispute_period);
-        type IterType<T> = PrefixIterator<(
-            <T as frame_system::Config>::BlockNumber,
-            BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
-        )>;
+        let last_dp_end_block = current_block.saturating_sub(dispute_period);
+        type DisputeBlockToMarketIdsTuple<T> =
+            (<T as frame_system::Config>::BlockNumber, BoundedVec<MarketIdOf<T>, CacheSize>);
+        type IterType<T> = PrefixIterator<DisputeBlockToMarketIdsTuple<T>>;
 
         let market_ids_per_dispute_iterator: IterType<T> =
             frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
@@ -200,11 +199,15 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
                 b"MarketIdsPerDisputeBlock",
             );
 
-        let market_ids_tobe_removed_per_dispute: Vec<_> =
-            market_ids_per_dispute_iterator.filter(|v| v.0 <= block).collect();
-        for (k, _v) in market_ids_tobe_removed_per_dispute {
+        let market_ids_tobe_removed_per_dispute: Vec<DisputeBlockToMarketIdsTuple<T>> =
+            market_ids_per_dispute_iterator
+                .filter(|(dispute_start_block, _market_ids)| {
+                    *dispute_start_block <= last_dp_end_block
+                })
+                .collect();
+        for (dispute_start_block, _market_ids) in market_ids_tobe_removed_per_dispute {
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            MarketIdsPerDisputeBlock::<T>::remove(k);
+            MarketIdsPerDisputeBlock::<T>::remove(dispute_start_block);
         }
 
         let market_ids_per_report_iterator: IterType<T> =
@@ -213,11 +216,12 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
                 b"MarketIdsPerReportBlock",
             );
 
-        let market_ids_tobe_removed_per_report: Vec<_> =
-            market_ids_per_report_iterator.filter(|v| v.0 <= block).collect();
-        for (k, _v) in market_ids_tobe_removed_per_report {
+        let market_ids_tobe_removed_per_report: Vec<_> = market_ids_per_report_iterator
+            .filter(|(dispute_start_block, _market_ids)| *dispute_start_block <= last_dp_end_block)
+            .collect();
+        for (dispute_start_block, _market_ids) in market_ids_tobe_removed_per_report {
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            MarketIdsPerReportBlock::<T>::remove(k);
+            MarketIdsPerReportBlock::<T>::remove(dispute_start_block);
         }
         StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
@@ -233,6 +237,71 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
+        let dispute_period = T::DisputePeriod::get();
+        let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
+        let last_dp_end_block = current_block.saturating_sub(dispute_period);
+        type DisputeBlockToMarketIdsTuple<T> =
+            (<T as frame_system::Config>::BlockNumber, BoundedVec<MarketIdOf<T>, CacheSize>);
+        type IterType<T> = PrefixIterator<DisputeBlockToMarketIdsTuple<T>>;
+
+        let mut market_ids_per_dispute_iterator: IterType<T> =
+            frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
+                b"PredictionMarkets",
+                b"MarketIdsPerDisputeBlock",
+            );
+        market_ids_per_dispute_iterator.try_for_each(
+            |(dispute_start_block, market_ids)| -> Result<(), &'static str> {
+                assert!(
+                    dispute_start_block > last_dp_end_block,
+                    "found unexpected storage key in MarketIdsPerDisputeBlock. \
+                     dispute_start_block: {:?}, last_dp_end_block: {:?}",
+                    dispute_start_block,
+                    last_dp_end_block
+                );
+
+                market_ids.iter().try_for_each(|market_id| -> Result<(), &'static str> {
+                    let market = T::MarketCommons::market(market_id)
+                        .map_err(|_| "invalid market_id found.")?;
+                    assert!(
+                        market.status == MarketStatus::Disputed,
+                        "found unexpected market status. market_id: {:?}, status: {:?}",
+                        market_id,
+                        market.status
+                    );
+                    Ok(())
+                })?;
+                Ok(())
+            },
+        )?;
+        let mut market_ids_per_reported_iterator: IterType<T> =
+            frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
+                b"PredictionMarkets",
+                b"MarketIdsPerReportBlock",
+            );
+        market_ids_per_reported_iterator.try_for_each(
+            |(dispute_start_block, market_ids)| -> Result<(), &'static str> {
+                assert!(
+                    dispute_start_block > last_dp_end_block,
+                    "found unexpected storage key in MarketIdsPerReportBlock. \
+                     dispute_start_block: {:?}, last_dp_end_block: {:?}",
+                    dispute_start_block,
+                    last_dp_end_block
+                );
+
+                market_ids.iter().try_for_each(|market_id| -> Result<(), &'static str> {
+                    let market = T::MarketCommons::market(market_id)
+                        .map_err(|_| "invalid market_id found.")?;
+                    assert!(
+                        market.status == MarketStatus::Reported,
+                        "found unexpected market status. market_id: {:?}, status: {:?}",
+                        market_id,
+                        market.status
+                    );
+                    Ok(())
+                })?;
+                Ok(())
+            },
+        )?;
         Ok(())
     }
 }
@@ -297,6 +366,7 @@ mod tests {
     use crate::{mock::*, CacheSize, MomentOf};
     use frame_support::assert_ok;
     use orml_traits::MultiCurrency;
+    use sp_runtime::traits::BlockNumberProvider;
     use zeitgeist_primitives::{
         constants::{BASE, MILLISECS_PER_BLOCK},
         traits::Swaps as SwapsApi,
@@ -334,7 +404,7 @@ mod tests {
     }
 
     #[test]
-    fn test_market_ids_per_open_block_on_runtime_upgrade_with_sample_markets() {
+    fn test_market_ids_per_open_block_on_runtime_upgrade() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
             assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 1_000 * BASE));
@@ -378,7 +448,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cleanup_storage_for_resolved_or_closed_market_on_runtime_upgrade_with_sample_markets() {
+    fn test_cleanup_storage_for_resolved_or_closed_market_on_runtime_upgrade() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
             let _ = AssetManager::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
@@ -400,14 +470,26 @@ mod tests {
             System::set_block_number(1);
             let market_ids = BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0, 1])
                 .expect("BoundedVec creation failed");
-            MarketIdsPerDisputeBlock::<Runtime>::insert(1, market_ids.clone());
-            MarketIdsPerReportBlock::<Runtime>::insert(1, market_ids);
-            System::set_block_number(1 + <Runtime as crate::Config>::DisputePeriod::get());
-            assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(1).len(), 2);
-            assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(1).len(), 2);
+            let dispute_block = System::current_block_number();
+            MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids.clone());
+            MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids.clone());
+            System::set_block_number(
+                System::current_block_number() + <Runtime as crate::Config>::DisputePeriod::get(),
+            );
+            assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block).len(), 2);
+            assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(dispute_block).len(), 2);
             CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
-            assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(1).len(), 0);
-            assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(1).len(), 0);
+            assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block).len(), 0);
+            assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(dispute_block).len(), 0);
+
+            let dispute_block = System::current_block_number();
+            MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids.clone());
+            MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids.clone());
+            System::set_block_number(System::current_block_number() + 1);
+            CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
+            // storage is untouched as DisputePeriod is not reached.
+            assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block).len(), 2);
+            assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(dispute_block).len(), 2);
         });
     }
 
