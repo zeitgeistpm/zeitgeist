@@ -259,9 +259,10 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
                 assert!(
                     dispute_start_block > last_dp_end_block,
                     "found unexpected storage key in MarketIdsPerDisputeBlock. \
-                     dispute_start_block: {:?}, last_dp_end_block: {:?}",
+                     dispute_start_block: {:?}, last_dp_end_block: {:?} market_ids: {:?}",
                     dispute_start_block,
-                    last_dp_end_block
+                    last_dp_end_block,
+                    market_ids
                 );
 
                 market_ids.iter().try_for_each(|market_id| -> Result<(), &'static str> {
@@ -288,9 +289,10 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
                 assert!(
                     dispute_start_block > last_dp_end_block,
                     "found unexpected storage key in MarketIdsPerReportBlock. \
-                     dispute_start_block: {:?}, last_dp_end_block: {:?}",
+                     dispute_start_block: {:?}, last_dp_end_block: {:?}, market_ids: {:?}",
                     dispute_start_block,
-                    last_dp_end_block
+                    last_dp_end_block,
+                    market_ids
                 );
 
                 market_ids.iter().try_for_each(|market_id| -> Result<(), &'static str> {
@@ -373,7 +375,7 @@ mod tests {
     use orml_traits::MultiCurrency;
     use sp_runtime::traits::BlockNumberProvider;
     use zeitgeist_primitives::{
-        constants::{BASE, MILLISECS_PER_BLOCK},
+        constants::{DisputePeriod, BASE, MILLISECS_PER_BLOCK},
         traits::Swaps as SwapsApi,
         types::{
             Asset, BlockNumber, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -477,11 +479,10 @@ mod tests {
             let market_ids = BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0, 1])
                 .expect("BoundedVec creation failed");
             let dispute_block = System::current_block_number();
+            let dispute_period = <Runtime as crate::Config>::DisputePeriod::get();
             MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids.clone());
             MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids.clone());
-            System::set_block_number(
-                System::current_block_number() + <Runtime as crate::Config>::DisputePeriod::get(),
-            );
+            System::set_block_number(System::current_block_number() + dispute_period);
             assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block).len(), 2);
             assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(dispute_block).len(), 2);
             CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
@@ -491,7 +492,7 @@ mod tests {
             let dispute_block = System::current_block_number();
             MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids.clone());
             MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids);
-            System::set_block_number(System::current_block_number() + 1);
+            System::set_block_number(System::current_block_number() + dispute_period - 1);
             CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
             // storage is untouched as DisputePeriod is not reached.
             assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block).len(), 2);
