@@ -1,5 +1,5 @@
 use crate::{
-    service::{AdditionalRuntimeApiCollection, CommonRuntimeApiCollection, ExecutorDispatch},
+    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection, ExecutorDispatch},
     KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_cli::CollatorOptions;
@@ -115,7 +115,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         > + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
@@ -201,7 +201,7 @@ async fn do_new_full<RuntimeApi, Executor, BIC>(
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         > + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,

@@ -34,6 +34,7 @@ sp-session = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/p
 sp-storage = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+sp-trie = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 
 # Try-Runtime
@@ -70,7 +71,6 @@ sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.co
 sc-network = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.136" }
-sp-trie = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-keystore = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 
@@ -138,7 +138,6 @@ parachain = [
     "sc-tracing",
     "serde",
     "sp-keystore",
-    "sp-trie",
     "substrate-prometheus-endpoint",
 
     # Polkadot

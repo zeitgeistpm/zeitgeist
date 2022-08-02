@@ -1,4 +1,4 @@
-use crate::service::FullClient;
+use super::service::FullClient;
 
 use sc_cli::Result;
 use sc_client_api::BlockBackend;
@@ -69,7 +69,7 @@ pub fn create_benchmark_extrinsic<RuntimeApi, Executor: NativeExecutionDispatch 
         ),
         zeitgeist_runtime::CheckNonce::<zeitgeist_runtime::Runtime>::from(nonce.into()),
         zeitgeist_runtime::CheckWeight::<zeitgeist_runtime::Runtime>::new(),
-        zeitgeist_runtime::ChargeTransactionPayment::<zeitgeist_runtime::Runtime>::from(0),
+        pallet_transaction_payment::ChargeTransactionPayment::<zeitgeist_runtime::Runtime>::from(0),
     );
 
     let raw_payload = zeitgeist_runtime::SignedPayload::from_raw(

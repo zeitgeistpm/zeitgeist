@@ -1,13 +1,12 @@
 use super::{
     cli::{Cli, Subcommand},
     command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
-    service::{new_partial, new_chain_ops, ExecutorDispatch},
+    service::{new_partial, new_chain_ops},
 };
 use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 use std::sync::Arc;
-use zeitgeist_runtime::{Block, RuntimeApi};
 #[cfg(feature = "parachain")]
 use {
     sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
@@ -32,8 +31,8 @@ pub fn run() -> sc_cli::Result<()> {
             let runner = cli.create_runner(cmd)?;
 
             runner.sync_run(|config| {
-                let PartialComponents { client, backend, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+                let (client, backend, _, _) = new_chain_ops(&mut config)?;
+                let chain_spec = &runner.config().chain_spec;
 
                 // This switch needs to be in the client, since the client decides
                 // which sub-commands it wants to support.
@@ -46,7 +45,27 @@ pub fn run() -> sc_cli::Result<()> {
                                 .into());
                         }
 
-                        cmd.run::<Block, ExecutorDispatch>(config)
+                        /*
+                        match chain_spec {
+							#[cfg(feature = "with-zeitgeist-runtime")]
+							spec if spec.is_zeitgeist() => {
+								return runner.sync_run(|config| {
+									cmd.run::<zeitgeist_runtime::Block, service::ZeitgeistExecutor>(
+										config,
+									)
+								})
+							}
+							#[cfg(feature = "with-battery-station-runtime")]
+							spec if spec.is_battery_station() => {
+								return runner.sync_run(|config| {
+									cmd.run::<battery_station::Block, service::BatteryStationExecutor>(
+										config,
+									)
+								})
+							}
+							_ => panic!("invalid chain spec"),
+						}*/
+                        cmd.run(config);
                     }
                     BenchmarkCmd::Block(cmd) => cmd.run(client),
                     BenchmarkCmd::Storage(cmd) => {
@@ -201,8 +220,7 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
-                let PartialComponents { client, task_manager, backend, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+                let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
 
                 let aux_revert = Box::new(move |client, _, blocks| {
                     sc_finality_grandpa::revert(client, blocks)?;
@@ -267,7 +285,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         >::into_account(&parachain_id);
 
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
-        let block: zeitgeist_runtime::Block =
+        let block =
             cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)
                 .map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));

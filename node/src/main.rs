@@ -6,7 +6,7 @@ mod command;
 mod command_helper;
 mod rpc;
 #[macro_use]
-mod service;
+pub(crate) mod service;
 
 cfg_if::cfg_if!(
     if #[cfg(feature = "parachain")] {

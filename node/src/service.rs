@@ -8,16 +8,20 @@ use zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId};
 use zeitgeist_runtime::Block;
 
 #[cfg(feature = "parachain")]
-pub use service_parachain::{new_full, new_partial, FullClient, ParachainPartialComponents};
+pub use service_parachain::{new_full, new_partial, FullClient, FullBackend, ParachainPartialComponents};
 #[cfg(not(feature = "parachain"))]
-pub use service_standalone::{new_full, new_partial, FullClient};
-
+pub use service_standalone::{new_full, new_partial, FullClient, FullBackend};
+use std::sync::Arc;
+use sc_service::{error::Error as ServiceError, ChainSpec, Configuration, TaskManager, PartialComponents};
+use sp_trie::PrefixedMemoryDB;
+use sp_api::ConstructRuntimeApi;
+use sc_executor::{NativeExecutionDispatch};
 
 #[cfg(feature = "with-battery-station-runtime")]
-pub struct BatteryStationExecutorDispatch;
+pub struct BatteryStationExecutor;
 
 #[cfg(feature = "with-battery-station-runtime")]
-impl sc_executor::NativeExecutionDispatch for BatteryStationExecutorDispatch {
+impl sc_executor::NativeExecutionDispatch for BatteryStationExecutor {
     #[cfg(feature = "runtime-benchmarks")]
     type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
     #[cfg(not(feature = "runtime-benchmarks"))]
@@ -33,10 +37,10 @@ impl sc_executor::NativeExecutionDispatch for BatteryStationExecutorDispatch {
 }
 
 #[cfg(feature = "with-zeitgeist-runtime")]
-pub struct ZeitgeistExecutorDispatch;
+pub struct ZeitgeistExecutor;
 
 #[cfg(feature = "with-zeitgeist-runtime")]
-impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutorDispatch {
+impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
     #[cfg(feature = "runtime-benchmarks")]
     type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
     #[cfg(not(feature = "runtime-benchmarks"))]
@@ -72,7 +76,7 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 }
 
 /// A set of common runtime APIs between standalone an parachain runtimes.
-pub trait CommonRuntimeApiCollection:
+pub trait RuntimeApiCollection:
     sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
     + sp_api::ApiExt<Block>
     + sp_block_builder::BlockBuilder<Block>
@@ -87,7 +91,7 @@ where
 {
 }
 
-impl<Api> CommonRuntimeApiCollection for Api
+impl<Api> RuntimeApiCollection for Api
 where
     Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
         + sp_api::ApiExt<Block>
@@ -162,11 +166,11 @@ pub fn new_chain_ops(
 	match &config.chain_spec {
 		#[cfg(feature = "with-zeitgeist-runtime")]
 		spec if spec.is_zeitgeist() => {
-			new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutorDispatch>(config)
+			new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutor>(config)
 		}
 		#[cfg(feature = "with-battery-station-runtime")]
 		spec if spec.is_battery_station() => {
-			new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutorDispatch>(config)
+			new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutor>(config)
 		}
 		_ => panic!("Invalid chain spec"),
 	}
