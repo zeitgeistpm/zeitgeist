@@ -44,6 +44,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     // Storage: Styx BurnAmount (r:0 w:1)
     fn set_burn_amount() -> Weight {
-        (8_000_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (9_000_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }

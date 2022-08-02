@@ -28,8 +28,8 @@ benchmarks! {
     set_burn_amount {
         let origin = T::SetBurnAmountOrigin::successful_origin();
         let caller: T::AccountId = whitelisted_caller();
-        let balance = 100_000_000_000_000u128.saturated_into();
-        let amount = 200_000_000_000u128.saturated_into();
+        let balance = (10_000 * BASE).saturated_into();
+        let amount = (20 * BASE).saturated_into();
         T::Currency::deposit_creating(&caller, balance);
         let call = Call::<T>::set_burn_amount { amount };
     }: { call.dispatch_bypass_filter(origin)? }
