@@ -1004,10 +1004,11 @@ impl zrml_global_disputes::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type MarketCommons = MarketCommons;
-    type PalletId = GlobalDisputesPalletId;
+    type GlobalDisputesPalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type MinOutcomes = MinOutcomes;
+    type VotingOutcomeFee = VotingOutcomeFee;
     type MaxOutcomeLimit = MaxOutcomeLimit;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }

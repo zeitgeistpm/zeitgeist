@@ -82,9 +82,6 @@ pub type PoolId = u128;
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
-/// Vote identifier for one market. This allows to have multiple global disputes on the same market (without overlaying storage) for the global dispute system.
-pub type VoteId = u8;
-
 /// The outcome index which is chosen of all pushed outcomes for the global dispute system.
 pub type OutcomeIndex = u32;
 

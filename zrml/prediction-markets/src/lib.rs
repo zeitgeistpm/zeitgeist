@@ -86,11 +86,11 @@ mod pallet {
         traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
         transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
-    use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
+    use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedDiv, One, Saturating, Zero},
+        traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -99,7 +99,7 @@ mod pallet {
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
             MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
-            ScoringRule, SubsidyUntil, VoteId,
+            ScoringRule, SubsidyUntil,
         },
     };
     use zrml_global_disputes::GlobalDisputesPalletApi;
@@ -408,32 +408,6 @@ mod pallet {
 
         #[pallet::weight(5000)]
         #[transactional]
-        pub fn repeat_global_dispute(
-            origin: OriginFor<T>,
-            #[pallet::compact] market_id: MarketIdOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-
-            let mut global_disputes = <GlobalDisputesInfo<T>>::get(market_id);
-            // for each global dispute on the same market id create a unique vote_id
-            if let Some((vote_id, _)) = global_disputes.last() {
-                let next_vote_id = (*vote_id).saturating_add(One::one());
-                let is_started = false;
-                let elem = (next_vote_id, is_started);
-                ensure!(
-                    global_disputes.try_push(elem).is_ok(),
-                    Error::<T>::TooManyGlobalDisputesPerMarketId
-                );
-                <GlobalDisputesInfo<T>>::insert(market_id, global_disputes);
-            }
-
-            // TODO add event
-
-            Ok(().into())
-        }
-
-        #[pallet::weight(5000)]
-        #[transactional]
         pub fn start_global_dispute(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -451,32 +425,16 @@ mod pallet {
                 Error::<T>::MaxDisputesNeeded
             );
 
-            let mut global_disputes = <GlobalDisputesInfo<T>>::get(market_id);
-            // for each global dispute on the same market id create a unique vote_id
-            let last_index = global_disputes.len().saturating_sub(One::one());
-            let vote_id = match global_disputes.get_mut(last_index) {
-                Some((id, is_started)) => {
-                    if *is_started {
-                        return Err(Error::<T>::GlobalDisputeAlreadyStarted.into());
-                    }
-                    *is_started = true;
-                    *id
-                }
-                None => {
-                    let id = 0u8;
-                    ensure!(
-                        global_disputes.try_push((id, true)).is_ok(),
-                        Error::<T>::TooManyGlobalDisputesPerMarketId
-                    );
-                    id
-                }
-            };
+            ensure!(
+                T::GlobalDisputes::is_started(&market_id),
+                Error::<T>::GlobalDisputeAlreadyStarted
+            );
 
             // add report outcome to voting choices
             if let Some(report) = market.report {
                 // TODO what bond is for reporting? instead of using zero here
                 if let Err(err) = T::GlobalDisputes::push_voting_outcome(
-                    (&market_id, &vote_id),
+                    &market_id,
                     report.outcome,
                     <BalanceOf<T>>::zero(),
                 ) {
@@ -485,9 +443,8 @@ mod pallet {
                     log::error!(
                         "[PredictionMarkets] Cannot push report outcome to the voting outcomes. \
                          market id.
-                    market_id: {:?}, vote_id: {:?}, error: {:?}",
+                    market_id: {:?}, error: {:?}",
                         &market_id,
-                        &vote_id,
                         err
                     );
                 }
@@ -496,7 +453,7 @@ mod pallet {
             for (index, MarketDispute { at: _, by: _, outcome }) in disputes.iter().enumerate() {
                 let dispute_bond = default_dispute_bond::<T>(index);
                 if let Err(err) = T::GlobalDisputes::push_voting_outcome(
-                    (&market_id, &vote_id),
+                    &market_id,
                     outcome.clone(),
                     dispute_bond,
                 ) {
@@ -506,9 +463,8 @@ mod pallet {
                     log::error!(
                         "[PredictionMarkets] Cannot push dispute outcome to the voting outcomes. \
                          market id.
-                    market_id: {:?}, vote_id: {:?}, error: {:?}",
+                    market_id: {:?}, error: {:?}",
                         &market_id,
-                        &vote_id,
                         err
                     );
                 }
@@ -522,8 +478,6 @@ mod pallet {
             <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
-
-            <GlobalDisputesInfo<T>>::insert(market_id, global_disputes);
 
             // TODO add event
 
@@ -1415,15 +1369,6 @@ mod pallet {
         ValueQuery,
     >;
 
-    #[pallet::storage]
-    pub type GlobalDisputesInfo<T: Config> = StorageMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        BoundedVec<(VoteId, bool), ConstU32<10>>,
-        ValueQuery,
-    >;
-
     /// Contains a list of all markets that are currently collecting subsidy and the deadline.
     // All the values are "cached" here. Results in data duplication, but speeds up the iteration
     // over every market significantly (otherwise 25µs per relevant market per block).
@@ -1871,8 +1816,8 @@ mod pallet {
                         }
                     };
 
-                    if let Some(v_id) = <GlobalDisputesInfo<T>>::get(market_id).last().map(|(v_id, _)| v_id) {
-                        resolved_outcome_option = T::GlobalDisputes::get_voting_winner((market_id, v_id));
+                    if let Some(o) = T::GlobalDisputes::get_voting_winner(&market_id) {
+                        resolved_outcome_option = Some(o);
                     }
 
                     let resolved_outcome =

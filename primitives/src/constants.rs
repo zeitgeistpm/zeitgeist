@@ -93,8 +93,9 @@ parameter_types! {
     pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
     pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
-    pub const MaxOutcomeLimit: u32 = 10;
+    pub const MaxOutcomeLimit: u32 = u32::MAX;
     pub const MinOutcomes: u32 = 2;
+    pub const VotingOutcomeFee: Balance = 100 * CENT;
 }
 
 // Swaps parameters

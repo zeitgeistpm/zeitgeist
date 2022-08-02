@@ -20,12 +20,12 @@ use zeitgeist_primitives::{
     constants::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, GlobalDisputesPalletId, LiquidityMiningPalletId, MaxAssets,
-        MaxCategories, MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxOutcomeLimit,
-        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinLiquidity, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, VoteLockIdentifier, BASE, CENT, GlobalDisputePeriod,
+        GetNativeCurrencyId, GlobalDisputePeriod, GlobalDisputesPalletId, LiquidityMiningPalletId,
+        MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio,
+        MaxOutcomeLimit, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight,
+        MinAssets, MinCategories, MinLiquidity, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod,
+        MinWeight, MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight,
+        SwapsPalletId, VoteLockIdentifier, VotingOutcomeFee, BASE, CENT,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -240,11 +240,12 @@ impl zrml_global_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
-    type PalletId = GlobalDisputesPalletId;
+    type GlobalDisputesPalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type MinOutcomes = MaxDisputes;
     type MaxOutcomeLimit = MaxOutcomeLimit;
+    type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
 }
 
