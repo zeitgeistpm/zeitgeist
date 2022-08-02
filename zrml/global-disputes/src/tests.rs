@@ -445,7 +445,7 @@ fn get_voting_winner_clears_outcome_votes() {
         assert_eq!(<OutcomeVotes<Runtime>>::get(id, 0u32), Some(10 * BASE));
         assert_eq!(<OutcomeVotes<Runtime>>::get(id, 1u32), Some(10 * BASE));
 
-        assert_ok!(GlobalDisputes::get_voting_winner(id));
+        assert!(GlobalDisputes::get_voting_winner(id).is_some());
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
         // TODO if nobody would have voted on 1u128, then the OutcomeVotes would never be deleted
@@ -473,7 +473,7 @@ fn unlock_clears_lock_info() {
             50 * BASE
         ));
 
-        assert_ok!(GlobalDisputes::get_voting_winner(id));
+        assert!(GlobalDisputes::get_voting_winner(id).is_some());
 
         assert!(<LockInfoOf<Runtime>>::get(ALICE, id).is_some());
 
@@ -627,7 +627,7 @@ fn locking_works_for_one_market() {
         assert_eq!(LockInfoOf::<Runtime>::get(EVE, id), Some((3u32, 20 * BASE)));
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
-        assert_ok!(GlobalDisputes::get_voting_winner(id));
+        assert!(GlobalDisputes::get_voting_winner(id).is_some());
 
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id), Some((0u32, 50 * BASE)));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
@@ -722,7 +722,7 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
         // id_1 has stronger locks
-        assert_ok!(GlobalDisputes::get_voting_winner(id_1));
+        assert!(GlobalDisputes::get_voting_winner(id_1).is_some());
 
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_1), Some((0u32, 50 * BASE)));
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_2), Some((0u32, 30 * BASE)));
@@ -742,7 +742,7 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_2), Some((0u32, 30 * BASE)));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(30 * BASE)]);
 
-        assert_ok!(GlobalDisputes::get_voting_winner(id_2));
+        assert!(GlobalDisputes::get_voting_winner(id_2).is_some());
 
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_1), None);
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_2), Some((0u32, 30 * BASE)));
@@ -821,7 +821,7 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
         // id_2 has weaker locks
-        assert_ok!(GlobalDisputes::get_voting_winner(id_2));
+        assert!(GlobalDisputes::get_voting_winner(id_2).is_some());
 
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_1), Some((0u32, 50 * BASE)));
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_2), Some((0u32, 30 * BASE)));
@@ -842,7 +842,7 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_2), None);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
 
-        assert_ok!(GlobalDisputes::get_voting_winner(id_1));
+        assert!(GlobalDisputes::get_voting_winner(id_1).is_some());
 
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_1), Some((0u32, 50 * BASE)));
         assert_eq!(LockInfoOf::<Runtime>::get(ALICE, id_2), None);

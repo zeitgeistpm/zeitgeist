@@ -25,7 +25,7 @@ mod pallet {
         pallet_prelude::{
             DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap, ValueQuery,
         },
-        traits::{Currency, Get, Hooks, IsType, LockIdentifier, LockableCurrency, WithdrawReasons},
+        traits::{Currency, Get, IsType, LockIdentifier, LockableCurrency, WithdrawReasons},
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -204,14 +204,10 @@ mod pallet {
         InsufficientAmount,
         /// Sender tried to vote with an amount below a defined minium.
         AmountTooLow,
-        /// There is no default outcome set in the first place to resolve to.
-        NoDefaultOutcome,
         /// The number of maximum outcomes is reached.
         MaxOutcomeLimitReached,
         /// The maximum number of vote id's is reached.
         MaxVoteIds,
-        /// There are no votes to determine the winner.
-        NoVotesPresent,
     }
 
     #[pallet::event]
@@ -222,16 +218,6 @@ mod pallet {
     {
         /// A vote happened on an outcome. \[vote_id, outcome_index, vote_amount\]
         VotedOnOutcome(VoteId, u32, BalanceOf<T>),
-    }
-
-    #[pallet::hooks]
-    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
-
-    impl<T: Config> Pallet<T> {
-        fn get_default_outcome(id: (&MarketIdOf<T>, &VoteId)) -> Option<OutcomeReport> {
-            // return first element if the BoundedVec is not empty, otherwise None
-            <Outcomes<T>>::get(id).get(0usize).cloned()
-        }
     }
 
     impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, BalanceOf<T>> for Pallet<T>
@@ -247,6 +233,18 @@ mod pallet {
             let mut outcomes = <Outcomes<T>>::get(id);
             ensure!(outcomes.try_push(outcome).is_ok(), Error::<T>::MaxOutcomeLimitReached);
             let outcome_index = outcomes.len().saturated_into::<u32>().saturating_sub(One::one());
+            <HighestVotes<T>>::mutate(id, |highest| {
+                *highest = Some(highest.map_or(
+                    (outcome_index, vote_balance),
+                    |(prev_i, prev_highest_sum)| {
+                        if vote_balance >= prev_highest_sum {
+                            (outcome_index, vote_balance)
+                        } else {
+                            (prev_i, prev_highest_sum)
+                        }
+                    },
+                ));
+            });
             <Outcomes<T>>::insert(id, outcomes);
             <OutcomeVotes<T>>::insert(id, outcome_index, vote_balance);
             Ok(())
@@ -255,21 +253,17 @@ mod pallet {
         /// Determine the outcome with the most amount of tokens.
         fn get_voting_winner(
             id: (&MarketIdOf<T>, &VoteId),
-        ) -> Result<OutcomeReport, DispatchError> {
-            let default_outcome =
-                Self::get_default_outcome(id).ok_or(<Error<T>>::NoDefaultOutcome)?;
-            let (winning_outcome_index, _) =
-                <HighestVotes<T>>::get(id).ok_or(<Error<T>>::NoVotesPresent)?;
+        ) -> Option<OutcomeReport> {
+            let winning_outcome_index =
+                <HighestVotes<T>>::get(id).map(|(i, _)| i as usize).unwrap_or(0usize);
 
             let winning_outcome = <Outcomes<T>>::get(id)
-                .get(winning_outcome_index as usize)
-                .cloned()
-                .unwrap_or(default_outcome);
+                .get(winning_outcome_index).cloned();
 
             <Outcomes<T>>::remove(id);
             <HighestVotes<T>>::remove(id);
 
-            Ok(winning_outcome)
+            winning_outcome
         }
     }
 

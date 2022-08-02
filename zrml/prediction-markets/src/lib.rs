@@ -90,7 +90,7 @@ mod pallet {
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
     use sp_arithmetic::per_things::Perbill;
     use sp_runtime::{
-        traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
+        traits::{AccountIdConversion, CheckedDiv, One, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
@@ -408,12 +408,37 @@ mod pallet {
 
         #[pallet::weight(5000)]
         #[transactional]
+        pub fn repeat_global_dispute(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+
+            let mut global_disputes = <GlobalDisputesInfo<T>>::get(market_id);
+            // for each global dispute on the same market id create a unique vote_id
+            if let Some((vote_id, _)) = global_disputes.last() {
+                let next_vote_id = (*vote_id).saturating_add(One::one());
+                let is_started = false;
+                let elem = (next_vote_id, is_started);
+                ensure!(
+                    global_disputes.try_push(elem).is_ok(),
+                    Error::<T>::TooManyGlobalDisputesPerMarketId
+                );
+                <GlobalDisputesInfo<T>>::insert(market_id, global_disputes);
+            }
+
+            // TODO add event
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(5000)]
+        #[transactional]
         pub fn start_global_dispute(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            #[pallet::compact] vote_id: VoteId,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
             // TODO maybe transition to a GlobalDisputes state?
@@ -426,19 +451,43 @@ mod pallet {
                 Error::<T>::MaxDisputesNeeded
             );
 
+            let mut global_disputes = <GlobalDisputesInfo<T>>::get(market_id);
+            // for each global dispute on the same market id create a unique vote_id
+            let last_index = global_disputes.len().saturating_sub(One::one());
+            let vote_id = match global_disputes.get_mut(last_index) {
+                Some((id, is_started)) => {
+                    if *is_started {
+                        return Err(Error::<T>::GlobalDisputeAlreadyStarted.into());
+                    }
+                    *is_started = true;
+                    *id
+                }
+                None => {
+                    let id = 0u8;
+                    ensure!(
+                        global_disputes.try_push((id, true)).is_ok(),
+                        Error::<T>::TooManyGlobalDisputesPerMarketId
+                    );
+                    id
+                }
+            };
+
             // add report outcome to voting choices
             if let Some(report) = market.report {
+                // TODO what bond is for reporting? instead of using zero here
                 if let Err(err) = T::GlobalDisputes::push_voting_outcome(
                     (&market_id, &vote_id),
                     report.outcome,
                     <BalanceOf<T>>::zero(),
                 ) {
                     // error happens if the maximum number of outcomes is reached
+                    // this should not happen for the first pushed voting outcome (report outcome)
                     log::error!(
                         "[PredictionMarkets] Cannot push report outcome to the voting outcomes. \
                          market id.
-                    market_id: {:?}, error: {:?}",
+                    market_id: {:?}, vote_id: {:?}, error: {:?}",
                         &market_id,
+                        &vote_id,
                         err
                     );
                 }
@@ -452,18 +501,31 @@ mod pallet {
                     dispute_bond,
                 ) {
                     // error happens if the maximum number of outcomes is reached
+                    // this should not happen for the first `MaxDisputes` outcomes
+                    // because the maximum number of outcomes is at least greater than `MaxDisputes` + 1 for the report outcome
                     log::error!(
                         "[PredictionMarkets] Cannot push dispute outcome to the voting outcomes. \
                          market id.
-                    market_id: {:?}, error: {:?}",
+                    market_id: {:?}, vote_id: {:?}, error: {:?}",
                         &market_id,
+                        &vote_id,
                         err
                     );
                 }
             }
 
-            // TODO use a better mechanism to limit the amount of outcomes (crowdfunding or auction?)
-            // TODO push additionally highest crowd outcomes (which are not already dispute outcomes)
+            // ensure, that global disputes controls the resolution now
+            // it does not end after the dispute period now, but after the global dispute end
+            Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
+
+            let curr_block_num = <frame_system::Pallet<T>>::block_number();
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
+                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+            })?;
+
+            <GlobalDisputesInfo<T>>::insert(market_id, global_disputes);
+
+            // TODO add event
 
             Ok(().into())
         }
@@ -1131,6 +1193,10 @@ mod pallet {
         /// See [`GlobalDisputesPalletApi`].
         type GlobalDisputes: GlobalDisputesPalletApi<MarketIdOf<Self>, BalanceOf<Self>>;
 
+        /// The number of blocks the global dispute period remains open.
+        #[pallet::constant]
+        type GlobalDisputePeriod: Get<Self::BlockNumber>;
+
         /// Swaps pallet API
         type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
@@ -1202,6 +1268,10 @@ mod pallet {
         InvalidMarketPeriod,
         /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
+        /// There are too many global disputes per market id.
+        TooManyGlobalDisputesPerMarketId,
+        /// The start of the global dispute for this market happened already.
+        GlobalDisputeAlreadyStarted,
     }
 
     #[pallet::event]
@@ -1342,6 +1412,15 @@ mod pallet {
         Twox64Concat,
         T::BlockNumber,
         BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
+    pub type GlobalDisputesInfo<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        BoundedVec<(VoteId, bool), ConstU32<10>>,
         ValueQuery,
     >;
 
@@ -1780,7 +1859,7 @@ mod pallet {
                 MarketStatus::Disputed => {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
                     // the oracle's report.
-                    let resolved_outcome_option = match market.dispute_mechanism {
+                    let mut resolved_outcome_option = match market.dispute_mechanism {
                         MarketDisputeMechanism::Authorized(_) => {
                             T::Authorized::on_resolution(&disputes, market_id, market)?
                         }
@@ -1791,6 +1870,11 @@ mod pallet {
                             T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
                         }
                     };
+
+                    if let Some(v_id) = <GlobalDisputesInfo<T>>::get(market_id).last().map(|(v_id, _)| v_id) {
+                        resolved_outcome_option = T::GlobalDisputes::get_voting_winner((market_id, v_id));
+                    }
+
                     let resolved_outcome =
                         resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 
@@ -2139,25 +2223,40 @@ mod pallet {
             ) -> DispatchResult,
         {
             let dispute_period = T::DisputePeriod::get();
+
             if now <= dispute_period {
                 return Ok(());
             }
 
-            let block = now.saturating_sub(dispute_period);
+            let normal_dispute_start_block = now.saturating_sub(dispute_period);
 
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(&block).iter() {
+            for id in MarketIdsPerReportBlock::<T>::get(&normal_dispute_start_block).iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
                 }
             }
 
+            let mut resolve_disputed_markets = |start_block| -> DispatchResult {
+                for id in MarketIdsPerDisputeBlock::<T>::get(&start_block).iter() {
+                    let market = T::MarketCommons::market(id)?;
+                    cb(id, &market)?;
+                }
+                Ok(())
+            };
+
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(&block).iter() {
-                let market = T::MarketCommons::market(id)?;
-                cb(id, &market)?;
+            resolve_disputed_markets(normal_dispute_start_block)?;
+
+            let global_dispute_period = T::GlobalDisputePeriod::get();
+            if now <= global_dispute_period {
+                return Ok(());
             }
+            let global_dispute_start_block = now.saturating_sub(global_dispute_period);
+
+            // Resolve any global dispute markets.
+            resolve_disputed_markets(global_dispute_start_block)?;
 
             Ok(())
         }

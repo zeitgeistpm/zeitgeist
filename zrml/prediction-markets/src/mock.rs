@@ -25,7 +25,7 @@ use zeitgeist_primitives::{
         MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
         MinCategories, MinLiquidity, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
         MinimumPeriod, PmPalletId, ReportingPeriod, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, VoteLockIdentifier, BASE, CENT,
+        SwapsPalletId, VoteLockIdentifier, BASE, CENT, GlobalDisputePeriod,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -106,6 +106,7 @@ impl crate::Config for Runtime {
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type GlobalDisputes = GlobalDisputes;
+    type GlobalDisputePeriod = GlobalDisputePeriod;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;

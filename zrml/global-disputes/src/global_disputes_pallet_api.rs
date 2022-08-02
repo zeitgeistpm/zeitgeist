@@ -8,5 +8,5 @@ pub trait GlobalDisputesPalletApi<MarketId, Balance> {
         vote_balance: Balance,
     ) -> Result<(), DispatchError>;
 
-    fn get_voting_winner(id: (&MarketId, &VoteId)) -> Result<OutcomeReport, DispatchError>;
+    fn get_voting_winner(id: (&MarketId, &VoteId)) -> Option<OutcomeReport>;
 }

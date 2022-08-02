@@ -973,6 +973,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type GlobalDisputes = GlobalDisputes;
+    type GlobalDisputePeriod = GlobalDisputePeriod;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
