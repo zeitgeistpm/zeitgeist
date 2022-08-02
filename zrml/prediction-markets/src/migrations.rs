@@ -189,14 +189,16 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
         let dispute_period = T::DisputePeriod::get();
         let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
         let block = current_block.saturating_sub(dispute_period);
-
-        let market_ids_per_dispute_iterator: PrefixIterator<(
-            T::BlockNumber,
+        type IterType<T> = PrefixIterator<(
+            <T as frame_system::Config>::BlockNumber,
             BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
-        )> = frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
-            b"PredictionMarkets",
-            b"MarketIdsPerDisputeBlock",
-        );
+        )>;
+
+        let market_ids_per_dispute_iterator: IterType<T> =
+            frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
+                b"PredictionMarkets",
+                b"MarketIdsPerDisputeBlock",
+            );
 
         let market_ids_tobe_removed_per_dispute: Vec<_> =
             market_ids_per_dispute_iterator.filter(|v| v.0 <= block).collect();
@@ -205,13 +207,11 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
             MarketIdsPerDisputeBlock::<T>::remove(k);
         }
 
-        let market_ids_per_report_iterator: PrefixIterator<(
-            T::BlockNumber,
-            BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
-        )> = frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
-            b"PredictionMarkets",
-            b"MarketIdsPerReportBlock",
-        );
+        let market_ids_per_report_iterator: IterType<T> =
+            frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
+                b"PredictionMarkets",
+                b"MarketIdsPerReportBlock",
+            );
 
         let market_ids_tobe_removed_per_report: Vec<_> =
             market_ids_per_report_iterator.filter(|v| v.0 <= block).collect();
