@@ -21,6 +21,8 @@ const SWAPS_NEXT_STORAGE_VERSION: u16 = 3;
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 2;
 const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 3;
 
+const PREDICTION_MARKETS_STORAGE_VERSION_BEFORE_NEXT_MIGRATION: u16 = 3;
+const PREDICTION_MARKETS_STORAGE_VERSION_AFTER_NEXT_MIGRATION: u16 = 4;
 pub struct MigrateMarketPoolsBeforeOpen<T>(PhantomData<T>);
 
 pub struct CleanUpStorageForResolvedOrClosedMarkets<T>(PhantomData<T>);
@@ -178,7 +180,9 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
     {
         let mut total_weight = T::DbWeight::get().reads(1);
 
-        if StorageVersion::get::<Pallet<T>>() != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+        if StorageVersion::get::<Pallet<T>>()
+            != PREDICTION_MARKETS_STORAGE_VERSION_BEFORE_NEXT_MIGRATION
+        {
             log::info!("Skipping storage cleanup; prediction-markets already up to date");
             return total_weight;
         }
@@ -223,7 +227,8 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             MarketIdsPerReportBlock::<T>::remove(dispute_start_block);
         }
-        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
+        StorageVersion::new(PREDICTION_MARKETS_STORAGE_VERSION_AFTER_NEXT_MIGRATION)
+            .put::<Pallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
         log::info!("Completed storage cleanup of CleanUpStorageForResolvedOrClosedMarkets");
@@ -394,7 +399,7 @@ mod tests {
             CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<Pallet<Runtime>>(),
-                PREDICTION_MARKETS_NEXT_STORAGE_VERSION
+                PREDICTION_MARKETS_STORAGE_VERSION_AFTER_NEXT_MIGRATION
             );
             assert_eq!(
                 utility::get_on_chain_storage_version_of_swaps_pallet(),
@@ -450,7 +455,8 @@ mod tests {
     #[test]
     fn test_cleanup_storage_for_resolved_or_closed_market_on_runtime_upgrade() {
         ExtBuilder::default().build().execute_with(|| {
-            setup_chain();
+            StorageVersion::new(PREDICTION_MARKETS_STORAGE_VERSION_BEFORE_NEXT_MIGRATION)
+                .put::<Pallet<Runtime>>();
             let _ = AssetManager::deposit(Asset::Ztg, &ALICE, 1_000 * BASE);
 
             let short_time: MomentOf<Runtime> = (5 * MILLISECS_PER_BLOCK).into();
@@ -484,7 +490,7 @@ mod tests {
 
             let dispute_block = System::current_block_number();
             MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids.clone());
-            MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids.clone());
+            MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids);
             System::set_block_number(System::current_block_number() + 1);
             CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
             // storage is untouched as DisputePeriod is not reached.
