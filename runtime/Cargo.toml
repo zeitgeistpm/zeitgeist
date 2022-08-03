@@ -209,10 +209,19 @@ std = [
     "sp-session/std",
     "sp-transaction-pool/std",
     "sp-version/std",
-    "substrate-fixed/std", # Try-Runtime
-    "frame-try-runtime/std", # Benchmark
+    "substrate-fixed/std", 
+    
+    # Try-Runtime
+
+    "frame-try-runtime/std", 
+    
+    # Benchmark
+
     "frame-benchmarking?/std",
-    "frame-system-benchmarking?/std", # Cumulus
+    "frame-system-benchmarking?/std", 
+    
+    # Cumulus
+
     "cumulus-pallet-dmp-queue?/std",
     "cumulus-pallet-parachain-system?/std",
     "cumulus-pallet-xcm?/std",
@@ -220,22 +229,34 @@ std = [
     "cumulus-primitives-core?/std",
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
-    "parachain-info?/std", # Parachain
+    "parachain-info?/std", 
+    
+    # Parachain
+
     "nimbus-primitives?/std",
     "pallet-author-inherent?/std",
     "pallet-author-mapping?/std",
     "pallet-author-slot-filter?/std",
     "pallet-crowdloan-rewards?/std",
-    "parachain-staking?/std", # Polkadot
+    "parachain-staking?/std", 
+    
+    # Polkadot
+
     "pallet-xcm?/std",
     "polkadot-parachain?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
-    "xcm?/std", # Standalone
+    "xcm?/std", 
+    
+    # Standalone
+
     "pallet-aura/std",
     "pallet-grandpa/std",
     "sp-consensus-aura/std",
-    "sp-finality-grandpa/std", # Zeitgeist
+    "sp-finality-grandpa/std", 
+    
+    # Zeitgeist
+    
     "zeitgeist-primitives/std",
     "zrml-authorized/std",
     "zrml-court/std",
