@@ -110,6 +110,7 @@ sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purest
 default = ["std"]
 parachain = [
     # Cumulus
+
     "cumulus-pallet-dmp-queue",
     "cumulus-pallet-parachain-system",
     "cumulus-pallet-xcm",
@@ -117,18 +118,27 @@ parachain = [
     "cumulus-primitives-core",
     "cumulus-primitives-timestamp",
     "cumulus-primitives-utility",
-    "parachain-info", # Parachain
+    "parachain-info", 
+    
+    # Parachain
+
     "nimbus-primitives",
     "pallet-author-inherent",
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-crowdloan-rewards",
-    "parachain-staking", # Polkadot
+    "parachain-staking", 
+    
+    # Polkadot
+
     "pallet-xcm",
     "polkadot-parachain",
     "xcm-builder",
     "xcm-executor",
-    "xcm", # Misc
+    "xcm", 
+    
+    # Misc
+    
     "log",
 ]
 
@@ -256,7 +266,7 @@ std = [
     "sp-finality-grandpa/std", 
     
     # Zeitgeist
-    
+
     "zeitgeist-primitives/std",
     "zrml-authorized/std",
     "zrml-court/std",
