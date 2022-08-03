@@ -19,7 +19,7 @@ use zeitgeist_primitives::{
     },
     types::{AccountId, Balance, Signature},
 };
-use zeitgeist_runtime::SS58Prefix;
+use zeitgeist_runtime::parameters::SS58Prefix;
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::Perbill,
@@ -349,6 +349,7 @@ fn telemetry_endpoints() -> Option<TelemetryEndpoints> {
     .ok()
 }
 
+// TODO calculate token properties in respective module for chain to get correct SS58prefix
 fn token_properties(token_symbol: &str) -> Map<String, Value> {
     let mut properties = Map::new();
     properties.insert("ss58Format".into(), SS58Prefix::get().into());

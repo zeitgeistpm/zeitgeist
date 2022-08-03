@@ -5,7 +5,6 @@ use super::{
 };
 use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
-use sc_service::PartialComponents;
 use std::sync::Arc;
 #[cfg(feature = "parachain")]
 use {

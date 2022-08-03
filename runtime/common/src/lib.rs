@@ -22,7 +22,7 @@ macro_rules! decl_common_types {
             zrml_court::migrations::JurorsCountedStorageMapMigration<Runtime>,
         >;
 
-        type Header = generic::Header<BlockNumber, BlakeTwo256>;
+        pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
         pub(crate) type NodeBlock = generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
         type RikiddoSigmoidFeeMarketVolumeEma = zrml_rikiddo::Instance1;
         pub type SignedExtra = (

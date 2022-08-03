@@ -16,6 +16,7 @@ use sc_service::{error::Error as ServiceError, ChainSpec, Configuration, TaskMan
 use sp_trie::PrefixedMemoryDB;
 use sp_api::ConstructRuntimeApi;
 use sc_executor::{NativeExecutionDispatch};
+use super::cli::Client;
 
 #[cfg(feature = "with-battery-station-runtime")]
 pub struct BatteryStationExecutor;
@@ -189,7 +190,7 @@ fn new_chain_ops_inner<RuntimeApi, Executor>(
 	ServiceError,
 >
 where
-	Client: From<Arc<crate::FullClient<RuntimeApi, Executor>>>,
+	Client: From<Arc<FullClient<RuntimeApi, Executor>>>,
 	RuntimeApi:
 		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi:

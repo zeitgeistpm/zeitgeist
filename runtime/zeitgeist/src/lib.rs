@@ -58,9 +58,10 @@ use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
 
 #[cfg(feature = "parachain")]
-mod xcm_config;
-mod parachain_params;
-mod parameters;
+pub mod xcm_config;
+#[cfg(feature = "parachain")]
+pub mod parachain_params;
+pub mod parameters;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),

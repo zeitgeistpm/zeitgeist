@@ -1,7 +1,8 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
+// TODO: Dynamically select correct executor
 use crate::service::{
-    AdditionalRuntimeApiCollection, RuntimeApiCollection, ExecutorDispatch,
+    AdditionalRuntimeApiCollection, RuntimeApiCollection, ZeitgeistExecutor,
 };
 use sc_client_api::{BlockBackend, ExecutorProvider};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
@@ -19,7 +20,7 @@ use zeitgeist_runtime::{Block, RuntimeApi};
 
 pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
-type FullBackend = TFullBackend<Block>;
+pub type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 /// Builds a new service for a full client.
@@ -33,7 +34,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         select_chain,
         transaction_pool,
         other: (block_import, grandpa_link, mut telemetry),
-    } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+    } = new_partial::<RuntimeApi, ZeitgeistExecutor>(&config)?;
 
     if let Some(url) = &config.keystore_remote {
         match remote_keystore(url) {

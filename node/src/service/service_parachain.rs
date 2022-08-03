@@ -1,5 +1,6 @@
+// TODO: Dynamically select correct executor
 use crate::{
-    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection, ExecutorDispatch},
+    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection, ZeitgeistExecutor},
     KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_cli::CollatorOptions;
@@ -24,7 +25,7 @@ use substrate_prometheus_endpoint::Registry;
 use zeitgeist_primitives::types::Hash;
 use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
-type FullBackend = TFullBackend<Block>;
+pub type FullBackend = TFullBackend<Block>;
 pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
@@ -41,7 +42,7 @@ pub async fn new_full(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, ExecutorDispatch>>)> {
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, ZeitgeistExecutor>>)> {
     do_new_full(
         parachain_config,
         polkadot_config,
