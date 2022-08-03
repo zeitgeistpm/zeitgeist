@@ -22,27 +22,17 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         ensure,
-        pallet_prelude::{
-            DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap, ValueQuery,
-        },
+        pallet_prelude::{DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap},
         traits::{
-            Currency, Get, IsType, LockIdentifier, LockableCurrency, NamedReservableCurrency,
+            Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,
             WithdrawReasons,
         },
-        Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
+        Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use sp_runtime::{
-        traits::{One, Saturating, Zero},
-        DispatchError, SaturatedConversion,
-    };
-    use zeitgeist_primitives::{
-        constants::GlobalDisputesPalletId,
-        types::{OutcomeIndex, OutcomeReport},
-    };
+    use sp_runtime::traits::{AccountIdConversion, Saturating, Zero};
+    use zeitgeist_primitives::types::OutcomeReport;
     use zrml_market_commons::MarketCommonsPalletApi;
-
-    pub(crate) const RESERVE_ID: [u8; 8] = GlobalDisputesPalletId::get().0;
 
     pub(crate) type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -59,24 +49,76 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
+            let sender = ensure_signed(origin)?;
+
+            ensure!(Self::is_started(&market_id), Error::<T>::NoGlobalDisputeStarted);
+
+            ensure!(
+                <OutcomeVotes<T>>::get(market_id, outcome.clone()).is_none(),
+                Error::<T>::OutcomeAlreadyExists
+            );
+
             let voting_outcome_fee = T::VotingOutcomeFee::get();
-            ensure!(
-                voting_outcome_fee >= T::Currency::free_balance(&who),
-                Error::<T>::InsufficientAmount
-            );
 
-            ensure!(
-                <Outcomes<T>>::get(market_id).len() >= One::one(),
-                Error::<T>::NoGlobalDisputeStarted
-            );
+            let reward_account = T::GlobalDisputesPalletId::get().into_sub_account(market_id);
 
-            Self::push_voting_outcome(&market_id, outcome.clone(), voting_outcome_fee)?;
+            T::Currency::transfer(
+                &sender,
+                &reward_account,
+                voting_outcome_fee,
+                ExistenceRequirement::AllowDeath,
+            )?;
 
-            // save the reserve and the account with this market id
-            T::Currency::reserve_named(&RESERVE_ID, &who, voting_outcome_fee)?;
+            Self::push_voting_outcome(&market_id, outcome.clone(), voting_outcome_fee);
 
-            Self::deposit_event(Event::PushedVotingOutcome(market_id, outcome));
+            <OutcomeOwner<T>>::insert(market_id, outcome.clone(), sender);
+
+            Self::deposit_event(Event::AddedVotingOutcome(market_id, outcome));
+            Ok(().into())
+        }
+
+        #[frame_support::transactional]
+        #[pallet::weight(5000)]
+        pub fn reward_outcome_owner(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+
+            let mut outcome_owner_rewarded = false;
+            if let Some((winner_outcome, _winner_vote_balance, is_finished)) =
+                <Winners<T>>::get(market_id)
+            {
+                ensure!(is_finished, Error::<T>::UnfinishedGlobalDispute);
+                let reward_account = T::GlobalDisputesPalletId::get().into_sub_account(market_id);
+                for (outcome, account) in <OutcomeOwner<T>>::drain_prefix(market_id)
+                    .take(T::RemoveKeysLimit::get() as usize)
+                {
+                    if outcome == winner_outcome {
+                        let reward_account_free_balance =
+                            T::Currency::free_balance(&reward_account);
+                        // Return funds to caller without charging a transfer fee
+                        let _ = T::Currency::resolve_into_existing(
+                            &account,
+                            T::Currency::withdraw(
+                                &reward_account,
+                                reward_account_free_balance,
+                                WithdrawReasons::TRANSFER,
+                                ExistenceRequirement::AllowDeath,
+                            )?,
+                        );
+                        outcome_owner_rewarded = true;
+                    }
+                    if <OutcomeVotes<T>>::get(market_id, outcome.clone()).is_some() {
+                        <OutcomeVotes<T>>::remove(market_id, outcome);
+                    }
+                }
+            }
+
+            if outcome_owner_rewarded {
+                Self::deposit_event(Event::OutcomeOwnerRewarded(market_id));
+            }
+            
             Ok(().into())
         }
 
@@ -86,56 +128,44 @@ mod pallet {
         pub fn vote_on_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            #[pallet::compact] outcome_index: OutcomeIndex,
+            outcome: OutcomeReport,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(amount <= T::Currency::free_balance(&sender), Error::<T>::InsufficientAmount);
             ensure!(amount >= T::MinOutcomeVoteAmount::get(), Error::<T>::AmountTooLow);
 
-            let outcomes = <Outcomes<T>>::get(market_id);
-            let outcome_number = outcomes.len();
-            ensure!(outcome_number >= One::one(), Error::<T>::NoGlobalDisputeStarted);
+            ensure!(Self::is_started(&market_id), Error::<T>::NoGlobalDisputeStarted);
 
-            ensure!(
-                outcome_number >= T::MinOutcomes::get() as usize,
-                Error::<T>::NotEnoughOutcomes
-            );
-
-            let mut outcome_vote_sum = <OutcomeVotes<T>>::get(market_id, outcome_index).unwrap_or(Zero::zero());
-
-            let outcome: &OutcomeReport = outcomes.get(outcome_index as usize).ok_or(Error::<T>::OutcomeDoesNotExist)?;
+            let mut outcome_vote_sum = <OutcomeVotes<T>>::get(market_id, &outcome)
+                .ok_or(Error::<T>::OutcomeDoesNotExist)?;
 
             <LockInfoOf<T>>::mutate(&sender, market_id, |lock_info| {
                 let mut add_to_outcome_sum = |a| {
                     outcome_vote_sum = outcome_vote_sum.saturating_add(a);
                     <Winners<T>>::mutate(market_id, |highest| {
-                        *highest = Some(highest.map_or(
-                            (outcome_index, outcome_vote_sum),
-                            |(prev_i, prev_highest_sum)| {
+                        *highest = Some(highest.clone().map_or(
+                            (outcome.clone(), outcome_vote_sum, false),
+                            |(prev_outcome, prev_highest_sum, _is_finished)| {
                                 if outcome_vote_sum >= prev_highest_sum {
-                                    (outcome_index, outcome_vote_sum)
+                                    (outcome.clone(), outcome_vote_sum, false)
                                 } else {
-                                    (prev_i, prev_highest_sum)
+                                    (prev_outcome, prev_highest_sum, false)
                                 }
                             },
                         ));
                     });
-                    <OutcomeVotes<T>>::insert(market_id, outcome_index, outcome_vote_sum);
+                    <OutcomeVotes<T>>::insert(market_id, &outcome, outcome_vote_sum);
                 };
-                if let Some((prev_index, prev_highest_amount)) = lock_info {
+                if let Some(prev_highest_amount) = lock_info {
                     if amount >= *prev_highest_amount {
-                        if outcome_index == *prev_index {
-                            let diff = amount.saturating_sub(*prev_highest_amount);
-                            add_to_outcome_sum(diff);
-                        } else {
-                            add_to_outcome_sum(amount);
-                        }
-                        *lock_info = Some((outcome_index, amount));
+                        let diff = amount.saturating_sub(*prev_highest_amount);
+                        add_to_outcome_sum(diff);
+                        *lock_info = Some(amount);
                     }
                 } else {
                     add_to_outcome_sum(amount);
-                    *lock_info = Some((outcome_index, amount));
+                    *lock_info = Some(amount);
                 }
             });
 
@@ -146,7 +176,7 @@ mod pallet {
                 WithdrawReasons::TRANSFER,
             );
 
-            Self::deposit_event(Event::VotedOnOutcome(market_id, outcome_index, amount));
+            Self::deposit_event(Event::VotedOnOutcome(market_id, outcome, amount));
             Ok(Some(T::WeightInfo::vote_on_outcome()).into())
         }
 
@@ -161,15 +191,12 @@ mod pallet {
 
             let mut lock_needed: BalanceOf<T> = Zero::zero();
             let mut resolved_ids = Vec::new();
-            for (market_id, (outcome_index, locked_balance)) in <LockInfoOf<T>>::iter_prefix(&voter)
-            {
-                if <Winners<T>>::get(market_id).is_none() {
+            for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&voter) {
+                // true is pattern matching for is_finished
+                if let Some((_winner_outcome, _winner_vote_balance, true)) =
+                    <Winners<T>>::get(market_id)
+                {
                     resolved_ids.push(market_id);
-                    if <OutcomeVotes<T>>::get(market_id, outcome_index).is_some() {
-                        // TODO if there is no lock for the outcome index, then the storage for this is never removed
-                        // TODO maybe think about removing prefix with a limit of 5
-                        <OutcomeVotes<T>>::remove(market_id, outcome_index);
-                    }
                     continue;
                 }
                 lock_needed = lock_needed.max(locked_balance);
@@ -205,8 +232,7 @@ mod pallet {
         >;
 
         /// The currency to allow locking funds for voting.
-        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
-            + NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
+        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         /// The pallet identifier.
         #[pallet::constant]
@@ -223,31 +249,27 @@ mod pallet {
         #[pallet::constant]
         type VotingOutcomeFee: Get<BalanceOf<Self>>;
 
-        /// The minimum number of outcomes required to allow voting.
+        /// The maximum number of keys to remove from a storage map.
         #[pallet::constant]
-        type MinOutcomes: Get<u32>;
-
-        /// The maximum number of possible outcomes.
-        #[pallet::constant]
-        type MaxOutcomeLimit: Get<u32>;
+        type RemoveKeysLimit: Get<u32>;
 
         type WeightInfo: WeightInfoZeitgeist;
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The vote on this outcome index is not allowed, because there are not at least a minimum number of outcomes.
-        NotEnoughOutcomes,
         /// The outcome specified with vote id and outcome index is not present.
         OutcomeDoesNotExist,
         /// Sender does not have enough funds for the vote on an outcome.
         InsufficientAmount,
+        /// The global dispute period is not over yet. The winner is not yet determined.
+        UnfinishedGlobalDispute,
         /// Sender tried to vote with an amount below a defined minium.
         AmountTooLow,
-        /// The number of maximum outcomes is reached.
-        MaxOutcomeLimitReached,
         /// No global dispute present at the moment.
         NoGlobalDisputeStarted,
+        /// The voting outcome has been already added.
+        OutcomeAlreadyExists,
     }
 
     #[pallet::event]
@@ -256,10 +278,12 @@ mod pallet {
     where
         T: Config,
     {
-        /// A vote happened on an outcome. \[market_id, outcome_index, vote_amount\]
-        VotedOnOutcome(MarketIdOf<T>, u32, BalanceOf<T>),
+        /// A vote happened on an outcome. \[market_id, outcome, vote_amount\]
+        VotedOnOutcome(MarketIdOf<T>, OutcomeReport, BalanceOf<T>),
         /// A new outcome has been pushed. \[market_id, outcome_report\]
-        PushedVotingOutcome(MarketIdOf<T>, OutcomeReport),
+        AddedVotingOutcome(MarketIdOf<T>, OutcomeReport),
+        /// The outcome owner has been rewarded. \[market_id\]
+        OutcomeOwnerRewarded(MarketIdOf<T>),
     }
 
     impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, BalanceOf<T>> for Pallet<T>
@@ -271,42 +295,47 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             outcome: OutcomeReport,
             vote_balance: BalanceOf<T>,
-        ) -> Result<(), DispatchError> {
-            let mut outcomes = <Outcomes<T>>::get(market_id);
-            ensure!(outcomes.try_push(outcome).is_ok(), Error::<T>::MaxOutcomeLimitReached);
-            let outcome_index = outcomes.len().saturated_into::<u32>().saturating_sub(One::one());
-            <Winners<T>>::mutate(market_id, |highest| {
-                *highest = Some(highest.map_or(
-                    (outcome_index, vote_balance),
-                    |(prev_i, prev_highest_sum)| {
-                        if vote_balance >= prev_highest_sum {
-                            (outcome_index, vote_balance)
-                        } else {
-                            (prev_i, prev_highest_sum)
-                        }
-                    },
-                ));
-            });
-            <Outcomes<T>>::insert(market_id, outcomes);
-            <OutcomeVotes<T>>::insert(market_id, outcome_index, vote_balance);
-            Ok(())
+        ) {
+            let update_winner = |b| {
+                <Winners<T>>::mutate(market_id, |highest| {
+                    *highest = Some(highest.clone().map_or(
+                        (outcome.clone(), b, false),
+                        |(prev_outcome, prev_highest_sum, _is_finished)| {
+                            if b >= prev_highest_sum {
+                                (outcome.clone(), b, false)
+                            } else {
+                                (prev_outcome, prev_highest_sum, false)
+                            }
+                        },
+                    ));
+                });
+            };
+            match <OutcomeVotes<T>>::get(market_id, outcome.clone()) {
+                Some(b) => {
+                    let outcome_sum = b.saturating_add(vote_balance);
+                    update_winner(outcome_sum);
+                    <OutcomeVotes<T>>::insert(market_id, outcome, outcome_sum);
+                }
+                None => {
+                    update_winner(vote_balance);
+                    <OutcomeVotes<T>>::insert(market_id, outcome, vote_balance);
+                }
+            }
         }
 
         /// Determine the outcome with the most amount of tokens.
         fn get_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
-            let winning_outcome_index =
-                <Winners<T>>::get(market_id).map(|(i, _)| i as usize).unwrap_or(0usize);
+            let winner = <Winners<T>>::get(market_id);
 
-            let winning_outcome = <Outcomes<T>>::get(market_id).get(winning_outcome_index).cloned();
+            if let Some((outcome, vote_balance, _is_finished)) = &winner {
+                <Winners<T>>::insert(market_id, (outcome, vote_balance, true));
+            }
 
-            <Outcomes<T>>::remove(market_id);
-            <Winners<T>>::remove(market_id);
-
-            winning_outcome
+            winner.map(|(outcome, _, _)| outcome)
         }
 
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
-            <Outcomes<T>>::get(market_id).len() >= One::one()
+            <OutcomeVotes<T>>::iter_prefix(market_id).take(1).next().is_some()
         }
     }
 
@@ -314,17 +343,12 @@ mod pallet {
     pub struct Pallet<T>(PhantomData<T>);
 
     #[pallet::storage]
-    pub type Winners<T: Config> =
-        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, (OutcomeIndex, BalanceOf<T>), OptionQuery>;
-
-    /// Maps the vote id to the outcome reports.
-    #[pallet::storage]
-    pub type Outcomes<T: Config> = StorageMap<
+    pub type Winners<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         MarketIdOf<T>,
-        BoundedVec<OutcomeReport, T::MaxOutcomeLimit>,
-        ValueQuery,
+        (OutcomeReport, BalanceOf<T>, bool),
+        OptionQuery,
     >;
 
     /// Maps the vote id to the outcome index and the vote balance.  
@@ -334,7 +358,7 @@ mod pallet {
         Blake2_128Concat,
         MarketIdOf<T>,
         Blake2_128Concat,
-        OutcomeIndex,
+        OutcomeReport,
         BalanceOf<T>,
         OptionQuery,
     >;
@@ -349,7 +373,18 @@ mod pallet {
         T::AccountId,
         Blake2_128Concat,
         MarketIdOf<T>,
-        (OutcomeIndex, BalanceOf<T>),
+        BalanceOf<T>,
+        OptionQuery,
+    >;
+
+    #[pallet::storage]
+    pub type OutcomeOwner<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        Blake2_128Concat,
+        OutcomeReport,
+        T::AccountId,
         OptionQuery,
     >;
 }
