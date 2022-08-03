@@ -107,45 +107,45 @@ zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 [features]
 default = []
 parachain = [
-  "zeitgeist-runtime/parachain", # Cumulus
-  "cumulus-client-cli",
-  "cumulus-client-collator",
-  "cumulus-client-consensus-common",
-  "cumulus-client-consensus-relay-chain",
-  "cumulus-client-network",
-  "cumulus-client-service",
-  "cumulus-primitives-core",
-  "cumulus-primitives-parachain-inherent",
-  "cumulus-relay-chain-inprocess-interface",
-  "cumulus-relay-chain-interface",
-  "cumulus-relay-chain-rpc-interface", # Parachain
-  "log",
-  "nimbus-consensus",
-  "nimbus-primitives",
-  "pallet-author-inherent",
-  "parachain-staking",
-  "parity-scale-codec",
-  "sc-chain-spec",
-  "sc-network",
-  "sc-tracing",
-  "serde",
-  "sp-keystore",
-  "sp-trie",
-  "substrate-prometheus-endpoint", # Polkadot
-  "polkadot-cli",
-  "polkadot-parachain",
-  "polkadot-primitives",
-  "polkadot-service",
-  "polkadot-test-service",
+    "zeitgeist-runtime/parachain", # Cumulus
+    "cumulus-client-cli",
+    "cumulus-client-collator",
+    "cumulus-client-consensus-common",
+    "cumulus-client-consensus-relay-chain",
+    "cumulus-client-network",
+    "cumulus-client-service",
+    "cumulus-primitives-core",
+    "cumulus-primitives-parachain-inherent",
+    "cumulus-relay-chain-inprocess-interface",
+    "cumulus-relay-chain-interface",
+    "cumulus-relay-chain-rpc-interface", # Parachain
+    "log",
+    "nimbus-consensus",
+    "nimbus-primitives",
+    "pallet-author-inherent",
+    "parachain-staking",
+    "parity-scale-codec",
+    "sc-chain-spec",
+    "sc-network",
+    "sc-tracing",
+    "serde",
+    "sp-keystore",
+    "sp-trie",
+    "substrate-prometheus-endpoint", # Polkadot
+    "polkadot-cli",
+    "polkadot-parachain",
+    "polkadot-primitives",
+    "polkadot-service",
+    "polkadot-test-service",
 ]
 runtime-benchmarks = [
-  "frame-benchmarking/runtime-benchmarks",
-  "polkadot-service?/runtime-benchmarks",
-  "zeitgeist-runtime/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "polkadot-service?/runtime-benchmarks",
+    "zeitgeist-runtime/runtime-benchmarks",
 ]
 try-runtime = [
-  "zeitgeist-runtime/try-runtime",
-  "try-runtime-cli",
+    "zeitgeist-runtime/try-runtime",
+    "try-runtime-cli",
 ]
 without-sudo = []
 
