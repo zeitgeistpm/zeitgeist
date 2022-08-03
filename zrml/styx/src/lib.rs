@@ -12,7 +12,7 @@ pub use pallet::*;
 pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
-        traits::{Currency, NamedReservableCurrency},
+        traits::{Currency},
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::SaturatedConversion;
@@ -27,7 +27,7 @@ pub mod pallet {
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        type Currency: NamedReservableCurrency<Self::AccountId, ReserveIdentifier = [u8; 8]>;
+        type Currency: Currency<Self::AccountId>;
 
         type WeightInfo: WeightInfoZeitgeist;
     }
