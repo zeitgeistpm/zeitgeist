@@ -3,7 +3,7 @@ substrate-wasm-builder = { branch = "moonbeam-polkadot-v0.9.19", git = "https://
 
 [dependencies]
 frame-executive = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-support = {branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate"}
+frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 orml-benchmarking = { branch = "2022-06-v0.9.19", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
