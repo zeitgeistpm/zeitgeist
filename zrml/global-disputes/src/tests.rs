@@ -5,7 +5,7 @@ use crate::{
     mock::{
         Balances, ExtBuilder, GlobalDisputes, Origin, Runtime, ALICE, BOB, CHARLIE, EVE, POOR_PAUL,
     },
-    Error, LockInfoOf, OutcomeVotes, Outcomes,
+    Error, LockInfoOf, OutcomeVotes,
 };
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
 use pallet_balances::BalanceLock;

@@ -27,6 +27,7 @@ mod pallet {
             Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,
             WithdrawReasons,
         },
+        storage::child::KillStorageResult,
         Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
@@ -85,7 +86,6 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let mut outcome_owner_rewarded = false;
             if let Some((winner_outcome, _winner_vote_balance, is_finished)) =
                 <Winners<T>>::get(market_id)
             {
@@ -107,18 +107,20 @@ mod pallet {
                                 ExistenceRequirement::AllowDeath,
                             )?,
                         );
-                        outcome_owner_rewarded = true;
+                        Self::deposit_event(Event::OutcomeOwnerRewarded(market_id));
                     }
-                    if <OutcomeVotes<T>>::get(market_id, outcome.clone()).is_some() {
-                        <OutcomeVotes<T>>::remove(market_id, outcome);
-                    }
+                }
+                if <OutcomeOwner<T>>::iter_prefix(market_id).take(1).next().is_some() {
+                    Self::deposit_event(Event::OutcomeOwnersPartiallyCleaned(market_id));
+                } else {
+                    Self::deposit_event(Event::OutcomeOwnersFullyCleaned(market_id));
+                }
+                match <OutcomeVotes<T>>::remove_prefix(market_id, Some(T::RemoveKeysLimit::get())) {
+                    KillStorageResult::AllRemoved(_) => Self::deposit_event(Event::OutcomeVotesFullyCleaned(market_id)),
+                    KillStorageResult::SomeRemaining(_) => Self::deposit_event(Event::OutcomeVotesPartiallyCleaned(market_id)),
                 }
             }
 
-            if outcome_owner_rewarded {
-                Self::deposit_event(Event::OutcomeOwnerRewarded(market_id));
-            }
-            
             Ok(().into())
         }
 
@@ -284,6 +286,14 @@ mod pallet {
         AddedVotingOutcome(MarketIdOf<T>, OutcomeReport),
         /// The outcome owner has been rewarded. \[market_id\]
         OutcomeOwnerRewarded(MarketIdOf<T>),
+        /// The outcome votes storage item is partially cleaned. So there are some missing. \[market_id\]
+        OutcomeVotesPartiallyCleaned(MarketIdOf<T>),
+        /// The outcome votes storage item is fully cleaned. \[market_id\]
+        OutcomeVotesFullyCleaned(MarketIdOf<T>),
+        /// The outcome owners storage item is fully cleaned. \[market_id\]
+        OutcomeOwnersPartiallyCleaned(MarketIdOf<T>),
+        /// The outcome owners storage item is fully cleaned. \[market_id\]
+        OutcomeOwnersFullyCleaned(MarketIdOf<T>),
     }
 
     impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, BalanceOf<T>> for Pallet<T>

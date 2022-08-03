@@ -96,6 +96,7 @@ parameter_types! {
     pub const MaxOutcomeLimit: u32 = u32::MAX;
     pub const MinOutcomes: u32 = 2;
     pub const VotingOutcomeFee: Balance = 100 * CENT;
+    pub const RemoveKeysLimit: u32 = 250;
 }
 
 // Swaps parameters

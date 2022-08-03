@@ -438,41 +438,20 @@ mod pallet {
             // add report outcome to voting choices
             if let Some(report) = market.report {
                 // TODO what bond is for reporting? instead of using zero here
-                if let Err(err) = T::GlobalDisputes::push_voting_outcome(
+                T::GlobalDisputes::push_voting_outcome(
                     &market_id,
                     report.outcome,
                     <BalanceOf<T>>::zero(),
-                ) {
-                    // error happens if the maximum number of outcomes is reached
-                    // this should not happen for the first pushed voting outcome (report outcome)
-                    log::error!(
-                        "[PredictionMarkets] Cannot push report outcome to the voting outcomes. \
-                         market id.
-                    market_id: {:?}, error: {:?}",
-                        &market_id,
-                        err
-                    );
-                }
+                );
             }
 
             for (index, MarketDispute { at: _, by: _, outcome }) in disputes.iter().enumerate() {
                 let dispute_bond = default_dispute_bond::<T>(index);
-                if let Err(err) = T::GlobalDisputes::push_voting_outcome(
+                T::GlobalDisputes::push_voting_outcome(
                     &market_id,
                     outcome.clone(),
                     dispute_bond,
-                ) {
-                    // error happens if the maximum number of outcomes is reached
-                    // this should not happen for the first `MaxDisputes` outcomes
-                    // because the maximum number of outcomes is at least greater than `MaxDisputes` + 1 for the report outcome
-                    log::error!(
-                        "[PredictionMarkets] Cannot push dispute outcome to the voting outcomes. \
-                         market id.
-                    market_id: {:?}, error: {:?}",
-                        &market_id,
-                        err
-                    );
-                }
+                );
             }
 
             // ensure, that global disputes controls the resolution now
