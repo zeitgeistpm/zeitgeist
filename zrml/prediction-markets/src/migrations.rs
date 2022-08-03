@@ -375,7 +375,7 @@ mod tests {
     use orml_traits::MultiCurrency;
     use sp_runtime::traits::BlockNumberProvider;
     use zeitgeist_primitives::{
-        constants::{DisputePeriod, BASE, MILLISECS_PER_BLOCK},
+        constants::{BASE, MILLISECS_PER_BLOCK},
         traits::Swaps as SwapsApi,
         types::{
             Asset, BlockNumber, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
