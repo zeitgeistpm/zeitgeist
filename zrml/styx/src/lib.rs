@@ -39,7 +39,7 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn DefaultBurnAmount<T: Config>() -> Balance {
-        (zeitgeist_primitives::constants::BASE * 100).saturated_into()
+        (zeitgeist_primitives::constants::BASE * 200).saturated_into()
     }
 
     /// An extra layer of pseudo randomness.
