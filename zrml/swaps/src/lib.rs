@@ -4,6 +4,7 @@
 //! liquidity providers to deposit full outcome shares and earn fees.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 
@@ -78,7 +79,7 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -371,9 +372,12 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             let pool = Self::pool_by_id(pool_id)?;
+            ensure!(
+                matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                Error::<T>::InvalidPoolStatus,
+            );
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
 
-            Self::check_if_pool_is_active(&pool)?;
             let params = PoolParams {
                 asset_bounds: max_assets_in,
                 event: |evt| Self::deposit_event(Event::PoolJoin(evt)),
@@ -431,7 +435,7 @@ mod pallet {
                     &who,
                     |user_subsidy| {
                         if let Some(prev_val) = user_subsidy {
-                            *prev_val += amount;
+                            *prev_val = prev_val.saturating_add(amount);
                         } else {
                             // If the account adds subsidy for the first time, ensure that it's
                             // larger than the minimum amount.
@@ -442,7 +446,7 @@ mod pallet {
                             *user_subsidy = Some(amount);
                         }
 
-                        pool.total_subsidy = Some(total_subsidy + amount);
+                        pool.total_subsidy = Some(total_subsidy.saturating_add(amount));
                         Ok(())
                     },
                 )?;
@@ -766,6 +770,8 @@ mod pallet {
         InvalidAmountArgument,
         /// Could not create CPMM pool since no fee was supplied.
         InvalidFeeArgument,
+        /// Dispatch called on pool with invalid status.
+        InvalidPoolStatus,
         /// A function that is only valid for pools with specific scoring rules was called for a
         /// pool with another scoring rule.
         InvalidScoringRule,
@@ -847,6 +853,8 @@ mod pallet {
         PoolClosed(PoolId),
         /// A pool was cleaned up. \[pool_id\]
         PoolCleanedUp(PoolId),
+        /// A pool was opened. \[pool_id\]
+        PoolActive(PoolId),
         /// Someone has exited a pool. \[PoolAssetsEvent\]
         PoolExit(
             PoolAssetsEvent<
@@ -1423,7 +1431,7 @@ mod pallet {
                         );
                         T::AssetManager::deposit(pool_shares_id, &who, amount_unwrapped)?;
 
-                        let pool_status = PoolStatus::Active;
+                        let pool_status = PoolStatus::Initialized;
                         let total_subsidy = None;
                         let total_weight = Some(total_weight);
                         let weights = Some(map);
@@ -1476,7 +1484,10 @@ mod pallet {
 
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
-                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
+                ensure!(
+                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                    Error::<T>::InvalidStateTransition,
+                );
                 pool.pool_status = PoolStatus::Closed;
                 Ok(())
             })?;
@@ -1682,6 +1693,20 @@ mod pallet {
                     Err(err) => TransactionOutcome::Rollback(Err(err)),
                 }
             })
+        }
+
+        fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            Self::mutate_pool(pool_id, |pool| {
+                ensure!(
+                    pool.pool_status == PoolStatus::Initialized,
+                    Error::<T>::InvalidStateTransition
+                );
+                pool.pool_status = PoolStatus::Active;
+                Ok(())
+            })?;
+            Self::deposit_event(Event::PoolActive(pool_id));
+            // TODO(#603): Fix weight calculation!
+            Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
         /// Pool - Exit with exact pool amount
@@ -2035,7 +2060,8 @@ mod pallet {
                                 outstanding_before.push(total_amount);
 
                                 if *asset == asset_out {
-                                    outstanding_after.push(total_amount + asset_amount_out);
+                                    outstanding_after
+                                        .push(total_amount.saturating_add(asset_amount_out));
                                 } else {
                                     outstanding_after.push(total_amount);
                                 }

@@ -23,4 +23,6 @@ pub enum PoolStatus {
     Closed,
     /// The pool has been cleaned up, usually after the corresponding market has been resolved.
     Clean,
+    /// The pool has just been created.
+    Initialized,
 }

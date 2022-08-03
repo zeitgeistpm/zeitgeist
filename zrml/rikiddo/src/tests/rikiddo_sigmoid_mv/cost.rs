@@ -8,7 +8,7 @@ use crate::{traits::Lmsr, types::RikiddoFormulaComponents, utils::convert_to_sig
 #[test]
 fn rikiddo_cost_function_rejects_empty_list() {
     let rikiddo = Rikiddo::default();
-    assert_err!(rikiddo.cost(&vec![]), "[RikiddoSigmoidMV] No asset balances provided");
+    assert_err!(rikiddo.cost(&[]), "[RikiddoSigmoidMV] No asset balances provided");
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn rikiddo_cost_function_overflow_during_fee_times_balance_sum() {
     rikiddo.config.initial_fee = <FixedI128<U64>>::from_num(i64::MAX);
     let param = <FixedU128<U64>>::from_num(i64::MAX);
     assert_err!(
-        rikiddo.cost(&vec![param]),
+        rikiddo.cost(&[param]),
         "[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance"
     );
 }
@@ -40,7 +40,7 @@ fn rikiddo_cost_function_overflow_during_calculation_of_exponent() {
         <FixedI128<U64>>::from_bits(0x0000_0000_0000_0000_0000_0000_0000_0001);
     let param = <FixedU128<U64>>::from_num(i64::MAX);
     assert_err!(
-        rikiddo.cost(&vec![param]),
+        rikiddo.cost(&[param]),
         "[RikiddoSigmoidMV] Overflow during calculation: expontent_i = asset_balance_i / \
          denominator"
     );
@@ -53,7 +53,7 @@ fn rikiddo_cost_function_overflow_during_calculation_of_result() {
     rikiddo.config.log2_e = <FixedI128<U64>>::from_num(i64::MAX >> 1);
     let param = <FixedU128<U64>>::from_num(i64::MAX as u64 >> 1);
     assert_err!(
-        rikiddo.cost(&vec![param, param]),
+        rikiddo.cost(&[param, param]),
         "[RikiddoSigmoidMV] Overflow during calculation: fee * total_asset_balance * \
          ln(sum_i(e^i))"
     );
@@ -107,7 +107,7 @@ fn rikiddo_cost_helper_does_set_all_values() -> Result<(), &'static str> {
     let rikiddo = Rikiddo::default();
     let param = <FixedU128<U64>>::from_num(1);
     let mut formula_components = RikiddoFormulaComponents::default();
-    let _ = rikiddo.cost_with_forumla(&vec![param, param], &mut formula_components, true, true)?;
+    let _ = rikiddo.cost_with_forumla(&[param, param], &mut formula_components, true, true)?;
     let zero: FixedI128<U64> = 0.to_fixed();
     assert_ne!(formula_components.one, zero);
     assert_ne!(formula_components.fee, zero);
@@ -127,10 +127,10 @@ fn rikiddo_cost_helper_does_return_cost_minus_sum_quantities() -> Result<(), &'s
     let mut formula_components = RikiddoFormulaComponents::default();
     let quantities = &vec![param, param];
     let cost_without_sum_quantities =
-        rikiddo.cost_with_forumla(&quantities, &mut formula_components, true, false)?;
+        rikiddo.cost_with_forumla(quantities, &mut formula_components, true, false)?;
     let cost_from_price_formula_times_sum_quantities =
         cost_without_sum_quantities * formula_components.sum_balances;
-    let cost: FixedI128<U64> = convert_to_signed(rikiddo.cost(&quantities)?)?;
+    let cost: FixedI128<U64> = convert_to_signed(rikiddo.cost(quantities)?)?;
     let difference_abs = (cost - cost_from_price_formula_times_sum_quantities).abs();
     assert!(
         difference_abs <= max_allowed_error(64),
