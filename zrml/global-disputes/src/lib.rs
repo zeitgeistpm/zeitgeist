@@ -53,6 +53,9 @@ mod pallet {
             let sender = ensure_signed(origin)?;
 
             ensure!(Self::is_started(&market_id), Error::<T>::NoGlobalDisputeStarted);
+            if let Some((_winner_outcome, _winner_vote_balance, is_finished)) = <Winners<T>>::get(market_id) {
+                ensure!(!is_finished, Error::<T>::GlobalDisputeAlreadyFinished);
+            }
 
             ensure!(
                 <OutcomeVotes<T>>::get(market_id, outcome.clone()).is_none(),
@@ -97,17 +100,19 @@ mod pallet {
                     if outcome == winner_outcome {
                         let reward_account_free_balance =
                             T::Currency::free_balance(&reward_account);
-                        // Return funds to caller without charging a transfer fee
-                        let _ = T::Currency::resolve_into_existing(
-                            &account,
-                            T::Currency::withdraw(
-                                &reward_account,
-                                reward_account_free_balance,
-                                WithdrawReasons::TRANSFER,
-                                ExistenceRequirement::AllowDeath,
-                            )?,
-                        );
-                        Self::deposit_event(Event::OutcomeOwnerRewarded(market_id));
+                        // Reward the loosing funds to the winner without charging a transfer fee
+                        if !reward_account_free_balance.is_zero() {
+                            let _ = T::Currency::resolve_into_existing(
+                                &account,
+                                T::Currency::withdraw(
+                                    &reward_account,
+                                    reward_account_free_balance,
+                                    WithdrawReasons::TRANSFER,
+                                    ExistenceRequirement::AllowDeath,
+                                )?,
+                            );
+                            Self::deposit_event(Event::OutcomeOwnerRewarded(market_id));
+                        }
                     }
                 }
                 if <OutcomeOwner<T>>::iter_prefix(market_id).take(1).next().is_some() {
@@ -272,6 +277,8 @@ mod pallet {
         NoGlobalDisputeStarted,
         /// The voting outcome has been already added.
         OutcomeAlreadyExists,
+        /// The global dispute is already over.
+        GlobalDisputeAlreadyFinished,
     }
 
     #[pallet::event]
@@ -345,7 +352,7 @@ mod pallet {
         }
 
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
-            <OutcomeVotes<T>>::iter_prefix(market_id).take(1).next().is_some()
+            <Winners<T>>::get(market_id).is_some()
         }
     }
 
