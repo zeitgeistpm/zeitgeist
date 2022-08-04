@@ -441,13 +441,14 @@ mod pallet {
                 T::GlobalDisputes::push_voting_outcome(
                     &market_id,
                     report.outcome,
+                    &report.by,
                     <BalanceOf<T>>::zero(),
                 );
             }
 
-            for (index, MarketDispute { at: _, by: _, outcome }) in disputes.iter().enumerate() {
+            for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
                 let dispute_bond = default_dispute_bond::<T>(index);
-                T::GlobalDisputes::push_voting_outcome(&market_id, outcome.clone(), dispute_bond);
+                T::GlobalDisputes::push_voting_outcome(&market_id, outcome.clone(), &by, dispute_bond);
             }
 
             // ensure, that global disputes controls the resolution now
@@ -1153,7 +1154,7 @@ mod pallet {
         >;
 
         /// See [`GlobalDisputesPalletApi`].
-        type GlobalDisputes: GlobalDisputesPalletApi<MarketIdOf<Self>, BalanceOf<Self>>;
+        type GlobalDisputes: GlobalDisputesPalletApi<MarketIdOf<Self>, Self::AccountId, BalanceOf<Self>>;
 
         /// The number of blocks the global dispute period remains open.
         #[pallet::constant]
