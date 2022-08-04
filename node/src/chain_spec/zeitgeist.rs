@@ -1,3 +1,5 @@
+#![cfg(feature = "with-zeitgeist-runtime")]
+
 use crate::chain_spec::{
     additional_chain_spec_staging_mainnet, endowed_accounts_staging_mainnet, generic_genesis,
     telemetry_endpoints, token_properties, zeitgeist_wasm, ChainSpec,

@@ -5,7 +5,7 @@ mod service_standalone;
 
 use sp_runtime::traits::BlakeTwo256;
 use zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId};
-use zeitgeist_runtime::Block;
+use zeitgeist_runtime::opaque::Block;
 
 #[cfg(feature = "parachain")]
 pub use service_parachain::{new_full, new_partial, FullClient, FullBackend, ParachainPartialComponents};
@@ -194,7 +194,8 @@ where
 	RuntimeApi:
 		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+            + AdditionalRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
@@ -204,7 +205,7 @@ where
 		import_queue,
 		task_manager,
 		..
-	} = new_partial::<RuntimeApi, Executor>(config, config.chain_spec.is_dev())?;
+	} = new_partial::<RuntimeApi, Executor>(config)?;
 	Ok((
 		Arc::new(Client::from(client)),
 		backend,

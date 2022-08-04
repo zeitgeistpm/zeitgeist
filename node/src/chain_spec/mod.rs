@@ -1,3 +1,4 @@
+/*
 mod additional_chain_spec;
 mod battery_station;
 mod dev;
@@ -181,6 +182,7 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
         .expect("static values are valid; qed")
         .public()
 }
+*/
 
 /// The extensions for the [`ChainSpec`].
 #[cfg(feature = "parachain")]
@@ -208,7 +210,7 @@ impl Extensions {
         sc_chain_spec::get_extension(chain_spec.extensions())
     }
 }
-
+/*
 // Testnet configuration
 
 #[cfg(feature = "parachain")]
@@ -361,3 +363,5 @@ fn token_properties(token_symbol: &str) -> Map<String, Value> {
 fn zeitgeist_wasm() -> Result<&'static [u8], String> {
     zeitgeist_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
+
+*/

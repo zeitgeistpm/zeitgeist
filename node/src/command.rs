@@ -1,6 +1,6 @@
 use super::{
     cli::{Cli, Subcommand},
-    command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
+    //command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
     service::{new_partial, new_chain_ops},
 };
 use frame_benchmarking_cli::BenchmarkCmd;
@@ -27,6 +27,7 @@ pub fn run() -> sc_cli::Result<()> {
 
     match &cli.subcommand {
         Some(Subcommand::Benchmark(cmd)) => {
+            /*
             let runner = cli.create_runner(cmd)?;
 
             runner.sync_run(|config| {
@@ -64,7 +65,7 @@ pub fn run() -> sc_cli::Result<()> {
 							}
 							_ => panic!("invalid chain spec"),
 						}*/
-                        cmd.run(config);
+                        cmd.run(config)
                     }
                     BenchmarkCmd::Block(cmd) => cmd.run(client),
                     BenchmarkCmd::Storage(cmd) => {
@@ -73,6 +74,7 @@ pub fn run() -> sc_cli::Result<()> {
 
                         cmd.run(config, client, db, storage)
                     }
+                    /*
                     BenchmarkCmd::Overhead(cmd) => {
                         if cfg!(feature = "parachain") {
                             Err("Overhead is only supported in standalone chain".into())
@@ -86,8 +88,11 @@ pub fn run() -> sc_cli::Result<()> {
                             )
                         }
                     }
+                    */
                 }
             })
+            */
+            Ok(())
         }
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
@@ -111,7 +116,7 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::ExportHeader(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
-            runner.sync_run(|config| {
+            runner.sync_run(|mut config| {
                 let (client, _, _, _) = new_chain_ops(&mut config)?;
 
                 match client.block(&cmd.input.parse()?) {
@@ -217,6 +222,7 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| cmd.run(config.database))
         }
         Some(Subcommand::Revert(cmd)) => {
+            /*
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|config| {
                 let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
@@ -228,6 +234,8 @@ pub fn run() -> sc_cli::Result<()> {
 
                 Ok((cmd.run(client, backend, Some(aux_revert)), task_manager))
             })
+            */
+            Ok(())
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
@@ -284,7 +292,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         >::into_account(&parachain_id);
 
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
-        let block =
+        let block: zeitgeist_runtime::Block =
             cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)
                 .map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));

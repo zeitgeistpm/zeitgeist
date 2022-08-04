@@ -16,7 +16,7 @@ use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
-use zeitgeist_runtime::{Block, RuntimeApi};
+use zeitgeist_runtime::{opaque::Block, RuntimeApi};
 
 pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;

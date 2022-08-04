@@ -3,7 +3,7 @@
 mod chain_spec;
 mod cli;
 mod command;
-mod command_helper;
+// mod command_helper;
 mod rpc;
 #[macro_use]
 pub(crate) mod service;

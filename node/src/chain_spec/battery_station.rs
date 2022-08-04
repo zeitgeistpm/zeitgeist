@@ -1,4 +1,4 @@
-#![cfg(feature = "testnet")]
+#![cfg(feature = "with-battery-station-runtime")]
 
 use crate::chain_spec::{
     additional_chain_spec_staging_testnet, endowed_accounts_staging_testnet, generic_genesis,

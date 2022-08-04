@@ -17,7 +17,7 @@ use {
 pub use zeitgeist_primitives::types::{AccountId, Balance, BlockNumber, Hash, Index};
 use super::service::{FullClient, FullBackend};
 use zeitgeist_runtime::{Header, opaque::Block};
-use super::service::RuntimeApiCollection;
+use super::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection};
 use clap::Parser;
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
@@ -45,7 +45,8 @@ pub fn load_spec(
     id: &str,
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-    Ok(match id {
+    Err("no".to_string())
+    /*Ok(match id {
         "" | "dev" => Box::new(crate::chain_spec::dev_config(
             #[cfg(feature = "parachain")]
             parachain_id,
@@ -73,7 +74,8 @@ pub fn load_spec(
         path => {
             Box::new(crate::chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?)
         }
-    })
+        
+    })*/
 }
 
 
@@ -203,6 +205,7 @@ impl SubstrateCli for Cli {
     }
 }
 
+
 /// Config that abstracts over all available client implementations.
 ///
 /// For a concrete type there exists [`Client`].
@@ -218,7 +221,8 @@ where
 	Block: BlockT,
 	Backend: BackendT<Block>,
 	Backend::State: sp_api::StateBackend<BlakeTwo256>,
-	Self::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+	Self::Api: RuntimeApiCollection<StateBackend = Backend::State>
+        + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
 {
 }
 
@@ -234,7 +238,8 @@ where
 		+ Send
 		+ Sync
 		+ CallApiAt<Block, StateBackend = Backend::State>,
-	Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+	Client::Api: RuntimeApiCollection<StateBackend = Backend::State>
+        + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
 {
 }
 
@@ -261,7 +266,8 @@ pub trait ExecuteWithClient {
 		<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 		Backend: sc_client_api::Backend<Block>,
 		Backend::State: sp_api::StateBackend<BlakeTwo256>,
-		Api: RuntimeApiCollection<StateBackend = Backend::State>,
+		Api: RuntimeApiCollection<StateBackend = Backend::State>
+            + AdditionalRuntimeApiCollection<StateBackend = Backend::State>,
 		Client: AbstractClient<Block, Backend, Api = Api> + 'static;
 }
 
@@ -277,6 +283,7 @@ pub trait ClientHandle {
 	fn execute_with<T: ExecuteWithClient>(&self, t: T) -> T::Output;
 }
 
+
 /// A client instance of Zeitgeist.
 #[derive(Clone)]
 pub enum Client {
@@ -285,6 +292,7 @@ pub enum Client {
 	#[cfg(feature = "with-zeitgeist-runtime")]
 	Zeitgeist(Arc<FullClient<ZGRuntimeApi, ZeitgeistExecutor>>),
 }
+
 
 #[cfg(feature = "with-battery-station-runtime")]
 impl From<Arc<FullClient<BSRuntimeApi, BatteryStationExecutor>>>
