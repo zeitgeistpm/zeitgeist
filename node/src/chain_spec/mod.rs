@@ -1,18 +1,21 @@
-/*
+
 mod additional_chain_spec;
-mod battery_station;
-mod dev;
-mod zeitgeist;
+//#[cfg(feature("with-battery-station-runtime")]
+//mod battery_station;
+//mod dev;
+//#[cfg(feature("with-zeitgeist-runtime")]/
+//mod zeitgeist;
+
 
 pub use additional_chain_spec::AdditionalChainSpec;
-pub use battery_station::battery_station_staging_config;
-pub use dev::dev_config;
+// pub use battery_station::battery_station_staging_config;
+// pub use dev::dev_config;
 use hex_literal::hex;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-pub use zeitgeist::zeitgeist_staging_config;
+// pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
@@ -75,9 +78,9 @@ cfg_if::cfg_if! {
             }
         };
 
-        pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig, Extensions>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec<(), Extensions>;
     } else {
-        pub type ChainSpec = sc_service::GenericChainSpec<zeitgeist_runtime::GenesisConfig>;
+        pub type DummyChainSpec = sc_service::GenericChainSpec<()>;
     }
 }
 
@@ -182,7 +185,7 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
         .expect("static values are valid; qed")
         .public()
 }
-*/
+
 
 /// The extensions for the [`ChainSpec`].
 #[cfg(feature = "parachain")]
@@ -210,7 +213,7 @@ impl Extensions {
         sc_chain_spec::get_extension(chain_spec.extensions())
     }
 }
-/*
+
 // Testnet configuration
 
 #[cfg(feature = "parachain")]
@@ -363,5 +366,3 @@ fn token_properties(token_symbol: &str) -> Map<String, Value> {
 fn zeitgeist_wasm() -> Result<&'static [u8], String> {
     zeitgeist_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
-
-*/

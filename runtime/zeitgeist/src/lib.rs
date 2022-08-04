@@ -37,9 +37,9 @@ use {
     xcm_config::XcmConfig,
 };
 use pallet_transaction_payment::ChargeTransactionPayment;
-use crate::parameters::*;
+pub use crate::parameters::*;
 #[cfg(feature = "parachain")]
-use crate::parachain_params::*;
+pub use crate::parachain_params::*;
 
 
 use frame_support::{construct_runtime};

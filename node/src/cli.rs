@@ -3,7 +3,7 @@ mod cli_parachain;
 
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
-
+use crate::{BATTERY_STATION_RUNTIME_NOT_AVAILABLE, ZEITGEIST_RUNTIME_NOT_AVAILABLE};
 #[cfg(feature = "with-zeitgeist-runtime")]
 use {
     super::service::ZeitgeistExecutor,
@@ -17,7 +17,7 @@ use {
 pub use zeitgeist_primitives::types::{AccountId, Balance, BlockNumber, Hash, Index};
 use super::service::{FullClient, FullBackend};
 use zeitgeist_runtime::{Header, opaque::Block};
-use super::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection};
+use super::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection, IdentifyVariant};
 use clap::Parser;
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
@@ -45,37 +45,63 @@ pub fn load_spec(
     id: &str,
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<Box<dyn sc_service::ChainSpec>, String> {
-    Err("no".to_string())
-    /*Ok(match id {
+    Ok(match id {
+		/*
         "" | "dev" => Box::new(crate::chain_spec::dev_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
-        "battery_station" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
+		*/
+        "battery_station" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/bs_parachain.json")[..],
             #[cfg(not(feature = "parachain"))]
             &include_bytes!("../res/bs.json")[..],
         )?),
+		/*
         "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
-        "zeitgeist" => Box::new(crate::chain_spec::ChainSpec::from_json_bytes(
+		*/
+        "zeitgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/zeitgeist_parachain.json")[..],
             #[cfg(not(feature = "parachain"))]
             &include_bytes!("../res/zeitgeist.json")[..],
         )?),
+		/*
         "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
-        path => {
-            Box::new(crate::chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?)
+		*/
+        path => { 
+			let spec = Box::new(crate::chain_spec::DummyChainSpec::from_json_file(std::path::PathBuf::from(path))?)
+				as Box<dyn ChainSpec>;
+
+			match spec {
+				spec if spec.is_battery_station() => {
+					#[cfg(feature = "with-battery-station-runtime")]
+					// return Box::new(chain_spec::battery_station::ChainSpec::from_json_file(path)?);
+					panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+					#[cfg(not(feature = "with-battery-station-runtime"))]
+					panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+				}
+				spec if spec.is_zeitgeist() => {
+					#[cfg(feature = "with-zeitgeist-runtime")]
+					// return Box::new(chain_spec::zeitgeist::ChainSpec::from_json_file(path)?);
+					panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+					#[cfg(not(feature = "with-zeitgeist-runtime"))]
+					panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE);
+				}
+				_ => {
+					// TODO: Allow usage of arbitrary chain specs
+					panic!("invalid chain spec");
+				}
+			}
         }
-        
-    })*/
+    })
 }
 
 
@@ -196,8 +222,24 @@ impl SubstrateCli for Cli {
         )
     }
 
-    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &zeitgeist_runtime::VERSION
+    fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		match spec {
+			_ if spec.is_battery_station() => {
+				#[cfg(feature = "with-battery-station-runtime")]
+				return &battery_station_runtime::VERSION;
+				#[cfg(not(feature = "with-battery-station-runtime"))]
+				panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+			}
+			_ if spec.is_zeitgeist() => {
+				#[cfg(feature = "with-zeitgeist-runtime")]
+				return &zeitgeist_runtime::VERSION;
+				#[cfg(not(feature = "with-zeitgeist-runtime"))]
+				panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE);
+			}
+			_ => {
+				panic!("invalid chain spec");
+			}
+		}
     }
 
     fn support_url() -> String {

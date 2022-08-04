@@ -8,6 +8,11 @@ mod rpc;
 #[macro_use]
 pub(crate) mod service;
 
+pub const BATTERY_STATION_RUNTIME_NOT_AVAILABLE: &str =
+	"Battery Station runtime is not available. Please compile the node with `--features with-battery-station-runtime` to enable it.";
+pub const ZEITGEIST_RUNTIME_NOT_AVAILABLE: &str =
+	"Zeitgeist runtime is not available. Please compile the node with `--features with-zeitgeist-runtime` to enable it.";
+
 cfg_if::cfg_if!(
     if #[cfg(feature = "parachain")] {
         const KUSAMA_PARACHAIN_ID: u32 = 2101;
