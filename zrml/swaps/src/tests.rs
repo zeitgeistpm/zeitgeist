@@ -2768,7 +2768,6 @@ fn pool_exit_fails_if_balances_drop_too_low() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
         let pool_account_id = Swaps::pool_account_id(pool_id);
-        let pool_shares_id = Swaps::pool_shares_id(pool_id);
 
         // There's one left of each asset.
         assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _99));
@@ -2779,7 +2778,7 @@ fn pool_exit_fails_if_balances_drop_too_low() {
         // We withdraw 99% of it, leaving 0.01 of each asset, which is below minimum balance.
         assert_noop!(
             Swaps::pool_exit(Origin::signed(BOB), pool_id, _99, vec![0; 4]),
-            crate::Error::<Runtime>::LimitOut,
+            crate::Error::<Runtime>::PoolDrain,
         );
     });
 }
@@ -2792,7 +2791,6 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
         let pool_account_id = Swaps::pool_account_id(pool_id);
-        let pool_shares_id = Swaps::pool_shares_id(pool_id);
 
         // There's 1000 left of each asset.
         assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _900));
@@ -2803,7 +2801,7 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
         // We withdraw too much liquidity but leave enough of each asset.
         assert_noop!(
             Swaps::pool_exit(Origin::signed(BOB), pool_id, _100 - MIN_BALANCE + 1, vec![0; 4]),
-            crate::Error::<Runtime>::LimitIn,
+            crate::Error::<Runtime>::PoolDrain,
         );
     });
 }

@@ -132,6 +132,12 @@ mod pallet {
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
+            // If the pool is still in use, prevent a pool drain.
+            if pool.pool_status != PoolStatus::Clean {
+                let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
+                let max_withdraw = total_issuance.saturating_sub(MIN_BALANCE.saturated_into());
+                ensure!(pool_amount <= max_withdraw, Error::<T>::PoolDrain);
+            }
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let params = PoolParams {
                 asset_bounds: min_assets_out,
@@ -141,12 +147,7 @@ mod pallet {
                 pool_id,
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
-                    let balance: u128 =
-                        T::AssetManager::free_balance(asset, &pool_account_id).saturated_into();
-                    ensure!(
-                        amount <= balance.saturating_sub(MIN_BALANCE).saturated_into(),
-                        Error::<T>::LimitOut
-                    );
+                    Self::ensure_minimum_balance(pool_id, asset, amount)?;
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
                     T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
@@ -164,12 +165,6 @@ mod pallet {
                 },
                 who: who_clone,
             };
-
-            // Verify that liquidity doesn't drop too far.
-            let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
-            let max_withdraw = total_issuance.saturating_sub(MIN_BALANCE.saturated_into());
-            ensure!(pool_amount <= max_withdraw, Error::<T>::LimitIn);
-
             crate::utils::pool::<_, _, _, _, T>(params)
         }
 
@@ -819,6 +814,8 @@ mod pallet {
         NoSubsidyProvided,
         /// The pool in question does not exist.
         PoolDoesNotExist,
+        /// A pool balance dropped below the allowed minimum.
+        PoolDrain,
         /// The pool in question is inactive.
         PoolIsNotActive,
         /// The CPMM pool in question does not have a fee, although it should.
@@ -1194,6 +1191,23 @@ mod pallet {
 
         pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
             T::PalletId::get().into_sub_account(pool_id.saturated_into::<u128>())
+        }
+
+        pub(crate) fn ensure_minimum_balance(
+            pool_id: PoolId,
+            asset: Asset<T::MarketId>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let pool = Self::pool_by_id(pool_id)?;
+            // No need to prevent a clean pool from getting drained.
+            if pool.pool_status == PoolStatus::Clean {
+                return Ok(());
+            }
+            let pool_account = Self::pool_account_id(pool_id);
+            let balance = T::AssetManager::free_balance(asset, &pool_account);
+            let max_withdraw = balance.saturating_sub(MIN_BALANCE.saturated_into());
+            ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
+            Ok(())
         }
 
         pub(crate) fn burn_pool_shares(
@@ -1993,6 +2007,7 @@ mod pallet {
                     if let Some(maao) = min_asset_amount_out {
                         ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
                     }
+                    Self::ensure_minimum_balance(pool_id, asset_out, asset_amount_out)?;
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
