@@ -71,7 +71,6 @@ pub fn load_spec(
             #[cfg(not(feature = "parachain"))]
             &include_bytes!("../res/zeitgeist.json")[..],
         )?),
-		/*
 		#[cfg(feature = "with-zeitgeist-runtime")]
         "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config(
             #[cfg(feature = "parachain")]
@@ -79,7 +78,6 @@ pub fn load_spec(
         )?),
 		#[cfg(not(feature = "with-zeitgeist-runtime"))]
 		"zeitgeist_staging" => panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE),
-		*/
         path => { 
 			let spec = Box::new(crate::chain_spec::DummyChainSpec::from_json_file(std::path::PathBuf::from(path))?)
 				as Box<dyn ChainSpec>;

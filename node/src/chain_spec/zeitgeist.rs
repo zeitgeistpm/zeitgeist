@@ -1,7 +1,7 @@
 #![cfg(feature = "with-zeitgeist-runtime")]
 
 use crate::chain_spec::{
-    generic_genesis, telemetry_endpoints, token_properties
+    generate_generic_genesis_function, telemetry_endpoints, token_properties
 };
 use zeitgeist_runtime::parameters::SS58Prefix;
 use sc_service::ChainType;
@@ -18,7 +18,7 @@ use zeitgeist_primitives::{
     },
     types::{AccountId, Balance, Signature},
 };
-use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance, DEFAULT_COLLATOR_INFLATION_INFO};
+use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance};
 
 #[cfg(feature = "parachain")]
 use {
@@ -99,7 +99,7 @@ fn additional_chain_spec_staging_zeitgeist(
 
 #[cfg(not(feature = "parachain"))]
 fn additional_chain_spec_staging_zeitgeist() -> AdditionalChainSpec {
-    additional_chain_spec_staging_testnet()
+    super::battery_station::additional_chain_spec_staging_battery_station()
 }
 
 #[inline]
@@ -107,12 +107,14 @@ fn get_wasm() -> Result<&'static [u8], String> {
     zeitgeist_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 
+generate_generic_genesis_function!(zeitgeist_runtime,);
+
 pub fn zeitgeist_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<ChainSpec, String> {
+) -> Result<ZeitgeistChainSpec, String> {
     let wasm = get_wasm()?;
 
-    Ok(ChainSpec::from_genesis(
+    Ok(ZeitgeistChainSpec::from_genesis(
         "Zeitgeist Staging",
         "zeitgeist_staging",
         ChainType::Live,
@@ -123,7 +125,7 @@ pub fn zeitgeist_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_zeitgeist(),
-                wasm?,
+                wasm,
             )
         },
         vec![],

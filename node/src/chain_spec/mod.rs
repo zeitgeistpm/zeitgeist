@@ -3,8 +3,8 @@ mod additional_chain_spec;
 #[cfg(feature = "with-battery-station-runtime")]
 pub(crate) mod battery_station;
 //mod dev;
-//#[cfg(feature = "with-zeitgeist-runtime")]
-//pub(crate) mod zeitgeist;
+#[cfg(feature = "with-zeitgeist-runtime")]
+pub(crate) mod zeitgeist;
 
 
 pub use additional_chain_spec::AdditionalChainSpec;
@@ -14,7 +14,7 @@ use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-//pub use zeitgeist::zeitgeist_staging_config;
+pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
