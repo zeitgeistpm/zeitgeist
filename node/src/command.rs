@@ -1,7 +1,17 @@
 use super::{
     cli::{Cli, Subcommand},
     //command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
-    service::{new_partial, new_chain_ops},
+    service::{new_partial, new_full, new_chain_ops, IdentifyVariant},
+};
+#[cfg(feature = "with-zeitgeist-runtime")]
+use {
+    super::service::ZeitgeistExecutor,
+    zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi
+};
+#[cfg(feature = "with-battery-station-runtime")]
+use {
+    super::service::BatteryStationExecutor,
+    battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi
 };
 use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
@@ -306,10 +316,29 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain Account: {}", parachain_account);
         log::info!("Parachain genesis state: {}", genesis_state);
 
-        crate::service::new_full(parachain_config, parachain_id, polkadot_config)
-            .await
-            .map(|r| r.0)
-            .map_err(Into::into)
+        match &parachain_config.chain_spec {
+            #[cfg(feature = "with-battery-station-runtime")]
+            spec if spec.is_battery_station() => {
+                new_full::<
+                    BatteryStationRuntimeApi,
+                    BatteryStationExecutor,
+                >(parachain_config, parachain_id, polkadot_config)
+                    .await
+                    .map(|r| r.0)
+                    .map_err(Into::into)
+            }
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            spec if spec.is_zeitgeist() => {
+                new_full::<
+                    ZeitgeistRuntimeApi,
+                    ZeitgeistExecutor,
+                >(parachain_config, parachain_id, polkadot_config)
+                    .await
+                    .map(|r| r.0)
+                    .map_err(Into::into)
+            }
+            _ => panic!("invalid chain spec"),
+        }
     })
 }
 
@@ -317,10 +346,28 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
-        match config.role {
-            sc_cli::Role::Light => return Err("Light client not supported!".into()),
-            _ => crate::service::new_full(config),
+        if let sc_cli::Role::Light = config.role {
+            return Err("Light client not supported!".into())
         }
-        .map_err(sc_cli::Error::Service)
+
+        match &config.chain_spec {
+            #[cfg(feature = "with-battery-station-runtime")]
+            spec if spec.is_battery_station() => {
+                new_full::<
+                    BatteryStationRuntimeApi,
+                    BatteryStationExecutor,
+                >(config)
+                .map_err(sc_cli::Error::Service)
+            }
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            spec if spec.is_zeitgeist() => {
+                new_full::<
+                    ZeitgeistRuntimeApi,
+                    ZeitgeistExecutor,
+                >(config)
+                .map_err(sc_cli::Error::Service)
+            }
+            _ => panic!("invalid chain spec"),
+        }
     })
 }

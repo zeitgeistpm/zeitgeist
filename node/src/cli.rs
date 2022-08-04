@@ -7,12 +7,12 @@ pub use cli_parachain::RelayChainCli;
 #[cfg(feature = "with-zeitgeist-runtime")]
 use {
     super::service::ZeitgeistExecutor,
-    zeitgeist_runtime::RuntimeApi as ZGRuntimeApi
+    zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi
 };
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
-    battery_station_runtime::RuntimeApi as BSRuntimeApi
+    battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi
 };
 pub use zeitgeist_primitives::types::{AccountId, Balance, BlockNumber, Hash, Index};
 use super::service::{FullClient, FullBackend};
@@ -288,29 +288,29 @@ pub trait ClientHandle {
 #[derive(Clone)]
 pub enum Client {
     #[cfg(feature = "with-battery-station-runtime")]
-	BatteryStation(Arc<FullClient<BSRuntimeApi, BatteryStationExecutor>>),
+	BatteryStation(Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>),
 	#[cfg(feature = "with-zeitgeist-runtime")]
-	Zeitgeist(Arc<FullClient<ZGRuntimeApi, ZeitgeistExecutor>>),
+	Zeitgeist(Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>),
 }
 
 
 #[cfg(feature = "with-battery-station-runtime")]
-impl From<Arc<FullClient<BSRuntimeApi, BatteryStationExecutor>>>
+impl From<Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>>
 	for Client
 {
 	fn from(
-		client: Arc<FullClient<BSRuntimeApi, BatteryStationExecutor>>,
+		client: Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>,
 	) -> Self {
 		Self::BatteryStation(client)
 	}
 }
 
 #[cfg(feature = "with-zeitgeist-runtime")]
-impl From<Arc<FullClient<ZGRuntimeApi, ZeitgeistExecutor>>>
+impl From<Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>>
 	for Client
 {
 	fn from(
-		client: Arc<FullClient<ZGRuntimeApi, ZeitgeistExecutor>>,
+		client: Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>,
 	) -> Self {
 		Self::Zeitgeist(client)
 	}

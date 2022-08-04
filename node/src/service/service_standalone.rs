@@ -2,7 +2,7 @@
 
 // TODO: Dynamically select correct executor
 use crate::service::{
-    AdditionalRuntimeApiCollection, RuntimeApiCollection, ZeitgeistExecutor,
+    AdditionalRuntimeApiCollection, RuntimeApiCollection
 };
 use sc_client_api::{BlockBackend, ExecutorProvider};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
@@ -24,7 +24,17 @@ pub type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 /// Builds a new service for a full client.
-pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn new_full<RuntimeApi, Executor>(mut config: Configuration) -> Result<TaskManager, ServiceError> 
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        > + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
+{
     let sc_service::PartialComponents {
         client,
         backend,
@@ -34,7 +44,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         select_chain,
         transaction_pool,
         other: (block_import, grandpa_link, mut telemetry),
-    } = new_partial::<RuntimeApi, ZeitgeistExecutor>(&config)?;
+    } = new_partial::<RuntimeApi, Executor>(&config)?;
 
     if let Some(url) = &config.keystore_remote {
         match remote_keystore(url) {

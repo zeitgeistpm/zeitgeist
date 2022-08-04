@@ -1,6 +1,6 @@
 // TODO: Dynamically select correct executor
 use crate::{
-    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection, ZeitgeistExecutor},
+    service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
     KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
 };
 use cumulus_client_cli::CollatorOptions;
@@ -38,11 +38,21 @@ pub type ParachainPartialComponents<Executor, RuntimeApi> = PartialComponents<
 >;
 
 /// Start a parachain node.
-pub async fn new_full(
+pub async fn new_full<RuntimeApi, Executor>(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
-) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, ZeitgeistExecutor>>)> {
+)  -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        > + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
+{
     do_new_full(
         parachain_config,
         polkadot_config,
