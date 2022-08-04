@@ -79,7 +79,7 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -1484,7 +1484,10 @@ mod pallet {
 
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
-                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
+                ensure!(
+                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                    Error::<T>::InvalidStateTransition,
+                );
                 pool.pool_status = PoolStatus::Closed;
                 Ok(())
             })?;
