@@ -45,12 +45,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install Rust toolchain
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=none
-          source "$HOME/.cargo/env" 
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          rustup show
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
+          default: true
+          override: true
 
       - uses: actions-rs/install@v0.1
         with:
