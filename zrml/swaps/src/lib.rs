@@ -28,6 +28,7 @@ pub use pallet::*;
 mod pallet {
     use crate::{
         check_arithm_rslt::CheckArithmRslt,
+        consts::MIN_BALANCE,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
         fixed::{bdiv, bmul},
         utils::{
@@ -140,6 +141,12 @@ mod pallet {
                 pool_id,
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
+                    let balance: u128 =
+                        T::AssetManager::free_balance(asset, &pool_account_id).saturated_into();
+                    ensure!(
+                        amount <= balance.saturating_sub(MIN_BALANCE).saturated_into(),
+                        Error::<T>::LimitOut
+                    );
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
                     T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
@@ -157,6 +164,12 @@ mod pallet {
                 },
                 who: who_clone,
             };
+
+            // Verify that liquidity doesn't drop too far.
+            let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
+            let max_withdraw = total_issuance.saturating_sub(MIN_BALANCE.saturated_into());
+            ensure!(pool_amount <= max_withdraw, Error::<T>::LimitIn);
+
             crate::utils::pool::<_, _, _, _, T>(params)
         }
 

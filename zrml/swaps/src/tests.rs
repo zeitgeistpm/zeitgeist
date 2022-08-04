@@ -1,6 +1,7 @@
 #![cfg(all(feature = "mock", test))]
 
 use crate::{
+    consts::MIN_BALANCE,
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
     BalanceOf, Config, Event, SubsidyProviders,
@@ -2760,55 +2761,50 @@ fn pool_join_with_uneven_balances() {
 }
 
 #[test]
-fn pool_exit_can_reduce_pool_balance_to_zero() {
+fn pool_exit_fails_if_balances_drop_too_low() {
     ExtBuilder::default().build().execute_with(|| {
-        // This test demonstrates that (in the absence of exit fees), `pool_exit` can reduce
-        // balances in the pool to zero without reducing the total issuance of liquidity shares to
-        // zero.
+        // We drop the balances below `MIN_BALANCE`, but liquidity remains above `MIN_BALANCE`.
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
         let pool_account_id = Swaps::pool_account_id(pool_id);
         let pool_shares_id = Swaps::pool_shares_id(pool_id);
-        let liquidity_shares_left = 1;
-        assert_ok!(Swaps::pool_exit(
-            Origin::signed(BOB),
-            pool_id,
-            _100 - liquidity_shares_left,
-            vec![0; 4]
-        ));
-        assert_eq!(Currencies::total_issuance(pool_shares_id), liquidity_shares_left);
-        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), 0);
-        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), 0);
-        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), 0);
-        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), 0);
+
+        // There's one left of each asset.
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _99));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _99));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _99));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _99));
+
+        // We withdraw 99% of it, leaving 0.01 of each asset, which is below minimum balance.
+        assert_noop!(
+            Swaps::pool_exit(Origin::signed(BOB), pool_id, _99, vec![0; 4]),
+            crate::Error::<Runtime>::LimitOut,
+        );
     });
 }
 
 #[test]
-fn pool_exit_with_all_liquidity_withdraws_all_assets() {
+fn pool_exit_fails_if_liquidity_drops_too_low() {
     ExtBuilder::default().build().execute_with(|| {
-        // This test demonstrates that (in the absence of exit fees), `pool_exit` can reduce
-        // balances in the pool to zero without reducing the total issuance of liquidity shares to
-        // zero.
+        // We drop the liquidity below `MIN_BALANCE`, but balances remains above `MIN_BALANCE`.
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
         let pool_account_id = Swaps::pool_account_id(pool_id);
         let pool_shares_id = Swaps::pool_shares_id(pool_id);
 
-        // Deposit some assets to make numbers uneven.
-        assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _165));
+        // There's 1000 left of each asset.
         assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _900));
-        assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _1234));
-        assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _10000));
+        assert_ok!(Currencies::deposit(ASSET_B, &pool_account_id, _900));
+        assert_ok!(Currencies::deposit(ASSET_C, &pool_account_id, _900));
+        assert_ok!(Currencies::deposit(ASSET_D, &pool_account_id, _900));
 
-        assert_ok!(Swaps::pool_exit(Origin::signed(BOB), pool_id, _100, vec![0; 4]));
-        assert_eq!(Currencies::total_issuance(pool_shares_id), 0);
-        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), 0);
-        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), 0);
-        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), 0);
-        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), 0);
+        // We withdraw too much liquidity but leave enough of each asset.
+        assert_noop!(
+            Swaps::pool_exit(Origin::signed(BOB), pool_id, _100 - MIN_BALANCE + 1, vec![0; 4]),
+            crate::Error::<Runtime>::LimitIn,
+        );
     });
 }
 
