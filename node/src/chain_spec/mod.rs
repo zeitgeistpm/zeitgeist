@@ -2,14 +2,14 @@
 mod additional_chain_spec;
 #[cfg(feature = "with-battery-station-runtime")]
 pub(crate) mod battery_station;
-//mod dev;
+mod dev;
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub(crate) mod zeitgeist;
 
 
 pub use additional_chain_spec::AdditionalChainSpec;
 pub use battery_station::battery_station_staging_config;
-// pub use dev::dev_config;
+pub use dev::dev_config;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
@@ -79,7 +79,7 @@ pub(crate) struct EndowedAccountWithBalance(AccountId, Balance);
 
 macro_rules! generate_generic_genesis_function {
 	($runtime:ident, $($additional_genesis:tt)*) => {
-        fn generic_genesis(
+        pub(super) fn generic_genesis(
             acs: AdditionalChainSpec,
             endowed_accounts: Vec<EndowedAccountWithBalance>,
             wasm_binary: &[u8],

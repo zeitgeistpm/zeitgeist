@@ -351,14 +351,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         }
 
         match &config.chain_spec {
-            #[cfg(feature = "with-battery-station-runtime")]
-            spec if spec.is_battery_station() => {
-                new_full::<
-                    BatteryStationRuntimeApi,
-                    BatteryStationExecutor,
-                >(config)
-                .map_err(sc_cli::Error::Service)
-            }
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => {
                 new_full::<
@@ -367,7 +359,13 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 >(config)
                 .map_err(sc_cli::Error::Service)
             }
-            _ => panic!("invalid chain spec"),
+            _ => {
+                new_full::<
+                    BatteryStationRuntimeApi,
+                    BatteryStationExecutor,
+                >(config)
+                .map_err(sc_cli::Error::Service)
+            }
         }
     })
 }

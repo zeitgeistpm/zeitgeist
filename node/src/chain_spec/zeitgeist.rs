@@ -103,7 +103,7 @@ fn additional_chain_spec_staging_zeitgeist() -> AdditionalChainSpec {
 }
 
 #[inline]
-fn get_wasm() -> Result<&'static [u8], String> {
+pub(super) fn get_wasm() -> Result<&'static [u8], String> {
     zeitgeist_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 

@@ -77,16 +77,6 @@ pub(super) fn additional_chain_spec_staging_battery_station() -> AdditionalChain
     }
 }
 
-#[cfg(not(feature = "parachain"))]
-fn authority_keys_from_seed(
-    s: &str,
-) -> (sp_consensus_aura::sr25519::AuthorityId, sp_finality_grandpa::AuthorityId) {
-    (
-        get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
-        get_from_seed::<sp_finality_grandpa::AuthorityId>(s),
-    )
-}
-
 fn endowed_accounts_staging_battery_station() -> Vec<EndowedAccountWithBalance> {
     vec![
         // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
@@ -113,7 +103,7 @@ fn root_key_staging_battery_station() -> AccountId {
 }
 
 #[inline]
-fn get_wasm() -> Result<&'static [u8], String> {
+pub(super) fn get_wasm() -> Result<&'static [u8], String> {
     battery_station_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 

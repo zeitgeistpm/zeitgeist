@@ -1,21 +1,42 @@
-use super::EndowedAccountWithBalance;
-#[cfg(feature = "parachain")]
-use crate::chain_spec::get_from_seed;
-use crate::chain_spec::{
-    generic_genesis, get_account_id_from_seed, token_properties, zeitgeist_wasm,
-    AdditionalChainSpec, ChainSpec,
-};
+use super::{battery_station::BatteryStationChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, get_account_id_from_seed, token_properties, AdditionalChainSpec};
+#[cfg(not(feature = "parachain"))]
+use super::get_from_seed;
+
 use sc_service::ChainType;
 use sp_core::sr25519;
-use zeitgeist_primitives::types::Balance;
+use zeitgeist_primitives::{
+    constants::{
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        BalanceFractionalDecimals, BASE,
+    },
+    types::{AccountId, Balance, Signature},
+};
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
 
+#[cfg(not(feature = "parachain"))]
+fn authority_keys_from_seed(
+    s: &str,
+) -> (sp_consensus_aura::sr25519::AuthorityId, sp_finality_grandpa::AuthorityId) {
+    (
+        get_from_seed::<sp_consensus_aura::sr25519::AuthorityId>(s),
+        get_from_seed::<sp_finality_grandpa::AuthorityId>(s),
+    )
+}
+
+generate_generic_genesis_function!{battery_station_runtime,
+    sudo: battery_station_runtime::SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
+}
+
+// Dev currently uses battery station runtime for the following reasons:
+// 1. It is the most experimental runtime (as of writing this)
+// 2. It offers the sudo pallet
 pub fn dev_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
-) -> Result<ChainSpec, String> {
-    let zeitgeist_wasm = zeitgeist_wasm()?;
-    Ok(ChainSpec::from_genesis(
+) -> Result<BatteryStationChainSpec, String> {
+    let wasm = super::battery_station::get_wasm()?;
+
+    Ok(BatteryStationChainSpec::from_genesis(
         "Development",
         "dev",
         ChainType::Local,
@@ -26,7 +47,7 @@ pub fn dev_config(
                     candidates: vec![(
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
                         get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
-                        crate::chain_spec::DEFAULT_STAKING_AMOUNT_TESTNET,
+                        crate::chain_spec::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
                     crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
@@ -35,7 +56,7 @@ pub fn dev_config(
                 },
                 #[cfg(not(feature = "parachain"))]
                 AdditionalChainSpec {
-                    initial_authorities: vec![crate::chain_spec::authority_keys_from_seed("Alice")],
+                    initial_authorities: vec![authority_keys_from_seed("Alice")],
                 },
                 vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -54,16 +75,14 @@ pub fn dev_config(
                 .into_iter()
                 .map(|acc| EndowedAccountWithBalance(acc, INITIAL_BALANCE))
                 .collect(),
-                #[cfg(feature = "testnet")]
-                get_account_id_from_seed::<sr25519::Public>("Alice"),
-                zeitgeist_wasm,
+                wasm,
             )
         },
         vec![],
         None,
         None,
         None,
-        Some(token_properties("DEV")),
+        Some(token_properties("DEV", battery_station_runtime::SS58Prefix::get())),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "rococo-dev".into(),
