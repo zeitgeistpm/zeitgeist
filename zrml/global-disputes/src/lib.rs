@@ -46,18 +46,18 @@ mod pallet {
     pub type OutcomeInfoOf<T> = OutcomeInfo<BalanceOf<T>, AccountIdOf<T>>;
     pub type WinnerInfoOf<T> = WinnerInfo<BalanceOf<T>, AccountIdOf<T>>;
 
-    #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialOrd, PartialEq)]
+    #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialOrd, PartialEq)]
     pub struct OutcomeInfo<Balance, AccountId> {
-        outcome_sum: Balance,
-        owners: BoundedVec<AccountId, ConstU32<10>>,
+        pub outcome_sum: Balance,
+        pub owners: BoundedVec<AccountId, ConstU32<10>>,
     }
 
     #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialOrd, PartialEq)]
     pub struct WinnerInfo<Balance, AccountId> {
-        outcome: OutcomeReport,
-        vote_sum: Balance,
-        is_finished: bool,
-        owners: BoundedVec<AccountId, ConstU32<10>>,
+        pub outcome: OutcomeReport,
+        pub vote_sum: Balance,
+        pub is_finished: bool,
+        pub owners: BoundedVec<AccountId, ConstU32<10>>,
     }
 
     impl<Balance: Saturating, AccountId> WinnerInfo<Balance, AccountId> {
@@ -147,8 +147,6 @@ mod pallet {
                                 }
                             }
                             Self::deposit_event(Event::OutcomeOwnerRewarded(market_id));
-                        } else {
-                            return Err(Error::<T>::NoRewardRemaining.into());
                         }
                     }
                     KillStorageResult::SomeRemaining(_) => {
@@ -312,8 +310,6 @@ mod pallet {
         OutcomeAlreadyExists,
         /// The global dispute is already over.
         GlobalDisputeAlreadyFinished,
-        /// There is no balance in the reward account for the outcome owners.
-        NoRewardRemaining,
     }
 
     #[pallet::event]
