@@ -14,7 +14,7 @@ use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-// pub use zeitgeist::zeitgeist_staging_config;
+//pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
@@ -77,85 +77,93 @@ type AccountPublic = <Signature as Verify>::Signer;
 #[derive(Clone)]
 pub(crate) struct EndowedAccountWithBalance(AccountId, Balance);
 
-fn generic_genesis(
-    acs: AdditionalChainSpec,
-    endowed_accounts: Vec<EndowedAccountWithBalance>,
-    root_key: AccountId,
-    wasm_binary: &[u8],
-) -> battery_station_runtime::GenesisConfig {
-    battery_station_runtime::GenesisConfig {
-        advisory_committee: Default::default(),
-        advisory_committee_membership: battery_station_runtime::AdvisoryCommitteeMembershipConfig {
-            members: vec![],
-            phantom: Default::default(),
-        },
-        #[cfg(not(feature = "parachain"))]
-        aura: battery_station_runtime::AuraConfig {
-            authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
-        },
-        #[cfg(feature = "parachain")]
-        author_filter: battery_station_runtime::AuthorFilterConfig {
-            eligible_count: EligibilityValue::new_unchecked(50),
-        },
-        #[cfg(feature = "parachain")]
-        author_mapping: battery_station_runtime::AuthorMappingConfig {
-            mappings: acs
-                .candidates
-                .iter()
-                .cloned()
-                .map(|(account_id, author_id, _)| (author_id, account_id))
-                .collect(),
-        },
-        balances: battery_station_runtime::BalancesConfig {
-            balances: endowed_accounts.iter().cloned().map(|k| (k.0, k.1)).collect(),
-        },
-        council: Default::default(),
-        council_membership: battery_station_runtime::CouncilMembershipConfig {
-            members: vec![],
-            phantom: Default::default(),
-        },
-        #[cfg(feature = "parachain")]
-        crowdloan: battery_station_runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
-        democracy: Default::default(),
-        #[cfg(not(feature = "parachain"))]
-        grandpa: battery_station_runtime::GrandpaConfig {
-            authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
-        },
-        liquidity_mining: battery_station_runtime::LiquidityMiningConfig {
-            initial_balance: LIQUIDITY_MINING,
-            per_block_distribution: LIQUIDITY_MINING_PTD.mul_ceil(LIQUIDITY_MINING),
-        },
-        #[cfg(feature = "parachain")]
-        parachain_info: battery_station_runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
-        #[cfg(feature = "parachain")]
-        parachain_staking: battery_station_runtime::ParachainStakingConfig {
-            candidates: acs
-                .candidates
-                .iter()
-                .cloned()
-                .map(|(account, _, bond)| (account, bond))
-                .collect(),
-            inflation_config: acs.inflation_info,
-            delegations: acs.nominations,
-        },
-        #[cfg(feature = "parachain")]
-        parachain_system: Default::default(),
-        #[cfg(feature = "parachain")]
-        // Default should use the pallet configuration
-        polkadot_xcm: PolkadotXcmConfig::default(),
-        sudo: battery_station_runtime::SudoConfig { key: Some(root_key) },
-        system: battery_station_runtime::SystemConfig { code: wasm_binary.to_vec() },
-        technical_committee: Default::default(),
-        technical_committee_membership: battery_station_runtime::TechnicalCommitteeMembershipConfig {
-            members: vec![],
-            phantom: Default::default(),
-        },
-        treasury: Default::default(),
-        transaction_payment: Default::default(),
-        tokens: Default::default(),
-        vesting: Default::default(),
-    }
+macro_rules! generate_generic_genesis_function {
+	($runtime:ident, $($additional_genesis:tt)*) => {
+        fn generic_genesis(
+            acs: AdditionalChainSpec,
+            endowed_accounts: Vec<EndowedAccountWithBalance>,
+            wasm_binary: &[u8],
+        ) -> $runtime::GenesisConfig {
+            $runtime::GenesisConfig {
+                // Common genesis
+                advisory_committee: Default::default(),
+                advisory_committee_membership: $runtime::AdvisoryCommitteeMembershipConfig {
+                    members: vec![],
+                    phantom: Default::default(),
+                },
+                #[cfg(not(feature = "parachain"))]
+                aura: $runtime::AuraConfig {
+                    authorities: acs.initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+                },
+                #[cfg(feature = "parachain")]
+                author_filter: $runtime::AuthorFilterConfig {
+                    eligible_count: EligibilityValue::new_unchecked(50),
+                },
+                #[cfg(feature = "parachain")]
+                author_mapping: $runtime::AuthorMappingConfig {
+                    mappings: acs
+                        .candidates
+                        .iter()
+                        .cloned()
+                        .map(|(account_id, author_id, _)| (author_id, account_id))
+                        .collect(),
+                },
+                balances: $runtime::BalancesConfig {
+                    balances: endowed_accounts.iter().cloned().map(|k| (k.0, k.1)).collect(),
+                },
+                council: Default::default(),
+                council_membership: $runtime::CouncilMembershipConfig {
+                    members: vec![],
+                    phantom: Default::default(),
+                },
+                #[cfg(feature = "parachain")]
+                crowdloan: $runtime::CrowdloanConfig { funded_amount: acs.crowdloan_fund_pot },
+                democracy: Default::default(),
+                #[cfg(not(feature = "parachain"))]
+                grandpa: $runtime::GrandpaConfig {
+                    authorities: acs.initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
+                },
+                liquidity_mining: $runtime::LiquidityMiningConfig {
+                    initial_balance: LIQUIDITY_MINING,
+                    per_block_distribution: LIQUIDITY_MINING_PTD.mul_ceil(LIQUIDITY_MINING),
+                },
+                #[cfg(feature = "parachain")]
+                parachain_info: $runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
+                #[cfg(feature = "parachain")]
+                parachain_staking: $runtime::ParachainStakingConfig {
+                    candidates: acs
+                        .candidates
+                        .iter()
+                        .cloned()
+                        .map(|(account, _, bond)| (account, bond))
+                        .collect(),
+                    inflation_config: acs.inflation_info,
+                    delegations: acs.nominations,
+                },
+                #[cfg(feature = "parachain")]
+                parachain_system: Default::default(),
+                #[cfg(feature = "parachain")]
+                // Default should use the pallet configuration
+                polkadot_xcm: PolkadotXcmConfig::default(),
+                system: $runtime::SystemConfig { code: wasm_binary.to_vec() },
+                technical_committee: Default::default(),
+                technical_committee_membership: $runtime::TechnicalCommitteeMembershipConfig {
+                    members: vec![],
+                    phantom: Default::default(),
+                },
+                treasury: Default::default(),
+                transaction_payment: Default::default(),
+                tokens: Default::default(),
+                vesting: Default::default(),
+
+                // Additional genesis
+                $($additional_genesis)*
+            }
+        }
+	};
 }
+
+pub(crate) use generate_generic_genesis_function;
 
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where

@@ -1,7 +1,7 @@
 #![cfg(feature = "with-battery-station-runtime")]
 
 use crate::chain_spec::{
-    generic_genesis, telemetry_endpoints, token_properties
+    generate_generic_genesis_function, telemetry_endpoints, token_properties
 };
 
 use battery_station_runtime::parameters::SS58Prefix;
@@ -64,7 +64,7 @@ fn additional_chain_spec_staging_battery_station(
 }
 
 #[cfg(not(feature = "parachain"))]
-fn additional_chain_spec_staging_battery_station() -> AdditionalChainSpec {
+pub(super) fn additional_chain_spec_staging_battery_station() -> AdditionalChainSpec {
     AdditionalChainSpec {
         initial_authorities: vec![(
             // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
@@ -117,6 +117,10 @@ fn get_wasm() -> Result<&'static [u8], String> {
     battery_station_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 
+generate_generic_genesis_function!{battery_station_runtime,
+    sudo: battery_station_runtime::SudoConfig { key: Some(root_key_staging_battery_station()) },
+}
+
 pub fn battery_station_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<BatteryStationChainSpec, String> {
@@ -133,7 +137,6 @@ pub fn battery_station_staging_config(
                     parachain_id,
                 ),
                 endowed_accounts_staging_battery_station(),
-                root_key_staging_battery_station(),
                 wasm,
             )
         },
