@@ -445,7 +445,12 @@ mod pallet {
 
             for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
                 let dispute_bond = default_dispute_bond::<T>(index);
-                T::GlobalDisputes::push_voting_outcome(&market_id, outcome.clone(), &by, dispute_bond);
+                T::GlobalDisputes::push_voting_outcome(
+                    &market_id,
+                    outcome.clone(),
+                    by,
+                    dispute_bond,
+                );
             }
 
             // ensure, that global disputes controls the resolution now
@@ -457,9 +462,7 @@ mod pallet {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
-            Self::deposit_event(Event::GlobalDisputeStarted(
-                market_id
-            ));
+            Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
             Ok(().into())
         }
@@ -1153,7 +1156,11 @@ mod pallet {
         >;
 
         /// See [`GlobalDisputesPalletApi`].
-        type GlobalDisputes: GlobalDisputesPalletApi<MarketIdOf<Self>, Self::AccountId, BalanceOf<Self>>;
+        type GlobalDisputes: GlobalDisputesPalletApi<
+            MarketIdOf<Self>,
+            Self::AccountId,
+            BalanceOf<Self>,
+        >;
 
         /// The number of blocks the global dispute period remains open.
         #[pallet::constant]
@@ -1925,7 +1932,7 @@ mod pallet {
                         }
                     };
 
-                    if let Some(o) = T::GlobalDisputes::get_voting_winner(&market_id) {
+                    if let Some(o) = T::GlobalDisputes::get_voting_winner(market_id) {
                         resolved_outcome_option = Some(o);
                     }
 

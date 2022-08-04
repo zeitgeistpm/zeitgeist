@@ -27,12 +27,22 @@ where
     T: Config,
 {
     deposit::<T>(caller);
-    let vote_id = 0u128.saturated_into();
-    let outcome_index = 0u128;
+    let market_id = 0u128.saturated_into();
+    let outcome = OutcomeReport::Scalar(0);
     let amount: BalanceOf<T> = MinOutcomeVoteAmount::get().saturated_into();
-    Pallet::<T>::push_voting_outcome(OutcomeReport::Scalar(0), 10u128.saturated_into()).unwrap();
-    Pallet::<T>::push_voting_outcome(OutcomeReport::Scalar(20), 20u128.saturated_into()).unwrap();
-    Call::<T>::vote_on_outcome { vote_id, outcome_index, amount }
+    Pallet::<T>::push_voting_outcome(
+        &market_id,
+        OutcomeReport::Scalar(0),
+        caller,
+        10u128.saturated_into(),
+    );
+    Pallet::<T>::push_voting_outcome(
+        &market_id,
+        OutcomeReport::Scalar(20),
+        caller,
+        20u128.saturated_into(),
+    );
+    Call::<T>::vote_on_outcome { market_id, outcome, amount }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())
         .unwrap();
 }
@@ -40,14 +50,14 @@ where
 benchmarks! {
     vote_on_outcome {
         let caller: T::AccountId = whitelisted_caller();
-        let vote_id = 0u128.saturated_into();
-        let outcome_index = 0u128;
+        let market_id = 0u128.saturated_into();
+        let outcome = OutcomeReport::Scalar(0);
         let amount: BalanceOf<T> = MinOutcomeVoteAmount::get().saturated_into();
         deposit::<T>(&caller);
 
-        Pallet::<T>::push_voting_outcome(OutcomeReport::Scalar(0), 10u128.saturated_into()).unwrap();
-        Pallet::<T>::push_voting_outcome(OutcomeReport::Scalar(20), 20u128.saturated_into()).unwrap();
-    }: _(RawOrigin::Signed(caller), vote_id, outcome_index, amount)
+        Pallet::<T>::push_voting_outcome(&market_id, OutcomeReport::Scalar(0), &caller, 10u128.saturated_into());
+        Pallet::<T>::push_voting_outcome(&market_id, OutcomeReport::Scalar(20), &caller, 20u128.saturated_into());
+    }: _(RawOrigin::Signed(caller), market_id, outcome, amount)
 
     unlock_vote_balance {
         let caller: T::AccountId = whitelisted_caller();

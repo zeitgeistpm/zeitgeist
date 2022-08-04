@@ -128,15 +128,15 @@ mod pallet {
                             T::Currency::free_balance(&reward_account);
                         if !reward_account_free_balance.is_zero() {
                             let mut remainder = reward_account_free_balance;
-                            if let Some(reward_per_each) = reward_account_free_balance.checked_div(
-                                &<BalanceOf<T>>::from((&winner_info).owners.len() as u32),
-                            ) {
+                            if let Some(reward_per_each) = reward_account_free_balance
+                                .checked_div(&<BalanceOf<T>>::from(winner_info.owners.len() as u32))
+                            {
                                 for winner in winner_info.owners.iter() {
                                     let reward = remainder.min(reward_per_each); // *Should* always be equal to `reward_per_each`
                                     remainder = remainder.saturating_sub(reward);
                                     // Reward the loosing funds to the winners without charging a transfer fee
                                     let _ = T::Currency::resolve_into_existing(
-                                        &winner,
+                                        winner,
                                         T::Currency::withdraw(
                                             &reward_account,
                                             reward,
