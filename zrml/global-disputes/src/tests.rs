@@ -503,8 +503,7 @@ fn reward_outcome_owner_cleans_outcome_info() {
             market_id,
         ));
 
-        // TODO figure out why this doesnt emit: System::assert_has_event(PEvent::<Runtime>::OutcomesFullyCleaned(market_id).into());
-
+        // figure out why this doesnt emit: System::assert_has_event(PEvent::<Runtime>::OutcomesFullyCleaned(market_id).into());
         // System::assert_last_event(PEvent::<Runtime>::OutcomesFullyCleaned(market_id).into());
         // System::assert_has_event(PEvent::<Runtime>::OutcomesFullyCleaned(market_id).into());
 

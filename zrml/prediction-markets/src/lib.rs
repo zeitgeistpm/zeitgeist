@@ -420,8 +420,6 @@ mod pallet {
             ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
-            // TODO maybe transition to a GlobalDisputes state?
-            // TODO How to handle the on_resolution when Court and Authorized failed? When does Authorized and Court fail?
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
             let disputes = <Disputes<T>>::get(market_id);
@@ -437,7 +435,6 @@ mod pallet {
 
             // add report outcome to voting choices
             if let Some(report) = market.report {
-                // TODO what bond is for reporting? instead of using zero here
                 T::GlobalDisputes::push_voting_outcome(
                     &market_id,
                     report.outcome,
@@ -460,7 +457,9 @@ mod pallet {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
-            // TODO add event
+            Self::deposit_event(Event::GlobalDisputeStarted(
+                market_id
+            ));
 
             Ok(().into())
         }
@@ -1283,6 +1282,8 @@ mod pallet {
             BalanceOf<T>,
             <T as frame_system::Config>::AccountId,
         ),
+        /// The global dispute was started. \[market_id\]
+        GlobalDisputeStarted(MarketIdOf<T>),
     }
 
     #[pallet::hooks]
@@ -1684,7 +1685,6 @@ mod pallet {
             report: &Report<T::AccountId, T::BlockNumber>,
             outcome: &OutcomeReport,
         ) -> DispatchResult {
-            // TODO when simple disputes is deleted, should we allow duplicated outcomes of the disputes?
             if let Some(last_dispute) = disputes.last() {
                 ensure!(&last_dispute.outcome != outcome, Error::<T>::CannotDisputeSameOutcome);
             } else {
@@ -1696,7 +1696,6 @@ mod pallet {
 
         #[inline]
         fn ensure_disputes_does_not_exceed_max_disputes(num_disputes: u32) -> DispatchResult {
-            // TODO how to handle this with global disputes?
             ensure!(num_disputes < T::MaxDisputes::get(), Error::<T>::MaxDisputesReached);
             Ok(())
         }
