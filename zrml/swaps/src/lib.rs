@@ -309,6 +309,7 @@ mod pallet {
             #[pallet::compact] min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
+            Self::ensure_minimum_liquidity_shares(pool_id, pool_amount)?;
             let pool = Self::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let who = ensure_signed(origin)?;
@@ -342,6 +343,7 @@ mod pallet {
                             .saturated_into(),
                         Error::<T>::MaxOutRatio
                     );
+                    Self::ensure_minimum_balance(pool_id, asset, asset_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(asset_amount)
                 },
