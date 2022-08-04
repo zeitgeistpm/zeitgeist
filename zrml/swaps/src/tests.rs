@@ -2806,6 +2806,36 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
     });
 }
 
+#[test]
+fn swap_exact_amount_in_fails_if_balances_drop_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        // We drop the liquidity below `MIN_BALANCE`, but balances remains above `MIN_BALANCE`.
+        <Runtime as Config>::ExitFee::set(&0u128);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
+        let pool_id = 0;
+        let pool_account_id = Swaps::pool_account_id(pool_id);
+
+        // There's only very little left of all assets!
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - MIN_BALANCE));
+
+        assert_noop!(
+            Swaps::swap_exact_amount_in(
+                Origin::signed(ALICE),
+                pool_id,
+                ASSET_A,
+                MIN_BALANCE / 10,
+                ASSET_B,
+                Some(0),
+                None,
+            ),
+            crate::Error::<Runtime>::PoolDrain,
+        );
+    });
+}
+
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
 }
