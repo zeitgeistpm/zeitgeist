@@ -15,7 +15,7 @@ sc-client-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.co
 sc-consensus = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-executor = { branch = "moonbeam-polkadot-v0.9.19", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
 sc-keystore = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
-sc-rpc = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+sc-rpc = { branch = "moonbeam-polkadot-v0.9.19",  git = "https://github.com/purestake/substrate" }
 sc-rpc-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-service = { branch = "moonbeam-polkadot-v0.9.19", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
 sc-telemetry = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
@@ -70,8 +70,8 @@ sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.co
 sc-network = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.136" }
-sp-keystore = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-trie = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+sp-keystore = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 
 # Polkadot
@@ -91,7 +91,7 @@ sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.19", git = "https://git
 
 # Utility
 cfg-if = { version = "1.0.0" }
-clap = { version = "3.1.6", features = ["derive"] }
+clap = { version = "3.1.6", features = [ "derive" ] }
 hex-literal = { version = "0.3.4" }
 jsonrpc-core = { version = "18.0.0" }
 log = { optional = true, version = "0.4.14" }
@@ -100,15 +100,14 @@ log = { optional = true, version = "0.4.14" }
 
 zeitgeist-primitives = { path = "../primitives" }
 zeitgeist-runtime = { path = "../runtime" }
-zrml-styx = { path = "../zrml/styx" }
 zrml-liquidity-mining = { path = "../zrml/liquidity-mining" }
 zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 [features]
 default = []
 parachain = [
-    "zeitgeist-runtime/parachain", 
-    
+    "zeitgeist-runtime/parachain",
+
     # Cumulus
 
     "cumulus-client-cli",
@@ -121,8 +120,9 @@ parachain = [
     "cumulus-primitives-parachain-inherent",
     "cumulus-relay-chain-inprocess-interface",
     "cumulus-relay-chain-interface",
-    "cumulus-relay-chain-rpc-interface", 
+    "cumulus-relay-chain-rpc-interface",
     
+
     # Parachain
 
     "log",
@@ -137,10 +137,10 @@ parachain = [
     "serde",
     "sp-keystore",
     "sp-trie",
-    "substrate-prometheus-endpoint", 
-    
+    "substrate-prometheus-endpoint",
+
     # Polkadot
-    
+
     "polkadot-cli",
     "polkadot-parachain",
     "polkadot-primitives",
@@ -150,7 +150,7 @@ parachain = [
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
-    "zeitgeist-runtime/runtime-benchmarks",
+    "zeitgeist-runtime/runtime-benchmarks"
 ]
 try-runtime = [
     "zeitgeist-runtime/try-runtime",

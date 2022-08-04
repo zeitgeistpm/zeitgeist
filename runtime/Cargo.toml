@@ -42,7 +42,7 @@ substrate-fixed = { default-features = false, features = ["serde"], git = "https
 
 # Try-Runtime
 
-frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate"}
 
 # Benchmark
 
@@ -94,12 +94,12 @@ log = { version = "0.4.8", default-features = false, optional = true }
 zeitgeist-primitives = { default-features = false, path = "../primitives" }
 zrml-authorized = { default-features = false, path = "../zrml/authorized" }
 zrml-court = { default-features = false, path = "../zrml/court" }
-zrml-styx = { default-features = false, path = "../zrml/styx" }
 zrml-liquidity-mining = { default-features = false, path = "../zrml/liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../zrml/market-commons" }
 zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
 zrml-rikiddo = { default-features = false, path = "../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
+zrml-styx = { default-features = false, path = "../zrml/styx" }
 zrml-swaps = { default-features = false, path = "../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
 
@@ -118,8 +118,8 @@ parachain = [
     "cumulus-primitives-core",
     "cumulus-primitives-timestamp",
     "cumulus-primitives-utility",
-    "parachain-info", 
-    
+    "parachain-info",
+
     # Parachain
 
     "nimbus-primitives",
@@ -127,19 +127,19 @@ parachain = [
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-crowdloan-rewards",
-    "parachain-staking", 
-    
+    "parachain-staking",
+
     # Polkadot
 
     "pallet-xcm",
     "polkadot-parachain",
     "xcm-builder",
     "xcm-executor",
-    "xcm", 
-    
+    "xcm",
+
     # Misc
-    
-    "log",
+
+    "log"
 ]
 
 runtime-benchmarks = [
@@ -177,8 +177,8 @@ runtime-benchmarks = [
     "zrml-liquidity-mining/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
     "zrml-simple-disputes/runtime-benchmarks",
-    "zrml-swaps/runtime-benchmarks",
     "zrml-styx/runtime-benchmarks",
+    "zrml-swaps/runtime-benchmarks",
 ]
 std = [
     "frame-executive/std",
@@ -219,17 +219,16 @@ std = [
     "sp-session/std",
     "sp-transaction-pool/std",
     "sp-version/std",
-    "substrate-fixed/std", 
-    
-    # Try-Runtime
+    "substrate-fixed/std",
 
-    "frame-try-runtime/std", 
-    
+    # Try-Runtime
+    "frame-try-runtime/std",
+
     # Benchmark
 
     "frame-benchmarking?/std",
-    "frame-system-benchmarking?/std", 
-    
+    "frame-system-benchmarking?/std",
+
     # Cumulus
 
     "cumulus-pallet-dmp-queue?/std",
@@ -239,8 +238,8 @@ std = [
     "cumulus-primitives-core?/std",
     "cumulus-primitives-timestamp?/std",
     "cumulus-primitives-utility?/std",
-    "parachain-info?/std", 
-    
+    "parachain-info?/std",
+
     # Parachain
 
     "nimbus-primitives?/std",
@@ -248,23 +247,23 @@ std = [
     "pallet-author-mapping?/std",
     "pallet-author-slot-filter?/std",
     "pallet-crowdloan-rewards?/std",
-    "parachain-staking?/std", 
-    
+    "parachain-staking?/std",
+
     # Polkadot
 
     "pallet-xcm?/std",
     "polkadot-parachain?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
-    "xcm?/std", 
-    
+    "xcm?/std",
+
     # Standalone
 
     "pallet-aura/std",
     "pallet-grandpa/std",
     "sp-consensus-aura/std",
-    "sp-finality-grandpa/std", 
-    
+    "sp-finality-grandpa/std",
+
     # Zeitgeist
 
     "zeitgeist-primitives/std",
@@ -278,27 +277,42 @@ std = [
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
+txfilter = []
 try-runtime = [
     "frame-executive/try-runtime",
-    "frame-try-runtime", # For every pallet in the runtime include try-runtime  # System runtime pallets
+    "frame-try-runtime",
+
+    # For every pallet in the runtime include try-runtime
+
+    # System runtime pallets
     "frame-system/try-runtime",
     "pallet-timestamp/try-runtime",
     "pallet-randomness-collective-flip/try-runtime",
     "pallet-scheduler/try-runtime",
-    "pallet-preimage/try-runtime", # Money runtime pallets
+    "pallet-preimage/try-runtime",
+
+    # Money runtime pallets
     "pallet-balances/try-runtime",
     "pallet-transaction-payment/try-runtime",
     "pallet-treasury/try-runtime",
     "pallet-vesting/try-runtime",
-    "pallet-multisig/try-runtime", # Governance runtime pallets
+    "pallet-multisig/try-runtime",
+
+    # Governance runtime pallets
     "pallet-democracy/try-runtime",
     "pallet-collective/try-runtime",
-    "pallet-membership/try-runtime", # Other Parity runtime pallets
+    "pallet-membership/try-runtime",
+
+    # Other Parity runtime pallets
     "pallet-identity/try-runtime",
     "pallet-sudo/try-runtime",
-    "pallet-utility/try-runtime", # ORML runtime pallets
+    "pallet-utility/try-runtime",
+    
+    # ORML runtime pallets
     "orml-currencies/try-runtime",
-    "orml-tokens/try-runtime", # Zeitgeist runtime pallets
+    "orml-tokens/try-runtime",
+
+    # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",
     "zrml-court/try-runtime",
     "zrml-liquidity-mining/try-runtime",
@@ -306,14 +320,15 @@ try-runtime = [
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
-    "zrml-swaps/try-runtime", # Parachain
-    "zrml-styx/try-runtime", # Parachain
+    "zrml-styx/try-runtime",
+    "zrml-swaps/try-runtime",
+
+    # Parachain
     "pallet-author-mapping?/try-runtime",
     "pallet-author-slot-filter?/try-runtime",
     "parachain-staking?/try-runtime",
 ]
-txfilter = []
-without-sudo = []
+without-sudo=[]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
