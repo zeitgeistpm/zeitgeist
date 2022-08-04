@@ -12485,7 +12485,6 @@ dependencies = [
  "zeitgeist-primitives",
  "zeitgeist-runtime",
  "zrml-liquidity-mining",
- "zrml-styx",
  "zrml-swaps-rpc",
 ]
 
