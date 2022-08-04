@@ -20,6 +20,7 @@ fuzz_target!(|data: Data| {
             Origin::signed(data.create_scalar_market_origin.into()),
             data.create_scalar_market_oracle.into(),
             MarketPeriod::Block(data.create_scalar_market_period),
+            None,
             data.create_scalar_market_metadata,
             market_creation(data.create_scalar_market_creation),
             MarketType::Scalar(data.create_scalar_market_outcome_range),

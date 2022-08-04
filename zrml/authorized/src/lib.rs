@@ -176,6 +176,11 @@ where
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        deadlines: zeitgeist_primitives::types::Deadlines {
+            oracle_delay: 1_u32,
+            oracle_duration: 1_u32,
+            dispute_duration: 1_u32,
+        },
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,

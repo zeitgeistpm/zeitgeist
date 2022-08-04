@@ -8,8 +8,8 @@ use frame_support::assert_noop;
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{
-        Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, ScoringRule,
+        Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, OutcomeReport, ScoringRule,
     },
 };
 
@@ -22,6 +22,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
+    deadlines: Deadlines { oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: 1_u32 },
     report: None,
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,

@@ -10,6 +10,7 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 serde = { default-features = false, features = ["derive"], optional = true, version = "1.0.136" }
 sp-core = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 
 [dev-dependencies]
 test-case = "2.0.2"
@@ -26,6 +27,7 @@ std = [
     "serde",
     "sp-core/std",
     "sp-runtime/std",
+    "sp-arithmetic/std",
 ]
 
 [package]

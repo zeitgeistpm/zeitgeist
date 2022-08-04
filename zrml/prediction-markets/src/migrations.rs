@@ -308,6 +308,7 @@ mod tests {
             Origin::signed(ALICE),
             BOB,
             period,
+            None,
             gen_metadata(0),
             MarketType::Categorical(category_count),
             MarketDisputeMechanism::Authorized(CHARLIE),

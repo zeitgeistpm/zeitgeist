@@ -21,8 +21,9 @@ use zeitgeist_primitives::{
     constants::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule, SubsidyUntil,
+        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+        MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
+        SubsidyUntil,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -36,6 +37,7 @@ fn create_market_common_parameters<T: Config>(
         T::AccountId,
         T::AccountId,
         MarketPeriod<T::BlockNumber, MomentOf<T>>,
+        Deadlines,
         MultiHash,
         MarketCreation,
     ),
@@ -45,11 +47,13 @@ fn create_market_common_parameters<T: Config>(
     let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
+    let deadlines =
+        Deadlines { oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: 1_u32 };
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;
     let creation = permission;
-    Ok((caller, oracle, period, MultiHash::Sha3_384(metadata), creation))
+    Ok((caller, oracle, period, deadlines, MultiHash::Sha3_384(metadata), creation))
 }
 
 // Create a market based on common parameters
@@ -58,11 +62,12 @@ fn create_market_common<T: Config>(
     options: MarketType,
     scoring_rule: ScoringRule,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, oracle, period, metadata, creation) =
+    let (caller, oracle, period, deadlines, metadata, creation) =
         create_market_common_parameters::<T>(permission)?;
     let _ = Call::<T>::create_market {
         oracle,
         period,
+        deadlines: Some(deadlines),
         metadata,
         creation,
         market_type: options,
@@ -298,9 +303,9 @@ benchmarks! {
     // Beware! We're only benchmarking categorical markets (scalar market creation is essentially
     // the same).
     create_market {
-        let (caller, oracle, period, metadata, creation) =
+        let (caller, oracle, period, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation,
+    }: _(RawOrigin::Signed(caller), oracle, period, Some(deadlines), metadata, creation,
             MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 

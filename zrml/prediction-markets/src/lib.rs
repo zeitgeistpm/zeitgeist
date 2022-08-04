@@ -99,9 +99,9 @@ mod pallet {
         constants::{PmPalletId, MILLISECS_PER_BLOCK},
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
-            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
+            MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
+            ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -369,6 +369,11 @@ mod pallet {
                 matches!(market.status, MarketStatus::Reported | MarketStatus::Disputed),
                 Error::<T>::InvalidMarketStatus
             );
+            let report = market.report.clone().ok_or(Error::<T>::MarketIsNotReported)?;
+            ensure!(
+                curr_block_num < (report.at + market.deadlines.dispute_duration.into()),
+                Error::<T>::NotAllowedToDisputeNow
+            );
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             T::AssetManager::reserve_named(
@@ -439,6 +444,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Option<Deadlines>,
             metadata: MultiHash,
             market_type: MarketType,
             dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
@@ -452,6 +458,7 @@ mod pallet {
                 origin.clone(),
                 oracle,
                 period,
+                deadlines,
                 metadata,
                 MarketCreation::Permissionless,
                 market_type.clone(),
@@ -491,6 +498,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Option<Deadlines>,
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
@@ -549,6 +557,12 @@ mod pallet {
                     MarketStatus::Proposed
                 }
             };
+            let deafult_deadline_value: u32 = 24 * 60 * 60 / MILLISECS_PER_BLOCK;
+            let deadlines = deadlines.unwrap_or(Deadlines {
+                oracle_delay: deafult_deadline_value,
+                oracle_duration: deafult_deadline_value,
+                dispute_duration: deafult_deadline_value,
+            });
 
             let market = Market {
                 creation,
@@ -559,6 +573,7 @@ mod pallet {
                 metadata: Vec::from(multihash),
                 oracle,
                 period: period.clone(),
+                deadlines,
                 report: None,
                 resolved_outcome: None,
                 status,
@@ -872,21 +887,31 @@ mod pallet {
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
                 Self::ensure_market_is_closed(market)?;
-                ensure!(
-                    market.matches_outcome_report(&market_report.outcome),
-                    Error::<T>::OutcomeMismatch
-                );
 
                 let mut should_check_origin = false;
                 match market.period {
                     MarketPeriod::Block(ref range) => {
+                        ensure!(
+                            current_block
+                                > (range.end.saturating_add(market.deadlines.oracle_delay.into())),
+                            Error::<T>::NotAllowedToReportYet
+                        );
                         if current_block
-                            <= range.end.saturating_add(T::ReportingPeriod::get().into())
+                            <= range.end.saturating_add(market.deadlines.oracle_duration.into())
                         {
                             should_check_origin = true;
                         }
                     }
                     MarketPeriod::Timestamp(ref range) => {
+                        let oracle_delay_in_moments: MomentOf<T> =
+                            market.deadlines.oracle_delay.into();
+                        let oracle_delay_in_ms =
+                            oracle_delay_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let now = T::MarketCommons::now();
+                        ensure!(
+                            now > range.end.saturating_add(oracle_delay_in_ms),
+                            Error::<T>::NotAllowedToReportYet
+                        );
                         let rp_moment: MomentOf<T> = T::ReportingPeriod::get().into();
                         let reporting_period_in_ms =
                             rp_moment.saturating_mul(MILLISECS_PER_BLOCK.into());
@@ -898,6 +923,11 @@ mod pallet {
                     }
                 }
 
+                ensure!(
+                    market.matches_outcome_report(&market_report.outcome),
+                    Error::<T>::OutcomeMismatch
+                );
+
                 if should_check_origin {
                     let sender_is_oracle = sender == market.oracle;
                     let origin_has_permission = T::ResolveOrigin::ensure_origin(origin).is_ok();
@@ -905,6 +935,8 @@ mod pallet {
                         sender_is_oracle || origin_has_permission,
                         Error::<T>::ReporterNotOracle
                     );
+                } else {
+                    ensure!(sender != market.oracle, Error::<T>::OracleNotAllowedReportingNow);
                 }
 
                 market.report = Some(market_report.clone());
@@ -1166,6 +1198,12 @@ mod pallet {
         InvalidMarketPeriod,
         /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
+        /// Can not report before market.deadlines.oracle_delay is ended.
+        NotAllowedToReportYet,
+        /// Oracle is not allowed to report as market.deadlines.oracle_duration has passed.
+        OracleNotAllowedReportingNow,
+        /// No disputes are allowed now as market.deadliens.dispute_duration has passed.
+        NotAllowedToDisputeNow,
     }
 
     #[pallet::event]

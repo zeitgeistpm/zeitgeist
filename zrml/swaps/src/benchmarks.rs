@@ -18,8 +18,8 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, PoolStatus, ScoringRule,
+        Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, OutcomeReport, PoolStatus, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -135,6 +135,7 @@ benchmarks! {
                 metadata: vec![0; 50],
                 oracle: caller.clone(),
                 period: MarketPeriod::Block(0u32.into()..1u32.into()),
+                deadlines: Deadlines{ oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: 1_u32},
                 report: None,
                 resolved_outcome: None,
                 scoring_rule: ScoringRule::CPMM,
