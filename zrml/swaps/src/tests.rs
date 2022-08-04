@@ -2815,13 +2815,7 @@ fn pool_exit_with_exact_pool_amount_fails_if_balances_drop_too_low() {
         assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - MIN_BALANCE));
 
         assert_noop!(
-            Swaps::pool_exit_with_exact_pool_amount(
-                Origin::signed(BOB),
-                pool_id,
-                ASSET_A,
-                _1,
-                0,
-            ),
+            Swaps::pool_exit_with_exact_pool_amount(Origin::signed(BOB), pool_id, ASSET_A, _1, 0),
             crate::Error::<Runtime>::PoolDrain,
         );
     });
@@ -2854,6 +2848,60 @@ fn pool_exit_with_exact_pool_amount_fails_if_liquidity_drops_too_low() {
                 ASSET_A,
                 ten_percent_of_pool,
                 0,
+            ),
+            crate::Error::<Runtime>::PoolDrain,
+        );
+    });
+}
+
+#[test]
+fn pool_exit_with_exact_asset_amount_fails_if_balances_drop_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0u128);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
+        let pool_id = 0;
+        let pool_account_id = Swaps::pool_account_id(pool_id);
+
+        // There's only very little left of all assets!
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - MIN_BALANCE));
+
+        let ten_percent_of_pool = MIN_BALANCE / 10;
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(
+                Origin::signed(BOB),
+                pool_id,
+                ASSET_A,
+                ten_percent_of_pool,
+                _100,
+            ),
+            crate::Error::<Runtime>::PoolDrain,
+        );
+    });
+}
+
+#[test]
+fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        <Runtime as Config>::ExitFee::set(&0u128);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
+        let pool_id = 0;
+
+        // Reduce amount of liquidity so that doing the withdraw doesn't cause a `Min*Ratio` error!
+        let pool_shares_id = Swaps::pool_shares_id(pool_id);
+        assert_eq!(Currencies::total_issuance(pool_shares_id), _100);
+        Currencies::slash(pool_shares_id, &BOB, _100 - MIN_BALANCE);
+        assert_eq!(Currencies::total_issuance(pool_shares_id), MIN_BALANCE);
+
+        assert_noop!(
+            Swaps::pool_exit_with_exact_asset_amount(
+                Origin::signed(BOB),
+                pool_id,
+                ASSET_A,
+                _25,
+                _100,
             ),
             crate::Error::<Runtime>::PoolDrain,
         );

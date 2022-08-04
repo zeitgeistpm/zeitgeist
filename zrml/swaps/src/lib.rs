@@ -1769,6 +1769,7 @@ mod pallet {
             max_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
+            Self::ensure_minimum_balance(pool_id, asset, asset_amount)?;
             let pool_ref = &pool;
             let who_clone = who.clone();
 
@@ -1804,6 +1805,7 @@ mod pallet {
                     .saturated_into();
                     ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
+                    Self::ensure_minimum_liquidity_shares(pool_id, pool_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(pool_amount)
                 },
