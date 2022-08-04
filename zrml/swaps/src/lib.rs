@@ -133,11 +133,7 @@ mod pallet {
             let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
             // If the pool is still in use, prevent a pool drain.
-            if pool.pool_status != PoolStatus::Clean {
-                let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
-                let max_withdraw = total_issuance.saturating_sub(MIN_BALANCE.saturated_into());
-                ensure!(pool_amount <= max_withdraw, Error::<T>::PoolDrain);
-            }
+            Self::ensure_minimum_liquidity_shares(pool_id, pool_amount)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let params = PoolParams {
                 asset_bounds: min_assets_out,
@@ -1191,6 +1187,20 @@ mod pallet {
 
         pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
             T::PalletId::get().into_sub_account(pool_id.saturated_into::<u128>())
+        }
+
+        pub(crate) fn ensure_minimum_liquidity_shares(
+            pool_id: PoolId,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let pool = Self::pool_by_id(pool_id)?;
+            if pool.pool_status == PoolStatus::Clean {
+                return Ok(());
+            }
+            let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
+            let max_withdraw = total_issuance.saturating_sub(MIN_BALANCE.saturated_into());
+            ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
+            Ok(())
         }
 
         pub(crate) fn ensure_minimum_balance(
