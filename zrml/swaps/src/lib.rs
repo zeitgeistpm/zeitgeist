@@ -2042,7 +2042,8 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing,);
+            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
+            Self::ensure_minimum_balance(pool_id, asset_out, asset_amount_out)?;
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);

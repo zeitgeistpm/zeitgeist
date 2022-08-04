@@ -931,7 +931,7 @@ fn out_amount_must_be_equal_or_less_than_max_out_ratio() {
                 ASSET_A,
                 Some(_1),
                 ASSET_B,
-                u128::MAX,
+                _50,
                 Some(_1),
             ),
             crate::Error::<Runtime>::MaxOutRatio
@@ -2681,34 +2681,6 @@ fn single_asset_operations_are_equivalent_to_swaps() {
 }
 
 #[test]
-fn swaps_cannot_reduce_balances_to_zero() {
-    ExtBuilder::default().build().execute_with(|| {
-        create_initial_pool(ScoringRule::CPMM, Some(0), true);
-        let pool_id = 0;
-        // Artificially set one of the balances close to zero.
-        let pool_account_id = Swaps::pool_account_id(pool_id);
-        let almost_zero = 1;
-        assert_ok!(Currencies::withdraw(
-            ASSET_A,
-            &pool_account_id,
-            Currencies::free_balance(ASSET_A, &pool_account_id) - almost_zero,
-        ));
-        assert_noop!(
-            Swaps::swap_exact_amount_out(
-                alice_signed(),
-                pool_id,
-                ASSET_B,
-                Some(u128::MAX),
-                ASSET_A,
-                almost_zero,
-                Some(u128::MAX),
-            ),
-            crate::Error::<Runtime>::MaxOutRatio,
-        );
-    });
-}
-
-#[test]
 fn single_asset_operations_cannot_reduce_balances_to_zero() {
     ExtBuilder::default().build().execute_with(|| {
         create_initial_pool(ScoringRule::CPMM, Some(0), true);
@@ -2829,6 +2801,36 @@ fn swap_exact_amount_in_fails_if_balances_drop_too_low() {
                 MIN_BALANCE / 10,
                 ASSET_B,
                 Some(0),
+                None,
+            ),
+            crate::Error::<Runtime>::PoolDrain,
+        );
+    });
+}
+
+#[test]
+fn swap_exact_amount_out_fails_if_balances_drop_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        // We drop the liquidity below `MIN_BALANCE`, but balances remains above `MIN_BALANCE`.
+        <Runtime as Config>::ExitFee::set(&0u128);
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
+        let pool_id = 0;
+        let pool_account_id = Swaps::pool_account_id(pool_id);
+
+        // There's only very little left of all assets!
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - MIN_BALANCE));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - MIN_BALANCE));
+
+        assert_noop!(
+            Swaps::swap_exact_amount_out(
+                Origin::signed(ALICE),
+                pool_id,
+                ASSET_A,
+                Some(u128::MAX),
+                ASSET_B,
+                MIN_BALANCE / 10,
                 None,
             ),
             crate::Error::<Runtime>::PoolDrain,
