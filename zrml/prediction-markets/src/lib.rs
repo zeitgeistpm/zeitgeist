@@ -447,11 +447,7 @@ mod pallet {
 
             for (index, MarketDispute { at: _, by: _, outcome }) in disputes.iter().enumerate() {
                 let dispute_bond = default_dispute_bond::<T>(index);
-                T::GlobalDisputes::push_voting_outcome(
-                    &market_id,
-                    outcome.clone(),
-                    dispute_bond,
-                );
+                T::GlobalDisputes::push_voting_outcome(&market_id, outcome.clone(), dispute_bond);
             }
 
             // ensure, that global disputes controls the resolution now

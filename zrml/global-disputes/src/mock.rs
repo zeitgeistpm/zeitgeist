@@ -9,7 +9,7 @@ use sp_runtime::{
 use zeitgeist_primitives::{
     constants::{
         BlockHashCount, GlobalDisputesPalletId, MaxReserves, MinOutcomeVoteAmount, MinimumPeriod,
-        VoteLockIdentifier, VotingOutcomeFee, BASE, RemoveKeysLimit
+        RemoveKeysLimit, VoteLockIdentifier, VotingOutcomeFee, BASE,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
