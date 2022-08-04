@@ -58,12 +58,13 @@ pub fn load_spec(
             #[cfg(not(feature = "parachain"))]
             &include_bytes!("../res/bs.json")[..],
         )?),
-		/*
+		#[cfg(feature = "with-battery-station-runtime")]
         "battery_station_staging" => Box::new(crate::chain_spec::battery_station_staging_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
-		*/
+		#[cfg(not(feature = "with-battery-station-runtime"))]
+		"battery_station_staging" => panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         "zeitgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/zeitgeist_parachain.json")[..],
@@ -71,10 +72,13 @@ pub fn load_spec(
             &include_bytes!("../res/zeitgeist.json")[..],
         )?),
 		/*
+		#[cfg(feature = "with-zeitgeist-runtime")]
         "zeitgeist_staging" => Box::new(crate::chain_spec::zeitgeist_staging_config(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
+		#[cfg(not(feature = "with-zeitgeist-runtime"))]
+		"zeitgeist_staging" => panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE),
 		*/
         path => { 
 			let spec = Box::new(crate::chain_spec::DummyChainSpec::from_json_file(std::path::PathBuf::from(path))?)
@@ -83,14 +87,13 @@ pub fn load_spec(
 			match spec {
 				spec if spec.is_battery_station() => {
 					#[cfg(feature = "with-battery-station-runtime")]
-					// return Box::new(chain_spec::battery_station::ChainSpec::from_json_file(path)?);
-					panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+					return Ok(Box::new(crate::chain_spec::battery_station::BatteryStationChainSpec::from_json_file(std::path::PathBuf::from(path))?));
 					#[cfg(not(feature = "with-battery-station-runtime"))]
 					panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
 				}
 				spec if spec.is_zeitgeist() => {
 					#[cfg(feature = "with-zeitgeist-runtime")]
-					// return Box::new(chain_spec::zeitgeist::ChainSpec::from_json_file(path)?);
+					// return Ok(Box::new(chain_spec::zeitgeist::ZeitgeistChainSpec::from_json_file(path)?));
 					panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
 					#[cfg(not(feature = "with-zeitgeist-runtime"))]
 					panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE);

@@ -6,7 +6,7 @@ mod command;
 // mod command_helper;
 mod rpc;
 #[macro_use]
-pub(crate) mod service;
+mod service;
 
 pub const BATTERY_STATION_RUNTIME_NOT_AVAILABLE: &str =
 	"Battery Station runtime is not available. Please compile the node with `--features with-battery-station-runtime` to enable it.";
