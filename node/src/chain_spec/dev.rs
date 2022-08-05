@@ -1,7 +1,6 @@
 #![cfg(feature = "with-battery-station-runtime")]
 
 use super::{battery_station::BatteryStationChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, get_account_id_from_seed, token_properties, AdditionalChainSpec};
-#[cfg(not(feature = "parachain"))]
 use super::get_from_seed;
 
 use sc_service::ChainType;
@@ -13,6 +12,16 @@ use zeitgeist_primitives::{
     },
     types::{AccountId, Balance, Signature},
 };
+#[cfg(feature = "parachain")]
+use {
+    super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
+    sp_runtime::Perbill,
+    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
+    battery_station_runtime::{
+        CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
+    },
+};
+
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
 
@@ -49,7 +58,7 @@ pub fn dev_config(
                     candidates: vec![(
                         get_account_id_from_seed::<sr25519::Public>("Alice"),
                         get_from_seed::<nimbus_primitives::NimbusId>("Alice"),
-                        crate::chain_spec::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
+                        super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
                     crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
                     inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,

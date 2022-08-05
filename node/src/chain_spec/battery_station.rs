@@ -33,7 +33,7 @@ use {
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
-        const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
+        pub(super) const DEFAULT_STAKING_AMOUNT_BATTERY_STATION: u128 = 2_000 * BASE;
         const DEFAULT_COLLATOR_BALANCE_BATTERY_STATION: Option<u128> =
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION.checked_add(CollatorDeposit::get());
         const DEFAULT_INITIAL_CROWDLOAN_FUNDS_BATTERY_STATION: u128 = 100 * BASE;

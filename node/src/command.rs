@@ -236,14 +236,6 @@ pub fn run() -> sc_cli::Result<()> {
             runner.async_run(|mut config| {
                 let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
 
-                /*
-                let aux_revert = Box::new(move |client, _, blocks| {
-                    sc_finality_grandpa::revert(client, blocks)?;
-                    Ok(())
-                });
-
-                Ok((cmd.run(client, backend, Some(aux_revert)), task_manager))
-                */
                 Ok((
                     cmd.run(client, backend, None),
                     task_manager,
@@ -253,16 +245,34 @@ pub fn run() -> sc_cli::Result<()> {
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                // we don't need any of the components of new_partial, just a runtime, or a task
-                // manager to do `async_run`.
-                let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
-                let task_manager =
-                    sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
-                        .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
+            let chain_spec = &runner.config().chain_spec;
 
-                Ok((cmd.run::<Block, ExecutorDispatch>(config), task_manager))
-            })
+            match chain_spec {               
+                #[cfg(feature = "with-zeitgeist-runtime")]
+                spec if spec.is_zeitgeist() => {
+                    runner.async_run(|config| { 
+                        // we don't need any of the components of new_partial, just a runtime, or a task
+                        // manager to do `async_run`.
+                        let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                        let task_manager =
+                            sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                                .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
+                        return Ok((cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config), task_manager));
+                    })
+                }
+                #[cfg(feature = "with-battery-station-runtime")]
+                _ => {
+                    runner.async_run(|config| { 
+                        let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                        let task_manager =
+                            sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                                .map_err(|e| sc_cli::Error::Service(sc_service::Error::Prometheus(e)))?;
+                        return Ok((cmd.run::<battery_station_runtime::Block, BatteryStationExecutor>(config), task_manager));
+                    })
+                }
+                #[cfg(not(feature = "with-battery-station-runtime"))]
+                _ => Err("Invalid chain spec")
+            }
         }
         #[cfg(not(feature = "try-runtime"))]
         Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
