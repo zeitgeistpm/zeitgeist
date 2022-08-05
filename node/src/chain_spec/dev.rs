@@ -1,3 +1,5 @@
+#![cfg(feature = "with-battery-station-runtime")]
+
 use super::{battery_station::BatteryStationChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, get_account_id_from_seed, token_properties, AdditionalChainSpec};
 #[cfg(not(feature = "parachain"))]
 use super::get_from_seed;

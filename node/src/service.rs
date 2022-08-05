@@ -5,7 +5,7 @@ mod service_standalone;
 
 use sp_runtime::traits::BlakeTwo256;
 use zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId};
-use zeitgeist_runtime::opaque::Block;
+use zeitgeist_primitives::types::Block;
 
 #[cfg(feature = "parachain")]
 pub use service_parachain::{new_full, new_partial, FullClient, FullBackend, ParachainPartialComponents};
@@ -170,9 +170,10 @@ pub fn new_chain_ops(
 			new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutor>(config)
 		}
 		#[cfg(feature = "with-battery-station-runtime")]
-		spec if spec.is_battery_station() => {
+		_ => {
 			new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutor>(config)
 		}
+        #[cfg(not(feature = "with-battery-station-runtime"))]
 		_ => panic!("Invalid chain spec"),
 	}
 }

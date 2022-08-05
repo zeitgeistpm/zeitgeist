@@ -150,7 +150,7 @@ pub fn run() -> sc_cli::Result<()> {
             )?;
             let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
-            let block: zeitgeist_runtime::Block =
+            let block: zeitgeist_primitives::types::Block =
                 cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)?;
             let raw_header = block.header().encode();
             let buf = if params.raw {
@@ -232,20 +232,23 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| cmd.run(config.database))
         }
         Some(Subcommand::Revert(cmd)) => {
-            /*
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
+            runner.async_run(|mut config| {
                 let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
 
+                /*
                 let aux_revert = Box::new(move |client, _, blocks| {
                     sc_finality_grandpa::revert(client, blocks)?;
                     Ok(())
                 });
 
                 Ok((cmd.run(client, backend, Some(aux_revert)), task_manager))
+                */
+                Ok((
+                    cmd.run(client, backend, None),
+                    task_manager,
+                ))
             })
-            */
-            Ok(())
         }
         #[cfg(feature = "try-runtime")]
         Some(Subcommand::TryRuntime(cmd)) => {
@@ -317,16 +320,6 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain genesis state: {}", genesis_state);
 
         match &parachain_config.chain_spec {
-            #[cfg(feature = "with-battery-station-runtime")]
-            spec if spec.is_battery_station() => {
-                new_full::<
-                    BatteryStationRuntimeApi,
-                    BatteryStationExecutor,
-                >(parachain_config, parachain_id, polkadot_config)
-                    .await
-                    .map(|r| r.0)
-                    .map_err(Into::into)
-            }
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => {
                 new_full::<
@@ -337,7 +330,18 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                     .map(|r| r.0)
                     .map_err(Into::into)
             }
-            _ => panic!("invalid chain spec"),
+            #[cfg(feature = "with-battery-station-runtime")]
+            _ => {
+                new_full::<
+                    BatteryStationRuntimeApi,
+                    BatteryStationExecutor,
+                >(parachain_config, parachain_id, polkadot_config)
+                    .await
+                    .map(|r| r.0)
+                    .map_err(Into::into)
+            }
+            #[cfg(not(feature = "with-battery-station-runtime"))]
+            _ => panic!(""),
         }
     })
 }
@@ -359,6 +363,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 >(config)
                 .map_err(sc_cli::Error::Service)
             }
+            #[cfg(feature = "with-battery-station-runtime")]
             _ => {
                 new_full::<
                     BatteryStationRuntimeApi,

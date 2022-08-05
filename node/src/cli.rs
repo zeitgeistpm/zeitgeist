@@ -16,7 +16,7 @@ use {
 };
 pub use zeitgeist_primitives::types::{AccountId, Balance, BlockNumber, Hash, Index};
 use super::service::{FullClient, FullBackend};
-use zeitgeist_runtime::{Header, opaque::Block};
+use zeitgeist_primitives::types::{Header, Block};
 use super::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection, IdentifyVariant};
 use clap::Parser;
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
@@ -46,6 +46,7 @@ pub fn load_spec(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
+		#[cfg(feature = "with-battery-station-runtime")]
         "" | "dev" => Box::new(crate::chain_spec::dev_config(
             #[cfg(feature = "parachain")]
             parachain_id,

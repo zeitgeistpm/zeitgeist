@@ -26,7 +26,7 @@ use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
     sp_runtime::Perbill,
     zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
-    zeitgeist_runtime::{
+    battery_station_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
     },
 };

@@ -22,8 +22,7 @@ use sp_api::ConstructRuntimeApi;
 use sp_keystore::SyncCryptoStorePtr;
 use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
-use zeitgeist_primitives::types::Hash;
-use zeitgeist_runtime::{opaque::Block, RuntimeApi};
+use zeitgeist_primitives::types::{Block, Hash};
 
 pub type FullBackend = TFullBackend<Block>;
 pub type FullClient<RuntimeApi, Executor> =

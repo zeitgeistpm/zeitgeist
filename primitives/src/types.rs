@@ -8,8 +8,9 @@ use frame_support::dispatch::{Decode, Encode, Weight};
 use scale_info::TypeInfo;
 use sp_runtime::{
     generic,
-    traits::{IdentifyAccount, Verify},
+    traits::{BlakeTwo256, IdentifyAccount, Verify},
     MultiSignature,
+    OpaqueExtrinsic,
 };
 
 /// Signed counter-part of Balance
@@ -25,6 +26,9 @@ pub type AccountIndex = u64;
 
 /// Balance of an account.
 pub type Balance = u128;
+
+/// Block type.
+pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 
 /// An index to a block.
 pub type BlockNumber = u64;
@@ -66,6 +70,9 @@ pub type Index = u64;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
+
+/// Block header type as expected by this runtime.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem;
