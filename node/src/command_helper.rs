@@ -1,6 +1,6 @@
-use super::service::FullClient;
+use super::{BATTERY_STATION_RUNTIME_NOT_AVAILABLE, service::FullClient};
 
-use sc_cli::Result;
+use sc_cli::{ChainSpec, Result};
 use sc_client_api::BlockBackend;
 use sc_executor::NativeExecutionDispatch;
 use sp_core::{Encode, Pair};
@@ -9,21 +9,21 @@ use sp_keyring::Sr25519Keyring;
 use sp_runtime::{OpaqueExtrinsic, SaturatedConversion};
 use std::{sync::Arc, time::Duration};
 use zeitgeist_primitives::{constants::BlockHashCount, types::Signature};
-use zeitgeist_runtime::{SystemCall, UncheckedExtrinsic, VERSION};
 
 /// Generates extrinsics for the `benchmark overhead` command.
 ///
 /// Note: Should only be used for benchmarking.
 pub struct BenchmarkExtrinsicBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
     client: Arc<FullClient<RuntimeApi, Executor>>,
+    chain_spec: Box<dyn ChainSpec>
 }
 
 impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
 {
     /// Creates a new [`Self`] from the given client.
-    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>) -> Self {
-        Self { client }
+    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, chain_spec: Box<dyn ChainSpec>) -> Self {
+        Self { client, chain_spec }
     }
 }
 
@@ -32,27 +32,44 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
 {
     fn remark(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
         let acc = Sr25519Keyring::Bob.pair();
-        let extrinsic: OpaqueExtrinsic = create_benchmark_extrinsic(
-            self.client.as_ref(),
-            acc,
-            SystemCall::remark { remark: vec![] }.into(),
-            nonce,
-        )
-        .into();
+        match self.chain_spec {
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            spec if spec.is_zeitgeist() => {
+                Ok(create_benchmark_extrinsic_zeitgeist(
+                    self.client.as_ref(),
+                    acc,
+                    zeitgeist_runtime::SystemCall::remark { remark: vec![] }.into(),
+                    nonce,
+                )
+                .into())
+            }
 
-        Ok(extrinsic)
+            #[cfg(feature = "with-battery-station-runtime")]
+            _ => {
+                Ok(create_benchmark_extrinsic_battery_station(
+                    self.client.as_ref(),
+                    acc,
+                    battery_station_runtime::SystemCall::remark { remark: vec![] }.into(),
+                    nonce,
+                )
+                .into())
+            }
+            #[cfg(not(feature = "with-battery-station-runtime"))]
+            _ => Err("Invalid chain spec")
+        }
     }
 }
 
 /// Creates a transaction using the given `call`.
 ///
 /// Note: Should only be used for benchmarking.
-pub fn create_benchmark_extrinsic<RuntimeApi, Executor: NativeExecutionDispatch + 'static>(
-    client: &FullClient<RuntimeApi, Executor>,
+#[cfg(feature = "with-zeitgeist-runtime")]
+pub fn create_benchmark_extrinsic_zeitgeist(
+    client: &FullClient<zeitgeist_runtime::RuntimeApi, crate::service::ZeitgeistExecutor>,
     sender: sp_core::sr25519::Pair,
     call: zeitgeist_runtime::Call,
     nonce: u32,
-) -> UncheckedExtrinsic {
+) -> zeitgeist_runtime::UncheckedExtrinsic {
     let genesis_hash = client.block_hash(0).ok().flatten().expect("Genesis block exists; qed");
     let best_hash = client.chain_info().best_hash;
     let best_block = client.chain_info().best_number;
@@ -77,8 +94,8 @@ pub fn create_benchmark_extrinsic<RuntimeApi, Executor: NativeExecutionDispatch 
         extra.clone(),
         (
             (),
-            VERSION.spec_version,
-            VERSION.transaction_version,
+            zeitgeist_runtime::VERSION.spec_version,
+            zeitgeist_runtime::VERSION.transaction_version,
             genesis_hash,
             best_hash,
             (),
@@ -88,7 +105,60 @@ pub fn create_benchmark_extrinsic<RuntimeApi, Executor: NativeExecutionDispatch 
     );
     let signature = raw_payload.using_encoded(|e| sender.sign(e));
 
-    UncheckedExtrinsic::new_signed(
+    zeitgeist_runtime::UncheckedExtrinsic::new_signed(
+        call,
+        sp_runtime::AccountId32::from(sender.public()).into(),
+        Signature::Sr25519(signature),
+        extra,
+    )
+}
+
+/// Creates a transaction using the given `call`.
+///
+/// Note: Should only be used for benchmarking.
+#[cfg(feature = "with-battery-station-runtime")]
+pub fn create_benchmark_extrinsic_battery_station(
+    client: &FullClient<battery_station_runtime::RuntimeApi, crate::service::BatteryStationExecutor>,
+    sender: sp_core::sr25519::Pair,
+    call: battery_station_runtime::Call,
+    nonce: u32,
+) -> battery_station_runtime::UncheckedExtrinsic {
+    let genesis_hash = client.block_hash(0).ok().flatten().expect("Genesis block exists; qed");
+    let best_hash = client.chain_info().best_hash;
+    let best_block = client.chain_info().best_number;
+
+    let period =
+        BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
+    let extra: battery_station_runtime::SignedExtra = (
+        battery_station_runtime::CheckNonZeroSender::<battery_station_runtime::Runtime>::new(),
+        battery_station_runtime::CheckSpecVersion::<battery_station_runtime::Runtime>::new(),
+        battery_station_runtime::CheckTxVersion::<battery_station_runtime::Runtime>::new(),
+        battery_station_runtime::CheckGenesis::<battery_station_runtime::Runtime>::new(),
+        battery_station_runtime::CheckEra::<battery_station_runtime::Runtime>::from(
+            sp_runtime::generic::Era::mortal(period, best_block.saturated_into()),
+        ),
+        battery_station_runtime::CheckNonce::<battery_station_runtime::Runtime>::from(nonce.into()),
+        battery_station_runtime::CheckWeight::<battery_station_runtime::Runtime>::new(),
+        pallet_transaction_payment::ChargeTransactionPayment::<battery_station_runtime::Runtime>::from(0),
+    );
+
+    let raw_payload = battery_station_runtime::SignedPayload::from_raw(
+        call.clone(),
+        extra.clone(),
+        (
+            (),
+            battery_station_runtime::VERSION.spec_version,
+            battery_station_runtime::VERSION.transaction_version,
+            genesis_hash,
+            best_hash,
+            (),
+            (),
+            (),
+        ),
+    );
+    let signature = raw_payload.using_encoded(|e| sender.sign(e));
+
+    battery_station_runtime::UncheckedExtrinsic::new_signed(
         call,
         sp_runtime::AccountId32::from(sender.public()).into(),
         Signature::Sr25519(signature),
