@@ -220,13 +220,13 @@ impl SubstrateCli for Cli {
 
     fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		match spec {
-			_ if spec.is_zeitgeist() => {
+			spec if spec.is_zeitgeist() => {
 				#[cfg(feature = "with-zeitgeist-runtime")]
 				return &zeitgeist_runtime::VERSION;
 				#[cfg(not(feature = "with-zeitgeist-runtime"))]
 				panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE);
 			}
-			_ => {
+			spec => {
 				#[cfg(feature = "with-battery-station-runtime")]
 				return &battery_station_runtime::VERSION;
 				#[cfg(not(feature = "with-battery-station-runtime"))]

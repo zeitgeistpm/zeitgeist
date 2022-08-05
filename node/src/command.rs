@@ -150,14 +150,36 @@ pub fn run() -> sc_cli::Result<()> {
             )?;
             let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
-            let block: zeitgeist_primitives::types::Block =
-                cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)?;
-            let raw_header = block.header().encode();
-            let buf = if params.raw {
-                raw_header
-            } else {
-                format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+            let buf = match chain_spec {
+                #[cfg(feature = "with-zeitgeist-runtime")]
+                spec if spec.is_zeitgeist() =>  {
+                    let block: zeitgeist_runtime::Block =
+                        cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)?;
+                    let raw_header = block.header().encode();
+
+                    if params.raw {
+                        raw_header
+                    } else {
+                        format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+                    }
+                }
+                #[cfg(feature = "with-battery-station-runtime")]
+                _ => {
+                    let block: battery_station_runtime::Block =
+                        cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)?;
+                    let raw_header = block.header().encode();
+
+                    if params.raw {
+                        raw_header
+                    } else {
+                        format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+                    }
+                }
+                #[cfg(not(feature = "with-battery-station-runtime"))]
+                _ => panic!("Invalid chain spec"),
             };
+
+            // let raw_header = block.header().encode();
 
             if let Some(output) = &params.output {
                 std::fs::write(output, buf)?;
