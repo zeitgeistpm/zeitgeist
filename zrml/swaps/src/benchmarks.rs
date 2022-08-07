@@ -264,18 +264,18 @@ benchmarks! {
         let min_assets_out = vec![0u32.into(); a as usize];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, min_assets_out)
 
-    // pool_exit_subsidy {
-    //     let caller: T::AccountId = whitelisted_caller();
-    //     let (pool_id, ..) = bench_create_pool::<T>(
-    //         caller.clone(),
-    //         None,
-    //         Some(T::MinSubsidy::get()),
-    //         ScoringRule::RikiddoSigmoidFeeMarketEma,
-    //         false
-    //     );
-    //     let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
-    //         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    // }: _(RawOrigin::Signed(caller), pool_id, T::MinSubsidy::get())
+    pool_exit_subsidy {
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, ..) = bench_create_pool::<T>(
+            caller.clone(),
+            None,
+            Some(T::MinSubsidy::get()),
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            false
+        );
+        let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
+            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    }: _(RawOrigin::Signed(caller), pool_id, T::MinSubsidy::get())
 
     pool_exit_with_exact_asset_amount {
         let a = T::MaxAssets::get();
