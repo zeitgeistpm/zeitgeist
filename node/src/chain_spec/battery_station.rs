@@ -1,7 +1,7 @@
 #![cfg(feature = "with-battery-station-runtime")]
 
-use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
 use super::{AdditionalChainSpec, EndowedAccountWithBalance};
+use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
 use battery_station_runtime::parameters::SS58Prefix;
 use hex_literal::hex;
 use sc_service::ChainType;
