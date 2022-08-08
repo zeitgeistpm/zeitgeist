@@ -1,7 +1,10 @@
 #![cfg(feature = "with-battery-station-runtime")]
 
-use super::{battery_station::BatteryStationChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, get_account_id_from_seed, token_properties, AdditionalChainSpec};
-use super::get_from_seed;
+use super::{
+    battery_station::BatteryStationChainSpec, generate_generic_genesis_function,
+    get_account_id_from_seed, get_from_seed, token_properties, AdditionalChainSpec,
+    EndowedAccountWithBalance,
+};
 
 use sc_service::ChainType;
 use sp_core::sr25519;
@@ -15,13 +18,12 @@ use zeitgeist_primitives::{
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
     battery_station_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
     },
+    sp_runtime::Perbill,
+    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
 };
-
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;
 
@@ -35,7 +37,7 @@ fn authority_keys_from_seed(
     )
 }
 
-generate_generic_genesis_function!{battery_station_runtime,
+generate_generic_genesis_function! {battery_station_runtime,
     sudo: battery_station_runtime::SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")) },
 }
 

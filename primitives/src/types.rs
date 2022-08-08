@@ -9,8 +9,7 @@ use scale_info::TypeInfo;
 use sp_runtime::{
     generic,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
-    MultiSignature,
-    OpaqueExtrinsic,
+    MultiSignature, OpaqueExtrinsic,
 };
 
 /// Signed counter-part of Balance

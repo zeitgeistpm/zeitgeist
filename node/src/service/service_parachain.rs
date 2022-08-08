@@ -1,4 +1,3 @@
-// TODO: Dynamically select correct executor
 use crate::{
     service::{AdditionalRuntimeApiCollection, RuntimeApiCollection},
     KUSAMA_BLOCK_DURATION, SOFT_DEADLINE_PERCENT,
@@ -41,13 +40,12 @@ pub async fn new_full<RuntimeApi, Executor>(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
-)  -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: RuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        > + AdditionalRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         >,
     Executor: NativeExecutionDispatch + 'static,
@@ -125,9 +123,8 @@ pub fn new_partial<RuntimeApi, Executor>(
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: RuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        > + AdditionalRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         >,
     Executor: NativeExecutionDispatch + 'static,
@@ -211,9 +208,8 @@ async fn do_new_full<RuntimeApi, Executor, BIC>(
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: RuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        > + AdditionalRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         >,
     Executor: NativeExecutionDispatch + 'static,

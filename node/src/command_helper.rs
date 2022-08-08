@@ -1,4 +1,7 @@
-use super::{BATTERY_STATION_RUNTIME_NOT_AVAILABLE, service::FullClient};
+use super::{
+    service::{FullClient, IdentifyVariant},
+    BATTERY_STATION_RUNTIME_NOT_AVAILABLE,
+};
 
 use sc_cli::{ChainSpec, Result};
 use sc_client_api::BlockBackend;
@@ -15,15 +18,15 @@ use zeitgeist_primitives::{constants::BlockHashCount, types::Signature};
 /// Note: Should only be used for benchmarking.
 pub struct BenchmarkExtrinsicBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
     client: Arc<FullClient<RuntimeApi, Executor>>,
-    chain_spec: Box<dyn ChainSpec>
+    is_zeitgeist: bool,
 }
 
 impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
 {
     /// Creates a new [`Self`] from the given client.
-    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, chain_spec: Box<dyn ChainSpec>) -> Self {
-        Self { client, chain_spec }
+    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, is_zeitgeist: bool) -> Self {
+        Self { client, is_zeitgeist }
     }
 }
 
@@ -32,31 +35,29 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
 {
     fn remark(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
         let acc = Sr25519Keyring::Bob.pair();
-        match self.chain_spec {
-            #[cfg(feature = "with-zeitgeist-runtime")]
-            spec if spec.is_zeitgeist() => {
-                Ok(create_benchmark_extrinsic_zeitgeist(
-                    self.client.as_ref(),
-                    acc,
-                    zeitgeist_runtime::SystemCall::remark { remark: vec![] }.into(),
-                    nonce,
-                )
-                .into())
-            }
 
-            #[cfg(feature = "with-battery-station-runtime")]
-            _ => {
-                Ok(create_benchmark_extrinsic_battery_station(
-                    self.client.as_ref(),
-                    acc,
-                    battery_station_runtime::SystemCall::remark { remark: vec![] }.into(),
-                    nonce,
-                )
-                .into())
-            }
-            #[cfg(not(feature = "with-battery-station-runtime"))]
-            _ => Err("Invalid chain spec")
+        #[cfg(feature = "with-zeitgeist-runtime")]
+        if self.is_zeitgeist {
+            return Ok(create_benchmark_extrinsic_zeitgeist(
+                self.client.as_ref(),
+                acc,
+                zeitgeist_runtime::SystemCall::remark { remark: vec![] }.into(),
+                nonce,
+            )
+            .into());
         }
+        #[cfg(feature = "with-battery-station-runtime")]
+        if !self.is_zeitgeist {
+            return Ok(create_benchmark_extrinsic_battery_station(
+                self.client.as_ref(),
+                acc,
+                battery_station_runtime::SystemCall::remark { remark: vec![] }.into(),
+                nonce,
+            )
+            .into());
+        }
+
+        Err("Invalid chain spec")
     }
 }
 
@@ -64,8 +65,11 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
 ///
 /// Note: Should only be used for benchmarking.
 #[cfg(feature = "with-zeitgeist-runtime")]
-pub fn create_benchmark_extrinsic_zeitgeist(
-    client: &FullClient<zeitgeist_runtime::RuntimeApi, crate::service::ZeitgeistExecutor>,
+pub fn create_benchmark_extrinsic_zeitgeist<
+    RuntimeApi,
+    Executor: NativeExecutionDispatch + 'static,
+>(
+    client: &FullClient<RuntimeApi, Executor>,
     sender: sp_core::sr25519::Pair,
     call: zeitgeist_runtime::Call,
     nonce: u32,
@@ -117,8 +121,11 @@ pub fn create_benchmark_extrinsic_zeitgeist(
 ///
 /// Note: Should only be used for benchmarking.
 #[cfg(feature = "with-battery-station-runtime")]
-pub fn create_benchmark_extrinsic_battery_station(
-    client: &FullClient<battery_station_runtime::RuntimeApi, crate::service::BatteryStationExecutor>,
+pub fn create_benchmark_extrinsic_battery_station<
+    RuntimeApi,
+    Executor: NativeExecutionDispatch + 'static,
+>(
+    client: &FullClient<RuntimeApi, Executor>,
     sender: sp_core::sr25519::Pair,
     call: battery_station_runtime::Call,
     nonce: u32,

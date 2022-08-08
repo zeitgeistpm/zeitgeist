@@ -1,12 +1,11 @@
 #![cfg(feature = "with-battery-station-runtime")]
 
-use crate::chain_spec::{
-    generate_generic_genesis_function, telemetry_endpoints, token_properties
-};
+use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
 
 use battery_station_runtime::parameters::SS58Prefix;
 use sc_service::ChainType;
 
+use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance};
 use hex_literal::hex;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
@@ -19,16 +18,15 @@ use zeitgeist_primitives::{
     },
     types::{AccountId, Balance, Signature},
 };
-use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance};
 
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
     battery_station_runtime::{
         CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
     },
+    sp_runtime::Perbill,
+    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
 };
 
 cfg_if::cfg_if! {
@@ -107,7 +105,7 @@ pub(super) fn get_wasm() -> Result<&'static [u8], String> {
     battery_station_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 
-generate_generic_genesis_function!{battery_station_runtime,
+generate_generic_genesis_function! {battery_station_runtime,
     sudo: battery_station_runtime::SudoConfig { key: Some(root_key_staging_battery_station()) },
 }
 

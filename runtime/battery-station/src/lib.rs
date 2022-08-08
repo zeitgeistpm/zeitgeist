@@ -6,14 +6,20 @@ extern crate alloc;
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use common_runtime::{create_runtime_with_additional_pallets, create_runtime, impl_config_traits, create_runtime_api, decl_common_types, create_common_benchmark_logic, create_common_tests};
-#[cfg(feature = "parachain")]
-pub use {pallet_author_slot_filter::EligibilityValue};
+use common_runtime::{
+    create_common_benchmark_logic, create_common_tests, create_runtime, create_runtime_api,
+    create_runtime_with_additional_pallets, decl_common_types, impl_config_traits,
+};
 pub use frame_system::{
     Call as SystemCall, CheckEra, CheckGenesis, CheckNonZeroSender, CheckNonce, CheckSpecVersion,
     CheckTxVersion, CheckWeight,
 };
+#[cfg(feature = "parachain")]
+pub use pallet_author_slot_filter::EligibilityValue;
 
+#[cfg(feature = "parachain")]
+pub use crate::parachain_params::*;
+pub use crate::parameters::*;
 use alloc::vec;
 use frame_support::{
     traits::{ConstU16, ConstU32, Contains, EnsureOneOf, EqualPrivilegeOnly, InstanceFilter},
@@ -21,9 +27,8 @@ use frame_support::{
 };
 use frame_system::EnsureRoot;
 use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
-use sp_runtime::{
-    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256},
-};
+use pallet_transaction_payment::ChargeTransactionPayment;
+use sp_runtime::traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
@@ -36,13 +41,8 @@ use {
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
     xcm_config::XcmConfig,
 };
-use pallet_transaction_payment::ChargeTransactionPayment;
-pub use crate::parameters::*;
-#[cfg(feature = "parachain")]
-pub use crate::parachain_params::*;
 
-
-use frame_support::{construct_runtime};
+use frame_support::construct_runtime;
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -58,10 +58,10 @@ use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
 
 #[cfg(feature = "parachain")]
-pub mod xcm_config;
-#[cfg(feature = "parachain")]
 pub mod parachain_params;
 pub mod parameters;
+#[cfg(feature = "parachain")]
+pub mod xcm_config;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("zeitgeist"),
@@ -119,7 +119,6 @@ impl pallet_sudo::Config for Runtime {
     type Call = Call;
     type Event = Event;
 }
-
 
 impl_config_traits!();
 create_runtime_api!();

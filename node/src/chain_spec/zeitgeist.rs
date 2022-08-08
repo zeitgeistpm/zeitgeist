@@ -1,11 +1,10 @@
 #![cfg(feature = "with-zeitgeist-runtime")]
 
-use crate::chain_spec::{
-    generate_generic_genesis_function, telemetry_endpoints, token_properties
-};
-use zeitgeist_runtime::parameters::SS58Prefix;
+use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
 use sc_service::ChainType;
+use zeitgeist_runtime::parameters::SS58Prefix;
 
+use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance};
 use hex_literal::hex;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
@@ -18,7 +17,6 @@ use zeitgeist_primitives::{
     },
     types::{AccountId, Balance, Signature},
 };
-use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance};
 
 #[cfg(feature = "parachain")]
 use {

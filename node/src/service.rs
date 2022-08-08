@@ -4,19 +4,22 @@ mod service_parachain;
 mod service_standalone;
 
 use sp_runtime::traits::BlakeTwo256;
-use zeitgeist_primitives::types::{AccountId, Balance, Index, MarketId, PoolId};
-use zeitgeist_primitives::types::Block;
+use zeitgeist_primitives::types::{AccountId, Balance, Block, Index, MarketId, PoolId};
 
-#[cfg(feature = "parachain")]
-pub use service_parachain::{new_full, new_partial, FullClient, FullBackend, ParachainPartialComponents};
-#[cfg(not(feature = "parachain"))]
-pub use service_standalone::{new_full, new_partial, FullClient, FullBackend};
-use std::sync::Arc;
-use sc_service::{error::Error as ServiceError, ChainSpec, Configuration, TaskManager, PartialComponents};
-use sp_trie::PrefixedMemoryDB;
-use sp_api::ConstructRuntimeApi;
-use sc_executor::{NativeExecutionDispatch};
 use super::cli::Client;
+use sc_executor::NativeExecutionDispatch;
+use sc_service::{
+    error::Error as ServiceError, ChainSpec, Configuration, PartialComponents, TaskManager,
+};
+#[cfg(feature = "parachain")]
+pub use service_parachain::{
+    new_full, new_partial, FullBackend, FullClient, ParachainPartialComponents,
+};
+#[cfg(not(feature = "parachain"))]
+pub use service_standalone::{new_full, new_partial, FullBackend, FullClient};
+use sp_api::ConstructRuntimeApi;
+use sp_trie::PrefixedMemoryDB;
+use std::sync::Arc;
 
 #[cfg(feature = "with-battery-station-runtime")]
 pub struct BatteryStationExecutor;
@@ -59,21 +62,21 @@ impl sc_executor::NativeExecutionDispatch for ZeitgeistExecutor {
 /// Can be called for a `Configuration` to check if it is a configuration for
 /// the `Zeitgeist` network.
 pub trait IdentifyVariant {
-	/// Returns `true` if this is a configuration for the `Battery Station` network.
-	fn is_battery_station(&self) -> bool;
+    /// Returns `true` if this is a configuration for the `Battery Station` network.
+    fn is_battery_station(&self) -> bool;
 
-	/// Returns `true` if this is a configuration for the `Zeitgeist` network.
-	fn is_zeitgeist(&self) -> bool;
+    /// Returns `true` if this is a configuration for the `Zeitgeist` network.
+    fn is_zeitgeist(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn ChainSpec> {
-	fn is_battery_station(&self) -> bool {
-		self.id().starts_with("battery_station")
-	}
+    fn is_battery_station(&self) -> bool {
+        self.id().starts_with("battery_station")
+    }
 
-	fn is_zeitgeist(&self) -> bool {
-		self.id().starts_with("zeitgeist")
-	}
+    fn is_zeitgeist(&self) -> bool {
+        self.id().starts_with("zeitgeist")
+    }
 }
 
 /// A set of common runtime APIs between standalone an parachain runtimes.
@@ -154,63 +157,54 @@ cfg_if::cfg_if! {
 /// Builds a new object suitable for chain operations.
 #[allow(clippy::type_complexity)]
 pub fn new_chain_ops(
-	config: &mut Configuration,
+    config: &mut Configuration,
 ) -> Result<
-	(
-		Arc<Client>,
-		Arc<FullBackend>,
-		sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-		TaskManager,
-	),
-	ServiceError,
+    (
+        Arc<Client>,
+        Arc<FullBackend>,
+        sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+        TaskManager,
+    ),
+    ServiceError,
 > {
-	match &config.chain_spec {
-		#[cfg(feature = "with-zeitgeist-runtime")]
-		spec if spec.is_zeitgeist() => {
-			new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutor>(config)
-		}
-		#[cfg(feature = "with-battery-station-runtime")]
-		_ => {
-			new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutor>(config)
-		}
+    match &config.chain_spec {
+        #[cfg(feature = "with-zeitgeist-runtime")]
+        spec if spec.is_zeitgeist() => {
+            new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutor>(config)
+        }
+        #[cfg(feature = "with-battery-station-runtime")]
+        _ => new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutor>(
+            config,
+        ),
         #[cfg(not(feature = "with-battery-station-runtime"))]
-		_ => panic!("Invalid chain spec"),
-	}
+        _ => panic!("Invalid chain spec"),
+    }
 }
 
 #[allow(clippy::type_complexity)]
 fn new_chain_ops_inner<RuntimeApi, Executor>(
-	mut config: &mut Configuration,
+    mut config: &mut Configuration,
 ) -> Result<
-	(
-		Arc<Client>,
-		Arc<FullBackend>,
-		sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-		TaskManager,
-	),
-	ServiceError,
+    (
+        Arc<Client>,
+        Arc<FullBackend>,
+        sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+        TaskManager,
+    ),
+    ServiceError,
 >
 where
-	Client: From<Arc<FullClient<RuntimeApi, Executor>>>,
-	RuntimeApi:
-		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-	RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
-            + AdditionalRuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	Executor: NativeExecutionDispatch + 'static,
+    Client: From<Arc<FullClient<RuntimeApi, Executor>>>,
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
 {
-	config.keystore = sc_service::config::KeystoreConfig::InMemory;
-	let PartialComponents {
-		client,
-		backend,
-		import_queue,
-		task_manager,
-		..
-	} = new_partial::<RuntimeApi, Executor>(config)?;
-	Ok((
-		Arc::new(Client::from(client)),
-		backend,
-		import_queue,
-		task_manager,
-	))
+    config.keystore = sc_service::config::KeystoreConfig::InMemory;
+    let PartialComponents { client, backend, import_queue, task_manager, .. } =
+        new_partial::<RuntimeApi, Executor>(config)?;
+    Ok((Arc::new(Client::from(client)), backend, import_queue, task_manager))
 }

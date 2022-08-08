@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
 
-
 pub mod weights;
 
 #[macro_export]
@@ -1324,35 +1323,35 @@ macro_rules! create_common_benchmark_logic {
                     constants::{ExistentialDeposit, GetNativeCurrencyId, BASE},
                     types::Asset,
                 };
-                
+
                 use frame_benchmarking::{account, whitelisted_caller};
                 use frame_system::RawOrigin;
                 use sp_runtime::traits::UniqueSaturatedInto;
-                
+
                 use orml_benchmarking::runtime_benchmarks;
                 use orml_traits::MultiCurrency;
-                
+
                 const SEED: u32 = 0;
-                
+
                 const NATIVE: CurrencyId = GetNativeCurrencyId::get();
                 const ASSET: CurrencyId = Asset::CategoricalOutcome(0, 0);
-                
+
                 runtime_benchmarks! {
                     { Runtime, orml_currencies }
-                
+
                     // `transfer` non-native currency
                     transfer_non_native_currency {
                         let amount: Balance = 1_000 * BASE;
                         let from: AccountId = whitelisted_caller();
                         set_balance(ASSET, &from, amount);
-                
+
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
                     }: transfer(RawOrigin::Signed(from), to_lookup, ASSET, amount)
                     verify {
                         assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(ASSET, &to), amount);
                     }
-                
+
                     // `transfer` native currency and in worst case
                     #[extra]
                     transfer_native_currency_worst_case {
@@ -1360,14 +1359,14 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = existential_deposit.saturating_mul(1000);
                         let from: AccountId = whitelisted_caller();
                         set_balance(NATIVE, &from, amount);
-                
+
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
                     }: transfer(RawOrigin::Signed(from), to_lookup, NATIVE, amount)
                     verify {
                         assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(NATIVE, &to), amount);
                     }
-                
+
                     // `transfer_native_currency` in worst case
                     // * will create the `to` account.
                     // * will kill the `from` account.
@@ -1376,14 +1375,14 @@ macro_rules! create_common_benchmark_logic {
                         let amount: Balance = existential_deposit.saturating_mul(1000);
                         let from: AccountId = whitelisted_caller();
                         set_balance(NATIVE, &from, amount);
-                
+
                         let to: AccountId = account("to", 0, SEED);
                         let to_lookup = lookup_of_account(to.clone());
                     }: _(RawOrigin::Signed(from), to_lookup, amount)
                     verify {
                         assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(NATIVE, &to), amount);
                     }
-                
+
                     // `update_balance` for non-native currency
                     update_balance_non_native_currency {
                         let balance: Balance = 2 * BASE;
@@ -1394,7 +1393,7 @@ macro_rules! create_common_benchmark_logic {
                     verify {
                         assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(ASSET, &who), balance);
                     }
-                
+
                     // `update_balance` for native currency
                     // * will create the `who` account.
                     update_balance_native_currency_creating {
@@ -1407,7 +1406,7 @@ macro_rules! create_common_benchmark_logic {
                     verify {
                         assert_eq!(<AssetManager as MultiCurrency<_>>::total_balance(NATIVE, &who), balance);
                     }
-                
+
                     // `update_balance` for native currency
                     // * will kill the `who` account.
                     update_balance_native_currency_killing {
@@ -1422,13 +1421,13 @@ macro_rules! create_common_benchmark_logic {
                         assert_eq!(<AssetManager as MultiCurrency<_>>::free_balance(NATIVE, &who), 0);
                     }
                 }
-                
+
                 #[cfg(test)]
                 mod tests {
                     use super::*;
                     use crate::benchmarks::utils::tests::new_test_ext;
                     use orml_benchmarking::impl_benchmark_test_suite;
-                
+
                     impl_benchmark_test_suite!(new_test_ext(),);
                 }
             }
@@ -1523,13 +1522,13 @@ macro_rules! create_common_benchmark_logic {
                 use frame_support::assert_ok;
                 use orml_traits::MultiCurrencyExtended;
                 use sp_runtime::traits::{SaturatedConversion, StaticLookup};
-                
+
                 pub fn lookup_of_account(
                     who: AccountId,
                 ) -> <<Runtime as frame_system::Config>::Lookup as StaticLookup>::Source {
                     <Runtime as frame_system::Config>::Lookup::unlookup(who)
                 }
-                
+
                 pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) {
                     assert_ok!(<AssetManager as MultiCurrencyExtended<_>>::update_balance(
                         currency_id,
@@ -1537,7 +1536,7 @@ macro_rules! create_common_benchmark_logic {
                         balance.saturated_into()
                     ));
                 }
-                
+
                 #[cfg(test)]
                 pub mod tests {
                     pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -1566,10 +1565,10 @@ macro_rules! create_common_tests {
                     traits::{BlakeTwo256, Convert, IdentityLookup},
                     Perbill,
                 };
-    
+
                 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
                 type Block = frame_system::mocking::MockBlock<Runtime>;
-    
+
                 frame_support::construct_runtime!(
                     pub enum Runtime where
                         Block = Block,
@@ -1579,7 +1578,7 @@ macro_rules! create_common_tests {
                         System: frame_system::{Pallet, Call, Config, Storage, Event<T>}
                     }
                 );
-    
+
                 parameter_types! {
                     pub const BlockHashCount: u64 = 250;
                     pub const AvailableBlockRatio: Perbill = Perbill::one();
@@ -1588,7 +1587,7 @@ macro_rules! create_common_tests {
                     pub BlockWeights: frame_system::limits::BlockWeights =
                         frame_system::limits::BlockWeights::simple_max(1024);
                 }
-    
+
                 impl frame_system::Config for Runtime {
                     type BaseCallFilter = frame_support::traits::Everything;
                     type BlockWeights = BlockWeights;
@@ -1615,7 +1614,7 @@ macro_rules! create_common_tests {
                     type OnSetCode = ();
                     type MaxConsumers = frame_support::traits::ConstU32<16>;
                 }
-    
+
                 fn run_with_system_weight<F>(w: Weight, mut assertions: F)
                 where
                     F: FnMut(),
@@ -1627,7 +1626,7 @@ macro_rules! create_common_tests {
                         assertions()
                     });
                 }
-    
+
                 #[test]
                 fn multiplier_can_grow_from_zero() {
                     let minimum_multiplier = MinimumMultiplier::get();

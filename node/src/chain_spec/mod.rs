@@ -1,4 +1,3 @@
-
 mod additional_chain_spec;
 #[cfg(feature = "with-battery-station-runtime")]
 pub(crate) mod battery_station;
@@ -6,7 +5,6 @@ pub(crate) mod battery_station;
 mod dev;
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub(crate) mod zeitgeist;
-
 
 pub use additional_chain_spec::AdditionalChainSpec;
 #[cfg(feature = "with-battery-station-runtime")]
@@ -181,7 +179,6 @@ fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public
         .expect("static values are valid; qed")
         .public()
 }
-
 
 /// The extensions for the [`ChainSpec`].
 #[cfg(feature = "parachain")]
