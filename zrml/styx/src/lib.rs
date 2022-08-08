@@ -1,3 +1,29 @@
+//! # Styx
+//!
+//! A module for burning som native chain tokens to be able to claim their avatar.
+//!
+//! ## Overview
+//!
+//! When the signer pays the ferryman and crosses the river Styx they claim their right
+//! to incarnate in the system as an avatar. The account can only cross once and its the concern
+//! of a separate system to pick up these events and allow minting of the avatar NFT.
+//!
+//! ## Interface
+//!
+//! ### Dispatches
+//!
+//! #### Public Dispatches
+//!
+//! - `cross` - Burns native chain tokens to cross, granting the ability to claim your zeitgeist avatar.
+//!
+//! #### Admin Dispatches
+//!
+//! The administrative dispatches are used to perform admin functions on chain:
+//!
+//! - `set_burn_amount` - Sets the new burn price for the cross. Intended to be called by governance.
+//!
+//! The origins from which the admin functions are called (`SetBurnAmountOrigin`) are mainly minimum vote proportions from council.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -66,6 +92,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Burns ZTG(styx.burnAmount()) to cross, granting the ability to claim your zeitgeist avatar.
+        /// The signer can only cross once.
         #[pallet::weight(T::WeightInfo::cross())]
         pub fn cross(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -88,7 +115,12 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Set the burn amount. Ensures SetBurnAmountOrigin.
+        /// Set the burn amount. Ensures the SetBurnAmountOrigin in the runtime.
+        /// Intended to be called by a governing body like the council.
+        ///
+        /// # Arguments
+        ///
+        /// * `amount`: The amount of the new burn price
         #[pallet::weight(T::WeightInfo::set_burn_amount())]
         pub fn set_burn_amount(
             origin: OriginFor<T>,
