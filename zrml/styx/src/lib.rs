@@ -1,6 +1,6 @@
 //! # Styx
 //!
-//! A module for burning som native chain tokens to be able to claim their avatar.
+//! A module for burning native chain tokens in order to gain entry into a registry for off-chain use.
 //!
 //! ## Overview
 //!
