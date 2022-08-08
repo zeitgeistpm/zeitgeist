@@ -28,7 +28,6 @@ pub use pallet::*;
 mod pallet {
     use crate::{
         check_arithm_rslt::CheckArithmRslt,
-        consts::MIN_BALANCE,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
         fixed::{bdiv, bmul},
         utils::{
@@ -1191,6 +1190,11 @@ mod pallet {
             T::PalletId::get().into_sub_account(pool_id.saturated_into::<u128>())
         }
 
+        // The minimum allowed balance in a liquidity pool.
+        pub(crate) fn min_balance() -> BalanceOf<T> {
+            T::AssetManager::minimum_balance(Asset::Ztg)
+        }
+
         pub(crate) fn ensure_minimum_liquidity_shares(
             pool_id: PoolId,
             amount: BalanceOf<T>,
@@ -1200,7 +1204,7 @@ mod pallet {
                 return Ok(());
             }
             let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
-            let max_withdraw = total_issuance.saturating_sub(MIN_BALANCE.saturated_into());
+            let max_withdraw = total_issuance.saturating_sub(Self::min_balance().saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
             Ok(())
         }
@@ -1217,7 +1221,7 @@ mod pallet {
             }
             let pool_account = Self::pool_account_id(pool_id);
             let balance = T::AssetManager::free_balance(asset, &pool_account);
-            let max_withdraw = balance.saturating_sub(MIN_BALANCE.saturated_into());
+            let max_withdraw = balance.saturating_sub(Self::min_balance().saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
             Ok(())
         }
