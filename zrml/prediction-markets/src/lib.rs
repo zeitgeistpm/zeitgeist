@@ -96,7 +96,7 @@ mod pallet {
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::{PmPalletId, MILLISECS_PER_BLOCK},
+        constants::{PmPalletId, MILLISECS_PER_BLOCK, BLOCKS_PER_DAY_U32},
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
@@ -557,11 +557,10 @@ mod pallet {
                     MarketStatus::Proposed
                 }
             };
-            let deafult_deadline_value: u32 = 24 * 60 * 60 / MILLISECS_PER_BLOCK;
             let deadlines = deadlines.unwrap_or(Deadlines {
-                oracle_delay: deafult_deadline_value,
-                oracle_duration: deafult_deadline_value,
-                dispute_duration: deafult_deadline_value,
+                oracle_delay: BLOCKS_PER_DAY_U32,
+                oracle_duration: BLOCKS_PER_DAY_U32,
+                dispute_duration: BLOCKS_PER_DAY_U32,
             });
 
             let market = Market {
@@ -891,13 +890,15 @@ mod pallet {
                 let mut should_check_origin = false;
                 match market.period {
                     MarketPeriod::Block(ref range) => {
+                        let oracle_delay = range.end.saturating_add(market.deadlines.oracle_delay.into());
                         ensure!(
                             current_block
-                                > (range.end.saturating_add(market.deadlines.oracle_delay.into())),
+                                > oracle_delay,
                             Error::<T>::NotAllowedToReportYet
                         );
+                        let oracle_duration = oracle_delay.saturating_add(market.deadlines.oracle_duration.into());
                         if current_block
-                            <= range.end.saturating_add(market.deadlines.oracle_duration.into())
+                            <= oracle_duration
                         {
                             should_check_origin = true;
                         }
@@ -907,16 +908,17 @@ mod pallet {
                             market.deadlines.oracle_delay.into();
                         let oracle_delay_in_ms =
                             oracle_delay_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let oracle_delay = range.end.saturating_add(oracle_delay_in_ms);
                         let now = T::MarketCommons::now();
                         ensure!(
-                            now > range.end.saturating_add(oracle_delay_in_ms),
+                            now > oracle_delay,
                             Error::<T>::NotAllowedToReportYet
                         );
-                        let rp_moment: MomentOf<T> = T::ReportingPeriod::get().into();
-                        let reporting_period_in_ms =
-                            rp_moment.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        if T::MarketCommons::now()
-                            <= range.end.saturating_add(reporting_period_in_ms)
+                        let oracle_duration_in_moments: MomentOf<T> = market.deadlines.oracle_duration.into();
+                        let oracle_duration_in_ms = oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let oracle_duration = oracle_delay.saturating_add(oracle_duration_in_ms);
+                        if now
+                            <= oracle_duration
                         {
                             should_check_origin = true;
                         }

@@ -16,7 +16,7 @@ use test_case::test_case;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
+    constants::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK, BLOCKS_PER_DAY_U32, BLOCKS_PER_DAY},
     traits::Swaps as SwapsPalletApi,
     types::{
         Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
@@ -225,7 +225,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
             0..end,
             ScoringRule::CPMM,
         );
-        run_to_block(end);
+        run_to_block(end + BLOCKS_PER_DAY + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
@@ -250,12 +250,14 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
             0..end,
             ScoringRule::CPMM,
         );
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(1)
         ));
+        run_to_block(oracle_delay + 2);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
@@ -280,13 +282,14 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
             0..end,
             ScoringRule::CPMM,
         );
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(<Runtime as Config>::DisputePeriod::get());
+        run_blocks( oracle_delay + /*de fault oracle_duration*/BLOCKS_PER_DAY + /*default dispute_period*/BLOCKS_PER_DAY + 1);
         assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
@@ -345,7 +348,8 @@ fn admin_destroy_market_correctly_slashes_advised_market_reported() {
             ScoringRule::CPMM,
         );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
@@ -371,12 +375,14 @@ fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
             ScoringRule::CPMM,
         );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(1)
         ));
+        run_to_block(oracle_delay + 2);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
@@ -402,13 +408,14 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
             ScoringRule::CPMM,
         );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(<Runtime as Config>::ReportingPeriod::get().into()); // Wait until market resolves
+        run_blocks( oracle_delay + /*de fault oracle_duration*/BLOCKS_PER_DAY + /*default dispute_period*/BLOCKS_PER_DAY + 1);
         assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
@@ -528,7 +535,8 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         let balance_free_before = Balances::free_balance(&ALICE);
         let balance_reserved_before = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
 
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         let category = 1;
         let outcome_report = OutcomeReport::Categorical(category);
         assert_ok!(PredictionMarkets::report(
@@ -1462,7 +1470,8 @@ fn it_allows_to_report_the_outcome_of_a_market() {
             ScoringRule::CPMM,
         );
 
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
@@ -1504,7 +1513,8 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
             0..end,
             ScoringRule::CPMM,
         );
-        run_to_block(end);
+        let oracle_dealy =  end + BLOCKS_PER_DAY;
+        run_to_block(oracle_dealy + 1);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(123)),
             Error::<Runtime>::OutcomeMismatch,
@@ -1524,7 +1534,8 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
             0..end,
             ScoringRule::CPMM,
         );
-        run_to_block(end);
+        let oracle_dealy =  end + BLOCKS_PER_DAY;
+        run_to_block(oracle_dealy + 1);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(2)),
             Error::<Runtime>::OutcomeMismatch,
@@ -1544,7 +1555,8 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
             0..end,
             ScoringRule::CPMM,
         );
-        run_to_block(end);
+        let oracle_dealy =  end + BLOCKS_PER_DAY;
+        run_to_block(oracle_dealy + 1);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(0)),
             Error::<Runtime>::OutcomeMismatch,
@@ -1566,7 +1578,8 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         );
 
         // Run to the end of the trading phase.
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
 
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -1574,9 +1587,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        // Dispute phase is 10 blocks... so only run 5 of them.
-        let dispute_at = frame_system::Pallet::<Runtime>::block_number()
-            + <Runtime as Config>::DisputePeriod::get() / 2;
+        let dispute_at = oracle_delay + 2;
         run_to_block(dispute_at);
 
         assert_ok!(PredictionMarkets::dispute(
@@ -1612,7 +1623,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         );
 
         // Just skip to waaaay overdue.
-        run_to_block(end + <Runtime as Config>::ReportingPeriod::get() as u64 + 1);
+        run_to_block(end + /* default oracle_delay*/ BLOCKS_PER_DAY + /*default oracle_duration*/ BLOCKS_PER_DAY+ 1);
 
         assert_ok!(PredictionMarkets::report(
             Origin::signed(ALICE), // alice reports her own market now
@@ -1629,7 +1640,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
         // make sure it still resolves
         run_to_block(
             frame_system::Pallet::<Runtime>::block_number()
-                + <Runtime as Config>::DisputePeriod::get(),
+                + BLOCKS_PER_DAY,
         );
 
         let market_after = MarketCommons::market(&0).unwrap();
@@ -1649,7 +1660,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        let report_at = end + 33;
+        let report_at = end + /*default oracle_dealy*/ BLOCKS_PER_DAY + 1;
         run_to_block(report_at);
 
         assert_ok!(PredictionMarkets::report(
@@ -1663,7 +1674,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         let id = reported_ids[0];
         assert_eq!(id, 0);
 
-        run_blocks(<Runtime as Config>::ReportingPeriod::get().into());
+        run_blocks(report_at + /*default oracle_duration*/ BLOCKS_PER_DAY);
 
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Resolved);
@@ -1701,7 +1712,8 @@ fn it_resolves_a_disputed_market() {
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        let report_at = end + 33;
+        let oracle_delay : u64 = BLOCKS_PER_DAY_U32.into();
+        let report_at = end + oracle_delay + 1;
         run_to_block(report_at);
 
         assert_ok!(PredictionMarkets::report(
@@ -1848,27 +1860,28 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        run_to_block(end);
+        let oracle_delay : u64 = BLOCKS_PER_DAY_U32.into();
+        run_to_block(end + oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(0)
         ));
-        let dispute_at_0 = end + 2;
+        let dispute_at_0 = end + oracle_delay + 2;
         run_to_block(dispute_at_0);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
         ));
-        let dispute_at_1 = end + 3;
+        let dispute_at_1 = dispute_at_0 + 1;
         run_to_block(dispute_at_1);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(DAVE),
             0,
             OutcomeReport::Categorical(0)
         ));
-        let dispute_at_2 = end + 4;
+        let dispute_at_2 = dispute_at_1 + 1;
         run_to_block(dispute_at_2);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(EVE),
@@ -1918,7 +1931,8 @@ fn it_allows_to_redeem_shares() {
         );
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
-        run_to_block(end);
+        let oracle_delay =  end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
 
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -2138,7 +2152,8 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         // set the timestamp
         set_timestamp_for_on_initialize(100_000_000);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2.
-        set_timestamp_for_on_initialize(123_456_789);
+        let oracle_delay : u64 =  BLOCKS_PER_DAY * MILLISECS_PER_BLOCK as u64;
+        set_timestamp_for_on_initialize(100_000_000 + oracle_delay + 24_000);
 
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT),
@@ -2179,9 +2194,9 @@ fn full_scalar_market_lifecycle() {
         }
 
         set_timestamp_for_on_initialize(100_000_000);
-        let report_at = 33;
+        let report_at = 7200 + 2;
         run_to_block(report_at); // Trigger `on_initialize`; must be at least block #2.
-        set_timestamp_for_on_initialize(123_456_789);
+        set_timestamp_for_on_initialize(100_000_000 + 864_000_00 + 12_000 + 12_000);
 
         // report
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
@@ -2198,7 +2213,7 @@ fn full_scalar_market_lifecycle() {
         let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 1);
 
-        run_blocks(<Runtime as Config>::DisputePeriod::get());
+        run_blocks( 7200 + 7200 + 2);
 
         let market_after_resolve = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
@@ -2337,14 +2352,15 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, 2 * BASE));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
 
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(2)
         ));
 
-        run_to_block(end + <Runtime as Config>::DisputePeriod::get());
+        run_to_block(oracle_delay + BLOCKS_PER_DAY + 2);
         assert_ok!(Swaps::pool_exit(Origin::signed(FRED), 0, BASE * 100, vec![0, 0]));
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
     })
@@ -2367,13 +2383,14 @@ fn authorized_correctly_resolves_disputed_market() {
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        run_to_block(end);
+            let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(0)
         ));
-        let dispute_at_0 = end + 2;
+        let dispute_at_0 = oracle_delay + 1 + 1;
         run_to_block(dispute_at_0);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
@@ -2393,14 +2410,14 @@ fn authorized_correctly_resolves_disputed_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        let dispute_at_1 = end + 3;
+        let dispute_at_1 = dispute_at_0 + 1;
         run_to_block(dispute_at_1);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(DAVE),
             0,
             OutcomeReport::Categorical(0)
         ));
-        let dispute_at_2 = end + 4;
+        let dispute_at_2 = dispute_at_1 + 1;
         run_to_block(dispute_at_2);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(EVE),
@@ -2493,13 +2510,13 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), market_id, CENT));
 
-        run_to_block(end);
+        let oracle_delay =  end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             market_id,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(1);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(CHARLIE),
             market_id,
@@ -2511,7 +2528,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        run_blocks(<Runtime as Config>::DisputePeriod::get());
+        run_blocks(oracle_delay + BLOCKS_PER_DAY + 2);
         let market_after = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(&0);
@@ -2581,13 +2598,14 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             Balances::reserved_balance(&ALICE),
             SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
         );
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(0)
         ));
-        run_blocks(<Runtime as Config>::DisputePeriod::get());
+        run_to_block(oracle_delay + BLOCKS_PER_DAY + 1);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
         assert_eq!(
             Balances::free_balance(&ALICE),
@@ -2720,7 +2738,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             Balances::reserved_balance(&ALICE),
             SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
         );
-        run_to_block(end + <Runtime as Config>::ReportingPeriod::get() as u64 + 1);
+        run_to_block(end +  /*default oracle_delay*/ BLOCKS_PER_DAY + /*default oracle_duration*/ BLOCKS_PER_DAY + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(CHARLIE),
             0,
@@ -2754,7 +2772,8 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
-        run_to_block(end);
+        let oracle_delay = end + BLOCKS_PER_DAY;
+        run_to_block(oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
@@ -2788,7 +2807,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
-        run_to_block(end + <Runtime as Config>::ReportingPeriod::get() as u64 + 1);
+        run_to_block(end +  /*default oracle_delay*/ BLOCKS_PER_DAY + /*default oracle_duration*/ BLOCKS_PER_DAY + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(CHARLIE),
             0,
@@ -2977,7 +2996,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
         set_timestamp_for_on_initialize(100_000_000);
         // Trigger hooks which close the market.
         run_to_block(2);
-        set_timestamp_for_on_initialize(100_056_789);
+        set_timestamp_for_on_initialize(100_000_000 + 864_000_00 + 12_000 + 12_000);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle,
@@ -3019,7 +3038,8 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
     ));
     // (Eve now has 100 SHORT, Charlie has 100 LONG)
 
-    run_to_block(end);
+    let oracle_dealy = end + BLOCKS_PER_DAY;
+    run_to_block(oracle_dealy + 1);
     assert_ok!(PredictionMarkets::report(
         Origin::signed(BOB),
         0,
@@ -3028,11 +3048,11 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
     let market_after_report = MarketCommons::market(&0).unwrap();
     assert!(market_after_report.report.is_some());
     let report = market_after_report.report.unwrap();
-    assert_eq!(report.at, 100);
+    assert_eq!(report.at, oracle_dealy + 1);
     assert_eq!(report.by, BOB);
     assert_eq!(report.outcome, OutcomeReport::Scalar(reported_value));
 
-    run_blocks(<Runtime as Config>::DisputePeriod::get());
+    run_blocks(oracle_dealy + 2);
     let market_after_resolve = MarketCommons::market(&0).unwrap();
     assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
 

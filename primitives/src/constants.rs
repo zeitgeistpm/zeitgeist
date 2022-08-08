@@ -18,6 +18,7 @@ pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
 pub const MILLISECS_PER_BLOCK: u32 = 12000;
 pub const BLOCKS_PER_MINUTE: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const BLOCKS_PER_HOUR: BlockNumber = BLOCKS_PER_MINUTE * 60;
+pub const BLOCKS_PER_DAY_U32: u32 = 24 * 60 * 60 / 12;
 
 // Definitions for currency
 pub const BASE: u128 = 10_000_000_000;
