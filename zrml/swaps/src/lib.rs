@@ -79,7 +79,7 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -435,7 +435,7 @@ mod pallet {
                     &who,
                     |user_subsidy| {
                         if let Some(prev_val) = user_subsidy {
-                            *prev_val += amount;
+                            *prev_val = prev_val.saturating_add(amount);
                         } else {
                             // If the account adds subsidy for the first time, ensure that it's
                             // larger than the minimum amount.
@@ -446,7 +446,7 @@ mod pallet {
                             *user_subsidy = Some(amount);
                         }
 
-                        pool.total_subsidy = Some(total_subsidy + amount);
+                        pool.total_subsidy = Some(total_subsidy.saturating_add(amount));
                         Ok(())
                     },
                 )?;
@@ -1485,7 +1485,7 @@ mod pallet {
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
                 ensure!(
-                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active,),
+                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
                     Error::<T>::InvalidStateTransition,
                 );
                 pool.pool_status = PoolStatus::Closed;
@@ -2060,7 +2060,8 @@ mod pallet {
                                 outstanding_before.push(total_amount);
 
                                 if *asset == asset_out {
-                                    outstanding_after.push(total_amount + asset_amount_out);
+                                    outstanding_after
+                                        .push(total_amount.saturating_add(asset_amount_out));
                                 } else {
                                     outstanding_after.push(total_amount);
                                 }

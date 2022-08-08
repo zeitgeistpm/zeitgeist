@@ -2,10 +2,13 @@
 
 use super::{AdditionalChainSpec, EndowedAccountWithBalance};
 use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
-use hex_literal::hex;
 use sc_service::ChainType;
-use sp_core::crypto::UncheckedInto;
 use zeitgeist_runtime::parameters::SS58Prefix;
+#[cfg(feature = "parachain")]
+use {
+    crypto::UncheckedInto,
+    hex_literal::hex,
+};
 
 use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD};
 

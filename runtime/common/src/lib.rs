@@ -499,7 +499,7 @@ macro_rules! impl_config_traits {
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type ReserveIdentifier = [u8; 8];
-            type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
+            type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>; // weights::pallet_balances::WeightInfo<Runtime>;
         }
 
         impl pallet_collective::Config<AdvisoryCommitteeInstance> for Runtime {

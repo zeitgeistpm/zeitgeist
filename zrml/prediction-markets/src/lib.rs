@@ -68,6 +68,7 @@
 extern crate alloc;
 
 mod benchmarks;
+pub mod migrations;
 pub mod mock;
 mod tests;
 pub mod weights;
@@ -109,7 +110,7 @@ mod pallet {
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -118,6 +119,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
+    type CacheSize = ConstU32<64>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -523,7 +525,7 @@ mod pallet {
 
             let status: MarketStatus = match creation {
                 MarketCreation::Permissionless => {
-                    let required_bond = T::ValidityBond::get() + T::OracleBond::get();
+                    let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         Asset::Ztg,
@@ -537,7 +539,7 @@ mod pallet {
                     }
                 }
                 MarketCreation::Advised => {
-                    let required_bond = T::AdvisoryBond::get() + T::OracleBond::get();
+                    let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &RESERVE_ID,
                         Asset::Ztg,
@@ -795,7 +797,7 @@ mod pallet {
                     // ever not true then we have an accounting problem.
                     ensure!(
                         T::AssetManager::free_balance(Asset::Ztg, &market_account)
-                            >= long_payout + short_payout,
+                            >= long_payout.saturating_add(short_payout),
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
 
@@ -1220,39 +1222,47 @@ mod pallet {
             let mut total_weight: Weight =
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
+            // If we are at genesis or the first block the timestamp is be undefined. No
+            // market needs to be opened or closed on blocks #0 or #1, so we skip the
+            // evaluation. Without this check, new chains starting from genesis will hang up,
+            // since the loops in the `market_status_manager` calls below will run over an interval
+            // of 0 to the current time frame.
+            if now <= 1u32.into() {
+                return total_weight;
+            }
+
+            // We add one to the count, because `pallet-timestamp` sets the timestamp _after_
+            // `on_initialize` is called, so calling `now()` during `on_initialize` gives us
+            // the timestamp of the previous block.
+            let current_time_frame =
+                Self::calculate_time_frame_of_moment(T::MarketCommons::now()).saturating_add(1);
+
+            // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
+            // check all time frames since epoch.
+            let last_time_frame =
+                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
+
             let _ = with_transaction(|| {
-                // If we are at genesis or the first block the timestamp is be undefined. No
-                // market needs to be opened or closed on blocks #0 or #1, so we skip the
-                // evaluation. Without this check, new chains starting from genesis will hang up,
-                // since the loops in `market_open_manager` and `market_close_manager` below will
-                // run over an interval of 0 to the current time frame.
-                if now <= 1u32.into() {
-                    return TransactionOutcome::Commit(Ok(()));
-                }
-
-                // We add one to the count, because `pallet-timestamp` sets the timestamp _after_
-                // `on_initialize` is called, so calling `now()` during `on_initialize` gives us
-                // the timestamp of the previous block.
-                let current_time_frame =
-                    Self::calculate_time_frame_of_moment(T::MarketCommons::now()).saturating_add(1);
-
-                // On first pass, we use current_time - 1 to ensure that the chain doesn't try to
-                // check all time frames since epoch.
-                let last_time_frame = LastTimeFrame::<T>::get()
-                    .unwrap_or_else(|| current_time_frame.saturating_sub(1));
-
-                let open = Self::market_open_manager(
+                let open = Self::market_status_manager::<
+                    _,
+                    MarketIdsPerOpenBlock<T>,
+                    MarketIdsPerOpenTimeFrame<T>,
+                >(
                     now,
                     last_time_frame,
                     current_time_frame,
-                    |market_id, market| {
-                        let weight = Self::on_market_open(market_id, market)?;
+                    |market_id, _| {
+                        let weight = Self::open_market(market_id)?;
                         total_weight = total_weight.saturating_add(weight);
                         Ok(())
                     },
                 );
 
-                let close = Self::market_close_manager(
+                let close = Self::market_status_manager::<
+                    _,
+                    MarketIdsPerCloseBlock<T>,
+                    MarketIdsPerCloseTimeFrame<T>,
+                >(
                     now,
                     last_time_frame,
                     current_time_frame,
@@ -1305,7 +1315,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1314,7 +1324,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         TimeFrame,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1324,7 +1334,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1334,7 +1344,7 @@ mod pallet {
         _,
         Blake2_128Concat,
         TimeFrame,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1349,7 +1359,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1359,7 +1369,7 @@ mod pallet {
         _,
         Twox64Concat,
         T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, ConstU32<1024>>,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
         ValueQuery,
     >;
 
@@ -1767,16 +1777,6 @@ mod pallet {
             Ok(total_weight)
         }
 
-        fn on_market_open(
-            market_id: &MarketIdOf<T>,
-            market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> Result<Weight, DispatchError> {
-            match market.status {
-                MarketStatus::Active => Self::open_market(market_id),
-                _ => Err(Error::<T>::InvalidMarketStatus.into()), // Should never occur!
-            }
-        }
-
         /// Handle market state transitions at the end of its active phase.
         fn on_market_close(
             market_id: &MarketIdOf<T>,
@@ -2049,8 +2049,8 @@ mod pallet {
 
                                         // Unreserve funds reserved during market creation
                                         if m.creation == MarketCreation::Permissionless {
-                                            let required_bond =
-                                                T::ValidityBond::get() + T::OracleBond::get();
+                                            let required_bond = T::ValidityBond::get()
+                                                .saturating_add(T::OracleBond::get());
                                             T::AssetManager::unreserve_named(
                                                 &RESERVE_ID,
                                                 Asset::Ztg,
@@ -2150,7 +2150,7 @@ mod pallet {
             Ok(())
         }
 
-        pub(crate) fn market_open_manager<F>(
+        pub(crate) fn market_status_manager<F, MarketIdsPerBlock, MarketIdsPerTimeFrame>(
             block_number: T::BlockNumber,
             last_time_frame: TimeFrame,
             current_time_frame: TimeFrame,
@@ -2161,49 +2161,31 @@ mod pallet {
                 &MarketIdOf<T>,
                 Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             ) -> DispatchResult,
+            MarketIdsPerBlock: frame_support::StorageMap<
+                T::BlockNumber,
+                BoundedVec<MarketIdOf<T>, CacheSize>,
+                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
+            >,
+            MarketIdsPerTimeFrame: frame_support::StorageMap<
+                TimeFrame,
+                BoundedVec<MarketIdOf<T>, CacheSize>,
+                Query = BoundedVec<MarketIdOf<T>, CacheSize>,
+            >,
         {
-            for market_id in MarketIdsPerOpenBlock::<T>::get(&block_number).iter() {
+            for market_id in MarketIdsPerBlock::get(&block_number).iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
-            MarketIdsPerOpenBlock::<T>::remove(&block_number);
+            MarketIdsPerBlock::remove(&block_number);
 
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerOpenTimeFrame::<T>::get(&time_frame).iter() {
+                for market_id in MarketIdsPerTimeFrame::get(&time_frame).iter() {
                     let market = T::MarketCommons::market(market_id)?;
                     mutation(market_id, market)?;
                 }
-                MarketIdsPerOpenTimeFrame::<T>::remove(&time_frame);
+                MarketIdsPerTimeFrame::remove(&time_frame);
             }
 
-            Ok(())
-        }
-
-        pub(crate) fn market_close_manager<F>(
-            block_number: T::BlockNumber,
-            last_time_frame: TimeFrame,
-            current_time_frame: TimeFrame,
-            mut mutation: F,
-        ) -> DispatchResult
-        where
-            F: FnMut(
-                &MarketIdOf<T>,
-                Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            ) -> DispatchResult,
-        {
-            for market_id in MarketIdsPerCloseBlock::<T>::get(&block_number).iter() {
-                let market = T::MarketCommons::market(market_id)?;
-                mutation(market_id, market)?;
-            }
-            MarketIdsPerCloseBlock::<T>::remove(&block_number);
-
-            for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerCloseTimeFrame::<T>::get(&time_frame).iter() {
-                    let market = T::MarketCommons::market(market_id)?;
-                    mutation(market_id, market)?;
-                }
-                MarketIdsPerCloseTimeFrame::<T>::remove(&time_frame);
-            }
             Ok(())
         }
 
