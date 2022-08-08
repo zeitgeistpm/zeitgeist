@@ -9,7 +9,7 @@ use utils::{construct_asset, SwapExactAmountOutData};
 
 fuzz_target!(|data: SwapExactAmountOutData| {
     let mut ext = ExtBuilder::default().build();
-    let _ = ext.execute_with(|| {
+    ext.execute_with(|| {
         // ensure that the account origin has a sufficient balance
         // use orml_traits::MultiCurrency; required for this
         for a in &data.pool_creation.assets {
