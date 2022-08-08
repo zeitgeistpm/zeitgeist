@@ -1,29 +1,18 @@
 #![cfg(feature = "with-zeitgeist-runtime")]
 
+use super::{AdditionalChainSpec, EndowedAccountWithBalance};
 use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use hex_literal::hex;
 use sc_service::ChainType;
+use sp_core::crypto::UncheckedInto;
 use zeitgeist_runtime::parameters::SS58Prefix;
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance};
-
-
-
-
-
-use zeitgeist_primitives::{
-    constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-    },
-};
+use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD};
 
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
-    zeitgeist_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
-    },
+    zeitgeist_runtime::{CollatorDeposit, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
 };
 
 cfg_if::cfg_if! {

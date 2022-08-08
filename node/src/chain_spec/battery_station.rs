@@ -1,31 +1,23 @@
 #![cfg(feature = "with-battery-station-runtime")]
 
 use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
-
-use battery_station_runtime::parameters::SS58Prefix;
-use sc_service::ChainType;
-
 use super::{AdditionalChainSpec, EndowedAccountWithBalance};
+use battery_station_runtime::parameters::SS58Prefix;
 use hex_literal::hex;
-
-
-use sp_core::{crypto::UncheckedInto};
-
+use sc_service::ChainType;
+use sp_core::crypto::UncheckedInto;
 use zeitgeist_primitives::{
     constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD}, BASE,
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        BASE,
     },
-    types::{AccountId},
+    types::AccountId,
 };
 
 #[cfg(feature = "parachain")]
 use {
     super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    battery_station_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
-    },
-    sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
+    battery_station_runtime::{CollatorDeposit, EligibilityValue, PolkadotXcmConfig},
 };
 
 cfg_if::cfg_if! {

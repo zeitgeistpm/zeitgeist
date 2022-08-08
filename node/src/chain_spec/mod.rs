@@ -18,18 +18,14 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
-    constants::{
-        BalanceFractionalDecimals,
-    },
+    constants::BalanceFractionalDecimals,
     types::{AccountId, Balance, Signature},
 };
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::Perbill,
     zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
-    zeitgeist_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
-    },
+    zeitgeist_runtime::DefaultBlocksPerRound,
 };
 
 cfg_if::cfg_if! {

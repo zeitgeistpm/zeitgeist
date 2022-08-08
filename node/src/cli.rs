@@ -4,7 +4,7 @@ mod cli_parachain;
 use super::service::{
     AdditionalRuntimeApiCollection, FullBackend, FullClient, IdentifyVariant, RuntimeApiCollection,
 };
-use crate::{BATTERY_STATION_RUNTIME_NOT_AVAILABLE};
+use crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE;
 use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;

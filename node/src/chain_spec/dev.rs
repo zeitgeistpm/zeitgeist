@@ -6,22 +6,13 @@ use super::{
     EndowedAccountWithBalance,
 };
 
+#[cfg(feature = "parachain")]
+use battery_station_runtime::{EligibilityValue, PolkadotXcmConfig};
 use sc_service::ChainType;
 use sp_core::sr25519;
 use zeitgeist_primitives::{
-    constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-    },
-    types::{Balance},
-};
-#[cfg(feature = "parachain")]
-use {
-    super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
-    battery_station_runtime::{
-        CollatorDeposit, DefaultBlocksPerRound, EligibilityValue, MinCollatorStk, PolkadotXcmConfig,
-    },
-    sp_runtime::Perbill,
-    zeitgeist_primitives::constants::{ztg, MILLISECS_PER_BLOCK},
+    constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+    types::Balance,
 };
 
 const INITIAL_BALANCE: Balance = Balance::MAX >> 4;

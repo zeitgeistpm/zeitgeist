@@ -1,6 +1,6 @@
 use super::service::FullClient;
 
-use sc_cli::{Result};
+use sc_cli::Result;
 use sc_client_api::BlockBackend;
 use sc_executor::NativeExecutionDispatch;
 use sp_core::{Encode, Pair};
