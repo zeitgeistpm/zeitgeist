@@ -1,12 +1,11 @@
 //! # Styx
 //!
-//! A module for burning som native chain tokens to be able to claim their avatar.
+//! A module for burning som native tokens to be able to claim their avatar.
 //!
 //! ## Overview
 //!
-//! When the signer pays the ferryman and crosses the river Styx they claim their right
-//! to incarnate in the system as an avatar. The account can only cross once and its the concern
-//! of a separate system to pick up these events and allow minting of the avatar NFT.
+//! The pallet lets the signer burn native tokens.
+//! In the zeitgeist ecosystem this grants the ability to claim the avatar of the signer.
 //!
 //! ## Interface
 //!
