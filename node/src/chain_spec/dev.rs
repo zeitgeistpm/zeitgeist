@@ -11,9 +11,8 @@ use sp_core::sr25519;
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BalanceFractionalDecimals, BASE,
     },
-    types::{AccountId, Balance, Signature},
+    types::{Balance},
 };
 #[cfg(feature = "parachain")]
 use {

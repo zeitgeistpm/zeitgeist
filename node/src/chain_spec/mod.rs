@@ -13,14 +13,13 @@ pub use battery_station::battery_station_staging_config;
 pub use dev::dev_config;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
-use sp_core::{crypto::UncheckedInto, Pair, Public};
+use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BalanceFractionalDecimals, BASE,
+        BalanceFractionalDecimals,
     },
     types::{AccountId, Balance, Signature},
 };

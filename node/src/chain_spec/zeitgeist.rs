@@ -4,18 +4,16 @@ use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, 
 use sc_service::ChainType;
 use zeitgeist_runtime::parameters::SS58Prefix;
 
-use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance};
-use hex_literal::hex;
-use jsonrpc_core::serde_json::{Map, Value};
-use sc_telemetry::TelemetryEndpoints;
-use sp_core::{crypto::UncheckedInto, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use super::{AdditionalChainSpec, EndowedAccountWithBalance};
+
+
+
+
+
 use zeitgeist_primitives::{
     constants::{
         ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BalanceFractionalDecimals, BASE,
     },
-    types::{AccountId, Balance, Signature},
 };
 
 #[cfg(feature = "parachain")]

@@ -4,7 +4,7 @@ mod cli_parachain;
 use super::service::{
     AdditionalRuntimeApiCollection, FullBackend, FullClient, IdentifyVariant, RuntimeApiCollection,
 };
-use crate::{BATTERY_STATION_RUNTIME_NOT_AVAILABLE, ZEITGEIST_RUNTIME_NOT_AVAILABLE};
+use crate::{BATTERY_STATION_RUNTIME_NOT_AVAILABLE};
 use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
@@ -224,7 +224,7 @@ impl SubstrateCli for Cli {
                 #[cfg(not(feature = "with-zeitgeist-runtime"))]
                 panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE);
             }
-            spec => {
+            _spec => {
                 #[cfg(feature = "with-battery-station-runtime")]
                 return &battery_station_runtime::VERSION;
                 #[cfg(not(feature = "with-battery-station-runtime"))]

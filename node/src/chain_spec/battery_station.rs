@@ -5,18 +5,17 @@ use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, 
 use battery_station_runtime::parameters::SS58Prefix;
 use sc_service::ChainType;
 
-use super::{get_from_seed, AdditionalChainSpec, EndowedAccountWithBalance};
+use super::{AdditionalChainSpec, EndowedAccountWithBalance};
 use hex_literal::hex;
-use jsonrpc_core::serde_json::{Map, Value};
-use sc_telemetry::TelemetryEndpoints;
-use sp_core::{crypto::UncheckedInto, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+
+
+use sp_core::{crypto::UncheckedInto};
+
 use zeitgeist_primitives::{
     constants::{
-        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
-        BalanceFractionalDecimals, BASE,
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD}, BASE,
     },
-    types::{AccountId, Balance, Signature},
+    types::{AccountId},
 };
 
 #[cfg(feature = "parachain")]

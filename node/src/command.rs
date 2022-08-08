@@ -1,7 +1,7 @@
 use super::{
     cli::{Cli, Subcommand},
     command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
-    service::{new_chain_ops, new_full, new_partial, IdentifyVariant},
+    service::{new_chain_ops, new_full, IdentifyVariant},
 };
 use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
