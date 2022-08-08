@@ -1,10 +1,10 @@
 //! # Styx
 //!
-//! A module for burning som native tokens to be able to claim their avatar.
+//! A module for burning native chain tokens in order to gain entry into a registry for off-chain use.
 //!
 //! ## Overview
 //!
-//! The pallet lets the signer burn native tokens.
+//! The pallet lets the signer burn native tokens, and lets governance update the price.
 //! In the zeitgeist ecosystem this grants the ability to claim the avatar of the signer.
 //!
 //! ## Interface
