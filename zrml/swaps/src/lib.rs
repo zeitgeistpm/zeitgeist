@@ -63,7 +63,7 @@ mod pallet {
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
-        constants::BASE,
+        constants::{BASE, CENT},
         traits::{MarketId, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
@@ -84,6 +84,8 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+
+    const MIN_BALANCE: u128 = CENT;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1191,8 +1193,8 @@ mod pallet {
         }
 
         // The minimum allowed balance in a liquidity pool.
-        pub(crate) fn min_balance() -> BalanceOf<T> {
-            T::AssetManager::minimum_balance(Asset::Ztg)
+        pub(crate) fn min_balance(asset: Asset<T::MarketId>) -> BalanceOf<T> {
+            T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
         }
 
         pub(crate) fn ensure_minimum_liquidity_shares(
@@ -1204,7 +1206,9 @@ mod pallet {
                 return Ok(());
             }
             let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
-            let max_withdraw = total_issuance.saturating_sub(Self::min_balance().saturated_into());
+            let pool_shares_id = Self::pool_shares_id(pool_id);
+            let max_withdraw =
+                total_issuance.saturating_sub(Self::min_balance(pool_shares_id).saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
             Ok(())
         }
@@ -1221,7 +1225,7 @@ mod pallet {
             }
             let pool_account = Self::pool_account_id(pool_id);
             let balance = T::AssetManager::free_balance(asset, &pool_account);
-            let max_withdraw = balance.saturating_sub(Self::min_balance().saturated_into());
+            let max_withdraw = balance.saturating_sub(Self::min_balance(asset).saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
             Ok(())
         }

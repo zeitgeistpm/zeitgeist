@@ -2698,16 +2698,33 @@ fn pool_join_with_uneven_balances() {
 #[test]
 fn pool_exit_fails_if_balances_drop_too_low() {
     ExtBuilder::default().build().execute_with(|| {
-        // We drop the balances below `Swaps::min_balance()`, but liquidity remains above `Swaps::min_balance()`.
+        // We drop the balances below `Swaps::min_balance(...)`, but liquidity remains above
+        // `Swaps::min_balance(...)`.
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance()));
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_A)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_B,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_B)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_C,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_C)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_D,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_D)
+        ));
 
         // We withdraw 99% of it, leaving 0.01 of each asset, which is below minimum balance.
         assert_noop!(
@@ -2720,7 +2737,8 @@ fn pool_exit_fails_if_balances_drop_too_low() {
 #[test]
 fn pool_exit_fails_if_liquidity_drops_too_low() {
     ExtBuilder::default().build().execute_with(|| {
-        // We drop the liquidity below `Swaps::min_balance()`, but balances remains above `Swaps::min_balance()`.
+        // We drop the liquidity below `Swaps::min_balance(...)`, but balances remains above
+        // `Swaps::min_balance(...)`.
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
@@ -2737,7 +2755,7 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
             Swaps::pool_exit(
                 Origin::signed(BOB),
                 pool_id,
-                _100 - Swaps::min_balance() + 1,
+                _100 - Swaps::min_balance(Swaps::pool_shares_id(pool_id)) + 1,
                 vec![0; 4]
             ),
             crate::Error::<Runtime>::PoolDrain,
@@ -2754,17 +2772,17 @@ fn swap_exact_amount_in_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance()));
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
 
         assert_noop!(
             Swaps::swap_exact_amount_in(
                 Origin::signed(ALICE),
                 pool_id,
                 ASSET_A,
-                Swaps::min_balance() / 10,
+                Swaps::min_balance(ASSET_A) / 10,
                 ASSET_B,
                 Some(0),
                 None,
@@ -2783,10 +2801,10 @@ fn swap_exact_amount_out_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance()));
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
 
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -2795,7 +2813,7 @@ fn swap_exact_amount_out_fails_if_balances_drop_too_low() {
                 ASSET_A,
                 Some(u128::MAX),
                 ASSET_B,
-                Swaps::min_balance() / 10,
+                Swaps::min_balance(ASSET_B) / 10,
                 None,
             ),
             crate::Error::<Runtime>::PoolDrain,
@@ -2812,10 +2830,10 @@ fn pool_exit_with_exact_pool_amount_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance()));
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(Origin::signed(BOB), pool_id, ASSET_A, _1, 0),
@@ -2840,10 +2858,9 @@ fn pool_exit_with_exact_pool_amount_fails_if_liquidity_drops_too_low() {
         // Reduce amount of liquidity so that doing the withdraw doesn't cause a `Min*Ratio` error!
         let pool_shares_id = Swaps::pool_shares_id(pool_id);
         assert_eq!(Currencies::total_issuance(pool_shares_id), _100);
-        Currencies::slash(pool_shares_id, &BOB, _100 - Swaps::min_balance());
-        assert_eq!(Currencies::total_issuance(pool_shares_id), Swaps::min_balance());
+        Currencies::slash(pool_shares_id, &BOB, _100 - Swaps::min_balance(pool_shares_id));
 
-        let ten_percent_of_pool = Swaps::min_balance() / 10;
+        let ten_percent_of_pool = Swaps::min_balance(pool_shares_id) / 10;
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(
                 Origin::signed(BOB),
@@ -2866,18 +2883,18 @@ fn pool_exit_with_exact_asset_amount_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance()));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance()));
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
+        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
+        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
 
-        let ten_percent_of_pool = Swaps::min_balance() / 10;
+        let ten_percent_of_balance = Swaps::min_balance(ASSET_A) / 10;
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
                 Origin::signed(BOB),
                 pool_id,
                 ASSET_A,
-                ten_percent_of_pool,
+                ten_percent_of_balance,
                 _100,
             ),
             crate::Error::<Runtime>::PoolDrain,
@@ -2895,8 +2912,7 @@ fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
         // Reduce amount of liquidity so that doing the withdraw doesn't cause a `Min*Ratio` error!
         let pool_shares_id = Swaps::pool_shares_id(pool_id);
         assert_eq!(Currencies::total_issuance(pool_shares_id), _100);
-        Currencies::slash(pool_shares_id, &BOB, _100 - Swaps::min_balance());
-        assert_eq!(Currencies::total_issuance(pool_shares_id), Swaps::min_balance());
+        Currencies::slash(pool_shares_id, &BOB, _100 - Swaps::min_balance(pool_shares_id));
 
         assert_noop!(
             Swaps::pool_exit_with_exact_asset_amount(
