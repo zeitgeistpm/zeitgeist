@@ -2772,10 +2772,26 @@ fn swap_exact_amount_in_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_A)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_B,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_B)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_C,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_C)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_D,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_D)
+        ));
 
         assert_noop!(
             Swaps::swap_exact_amount_in(
@@ -2801,10 +2817,26 @@ fn swap_exact_amount_out_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_A)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_B,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_B)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_C,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_C)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_D,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_D)
+        ));
 
         assert_noop!(
             Swaps::swap_exact_amount_out(
@@ -2830,10 +2862,26 @@ fn pool_exit_with_exact_pool_amount_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_A)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_B,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_B)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_C,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_C)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_D,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_D)
+        ));
 
         assert_noop!(
             Swaps::pool_exit_with_exact_pool_amount(Origin::signed(BOB), pool_id, ASSET_A, _1, 0),
@@ -2883,10 +2931,26 @@ fn pool_exit_with_exact_asset_amount_fails_if_balances_drop_too_low() {
         let pool_account_id = Swaps::pool_account_id(pool_id);
 
         // There's only very little left of all assets!
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, _100 - Swaps::min_balance(ASSET_A)));
-        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, _100 - Swaps::min_balance(ASSET_B)));
-        assert_ok!(Currencies::withdraw(ASSET_C, &pool_account_id, _100 - Swaps::min_balance(ASSET_C)));
-        assert_ok!(Currencies::withdraw(ASSET_D, &pool_account_id, _100 - Swaps::min_balance(ASSET_D)));
+        assert_ok!(Currencies::withdraw(
+            ASSET_A,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_A)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_B,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_B)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_C,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_C)
+        ));
+        assert_ok!(Currencies::withdraw(
+            ASSET_D,
+            &pool_account_id,
+            _100 - Swaps::min_balance(ASSET_D)
+        ));
 
         let ten_percent_of_balance = Swaps::min_balance(ASSET_A) / 10;
         assert_noop!(
