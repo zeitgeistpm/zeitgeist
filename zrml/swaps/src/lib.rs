@@ -1197,7 +1197,7 @@ mod pallet {
             T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
         }
 
-        pub(crate) fn ensure_minimum_liquidity_shares(
+        fn ensure_minimum_liquidity_shares(
             pool_id: PoolId,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
@@ -1213,7 +1213,7 @@ mod pallet {
             Ok(())
         }
 
-        pub(crate) fn ensure_minimum_balance(
+        fn ensure_minimum_balance(
             pool_id: PoolId,
             asset: Asset<T::MarketId>,
             amount: BalanceOf<T>,
