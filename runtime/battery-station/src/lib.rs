@@ -87,6 +87,7 @@ impl Contains<Call> for IsCallable {
         };
         use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
 
+        #[allow(clippy::match_like_matches_macro)]
         match call {
             Call::Court(_) => false,
             Call::LiquidityMining(_) => false,
