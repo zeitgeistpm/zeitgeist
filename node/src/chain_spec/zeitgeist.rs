@@ -5,7 +5,7 @@ use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, 
 use sc_service::ChainType;
 use zeitgeist_runtime::parameters::SS58Prefix;
 #[cfg(feature = "parachain")]
-use {crypto::UncheckedInto, hex_literal::hex};
+use {sp_core::crypto::UncheckedInto, hex_literal::hex};
 
 use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD};
 
