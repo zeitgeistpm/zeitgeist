@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
-#![allow(clippy::crate-in-macro-def)]
+#![allow(clippy::crate_in_macro_def)]
 
 pub mod weights;
 
