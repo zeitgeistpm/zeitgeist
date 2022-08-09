@@ -1588,7 +1588,7 @@ fn it_does_not_allow_oracle_to_report_the_outcome_of_a_market_after_oracle_durat
         );
 
         assert_ok!(PredictionMarkets::report(
-            Origin::signed(BOB),
+            Origin::signed(CHARLIE),
             0,
             OutcomeReport::Categorical(1)
         ));
@@ -1597,7 +1597,7 @@ fn it_does_not_allow_oracle_to_report_the_outcome_of_a_market_after_oracle_durat
         let report = market_after.report.unwrap();
         assert_eq!(market_after.status, MarketStatus::Reported);
         assert_eq!(report.outcome, OutcomeReport::Categorical(1));
-        assert_eq!(report.by, market_after.oracle);
+        assert_eq!(report.by, CHARLIE);
     });
 }
 

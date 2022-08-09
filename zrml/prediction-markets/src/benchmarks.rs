@@ -6,7 +6,6 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::mock::Timestamp;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
@@ -80,7 +79,7 @@ fn create_market_common<T: Config>(
     Ok((caller, market_id))
 }
 
-fn create_close_and_report_market<T: Config>(
+fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     permission: MarketCreation,
     options: MarketType,
     outcome: OutcomeReport,
@@ -88,9 +87,9 @@ fn create_close_and_report_market<T: Config>(
     let (caller, market_id) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::ApprovalOrigin::successful_origin())?;
-    let end: u64 =
-        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u64 conversion failed")?;
-    Timestamp::set_timestamp(end + 2 * MILLISECS_PER_BLOCK as u64);
+    let end: u32 =
+        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
@@ -120,7 +119,7 @@ fn generate_accounts_with_assets<T: Config>(
 }
 
 // Setup a reported categorical market and create accounts with outcome assets.
-fn setup_resolve_common_categorical<T: Config>(
+fn setup_resolve_common_categorical<T: Config + pallet_timestamp::Config>(
     acc_total: u32,
     acc_asset: u32,
     categories: u16,
@@ -139,7 +138,7 @@ fn setup_resolve_common_categorical<T: Config>(
 }
 
 // Setup a disputed categorical market and create accounts with outcome assets.
-fn setup_resolve_common_categorical_after_dispute<T: Config>(
+fn setup_resolve_common_categorical_after_dispute<T: Config + pallet_timestamp::Config>(
     acc_total: u32,
     acc_asset: u32,
     categories: u16,
@@ -152,7 +151,7 @@ fn setup_resolve_common_categorical_after_dispute<T: Config>(
 }
 
 // Setup a categorical market for fn `internal_resolve`
-fn setup_redeem_shares_common<T: Config>(
+fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     market_type: MarketType,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = create_market_common::<T>(
@@ -178,9 +177,9 @@ fn setup_redeem_shares_common<T: Config>(
     let approval_origin = T::ApprovalOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(approval_origin.clone())?;
-    let end: u64 =
-        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u64 conversion failed")?;
-    Timestamp::set_timestamp(end + 2 * MILLISECS_PER_BLOCK as u64);
+    let end: u32 =
+        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let _ = Call::<T>::admin_move_market_to_resolved { market_id }
@@ -189,7 +188,7 @@ fn setup_redeem_shares_common<T: Config>(
 }
 
 // Setup a reported scalar market and create accounts with outcome assets.
-fn setup_resolve_common_scalar<T: Config>(
+fn setup_resolve_common_scalar<T: Config + pallet_timestamp::Config>(
     acc_total: u32,
     acc_asset: u32,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
@@ -207,7 +206,7 @@ fn setup_resolve_common_scalar<T: Config>(
 }
 
 // Setup a disputed scalar market and create accounts with outcome assets.
-fn setup_resolve_common_scalar_after_dispute<T: Config>(
+fn setup_resolve_common_scalar_after_dispute<T: Config + pallet_timestamp::Config>(
     acc_total: u32,
     acc_asset: u32,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
@@ -218,6 +217,10 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
 }
 
 benchmarks! {
+    where_clause {
+        where T : pallet_timestamp::Config,
+    }
+
     admin_destroy_disputed_market{
         // a = total accounts
         // An higher number increases the benchmark runtime significantly, while increasing the
@@ -490,8 +493,9 @@ benchmarks! {
         let approval_origin = T::ApprovalOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
             .dispatch_bypass_filter(approval_origin)?;
-    let end : u64 = T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u64 conversion failed")?;
-    Timestamp::set_timestamp(end +  2 * MILLISECS_PER_BLOCK as u64);
+    let end: u32 =
+        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     sell_complete_set {

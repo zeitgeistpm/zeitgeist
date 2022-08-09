@@ -13,6 +13,7 @@ zrml-court = { default-features = false, path = "../court" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", default-features = false }
 
 # Mock
 
@@ -20,7 +21,6 @@ orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitge
 orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
@@ -40,18 +40,19 @@ mock = [
     "orml-tokens",
     "pallet-balances",
     "pallet-randomness-collective-flip",
-    "pallet-timestamp",
     "sp-api",
     "sp-io",
     "substrate-fixed",
     "zrml-prediction-markets-runtime-api",
     "zrml-rikiddo",
     "zrml-swaps",
+    "pallet-timestamp/std"
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks"
 ]
 std = [
     "frame-benchmarking?/std",
