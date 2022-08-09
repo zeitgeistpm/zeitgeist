@@ -6,6 +6,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
+use crate::mock::Timestamp;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
@@ -18,7 +19,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
+    constants::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::DisputeApi,
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -87,6 +88,9 @@ fn create_close_and_report_market<T: Config>(
     let (caller, market_id) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::ApprovalOrigin::successful_origin())?;
+    let end: u64 =
+        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u64 conversion failed")?;
+    Timestamp::set_timestamp(end + 2 * MILLISECS_PER_BLOCK as u64);
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
@@ -174,6 +178,9 @@ fn setup_redeem_shares_common<T: Config>(
     let approval_origin = T::ApprovalOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(approval_origin.clone())?;
+    let end: u64 =
+        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u64 conversion failed")?;
+    Timestamp::set_timestamp(end + 2 * MILLISECS_PER_BLOCK as u64);
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let _ = Call::<T>::admin_move_market_to_resolved { market_id }
@@ -483,6 +490,8 @@ benchmarks! {
         let approval_origin = T::ApprovalOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
             .dispatch_bypass_filter(approval_origin)?;
+    let end : u64 = T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u64 conversion failed")?;
+    Timestamp::set_timestamp(end +  2 * MILLISECS_PER_BLOCK as u64);
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     sell_complete_set {

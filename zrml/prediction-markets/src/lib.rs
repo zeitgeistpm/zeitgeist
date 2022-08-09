@@ -96,7 +96,7 @@ mod pallet {
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::{PmPalletId, MILLISECS_PER_BLOCK, BLOCKS_PER_DAY_U32},
+        constants::{PmPalletId, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK},
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
@@ -369,11 +369,6 @@ mod pallet {
                 matches!(market.status, MarketStatus::Reported | MarketStatus::Disputed),
                 Error::<T>::InvalidMarketStatus
             );
-            let report = market.report.clone().ok_or(Error::<T>::MarketIsNotReported)?;
-            ensure!(
-                curr_block_num < (report.at + market.deadlines.dispute_duration.into()),
-                Error::<T>::NotAllowedToDisputeNow
-            );
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             T::AssetManager::reserve_named(
@@ -399,7 +394,10 @@ mod pallet {
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
+            // each dispute resets dispute_duration
+            let dispute_duration_ends_at_block =
+                curr_block_num.saturating_add(market.deadlines.dispute_duration.into());
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(dispute_duration_ends_at_block, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
             Self::deposit_event(Event::MarketDisputed(
@@ -890,16 +888,12 @@ mod pallet {
                 let mut should_check_origin = false;
                 match market.period {
                     MarketPeriod::Block(ref range) => {
-                        let oracle_delay = range.end.saturating_add(market.deadlines.oracle_delay.into());
-                        ensure!(
-                            current_block
-                                > oracle_delay,
-                            Error::<T>::NotAllowedToReportYet
-                        );
-                        let oracle_duration = oracle_delay.saturating_add(market.deadlines.oracle_duration.into());
-                        if current_block
-                            <= oracle_duration
-                        {
+                        let oracle_delay =
+                            range.end.saturating_add(market.deadlines.oracle_delay.into());
+                        ensure!(current_block > oracle_delay, Error::<T>::NotAllowedToReportYet);
+                        let oracle_duration =
+                            oracle_delay.saturating_add(market.deadlines.oracle_duration.into());
+                        if current_block <= oracle_duration {
                             should_check_origin = true;
                         }
                     }
@@ -910,16 +904,13 @@ mod pallet {
                             oracle_delay_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
                         let oracle_delay = range.end.saturating_add(oracle_delay_in_ms);
                         let now = T::MarketCommons::now();
-                        ensure!(
-                            now > oracle_delay,
-                            Error::<T>::NotAllowedToReportYet
-                        );
-                        let oracle_duration_in_moments: MomentOf<T> = market.deadlines.oracle_duration.into();
-                        let oracle_duration_in_ms = oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        ensure!(now > oracle_delay, Error::<T>::NotAllowedToReportYet);
+                        let oracle_duration_in_moments: MomentOf<T> =
+                            market.deadlines.oracle_duration.into();
+                        let oracle_duration_in_ms =
+                            oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
                         let oracle_duration = oracle_delay.saturating_add(oracle_duration_in_ms);
-                        if now
-                            <= oracle_duration
-                        {
+                        if now <= oracle_duration {
                             should_check_origin = true;
                         }
                     }
@@ -947,7 +938,10 @@ mod pallet {
                 Ok(())
             })?;
 
-            MarketIdsPerReportBlock::<T>::try_mutate(&current_block, |ids| {
+            let market = T::MarketCommons::market(&market_id)?;
+            let block_after_dispute_duration =
+                current_block.saturating_add(market.deadlines.dispute_duration.into());
+            MarketIdsPerReportBlock::<T>::try_mutate(&block_after_dispute_duration, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
@@ -1204,8 +1198,6 @@ mod pallet {
         NotAllowedToReportYet,
         /// Oracle is not allowed to report as market.deadlines.oracle_duration has passed.
         OracleNotAllowedReportingNow,
-        /// No disputes are allowed now as market.deadliens.dispute_duration has passed.
-        NotAllowedToDisputeNow,
     }
 
     #[pallet::event]
@@ -1506,17 +1498,18 @@ mod pallet {
             let market = T::MarketCommons::market(market_id)?;
             if market.status == MarketStatus::Reported {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                MarketIdsPerReportBlock::<T>::mutate(&report.at, |ids| {
+                let dispute_duration_ends_at_block =
+                    report.at.saturating_add(market.deadlines.dispute_duration.into());
+                MarketIdsPerReportBlock::<T>::mutate(&dispute_duration_ends_at_block, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
             if market.status == MarketStatus::Disputed {
                 let disputes = Disputes::<T>::get(market_id);
                 if let Some(last_dispute) = disputes.last() {
-                    let at = last_dispute.at;
-                    let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(&at);
-                    remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
-                    MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
+                    let dispute_duration_ends_at_block =
+                        last_dispute.at.saturating_add(market.deadlines.dispute_duration.into());
+                    MarketIdsPerDisputeBlock::<T>::mutate(&dispute_duration_ends_at_block, |ids| {
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                     });
                 }
@@ -2182,8 +2175,10 @@ mod pallet {
             market_id: &MarketIdOf<T>,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
-                let at = last_dispute.at;
-                MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
+                let market = T::MarketCommons::market(market_id)?;
+                let dispute_duration_ends_at_block =
+                    last_dispute.at.saturating_add(market.deadlines.dispute_duration.into());
+                MarketIdsPerDisputeBlock::<T>::mutate(&dispute_duration_ends_at_block, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
@@ -2236,15 +2231,8 @@ mod pallet {
                 &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             ) -> DispatchResult,
         {
-            let dispute_period = T::DisputePeriod::get();
-            if now <= dispute_period {
-                return Ok(());
-            }
-
-            let block = now.saturating_sub(dispute_period);
-
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(&block).iter() {
+            for id in MarketIdsPerReportBlock::<T>::get(&now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
@@ -2252,7 +2240,7 @@ mod pallet {
             }
 
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(&block).iter() {
+            for id in MarketIdsPerDisputeBlock::<T>::get(&now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
