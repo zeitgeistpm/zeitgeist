@@ -75,7 +75,7 @@ type AccountPublic = <Signature as Verify>::Signer;
 pub(crate) struct EndowedAccountWithBalance(AccountId, Balance);
 
 macro_rules! generate_generic_genesis_function {
-	($runtime:ident, $($additional_genesis:tt)*) => {
+    ($runtime:ident, $($additional_genesis:tt)*) => {
         pub(super) fn generic_genesis(
             acs: AdditionalChainSpec,
             endowed_accounts: Vec<EndowedAccountWithBalance>,
@@ -157,7 +157,7 @@ macro_rules! generate_generic_genesis_function {
                 $($additional_genesis)*
             }
         }
-	};
+    };
 }
 
 pub(crate) use generate_generic_genesis_function;

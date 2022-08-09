@@ -90,7 +90,7 @@ pub fn load_spec(
                 }
                 _ => {
                     #[cfg(feature = "with-battery-station-runtime")]
-					return Ok(Box::new(crate::chain_spec::battery_station::BatteryStationChainSpec::from_json_file(std::path::PathBuf::from(path))?));
+                    return Ok(Box::new(crate::chain_spec::battery_station::BatteryStationChainSpec::from_json_file(std::path::PathBuf::from(path))?));
                     #[cfg(not(feature = "with-battery-station-runtime"))]
                     panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
                 }
@@ -354,14 +354,14 @@ impl ClientHandle for Client {
 }
 
 macro_rules! match_client {
-	($self:ident, $method:ident($($param:ident),*)) => {
-		match $self {
+    ($self:ident, $method:ident($($param:ident),*)) => {
+        match $self {
             #[cfg(feature = "with-battery-station-runtime")]
-			Self::BatteryStation(client) => client.$method($($param),*),
-			#[cfg(feature = "with-zeitgeist-runtime")]
-			Self::Zeitgeist(client) => client.$method($($param),*),
-		}
-	};
+            Self::BatteryStation(client) => client.$method($($param),*),
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            Self::Zeitgeist(client) => client.$method($($param),*),
+        }
+    };
 }
 
 impl sc_client_api::UsageProvider<Block> for Client {
