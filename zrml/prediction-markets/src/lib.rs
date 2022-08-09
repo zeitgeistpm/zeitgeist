@@ -1049,10 +1049,6 @@ mod pallet {
         #[pallet::constant]
         type DisputeFactor: Get<BalanceOf<Self>>;
 
-        /// The number of blocks the dispute period remains open.
-        #[pallet::constant]
-        type DisputePeriod: Get<Self::BlockNumber>;
-
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -1107,10 +1103,6 @@ mod pallet {
         ///  in a timely manner.
         #[pallet::constant]
         type OracleBond: Get<BalanceOf<Self>>;
-
-        /// The number of blocks the reporting period remains open.
-        #[pallet::constant]
-        type ReportingPeriod: Get<u32>;
 
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::Origin>;

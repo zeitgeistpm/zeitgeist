@@ -45,8 +45,6 @@ ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 parameter_types! {
-    pub const DisputePeriod: BlockNumber = 10;
-    pub const ReportingPeriod: u32 = 11;
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -88,7 +86,6 @@ impl crate::Config for Runtime {
     type DestroyOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
@@ -101,7 +98,6 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type ReportingPeriod = ReportingPeriod;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;

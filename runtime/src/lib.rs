@@ -953,7 +953,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
     type DisputeBond = DisputeBond;
     type DisputeFactor = DisputeFactor;
-    type DisputePeriod = DisputePeriod;
     type Event = Event;
     // LiquidityMining is currently unstable.
     // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
@@ -968,7 +967,6 @@ impl zrml_prediction_markets::Config for Runtime {
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
-    type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
