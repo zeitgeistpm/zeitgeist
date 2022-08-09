@@ -134,7 +134,7 @@ mod pallet {
             let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
             // If the pool is still in use, prevent a pool drain.
-            Self::ensure_minimum_liquidity_shares(pool_id, pool_amount)?;
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let params = PoolParams {
                 asset_bounds: min_assets_out,
@@ -144,7 +144,7 @@ mod pallet {
                 pool_id,
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
-                    Self::ensure_minimum_balance(pool_id, asset, amount)?;
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
                     T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
@@ -310,11 +310,11 @@ mod pallet {
             #[pallet::compact] min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
             ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
-            Self::ensure_minimum_liquidity_shares(pool_id, pool_amount)?;
             let pool = Self::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let who = ensure_signed(origin)?;
             let who_clone = who.clone();
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
 
             let params = PoolExitWithExactAmountParams {
                 asset,
@@ -344,7 +344,7 @@ mod pallet {
                             .saturated_into(),
                         Error::<T>::MaxOutRatio
                     );
-                    Self::ensure_minimum_balance(pool_id, asset, asset_amount)?;
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(asset_amount)
                 },
@@ -1199,9 +1199,9 @@ mod pallet {
 
         fn ensure_minimum_liquidity_shares(
             pool_id: PoolId,
+            pool: &Pool<BalanceOf<T>, T::MarketId>,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
-            let pool = Self::pool_by_id(pool_id)?;
             if pool.pool_status == PoolStatus::Clean {
                 return Ok(());
             }
@@ -1215,10 +1215,10 @@ mod pallet {
 
         fn ensure_minimum_balance(
             pool_id: PoolId,
+            pool: &Pool<BalanceOf<T>, T::MarketId>,
             asset: Asset<T::MarketId>,
             amount: BalanceOf<T>,
         ) -> DispatchResult {
-            let pool = Self::pool_by_id(pool_id)?;
             // No need to prevent a clean pool from getting drained.
             if pool.pool_status == PoolStatus::Clean {
                 return Ok(());
@@ -1777,7 +1777,7 @@ mod pallet {
             max_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
-            Self::ensure_minimum_balance(pool_id, asset, asset_amount)?;
+            Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
             let pool_ref = &pool;
             let who_clone = who.clone();
 
@@ -1813,7 +1813,7 @@ mod pallet {
                     .saturated_into();
                     ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
-                    Self::ensure_minimum_liquidity_shares(pool_id, pool_amount)?;
+                    Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(pool_amount)
                 },
@@ -2029,7 +2029,7 @@ mod pallet {
                     if let Some(maao) = min_asset_amount_out {
                         ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
                     }
-                    Self::ensure_minimum_balance(pool_id, asset_out, asset_amount_out)?;
+                    Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
@@ -2065,7 +2065,7 @@ mod pallet {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
-            Self::ensure_minimum_balance(pool_id, asset_out, asset_amount_out)?;
+            Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);
