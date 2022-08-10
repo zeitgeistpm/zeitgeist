@@ -81,7 +81,7 @@ fn create_close_and_report_market<T: Config>(
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(T::ApprovalOrigin::successful_origin())?;
+        .dispatch_bypass_filter(T::ApproveOrigin::successful_origin())?;
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
@@ -166,7 +166,7 @@ fn setup_redeem_shares_common<T: Config>(
         market_id,
         MinLiquidity::get().saturated_into(),
     )?;
-    let approval_origin = T::ApprovalOrigin::successful_origin();
+    let approval_origin = T::ApproveOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(approval_origin.clone())?;
     let _ = Call::<T>::report { market_id, outcome }
@@ -258,7 +258,7 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let approval_origin = T::ApproveOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_closed { market_id };
     }: { call.dispatch_bypass_filter(approval_origin)? }
 
@@ -270,7 +270,7 @@ benchmarks! {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
         let (_, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let approval_origin = T::ApproveOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: { call.dispatch_bypass_filter(approval_origin)? }
 
@@ -281,7 +281,7 @@ benchmarks! {
             ScoringRule::CPMM
         )?;
 
-        let origin = T::ApprovalOrigin::successful_origin();
+        let origin = T::ApproveOrigin::successful_origin();
         let call = Call::<T>::approve_market { market_id };
     }: { call.dispatch_bypass_filter(origin)? }
 
@@ -464,7 +464,7 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let approval_origin = T::ApproveOrigin::successful_origin();
         let call = Call::<T>::reject_market { market_id };
     }: { call.dispatch_bypass_filter(approval_origin)? }
 
@@ -475,7 +475,7 @@ benchmarks! {
             ScoringRule::CPMM
         )?;
         let outcome = OutcomeReport::Categorical(0);
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let approval_origin = T::ApproveOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
             .dispatch_bypass_filter(approval_origin)?;
     }: _(RawOrigin::Signed(caller), market_id, outcome)

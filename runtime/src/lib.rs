@@ -33,7 +33,7 @@ use frame_support::{
     weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 };
 use frame_system::EnsureRoot;
-use pallet_collective::{EnsureProportionAtLeast, PrimeDefaultVote};
+use pallet_collective::{EnsureMember, EnsureProportionAtLeast, PrimeDefaultVote};
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
@@ -682,10 +682,10 @@ impl pallet_democracy::Config for Runtime {
     /// Origin from which a proposal may be cancelled and its backers slashed.
     type CancelProposalOrigin = EnsureRootOrAllTechnicalCommittee;
     /// Origin for anyone able to veto proposals.
-    type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCommitteeInstance>;
+    type VetoOrigin = EnsureMember<AccountId, TechnicalCommitteeInstance>;
     type CooloffPeriod = CooloffPeriod;
     type PreimageByteDeposit = PreimageByteDeposit;
-    type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
+    type OperationalPreimageOrigin = EnsureMember<AccountId, CouncilInstance>;
     type Slash = Treasury;
     type Scheduler = Scheduler;
     type PalletsOrigin = OriginCaller;
@@ -950,7 +950,7 @@ impl zrml_liquidity_mining::LiquidityMiningPalletApi for NoopLiquidityMining {
 
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
-    type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
+    type ApproveOrigin = EnsureOneOf<EnsureRoot<AccountId>, EnsureMember<AccountId, AdvisoryCommitteeInstance>>;
     type Authorized = Authorized;
     type Court = Court;
     type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
@@ -972,6 +972,7 @@ impl zrml_prediction_markets::Config for Runtime {
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
+    type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
     type ReportingPeriod = ReportingPeriod;
     type ResolveOrigin = EnsureRoot<AccountId>;
     type AssetManager = AssetManager;

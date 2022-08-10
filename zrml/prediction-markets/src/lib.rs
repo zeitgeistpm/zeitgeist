@@ -52,7 +52,7 @@
 //! governing body of Zeitgeist that is responsible for maintaining a list of high quality markets
 //! and slash low quality markets.
 //!
-//! #### `ApprovalOrigin` Dispatches
+//! #### `ApproveOrigin` Dispatches
 //!
 //! Users can also propose markets, which are subject to approval or rejection by the Advisory
 //! Committee. The `AdvisoryOrigin` calls the following dispatches:
@@ -86,7 +86,9 @@ mod pallet {
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
         traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
-        transactional, Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
+        transactional,
+        weights::Pays,
+        Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
@@ -215,22 +217,29 @@ mod pallet {
             Self::deposit_event(Event::MarketDestroyed(market_id));
 
             // Weight correction
+            // The DestroyOrigin should not pay fees for providing this service
             if market_status == MarketStatus::Reported {
-                Ok(Some(T::WeightInfo::admin_destroy_reported_market(
-                    total_accounts.saturated_into(),
-                    share_accounts.saturated_into(),
-                    outcome_assets_amount.saturated_into(),
-                ))
-                .into())
+                Ok((
+                    Some(T::WeightInfo::admin_destroy_reported_market(
+                        total_accounts.saturated_into(),
+                        share_accounts.saturated_into(),
+                        outcome_assets_amount.saturated_into(),
+                    )),
+                    Pays::No,
+                )
+                    .into())
             } else if market_status == MarketStatus::Disputed {
-                Ok(Some(T::WeightInfo::admin_destroy_disputed_market(
-                    total_accounts.saturated_into(),
-                    share_accounts.saturated_into(),
-                    outcome_assets_amount.saturated_into(),
-                ))
-                .into())
+                Ok((
+                    Some(T::WeightInfo::admin_destroy_disputed_market(
+                        total_accounts.saturated_into(),
+                        share_accounts.saturated_into(),
+                        outcome_assets_amount.saturated_into(),
+                    )),
+                    Pays::No,
+                )
+                    .into())
             } else {
-                Ok(None.into())
+                Ok((None, Pays::No).into())
             }
         }
 
@@ -245,7 +254,7 @@ mod pallet {
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             // TODO(#638): Handle Rikiddo markets!
             T::CloseOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
@@ -253,7 +262,8 @@ mod pallet {
             Self::clear_auto_open(&market_id)?;
             Self::clear_auto_close(&market_id)?;
             Self::close_market(&market_id)?;
-            Ok(())
+            // The CloseOrigin should not pay fees for providing this service
+            Ok((None, Pays::No).into())
         }
 
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
@@ -290,7 +300,7 @@ mod pallet {
         /// NOTE: Returns the proposer's bond since the market has been
         /// deemed valid by an advisory committee.
         ///
-        /// NOTE: Can only be called by the `ApprovalOrigin`.
+        /// NOTE: Can only be called by the `ApproveOrigin`.
         ///
         #[pallet::weight(T::WeightInfo::approve_market())]
         #[transactional]
@@ -298,7 +308,7 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+            T::ApproveOrigin::ensure_origin(origin)?;
             let mut extra_weight = 0;
             let mut status = MarketStatus::Active;
 
@@ -326,7 +336,9 @@ mod pallet {
             })?;
 
             Self::deposit_event(Event::MarketApproved(market_id, status));
-            Ok(Some(T::WeightInfo::approve_market().saturating_add(extra_weight)).into())
+            // The ApproveOrigin should not pay fees for providing this service
+            Ok((Some(T::WeightInfo::approve_market().saturating_add(extra_weight)), Pays::No)
+                .into())
         }
 
         /// Buy a complete set of outcome shares of a market.
@@ -846,13 +858,14 @@ mod pallet {
         pub fn reject_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-        ) -> DispatchResult {
-            T::ApprovalOrigin::ensure_origin(origin)?;
+        ) -> DispatchResultWithPostInfo {
+            T::RejectOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             Self::clear_auto_open(&market_id)?;
             Self::clear_auto_close(&market_id)?;
             Self::do_reject_market(&market_id, market)?;
-            Ok(())
+            // The RejectOrigin should not pay fees for providing this service
+            Ok((None, Pays::No).into())
         }
 
         /// Reports the outcome of a market.
@@ -984,7 +997,14 @@ mod pallet {
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
         /// The origin that is allowed to approve / reject pending advised markets.
-        type ApprovalOrigin: EnsureOrigin<Self::Origin>;
+        type ApproveOrigin: EnsureOrigin<Self::Origin>;
+
+        /// Shares of outcome assets and native currency
+        type AssetManager: ZeitgeistAssetManager<
+            Self::AccountId,
+            CurrencyId = Asset<MarketIdOf<Self>>,
+            ReserveIdentifier = [u8; 8],
+        >;
 
         /// See [`AuthorizedPalletApi`].
         type Authorized: zrml_authorized::AuthorizedPalletApi<
@@ -1064,16 +1084,12 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
-        /// Shares of outcome assets and native currency
-        type AssetManager: ZeitgeistAssetManager<
-            Self::AccountId,
-            CurrencyId = Asset<MarketIdOf<Self>>,
-            ReserveIdentifier = [u8; 8],
-        >;
-
         /// The module identifier.
         #[pallet::constant]
         type PalletId: Get<PalletId>;
+
+        /// The origin that is allowed to approve / reject pending advised markets.
+        type RejectOrigin: EnsureOrigin<Self::Origin>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports
         ///  in a timely manner.
