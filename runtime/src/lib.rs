@@ -81,6 +81,7 @@ type Executive = frame_executive::Executive<
     (
         zrml_court::migrations::JurorsCountedStorageMapMigration<Runtime>,
         zrml_prediction_markets::migrations::MigrateMarketPoolsBeforeOpen<Runtime>,
+        zrml_prediction_markets::migrations::CleanUpStorageForResolvedOrClosedMarkets<Runtime>,
     ),
 >;
 
