@@ -20,7 +20,7 @@ Please observe the following ground-rules when making contributions:
 - Please use _squash and merge_ to merge pull requests. Feel free to remove
   trivial items like "Fix typo", etc. from the commit summary.
 - Don't modify `RuntimeVersion` under normal circumstances. Changes to
-  RuntimeVersion are made in a specific PR at the end of the release cycle.
+  `RuntimeVersion` are made in a specific PR at the end of the release cycle.
 - Summarize any interface changes in docs/changelog_for_devs.md and format the
   file using `prettier -w docs/changelog_for_devs.md`.
 
