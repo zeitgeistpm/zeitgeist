@@ -950,7 +950,8 @@ impl zrml_liquidity_mining::LiquidityMiningPalletApi for NoopLiquidityMining {
 
 impl zrml_prediction_markets::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
-    type ApproveOrigin = EnsureOneOf<EnsureRoot<AccountId>, EnsureMember<AccountId, AdvisoryCommitteeInstance>>;
+    type ApproveOrigin =
+        EnsureOneOf<EnsureRoot<AccountId>, EnsureMember<AccountId, AdvisoryCommitteeInstance>>;
     type Authorized = Authorized;
     type Court = Court;
     type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
