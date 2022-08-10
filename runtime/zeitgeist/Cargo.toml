@@ -177,6 +177,7 @@ runtime-benchmarks = [
     "zrml-liquidity-mining/runtime-benchmarks",
     "zrml-prediction-markets/runtime-benchmarks",
     "zrml-simple-disputes/runtime-benchmarks",
+    "zrml-styx/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
 ]
 std = [
@@ -273,6 +274,7 @@ std = [
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
     "zrml-swaps-runtime-api/std",
+    "zrml-styx/std",
     "zrml-swaps/std",
 ]
 try-runtime = [
@@ -316,6 +318,7 @@ try-runtime = [
     "zrml-prediction-markets/try-runtime",
     "zrml-rikiddo/try-runtime",
     "zrml-simple-disputes/try-runtime",
+    "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",
 
     # Parachain

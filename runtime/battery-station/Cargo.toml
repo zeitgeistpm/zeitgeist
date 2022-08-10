@@ -275,6 +275,7 @@ std = [
     "zrml-prediction-markets/std",
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
+    "zrml-styx/std",
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
