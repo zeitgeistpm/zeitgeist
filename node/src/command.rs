@@ -59,7 +59,7 @@ pub fn run() -> sc_cli::Result<()> {
                             )
                         }),
                         #[cfg(not(feature = "with-battery-station-runtime"))]
-                        _ => panic!("Invalid chain spec"),
+                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                     }
                 }
                 BenchmarkCmd::Block(cmd) => match chain_spec {
@@ -80,7 +80,7 @@ pub fn run() -> sc_cli::Result<()> {
                         cmd.run(params.client)
                     }),
                     #[cfg(not(feature = "with-battery-station-runtime"))]
-                    _ => panic!("Invalid chain spec"),
+                    _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                 },
                 BenchmarkCmd::Storage(cmd) => match chain_spec {
                     #[cfg(feature = "with-zeitgeist-runtime")]
@@ -108,7 +108,7 @@ pub fn run() -> sc_cli::Result<()> {
                         cmd.run(config, params.client, db, storage)
                     }),
                     #[cfg(not(feature = "with-battery-station-runtime"))]
-                    _ => panic!("Invalid chain spec"),
+                    _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                 },
 
                 BenchmarkCmd::Overhead(cmd) => {
@@ -149,7 +149,7 @@ pub fn run() -> sc_cli::Result<()> {
                             )
                         }),
                         #[cfg(not(feature = "with-battery-station-runtime"))]
-                        _ => panic!("Invalid chain spec"),
+                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                     }
                 }
             }
@@ -232,7 +232,7 @@ pub fn run() -> sc_cli::Result<()> {
                     }
                 }
                 #[cfg(not(feature = "with-battery-station-runtime"))]
-                _ => panic!("Invalid chain spec"),
+                _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
             };
 
             // let raw_header = block.header().encode();
@@ -414,25 +414,29 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 
         match &parachain_config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
-            spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
-                parachain_config,
-                parachain_id,
-                polkadot_config,
-            )
-            .await
-            .map(|r| r.0)
-            .map_err(Into::into),
+            spec if spec.is_zeitgeist() => {
+                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
+                    parachain_config,
+                    parachain_id,
+                    polkadot_config,
+                )
+                .await
+                .map(|r| r.0)
+                .map_err(Into::into)
+            }
             #[cfg(feature = "with-battery-station-runtime")]
-            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
-                parachain_config,
-                parachain_id,
-                polkadot_config,
-            )
-            .await
-            .map(|r| r.0)
-            .map_err(Into::into),
+            _ => {
+                new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
+                    parachain_config,
+                    parachain_id,
+                    polkadot_config,
+                )
+                .await
+                .map(|r| r.0)
+                .map_err(Into::into)
+            }
             #[cfg(not(feature = "with-battery-station-runtime"))]
-            _ => panic!("Invalid chain spec"),
+            _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         }
     })
 }
@@ -454,6 +458,11 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             #[cfg(feature = "with-battery-station-runtime")]
             _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(config)
                 .map_err(sc_cli::Error::Service),
+            #[cfg(all(not(feature = "with-battery-station-runtime"), feature = "with-zeitgeist-runtime"))]
+            _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config)
+                .map_err(sc_cli::Error::Service),
+            #[cfg(all(not(feature = "with-battery-station-runtime"), not(feature = "with-zeitgeist-runtime")))]
+            _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         }
     })
 }

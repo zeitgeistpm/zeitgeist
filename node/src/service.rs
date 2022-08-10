@@ -177,7 +177,7 @@ pub fn new_chain_ops(
             config,
         ),
         #[cfg(not(feature = "with-battery-station-runtime"))]
-        _ => panic!("Invalid chain spec"),
+        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
     }
 }
 

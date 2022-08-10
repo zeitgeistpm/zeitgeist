@@ -2,10 +2,11 @@
 
 use super::{AdditionalChainSpec, EndowedAccountWithBalance};
 use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use hex_literal::hex;
 use sc_service::ChainType;
+use sp_core::crypto::UncheckedInto;
 use zeitgeist_runtime::parameters::SS58Prefix;
-#[cfg(feature = "parachain")]
-use {hex_literal::hex, sp_core::crypto::UncheckedInto};
+
 
 use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD};
 
@@ -84,7 +85,16 @@ fn additional_chain_spec_staging_zeitgeist(
 
 #[cfg(not(feature = "parachain"))]
 fn additional_chain_spec_staging_zeitgeist() -> AdditionalChainSpec {
-    super::battery_station::additional_chain_spec_staging_battery_station()
+    AdditionalChainSpec {
+        initial_authorities: vec![(
+            // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
+            hex!["8a9a54bdf73fb4a757f5ab81fabe2f173922fdb92bb8b6e8bedf8b17fa38f500"]
+                .unchecked_into(),
+            // 5HGProUwcyCDMJDxjBBKbv8u7ehr5uoTBS3bckYHPcZMTifW
+            hex!["e61786c6426b55a034f9c4b78dc57d4183927cef8e64b2e496225ed6fca41758"]
+                .unchecked_into(),
+        )],
+    }
 }
 
 #[inline]

@@ -13,14 +13,18 @@ pub use battery_station::battery_station_staging_config;
 pub use dev::dev_config;
 use jsonrpc_core::serde_json::{Map, Value};
 use sc_telemetry::TelemetryEndpoints;
+#[cfg(feature = "with-battery-station-runtime")]
 use sp_core::{Pair, Public};
+#[cfg(feature = "with-battery-station-runtime")]
 use sp_runtime::traits::{IdentifyAccount, Verify};
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub use zeitgeist::zeitgeist_staging_config;
 use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals,
-    types::{AccountId, Balance, Signature},
+    types::{AccountId, Balance},
 };
+#[cfg(feature = "with-battery-station-runtime")] 
+use zeitgeist_primitives::types::Signature;
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::Perbill,
@@ -70,7 +74,6 @@ cfg_if::cfg_if! {
 const POLKADOT_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const ZEITGEIST_TELEMETRY_URL: &str = "wss://telemetry.zeitgeist.pm/submit/";
 
-type AccountPublic = <Signature as Verify>::Signer;
 #[derive(Clone)]
 pub(crate) struct EndowedAccountWithBalance(AccountId, Balance);
 
@@ -162,6 +165,9 @@ macro_rules! generate_generic_genesis_function {
 
 pub(crate) use generate_generic_genesis_function;
 
+#[cfg(feature = "with-battery-station-runtime")]
+type AccountPublic = <Signature as Verify>::Signer;
+#[cfg(feature = "with-battery-station-runtime")]
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
@@ -169,6 +175,7 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
+#[cfg(feature = "with-battery-station-runtime")]
 fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
     TPublic::Pair::from_string(&format!("//{}", seed), None)
         .expect("static values are valid; qed")

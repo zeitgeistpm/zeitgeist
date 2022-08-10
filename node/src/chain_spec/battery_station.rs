@@ -53,7 +53,7 @@ fn additional_chain_spec_staging_battery_station(
 }
 
 #[cfg(not(feature = "parachain"))]
-pub(super) fn additional_chain_spec_staging_battery_station() -> AdditionalChainSpec {
+fn additional_chain_spec_staging_battery_station() -> AdditionalChainSpec {
     AdditionalChainSpec {
         initial_authorities: vec![(
             // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu

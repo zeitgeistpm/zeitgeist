@@ -54,7 +54,7 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
             .into());
         }
 
-        Err("Invalid chain spec")
+        Err(crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE)
     }
 }
 
