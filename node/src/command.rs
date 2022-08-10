@@ -235,8 +235,6 @@ pub fn run() -> sc_cli::Result<()> {
                 _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
             };
 
-            // let raw_header = block.header().encode();
-
             if let Some(output) = &params.output {
                 std::fs::write(output, buf)?;
             } else {
