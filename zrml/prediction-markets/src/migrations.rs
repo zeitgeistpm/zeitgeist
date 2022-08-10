@@ -195,7 +195,8 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
 
         let dispute_period = T::DisputePeriod::get();
         let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
-        let last_dp_end_block = current_block.saturating_sub(dispute_period);
+        let last_dp_end_block =
+            current_block.saturating_sub(dispute_period).saturating_sub(1_u32.into());
         type DisputeBlockToMarketIdsTuple<T> =
             (<T as frame_system::Config>::BlockNumber, BoundedVec<MarketIdOf<T>, CacheSize>);
         type IterType<T> = PrefixIterator<DisputeBlockToMarketIdsTuple<T>>;
@@ -249,7 +250,8 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
     fn post_upgrade() -> Result<(), &'static str> {
         let dispute_period = T::DisputePeriod::get();
         let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
-        let last_dp_end_block = current_block.saturating_sub(dispute_period);
+        let last_dp_end_block =
+            current_block.saturating_sub(dispute_period).saturating_sub(1_u32.into());
         type DisputeBlockToMarketIdsTuple<T> =
             (<T as frame_system::Config>::BlockNumber, BoundedVec<MarketIdOf<T>, CacheSize>);
         type IterType<T> = PrefixIterator<DisputeBlockToMarketIdsTuple<T>>;
@@ -465,10 +467,10 @@ mod tests {
             StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_CLEANUP_STORAGE_FOR_RESOLVED_MARKETS)
                 .put::<Pallet<Runtime>>();
 
-            System::set_block_number(1);
+            System::set_block_number(2);
             let market_ids = BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0, 1])
                 .expect("BoundedVec creation failed");
-            let dispute_block = System::current_block_number();
+            let dispute_block = System::current_block_number().saturating_sub(1_u32.into());
             let dispute_period = <Runtime as crate::Config>::DisputePeriod::get();
             MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids.clone());
             MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids.clone());
