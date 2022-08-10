@@ -21,7 +21,7 @@ Please observe the following ground-rules when making contributions:
   trivial items like "Fix typo", etc. from the commit summary.
 - Don't modify `RuntimeVersion` under normal circumstances. Changes to
   `RuntimeVersion` are made in a specific PR at the end of the release cycle.
-- Summarize any interface changes in docs/changelog_for_devs.md and format the
+- Summarize any interface changes in [docs/changelog_for_devs.md] and format the
   file using `prettier -w docs/changelog_for_devs.md`.
 
 ## Labels
@@ -53,7 +53,8 @@ mark the PR with the following labels according to
 ## Style Guide
 
 - Use `rustfmt` to format your contributions.
-- Avoid panickers like `unwrap()` even if there's proof that they are infallible.
+- Avoid panickers like `unwrap()` even if there's proof that they are
+  infallible.
 - Dispatches that don't use `#[transactional]` macro **must** contain a comment
   including `MARK(non-transactional): ...` followed by a short explanation why
   the dispatch doesn't require `#[transactional]`.
@@ -68,4 +69,5 @@ mark the PR with the following labels according to
   case. A full code coverage is the targeted goal.
 
 [rules]: #Rules
+[docs/changelog_for_devs.md]: docs/changelog_for_devs.md
 [zeitgeistpm]: https://github.com/zeitgeistpm
