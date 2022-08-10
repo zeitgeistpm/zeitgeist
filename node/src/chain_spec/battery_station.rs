@@ -96,9 +96,10 @@ pub(super) fn get_wasm() -> Result<&'static [u8], String> {
     battery_station_runtime::WASM_BINARY.ok_or_else(|| "WASM binary is not available".to_string())
 }
 
-generate_generic_genesis_function! {battery_station_runtime,
+generate_generic_genesis_function!(
+    battery_station_runtime,
     sudo: battery_station_runtime::SudoConfig { key: Some(root_key_staging_battery_station()) },
-}
+);
 
 pub fn battery_station_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,

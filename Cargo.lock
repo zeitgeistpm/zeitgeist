@@ -522,6 +522,7 @@ dependencies = [
  "zrml-prediction-markets",
  "zrml-rikiddo",
  "zrml-simple-disputes",
+ "zrml-styx",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]
