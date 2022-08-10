@@ -5,6 +5,7 @@ members = [
     "runtime",
     "zrml/authorized",
     "zrml/court",
+    "zrml/global-disputes",
     "zrml/liquidity-mining",
     "zrml/market-commons",
     "zrml/orderbook-v1",

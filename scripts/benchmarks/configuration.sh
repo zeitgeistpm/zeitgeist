@@ -19,6 +19,6 @@ export ORML_PALLETS=( orml_currencies orml_tokens )
 export ORML_PALLETS_RUNS=20
 export ORML_PALLETS_STEPS=50
 
-export ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_liquidity_mining zrml_prediction_markets zrml_swaps )
+export ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_global_disputes zrml_liquidity_mining zrml_prediction_markets zrml_swaps )
 export ZEITGEIST_PALLETS_RUNS=1000
 export ZEITGEIST_PALLETS_STEPS=10

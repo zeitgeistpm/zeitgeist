@@ -411,6 +411,11 @@ mod pallet {
             )
         }
 
+        /// When the `MaxDisputes` amount of disputes is reached, this allows to start a global dispute.
+        /// 
+        /// NOTE:
+        /// The outcomes of the disputes and the report outcome is added to the global dispute voting outcomes.
+        /// The bond of each dispute is the initial vote amount.
         #[pallet::weight(5000)]
         #[transactional]
         pub fn start_global_dispute(

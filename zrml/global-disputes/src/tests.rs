@@ -1,11 +1,8 @@
 #![cfg(test)]
 
 use crate::{
-    global_disputes_pallet_api::GlobalDisputesPalletApi,
-    mock::{
-        Balances, ExtBuilder, GlobalDisputes, Origin, Runtime, ALICE, BOB, CHARLIE, EVE, POOR_PAUL,
-    },
-    Error, LockInfoOf, OutcomeInfo, Outcomes, Winners,
+    global_disputes_pallet_api::GlobalDisputesPalletApi, mock::*, Error, LockInfoOf, OutcomeInfo,
+    Outcomes, Winners,
 };
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency, BoundedVec};
 use pallet_balances::BalanceLock;

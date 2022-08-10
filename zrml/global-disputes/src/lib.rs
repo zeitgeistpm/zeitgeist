@@ -1,7 +1,4 @@
-//! # Global disputes
-//!
-//! Manages market disputes and resolutions.
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -68,7 +65,7 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Push an outcome to the global dispute system to allow anybody to vote on.
+        /// Add an outcome to the voting outcomes to allow anybody to lock native tokens on it.
         #[frame_support::transactional]
         #[pallet::weight(5000)]
         pub fn add_vote_outcome(
@@ -104,6 +101,7 @@ mod pallet {
             Ok(().into())
         }
 
+        /// Reward the owners of the winning outcome with the `VotingOutcomeFee`'s of the looser outcome owners.
         #[frame_support::transactional]
         #[pallet::weight(5000)]
         pub fn reward_outcome_owner(
@@ -158,7 +156,18 @@ mod pallet {
             Ok(().into())
         }
 
-        /// Votes on an outcome on a vote identifier with an `amount`.
+        /// Votes on an outcome with an `amount`.
+        ///
+        /// NOTE:
+        /// As long as the voting amount increases for multiple calls of this function,
+        /// only the increased difference amount is included in the `outcome_sum`.
+        /// The reason for this is to prevent the possible attack vector
+        /// of increasing the `outcome_sum` with the exact same locked balance.
+        /// The `outcome_sum` never decreases (only increases) to allow
+        /// caching the outcome with the highest `outcome_sum`.
+        /// If the `outcome_sum` decreases, it would lead to more storage,
+        /// because the winning outcome could have a smaller `outcome_sum`
+        /// than the second highest `outcome_sum`.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::vote_on_outcome())]
         pub fn vote_on_outcome(
@@ -196,7 +205,7 @@ mod pallet {
                     <Outcomes<T>>::insert(market_id, &outcome, outcome_info);
                 };
                 if let Some(prev_highest_amount) = lock_info {
-                    if amount >= *prev_highest_amount {
+                    if amount > *prev_highest_amount {
                         let diff = amount.saturating_sub(*prev_highest_amount);
                         add_to_outcome_sum(diff);
                         *lock_info = Some(amount);
@@ -218,7 +227,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::vote_on_outcome()).into())
         }
 
-        /// Unlock the expired (winner chosen) vote values.
+        /// Unlock the voters locked token amounts from the finished global disputes.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::unlock_vote_balance())]
         pub fn unlock_vote_balance(
@@ -261,22 +270,22 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+        /// To reference the market id type.
         type MarketCommons: MarketCommonsPalletApi<
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
         >;
 
-        /// The currency to allow locking funds for voting.
+        /// The currency to allow locking native token for voting.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         /// The pallet identifier.
         #[pallet::constant]
         type GlobalDisputesPalletId: Get<PalletId>;
 
-        /// The vote lock identifier for a voting outcome.
+        /// The vote lock identifier.
         #[pallet::constant]
         type VoteLockIdentifier: Get<LockIdentifier>;
 
@@ -284,6 +293,7 @@ mod pallet {
         #[pallet::constant]
         type MinOutcomeVoteAmount: Get<BalanceOf<Self>>;
 
+        /// The fee required to add a voting outcome.
         #[pallet::constant]
         type VotingOutcomeFee: Get<BalanceOf<Self>>;
 
@@ -296,7 +306,7 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The outcome specified with vote id and outcome index is not present.
+        /// The outcome specified is not present in the voting outcomes.
         OutcomeDoesNotExist,
         /// Sender does not have enough funds for the vote on an outcome.
         InsufficientAmount,
@@ -308,7 +318,7 @@ mod pallet {
         NoGlobalDisputeStarted,
         /// The voting outcome has been already added.
         OutcomeAlreadyExists,
-        /// The global dispute is already over.
+        /// The global dispute period is already over and the winner is determined.
         GlobalDisputeAlreadyFinished,
     }
 
@@ -320,7 +330,7 @@ mod pallet {
     {
         /// A vote happened on an outcome. \[market_id, outcome, vote_amount\]
         VotedOnOutcome(MarketIdOf<T>, OutcomeReport, BalanceOf<T>),
-        /// A new outcome has been pushed. \[market_id, outcome_report\]
+        /// A new voting outcome has been added. \[market_id, outcome_report\]
         AddedVotingOutcome(MarketIdOf<T>, OutcomeReport),
         /// The outcome owner has been rewarded. \[market_id\]
         OutcomeOwnerRewarded(MarketIdOf<T>),
@@ -340,7 +350,12 @@ mod pallet {
     where
         T: Config,
     {
-        /// Add outcomes (with initial vote balance) to the voting mechanism.
+        /// Add an outcome (with initial vote balance) to the voting outcomes. 
+        /// The `outcome_sum` of exact same outcomes is added.
+        /// There can be multiple owners of one same outcome.
+        /// 
+        /// NOTE:
+        /// This is meant to be called to start a global dispute.
         fn push_voting_outcome(
             market_id: &MarketIdOf<T>,
             outcome: OutcomeReport,
@@ -384,7 +399,10 @@ mod pallet {
             }
         }
 
-        /// Determine the outcome with the most amount of tokens.
+        /// Determine the outcome with the highest `outcome_sum` as the winner.
+        ///
+        /// NOTE:
+        /// This is meant to be called to finish a global dispute.
         fn get_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
             let winner_info_opt = <Winners<T>>::get(market_id);
 
@@ -396,6 +414,7 @@ mod pallet {
             winner_info_opt.map(|winner_info| winner_info.outcome)
         }
 
+        /// Check if the global dispute started already.
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
             <Winners<T>>::get(market_id).is_some()
         }
@@ -404,11 +423,12 @@ mod pallet {
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
+    /// Maps the market id to all information about the winner outcome and if the global dispute is finished.
     #[pallet::storage]
     pub type Winners<T: Config> =
         StorageMap<_, Blake2_128Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
 
-    /// Maps the vote id to the outcome index and the vote balance.  
+    /// Maps the market id to the outcome and providing information about the outcome.
     #[pallet::storage]
     pub type Outcomes<T: Config> = StorageDoubleMap<
         _,
