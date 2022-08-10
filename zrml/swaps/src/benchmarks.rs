@@ -6,7 +6,6 @@ use super::*;
 use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use fixed::bmul;
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -261,16 +260,8 @@ benchmarks! {
             ScoringRule::CPMM,
             false
         );
-        let pool_amount = T::MinLiquidity::get();
-        let min_assets_out = vec![
-            T::MinLiquidity::get()
-                - bmul(
-                    T::ExitFee::get().saturated_into(),
-                    T::MinLiquidity::get().saturated_into()
-                )?
-                .saturated_into();
-            a as usize
-        ];
+        let pool_amount = T::MinLiquidity::get() / 2u32.into();
+        let min_assets_out = vec![0u32.into(); a as usize];
     }: _(RawOrigin::Signed(caller), pool_id, pool_amount, min_assets_out)
 
     pool_exit_subsidy {
@@ -436,7 +427,7 @@ benchmarks! {
         let asset_amount_out: BalanceOf<T> = BASE.saturated_into();
         let max_price = Some((BASE * 1024).saturated_into());
     }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, *assets.last().unwrap(), max_asset_amount_in,
-            assets[0], asset_amount_out, max_price)
+           assets[0], asset_amount_out, max_price)
 }
 
 impl_benchmark_test_suite!(Swaps, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
