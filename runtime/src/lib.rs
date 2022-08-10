@@ -218,6 +218,7 @@ macro_rules! create_zeitgeist_runtime {
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
+                Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
 
                 $($additional_pallets)*
             }
@@ -358,6 +359,7 @@ cfg_if::cfg_if! {
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
+                    | Call::Styx(_)
                     | Call::PredictionMarkets(_) => false,
                 }
             }
@@ -397,6 +399,7 @@ cfg_if::cfg_if! {
                     | Call::Court(_)
                     | Call::LiquidityMining(_)
                     | Call::Swaps(_)
+                    | Call::Styx(_)
                     | Call::PredictionMarkets(_)=> false,
                 }
             }
@@ -1026,6 +1029,13 @@ impl zrml_swaps::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
+impl zrml_styx::Config for Runtime {
+    type Event = Event;
+    type SetBurnAmountOrigin = EnsureRootOrHalfCouncil;
+    type Currency = Balances;
+    type WeightInfo = zrml_styx::weights::WeightInfo<Runtime>;
+}
+
 // Implementation of runtime's apis
 impl_runtime_apis! {
     #[cfg(feature = "parachain")]
@@ -1130,6 +1140,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, zrml_court, Court);
             list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
             list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
+            list_benchmark!(list, extra, zrml_styx, Styx);
 
             cfg_if::cfg_if! {
                 if #[cfg(feature = "parachain")] {
@@ -1203,6 +1214,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, zrml_court, Court);
             add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
             add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
+            add_benchmark!(params, batches, zrml_styx, Styx);
 
 
             cfg_if::cfg_if! {

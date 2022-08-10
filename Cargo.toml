@@ -19,6 +19,7 @@ members = [
     "zrml/swaps/fuzz",
     "zrml/swaps/rpc",
     "zrml/swaps/runtime-api",
+    "zrml/styx",
 ]
 resolver = "2"
 
