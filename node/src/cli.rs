@@ -4,7 +4,6 @@ mod cli_parachain;
 use super::service::{
     AdditionalRuntimeApiCollection, FullBackend, FullClient, IdentifyVariant, RuntimeApiCollection,
 };
-use crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE;
 use clap::Parser;
 #[cfg(feature = "parachain")]
 pub use cli_parachain::RelayChainCli;
@@ -61,7 +60,7 @@ pub fn load_spec(
             parachain_id,
         )?),
         #[cfg(not(feature = "with-battery-station-runtime"))]
-        "battery_station_staging" => panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+        "battery_station_staging" => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         "zeitgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/zeitgeist_parachain.json")[..],
@@ -74,7 +73,7 @@ pub fn load_spec(
             parachain_id,
         )?),
         #[cfg(not(feature = "with-zeitgeist-runtime"))]
-        "zeitgeist_staging" => panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE),
+        "zeitgeist_staging" => panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE),
         path => {
             let spec = Box::new(crate::chain_spec::DummyChainSpec::from_json_file(
                 std::path::PathBuf::from(path),
@@ -83,16 +82,27 @@ pub fn load_spec(
             match spec {
                 spec if spec.is_zeitgeist() => {
                     #[cfg(feature = "with-zeitgeist-runtime")]
-                    // return Ok(Box::new(chain_spec::zeitgeist::ZeitgeistChainSpec::from_json_file(path)?));
-                    panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+                    return Ok(
+                        Box::new(
+                            crate::chain_spec::zeitgeist::ZeitgeistChainSpec::from_json_file(
+                                std::path::PathBuf::from(path)
+                            )?
+                        )
+                    );
                     #[cfg(not(feature = "with-zeitgeist-runtime"))]
-                    panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE);
+                    panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE);
                 }
                 _ => {
                     #[cfg(feature = "with-battery-station-runtime")]
-                    return Ok(Box::new(crate::chain_spec::battery_station::BatteryStationChainSpec::from_json_file(std::path::PathBuf::from(path))?));
+                    return Ok(
+                        Box::new(
+                            crate::chain_spec::battery_station::BatteryStationChainSpec::from_json_file(
+                                std::path::PathBuf::from(path)
+                            )?
+                        )
+                    );
                     #[cfg(not(feature = "with-battery-station-runtime"))]
-                    panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+                    panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
                 }
             }
         }
@@ -222,13 +232,13 @@ impl SubstrateCli for Cli {
                 #[cfg(feature = "with-zeitgeist-runtime")]
                 return &zeitgeist_runtime::VERSION;
                 #[cfg(not(feature = "with-zeitgeist-runtime"))]
-                panic!("{}", ZEITGEIST_RUNTIME_NOT_AVAILABLE);
+                panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE);
             }
             _spec => {
                 #[cfg(feature = "with-battery-station-runtime")]
                 return &battery_station_runtime::VERSION;
                 #[cfg(not(feature = "with-battery-station-runtime"))]
-                panic!("{}", BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
+                panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE);
             }
         }
     }
