@@ -98,7 +98,7 @@ parameter_types! {
     pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
 
     // Scheduler
-    pub MaximumSchedulerWeight: Weight = 
+    pub MaximumSchedulerWeight: Weight =
         Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
     // No hard limit, used for worst-case weight estimation
     pub const MaxScheduledPerBlock: u32 = 50;
