@@ -19,12 +19,12 @@ use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub use zeitgeist::zeitgeist_staging_config;
+#[cfg(feature = "with-battery-station-runtime")]
+use zeitgeist_primitives::types::Signature;
 use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals,
     types::{AccountId, Balance},
 };
-#[cfg(feature = "with-battery-station-runtime")] 
-use zeitgeist_primitives::types::Signature;
 #[cfg(feature = "parachain")]
 use {
     sp_runtime::Perbill,

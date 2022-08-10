@@ -82,13 +82,11 @@ pub fn load_spec(
             match spec {
                 spec if spec.is_zeitgeist() => {
                     #[cfg(feature = "with-zeitgeist-runtime")]
-                    return Ok(
-                        Box::new(
-                            crate::chain_spec::zeitgeist::ZeitgeistChainSpec::from_json_file(
-                                std::path::PathBuf::from(path)
-                            )?
-                        )
-                    );
+                    return Ok(Box::new(
+                        crate::chain_spec::zeitgeist::ZeitgeistChainSpec::from_json_file(
+                            std::path::PathBuf::from(path),
+                        )?,
+                    ));
                     #[cfg(not(feature = "with-zeitgeist-runtime"))]
                     panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE);
                 }

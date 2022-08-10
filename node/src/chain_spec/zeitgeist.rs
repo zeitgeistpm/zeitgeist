@@ -7,7 +7,6 @@ use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
 use zeitgeist_runtime::parameters::SS58Prefix;
 
-
 use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD};
 
 #[cfg(feature = "parachain")]
