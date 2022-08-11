@@ -63,7 +63,7 @@ parameter_types! {
     /// How often (in blocks) to check for new votes.
     pub const VotingPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
     /// Minimum voting period allowed for a fast-track referendum.
-    pub const FastTrackVotingPeriod: BlockNumber = 1 * BLOCKS_PER_DAY;
+    pub const FastTrackVotingPeriod: BlockNumber = BLOCKS_PER_DAY;
     /// The minimum amount to be used as a deposit for a public referendum proposal.
     pub const MinimumDeposit: Balance = 100 * BASE;
     /// The period between a proposal being approved and enacted.
@@ -183,7 +183,7 @@ parameter_types! {
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
     /// from a pool before the pool is closed.
-    pub const ExitFee: Balance = 1 * BASE / 10000; // 0.01%
+    pub const ExitFee: Balance = BASE / 10_000; // 0.01%
     /// Minimum number of assets.
     pub const MinAssets: u16 = 2;
     /// Maximum number of assets. `MaxCategories` plus one base asset.
