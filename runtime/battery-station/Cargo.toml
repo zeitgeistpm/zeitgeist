@@ -86,7 +86,7 @@ sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.19", default-features =
 
 # Utility
 cfg-if = { version = "1.0.0" }
-hex-literal = { default-features = false, optional = true, version = "0.3.4" }
+hex-literal = { default-features = false, optional = true, version = "0.3.5" }
 log = { version = "0.4.8", default-features = false, optional = true }
 
 # Zeitgeist
@@ -333,7 +333,7 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "battery-station-runtime"
-version = "0.3.4"
+version = "0.3.5"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
