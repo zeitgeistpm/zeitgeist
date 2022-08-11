@@ -79,6 +79,7 @@ pub struct IsCallable;
 
 // Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
 // dispute mechanism.
+// Disallow GlobalDisputes until we use Court. GlobalDisputes with authorized is not allowed.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
         use zeitgeist_primitives::types::{
@@ -90,6 +91,7 @@ impl Contains<Call> for IsCallable {
         #[allow(clippy::match_like_matches_macro)]
         match call {
             Call::Court(_) => false,
+            Call::GlobalDisputes(_) => false,
             Call::LiquidityMining(_) => false,
             Call::PredictionMarkets(inner_call) => {
                 match inner_call {
@@ -101,6 +103,7 @@ impl Contains<Call> for IsCallable {
                         dispute_mechanism: Court | SimpleDisputes,
                         ..
                     } => false,
+                    start_global_dispute { market_id: _ } => false,
                     _ => true,
                 }
             }

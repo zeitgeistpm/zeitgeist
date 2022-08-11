@@ -126,6 +126,7 @@ macro_rules! decl_common_types {
                     LiquidityMiningPalletId::get(),
                     PmPalletId::get(),
                     SimpleDisputesPalletId::get(),
+                    GlobalDisputesPalletId::get(),
                     SwapsPalletId::get(),
                 ];
 
@@ -230,9 +231,10 @@ macro_rules! create_runtime {
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 53,
                 RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
-                Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
+                GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 56,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 57,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 58,
+                Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 59,
 
                 $($additional_pallets)*
             }
@@ -860,6 +862,8 @@ macro_rules! impl_config_traits {
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             type SimpleDisputes = SimpleDisputes;
+            type GlobalDisputes = GlobalDisputes;
+            type GlobalDisputePeriod = GlobalDisputePeriod;
             type Swaps = Swaps;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
@@ -884,6 +888,18 @@ macro_rules! impl_config_traits {
             type Event = Event;
             type MarketCommons = MarketCommons;
             type PalletId = SimpleDisputesPalletId;
+        }
+
+        impl zrml_global_disputes::Config for Runtime {
+            type Event = Event;
+            type Currency = Balances;
+            type MarketCommons = MarketCommons;
+            type GlobalDisputesPalletId = GlobalDisputesPalletId;
+            type VoteLockIdentifier = VoteLockIdentifier;
+            type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
+            type VotingOutcomeFee = VotingOutcomeFee;
+            type RemoveKeysLimit = RemoveKeysLimit;
+            type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
         }
 
         impl zrml_swaps::Config for Runtime {
@@ -1028,6 +1044,7 @@ macro_rules! create_runtime_api {
                     list_benchmark!(list, extra, zrml_swaps, Swaps);
                     list_benchmark!(list, extra, zrml_authorized, Authorized);
                     list_benchmark!(list, extra, zrml_court, Court);
+                    list_benchmark!(list, extra, zrml_global_disputes, GlobalDisputes);
                     list_benchmark!(list, extra, zrml_prediction_markets, PredictionMarkets);
                     list_benchmark!(list, extra, zrml_liquidity_mining, LiquidityMining);
                     list_benchmark!(list, extra, zrml_styx, Styx);
@@ -1102,6 +1119,7 @@ macro_rules! create_runtime_api {
                     add_benchmark!(params, batches, zrml_swaps, Swaps);
                     add_benchmark!(params, batches, zrml_authorized, Authorized);
                     add_benchmark!(params, batches, zrml_court, Court);
+                    add_benchmark!(params, batches, zrml_global_disputes, GlobalDisputes);
                     add_benchmark!(params, batches, zrml_prediction_markets, PredictionMarkets);
                     add_benchmark!(params, batches, zrml_liquidity_mining, LiquidityMining);
                     add_benchmark!(params, batches, zrml_styx, Styx);
