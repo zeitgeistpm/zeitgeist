@@ -48,13 +48,10 @@ mod pallet {
         ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::CourtPalletId,
         traits::DisputeApi,
         types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
-
-    pub(crate) const RESERVE_ID: [u8; 8] = CourtPalletId::get().0;
 
     // Number of jurors for an initial market dispute
     const INITIAL_JURORS_NUM: usize = 3;
@@ -98,7 +95,7 @@ mod pallet {
             let jurors_num = Jurors::<T>::count() as usize;
             let jurors_num_plus_one = jurors_num.checked_add(1).ok_or(ArithmeticError::Overflow)?;
             let stake = Self::current_required_stake(jurors_num_plus_one);
-            CurrencyOf::<T>::reserve_named(&RESERVE_ID, &who, stake)?;
+            CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, stake)?;
             let juror = Juror { status: JurorStatus::Ok };
             Jurors::<T>::insert(&who, juror.clone());
             Self::deposit_event(Event::JoinedJuror(who, juror));
@@ -210,6 +207,12 @@ mod pallet {
             jurors.choose_multiple(rng, actual_len).collect()
         }
 
+        /// The reserve ID of the court pallet.
+        #[inline]
+        pub fn reserve_id() -> [u8; 8] {
+            T::PalletId::get().0
+        }
+
         // Returns a pseudo random number generator implementation based on the seed
         // provided by the `Config::Random` type and the `JurorsSelectionNonce` storage.
         pub(crate) fn rng() -> impl RngCore {
@@ -286,13 +289,13 @@ mod pallet {
             let treasury_account_id = Self::treasury_account_id();
 
             let slash_and_remove_juror = |ai: &T::AccountId| {
-                let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, ai);
+                let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), ai);
                 // Unsigned division will never overflow
                 let slash = all_reserved
                     .checked_div(&BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR))
                     .ok_or(DispatchError::Other("Zero division"))?;
                 let _ = CurrencyOf::<T>::repatriate_reserved_named(
-                    &RESERVE_ID,
+                    &Self::reserve_id(),
                     ai,
                     &treasury_account_id,
                     slash,
@@ -374,12 +377,12 @@ mod pallet {
                 if outcome == &winner_outcome {
                     total_winners = total_winners.saturating_add(BalanceOf::<T>::from(1u8));
                 } else {
-                    let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, jai);
+                    let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), jai);
                     // Unsigned division will never overflow
                     let slash = all_reserved
                         .checked_div(&BalanceOf::<T>::from(2u8))
                         .ok_or(DispatchError::Other("Zero division"))?;
-                    CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, jai, slash);
+                    CurrencyOf::<T>::slash_reserved_named(&Self::reserve_id(), jai, slash);
                     total_incentives = total_incentives.saturating_add(slash);
                 }
             }
@@ -448,7 +451,7 @@ mod pallet {
 
         // Obliterates all stored references of a juror un-reserving balances.
         fn remove_juror_from_all_courts_of_all_markets(ai: &T::AccountId) {
-            CurrencyOf::<T>::unreserve_all_named(&RESERVE_ID, ai);
+            CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), ai);
             Jurors::<T>::remove(ai);
             let mut market_ids = BTreeSet::new();
             market_ids.extend(RequestedJurors::<T>::iter().map(|el| el.0));

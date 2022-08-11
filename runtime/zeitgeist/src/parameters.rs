@@ -14,6 +14,7 @@ use frame_support::{
     PalletId,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
+use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
 use sp_version::RuntimeVersion;
@@ -52,7 +53,7 @@ parameter_types! {
     /// Duration of a single court case.
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
+    pub const CourtPalletId: PalletId = COURT_PALLET_ID;
     /// This value is multiplied by the current number of jurors to determine the stake
     /// the juror has to pay.
     pub const StakeWeight: u128 = 2 * BASE;
@@ -121,7 +122,7 @@ parameter_types! {
     /// by `DisputePeriod`.
     pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
-    pub const MaxCategories: u16 = 10;
+    pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
     pub const MaxDisputes: u16 = 6;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
@@ -139,7 +140,7 @@ parameter_types! {
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 50 * CENT;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const PmPalletId: PalletId = PM_PALLET_ID;
     /// Timeframe during which the oracle can report the final outcome after the market closed.
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
@@ -177,7 +178,7 @@ parameter_types! {
     /// Minimum number of assets.
     pub const MinAssets: u16 = 2;
     /// Maximum number of assets. `MaxCategories` plus one base asset.
-    pub const MaxAssets: u16 = MaxCategories::get() + 1;
+    pub const MaxAssets: u16 = MAX_ASSETS;
     /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
     pub const MaxInRatio: Balance = (BASE / 3) + 1;
     /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
@@ -197,7 +198,7 @@ parameter_types! {
     /// Minimum weight a single asset can have.
     pub const MinWeight: Balance = BASE;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
+    pub const SwapsPalletId: PalletId = SWAPS_PALLET_ID;
 
     // System
     pub const BlockHashCount: u64 = 250;

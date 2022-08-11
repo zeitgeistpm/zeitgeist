@@ -7,11 +7,9 @@
 pub mod ztg;
 
 use crate::{
-    asset::Asset,
-    types::{Balance, BlockNumber, CurrencyId, Moment},
+    types::{Balance, BlockNumber},
 };
 use frame_support::{parameter_types, PalletId};
-use orml_traits::parameter_type_with_key;
 
 // Definitions for time
 pub const BLOCKS_PER_DAY: BlockNumber = BLOCKS_PER_HOUR * 24;
@@ -43,3 +41,17 @@ parameter_types! {
         counter
     };
 }
+
+// Court
+/// Pallet identifier, mainly used for named balance reserves.
+pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
+
+// Prediction markets
+/// Max. categories in a prediction market.
+pub const MAX_CATEGORIES: u16 = 10;
+pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
+
+// Swaps
+/// Max. assets in a swap pool.
+pub const MAX_ASSETS: u16 = MAX_CATEGORIES + 1;
+pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");

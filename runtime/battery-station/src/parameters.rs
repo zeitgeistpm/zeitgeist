@@ -14,6 +14,7 @@ use frame_support::{
     PalletId,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
+use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
 use sp_version::RuntimeVersion;
@@ -121,7 +122,7 @@ parameter_types! {
     /// by `DisputePeriod`.
     pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
-    pub const MaxCategories: u16 = 10;
+    pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
     pub const MaxDisputes: u16 = 6;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
@@ -177,7 +178,7 @@ parameter_types! {
     /// Minimum number of assets.
     pub const MinAssets: u16 = 2;
     /// Maximum number of assets. `MaxCategories` plus one base asset.
-    pub const MaxAssets: u16 = MaxCategories::get() + 1;
+    pub const MaxAssets: u16 = MAX_ASSETS;
     /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
     pub const MaxInRatio: Balance = (BASE / 3) + 1;
     /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
