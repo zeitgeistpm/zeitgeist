@@ -1,18 +1,233 @@
 #![cfg(test)]
 
 use crate::{
-    global_disputes_pallet_api::GlobalDisputesPalletApi, mock::*, Error, LockInfoOf, OutcomeInfo,
-    Outcomes, Winners,
+    global_disputes_pallet_api::GlobalDisputesPalletApi, mock::*, Error, Event, LockInfoOf,
+    OutcomeInfo, Outcomes, WinnerInfo, Winners,
 };
-use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency, BoundedVec};
-use pallet_balances::BalanceLock;
+use frame_support::{
+    assert_noop, assert_ok,
+    traits::{Currency, ReservableCurrency},
+    BoundedVec,
+};
+use pallet_balances::{BalanceLock, Error as BalancesError};
+use sp_runtime::traits::Zero;
 use zeitgeist_primitives::{
-    constants::{MinOutcomeVoteAmount, VoteLockIdentifier, BASE},
+    constants::{MinOutcomeVoteAmount, VoteLockIdentifier, VotingOutcomeFee, BASE},
     types::OutcomeReport,
 };
 
 fn the_lock(amount: u128) -> BalanceLock<u128> {
     BalanceLock { id: VoteLockIdentifier::get(), amount, reasons: pallet_balances::Reasons::Misc }
+}
+
+#[test]
+fn add_vote_outcome_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let init_global_dispute = || {
+            // This starts the global dispute.
+            GlobalDisputes::push_voting_outcome(
+                &market_id,
+                OutcomeReport::Scalar(0),
+                &ALICE,
+                10 * BASE,
+            );
+        };
+        init_global_dispute();
+        let free_balance_alice_before = Balances::free_balance(&ALICE);
+        let free_balance_reward_account =
+            Balances::free_balance(GlobalDisputes::reward_account(&market_id));
+        assert_ok!(GlobalDisputes::add_vote_outcome(
+            Origin::signed(ALICE),
+            market_id,
+            OutcomeReport::Scalar(20),
+        ));
+        System::assert_last_event(
+            Event::<Runtime>::AddedVotingOutcome(market_id, OutcomeReport::Scalar(20)).into(),
+        );
+        assert_eq!(
+            Balances::free_balance(&ALICE),
+            free_balance_alice_before - VotingOutcomeFee::get()
+        );
+        assert_eq!(
+            Balances::free_balance(GlobalDisputes::reward_account(&market_id)),
+            free_balance_reward_account + VotingOutcomeFee::get()
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_if_no_global_dispute_present() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                Origin::signed(ALICE),
+                market_id,
+                OutcomeReport::Scalar(20),
+            ),
+            Error::<Runtime>::NoGlobalDisputeStarted
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_if_global_dispute_finished() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let mut winner_info = WinnerInfo::new(OutcomeReport::Scalar(0), 10 * BASE);
+        winner_info.is_finished = true;
+        <Winners<Runtime>>::insert(market_id, winner_info);
+
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                Origin::signed(ALICE),
+                market_id,
+                OutcomeReport::Scalar(20),
+            ),
+            Error::<Runtime>::GlobalDisputeAlreadyFinished
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_if_outcome_already_exists() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let init_global_dispute = || {
+            // This starts the global dispute.
+            GlobalDisputes::push_voting_outcome(
+                &market_id,
+                OutcomeReport::Scalar(0),
+                &ALICE,
+                10 * BASE,
+            );
+        };
+        init_global_dispute();
+        <Outcomes<Runtime>>::insert(
+            market_id,
+            OutcomeReport::Scalar(20),
+            OutcomeInfo { outcome_sum: Zero::zero(), owners: Default::default() },
+        );
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                Origin::signed(ALICE),
+                market_id,
+                OutcomeReport::Scalar(20),
+            ),
+            Error::<Runtime>::OutcomeAlreadyExists
+        );
+    });
+}
+
+#[test]
+fn add_vote_outcome_fails_if_balance_too_low() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        let init_global_dispute = || {
+            // This starts the global dispute.
+            GlobalDisputes::push_voting_outcome(
+                &market_id,
+                OutcomeReport::Scalar(0),
+                &ALICE,
+                10 * BASE,
+            );
+        };
+        init_global_dispute();
+        assert_noop!(
+            GlobalDisputes::add_vote_outcome(
+                Origin::signed(POOR_PAUL),
+                market_id,
+                OutcomeReport::Scalar(20),
+            ),
+            BalancesError::<Runtime>::InsufficientBalance
+        );
+    });
+}
+
+#[test]
+fn reward_outcome_owner_works_for_multiple_owners() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        <Outcomes<Runtime>>::insert(
+            market_id,
+            OutcomeReport::Scalar(20),
+            OutcomeInfo {
+                outcome_sum: Zero::zero(),
+                owners: BoundedVec::try_from(vec![ALICE, BOB, CHARLIE]).unwrap(),
+            },
+        );
+        let _ = Balances::deposit_creating(
+            &GlobalDisputes::reward_account(&market_id),
+            3 * VotingOutcomeFee::get(),
+        );
+        let winner_info = WinnerInfo {
+            outcome: OutcomeReport::Scalar(20),
+            vote_sum: 10 * BASE,
+            is_finished: true,
+            owners: Default::default(),
+        };
+        <Winners<Runtime>>::insert(market_id, winner_info);
+
+        let free_balance_alice_before = Balances::free_balance(&ALICE);
+        let free_balance_bob_before = Balances::free_balance(&BOB);
+        let free_balance_charlie_before = Balances::free_balance(&CHARLIE);
+
+        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
+
+        System::assert_has_event(Event::<Runtime>::OutcomesFullyCleaned(market_id).into());
+        System::assert_last_event(Event::<Runtime>::OutcomeOwnerRewarded(market_id).into());
+        assert_eq!(
+            Balances::free_balance(&ALICE),
+            free_balance_alice_before + VotingOutcomeFee::get()
+        );
+        assert_eq!(Balances::free_balance(&BOB), free_balance_bob_before + VotingOutcomeFee::get());
+        assert_eq!(
+            Balances::free_balance(&CHARLIE),
+            free_balance_charlie_before + VotingOutcomeFee::get()
+        );
+        assert!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)).is_zero());
+        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_none());
+    });
+}
+
+#[test]
+fn reward_outcome_owner_works_for_one_owner() {
+    ExtBuilder::default().build().execute_with(|| {
+        let market_id = 0u128;
+        <Outcomes<Runtime>>::insert(
+            market_id,
+            OutcomeReport::Scalar(20),
+            OutcomeInfo {
+                outcome_sum: Zero::zero(),
+                owners: BoundedVec::try_from(vec![ALICE]).unwrap(),
+            },
+        );
+        let _ = Balances::deposit_creating(
+            &GlobalDisputes::reward_account(&market_id),
+            3 * VotingOutcomeFee::get(),
+        );
+        let winner_info = WinnerInfo {
+            outcome: OutcomeReport::Scalar(20),
+            vote_sum: 10 * BASE,
+            is_finished: true,
+            owners: Default::default(),
+        };
+        <Winners<Runtime>>::insert(market_id, winner_info);
+
+        let free_balance_alice_before = Balances::free_balance(&ALICE);
+
+        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
+
+        System::assert_has_event(Event::<Runtime>::OutcomesFullyCleaned(market_id).into());
+        System::assert_last_event(Event::<Runtime>::OutcomeOwnerRewarded(market_id).into());
+        assert_eq!(
+            Balances::free_balance(&ALICE),
+            free_balance_alice_before + 3 * VotingOutcomeFee::get()
+        );
+        assert!(Balances::free_balance(GlobalDisputes::reward_account(&market_id)).is_zero());
+        assert!(<Outcomes<Runtime>>::iter_prefix(market_id).next().is_none());
+    });
 }
 
 #[test]
@@ -91,27 +306,45 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
             OutcomeReport::Scalar(0),
             42 * BASE
         ));
+        System::assert_last_event(
+            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(0), 42 * BASE).into(),
+        );
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(BOB),
             market_id,
             OutcomeReport::Scalar(20),
             42 * BASE
         ));
+        System::assert_last_event(
+            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(20), 42 * BASE)
+                .into(),
+        );
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(CHARLIE),
             market_id,
             OutcomeReport::Scalar(40),
             42 * BASE
         ));
+        System::assert_last_event(
+            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(40), 42 * BASE)
+                .into(),
+        );
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(EVE),
             market_id,
             OutcomeReport::Scalar(60),
             42 * BASE
         ));
+        System::assert_last_event(
+            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(60), 42 * BASE)
+                .into(),
+        );
         assert_eq!(
             &GlobalDisputes::get_voting_winner(&market_id).unwrap(),
             &OutcomeReport::Scalar(60)
+        );
+        System::assert_last_event(
+            Event::<Runtime>::GlobalDisputeWinnerDetermined(market_id).into(),
         );
     });
 }

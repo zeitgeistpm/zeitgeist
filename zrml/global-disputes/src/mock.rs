@@ -44,7 +44,7 @@ parameter_types! {
 }
 
 impl crate::Config for Runtime {
-    type Event = ();
+    type Event = Event;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
     type GlobalDisputesPalletId = GlobalDisputesPalletId;
@@ -65,7 +65,7 @@ impl frame_system::Config for Runtime {
     type BlockWeights = ();
     type Call = Call;
     type DbWeight = ();
-    type Event = ();
+    type Event = Event;
     type Hash = Hash;
     type Hashing = BlakeTwo256;
     type Header = Header;
@@ -86,7 +86,7 @@ impl pallet_balances::Config for Runtime {
     type AccountStore = System;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = ();
+    type Event = Event;
     type ExistentialDeposit = ();
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
@@ -133,6 +133,10 @@ impl ExtBuilder {
             .assimilate_storage(&mut t)
             .unwrap();
 
-        t.into()
+        let mut t: sp_io::TestExternalities = t.into();
+
+        t.execute_with(|| System::set_block_number(1));
+
+        t
     }
 }

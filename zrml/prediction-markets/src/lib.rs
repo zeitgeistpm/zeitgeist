@@ -32,6 +32,7 @@
 //! - `deploy_swap_pool_and_additional_liquidity` - Deploys a single "canonical" pool for a market,
 //!   buys a complete set of the assets used and deploys the funds as specified.
 //! - `dispute` - Submits a disputed outcome for a market.
+//! - `start_global_dispute` - Starts a global dispute for a market, when the `MaxDisputes` amount of disputes is reached.
 //! - `redeem_shares` - Redeems the winning shares for a market.
 //! - `report` - Reports an outcome for a market.
 //! - `sell_complete_set` - Sells a complete set of outcome assets for a market.
@@ -412,7 +413,7 @@ mod pallet {
         }
 
         /// When the `MaxDisputes` amount of disputes is reached, this allows to start a global dispute.
-        /// 
+        ///
         /// NOTE:
         /// The outcomes of the disputes and the report outcome is added to the global dispute voting outcomes.
         /// The bond of each dispute is the initial vote amount.
