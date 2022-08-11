@@ -2,7 +2,9 @@
 members = [
     "node",
     "primitives",
-    "runtime",
+    "runtime/common",
+    "runtime/battery-station",
+    "runtime/zeitgeist",
     "zrml/authorized",
     "zrml/court",
     "zrml/global-disputes",
@@ -20,6 +22,7 @@ members = [
     "zrml/swaps/fuzz",
     "zrml/swaps/rpc",
     "zrml/swaps/runtime-api",
+    "zrml/styx",
 ]
 resolver = "2"
 

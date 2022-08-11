@@ -1,4 +1,4 @@
-use crate::{
+use super::{
     AccountId, Ancestry, Balance, Balances, Barrier, Call, LocalAssetTransactor, MaxInstructions,
     PolkadotXcm, RelayLocation, UnitWeightCost, XcmOriginToTransactDispatchOrigin, XcmRouter,
 };

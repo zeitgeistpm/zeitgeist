@@ -1,8 +1,6 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use crate::service::{
-    AdditionalRuntimeApiCollection, CommonRuntimeApiCollection, ExecutorDispatch,
-};
+use crate::service::{AdditionalRuntimeApiCollection, RuntimeApiCollection};
 use sc_client_api::{BlockBackend, ExecutorProvider};
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_executor::{NativeElseWasmExecutor, NativeExecutionDispatch};
@@ -15,15 +13,26 @@ use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
-use zeitgeist_runtime::{opaque::Block, RuntimeApi};
+use zeitgeist_primitives::types::Block;
 
 pub type FullClient<RuntimeApi, Executor> =
     TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
-type FullBackend = TFullBackend<Block>;
+pub type FullBackend = TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 /// Builds a new service for a full client.
-pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn new_full<RuntimeApi, Executor>(
+    mut config: Configuration,
+) -> Result<TaskManager, ServiceError>
+where
+    RuntimeApi:
+        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
+            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+        >,
+    Executor: NativeExecutionDispatch + 'static,
+{
     let sc_service::PartialComponents {
         client,
         backend,
@@ -33,7 +42,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
         select_chain,
         transaction_pool,
         other: (block_import, grandpa_link, mut telemetry),
-    } = new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+    } = new_partial::<RuntimeApi, Executor>(&config)?;
 
     if let Some(url) = &config.keystore_remote {
         match remote_keystore(url) {
@@ -232,9 +241,8 @@ pub fn new_partial<RuntimeApi, Executor>(
 where
     RuntimeApi:
         ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi: CommonRuntimeApiCollection<
-            StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
-        > + AdditionalRuntimeApiCollection<
+    RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>
+        + AdditionalRuntimeApiCollection<
             StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
         >,
     Executor: NativeExecutionDispatch + 'static,
