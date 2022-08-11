@@ -4,19 +4,12 @@
     clippy::type_complexity,
 )]
 
-use zeitgeist_primitives::constants::{
-    MaxAssets, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinWeight, BASE,
-};
-
-use arbitrary::{Arbitrary, Result, Unstructured};
-
-use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
-
 use zeitgeist_primitives::{
-    constants::MaxSwapFee,
-    types::{Asset, ScalarPosition, SerdeWrapper},
+    constants::mock::{MaxAssets, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinWeight, BASE},
+    types::{Asset, ScalarPosition, SerdeWrapper}
 };
-
+use arbitrary::{Arbitrary, Result, Unstructured};
+use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 use zeitgeist_primitives::{
     traits::Swaps as SwapsTrait,
     types::{PoolId, ScoringRule},

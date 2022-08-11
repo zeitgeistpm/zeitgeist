@@ -1333,9 +1333,12 @@ macro_rules! create_common_benchmark_logic {
         pub(crate) mod benchmarks {
             pub(crate) mod currencies {
                 use super::utils::{lookup_of_account, set_balance};
-                use crate::{AccountId, Amount, AssetManager, Balance, CurrencyId, Runtime};
+                use crate::{
+                    AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit,
+                    GetNativeCurrencyId, Runtime
+                };
                 use zeitgeist_primitives::{
-                    constants::{ExistentialDeposit, GetNativeCurrencyId, BASE},
+                    constants::BASE,
                     types::Asset,
                 };
 
