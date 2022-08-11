@@ -52,13 +52,16 @@
 //! governing body of Zeitgeist that is responsible for maintaining a list of high quality markets
 //! and slash low quality markets.
 //!
-//! #### `ApproveOrigin` Dispatches
+//! #### `ApproveOrigin` and `RejectOrigin` Dispatches
 //!
 //! Users can also propose markets, which are subject to approval or rejection by the Advisory
 //! Committee. The `AdvisoryOrigin` calls the following dispatches:
 //!
 //! - `approve_market` - Approves a `Proposed` market that is waiting approval from the Advisory
 //!   Committee.
+//!
+//! The `RejectOrigin` calls the following dispatches:
+//!
 //! - `reject_market` -  Rejects a `Proposed` market that is waiting approval from the Advisory
 //!   Committee.
 
@@ -291,7 +294,7 @@ mod pallet {
             Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
             let weight = Self::on_resolution(&market_id, &market)?;
-            Ok(Some(weight).into())
+            Ok((Some(weight), Pays::No).into())
         }
 
         /// Approves a market that is waiting for approval from the
