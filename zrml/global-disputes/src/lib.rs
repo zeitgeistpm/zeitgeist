@@ -396,7 +396,7 @@ mod pallet {
                 <Winners<T>>::insert(market_id, winner_info);
             }
 
-            Self::deposit_event(Event::GlobalDisputeWinnerDetermined(market_id.clone()));
+            Self::deposit_event(Event::GlobalDisputeWinnerDetermined(*market_id));
 
             winner_info_opt.map(|winner_info| winner_info.outcome)
         }

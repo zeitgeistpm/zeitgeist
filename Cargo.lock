@@ -517,6 +517,7 @@ dependencies = [
  "zeitgeist-primitives",
  "zrml-authorized",
  "zrml-court",
+ "zrml-global-disputes",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-prediction-markets",
