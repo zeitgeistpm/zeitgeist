@@ -49,8 +49,12 @@ parameter_types! {
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
 
     // Court
+    /// Duration of a single court case.
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
+    /// Pallet identifier, mainly used for named balance reserves.
     pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
+    /// This value is multiplied by the current number of jurors to determine the stake
+    /// the juror has to pay.
     pub const StakeWeight: u128 = 2 * BASE;
 
     // Democracy
@@ -90,6 +94,7 @@ parameter_types! {
     pub const SubAccountDeposit: Balance = 2 * BASE;
 
     // Liquidity Mining parameters
+    /// Pallet identifier, mainly used for named balance reserves.
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
 
     // Multisig
@@ -103,22 +108,42 @@ parameter_types! {
     pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
 
     // Prediction Market parameters
+    /// (Slashable) Bond that is provided for creating an advised market that needs approval.
+    /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 25 * CENT;
+    /// (Slashable) Bond that is provided for disputing the outcome.
+    /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
+    /// was deposited.
     pub const DisputeBond: Balance = 5 * BASE;
+    /// `DisputeBond` is increased by this factor after every dispute.
     pub const DisputeFactor: Balance = 2 * BASE;
+    /// After reporting the outcome and after every dispute, the dispute period is extended
+    /// by `DisputePeriod`.
     pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
+    /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = 10;
+    /// Maximum number of disputes.
     pub const MaxDisputes: u16 = 6;
+    /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
+    /// Minimum number of milliseconds a Rikiddo market must be in subsidy gathering phase.
     pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
+    /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
+    /// The maximum market period.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
+    /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
+    /// outcome the oracle reported.
     pub const OracleBond: Balance = 50 * CENT;
+    /// Pallet identifier, mainly used for named balance reserves.
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    /// Timeframe during which the oracle can report the final outcome after the market closed.
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
+    /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
+    /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 50 * CENT;
 
     // Preimage
@@ -142,21 +167,36 @@ parameter_types! {
     pub const NoPreimagePostponement: Option<u64> = Some(5 * BLOCKS_PER_MINUTE);
 
     // Simple disputes parameters
+    /// Pallet identifier, mainly used for named balance reserves.
     pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
 
     // Swaps parameters
+    /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
+    /// from a pool before the pool is closed.
     pub const ExitFee: Balance = 3 * BASE / 1000; // 0.3%
+    /// Minimum number of assets.
     pub const MinAssets: u16 = 2;
+    /// Maximum number of assets. `MaxCategories` plus one base asset.
     pub const MaxAssets: u16 = MaxCategories::get() + 1;
+    /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
     pub const MaxInRatio: Balance = (BASE / 3) + 1;
+    /// Mathematical constraint set by the Balancer algorithm. DO NOT CHANGE.
     pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+    /// The maximum fee that is charged for swaps and single asset LP operations.
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
+    /// The sum of all weights of the assets within the pool is limited by `MaxTotalWeight`.
     pub const MaxTotalWeight: Balance = 50 * BASE;
+    /// The maximum weight a single asset can have.
     pub const MaxWeight: Balance = 50 * BASE;
+    /// Minimum amount of liquidity required to launch a CPMM pool.
     pub const MinLiquidity: Balance = 100 * BASE;
+    /// Minimum subsidy required to launch a Rikiddo pool.
     pub const MinSubsidy: Balance = MinLiquidity::get();
+    /// Minimum subsidy a single account can provide.
     pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
+    /// Minimum weight a single asset can have.
     pub const MinWeight: Balance = BASE;
+    /// Pallet identifier, mainly used for named balance reserves.
     pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
 
     // System
@@ -188,24 +228,37 @@ parameter_types! {
     pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
 
     // Transaction payment
+    /// A fee mulitplier for Operational extrinsics to compute “virtual tip”
+    /// to boost their priority.
     pub const OperationalFeeMultiplier: u8 = 5;
+    /// The fee that's paid for every byte in the transaction.
     pub const TransactionByteFee: Balance = 100 * MICRO;
+    /// Once the dispatchables in a block consume that percentage of the total weight
+    /// that's available for dispatchables in a block, the fee adjustment will start.
     pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(10);
     // With a target block time of 12 seconds (7200 blocks per day)
     // the weight fees can increase by at most ~21.46% per day, given extreme congestion.
-    // See https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html for details.
+    /// See https://paritytech.github.io/substrate/master/pallet_transaction_payment/struct.TargetedFeeAdjustment.html for details.
     pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(3, 100_000);
-    // Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
-    // that this value is not too low.
+    /// Minimum amount of the multiplier. The test `multiplier_can_grow_from_zero` ensures
+    /// that this value is not too low.
     pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000u128);
 
     // Treasury
+    /// Percentage of spare funds (if any) that are burnt per spend period.
     pub const Burn: Permill = Permill::from_percent(50);
+    /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
+    /// Fraction of a proposal's value that should be bonded in order to place the proposal.
+    /// An accepted proposal gets these back. A rejected proposal does not.
     pub const ProposalBond: Permill = Permill::from_percent(5);
+    /// Minimum amount of funds that should be placed in a deposit for making a proposal.
     pub const ProposalBondMinimum: Balance = 10 * BASE;
+    /// Maximum amount of funds that should be placed in a deposit for making a proposal.
     pub const ProposalBondMaximum: Balance = 500 * BASE;
+    /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
+    /// Pallet identifier, mainly used for named balance reserves.
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 
     // Vesting
