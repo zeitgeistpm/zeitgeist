@@ -9,9 +9,6 @@
   every asset in the pool has a minimum balance of 0.01.
 - A single member of the `AdvisoryCommittee` can now approve markets, whereas
   50% of all members have to agree upon rejecting a market.
-
-# v0.3.4
-
 - Implemented swap fees for CPMM pools. This means that the following extrinsics
   now have a (non-optional) `swap_fee` parameter:
 
@@ -21,6 +18,8 @@
 
   Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
   on-chain constant `MaxSwapFee`.
+
+# v0.3.4
 
 - Changed the `weights` parameter of `deploy_swap_pool_and_additional_liquidity`
   and `deploy_swap_pool_for_market` to be a vector whose length is equal to the
