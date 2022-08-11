@@ -13,6 +13,7 @@ zrml-market-commons = { default-features = false, path = "../market-commons" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+zeitgeist-primitives = { default-features = false, features = ["mock"], path = "../../primitives" }
 
 [features]
 default = ["std"]

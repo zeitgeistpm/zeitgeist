@@ -5,7 +5,7 @@ use crate::{
         Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
         CHARLIE, INITIAL_BALANCE,
     },
-    Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes, RESERVE_ID,
+    Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -50,11 +50,11 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 1);
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
         assert_ok!(Court::exit_court(Origin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 0);
     });
 }
 
@@ -74,12 +74,12 @@ fn join_court_reserves_balance_according_to_the_number_of_jurors() {
         assert_eq!(Balances::free_balance(ALICE), 1000 * BASE);
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
 
         assert_eq!(Balances::free_balance(BOB), 1000 * BASE);
         assert_ok!(Court::join_court(Origin::signed(BOB)));
         assert_eq!(Balances::free_balance(BOB), 996 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 4 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 4 * BASE);
     });
 }
 
@@ -158,11 +158,11 @@ fn on_resolution_awards_winners_and_slashes_losers() {
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE + 3 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
         assert_eq!(Balances::free_balance(BOB), 996 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 4 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 4 * BASE);
         assert_eq!(Balances::free_balance(CHARLIE), 994 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &CHARLIE), 3 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &CHARLIE), 3 * BASE);
     });
 }
 
@@ -226,7 +226,7 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
         let slash = join_court_stake / 5;
         assert_eq!(Balances::free_balance(Court::treasury_account_id()), INITIAL_BALANCE + slash);
         assert_eq!(Balances::free_balance(BOB), INITIAL_BALANCE - slash);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 0);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 0);
     });
 }
 

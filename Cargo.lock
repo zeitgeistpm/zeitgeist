@@ -12949,7 +12949,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "zeitgeist-primitives",
- "zrml-styx",
 ]
 
 [[package]]

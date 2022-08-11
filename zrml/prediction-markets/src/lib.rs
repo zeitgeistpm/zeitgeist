@@ -96,7 +96,7 @@ mod pallet {
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::{MILLISECS_PER_BLOCK},
+        constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,

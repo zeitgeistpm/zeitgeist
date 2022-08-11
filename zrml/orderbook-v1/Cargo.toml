@@ -23,6 +23,7 @@ mock = [
     "orml-tokens",
     "pallet-balances",
     "sp-io",
+    "zeitgeist-primitives/mock",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

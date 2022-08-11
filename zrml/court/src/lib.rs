@@ -377,7 +377,8 @@ mod pallet {
                 if outcome == &winner_outcome {
                     total_winners = total_winners.saturating_add(BalanceOf::<T>::from(1u8));
                 } else {
-                    let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), jai);
+                    let all_reserved =
+                        CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), jai);
                     // Unsigned division will never overflow
                     let slash = all_reserved
                         .checked_div(&BalanceOf::<T>::from(2u8))

@@ -10,7 +10,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{
+    constants::mock::{
         BlockHashCount, ExistentialDeposit, LiquidityMiningPalletId, MaxLocks, MaxReserves,
         MinimumPeriod, BASE,
     },

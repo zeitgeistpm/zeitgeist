@@ -8,7 +8,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, MaxReserves, BASE},
+    constants::mock::{BlockHashCount, MaxReserves, BASE},
     types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest},
 };
 

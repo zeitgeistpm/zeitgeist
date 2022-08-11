@@ -24,7 +24,6 @@ pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
-
 parameter_types! {
     // Authorized
     pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");

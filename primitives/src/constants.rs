@@ -4,11 +4,11 @@
     clippy::integer_arithmetic
 )]
 
+#[cfg(feature = "mock")]
+pub mod mock;
 pub mod ztg;
 
-use crate::{
-    types::{Balance, BlockNumber},
-};
+use crate::types::{Balance, BlockNumber};
 use frame_support::{parameter_types, PalletId};
 
 // Definitions for time
