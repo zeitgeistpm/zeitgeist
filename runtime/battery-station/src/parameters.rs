@@ -32,7 +32,7 @@ parameter_types! {
     pub const MaxAuthorities: u32 = 32;
 
     // Balance
-    pub const ExistentialDeposit: u128 = CENT;
+    pub const ExistentialDeposit: u128 = 5 * CENT;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -86,11 +86,21 @@ parameter_types! {
     pub const MaxProposals: u32 = 100;
 
     // Identity
+    /// The amount held on deposit for a registered identity
     pub const BasicDeposit: Balance = 8 * BASE;
+    /// The amount held on deposit per additional field for a registered identity.
     pub const FieldDeposit: Balance = 256 * CENT;
+    /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
+    /// required to access an identity, but can be pretty high.
     pub const MaxAdditionalFields: u32 = 64;
+    /// Maxmimum number of registrars allowed in the system. Needed to bound the complexity
+    /// of, e.g., updating judgements.
     pub const MaxRegistrars: u32 = 8;
+    /// The maximum number of sub-accounts allowed per identified account.
     pub const MaxSubAccounts: u32 = 64;
+    /// The amount held on deposit for a registered subaccount. This should account for the fact
+    /// that one storage item's value will increase by the size of an account ID, and there will
+    /// be another trie item whose value is the size of an account ID plus 32 bytes.
     pub const SubAccountDeposit: Balance = 2 * BASE;
 
     // Liquidity Mining parameters
@@ -185,9 +195,9 @@ parameter_types! {
     /// The maximum fee that is charged for swaps and single asset LP operations.
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     /// The sum of all weights of the assets within the pool is limited by `MaxTotalWeight`.
-    pub const MaxTotalWeight: Balance = 50 * BASE;
+    pub const MaxTotalWeight: Balance = 128 * BASE;
     /// The maximum weight a single asset can have.
-    pub const MaxWeight: Balance = 50 * BASE;
+    pub const MaxWeight: Balance = 64 * BASE;
     /// Minimum amount of liquidity required to launch a CPMM pool.
     pub const MinLiquidity: Balance = 100 * BASE;
     /// Minimum subsidy required to launch a Rikiddo pool.

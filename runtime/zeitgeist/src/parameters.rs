@@ -32,7 +32,7 @@ parameter_types! {
     pub const MaxAuthorities: u32 = 32;
 
     // Balance
-    pub const ExistentialDeposit: u128 = CENT;
+    pub const ExistentialDeposit: u128 = 5 * CENT;
     pub const MaxLocks: u32 = 50;
     pub const MaxReserves: u32 = 50;
 
@@ -51,7 +51,7 @@ parameter_types! {
     // Court
     /// Duration of a single court case.
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
-    /// Pallet identifier, mainly used for named balance reserves.
+    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const CourtPalletId: PalletId = COURT_PALLET_ID;
     /// This value is multiplied by the current number of jurors to determine the stake
     /// the juror has to pay.
@@ -63,7 +63,7 @@ parameter_types! {
     /// How often (in blocks) to check for new votes.
     pub const VotingPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
     /// Minimum voting period allowed for a fast-track referendum.
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * BLOCKS_PER_HOUR;
+    pub const FastTrackVotingPeriod: BlockNumber = 1 * BLOCKS_PER_DAY;
     /// The minimum amount to be used as a deposit for a public referendum proposal.
     pub const MinimumDeposit: Balance = 100 * BASE;
     /// The period between a proposal being approved and enacted.
@@ -74,7 +74,7 @@ parameter_types! {
     /// The minimum period of vote locking.
     /// It should be no shorter than enactment period to ensure that in the case of an approval,
     /// those successful voters are locked into the consequences that their votes entail.
-    pub const VoteLockingPeriod: BlockNumber = VotingPeriod::get() + EnactmentPeriod::get();
+    pub const VoteLockingPeriod: BlockNumber = EnactmentPeriod::get();
     /// Period in blocks where an external proposal may not be re-submitted after being vetoed.
     pub const CooloffPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// Indicator for whether an emergency origin is even allowed to happen.
@@ -86,15 +86,25 @@ parameter_types! {
     pub const MaxProposals: u32 = 100;
 
     // Identity
-    pub const BasicDeposit: Balance = 8 * BASE;
-    pub const FieldDeposit: Balance = 256 * CENT;
-    pub const MaxAdditionalFields: u32 = 64;
-    pub const MaxRegistrars: u32 = 8;
-    pub const MaxSubAccounts: u32 = 64;
-    pub const SubAccountDeposit: Balance = 2 * BASE;
+    /// The amount held on deposit for a registered identity
+    pub const BasicDeposit: Balance = 100 * BASE;
+    /// The amount held on deposit per additional field for a registered identity.
+    pub const FieldDeposit: Balance = 25 * BASE;
+    /// Maximum number of additional fields that may be stored in an ID. Needed to bound the I/O
+    /// required to access an identity, but can be pretty high.
+    pub const MaxAdditionalFields: u32 = 16;
+    /// Maxmimum number of registrars allowed in the system. Needed to bound the complexity
+    /// of, e.g., updating judgements.
+    pub const MaxRegistrars: u32 = 4;
+    /// The maximum number of sub-accounts allowed per identified account.
+    pub const MaxSubAccounts: u32 = 128;
+    /// The amount held on deposit for a registered subaccount. This should account for the fact
+    /// that one storage item's value will increase by the size of an account ID, and there will
+    /// be another trie item whose value is the size of an account ID plus 32 bytes.
+    pub const SubAccountDeposit: Balance = 20 * BASE;
 
     // Liquidity Mining parameters
-    /// Pallet identifier, mainly used for named balance reserves.
+    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
 
     // Multisig
@@ -110,20 +120,20 @@ parameter_types! {
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
-    pub const AdvisoryBond: Balance = 25 * CENT;
+    pub const AdvisoryBond: Balance = 200 * BASE;
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.
-    pub const DisputeBond: Balance = 5 * BASE;
+    pub const DisputeBond: Balance = 2_000 * BASE;
     /// `DisputeBond` is increased by this factor after every dispute.
     pub const DisputeFactor: Balance = 2 * BASE;
     /// After reporting the outcome and after every dispute, the dispute period is extended
     /// by `DisputePeriod`.
-    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const DisputePeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
-    pub const MaxDisputes: u16 = 6;
+    pub const MaxDisputes: u16 = 1;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
@@ -137,14 +147,14 @@ parameter_types! {
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
     /// outcome the oracle reported.
-    pub const OracleBond: Balance = 50 * CENT;
-    /// Pallet identifier, mainly used for named balance reserves.
+    pub const OracleBond: Balance = 200 * BASE;
+    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
     /// Timeframe during which the oracle can report the final outcome after the market closed.
-    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
+    pub const ReportingPeriod: u32 = 4 * BLOCKS_PER_DAY as _;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
-    pub const ValidityBond: Balance = 50 * CENT;
+    pub const ValidityBond: Balance = 1_000 * BASE;
 
     // Preimage
     pub const PreimageMaxSize: u32 = 4096 * 1024;
@@ -167,13 +177,13 @@ parameter_types! {
     pub const NoPreimagePostponement: Option<u64> = Some(5 * BLOCKS_PER_MINUTE);
 
     // Simple disputes parameters
-    /// Pallet identifier, mainly used for named balance reserves.
+    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
 
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
     /// from a pool before the pool is closed.
-    pub const ExitFee: Balance = 3 * BASE / 1000; // 0.3%
+    pub const ExitFee: Balance = 1 * BASE / 10000; // 0.01%
     /// Minimum number of assets.
     pub const MinAssets: u16 = 2;
     /// Maximum number of assets. `MaxCategories` plus one base asset.
@@ -185,9 +195,9 @@ parameter_types! {
     /// The maximum fee that is charged for swaps and single asset LP operations.
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     /// The sum of all weights of the assets within the pool is limited by `MaxTotalWeight`.
-    pub const MaxTotalWeight: Balance = 50 * BASE;
+    pub const MaxTotalWeight: Balance = 128 * BASE;
     /// The maximum weight a single asset can have.
-    pub const MaxWeight: Balance = 50 * BASE;
+    pub const MaxWeight: Balance = 64 * BASE;
     /// Minimum amount of liquidity required to launch a CPMM pool.
     pub const MinLiquidity: Balance = 100 * BASE;
     /// Minimum subsidy required to launch a Rikiddo pool.
@@ -196,7 +206,7 @@ parameter_types! {
     pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
     /// Minimum weight a single asset can have.
     pub const MinWeight: Balance = BASE;
-    /// Pallet identifier, mainly used for named balance reserves.
+    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const SwapsPalletId: PalletId = SWAPS_PALLET_ID;
 
     // System
@@ -258,7 +268,7 @@ parameter_types! {
     pub const ProposalBondMaximum: Balance = 500 * BASE;
     /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
-    /// Pallet identifier, mainly used for named balance reserves.
+    /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 
     // Vesting
