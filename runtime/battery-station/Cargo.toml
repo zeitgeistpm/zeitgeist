@@ -91,17 +91,18 @@ log = { version = "0.4.8", default-features = false, optional = true }
 
 # Zeitgeist
 
-zeitgeist-primitives = { default-features = false, path = "../primitives" }
-zrml-authorized = { default-features = false, path = "../zrml/authorized" }
-zrml-court = { default-features = false, path = "../zrml/court" }
-zrml-liquidity-mining = { default-features = false, path = "../zrml/liquidity-mining" }
-zrml-market-commons = { default-features = false, path = "../zrml/market-commons" }
-zrml-prediction-markets = { default-features = false, path = "../zrml/prediction-markets" }
-zrml-rikiddo = { default-features = false, path = "../zrml/rikiddo" }
-zrml-simple-disputes = { default-features = false, path = "../zrml/simple-disputes" }
-zrml-styx = { default-features = false, path = "../zrml/styx" }
-zrml-swaps = { default-features = false, path = "../zrml/swaps" }
-zrml-swaps-runtime-api = { default-features = false, path = "../zrml/swaps/runtime-api" }
+common-runtime = { default-features = false, path = "../common" }
+zeitgeist-primitives = { default-features = false, path = "../../primitives" }
+zrml-authorized = { default-features = false, path = "../../zrml/authorized" }
+zrml-court = { default-features = false, path = "../../zrml/court" }
+zrml-liquidity-mining = { default-features = false, path = "../../zrml/liquidity-mining" }
+zrml-market-commons = { default-features = false, path = "../../zrml/market-commons" }
+zrml-prediction-markets = { default-features = false, path = "../../zrml/prediction-markets" }
+zrml-rikiddo = { default-features = false, path = "../../zrml/rikiddo" }
+zrml-simple-disputes = { default-features = false, path = "../../zrml/simple-disputes" }
+zrml-styx = { default-features = false, path = "../../zrml/styx" }
+zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
+zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
 
 [dev-dependencies]
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
@@ -139,9 +140,9 @@ parachain = [
 
     # Misc
 
-    "log"
+    "common-runtime/parachain",
+    "log",
 ]
-
 runtime-benchmarks = [
     "cumulus-pallet-xcmp-queue/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
@@ -274,10 +275,10 @@ std = [
     "zrml-prediction-markets/std",
     "zrml-rikiddo/std",
     "zrml-simple-disputes/std",
+    "zrml-styx/std",
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
 ]
-txfilter = []
 try-runtime = [
     "frame-executive/try-runtime",
     "frame-try-runtime",
@@ -305,7 +306,6 @@ try-runtime = [
 
     # Other Parity runtime pallets
     "pallet-identity/try-runtime",
-    "pallet-sudo/try-runtime",
     "pallet-utility/try-runtime",
     
     # ORML runtime pallets
@@ -328,12 +328,11 @@ try-runtime = [
     "pallet-author-slot-filter?/try-runtime",
     "parachain-staking?/try-runtime",
 ]
-without-sudo=[]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
-name = "zeitgeist-runtime"
+name = "battery-station-runtime"
 version = "0.3.4"
 
 [package.metadata.docs.rs]
