@@ -1088,7 +1088,7 @@ mod pallet {
         #[pallet::constant]
         type PalletId: Get<PalletId>;
 
-        /// The origin that is allowed to approve / reject pending advised markets.
+        /// The origin that is allowed to reject pending advised markets.
         type RejectOrigin: EnsureOrigin<Self::Origin>;
 
         /// The base amount of currency that must be bonded to ensure the oracle reports
