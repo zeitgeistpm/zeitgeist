@@ -4,6 +4,11 @@
   status and must be opened using `Swaps::open_pool`. While the pool is
   `Initialized`, it is allowed to call `pool_join` and `pool_exit`, but trading
   and single-asset operations are prohibited.
+- Every asset in a pool has a minimum balance now that is:
+  `max(0.01, ExistentialDeposit(Asset))`. Regarding the current configuration,
+  every asset in the pool has a minimum balance of 0.01.
+- A single member of the `AdvisoryCommittee` can now approve markets, whereas
+  50% of all members have to agree upon rejecting a market.
 
 # v0.3.4
 
