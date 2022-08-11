@@ -2148,7 +2148,7 @@ mod pallet {
             Ok(())
         }
 
-        /// The reserve ID of the court pallet.
+        /// The reserve ID of the prediction-markets pallet.
         #[inline]
         pub fn reserve_id() -> [u8; 8] {
             T::PalletId::get().0

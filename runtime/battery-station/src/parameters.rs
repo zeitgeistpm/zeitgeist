@@ -26,7 +26,7 @@ pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
     // Authorized
-    pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
+    pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
 
     // Authority
     pub const MaxAuthorities: u32 = 32;
@@ -52,7 +52,7 @@ parameter_types! {
     /// Duration of a single court case.
     pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
+    pub const CourtPalletId: PalletId = COURT_PALLET_ID;
     /// This value is multiplied by the current number of jurors to determine the stake
     /// the juror has to pay.
     pub const StakeWeight: u128 = 2 * BASE;
@@ -105,7 +105,7 @@ parameter_types! {
 
     // Liquidity Mining parameters
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
+    pub const LiquidityMiningPalletId: PalletId = LM_PALLET_ID;
 
     // Multisig
     // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
@@ -149,7 +149,7 @@ parameter_types! {
     /// outcome the oracle reported.
     pub const OracleBond: Balance = 50 * CENT;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const PmPalletId: PalletId = PM_PALLET_ID;
     /// Timeframe during which the oracle can report the final outcome after the market closed.
     pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as u32;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
@@ -178,7 +178,7 @@ parameter_types! {
 
     // Simple disputes parameters
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
+    pub const SimpleDisputesPalletId: PalletId = SD_PALLET_ID;
 
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
@@ -207,7 +207,7 @@ parameter_types! {
     /// Minimum weight a single asset can have.
     pub const MinWeight: Balance = BASE;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
+    pub const SwapsPalletId: PalletId = SWAPS_PALLET_ID;
 
     // System
     pub const BlockHashCount: u64 = 250;

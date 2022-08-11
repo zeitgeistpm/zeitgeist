@@ -26,7 +26,7 @@ pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 parameter_types! {
     // Authorized
-    pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
+    pub const AuthorizedPalletId: PalletId = AUTHORIZED_PALLET_ID;
 
     // Authority
     pub const MaxAuthorities: u32 = 32;
@@ -105,7 +105,7 @@ parameter_types! {
 
     // Liquidity Mining parameters
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
-    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
+    pub const LiquidityMiningPalletId: PalletId = LM_PALLET_ID;
 
     // Multisig
     // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
@@ -178,7 +178,7 @@ parameter_types! {
 
     // Simple disputes parameters
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
-    pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
+    pub const SimpleDisputesPalletId: PalletId = SD_PALLET_ID;
 
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw

@@ -42,16 +42,29 @@ parameter_types! {
     };
 }
 
+// Authorized
+/// Pallet identifier, mainly used for named balance reserves.
+pub const AUTHORIZED_PALLET_ID: PalletId = PalletId(*b"zge/atzd");
+
 // Court
 /// Pallet identifier, mainly used for named balance reserves.
 pub const COURT_PALLET_ID: PalletId = PalletId(*b"zge/cout");
 
-// Prediction markets
+// Liqudity Mining
+/// Pallet identifier, mainly used for named balance reserves.
+pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
+
+// Prediction Markets
 /// Max. categories in a prediction market.
 pub const MAX_CATEGORIES: u16 = 10;
+/// Pallet identifier, mainly used for named balance reserves.
 pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
+
+// Simple Disputes
+pub const SD_PALLET_ID: PalletId = PalletId(*b"zge/sedp");
 
 // Swaps
 /// Max. assets in a swap pool.
 pub const MAX_ASSETS: u16 = MAX_CATEGORIES + 1;
+/// Pallet identifier, mainly used for named balance reserves.
 pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");
