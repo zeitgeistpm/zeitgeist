@@ -15,4 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-mod multiplier;
+use substrate_wasm_builder::WasmBuilder;
+
+fn main() {
+    WasmBuilder::new().with_current_project().export_heap_base().import_memory().build()
+}

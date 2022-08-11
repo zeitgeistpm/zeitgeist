@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{
+use super::{
     AccountId, Ancestry, Balance, Balances, Barrier, Call, LocalAssetTransactor, MaxInstructions,
     PolkadotXcm, RelayLocation, UnitWeightCost, XcmOriginToTransactDispatchOrigin, XcmRouter,
 };

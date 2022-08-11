@@ -27,7 +27,7 @@ use sp_runtime::RuntimeDebug;
 /// * `AI`: Account Id
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
-#[derive(Clone, Decode, Encode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Market<AI, BN, M> {
     /// Creator of this market.
     pub creator: AI,
@@ -116,7 +116,7 @@ pub enum MarketCreation {
     Advised,
 }
 
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
@@ -124,7 +124,7 @@ pub struct MarketDispute<AccountId, BlockNumber> {
 }
 
 /// How a market should resolve disputes
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketDisputeMechanism<AI> {
     Authorized(AI),
     Court,
@@ -197,7 +197,7 @@ impl MaxEncodedLen for MarketType {
     }
 }
 
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,

@@ -21,7 +21,7 @@
     clippy::integer_arithmetic
 )]
 
-use crate::VERSION;
+use super::VERSION;
 use frame_support::{
     parameter_types,
     weights::{
@@ -115,28 +115,31 @@ parameter_types! {
     pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
 
     // Scheduler
-    pub MaximumSchedulerWeight: Weight = Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
+    pub MaximumSchedulerWeight: Weight =
+        Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
     // No hard limit, used for worst-case weight estimation
     pub const MaxScheduledPerBlock: u32 = 50;
     pub const NoPreimagePostponement: Option<u64> = Some(5 * BLOCKS_PER_MINUTE);
-
     // System
     pub const SS58Prefix: u8 = 73;
     pub const Version: RuntimeVersion = VERSION;
-    pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+    pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(
+        5 * 1024 * 1024,
+        NORMAL_DISPATCH_RATIO,
+    );
     pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
     .base_block(BlockExecutionWeight::get())
     .for_class(DispatchClass::all(), |weights| {
-      weights.base_extrinsic = ExtrinsicBaseWeight::get();
+        weights.base_extrinsic = ExtrinsicBaseWeight::get();
     })
     .for_class(DispatchClass::Normal, |weights| {
-      weights.max_total = Some(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT);
+        weights.max_total = Some(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT);
     })
     .for_class(DispatchClass::Operational, |weights| {
-      weights.max_total = Some(MAXIMUM_BLOCK_WEIGHT);
-      weights.reserved = Some(
-        MAXIMUM_BLOCK_WEIGHT - NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT
-      );
+        weights.max_total = Some(MAXIMUM_BLOCK_WEIGHT);
+        weights.reserved = Some(
+            MAXIMUM_BLOCK_WEIGHT - NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT
+        );
     })
     .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
     .build_or_panic();

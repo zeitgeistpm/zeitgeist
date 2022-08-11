@@ -86,7 +86,7 @@ mod pallet {
         FixedI128, FixedI32, FixedU128, FixedU32,
     };
     use zeitgeist_primitives::{
-        constants::BASE,
+        constants::{BASE, CENT},
         traits::{MarketId, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
@@ -102,11 +102,13 @@ mod pallet {
     };
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+
+    const MIN_BALANCE: u128 = CENT;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -151,8 +153,11 @@ mod pallet {
             min_assets_out: Vec<BalanceOf<T>>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let who_clone = who.clone();
             let pool = Self::pool_by_id(pool_id)?;
+            // If the pool is still in use, prevent a pool drain.
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             let params = PoolParams {
                 asset_bounds: min_assets_out,
@@ -162,6 +167,7 @@ mod pallet {
                 pool_id,
                 pool: &pool,
                 transfer_asset: |amount, amount_bound, asset| {
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, amount)?;
                     ensure!(amount >= amount_bound, Error::<T>::LimitOut);
                     T::LiquidityMining::remove_shares(&who, &pool.market_id, amount);
                     T::AssetManager::transfer(asset, &pool_account_id, &who, amount)?;
@@ -326,11 +332,12 @@ mod pallet {
             #[pallet::compact] pool_amount: BalanceOf<T>,
             #[pallet::compact] min_asset_amount: BalanceOf<T>,
         ) -> DispatchResult {
-            ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let who = ensure_signed(origin)?;
             let who_clone = who.clone();
+            Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
 
             let params = PoolExitWithExactAmountParams {
                 asset,
@@ -349,7 +356,7 @@ mod pallet {
                         T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
-                    ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount >= min_asset_amount, Error::<T>::LimitOut);
                     ensure!(
                         asset_amount
@@ -360,6 +367,7 @@ mod pallet {
                             .saturated_into(),
                         Error::<T>::MaxOutRatio
                     );
+                    Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(asset_amount)
                 },
@@ -394,6 +402,7 @@ mod pallet {
             max_assets_in: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
+            ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Self::pool_by_id(pool_id)?;
             ensure!(
                 matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
@@ -561,7 +570,7 @@ mod pallet {
                         pool.swap_fee.ok_or(Error::<T>::PoolMissingFee)?.saturated_into(),
                     )?
                     .saturated_into();
-                    ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(asset_amount <= max_asset_amount, Error::<T>::LimitIn);
                     ensure!(
                         asset_amount <= asset_balance.check_mul_rslt(&T::MaxInRatio::get())?,
@@ -827,6 +836,8 @@ mod pallet {
         NoSubsidyProvided,
         /// The pool in question does not exist.
         PoolDoesNotExist,
+        /// A pool balance dropped below the allowed minimum.
+        PoolDrain,
         /// The pool in question is inactive.
         PoolIsNotActive,
         /// The CPMM pool in question does not have a fee, although it should.
@@ -1204,6 +1215,44 @@ mod pallet {
             T::PalletId::get().into_sub_account(pool_id.saturated_into::<u128>())
         }
 
+        // The minimum allowed balance in a liquidity pool.
+        pub(crate) fn min_balance(asset: Asset<T::MarketId>) -> BalanceOf<T> {
+            T::AssetManager::minimum_balance(asset).max(MIN_BALANCE.saturated_into())
+        }
+
+        fn ensure_minimum_liquidity_shares(
+            pool_id: PoolId,
+            pool: &Pool<BalanceOf<T>, T::MarketId>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            if pool.pool_status == PoolStatus::Clean {
+                return Ok(());
+            }
+            let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
+            let pool_shares_id = Self::pool_shares_id(pool_id);
+            let max_withdraw =
+                total_issuance.saturating_sub(Self::min_balance(pool_shares_id).saturated_into());
+            ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
+            Ok(())
+        }
+
+        fn ensure_minimum_balance(
+            pool_id: PoolId,
+            pool: &Pool<BalanceOf<T>, T::MarketId>,
+            asset: Asset<T::MarketId>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            // No need to prevent a clean pool from getting drained.
+            if pool.pool_status == PoolStatus::Clean {
+                return Ok(());
+            }
+            let pool_account = Self::pool_account_id(pool_id);
+            let balance = T::AssetManager::free_balance(asset, &pool_account);
+            let max_withdraw = balance.saturating_sub(Self::min_balance(asset).saturated_into());
+            ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
+            Ok(())
+        }
+
         pub(crate) fn burn_pool_shares(
             pool_id: PoolId,
             from: &T::AccountId,
@@ -1507,7 +1556,10 @@ mod pallet {
 
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             Self::mutate_pool(pool_id, |pool| {
-                ensure!(pool.pool_status == PoolStatus::Active, Error::<T>::InvalidStateTransition);
+                ensure!(
+                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                    Error::<T>::InvalidStateTransition,
+                );
                 pool.pool_status = PoolStatus::Closed;
                 Ok(())
             })?;
@@ -1751,6 +1803,7 @@ mod pallet {
             max_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
+            Self::ensure_minimum_balance(pool_id, &pool, asset, asset_amount)?;
             let pool_ref = &pool;
             let who_clone = who.clone();
 
@@ -1784,8 +1837,9 @@ mod pallet {
                         T::ExitFee::get().saturated_into(),
                     )?
                     .saturated_into();
-                    ensure!(pool_amount != Zero::zero(), Error::<T>::MathApproximation);
+                    ensure!(pool_amount != Zero::zero(), Error::<T>::ZeroAmount);
                     ensure!(pool_amount <= max_pool_amount, Error::<T>::LimitIn);
+                    Self::ensure_minimum_liquidity_shares(pool_id, &pool, pool_amount)?;
                     T::LiquidityMining::remove_shares(&who, &pool_ref.market_id, asset_amount);
                     Ok(pool_amount)
                 },
@@ -1819,7 +1873,7 @@ mod pallet {
             asset_amount: BalanceOf<T>,
             min_pool_amount: BalanceOf<T>,
         ) -> Result<Weight, DispatchError> {
-            ensure!(asset_amount != Zero::zero(), Error::<T>::MathApproximation);
+            ensure!(asset_amount != Zero::zero(), Error::<T>::ZeroAmount);
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_ref = &pool;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
@@ -2001,6 +2055,7 @@ mod pallet {
                     if let Some(maao) = min_asset_amount_out {
                         ensure!(asset_amount_out >= maao, Error::<T>::LimitOut);
                     }
+                    Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
 
                     Ok([asset_amount_in, asset_amount_out])
                 },
@@ -2035,7 +2090,8 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             let pool = Pallet::<T>::pool_by_id(pool_id)?;
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing,);
+            ensure!(max_asset_amount_in.is_some() || max_price.is_some(), Error::<T>::LimitMissing);
+            Self::ensure_minimum_balance(pool_id, &pool, asset_out, asset_amount_out)?;
             let params = SwapExactAmountParams {
                 asset_amounts: || {
                     let balance_out = T::AssetManager::free_balance(asset_out, &pool_account_id);

@@ -52,7 +52,7 @@ fn run_to_block(n: u64) {
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
-    let _ = ext.execute_with(|| {
+    ext.execute_with(|| {
         let mut rikiddo: RikiddoSigmoidMV<
             FixedU128<U33>,
             FixedI128<U33>,
