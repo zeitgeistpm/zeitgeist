@@ -23,9 +23,18 @@ pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
+
 parameter_types! {
+    // Authorized
+    pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
+
     // Authority
     pub const MaxAuthorities: u32 = 32;
+
+    // Balance
+    pub const ExistentialDeposit: u128 = CENT;
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 
     // Collective
     // Note: MaxMembers does not influence the pallet logic, but the worst-case weight estimation.
@@ -38,6 +47,11 @@ parameter_types! {
     pub const TechnicalCommitteeMaxMembers: u32 = 100;
     pub const TechnicalCommitteeMaxProposals: u32 = 64;
     pub const TechnicalCommitteeMotionDuration: BlockNumber = 7 * BLOCKS_PER_DAY;
+
+    // Court
+    pub const CourtCaseDuration: u64 = BLOCKS_PER_DAY;
+    pub const CourtPalletId: PalletId = PalletId(*b"zge/cout");
+    pub const StakeWeight: u128 = 2 * BASE;
 
     // Democracy
     /// How often (in blocks) new public referenda are launched.
@@ -75,6 +89,9 @@ parameter_types! {
     pub const MaxSubAccounts: u32 = 64;
     pub const SubAccountDeposit: Balance = 2 * BASE;
 
+    // Liquidity Mining parameters
+    pub const LiquidityMiningPalletId: PalletId = PalletId(*b"zge/lymg");
+
     // Multisig
     // One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
     pub const DepositBase: Balance = deposit(1, 88);
@@ -82,7 +99,27 @@ parameter_types! {
     pub const DepositFactor: Balance = deposit(0, 32);
 
     // ORML
+    pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
     pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+
+    // Prediction Market parameters
+    pub const AdvisoryBond: Balance = 25 * CENT;
+    pub const DisputeBond: Balance = 5 * BASE;
+    pub const DisputeFactor: Balance = 2 * BASE;
+    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
+    pub const MaxCategories: u16 = 10;
+    pub const MaxDisputes: u16 = 6;
+    pub const MinCategories: u16 = 2;
+    // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
+    pub const MinSubsidyPeriod: Moment = 60_000;
+    // 2_678_400_000 = 31 days.
+    pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
+    // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
+    pub const MaxMarketPeriod: Moment = u64::MAX / 2;
+    pub const OracleBond: Balance = 50 * CENT;
+    pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
+    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
+    pub const ValidityBond: Balance = 50 * CENT;
 
     // Preimage
     pub const PreimageMaxSize: u32 = 4096 * 1024;
@@ -103,7 +140,27 @@ parameter_types! {
     // No hard limit, used for worst-case weight estimation
     pub const MaxScheduledPerBlock: u32 = 50;
     pub const NoPreimagePostponement: Option<u64> = Some(5 * BLOCKS_PER_MINUTE);
+
+    // Simple disputes parameters
+    pub const SimpleDisputesPalletId: PalletId = PalletId(*b"zge/sedp");
+
+    // Swaps parameters
+    pub const ExitFee: Balance = 3 * BASE / 1000; // 0.3%
+    pub const MinAssets: u16 = 2;
+    pub const MaxAssets: u16 = MaxCategories::get() + 1;
+    pub const MaxInRatio: Balance = (BASE / 3) + 1;
+    pub const MaxOutRatio: Balance = (BASE / 3) + 1;
+    pub const MaxSwapFee: Balance = BASE / 10; // 10%
+    pub const MaxTotalWeight: Balance = 50 * BASE;
+    pub const MaxWeight: Balance = 50 * BASE;
+    pub const MinLiquidity: Balance = 100 * BASE;
+    pub const MinSubsidy: Balance = MinLiquidity::get();
+    pub const MinSubsidyPerAccount: Balance = MinSubsidy::get();
+    pub const MinWeight: Balance = BASE;
+    pub const SwapsPalletId: PalletId = PalletId(*b"zge/swap");
+
     // System
+    pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 73;
     pub const Version: RuntimeVersion = VERSION;
     pub RuntimeBlockLength: BlockLength = BlockLength::max_with_normal_ratio(
@@ -126,6 +183,9 @@ parameter_types! {
     })
     .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
     .build_or_panic();
+
+    // Timestamp
+    pub const MinimumPeriod: u64 = MILLISECS_PER_BLOCK as u64 / 2;
 
     // Transaction payment
     pub const OperationalFeeMultiplier: u8 = 5;
@@ -150,6 +210,16 @@ parameter_types! {
 
     // Vesting
     pub const MinVestedTransfer: Balance = CENT;
+}
+
+parameter_type_with_key! {
+    // Well, not every asset is a currency ¯\_(ツ)_/¯
+    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+        match currency_id {
+            Asset::Ztg => ExistentialDeposit::get(),
+            _ => 0
+        }
+    };
 }
 
 // Parameterized slow adjusting fee updated based on
