@@ -151,7 +151,7 @@ parameter_types! {
     /// Pallet identifier, mainly used for named balance reserves.
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     /// Timeframe during which the oracle can report the final outcome after the market closed.
-    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
+    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as u32;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 50 * CENT;
