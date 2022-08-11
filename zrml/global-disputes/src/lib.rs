@@ -43,13 +43,13 @@ mod pallet {
     pub type OutcomeInfoOf<T> = OutcomeInfo<BalanceOf<T>, AccountIdOf<T>>;
     pub type WinnerInfoOf<T> = WinnerInfo<BalanceOf<T>, AccountIdOf<T>>;
 
-    #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialOrd, PartialEq)]
+    #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
     pub struct OutcomeInfo<Balance, AccountId> {
         pub outcome_sum: Balance,
         pub owners: BoundedVec<AccountId, ConstU32<10>>,
     }
 
-    #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialOrd, PartialEq)]
+    #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
     pub struct WinnerInfo<Balance, AccountId> {
         pub outcome: OutcomeReport,
         pub vote_sum: Balance,
