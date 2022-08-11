@@ -26,7 +26,7 @@ cpmm_or_rikiddo --> CollectingSubsidy : [scoring_rule == ScoringRule::Rikiddo]
 
 'Delete or activate a market
 Proposed --> cpmm_or_rikiddo : ApproveOrigin accepts market
-Proposed --> [*] : ApproveOrigin rejects market \n or approval period passes
+Proposed --> [*] : RejectOrigin rejects market \n or approval period passes
 
 CollectingSubsidy --> enough_subsidy : Market trading period starts
 enough_subsidy --> Active : [subsidy => MinSubsidy]
