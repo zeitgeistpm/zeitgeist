@@ -12586,6 +12586,7 @@ dependencies = [
  "zrml-prediction-markets",
  "zrml-rikiddo",
  "zrml-simple-disputes",
+ "zrml-styx",
  "zrml-swaps",
  "zrml-swaps-runtime-api",
 ]
@@ -12814,6 +12815,23 @@ dependencies = [
  "sp-runtime",
  "zeitgeist-primitives",
  "zrml-market-commons",
+]
+
+[[package]]
+name = "zrml-styx"
+version = "0.3.4"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
+ "zrml-styx",
 ]
 
 [[package]]

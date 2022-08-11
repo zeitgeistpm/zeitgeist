@@ -13,7 +13,7 @@ use arbitrary::{Arbitrary, Result, Unstructured};
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
-    let _ = ext.execute_with(|| {
+    ext.execute_with(|| {
         // Make arbitrary order and attempt to fill
         let order_asset = asset(data.make_fill_order_asset);
         let order_hash = Orderbook::order_hash(

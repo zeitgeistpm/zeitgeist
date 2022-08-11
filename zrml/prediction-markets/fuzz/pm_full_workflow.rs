@@ -12,7 +12,7 @@ use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, Syste
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
-    let _ = ext.execute_with(|| {
+    ext.execute_with(|| {
         let _ = PredictionMarkets::on_initialize(1);
         System::set_block_number(1);
 

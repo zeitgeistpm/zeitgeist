@@ -102,16 +102,15 @@ where
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
-    let ratio: BalanceOf<T> =
-        bdiv(p.pool_amount.saturated_into(), total_issuance.saturated_into())?.saturated_into();
+    let ratio = bdiv(p.pool_amount.saturated_into(), total_issuance.saturated_into())?;
     Pallet::<T>::check_provided_values_len_must_equal_assets_len(&p.pool.assets, &p.asset_bounds)?;
-    ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
+    ensure!(ratio != 0, Error::<T>::MathApproximation);
 
     let mut transferred = Vec::with_capacity(p.asset_bounds.len());
 
     for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
         let balance = T::AssetManager::free_balance(asset, p.pool_account_id);
-        let amount = bmul(ratio.saturated_into(), balance.saturated_into())?.saturated_into();
+        let amount = bmul(ratio, balance.saturated_into())?.saturated_into();
         let fee = (p.fee)(amount)?;
         let amount_minus_fee = amount.check_sub_rslt(&fee)?;
         transferred.push(amount_minus_fee);

@@ -110,7 +110,7 @@ mod pallet {
     pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -119,7 +119,7 @@ mod pallet {
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
-    type CacheSize = ConstU32<64>;
+    pub type CacheSize = ConstU32<64>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -2230,12 +2230,14 @@ mod pallet {
                     cb(id, &market)?;
                 }
             }
+            MarketIdsPerReportBlock::<T>::remove(&block);
 
             // Resolve any disputed markets.
             for id in MarketIdsPerDisputeBlock::<T>::get(&now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
+            MarketIdsPerDisputeBlock::<T>::remove(&block);
 
             Ok(())
         }
