@@ -132,7 +132,7 @@ mod pallet {
         ///
         /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
         /// exception. Can currently only be used for destroying CPMM markets.
-        #[pallet::weight(
+        #[pallet::weight((
             T::WeightInfo::admin_destroy_reported_market(
                 900,
                 900,
@@ -141,8 +141,7 @@ mod pallet {
                 900,
                 900,
                 T::MaxCategories::get().into()
-            ))
-        )]
+            )), Pays::No))]
         #[transactional]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
@@ -252,7 +251,7 @@ mod pallet {
         //
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
-        #[pallet::weight(T::WeightInfo::admin_move_market_to_closed())]
+        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(), Pays::No))]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -272,13 +271,13 @@ mod pallet {
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
         ////
-        #[pallet::weight(T::WeightInfo::admin_move_market_to_resolved_overhead()
+        #[pallet::weight((T::WeightInfo::admin_move_market_to_resolved_overhead()
             .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
                 4_200,
                 4_200,
                 T::MaxCategories::get().into()
             ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
-        ))]
+        ), Pays::No))]
         #[transactional]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
@@ -305,7 +304,7 @@ mod pallet {
         ///
         /// NOTE: Can only be called by the `ApproveOrigin`.
         ///
-        #[pallet::weight(T::WeightInfo::approve_market())]
+        #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
         #[transactional]
         pub fn approve_market(
             origin: OriginFor<T>,
@@ -856,7 +855,7 @@ mod pallet {
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
-        #[pallet::weight(T::WeightInfo::reject_market())]
+        #[pallet::weight((T::WeightInfo::reject_market(), Pays::No))]
         #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
