@@ -43,6 +43,8 @@ use {
     super::service::BatteryStationExecutor,
     battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi,
 };
+#[cfg(feature = "with-raumgeist-runtime")]
+use {super::service::RaumgeistExecutor, raumgeist_runtime::RuntimeApi as RaumgeistRuntimeApi};
 #[cfg(feature = "with-zeitgeist-runtime")]
 use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
 
@@ -65,6 +67,7 @@ pub fn load_spec(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
+
         "battery_station" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/bs_parachain.json")[..],
@@ -78,6 +81,17 @@ pub fn load_spec(
         )?),
         #[cfg(not(feature = "with-battery-station-runtime"))]
         "battery_station_staging" => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+
+        #[cfg(feature = "with-raumgeist-runtime")]
+        "raumgeist_staging" => Box::new(crate::chain_spec::raumgeist_staging_config(
+            #[cfg(feature = "parachain")]
+            parachain_id,
+        )?),
+        #[cfg(not(feature = "with-raumgeist-runtime"))]
+        "raumgeist_staging" => panic!("{}", crate::RAUMGEIST_RUNTIME_NOT_AVAILABLE),
+
+        // TODO: Raumgeist from chainspec
+
         "zeitgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/zeitgeist_parachain.json")[..],
@@ -89,14 +103,26 @@ pub fn load_spec(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
+
         #[cfg(not(feature = "with-zeitgeist-runtime"))]
         "zeitgeist_staging" => panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE),
+
         path => {
             let spec = Box::new(crate::chain_spec::DummyChainSpec::from_json_file(
                 std::path::PathBuf::from(path),
             )?) as Box<dyn ChainSpec>;
 
             match spec {
+                spec if spec.is_raumgeist() => {
+                    #[cfg(feature = "with-raumgeist-runtime")]
+                    return Ok(Box::new(
+                        crate::chain_spec::raumgeist::RaumgeistChainSpec::from_json_file(
+                            std::path::PathBuf::from(path),
+                        )?,
+                    ));
+                    #[cfg(not(feature = "with-zeitgeist-runtime"))]
+                    panic!("{}", crate::RAUMGEIST_RUNTIME_NOT_AVAILABLE);
+                }
                 spec if spec.is_zeitgeist() => {
                     #[cfg(feature = "with-zeitgeist-runtime")]
                     return Ok(Box::new(
@@ -243,6 +269,12 @@ impl SubstrateCli for Cli {
 
     fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
         match spec {
+            spec if spec.is_raumgeist() => {
+                #[cfg(feature = "with-raumgeist-runtime")]
+                return &raumgeist_runtime::VERSION;
+                #[cfg(not(feature = "with-raumgeist-runtime"))]
+                panic!("{}", crate::RAUMGEIST_RUNTIME_NOT_AVAILABLE);
+            }
             spec if spec.is_zeitgeist() => {
                 #[cfg(feature = "with-zeitgeist-runtime")]
                 return &zeitgeist_runtime::VERSION;
@@ -345,6 +377,8 @@ pub trait ClientHandle {
 pub enum Client {
     #[cfg(feature = "with-battery-station-runtime")]
     BatteryStation(Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>),
+    #[cfg(feature = "with-raumgeist-runtime")]
+    Raumgeist(Arc<FullClient<RaumgeistRuntimeApi, RaumgeistExecutor>>),
     #[cfg(feature = "with-zeitgeist-runtime")]
     Zeitgeist(Arc<FullClient<ZeitgeistRuntimeApi, ZeitgeistExecutor>>),
 }
@@ -353,6 +387,13 @@ pub enum Client {
 impl From<Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>> for Client {
     fn from(client: Arc<FullClient<BatteryStationRuntimeApi, BatteryStationExecutor>>) -> Self {
         Self::BatteryStation(client)
+    }
+}
+
+#[cfg(feature = "with-raumgeist-runtime")]
+impl From<Arc<FullClient<RaumgeistRuntimeApi, RaumgeistExecutor>>> for Client {
+    fn from(client: Arc<FullClient<RaumgeistRuntimeApi, RaumgeistExecutor>>) -> Self {
+        Self::Raumgeist(client)
     }
 }
 
@@ -370,6 +411,10 @@ impl ClientHandle for Client {
             Self::BatteryStation(client) => {
                 T::execute_with_client::<_, _, FullBackend>(t, client.clone())
             }
+            #[cfg(feature = "with-raumgeist-runtime")]
+            Self::Raumgeist(client) => {
+                T::execute_with_client::<_, _, FullBackend>(t, client.clone())
+            }
             #[cfg(feature = "with-zeitgeist-runtime")]
             Self::Zeitgeist(client) => {
                 T::execute_with_client::<_, _, FullBackend>(t, client.clone())
@@ -383,6 +428,8 @@ macro_rules! match_client {
         match $self {
             #[cfg(feature = "with-battery-station-runtime")]
             Self::BatteryStation(client) => client.$method($($param),*),
+            #[cfg(feature = "with-raumgeist-runtime")]
+            Self::Raumgeist(client) => client.$method($($param),*),
             #[cfg(feature = "with-zeitgeist-runtime")]
             Self::Zeitgeist(client) => client.$method($($param),*),
         }

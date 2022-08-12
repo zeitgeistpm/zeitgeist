@@ -57,6 +57,25 @@ impl sc_executor::NativeExecutionDispatch for BatteryStationExecutor {
     }
 }
 
+#[cfg(feature = "with-raumgeist-runtime")]
+pub struct RaumgeistExecutor;
+
+#[cfg(feature = "with-raumgeist-runtime")]
+impl sc_executor::NativeExecutionDispatch for RaumgeistExecutor {
+    #[cfg(feature = "runtime-benchmarks")]
+    type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+    #[cfg(not(feature = "runtime-benchmarks"))]
+    type ExtendHostFunctions = ();
+
+    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+        raumgeist_runtime::api::dispatch(method, data)
+    }
+
+    fn native_version() -> sc_executor::NativeVersion {
+        raumgeist_runtime::native_version()
+    }
+}
+
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub struct ZeitgeistExecutor;
 
@@ -82,6 +101,9 @@ pub trait IdentifyVariant {
     /// Returns `true` if this is a configuration for the `Battery Station` network.
     fn is_battery_station(&self) -> bool;
 
+    /// Returns `true` if this is a configuration for the `Raumgeist` network.
+    fn is_raumgeist(&self) -> bool;
+
     /// Returns `true` if this is a configuration for the `Zeitgeist` network.
     fn is_zeitgeist(&self) -> bool;
 }
@@ -89,6 +111,10 @@ pub trait IdentifyVariant {
 impl IdentifyVariant for Box<dyn ChainSpec> {
     fn is_battery_station(&self) -> bool {
         self.id().starts_with("battery_station")
+    }
+
+    fn is_raumgeist(&self) -> bool {
+        self.id().starts_with("raumgeist")
     }
 
     fn is_zeitgeist(&self) -> bool {
@@ -188,6 +214,10 @@ pub fn new_chain_ops(
         #[cfg(feature = "with-zeitgeist-runtime")]
         spec if spec.is_zeitgeist() => {
             new_chain_ops_inner::<zeitgeist_runtime::RuntimeApi, ZeitgeistExecutor>(config)
+        }
+        #[cfg(feature = "with-raumgeist-runtime")]
+        spec if spec.is_raumgeist() => {
+            new_chain_ops_inner::<raumgeist_runtime::RuntimeApi, RaumgeistExecutor>(config)
         }
         #[cfg(feature = "with-battery-station-runtime")]
         _ => new_chain_ops_inner::<battery_station_runtime::RuntimeApi, BatteryStationExecutor>(

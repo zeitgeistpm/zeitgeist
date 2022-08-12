@@ -39,7 +39,7 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
 {
     /// Creates a new [`Self`] from the given client.
-    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, is_zeitgeist: bool) -> Self {
+    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, spec: Chainspec) -> Self {
         Self { client, is_zeitgeist }
     }
 }

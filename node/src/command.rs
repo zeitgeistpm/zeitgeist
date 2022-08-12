@@ -28,6 +28,8 @@ use {
     super::service::BatteryStationExecutor,
     battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi,
 };
+#[cfg(feature = "with-raumgeist-runtime")]
+use {super::service::RaumgeistExecutor, raumgeist_runtime::RuntimeApi as RaumgeistRuntimeApi};
 #[cfg(feature = "with-zeitgeist-runtime")]
 use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
 #[cfg(feature = "parachain")]
@@ -65,6 +67,10 @@ pub fn run() -> sc_cli::Result<()> {
                     }
 
                     match chain_spec {
+                        #[cfg(feature = "with-raumgeist-runtime")]
+                        spec if spec.is_raumgeist() => runner.sync_run(|config| {
+                            cmd.run::<raumgeist_runtime::Block, RaumgeistExecutor>(config)
+                        }),
                         #[cfg(feature = "with-zeitgeist-runtime")]
                         spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                             cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config)
@@ -80,6 +86,14 @@ pub fn run() -> sc_cli::Result<()> {
                     }
                 }
                 BenchmarkCmd::Block(cmd) => match chain_spec {
+                    #[cfg(feature = "with-raumgeist-runtime")]
+                    spec if spec.is_raumgeist() => runner.sync_run(|config| {
+                        let params = crate::service::new_partial::<
+                            raumgeist_runtime::RuntimeApi,
+                            RaumgeistExecutor,
+                        >(&config)?;
+                        cmd.run(params.client)
+                    }),
                     #[cfg(feature = "with-zeitgeist-runtime")]
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
@@ -100,6 +114,18 @@ pub fn run() -> sc_cli::Result<()> {
                     _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                 },
                 BenchmarkCmd::Storage(cmd) => match chain_spec {
+                    #[cfg(feature = "with-raumgeist-runtime")]
+                    spec if spec.is_raumgeist() => runner.sync_run(|config| {
+                        let params = crate::service::new_partial::<
+                            raumgeist_runtime::RuntimeApi,
+                            RaumgeistExecutor,
+                        >(&config)?;
+
+                        let db = params.backend.expose_db();
+                        let storage = params.backend.expose_storage();
+
+                        cmd.run(config, params.client, db, storage)
+                    }),
                     #[cfg(feature = "with-zeitgeist-runtime")]
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                         let params = crate::service::new_partial::<
@@ -133,6 +159,22 @@ pub fn run() -> sc_cli::Result<()> {
                         return Err("Overhead is only supported in standalone chain".into());
                     }
                     match chain_spec {
+                        #[cfg(feature = "with-raumgeist-runtime")]
+                        spec if spec.is_raumgeist() => runner.sync_run(|config| {
+                            let params = crate::service::new_partial::<
+                                raumgeist_runtime::RuntimeApi,
+                                RaumgeistExecutor,
+                            >(&config)?;
+
+                            let ext_builder =
+                                BenchmarkExtrinsicBuilder::new(params.client.clone(), true);
+                            cmd.run(
+                                config,
+                                params.client,
+                                inherent_benchmark_data()?,
+                                Arc::new(ext_builder),
+                            )
+                        }),
                         #[cfg(feature = "with-zeitgeist-runtime")]
                         spec if spec.is_zeitgeist() => runner.sync_run(|config| {
                             let params = crate::service::new_partial::<
@@ -218,6 +260,21 @@ pub fn run() -> sc_cli::Result<()> {
             let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
             let buf = match chain_spec {
+                #[cfg(feature = "with-raumgeist-runtime")]
+                spec if spec.is_raumgeist() => {
+                    let block: raumgeist_runtime::Block =
+                        cumulus_client_service::genesis::generate_genesis_block(
+                            chain_spec,
+                            state_version,
+                        )?;
+                    let raw_header = block.header().encode();
+
+                    if params.raw {
+                        raw_header
+                    } else {
+                        format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+                    }
+                }
                 #[cfg(feature = "with-zeitgeist-runtime")]
                 spec if spec.is_zeitgeist() => {
                     let block: zeitgeist_runtime::Block =
@@ -338,6 +395,23 @@ pub fn run() -> sc_cli::Result<()> {
             let chain_spec = &runner.config().chain_spec;
 
             match chain_spec {
+                #[cfg(feature = "with-raumgeist-runtime")]
+                spec if spec.is_raumgeist() => {
+                    runner.async_run(|config| {
+                        // we don't need any of the components of new_partial, just a runtime, or a task
+                        // manager to do `async_run`.
+                        let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                        let task_manager =
+                            sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                                .map_err(|e| {
+                                    sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                                })?;
+                        return Ok((
+                            cmd.run::<raumgeist_runtime::Block, RaumgeistExecutor>(config),
+                            task_manager,
+                        ));
+                    })
+                }
                 #[cfg(feature = "with-zeitgeist-runtime")]
                 spec if spec.is_zeitgeist() => {
                     runner.async_run(|config| {
@@ -428,6 +502,15 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain genesis state: {}", genesis_state);
 
         match &parachain_config.chain_spec {
+            #[cfg(feature = "with-raumgeist-runtime")]
+            spec if spec.is_raumgeist() => new_full::<RaumgeistRuntimeApi, RaumgeistExecutor>(
+                parachain_config,
+                parachain_id,
+                polkadot_config,
+            )
+            .await
+            .map(|r| r.0)
+            .map_err(Into::into),
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
                 parachain_config,
@@ -461,6 +544,11 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         }
 
         match &config.chain_spec {
+            #[cfg(feature = "with-raumgeist-runtime")]
+            spec if spec.is_raumgeist() => {
+                new_full::<RaumgeistRuntimeApi, RaumgeistExecutor>(config)
+                    .map_err(sc_cli::Error::Service)
+            }
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => {
                 new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config)
@@ -471,13 +559,21 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
-                feature = "with-zeitgeist-runtime"
+                feature = "with-zeitgeist-runtime",
             ))]
             _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config)
                 .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
-                not(feature = "with-zeitgeist-runtime")
+                not(feature = "with-zeitgeist-runtime"),
+                feature = "with-raumgeist-runtime",
+            ))]
+            _ => new_full::<RaumgeistRuntimeApi, RaumgeistExecutor>(config)
+                .map_err(sc_cli::Error::Service),
+            #[cfg(all(
+                not(feature = "with-battery-station-runtime"),
+                not(feature = "with-raumgeist-runtime"),
+                not(feature = "with-zeitgeist-runtime"),
             ))]
             _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         }
