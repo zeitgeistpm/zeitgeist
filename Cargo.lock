@@ -12647,6 +12647,7 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-service",
  "polkadot-test-service",
+ "raumgeist-runtime",
  "sc-basic-authorship",
  "sc-chain-spec",
  "sc-cli",

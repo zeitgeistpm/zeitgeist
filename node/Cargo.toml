@@ -99,15 +99,17 @@ log = { optional = true, version = "0.4.14" }
 # Zeitgeist
 
 battery-station-runtime = { path = "../runtime/battery-station", optional = true }
+raumgeist-runtime = { path = "../runtime/raumgeist", optional = true }
 zeitgeist-primitives = { path = "../primitives" }
 zeitgeist-runtime = { path = "../runtime/zeitgeist", optional = true }
 zrml-liquidity-mining = { path = "../zrml/liquidity-mining" }
 zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 [features]
-default = ["with-battery-station-runtime", "with-zeitgeist-runtime"]
+default = ["with-battery-station-runtime", "with-raumgeist-runtime", "with-zeitgeist-runtime"]
 parachain = [
     "battery-station-runtime?/parachain",
+    "raumgeist-runtime?/parachain",
     "zeitgeist-runtime?/parachain",
 
     # Cumulus
@@ -152,14 +154,17 @@ runtime-benchmarks = [
     "battery-station-runtime?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
+    "raumgeist-runtime?/runtime-benchmarks",
     "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [
     "battery-station-runtime?/try-runtime",
+    "raumgeist-runtime?/try-runtime",
     "zeitgeist-runtime?/try-runtime",
     "try-runtime-cli",
 ]
 with-battery-station-runtime = ["battery-station-runtime"]
+with-raumgeist-runtime = ["raumgeist-runtime"]
 with-zeitgeist-runtime = ["zeitgeist-runtime"]
 
 [package]

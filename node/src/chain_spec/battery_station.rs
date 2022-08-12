@@ -87,7 +87,7 @@ fn endowed_accounts_staging_battery_station() -> Vec<EndowedAccountWithBalance> 
     vec![
         // 5D2L4ghyiYE8p2z7VNJo9JYwRuc8uzPWtMBqdVyvjRcsnw4P
         EndowedAccountWithBalance(
-            hex!["2a6c61a907556e4c673880b5767dd4be08339ee7f2a58d5137d0c19ca9570a5c"].into(),
+            root_key_staging_battery_station(),
             DEFAULT_INITIAL_BALANCE_BATTERY_STATION,
         ),
         // 5EeeZVU4SiPG6ZRY7o8aDcav2p2mZMdu3ZLzbREWuHktYdhX
