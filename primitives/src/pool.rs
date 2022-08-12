@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    constants::MaxAssets,
+    constants::MAX_ASSETS,
     types::{Asset, PoolStatus},
 };
 use alloc::{collections::BTreeMap, vec::Vec};
@@ -61,13 +61,13 @@ where
     fn max_encoded_len() -> usize {
         let max_encoded_length_bytes = <Compact<u64>>::max_encoded_len();
         let b_tree_map_size = 1usize
-            .saturating_add(MaxAssets::get().saturated_into::<usize>().saturating_mul(
+            .saturating_add(MAX_ASSETS.saturated_into::<usize>().saturating_mul(
                 <Asset<MarketId>>::max_encoded_len().saturating_add(u128::max_encoded_len()),
             ))
             .saturating_add(max_encoded_length_bytes);
 
         <Asset<MarketId>>::max_encoded_len()
-            .saturating_mul(MaxAssets::get().saturated_into::<usize>())
+            .saturating_mul(MAX_ASSETS.saturated_into::<usize>())
             .saturating_add(max_encoded_length_bytes)
             .saturating_add(<Option<Asset<MarketId>>>::max_encoded_len())
             .saturating_add(MarketId::max_encoded_len())

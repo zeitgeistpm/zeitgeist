@@ -36,6 +36,7 @@ mock = [
     "pallet-timestamp",
     "sp-api",
     "sp-io",
+    "zeitgeist-primitives/mock",
     "zrml-swaps-runtime-api",
 ]
 runtime-benchmarks = [

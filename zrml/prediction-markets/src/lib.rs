@@ -118,7 +118,7 @@ mod pallet {
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::{PmPalletId, MILLISECS_PER_BLOCK},
+        constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
@@ -128,8 +128,6 @@ mod pallet {
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
-
-    pub const RESERVE_ID: [u8; 8] = PmPalletId::get().0;
 
     /// The current storage version.
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
@@ -181,7 +179,7 @@ mod pallet {
             // details.
             let slash_market_creator = |amount| {
                 T::AssetManager::slash_reserved_named(
-                    &RESERVE_ID,
+                    &Self::reserve_id(),
                     Asset::Ztg,
                     &market.creator,
                     amount,
@@ -346,7 +344,7 @@ mod pallet {
                 }
 
                 T::AssetManager::unreserve_named(
-                    &RESERVE_ID,
+                    &Self::reserve_id(),
                     Asset::Ztg,
                     &m.creator,
                     T::AdvisoryBond::get(),
@@ -403,7 +401,7 @@ mod pallet {
             let num_disputes: u32 = disputes.len().saturated_into();
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             T::AssetManager::reserve_named(
-                &RESERVE_ID,
+                &Self::reserve_id(),
                 Asset::Ztg,
                 &who,
                 default_dispute_bond::<T>(disputes.len()),
@@ -558,7 +556,7 @@ mod pallet {
                 MarketCreation::Permissionless => {
                     let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
-                        &RESERVE_ID,
+                        &Self::reserve_id(),
                         Asset::Ztg,
                         &sender,
                         required_bond,
@@ -572,7 +570,7 @@ mod pallet {
                 MarketCreation::Advised => {
                     let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
-                        &RESERVE_ID,
+                        &Self::reserve_id(),
                         Asset::Ztg,
                         &sender,
                         required_bond,
@@ -1557,13 +1555,13 @@ mod pallet {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
             T::AssetManager::slash_reserved_named(
-                &RESERVE_ID,
+                &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
                 T::AdvisoryBond::get(),
             );
             T::AssetManager::unreserve_named(
-                &RESERVE_ID,
+                &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
                 T::OracleBond::get(),
@@ -1581,13 +1579,13 @@ mod pallet {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
             T::AssetManager::unreserve_named(
-                &RESERVE_ID,
+                &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
                 T::AdvisoryBond::get(),
             );
             T::AssetManager::unreserve_named(
-                &RESERVE_ID,
+                &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
                 T::OracleBond::get(),
@@ -1830,7 +1828,7 @@ mod pallet {
         ) -> Result<u64, DispatchError> {
             if market.creation == MarketCreation::Permissionless {
                 T::AssetManager::unreserve_named(
-                    &RESERVE_ID,
+                    &Self::reserve_id(),
                     Asset::Ztg,
                     &market.creator,
                     T::ValidityBond::get(),
@@ -1847,14 +1845,14 @@ mod pallet {
                     // the oracle bond gets returned if the reporter was the oracle
                     if report.by == market.oracle {
                         T::AssetManager::unreserve_named(
-                            &RESERVE_ID,
+                            &Self::reserve_id(),
                             Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
                         let excess = T::AssetManager::slash_reserved_named(
-                            &RESERVE_ID,
+                            &Self::reserve_id(),
                             Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
@@ -1899,14 +1897,14 @@ mod pallet {
                     // pay the correct reporters.
                     if report.outcome == resolved_outcome {
                         T::AssetManager::unreserve_named(
-                            &RESERVE_ID,
+                            &Self::reserve_id(),
                             Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
                         let excess = T::AssetManager::slash_reserved_named(
-                            &RESERVE_ID,
+                            &Self::reserve_id(),
                             Asset::Ztg,
                             &market.creator,
                             T::OracleBond::get(),
@@ -1921,7 +1919,7 @@ mod pallet {
                         let actual_bond = default_dispute_bond::<T>(i);
                         if dispute.outcome == resolved_outcome {
                             T::AssetManager::unreserve_named(
-                                &RESERVE_ID,
+                                &Self::reserve_id(),
                                 Asset::Ztg,
                                 &dispute.by,
                                 actual_bond,
@@ -1930,7 +1928,7 @@ mod pallet {
                             correct_reporters.push(dispute.by.clone());
                         } else {
                             let excess = T::AssetManager::slash_reserved_named(
-                                &RESERVE_ID,
+                                &Self::reserve_id(),
                                 Asset::Ztg,
                                 &dispute.by,
                                 actual_bond,
@@ -2087,7 +2085,7 @@ mod pallet {
                                             let required_bond = T::ValidityBond::get()
                                                 .saturating_add(T::OracleBond::get());
                                             T::AssetManager::unreserve_named(
-                                                &RESERVE_ID,
+                                                &Self::reserve_id(),
                                                 Asset::Ztg,
                                                 &m.creator,
                                                 required_bond,
@@ -2096,7 +2094,7 @@ mod pallet {
                                             // AdvisoryBond was already returned when the market
                                             // was approved. Approval is inevitable to reach this.
                                             T::AssetManager::unreserve_named(
-                                                &RESERVE_ID,
+                                                &Self::reserve_id(),
                                                 Asset::Ztg,
                                                 &m.creator,
                                                 T::OracleBond::get(),
@@ -2183,6 +2181,12 @@ mod pallet {
                 });
             }
             Ok(())
+        }
+
+        /// The reserve ID of the prediction-markets pallet.
+        #[inline]
+        pub fn reserve_id() -> [u8; 8] {
+            T::PalletId::get().0
         }
 
         pub(crate) fn market_status_manager<F, MarketIdsPerBlock, MarketIdsPerTimeFrame>(

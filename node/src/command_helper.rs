@@ -25,7 +25,7 @@ use sp_inherents::{InherentData, InherentDataProvider};
 use sp_keyring::Sr25519Keyring;
 use sp_runtime::{OpaqueExtrinsic, SaturatedConversion};
 use std::{sync::Arc, time::Duration};
-use zeitgeist_primitives::{constants::BlockHashCount, types::Signature};
+use zeitgeist_primitives::types::Signature;
 
 /// Generates extrinsics for the `benchmark overhead` command.
 ///
@@ -92,8 +92,10 @@ pub fn create_benchmark_extrinsic_zeitgeist<
     let best_hash = client.chain_info().best_hash;
     let best_block = client.chain_info().best_number;
 
-    let period =
-        BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
+    let period = zeitgeist_runtime::BlockHashCount::get()
+        .checked_next_power_of_two()
+        .map(|c| c / 2)
+        .unwrap_or(2) as u64;
     let extra: zeitgeist_runtime::SignedExtra = (
         zeitgeist_runtime::CheckNonZeroSender::<zeitgeist_runtime::Runtime>::new(),
         zeitgeist_runtime::CheckSpecVersion::<zeitgeist_runtime::Runtime>::new(),
@@ -148,8 +150,10 @@ pub fn create_benchmark_extrinsic_battery_station<
     let best_hash = client.chain_info().best_hash;
     let best_block = client.chain_info().best_number;
 
-    let period =
-        BlockHashCount::get().checked_next_power_of_two().map(|c| c / 2).unwrap_or(2) as u64;
+    let period = battery_station_runtime::BlockHashCount::get()
+        .checked_next_power_of_two()
+        .map(|c| c / 2)
+        .unwrap_or(2) as u64;
     let extra: battery_station_runtime::SignedExtra = (
         battery_station_runtime::CheckNonZeroSender::<battery_station_runtime::Runtime>::new(),
         battery_station_runtime::CheckSpecVersion::<battery_station_runtime::Runtime>::new(),

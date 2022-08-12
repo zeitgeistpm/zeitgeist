@@ -23,6 +23,7 @@ mock = [
     "pallet-balances",
     "pallet-timestamp",
     "sp-io",
+    "zeitgeist-primitives/mock",
 ]
 std = [
     "frame-support/std",

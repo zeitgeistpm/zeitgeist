@@ -24,7 +24,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, MaxReserves, MinimumPeriod, SimpleDisputesPalletId},
+    constants::mock::{BlockHashCount, MaxReserves, MinimumPeriod, SimpleDisputesPalletId},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,

@@ -16,6 +16,7 @@ test-case = "2.0.2"
 
 [features]
 default = ["std"]
+mock = []
 std = [
     "frame-support/std",
     "frame-system/std",

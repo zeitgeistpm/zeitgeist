@@ -31,7 +31,7 @@ use sp_runtime::{
 };
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
-    constants::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
+    constants::mock::{BlockHashCount, ExistentialDeposit, MaxReserves, BASE},
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Moment, PoolId,
         UncheckedExtrinsicTest,
