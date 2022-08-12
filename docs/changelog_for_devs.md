@@ -19,9 +19,9 @@
   Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
   on-chain constant `MaxSwapFee`.
 - Added new pallet: Styx. Dispatchable calls are:
-  `cross` - Burns native chain tokens to cross. In the case of Zeitgeist, this
+  - `cross` - Burns native chain tokens to cross. In the case of Zeitgeist, this
             is granting the ability to claim your zeitgeist avatar.
-  `set_burn_amount(amount)` - Sets the new burn price for the cross.
+  - `set_burn_amount(amount)` - Sets the new burn price for the cross.
                               Intended to be called by governance.
 
 # v0.3.4
