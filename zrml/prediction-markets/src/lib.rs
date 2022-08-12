@@ -2230,14 +2230,14 @@ mod pallet {
                     cb(id, &market)?;
                 }
             }
-            MarketIdsPerReportBlock::<T>::remove(&block);
+            MarketIdsPerReportBlock::<T>::remove(&now);
 
             // Resolve any disputed markets.
             for id in MarketIdsPerDisputeBlock::<T>::get(&now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
-            MarketIdsPerDisputeBlock::<T>::remove(&block);
+            MarketIdsPerDisputeBlock::<T>::remove(&now);
 
             Ok(())
         }

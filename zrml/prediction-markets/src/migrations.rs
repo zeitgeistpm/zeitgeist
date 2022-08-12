@@ -13,7 +13,10 @@ use frame_support::{
 use sp_runtime::traits::Saturating;
 extern crate alloc;
 use alloc::vec::Vec;
-use zeitgeist_primitives::types::{MarketPeriod, MarketStatus, PoolStatus};
+use zeitgeist_primitives::{
+    constants::BLOCKS_PER_DAY_U32,
+    types::{MarketPeriod, MarketStatus, PoolStatus},
+};
 use zrml_market_commons::MarketCommonsPalletApi;
 
 const SWAPS_REQUIRED_STORAGE_VERSION: u16 = 2;
@@ -193,10 +196,10 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
         total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
         log::info!("Starting storage cleanup of CleanUpStorageForResolvedOrClosedMarkets");
 
-        let dispute_period = T::DisputePeriod::get();
+        let dispute_period = BLOCKS_PER_DAY_U32;
         let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
         let last_dp_end_block =
-            current_block.saturating_sub(dispute_period).saturating_sub(1_u32.into());
+            current_block.saturating_sub(dispute_period.into()).saturating_sub(1_u32.into());
         type DisputeBlockToMarketIdsTuple<T> =
             (<T as frame_system::Config>::BlockNumber, BoundedVec<MarketIdOf<T>, CacheSize>);
         type IterType<T> = PrefixIterator<DisputeBlockToMarketIdsTuple<T>>;
@@ -248,10 +251,10 @@ impl<T: Config> OnRuntimeUpgrade for CleanUpStorageForResolvedOrClosedMarkets<T>
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        let dispute_period = T::DisputePeriod::get();
+        let dispute_period = BLOCKS_PER_DAY_U32;
         let current_block: T::BlockNumber = <frame_system::Pallet<T>>::block_number();
         let last_dp_end_block =
-            current_block.saturating_sub(dispute_period).saturating_sub(1_u32.into());
+            current_block.saturating_sub(dispute_period.into()).saturating_sub(1_u32.into());
         type DisputeBlockToMarketIdsTuple<T> =
             (<T as frame_system::Config>::BlockNumber, BoundedVec<MarketIdOf<T>, CacheSize>);
         type IterType<T> = PrefixIterator<DisputeBlockToMarketIdsTuple<T>>;
@@ -471,7 +474,7 @@ mod tests {
             let market_ids = BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0, 1])
                 .expect("BoundedVec creation failed");
             let dispute_block = System::current_block_number().saturating_sub(1_u32.into());
-            let dispute_period = <Runtime as crate::Config>::DisputePeriod::get();
+            let dispute_period : <Runtime as frame_system::Config>::BlockNumber = BLOCKS_PER_DAY_U32.into();
             MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids.clone());
             MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids.clone());
             System::set_block_number(System::current_block_number() + dispute_period);
