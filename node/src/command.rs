@@ -17,12 +17,15 @@
 
 use super::{
     cli::{Cli, Subcommand},
-    command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
     service::{new_chain_ops, new_full, IdentifyVariant},
 };
-use frame_benchmarking_cli::BenchmarkCmd;
+#[cfg(feature = "runtime-benchmarks")]
+use {
+    super::command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
+    frame_benchmarking_cli::BenchmarkCmd,
+    std::sync::Arc,
+};
 use sc_cli::SubstrateCli;
-use std::sync::Arc;
 #[cfg(feature = "with-battery-station-runtime")]
 use {
     super::service::BatteryStationExecutor,
@@ -52,21 +55,21 @@ pub fn run() -> sc_cli::Result<()> {
     }
 
     match &cli.subcommand {
+        #[cfg(not(feature = "runtime-benchmarks"))]
+        Some(Subcommand::Benchmark(_)) => Err(
+            "Runtime benchmarking wasn't enabled when building the node. \
+            You can enable it with `--features runtime-benchmarks`.".into()
+        ),
+        #[cfg(feature = "runtime-benchmarks")]
         Some(Subcommand::Benchmark(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             let chain_spec = &runner.config().chain_spec;
-            let id = chain_spec.id().to_string().clone();
+            let id = chain_spec.id().to_string().clone();          
 
             match cmd {
                 // This switch needs to be in the client, since the client decides
                 // which sub-commands it wants to support.
                 BenchmarkCmd::Pallet(cmd) => {
-                    if !cfg!(feature = "runtime-benchmarks") {
-                        return Err("Runtime benchmarking wasn't enabled when building the node. \
-                                    You can enable it with `--features runtime-benchmarks`."
-                            .into());
-                    }
-
                     match chain_spec {
                         #[cfg(feature = "with-raumgeist-runtime")]
                         spec if spec.is_raumgeist() => runner.sync_run(|config| {
