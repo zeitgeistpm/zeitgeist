@@ -17,9 +17,11 @@
 
 mod additional_chain_spec;
 #[cfg(feature = "with-battery-station-runtime")]
-pub(crate) mod battery_station;
-#[cfg(feature = "with-battery-station-runtime")]
 mod dev;
+#[cfg(feature = "with-battery-station-runtime")]
+pub(crate) mod battery_station;
+#[cfg(feature = "with-raumgeist-runtime")]
+pub(crate) mod raumgeist;
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub(crate) mod zeitgeist;
 
