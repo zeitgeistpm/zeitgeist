@@ -7,7 +7,7 @@ state Closed : Trading is over
 state CollectingSubsidy : Rikiddo market needs funding
 state Disputed: Market outcome is disputed
 state InsufficientSubsidy : Market suspended due to insufficient subsidy
-state Proposed : Market has to be approved by ApprovalOrigin
+state Proposed : Market has to be approved by ApproveOrigin
 state Reported : Market outcome is reported
 state Resolved : Market resolved
 
@@ -25,8 +25,8 @@ cpmm_or_rikiddo --> Active : [scoring_rule == ScoringRule::CPMM]
 cpmm_or_rikiddo --> CollectingSubsidy : [scoring_rule == ScoringRule::Rikiddo]
 
 'Delete or activate a market
-Proposed --> cpmm_or_rikiddo : ApprovalOrigin accepts market
-Proposed --> [*] : ApprovalOrigin rejects market \n or approval period passes
+Proposed --> cpmm_or_rikiddo : ApproveOrigin accepts market
+Proposed --> [*] : RejectOrigin rejects market \n or approval period passes
 
 CollectingSubsidy --> enough_subsidy : Market trading period starts
 enough_subsidy --> Active : [subsidy => MinSubsidy]
