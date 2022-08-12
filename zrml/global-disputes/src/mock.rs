@@ -44,14 +44,14 @@ parameter_types! {
 }
 
 impl crate::Config for Runtime {
-    type Event = Event;
-    type MarketCommons = MarketCommons;
     type Currency = Balances;
+    type Event = Event;
     type GlobalDisputesPalletId = GlobalDisputesPalletId;
-    type VoteLockIdentifier = VoteLockIdentifier;
+    type MarketCommons = MarketCommons;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
-    type VotingOutcomeFee = VotingOutcomeFee;
     type RemoveKeysLimit = RemoveKeysLimit;
+    type VoteLockIdentifier = VoteLockIdentifier;
+    type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }
 
