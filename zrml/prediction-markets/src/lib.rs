@@ -55,7 +55,7 @@
 //! #### `ApproveOrigin` and `RejectOrigin` Dispatches
 //!
 //! Users can also propose markets, which are subject to approval or rejection by the Advisory
-//! Committee. The `AdvisoryOrigin` calls the following dispatches:
+//! Committee. The `ApproveOrigin` calls the following dispatches:
 //!
 //! - `approve_market` - Approves a `Proposed` market that is waiting approval from the Advisory
 //!   Committee.
