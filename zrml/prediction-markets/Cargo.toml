@@ -43,6 +43,7 @@ mock = [
     "sp-api",
     "sp-io",
     "substrate-fixed",
+    "zeitgeist-primitives/mock",
     "zrml-prediction-markets-runtime-api",
     "zrml-rikiddo",
     "zrml-swaps",
@@ -53,6 +54,7 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-timestamp/runtime-benchmarks"
+    "zeitgeist-primitives/mock",
 ]
 std = [
     "frame-benchmarking?/std",
@@ -77,4 +79,4 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets"
-version = "0.3.4"
+version = "0.3.5"

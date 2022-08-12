@@ -1,9 +1,26 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(all(feature = "mock", test))]
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
     mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
-    MarketIdsPerOpenBlock, MarketIdsPerReportBlock, RESERVE_ID,
+    MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -16,9 +33,7 @@ use test_case::test_case;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::{
-        DisputeFactor, BASE, BLOCKS_PER_DAY, BLOCKS_PER_DAY_U32, CENT, MILLISECS_PER_BLOCK,
-    },
+    constants::mock::{DisputeFactor, BASE, CENT, BLOCKS_PER_DAY, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
         Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
@@ -209,10 +224,17 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_active() {
             ScoringRule::CPMM,
         );
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -234,10 +256,17 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
             OutcomeReport::Categorical(1)
         ));
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -266,10 +295,17 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -292,12 +328,19 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
             OutcomeReport::Categorical(1)
         ));
         run_blocks( oracle_delay + /*de fault oracle_duration*/BLOCKS_PER_DAY + /*default dispute_period*/BLOCKS_PER_DAY + 1);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
+        assert_eq!(Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE), 0);
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -312,10 +355,17 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
             ScoringRule::CPMM,
         );
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -331,10 +381,17 @@ fn admin_destroy_market_correctly_slashes_advised_market_active() {
         );
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -358,10 +415,17 @@ fn admin_destroy_market_correctly_slashes_advised_market_reported() {
             OutcomeReport::Categorical(1)
         ));
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -391,10 +455,17 @@ fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -418,12 +489,19 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
             OutcomeReport::Categorical(1)
         ));
         run_blocks( oracle_delay + /*de fault oracle_duration*/BLOCKS_PER_DAY + /*default dispute_period*/BLOCKS_PER_DAY + 1);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
+        assert_eq!(Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE), 0);
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), SENTINEL_AMOUNT);
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         assert_eq!(balance_free_before_alice, balance_free_after_alice);
     });
@@ -533,9 +611,14 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the correct bonds are unreserved!
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before = Balances::free_balance(&ALICE);
-        let balance_reserved_before = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+        let balance_reserved_before =
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
         let oracle_delay = end + BLOCKS_PER_DAY;
         run_to_block(oracle_delay + 1);
@@ -560,7 +643,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         );
 
         assert_eq!(
-            Balances::reserved_balance_named(&RESERVE_ID, &ALICE),
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             balance_reserved_before
                 - <Runtime as Config>::OracleBond::get()
                 - <Runtime as Config>::ValidityBond::get()
@@ -784,16 +867,22 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond gets slashed but the OracleBond gets unreserved.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
 
-        let balance_reserved_before_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+        let balance_reserved_before_alice =
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
         assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
 
         // AdvisoryBond gets slashed after reject_market
         // OracleBond gets unreserved after reject_market
-        let balance_reserved_after_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+        let balance_reserved_after_alice =
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
         assert_eq!(
             balance_reserved_after_alice,
             balance_reserved_before_alice
@@ -842,9 +931,14 @@ fn on_market_close_auto_rejects_expired_advised_market() {
         // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
         // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let balance_free_before_alice = Balances::free_balance(&ALICE);
-        let balance_reserved_before_alice = Balances::reserved_balance_named(&RESERVE_ID, &ALICE);
+        let balance_reserved_before_alice =
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
         let end = 33;
         simple_create_categorical_market::<Runtime>(
@@ -857,7 +951,7 @@ fn on_market_close_auto_rejects_expired_advised_market() {
         run_to_block(end);
 
         assert_eq!(
-            Balances::reserved_balance_named(&RESERVE_ID, &ALICE),
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
             balance_reserved_before_alice
         );
         assert_eq!(Balances::free_balance(&ALICE), balance_free_before_alice);
@@ -2675,7 +2769,11 @@ fn approve_market_correctly_unreserves_advisory_bond() {
             ScoringRule::CPMM,
         ));
         // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(
             Balances::reserved_balance(&ALICE),
@@ -2704,7 +2802,11 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             ScoringRule::CPMM,
         ));
         // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(
             Balances::reserved_balance(&ALICE),
@@ -2844,7 +2946,11 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             ScoringRule::CPMM,
         ));
         // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(
             Balances::reserved_balance(&ALICE),
@@ -2882,7 +2988,11 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             ScoringRule::CPMM,
         ));
         // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
@@ -2918,7 +3028,11 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             ScoringRule::CPMM,
         ));
         // Reserve a sentinel amount to check that we don't unreserve too much.
-        assert_ok!(Balances::reserve_named(&RESERVE_ID, &ALICE, SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());

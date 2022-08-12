@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![allow(
     // Auto-generated code is a no man's land
     clippy::integer_arithmetic
@@ -18,9 +35,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::{
-        MaxSwapFee, MinLiquidity, MinWeight, BASE, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK,
-    },
+    constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK},
     traits::DisputeApi,
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -88,7 +103,7 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(T::ApprovalOrigin::successful_origin())?;
+        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
     let end: u32 =
         T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
     pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
@@ -176,16 +191,17 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
         market_id,
         MinLiquidity::get().saturated_into(),
     )?;
-    let approval_origin = T::ApprovalOrigin::successful_origin();
+    let close_origin = T::CloseOrigin::successful_origin();
+    let resolve_origin = T::ResolveOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(approval_origin.clone())?;
+        .dispatch_bypass_filter(close_origin)?;
     let end: u32 =
         T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
     pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let _ = Call::<T>::admin_move_market_to_resolved { market_id }
-        .dispatch_bypass_filter(approval_origin)?;
+        .dispatch_bypass_filter(resolve_origin)?;
     Ok((caller, market_id))
 }
 
@@ -275,9 +291,9 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_closed { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(close_origin)? }
 
     // This benchmark measures the cost of fn `admin_move_market_to_resolved`
     // and assumes a scalar market is used. The default cost for this function
@@ -287,9 +303,9 @@ benchmarks! {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
         let (_, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(close_origin)? }
 
     approve_market {
         let (_, market_id) = create_market_common::<T>(
@@ -298,9 +314,9 @@ benchmarks! {
             ScoringRule::CPMM
         )?;
 
-        let origin = T::ApprovalOrigin::successful_origin();
+        let approve_origin = T::ApproveOrigin::successful_origin();
         let call = Call::<T>::approve_market { market_id };
-    }: { call.dispatch_bypass_filter(origin)? }
+    }: { call.dispatch_bypass_filter(approve_origin)? }
 
     buy_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -481,9 +497,9 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let reject_origin = T::RejectOrigin::successful_origin();
         let call = Call::<T>::reject_market { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(reject_origin)? }
 
     report {
         let (caller, market_id) = create_market_common::<T>(
@@ -492,9 +508,9 @@ benchmarks! {
             ScoringRule::CPMM
         )?;
         let outcome = OutcomeReport::Categorical(0);
-        let approval_origin = T::ApprovalOrigin::successful_origin();
+        let close_origin = T::CloseOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
-            .dispatch_bypass_filter(approval_origin)?;
+            .dispatch_bypass_filter(close_origin)?;
     let end: u32 =
         T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
     pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());

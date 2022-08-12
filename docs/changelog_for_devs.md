@@ -4,9 +4,11 @@
   status and must be opened using `Swaps::open_pool`. While the pool is
   `Initialized`, it is allowed to call `pool_join` and `pool_exit`, but trading
   and single-asset operations are prohibited.
-
-# v0.3.4
-
+- Every asset in a pool has a minimum balance now that is:
+  `max(0.01, ExistentialDeposit(Asset))`. Regarding the current configuration,
+  every asset in the pool has a minimum balance of 0.01.
+- A single member of the `AdvisoryCommittee` can now approve markets, whereas
+  50% of all members have to agree upon rejecting a market.
 - Implemented swap fees for CPMM pools. This means that the following extrinsics
   now have a (non-optional) `swap_fee` parameter:
 
@@ -16,6 +18,13 @@
 
   Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
   on-chain constant `MaxSwapFee`.
+- Added new pallet: Styx. Dispatchable calls are:
+  - `cross` - Burns native chain tokens to cross. In the case of Zeitgeist, this
+            is granting the ability to claim your zeitgeist avatar.
+  - `set_burn_amount(amount)` - Sets the new burn price for the cross.
+                              Intended to be called by governance.
+
+# v0.3.4
 
 - Changed the `weights` parameter of `deploy_swap_pool_and_additional_liquidity`
   and `deploy_swap_pool_for_market` to be a vector whose length is equal to the
