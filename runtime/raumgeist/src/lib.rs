@@ -81,53 +81,111 @@ pub mod parameters;
 pub mod xcm_config;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("zeitgeist"),
-    impl_name: create_runtime_str!("zeitgeist"),
+    spec_name: create_runtime_str!("raumgeist"),
+    impl_name: create_runtime_str!("raumgeist"),
     authoring_version: 1,
-    spec_version: 39,
+    spec_version: 1,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 16,
+    transaction_version: 1,
     state_version: 1,
 };
 
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
-// dispute mechanism.
+// Filter anything but the essential and sudo.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
-        use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-        };
-        use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
-
-        #[allow(clippy::match_like_matches_macro)]
+        #[cfg(feature = "parachain")]
         match call {
-            Call::Court(_) => false,
-            Call::LiquidityMining(_) => false,
-            Call::PredictionMarkets(inner_call) => {
-                match inner_call {
-                    // Disable Rikiddo markets
-                    create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Court | SimpleDisputes,
-                        ..
-                    } => false,
-                    _ => true,
-                }
-            }
-            _ => true,
+            // Allowed calls:
+            | Call::AuthorInherent(_)
+            | Call::AuthorMapping(_)
+            | Call::ParachainSystem(_)
+            | Call::Sudo(_)
+            | Call::System(_)
+            | Call::Timestamp(_) => true,
+
+            // Prohibited calls:
+            Call::AdvisoryCommittee(_)
+            | Call::AdvisoryCommitteeMembership(_)
+            | Call::AuthorFilter(_)
+            | Call::AssetManager(_)
+            | Call::Authorized(_)
+            | Call::Balances(_)
+            | Call::Council(_)
+            | Call::CouncilMembership(_)
+            | Call::Court(_)
+            | Call::Crowdloan(_)
+            | Call::Democracy(_)
+            | Call::DmpQueue(_)
+            | Call::Identity(_)
+            | Call::LiquidityMining(_)
+            | Call::MultiSig(_)
+            | Call::ParachainStaking(_)
+            | Call::PolkadotXcm(_)
+            | Call::PredictionMarkets(_)
+            | Call::Preimage(_)
+            | Call::Proxy(_)
+            | Call::Scheduler(_)
+            | Call::Styx(_)
+            | Call::Swaps(_)
+            | Call::TechnicalCommittee(_)
+            | Call::TechnicalCommitteeMembership(_)
+            | Call::Treasury(_)
+            | Call::Utility(_)
+            | Call::Vesting(_)
+            | Call::XcmpQueue(_) => false,
+        }
+        #[cfg(not(feature = "parachain"))]
+        match call {
+            // Allowed calls:
+            | Call::Grandpa(_)
+            | Call::Sudo(_)
+            | Call::System(_)
+            | Call::Timestamp(_) => true,
+
+            // Prohibited calls:
+            Call::AdvisoryCommittee(_)
+            | Call::AdvisoryCommitteeMembership(_)
+            | Call::AssetManager(_)
+            | Call::Authorized(_)
+            | Call::Balances(_)
+            | Call::Council(_)
+            | Call::CouncilMembership(_)
+            | Call::Court(_)
+            | Call::Democracy(_)
+            | Call::Identity(_)
+            | Call::LiquidityMining(_)
+            | Call::MultiSig(_)
+            | Call::PredictionMarkets(_)
+            | Call::Preimage(_)
+            | Call::Proxy(_)
+            | Call::Scheduler(_)
+            | Call::Styx(_)
+            | Call::Swaps(_)
+            | Call::TechnicalCommittee(_)
+            | Call::TechnicalCommitteeMembership(_)
+            | Call::Treasury(_)
+            | Call::Utility(_)
+            | Call::Vesting(_) => false,
         }
     }
 }
 
 decl_common_types!();
-create_runtime_with_additional_pallets!();
+
+create_runtime_with_additional_pallets!(
+    // Others
+    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
+);
+
+impl pallet_sudo::Config for Runtime {
+    type Call = Call;
+    type Event = Event;
+}
+
 impl_config_traits!();
 create_runtime_api!();
 create_common_benchmark_logic!();
