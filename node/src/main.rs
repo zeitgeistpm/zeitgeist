@@ -20,6 +20,7 @@
 mod chain_spec;
 mod cli;
 mod command;
+#[cfg(feature = "runtime-benchmarks")]
 mod command_helper;
 mod rpc;
 #[macro_use]

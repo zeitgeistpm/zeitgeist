@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+#![cfg(feature = "runtime-benchmarks")]
 
 use super::service::FullClient;
 
@@ -32,46 +33,58 @@ use zeitgeist_primitives::types::Signature;
 /// Note: Should only be used for benchmarking.
 pub struct BenchmarkExtrinsicBuilder<RuntimeApi, Executor: NativeExecutionDispatch + 'static> {
     client: Arc<FullClient<RuntimeApi, Executor>>,
-    is_zeitgeist: bool,
+    spec: String,
 }
 
 impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
 {
     /// Creates a new [`Self`] from the given client.
-    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, spec: Chainspec) -> Self {
-        Self { client, is_zeitgeist }
+    pub fn new(client: Arc<FullClient<RuntimeApi, Executor>>, spec: String) -> Self {
+        Self { client, spec }
     }
 }
 
-impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
+impl<'a, RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     frame_benchmarking_cli::ExtrinsicBuilder for BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
 {
     fn remark(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
         let acc = Sr25519Keyring::Bob.pair();
 
-        #[cfg(feature = "with-zeitgeist-runtime")]
-        if self.is_zeitgeist {
-            return Ok(create_benchmark_extrinsic_zeitgeist(
-                self.client.as_ref(),
-                acc,
-                zeitgeist_runtime::SystemCall::remark { remark: vec![] }.into(),
-                nonce,
-            )
-            .into());
+        match &self.spec {
+            #[cfg(feature = "with-raumgeist-runtime")]
+            spec if spec.starts_with("raumgeist") =>  {
+                return Ok(create_benchmark_extrinsic_zeitgeist(
+                    self.client.as_ref(),
+                    acc,
+                    raumgeist_runtime::SystemCall::remark { remark: vec![] }.into(),
+                    nonce,
+                )
+                .into());
+            }
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            spec if spec.starts_with("zeitgeist") => {
+                return Ok(create_benchmark_extrinsic_zeitgeist(
+                    self.client.as_ref(),
+                    acc,
+                    zeitgeist_runtime::SystemCall::remark { remark: vec![] }.into(),
+                    nonce,
+                )
+                .into());
+            }
+            #[cfg(feature = "with-battery-station-runtime")]
+            _ => {
+                return Ok(create_benchmark_extrinsic_battery_station(
+                    self.client.as_ref(),
+                    acc,
+                    battery_station_runtime::SystemCall::remark { remark: vec![] }.into(),
+                    nonce,
+                )
+                .into());
+            }
+            #[cfg(not(feature = "with-battery-station-runtime"))]
+            _ => Err(crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE)
         }
-        #[cfg(feature = "with-battery-station-runtime")]
-        if !self.is_zeitgeist {
-            return Ok(create_benchmark_extrinsic_battery_station(
-                self.client.as_ref(),
-                acc,
-                battery_station_runtime::SystemCall::remark { remark: vec![] }.into(),
-                nonce,
-            )
-            .into());
-        }
-
-        Err(crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE)
     }
 }
 

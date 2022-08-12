@@ -55,6 +55,7 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::Benchmark(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             let chain_spec = &runner.config().chain_spec;
+            let id = chain_spec.id().to_string().clone();
 
             match cmd {
                 // This switch needs to be in the client, since the client decides
@@ -167,7 +168,7 @@ pub fn run() -> sc_cli::Result<()> {
                             >(&config)?;
 
                             let ext_builder =
-                                BenchmarkExtrinsicBuilder::new(params.client.clone(), true);
+                                BenchmarkExtrinsicBuilder::new(params.client.clone(), id);
                             cmd.run(
                                 config,
                                 params.client,
@@ -183,7 +184,7 @@ pub fn run() -> sc_cli::Result<()> {
                             >(&config)?;
 
                             let ext_builder =
-                                BenchmarkExtrinsicBuilder::new(params.client.clone(), true);
+                                BenchmarkExtrinsicBuilder::new(params.client.clone(), id);
                             cmd.run(
                                 config,
                                 params.client,
@@ -199,7 +200,7 @@ pub fn run() -> sc_cli::Result<()> {
                             >(&config)?;
 
                             let ext_builder =
-                                BenchmarkExtrinsicBuilder::new(params.client.clone(), false);
+                                BenchmarkExtrinsicBuilder::new(params.client.clone(), id);
                             cmd.run(
                                 config,
                                 params.client,
