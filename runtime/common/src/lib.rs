@@ -861,7 +861,6 @@ macro_rules! impl_config_traits {
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
-            type DisputePeriod = DisputePeriod;
             type Event = Event;
             // LiquidityMining is currently unstable.
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
@@ -877,7 +876,6 @@ macro_rules! impl_config_traits {
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
-            type ReportingPeriod = ReportingPeriod;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             type SimpleDisputes = SimpleDisputes;

@@ -53,7 +53,7 @@ runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
-    "pallet-timestamp/runtime-benchmarks"
+    "pallet-timestamp/runtime-benchmarks",
     "zeitgeist-primitives/mock",
 ]
 std = [

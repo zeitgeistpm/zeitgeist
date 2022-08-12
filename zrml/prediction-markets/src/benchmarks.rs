@@ -35,7 +35,9 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK},
+    constants::mock::{
+        MaxSwapFee, MinLiquidity, MinWeight, BASE, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK,
+    },
     traits::DisputeApi,
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,

@@ -33,7 +33,9 @@ use test_case::test_case;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::mock::{DisputeFactor, BASE, CENT, BLOCKS_PER_DAY, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK},
+    constants::mock::{
+        DisputeFactor, BASE, BLOCKS_PER_DAY, BLOCKS_PER_DAY_U32, CENT, MILLISECS_PER_BLOCK,
+    },
     traits::Swaps as SwapsPalletApi,
     types::{
         Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
