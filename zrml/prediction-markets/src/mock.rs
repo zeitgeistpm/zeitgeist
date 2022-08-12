@@ -98,7 +98,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
-    type ApprovalOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Court = Court;
@@ -117,6 +117,7 @@ impl crate::Config for Runtime {
     type MinSubsidyPeriod = MinSubsidyPeriod;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
+    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
     type AssetManager = AssetManager;

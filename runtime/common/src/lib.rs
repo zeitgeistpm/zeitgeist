@@ -851,7 +851,10 @@ macro_rules! impl_config_traits {
 
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
-            type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
+            type ApproveOrigin = EnsureOneOf<
+                EnsureRoot<AccountId>,
+                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
+            >;
             type Authorized = Authorized;
             type Court = Court;
             type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
@@ -873,6 +876,7 @@ macro_rules! impl_config_traits {
             type MinSubsidyPeriod = MinSubsidyPeriod;
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
+            type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type ReportingPeriod = ReportingPeriod;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
