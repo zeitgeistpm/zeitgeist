@@ -261,7 +261,7 @@ benchmarks! {
         )?;
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_closed { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(close_origin)? }
 
     // This benchmark measures the cost of fn `admin_move_market_to_resolved`
     // and assumes a scalar market is used. The default cost for this function
@@ -273,7 +273,7 @@ benchmarks! {
         let (_, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
-    }: { call.dispatch_bypass_filter(approval_origin)? }
+    }: { call.dispatch_bypass_filter(close_origin)? }
 
     approve_market {
         let (_, market_id) = create_market_common::<T>(
