@@ -13,7 +13,7 @@
       0
     ]
   ],
-  "protocolId": "raumgeist",
+  "protocolId": "raumgeist_standalone",
   "properties": {
     "ss58Format": 73,
     "tokenDecimals": 10,
