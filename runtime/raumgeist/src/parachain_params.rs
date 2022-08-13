@@ -38,7 +38,7 @@ use xcm_builder::{
     SovereignSignedViaLocation, TakeWeightCredit,
 };
 use zeitgeist_primitives::{
-    constants::{BASE, BLOCKS_PER_MINUTE, MICRO},
+    constants::{BASE, BLOCKS_PER_MINUTE, BLOCKS_PER_HOUR, MICRO},
     types::Balance,
 };
 
@@ -74,35 +74,35 @@ parameter_types! {
 
     // Staking
     /// Rounds before the candidate bond increase/decrease can be executed
-    pub const CandidateBondLessDelay: u32 = 2;
+    pub const CandidateBondLessDelay: u32 = 24;
     /// Default fixed percent a collator takes off the top of due rewards
     pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
     /// Blocks per round
-    pub const DefaultBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
+    pub const DefaultBlocksPerRound: u32 = 2 * BLOCKS_PER_HOUR as u32;
     /// Default percent of inflation set aside for parachain bond every round
     pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
     /// Rounds before the delegator bond increase/decrease can be executed
-    pub const DelegationBondLessDelay: u32 = 2;
+    pub const DelegationBondLessDelay: u32 = 24;
     /// Rounds before the collator leaving the candidates request can be executed
-    pub const LeaveCandidatesDelay: u32 = 2;
+    pub const LeaveCandidatesDelay: u32 = 24;
     /// Rounds before the delegator exit can be executed
-    pub const LeaveDelegatorsDelay: u32 = 2;
+    pub const LeaveDelegatorsDelay: u32 = 24;
     /// Maximum bottom delegations per candidate
     pub const MaxBottomDelegationsPerCandidate: u32 = 50;
     /// Maximum delegations per delegator
     pub const MaxDelegationsPerDelegator: u32 = 100;
     /// Maximum top delegations per candidate
     pub const MaxTopDelegationsPerCandidate: u32 = 300;
-    /// Minimum round length is 2 minutes
-    pub const MinBlocksPerRound: u32 = 2 * BLOCKS_PER_MINUTE as u32;
+    /// Minimum round length is 20 minutes
+    pub const MinBlocksPerRound: u32 = 20 * BLOCKS_PER_MINUTE as u32;
     /// Minimum stake required to become a collator
-    pub const MinCollatorStk: u128 = 64 * BASE;
+    pub const MinCollatorStk: u128 = 1000 * BASE;
     /// Minimum stake required to be reserved to be a delegator
-    pub const MinDelegatorStk: u128 = BASE / 2;
+    pub const MinDelegatorStk: u128 = 100 * BASE;
     /// Minimum collators selected per round, default at genesis and minimum forever after
     pub const MinSelectedCandidates: u32 = 8;
     /// Rounds before the delegator revocation can be executed
-    pub const RevokeDelegationDelay: u32 = 2;
+    pub const RevokeDelegationDelay: u32 = 24;
     /// Rounds before the reward is paid
     pub const RewardPaymentDelay: u32 = 2;
 
