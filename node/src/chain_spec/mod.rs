@@ -118,7 +118,7 @@ macro_rules! generate_generic_genesis_function {
                 },
                 #[cfg(feature = "parachain")]
                 author_filter: $runtime::AuthorFilterConfig {
-                    eligible_count: EligibilityValue::new_unchecked(50),
+                    eligible_count: EligibilityValue::new_unchecked(1),
                 },
                 #[cfg(feature = "parachain")]
                 author_mapping: $runtime::AuthorMappingConfig {
