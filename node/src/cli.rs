@@ -68,6 +68,7 @@ pub fn load_spec(
             parachain_id,
         )?),
 
+        // Battery station runtimes
         "battery_station" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/bs_parachain.json")[..],
@@ -82,6 +83,13 @@ pub fn load_spec(
         #[cfg(not(feature = "with-battery-station-runtime"))]
         "battery_station_staging" => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
 
+        // Raumgeist runtimes
+        "raumgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
+            #[cfg(feature = "parachain")]
+            &include_bytes!("../res/raumgeist_parachain.json")[..],
+            #[cfg(not(feature = "parachain"))]
+            &include_bytes!("../res/raumgeist.json")[..],
+        )?),
         #[cfg(feature = "with-raumgeist-runtime")]
         "raumgeist_staging" => Box::new(crate::chain_spec::raumgeist_staging_config(
             #[cfg(feature = "parachain")]
@@ -90,8 +98,7 @@ pub fn load_spec(
         #[cfg(not(feature = "with-raumgeist-runtime"))]
         "raumgeist_staging" => panic!("{}", crate::RAUMGEIST_RUNTIME_NOT_AVAILABLE),
 
-        // TODO: Raumgeist from chainspec
-
+        // Zeitgeist runtimes
         "zeitgeist" => Box::new(crate::chain_spec::DummyChainSpec::from_json_bytes(
             #[cfg(feature = "parachain")]
             &include_bytes!("../res/zeitgeist_parachain.json")[..],
@@ -103,7 +110,6 @@ pub fn load_spec(
             #[cfg(feature = "parachain")]
             parachain_id,
         )?),
-
         #[cfg(not(feature = "with-zeitgeist-runtime"))]
         "zeitgeist_staging" => panic!("{}", crate::ZEITGEIST_RUNTIME_NOT_AVAILABLE),
 
@@ -261,6 +267,9 @@ impl SubstrateCli for Cli {
             match id {
                 "battery_station_staging" => {
                     self.parachain_id.unwrap_or(super::BATTERY_STATION_PARACHAIN_ID).into()
+                }
+                "raumgeist_staging" => {
+                    self.parachain_id.unwrap_or(super::POLKADOT_PARACHAIN_ID).into()
                 }
                 _ => self.parachain_id.unwrap_or(super::KUSAMA_PARACHAIN_ID).into(),
             },

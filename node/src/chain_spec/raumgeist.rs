@@ -48,25 +48,24 @@ const DEFAULT_SUDO_BALANCE: Balance  = 100 * BASE;
 
 fn endowed_accounts_staging_raumgeist() -> Vec<EndowedAccountWithBalance> {
     vec![
-        // dDzt4vaprRfHqGBat44bWD4i36WMDXjsGXmCHoxMom2eQgQCd
+        // dE4NNpcWPCk8TH3GM9eJV1jauEmHC3rQcxMdnTtrc3NgDGUNo
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["ec9a6c37972582ce411546f96f806cfc2bb0670f60c30cbc3ad4276834b0253c"].into(),
             DEFAULT_COLLATOR_BALANCE_RAUMGEIST.unwrap(),
         ),
-        // dDy7WSPy4pvWBKsUta8MdWxduWFTpJtv9zgBiVGtqWmMh6bi6
+        // dDzXWuvDPSRXMQFAq2cJdr9NtEjtB8bohFhE3Ap9yM9s7rUQf
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["42a1ef95149913305fb05b6ac325ab9ed4b68c8d7aa60e3ea4daf4237dd9fc09"].into(),
             DEFAULT_COLLATOR_BALANCE_RAUMGEIST.unwrap(),
         ),
-        // dE36Y98QpX8hEkLANntbtUvt7figSPGxSrDxU4sscuX989CTJ
+        // dE375YCauT8vxvXwzBGaeCfPsKTXuuBpJaqCsBqRhoySNdmtE
         #[cfg(feature = "parachain")]
         EndowedAccountWithBalance(
             hex!["b4b3541a95c83a71de977a6f1e7e66e594a4d47c48b030802c90ba589c8bba16"].into(),
             DEFAULT_COLLATOR_BALANCE_RAUMGEIST.unwrap(),
         ),
-        // TODO - MUST BE REPLACED!!! Do not use this key.
         EndowedAccountWithBalance(
             root_key_staging_raumgeist(),
             DEFAULT_SUDO_BALANCE,
@@ -110,11 +109,11 @@ fn additional_chain_spec_staging_raumgeist(
 fn additional_chain_spec_staging_raumgeist() -> AdditionalChainSpec {
     AdditionalChainSpec {
         initial_authorities: vec![(
-            // 5FCSJzvmeUW1hBo3ASnLzSxpUdn5QUDt1Eqobj1meiQB7mLu
-            hex!["4c47b6615262606f47a4e7ae413c534a1851c9b40fecf4b47423e930eca6c554"]
+            // Aura
+            hex!["5ce5033dba3f6f730f11c20d00c34c4d3fbe23eb81471255bfde689f25dc966e"]
                 .unchecked_into(),
-            // 5HGProUwcyCDMJDxjBBKbv8u7ehr5uoTBS3bckYHPcZMTifW
-            hex!["9239e2cbc4dfd2e6a35660daad84d2a9bc318b29de5aa152cd13e066d15d431a"]
+            // Grandpa
+            hex!["ffd00bcb47e83ed435ce55264cf89969041a5108fdfb3198c79dfe0b75f66600"]
                 .unchecked_into(),
         )],
     }
@@ -159,7 +158,7 @@ pub fn raumgeist_staging_config(
         telemetry_endpoints(),
         Some("raumgeist"),
         None,
-        Some(token_properties("ZTG", SS58Prefix::get())),
+        Some(token_properties("RGT", SS58Prefix::get())),
         #[cfg(feature = "parachain")]
         crate::chain_spec::Extensions {
             relay_chain: "polkadot".into(),
