@@ -38,7 +38,7 @@ use xcm_builder::{
     SovereignSignedViaLocation, TakeWeightCredit,
 };
 use zeitgeist_primitives::{
-    constants::{BASE, BLOCKS_PER_MINUTE, BLOCKS_PER_HOUR, MICRO},
+    constants::{BASE, BLOCKS_PER_HOUR, BLOCKS_PER_MINUTE, MICRO},
     types::Balance,
 };
 

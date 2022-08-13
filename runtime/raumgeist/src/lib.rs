@@ -100,7 +100,7 @@ impl Contains<Call> for IsCallable {
         #[cfg(feature = "parachain")]
         match call {
             // Allowed calls:
-            | Call::AuthorInherent(_)
+            Call::AuthorInherent(_)
             | Call::AuthorMapping(_)
             | Call::ParachainSystem(_)
             | Call::Sudo(_)
@@ -141,10 +141,7 @@ impl Contains<Call> for IsCallable {
         #[cfg(not(feature = "parachain"))]
         match call {
             // Allowed calls:
-            | Call::Grandpa(_)
-            | Call::Sudo(_)
-            | Call::System(_)
-            | Call::Timestamp(_) => true,
+            Call::Grandpa(_) | Call::Sudo(_) | Call::System(_) | Call::Timestamp(_) => true,
 
             // Prohibited calls:
             Call::AdvisoryCommittee(_)

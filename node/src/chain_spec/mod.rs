@@ -17,9 +17,9 @@
 
 mod additional_chain_spec;
 #[cfg(feature = "with-battery-station-runtime")]
-mod dev;
-#[cfg(feature = "with-battery-station-runtime")]
 pub(crate) mod battery_station;
+#[cfg(feature = "with-battery-station-runtime")]
+mod dev;
 #[cfg(feature = "with-raumgeist-runtime")]
 pub(crate) mod raumgeist;
 #[cfg(feature = "with-zeitgeist-runtime")]
@@ -31,13 +31,13 @@ pub use battery_station::battery_station_staging_config;
 #[cfg(feature = "with-battery-station-runtime")]
 pub use dev::dev_config;
 use jsonrpc_core::serde_json::{Map, Value};
+#[cfg(feature = "with-raumgeist-runtime")]
+pub use raumgeist::raumgeist_staging_config;
 use sc_telemetry::TelemetryEndpoints;
 #[cfg(feature = "with-battery-station-runtime")]
 use sp_core::{Pair, Public};
 #[cfg(feature = "with-battery-station-runtime")]
 use sp_runtime::traits::{IdentifyAccount, Verify};
-#[cfg(feature = "with-raumgeist-runtime")]
-pub use raumgeist::raumgeist_staging_config;
 #[cfg(feature = "with-zeitgeist-runtime")]
 pub use zeitgeist::zeitgeist_staging_config;
 #[cfg(feature = "with-battery-station-runtime")]
@@ -46,7 +46,6 @@ use zeitgeist_primitives::{
     constants::BalanceFractionalDecimals,
     types::{AccountId, Balance},
 };
-
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {

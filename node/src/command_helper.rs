@@ -53,7 +53,7 @@ impl<'a, RuntimeApi, Executor: NativeExecutionDispatch + 'static>
 
         match &self.spec {
             #[cfg(feature = "with-raumgeist-runtime")]
-            spec if spec.starts_with("raumgeist") =>  {
+            spec if spec.starts_with("raumgeist") => {
                 return Ok(create_benchmark_extrinsic_zeitgeist(
                     self.client.as_ref(),
                     acc,
@@ -83,7 +83,7 @@ impl<'a, RuntimeApi, Executor: NativeExecutionDispatch + 'static>
                 .into());
             }
             #[cfg(not(feature = "with-battery-station-runtime"))]
-            _ => Err(crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE)
+            _ => Err(crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
         }
     }
 }

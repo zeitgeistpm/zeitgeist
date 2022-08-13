@@ -17,7 +17,10 @@
 
 #![cfg(feature = "with-zeitgeist-runtime")]
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use super::{
+    generate_generic_genesis_function, telemetry_endpoints, token_properties, AdditionalChainSpec,
+    EndowedAccountWithBalance,
+};
 use hex_literal::hex;
 use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
@@ -27,9 +30,9 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions},
-    zeitgeist_runtime::{CollatorDeposit, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
+    super::Extensions,
     zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
+    zeitgeist_runtime::{CollatorDeposit, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
 };
 
 cfg_if::cfg_if! {
@@ -72,7 +75,7 @@ fn additional_chain_spec_staging_zeitgeist(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
     use zeitgeist_primitives::constants::BASE;
-    
+
     AdditionalChainSpec {
         candidates: vec![
             (

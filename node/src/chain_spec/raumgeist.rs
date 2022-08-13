@@ -17,17 +17,26 @@
 
 #![cfg(feature = "with-raumgeist-runtime")]
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use super::{
+    generate_generic_genesis_function, telemetry_endpoints, token_properties, AdditionalChainSpec,
+    EndowedAccountWithBalance,
+};
 use hex_literal::hex;
+use raumgeist_runtime::parameters::SS58Prefix;
 use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
-use raumgeist_runtime::parameters::SS58Prefix;
 
-use zeitgeist_primitives::{types::{AccountId, Balance}, constants::{BASE, ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD}}};
+use zeitgeist_primitives::{
+    constants::{
+        ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PTD},
+        BASE,
+    },
+    types::{AccountId, Balance},
+};
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions},
+    super::Extensions,
     raumgeist_runtime::{CollatorDeposit, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
     zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
 };
@@ -44,7 +53,7 @@ cfg_if::cfg_if! {
     }
 }
 
-const DEFAULT_SUDO_BALANCE: Balance  = 100 * BASE;
+const DEFAULT_SUDO_BALANCE: Balance = 100 * BASE;
 
 fn endowed_accounts_staging_raumgeist() -> Vec<EndowedAccountWithBalance> {
     vec![
@@ -66,10 +75,7 @@ fn endowed_accounts_staging_raumgeist() -> Vec<EndowedAccountWithBalance> {
             hex!["b4b3541a95c83a71de977a6f1e7e66e594a4d47c48b030802c90ba589c8bba16"].into(),
             DEFAULT_COLLATOR_BALANCE_RAUMGEIST.unwrap(),
         ),
-        EndowedAccountWithBalance(
-            root_key_staging_raumgeist(),
-            DEFAULT_SUDO_BALANCE,
-        ),
+        EndowedAccountWithBalance(root_key_staging_raumgeist(), DEFAULT_SUDO_BALANCE),
     ]
 }
 
@@ -128,7 +134,6 @@ pub(super) fn get_wasm() -> Result<&'static [u8], String> {
 fn root_key_staging_raumgeist() -> AccountId {
     hex!["e6c622c6f2eaba444b68955501e535247c192b35e7b3e44e4c1dc24a514b4965"].into()
 }
-
 
 generate_generic_genesis_function!(
     raumgeist_runtime,

@@ -17,7 +17,10 @@
 
 #![cfg(feature = "with-battery-station-runtime")]
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use super::{
+    generate_generic_genesis_function, telemetry_endpoints, token_properties, AdditionalChainSpec,
+    EndowedAccountWithBalance,
+};
 use battery_station_runtime::parameters::SS58Prefix;
 use hex_literal::hex;
 use sc_service::ChainType;
@@ -32,7 +35,7 @@ use zeitgeist_primitives::{
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions},
+    super::Extensions,
     battery_station_runtime::{CollatorDeposit, EligibilityValue, PolkadotXcmConfig},
     zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
 };
