@@ -17,8 +17,7 @@
 
 #![cfg(feature = "with-battery-station-runtime")]
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance};
-use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use super::{AdditionalChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, telemetry_endpoints, token_properties};
 use battery_station_runtime::parameters::SS58Prefix;
 use hex_literal::hex;
 use sc_service::ChainType;
@@ -33,8 +32,9 @@ use zeitgeist_primitives::{
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
+    super::{Extensions},
     battery_station_runtime::{CollatorDeposit, EligibilityValue, PolkadotXcmConfig},
+    zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
 };
 
 cfg_if::cfg_if! {
@@ -63,7 +63,7 @@ fn additional_chain_spec_staging_battery_station(
             DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
         )],
         crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_BATTERY_STATION,
-        inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
+        inflation_info: inflation_config(Perbill::from_percent(5), TOTAL_INITIAL_ZTG * BASE),
         nominations: vec![],
         parachain_id,
     }
@@ -117,6 +117,9 @@ generate_generic_genesis_function!(
     battery_station_runtime,
     sudo: battery_station_runtime::SudoConfig { key: Some(root_key_staging_battery_station()) },
 );
+
+#[cfg(feature = "parachain")]
+super::generate_inflation_config_function!(battery_station_runtime);
 
 pub fn battery_station_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,

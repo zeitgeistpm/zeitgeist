@@ -17,8 +17,7 @@
 
 #![cfg(feature = "with-zeitgeist-runtime")]
 
-use super::{AdditionalChainSpec, EndowedAccountWithBalance};
-use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
+use super::{AdditionalChainSpec, EndowedAccountWithBalance, generate_generic_genesis_function, telemetry_endpoints, token_properties};
 use hex_literal::hex;
 use sc_service::ChainType;
 use sp_core::crypto::UncheckedInto;
@@ -28,8 +27,9 @@ use zeitgeist_primitives::constants::ztg::{LIQUIDITY_MINING, LIQUIDITY_MINING_PT
 
 #[cfg(feature = "parachain")]
 use {
-    super::{Extensions, DEFAULT_COLLATOR_INFLATION_INFO},
+    super::{Extensions},
     zeitgeist_runtime::{CollatorDeposit, EligibilityValue, MinCollatorStk, PolkadotXcmConfig},
+    zeitgeist_primitives::constants::ztg::TOTAL_INITIAL_ZTG,
 };
 
 cfg_if::cfg_if! {
@@ -71,6 +71,8 @@ fn endowed_accounts_staging_zeitgeist() -> Vec<EndowedAccountWithBalance> {
 fn additional_chain_spec_staging_zeitgeist(
     parachain_id: cumulus_primitives_core::ParaId,
 ) -> AdditionalChainSpec {
+    use zeitgeist_primitives::constants::BASE;
+    
     AdditionalChainSpec {
         candidates: vec![
             (
@@ -93,7 +95,7 @@ fn additional_chain_spec_staging_zeitgeist(
             ),
         ],
         crowdloan_fund_pot: DEFAULT_INITIAL_CROWDLOAN_FUNDS_ZEITGEIST,
-        inflation_info: DEFAULT_COLLATOR_INFLATION_INFO,
+        inflation_info: inflation_config(Perbill::from_percent(5), TOTAL_INITIAL_ZTG * BASE),
         nominations: vec![],
         parachain_id,
     }
@@ -119,6 +121,9 @@ pub(super) fn get_wasm() -> Result<&'static [u8], String> {
 }
 
 generate_generic_genesis_function!(zeitgeist_runtime,);
+
+#[cfg(feature = "parachain")]
+super::generate_inflation_config_function!(zeitgeist_runtime);
 
 pub fn zeitgeist_staging_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,

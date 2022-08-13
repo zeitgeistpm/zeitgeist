@@ -2,12 +2,7 @@
   "name": "Raumgeist",
   "id": "raumgeist",
   "chainType": "Live",
-  "bootNodes": [
-    "/dns/raumgeist-bootnode-0.zeitgeist.pm/tcp/30333/p2p/12D3KooWLnGqMy5aS54RjdWjf7RcggQZhQXQkhBuNoWMNo6sRnaM",
-    "/dns/raumgeist-bootnode-0.zeitgeist.pm/tcp/30333/ws/p2p/12D3KooWLnGqMy5aS54RjdWjf7RcggQZhQXQkhBuNoWMNo6sRnaM",
-    "/dns/raumgeist-bootnode-1.zeitgeist.pm/tcp/30333/p2p/12D3KooWK7yyAMHsxiuh78WsRyZzAe9kxVMQ2CYKz1wZ7EXdUPWK",
-    "/dns/raumgeist-bootnode-1.zeitgeist.pm/tcp/30333/ws/p2p/12D3KooWK7yyAMHsxiuh78WsRyZzAe9kxVMQ2CYKz1wZ7EXdUPWK"
-  ],
+  "bootNodes": [],
   "telemetryEndpoints": [
     [
       "/dns/telemetry.polkadot.io/tcp/443/x-parity-wss/%2Fsubmit%2F",

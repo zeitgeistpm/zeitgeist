@@ -54,6 +54,12 @@ generate_generic_genesis_function! {battery_station_runtime,
 pub fn dev_config(
     #[cfg(feature = "parachain")] parachain_id: cumulus_primitives_core::ParaId,
 ) -> Result<BatteryStationChainSpec, String> {
+    #[cfg(feature = "parachain")]
+    use {
+        super::battery_station::inflation_config,
+        zeitgeist_primitives::constants::{BASE, ztg::TOTAL_INITIAL_ZTG},
+    };
+    
     let wasm = super::battery_station::get_wasm()?;
 
     Ok(BatteryStationChainSpec::from_genesis(
@@ -70,7 +76,7 @@ pub fn dev_config(
                         super::battery_station::DEFAULT_STAKING_AMOUNT_BATTERY_STATION,
                     )],
                     crowdloan_fund_pot: zeitgeist_primitives::constants::BASE.saturating_mul(100),
-                    inflation_info: crate::chain_spec::DEFAULT_COLLATOR_INFLATION_INFO,
+                    inflation_info: inflation_config(sp_runtime::Perbill::from_percent(5), TOTAL_INITIAL_ZTG * BASE),
                     nominations: vec![],
                     parachain_id,
                 },
