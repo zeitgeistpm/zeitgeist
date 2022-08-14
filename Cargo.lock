@@ -12768,6 +12768,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "zrml-currencies"
+version = "0.3.5"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "zeitgeist-primitives",
+]
+
+[[package]]
 name = "zrml-liquidity-mining"
 version = "0.3.5"
 dependencies = [
