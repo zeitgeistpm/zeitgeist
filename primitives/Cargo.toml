@@ -16,6 +16,7 @@ test-case = "2.0.2"
 
 [features]
 default = ["std"]
+mock = []
 std = [
     "frame-support/std",
     "frame-system/std",
@@ -32,4 +33,4 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-primitives"
-version = "0.3.4"
+version = "0.3.5"

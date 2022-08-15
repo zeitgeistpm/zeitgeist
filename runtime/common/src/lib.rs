@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
 #![allow(clippy::crate_in_macro_def)]
@@ -836,7 +853,10 @@ macro_rules! impl_config_traits {
 
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
-            type ApprovalOrigin = EnsureRootOrHalfAdvisoryCommittee;
+            type ApproveOrigin = EnsureOneOf<
+                EnsureRoot<AccountId>,
+                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
+            >;
             type Authorized = Authorized;
             type Court = Court;
             type CloseOrigin = EnsureRootOrTwoThirdsAdvisoryCommittee;
@@ -858,6 +878,7 @@ macro_rules! impl_config_traits {
             type MinSubsidyPeriod = MinSubsidyPeriod;
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
+            type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type ReportingPeriod = ReportingPeriod;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
@@ -1351,9 +1372,12 @@ macro_rules! create_common_benchmark_logic {
         pub(crate) mod benchmarks {
             pub(crate) mod currencies {
                 use super::utils::{lookup_of_account, set_balance};
-                use crate::{AccountId, Amount, AssetManager, Balance, CurrencyId, Runtime};
+                use crate::{
+                    AccountId, Amount, AssetManager, Balance, CurrencyId, ExistentialDeposit,
+                    GetNativeCurrencyId, Runtime
+                };
                 use zeitgeist_primitives::{
-                    constants::{ExistentialDeposit, GetNativeCurrencyId, BASE},
+                    constants::BASE,
                     types::Asset,
                 };
 
