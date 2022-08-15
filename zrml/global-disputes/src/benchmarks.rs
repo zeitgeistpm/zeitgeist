@@ -11,7 +11,7 @@ use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_call
 use frame_support::{dispatch::UnfilteredDispatchable, traits::Currency};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Bounded, SaturatedConversion};
-use zeitgeist_primitives::{constants::MinOutcomeVoteAmount, types::OutcomeReport};
+use zeitgeist_primitives::{constants::mock::MinOutcomeVoteAmount, types::OutcomeReport};
 
 // ./target/release/zeitgeist benchmark pallet --chain=dev --steps=10 --repeat=1000 --pallet=zrml_global_disputes --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/global-disputes/src/weights.rs
 
