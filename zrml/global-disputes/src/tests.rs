@@ -12,7 +12,7 @@ use frame_support::{
 use pallet_balances::{BalanceLock, Error as BalancesError};
 use sp_runtime::traits::Zero;
 use zeitgeist_primitives::{
-    constants::{MinOutcomeVoteAmount, VoteLockIdentifier, VotingOutcomeFee, BASE},
+    constants::mock::{MinOutcomeVoteAmount, VoteLockIdentifier, VotingOutcomeFee, BASE},
     types::OutcomeReport,
 };
 

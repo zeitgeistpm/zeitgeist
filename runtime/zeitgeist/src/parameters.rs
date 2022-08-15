@@ -24,11 +24,11 @@
 use super::VERSION;
 use frame_support::{
     parameter_types,
+    traits::LockIdentifier,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         DispatchClass, Weight,
     },
-    traits::VoteLockIdentifier,
     PalletId,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
@@ -165,7 +165,7 @@ parameter_types! {
     /// by `DisputePeriod`.
     pub const DisputePeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// The period for a global dispute to end.
-    pub const GlobalDisputesPeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
