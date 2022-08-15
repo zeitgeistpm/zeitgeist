@@ -34,7 +34,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
-    traits::Swaps as SwapsPalletApi,
+    traits::{Swaps as SwapsPalletApi, ZeitgeistAssetManager},
     types::{
         Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
         MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition,
@@ -515,18 +515,25 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         let pool_account = Swaps::pool_account_id(pool_id);
         let market_account = PredictionMarkets::market_account(market_id);
         let alice_ztg_before = AssetManager::free_balance(Asset::Ztg, &ALICE);
+        let market = MarketCommons::market(&market_id).unwrap();
+        let outcome_assets = PredictionMarkets::outcome_assets(market_id, &market);
+        for asset in outcome_assets.clone() {
+            let accounts = ZrmlCurrencies::accounts_by_currency_id(asset);
+            let accounts_from_tokens = Tokens::accounts_by_currency_id(asset);
+            assert_eq!(accounts, accounts_from_tokens);
+        }
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &pool_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &pool_account), 0);
+        for asset in outcome_assets {
+            assert_eq!(AssetManager::free_balance(asset, &pool_account), 0);
+            assert_eq!(AssetManager::free_balance(asset, &market_account), 0);
+            assert_eq!(AssetManager::free_balance(asset, &ALICE), 0);
+
+            let accounts = ZrmlCurrencies::accounts_by_currency_id(asset);
+            let accounts_from_tokens = Tokens::accounts_by_currency_id(asset);
+            assert_eq!(accounts, accounts_from_tokens);
+        }
         assert_eq!(AssetManager::free_balance(Asset::Ztg, &pool_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &market_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::Ztg, &market_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
         assert_eq!(AssetManager::free_balance(Asset::Ztg, &ALICE), alice_ztg_before);
     });
 }

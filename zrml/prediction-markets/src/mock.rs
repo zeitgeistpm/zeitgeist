@@ -83,6 +83,7 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
+        ZrmlCurrencies: zrml_currencies::{Call, Pallet, Storage, Event<T>},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
@@ -120,7 +121,8 @@ impl crate::Config for Runtime {
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
-    type AssetManager = AssetManager;
+    // type AssetManager = AssetManager;
+    type AssetManager = ZrmlCurrencies;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
@@ -187,6 +189,12 @@ impl pallet_balances::Config for Runtime {
     type MaxReserves = MaxReserves;
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+}
+
+impl zrml_currencies::Config for Runtime {
+    type Event = Event;
+    type WeightInfo = zrml_currencies::weights::WeightInfo<Runtime>;
+    type Currencies = AssetManager;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -272,7 +280,8 @@ impl zrml_swaps::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type AssetManager = AssetManager;
+    // type AssetManager = AssetManager;
+    type AssetManager = ZrmlCurrencies;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 

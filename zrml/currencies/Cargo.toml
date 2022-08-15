@@ -7,6 +7,7 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 orml-traits = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 
 [dev-dependencies]
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
@@ -14,7 +15,6 @@ pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, features = ["mock"], path = "../../primitives" }
 orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 
 [features]
 default = ["std"]

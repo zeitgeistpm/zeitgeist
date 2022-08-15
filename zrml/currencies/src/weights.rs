@@ -45,22 +45,9 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_styx (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn cross() -> Weight;
-    fn set_burn_amount() -> Weight;
 }
 
 /// Weight functions for zrml_styx (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
-    // Storage: Styx Crossings (r:1 w:1)
-    // Storage: Styx BurnAmount (r:1 w:0)
-    fn cross() -> Weight {
-        (25_000_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-    // Storage: Styx BurnAmount (r:0 w:1)
-    fn set_burn_amount() -> Weight {
-        (9_000_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
 }

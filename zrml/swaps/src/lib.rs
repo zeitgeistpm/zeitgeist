@@ -1048,9 +1048,10 @@ mod pallet {
                 T::AssetManager::accounts_by_currency_id(shares_id).unwrap_or((0usize, vec![]));
             let share_accounts_num = share_accounts.len();
 
-            for share_holder in share_accounts {
-                let share_holder_account = share_holder.0;
-                let share_holder_balance = share_holder.1.free;
+            for share_holder_account in share_accounts {
+                // let share_holder_account = share_holderV;
+                // let share_holder_balance = share_holder.1.free;
+                let share_holder_balance = T::AssetManager::free_balance(shares_id, &share_holder_account);
                 let reward_pct_unadjusted =
                     bdiv(share_holder_balance.saturated_into(), total_pool_shares.saturated_into())
                         .unwrap_or(0);
