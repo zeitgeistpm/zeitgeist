@@ -26,7 +26,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode};
 use zeitgeist_primitives::{
-    constants::BLOCKS_PER_DAY_U32,
+    constants::BLOCKS_PER_DAY,
     types::{
         Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
         MarketType, OutcomeReport, Report, ScoringRule,
@@ -80,9 +80,9 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
         }
         log::info!("Starting updates of markets");
         let deadlines = Deadlines {
-            oracle_delay: BLOCKS_PER_DAY_U32,
-            oracle_duration: BLOCKS_PER_DAY_U32,
-            dispute_duration: BLOCKS_PER_DAY_U32,
+            oracle_delay: BLOCKS_PER_DAY as u32,
+            oracle_duration: BLOCKS_PER_DAY as u32,
+            dispute_duration: BLOCKS_PER_DAY as u32,
         };
         for (market_id, market) in
             storage_iter::<Option<LegacyMarketOf<T>>>(MARKET_COMMONS, MARKETS)
@@ -127,9 +127,9 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         let deadlines = Deadlines {
-            oracle_delay: BLOCKS_PER_DAY_U32,
-            oracle_duration: BLOCKS_PER_DAY_U32,
-            dispute_duration: BLOCKS_PER_DAY_U32,
+            oracle_delay: BLOCKS_PER_DAY as u32,
+            oracle_duration: BLOCKS_PER_DAY as u32,
+            dispute_duration: BLOCKS_PER_DAY as u32,
         };
         for (market_id, market) in storage_iter::<Option<MarketOf<T>>>(MARKET_COMMONS, MARKETS) {
             if let Some(market) = market {
@@ -233,9 +233,9 @@ mod tests {
             }),
         ];
         let deadlines = Deadlines {
-            oracle_delay: BLOCKS_PER_DAY_U32,
-            oracle_duration: BLOCKS_PER_DAY_U32,
-            dispute_duration: BLOCKS_PER_DAY_U32,
+            oracle_delay: BLOCKS_PER_DAY as u32,
+            oracle_duration: BLOCKS_PER_DAY as u32,
+            dispute_duration: BLOCKS_PER_DAY as u32,
         };
         let expected_markets: Vec<MarketOf<Runtime>> = vec![
             Market {

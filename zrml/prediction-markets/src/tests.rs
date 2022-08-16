@@ -33,9 +33,7 @@ use test_case::test_case;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::mock::{
-        DisputeFactor, BASE, BLOCKS_PER_DAY, BLOCKS_PER_DAY_U32, CENT, MILLISECS_PER_BLOCK,
-    },
+    constants::mock::{DisputeFactor, BASE, BLOCKS_PER_DAY, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
         Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
@@ -1908,7 +1906,7 @@ fn it_resolves_a_disputed_market() {
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        let oracle_delay: u64 = BLOCKS_PER_DAY_U32.into();
+        let oracle_delay: u64 = BLOCKS_PER_DAY;
         let report_at = end + oracle_delay + 1;
         run_to_block(report_at);
 
@@ -2062,7 +2060,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
-        let oracle_delay: u64 = BLOCKS_PER_DAY_U32.into();
+        let oracle_delay: u64 = BLOCKS_PER_DAY;
         run_to_block(end + oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),

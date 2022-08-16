@@ -118,7 +118,7 @@ mod pallet {
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::{BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK},
+        constants::{BLOCKS_PER_DAY, MILLISECS_PER_BLOCK},
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
@@ -585,9 +585,9 @@ mod pallet {
                 }
             };
             let deadlines = deadlines.unwrap_or(Deadlines {
-                oracle_delay: BLOCKS_PER_DAY_U32,
-                oracle_duration: BLOCKS_PER_DAY_U32,
-                dispute_duration: BLOCKS_PER_DAY_U32,
+                oracle_delay: BLOCKS_PER_DAY as u32,
+                oracle_duration: BLOCKS_PER_DAY as u32,
+                dispute_duration: BLOCKS_PER_DAY as u32,
             });
 
             let market = Market {

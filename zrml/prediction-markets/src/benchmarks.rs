@@ -36,7 +36,7 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{
-        MaxSwapFee, MinLiquidity, MinWeight, BASE, BLOCKS_PER_DAY_U32, MILLISECS_PER_BLOCK,
+        MaxSwapFee, MinLiquidity, MinWeight, BASE, BLOCKS_PER_DAY, MILLISECS_PER_BLOCK,
     },
     traits::DisputeApi,
     types::{
@@ -459,7 +459,7 @@ benchmarks! {
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + BLOCKS_PER_DAY_U32.into();
+        let starting_block = frame_system::Pallet::<T>::block_number() + (BLOCKS_PER_DAY as u32).into();
     }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
 
     // Benchmark iteration and market validity check without ending subsidy / discarding market.
