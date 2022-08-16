@@ -84,9 +84,8 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
             oracle_duration: BLOCKS_PER_DAY as u32,
             dispute_duration: BLOCKS_PER_DAY as u32,
         };
-        for (key, market) in
-            storage_iter::<Option<LegacyMarketOf<T>>>(MARKET_COMMONS, MARKETS)
-        {
+        for (key, market) in storage_iter::<Option<LegacyMarketOf<T>>>(MARKET_COMMONS, MARKETS) {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             if let Some(legacy_market) = market {
                 let new_market = Market {
                     creator: legacy_market.creator,
@@ -111,8 +110,6 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
                 );
                 total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             }
-
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
         }
         log::info!("Completed updates of markets");
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();

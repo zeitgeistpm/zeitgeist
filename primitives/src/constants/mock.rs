@@ -3,7 +3,7 @@
 pub use super::*;
 use crate::{
     asset::Asset,
-    types::{Balance, BlockNumber, CurrencyId, Moment},
+    types::{Balance, CurrencyId, Moment},
 };
 use frame_support::{parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;

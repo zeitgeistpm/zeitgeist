@@ -918,12 +918,15 @@ mod pallet {
                 let mut should_check_origin = false;
                 match market.period {
                     MarketPeriod::Block(ref range) => {
-                        let oracle_delay =
+                        let oracle_delay_end =
                             range.end.saturating_add(market.deadlines.oracle_delay.into());
-                        ensure!(current_block > oracle_delay, Error::<T>::NotAllowedToReportYet);
-                        let oracle_duration =
-                            oracle_delay.saturating_add(market.deadlines.oracle_duration.into());
-                        if current_block <= oracle_duration {
+                        ensure!(
+                            oracle_delay_end < current_block,
+                            Error::<T>::NotAllowedToReportYet
+                        );
+                        let oracle_duration_end = oracle_delay_end
+                            .saturating_add(market.deadlines.oracle_duration.into());
+                        if oracle_duration_end >= current_block {
                             should_check_origin = true;
                         }
                     }
@@ -932,15 +935,16 @@ mod pallet {
                             market.deadlines.oracle_delay.into();
                         let oracle_delay_in_ms =
                             oracle_delay_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        let oracle_delay = range.end.saturating_add(oracle_delay_in_ms);
+                        let oracle_delay_end = range.end.saturating_add(oracle_delay_in_ms);
                         let now = T::MarketCommons::now();
-                        ensure!(now > oracle_delay, Error::<T>::NotAllowedToReportYet);
+                        ensure!(oracle_delay_end < now, Error::<T>::NotAllowedToReportYet);
                         let oracle_duration_in_moments: MomentOf<T> =
                             market.deadlines.oracle_duration.into();
                         let oracle_duration_in_ms =
                             oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        let oracle_duration = oracle_delay.saturating_add(oracle_duration_in_ms);
-                        if now <= oracle_duration {
+                        let oracle_duration_end =
+                            oracle_delay_end.saturating_add(oracle_duration_in_ms);
+                        if oracle_duration_end >= now {
                             should_check_origin = true;
                         }
                     }
