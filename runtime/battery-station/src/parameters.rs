@@ -144,9 +144,6 @@ parameter_types! {
     pub const DisputeBond: Balance = 5 * BASE;
     /// `DisputeBond` is increased by this factor after every dispute.
     pub const DisputeFactor: Balance = 2 * BASE;
-    /// After reporting the outcome and after every dispute, the dispute period is extended
-    /// by `DisputePeriod`.
-    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
@@ -160,6 +157,7 @@ parameter_types! {
     /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
+    // Note: ReportingPeriod and DisputePeriod as specified in create_market() extrinsic.
     /// The maximum market period.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
@@ -167,8 +165,6 @@ parameter_types! {
     pub const OracleBond: Balance = 50 * CENT;
     /// Pallet identifier, mainly used for named balance reserves.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
-    /// Timeframe during which the oracle can report the final outcome after the market closed.
-    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as u32;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 50 * CENT;
