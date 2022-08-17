@@ -35,28 +35,22 @@ jobs:
           profile: minimal
           components: rustfmt, clippy, llvm-tools-preview
 
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
       - name: Download grcov
         run: |
           mkdir -p "${HOME}/.local/bin"
           curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.11/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-      
-      - name: Run xtask coverage
-        uses: actions-rs/cargo@v1
-        with:
-          command: xtask
-          args: coverage
+
+      - name: Tests
+        run: ./scripts/tests/${{ matrix.scripts }}.sh
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: coverage/*.lcov
-
-      - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
-
-      - name: Tests
-        run: ./scripts/tests/${{ matrix.scripts }}.sh
+          files: ./misc/*.lcov
 
   fuzz:
     name: Fuzz
@@ -75,26 +69,20 @@ jobs:
           profile: minimal
           components: rustfmt, clippy, llvm-tools-preview
 
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-fuzz
-          use-tool-cache: true
-
       - name: Download grcov
         run: |
           mkdir -p "${HOME}/.local/bin"
           curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.11/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
       
-      - name: Run xtask coverage
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/install@v0.1
         with:
-          command: xtask
-          args: coverage
+          crate: cargo-fuzz
+          use-tool-cache: true
+
+      - run: ./scripts/tests/fuzz.sh
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: coverage/*.lcov
-
-      - run: ./scripts/tests/fuzz.sh
+          files: ./misc/*.lcov
