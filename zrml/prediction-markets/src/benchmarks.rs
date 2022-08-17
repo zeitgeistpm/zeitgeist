@@ -509,13 +509,16 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
+        let market = T::MarketCommons::market(&0_u32.into()).unwrap();
         let outcome = OutcomeReport::Categorical(0);
         let close_origin = T::CloseOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
             .dispatch_bypass_filter(close_origin)?;
     let end: u32 =
         T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
+    let oracle_delay : u32 = market.deadlines.oracle_delay * MILLISECS_PER_BLOCK;
+    let oracle_duration : u32 = market.deadlines.oracle_duration * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay + oracle_duration).into());
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     sell_complete_set {
