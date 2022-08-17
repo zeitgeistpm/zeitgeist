@@ -1,9 +1,27 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 //! Fuzz test: Rikiddo pallet is called with calculated fee
 //!   -> create, force fee by multiple update_volume, cost, price, all_prices, clear, destroy
 #![allow(
     // Mocks are only used for fuzzing and unit tests
     clippy::integer_arithmetic
 )]
+#![allow(clippy::type_complexity)]
 #![no_main]
 
 use arbitrary::Arbitrary;
@@ -34,7 +52,7 @@ fn run_to_block(n: u64) {
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
-    let _ = ext.execute_with(|| {
+    ext.execute_with(|| {
         let mut rikiddo: RikiddoSigmoidMV<
             FixedU128<U33>,
             FixedI128<U33>,
@@ -47,7 +65,7 @@ fuzz_target!(|data: Data| {
         let pool_id = 0;
         let mut current_block = 0;
         let _ = Rikiddo::create(pool_id, rikiddo);
-        let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
+        <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), 0).unwrap();
 
         // Initialize ma_short and ma_long ema
         for (idx, volume) in data.update_volumes.iter().enumerate() {
@@ -56,8 +74,7 @@ fuzz_target!(|data: Data| {
             if idx % 2 == 1 {
                 current_block += 1;
                 run_to_block(current_block);
-                let _ = <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), current_block)
-                    .unwrap();
+                <Runtime as Config>::Timestamp::set(RawOrigin::None.into(), current_block).unwrap();
             }
         }
 

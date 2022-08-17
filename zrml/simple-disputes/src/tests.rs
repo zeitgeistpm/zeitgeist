@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(test)]
 
 use crate::{
@@ -18,7 +35,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     creator_fee: 0,
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    mdm: MarketDisputeMechanism::SimpleDisputes,
+    dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
@@ -32,7 +49,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
 fn on_dispute_denies_non_simple_disputes_markets() {
     ExtBuilder.build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::Court;
+        market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
             SimpleDisputes::on_dispute(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism
@@ -44,7 +61,7 @@ fn on_dispute_denies_non_simple_disputes_markets() {
 fn on_resolution_denies_non_simple_disputes_markets() {
     ExtBuilder.build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::Court;
+        market.dispute_mechanism = MarketDisputeMechanism::Court;
         assert_noop!(
             SimpleDisputes::on_resolution(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveSimpleDisputesMechanism

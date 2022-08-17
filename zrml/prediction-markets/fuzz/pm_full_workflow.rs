@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![no_main]
 
 use arbitrary::Arbitrary;
@@ -12,7 +29,7 @@ use zrml_prediction_markets::mock::{ExtBuilder, Origin, PredictionMarkets, Syste
 
 fuzz_target!(|data: Data| {
     let mut ext = ExtBuilder::default().build();
-    let _ = ext.execute_with(|| {
+    ext.execute_with(|| {
         let _ = PredictionMarkets::on_initialize(1);
         System::set_block_number(1);
 
@@ -23,7 +40,7 @@ fuzz_target!(|data: Data| {
             data.create_scalar_market_metadata,
             market_creation(data.create_scalar_market_creation),
             MarketType::Scalar(data.create_scalar_market_outcome_range),
-            market_dispute_mechanism(data.create_scalar_market_mdm),
+            market_dispute_mechanism(data.create_scalar_market_dispute_mechanism),
             ScoringRule::CPMM,
         );
 
@@ -75,7 +92,7 @@ struct Data {
     create_scalar_market_metadata: MultiHash,
     create_scalar_market_creation: u8,
     create_scalar_market_outcome_range: RangeInclusive<u128>,
-    create_scalar_market_mdm: u8,
+    create_scalar_market_dispute_mechanism: u8,
 
     buy_complete_set_origin: u8,
     buy_complete_set_market_id: u8,

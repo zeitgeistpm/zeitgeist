@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 //! # Common market parameters used by `Simple disputes` and `Prediction markets` pallets.
 //!
 //! As stated by the contract of `MarketCommonsPalletApi::now`, the caller must ensure that the
@@ -8,6 +25,9 @@
 extern crate alloc;
 
 mod market_commons_pallet_api;
+pub mod migrations;
+mod mock;
+mod tests;
 
 pub use market_commons_pallet_api::MarketCommonsPalletApi;
 pub use pallet::*;
@@ -18,19 +38,21 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
+        ensure,
         pallet_prelude::{StorageMap, StorageValue, ValueQuery},
+        storage::PrefixIterator,
         traits::{Hooks, NamedReservableCurrency, StorageVersion, Time},
         Blake2_128Concat, Parameter,
     };
     use parity_scale_codec::MaxEncodedLen;
     use sp_runtime::{
-        traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member},
+        traits::{AtLeast32Bit, CheckedAdd, MaybeSerializeDeserialize, Member, Saturating},
         ArithmeticError, DispatchError,
     };
     use zeitgeist_primitives::types::{Market, PoolId};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
@@ -66,6 +88,10 @@ mod pallet {
         /// It is not possible to fetch the latest market ID when
         /// no market has been created.
         NoMarketHasBeenCreated,
+        /// Market does not have a report
+        NoReport,
+        /// There's a pool registered for this market already.
+        PoolAlreadyExists,
     }
 
     #[pallet::hooks]
@@ -86,12 +112,9 @@ mod pallet {
         //
         // Returns `Err` if `MarketId` addition overflows.
         fn next_market_id() -> Result<T::MarketId, DispatchError> {
-            let id = if let Ok(current) = MarketCounter::<T>::try_get() {
-                current.checked_add(&T::MarketId::from(1u8)).ok_or(ArithmeticError::Overflow)?
-            } else {
-                T::MarketId::from(0u8)
-            };
-            <MarketCounter<T>>::put(id);
+            let id = MarketCounter::<T>::get();
+            let new_counter = id.checked_add(&1u8.into()).ok_or(ArithmeticError::Overflow)?;
+            <MarketCounter<T>>::put(new_counter);
             Ok(id)
         }
     }
@@ -110,7 +133,19 @@ mod pallet {
         // Market
 
         fn latest_market_id() -> Result<Self::MarketId, DispatchError> {
-            <MarketCounter<T>>::try_get().map_err(|_err| Error::<T>::NoMarketHasBeenCreated.into())
+            match <MarketCounter<T>>::try_get() {
+                Ok(market_id) => {
+                    Ok(market_id.saturating_sub(1u8.into())) // Note: market_id > 0!
+                }
+                _ => Err(Error::<T>::NoMarketHasBeenCreated.into()),
+            }
+        }
+
+        fn market_iter() -> PrefixIterator<(
+            Self::MarketId,
+            Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        )> {
+            <Markets<T>>::iter()
         }
 
         fn market(
@@ -153,13 +188,16 @@ mod pallet {
 
         // MarketPool
 
-        fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) {
+        fn insert_market_pool(market_id: Self::MarketId, pool_id: PoolId) -> DispatchResult {
+            ensure!(!<MarketPool<T>>::contains_key(market_id), Error::<T>::PoolAlreadyExists);
+            ensure!(<Markets<T>>::contains_key(market_id), Error::<T>::MarketDoesNotExist);
             <MarketPool<T>>::insert(market_id, pool_id);
+            Ok(())
         }
 
         fn remove_market_pool(market_id: &Self::MarketId) -> DispatchResult {
-            if !<Markets<T>>::contains_key(market_id) {
-                return Err(Error::<T>::MarketDoesNotExist.into());
+            if !<MarketPool<T>>::contains_key(market_id) {
+                return Err(Error::<T>::MarketPoolDoesNotExist.into());
             }
             <MarketPool<T>>::remove(market_id);
             Ok(())

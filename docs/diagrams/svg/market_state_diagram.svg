@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css" height="1760.4167px" preserveAspectRatio="none" style="width:883px;height:1760px;background:#00000000;" version="1.1" viewBox="0 0 883 1760" width="883.3333px" zoomAndPan="magnify"><defs><linearGradient id="ghunlab3fjcp0" x1="50%" x2="50%" y1="0%" y2="100%"><stop offset="0%" stop-color="#4DABF5"/><stop offset="100%" stop-color="#2196F3"/></linearGradient><filter height="300%" id="fhunlab3fjcp" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0833333333333335"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.166666666666667" dy="4.166666666666667" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter><linearGradient id="ghunlab3fjcp1" x1="50%" x2="50%" y1="0%" y2="100%"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#FFFFFF"/></linearGradient></defs><g><g id="Active"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="168.75" x="310.5583" y="900"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="310.5583" x2="479.3083" y1="944.5882" y2="944.5882"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="37.5" x="376.1833" y="926.2609">Active</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="127.0833" x="326.1833" y="970.8491">Market can be traded</text></g><g id="Closed"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="130.2083" x="329.8292" y="1088.5417"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="329.8292" x2="460.0375" y1="1133.1299" y2="1133.1299"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="40.625" x="374.6208" y="1114.8026">Closed</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="88.5417" x="345.4542" y="1159.3908">Trading is over</text></g><g id="CollectingSubsidy"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="218.75" x="507.4333" y="587.5"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="507.4333" x2="726.1833" y1="632.0882" y2="632.0882"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="105.2083" x="564.2042" y="613.7609">CollectingSubsidy</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="177.0833" x="523.0583" y="658.3491">Rikiddo market needs funding</text></g><g id="Disputed"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="206.25" x="131.3917" y="1465.625"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="131.3917" x2="337.6417" y1="1510.2132" y2="1510.2132"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="53.125" x="207.9542" y="1491.8859">Disputed</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="164.5833" x="147.0167" y="1536.4741">Market outcome is disputed</text></g><g id="InsufficientSubsidy"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="311.4583" x="524.6208" y="900"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="524.6208" x2="836.0792" y1="944.5882" y2="944.5882"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="111.4583" x="624.6208" y="926.2609">InsufficientSubsidy</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="269.7917" x="540.2458" y="970.8491">Market suspended due to insufficient subsidy</text></g><g id="Proposed"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="311.4583" x="90.2458" y="260.4167"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="90.2458" x2="401.7042" y1="305.0049" y2="305.0049"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="54.1667" x="218.8917" y="286.6776">Proposed</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="269.7917" x="105.8708" y="331.2658">Market has to be approved by ApproveOrigin</text></g><g id="Reported"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="206.25" x="291.8083" y="1277.0833"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="291.8083" x2="498.0583" y1="1321.6715" y2="1321.6715"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="54.1667" x="367.85" y="1303.3442">Reported</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="164.5833" x="307.4333" y="1347.9324">Market outcome is reported</text></g><g id="Resolved"><rect fill="url(#ghunlab3fjcp0)" filter="url(#fhunlab3fjcp)" height="89.1764" rx="4.1667" ry="4.1667" style="stroke:#1A78C2;stroke-width:1.0416666666666667;" width="137.5" x="309.5167" y="1654.1667"/><line style="stroke:#1A78C2;stroke-width:1.0416666666666667;" x1="309.5167" x2="447.0167" y1="1698.7549" y2="1698.7549"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="55.2083" x="350.6625" y="1680.4276">Resolved</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="11.4583" lengthAdjust="spacing" textLength="95.8333" x="325.1417" y="1725.0158">Market resolved</text></g><g id="elem_cpmm_or_rikiddo"><polygon fill="url(#ghunlab3fjcp1)" filter="url(#fhunlab3fjcp)" points="415.7667,463.5417,428.2667,476.0417,415.7667,488.5417,403.2667,476.0417,415.7667,463.5417" style="stroke:#CCCCCC;stroke-width:1.0416666666666667;"/></g><g id="elem_advised_or_proposed_cpmm"><polygon fill="url(#ghunlab3fjcp1)" filter="url(#fhunlab3fjcp)" points="391.8083,136.4583,404.3083,148.9583,391.8083,161.4583,379.3083,148.9583,391.8083,136.4583" style="stroke:#CCCCCC;stroke-width:1.0416666666666667;"/></g><g id="elem_enough_subsidy"><polygon fill="url(#ghunlab3fjcp1)" filter="url(#fhunlab3fjcp)" points="680.35,776.0417,692.85,788.5417,680.35,801.0417,667.85,788.5417,680.35,776.0417" style="stroke:#CCCCCC;stroke-width:1.0416666666666667;"/></g><ellipse cx="391.8083" cy="27.0833" fill="#1A78C2" filter="url(#fhunlab3fjcp)" rx="10.4167" ry="10.4167" style="stroke:none;stroke-width:1.0416666666666667;"/><ellipse cx="36.6" cy="476.0417" fill="none" filter="url(#fhunlab3fjcp)" rx="10.4167" ry="10.4167" style="stroke:#9C27B0;stroke-width:1.0416666666666667;"/><ellipse cx="37.1208" cy="476.5625" fill="#9C27B0" rx="6.25" ry="6.25" style="stroke:none;stroke-width:1.0416666666666667;"/><!--MD5=[18d8861ef9d73ddcf158f3d4f0d05d8f]
+link *start to advised_or_proposed_cpmm--><g id="link_*start_advised_or_proposed_cpmm"><path d="M391.8083,37.5208 C391.8083,57.625 391.8083,105.0417 391.8083,130.6979 " fill="none" id="*start-to-advised_or_proposed_cpmm" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="391.8083,136.125,396.0018,126.7619,391.8232,130.9167,387.6685,126.7381,391.8083,136.125" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="89.5833" x="403.2667" y="91.8111">Create market</text></g><!--MD5=[a8b64327f115805955555e24179f7d12]
+link advised_or_proposed_cpmm to cpmm_or_rikiddo--><g id="link_advised_or_proposed_cpmm_cpmm_or_rikiddo"><path d="M403.501,149.9583 C428.8479,150.5833 488.6698,156.0729 514.725,192.7083 C576.4375,279.4792 573.2292,343.3229 514.725,432.2917 C496.2437,460.3958 454.9219,470.0938 431.95,473.375 " fill="none" id="advised_or_proposed_cpmm-to-cpmm_or_rikiddo" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="426.5302,474.0729,436.364,476.9965,431.6951,473.4016,435.29,468.7327,426.5302,474.0729" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="287.5" x="572.0167" y="310.0403">[creation == MarketCreation::Permissionless]</text></g><!--MD5=[52441d3fc32d9155e17f1b1c8eaa0165]
+link advised_or_proposed_cpmm to Proposed--><g id="link_advised_or_proposed_cpmm_Proposed"><path d="M381.6406,151.3333 C350.9042,155.5937 260.0125,169.9375 242.85,192.7083 C229.6937,210.1667 228.7531,233.9167 231.8104,255 " fill="none" id="advised_or_proposed_cpmm-to-Proposed" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="232.6687,260.3021,235.2818,250.3812,231.8354,255.1608,227.0558,251.7145,232.6687,260.3021" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="244.7917" x="254.3083" y="215.7694">[creation == MarketCreation::Advised]</text></g><!--MD5=[72068cf5e222d2e92667e6718a188aec]
+link cpmm_or_rikiddo to Active--><g id="link_cpmm_or_rikiddo_Active"><path d="M413.9302,486.7292 C408.0135,518.3437 389.4885,621.7917 383.475,708.3333 C382.3521,724.4979 383.0094,728.5948 383.475,744.7917 C384.9458,795.9281 388.5406,854.3667 391.3146,894.6125 " fill="none" id="cpmm_or_rikiddo-to-Active" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="391.6833,899.9208,395.1889,890.2791,391.3217,894.7251,386.8757,890.8578,391.6833,899.9208" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="234.375" x="394.9333" y="731.3944">[scoring_rule == ScoringRule::CPMM]</text></g><!--MD5=[f86576a474c9d56903b0b50e5f0994f0]
+link cpmm_or_rikiddo to CollectingSubsidy--><g id="link_cpmm_or_rikiddo_CollectingSubsidy"><path d="M422.4552,482.2083 C442.8917,497.8854 506.0854,546.3438 554.926,583.7917 " fill="none" id="cpmm_or_rikiddo-to-CollectingSubsidy" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="559.3073,587.1563,554.3996,578.147,555.173,583.9886,549.3314,584.7619,559.3073,587.1563" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="244.7917" x="528.2667" y="542.8528">[scoring_rule == ScoringRule::Rikiddo]</text></g><!--MD5=[d1358368f14ec8335cbb118ed06032ee]
+link Proposed to cpmm_or_rikiddo--><g id="link_Proposed_cpmm_or_rikiddo"><path d="M252.1896,350.2396 C258.1312,377.1562 269.6427,410.5 291.8083,432.2917 C321.8375,461.8125 373.2042,470.9688 399.3833,473.7812 " fill="none" id="Proposed-to-cpmm_or_rikiddo" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="404.8708,474.3125,395.944,469.2565,399.687,473.8075,395.136,477.5506,404.8708,474.3125" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="195.8333" x="303.2667" y="411.6028">ApproveOrigin accepts market</text></g><!--MD5=[5160b5791cfe4c27fe789cf1c1697092]
+link Proposed to *end--><g id="link_Proposed_*end"><path d="M90.1164,337.7708 C69.5543,348.3438 51.0089,362.4583 37.6417,381.25 C20.8274,404.8958 26.9223,441.0625 32.1761,460.8542 " fill="none" id="Proposed-to-*end" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="33.6159,465.9687,35.1102,455.8189,32.2164,460.952,27.0833,458.0582,33.6159,465.9687" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="189.5833" x="49.1" y="404.3111">RejectOrigin rejects market</text><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="168.75" x="63.6833" y="418.8619">or approval period passes</text></g><!--MD5=[d9af3b419773b2a564027e69a5e814a0]
+link CollectingSubsidy to enough_subsidy--><g id="link_CollectingSubsidy_enough_subsidy"><path d="M634.8469,677.0938 C648.4437,710.0896 666.1969,753.1615 674.9656,774.4375 " fill="none" id="CollectingSubsidy-to-enough_subsidy" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="676.9937,779.3573,677.2756,769.1019,675.01,774.5415,669.5704,772.2759,676.9937,779.3573" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="176.0417" x="673.0583" y="731.3944">Market trading period starts</text></g><!--MD5=[00ac8c90561e5880148ea3556475a294]
+link enough_subsidy to Active--><g id="link_enough_subsidy_Active"><path d="M668.6771,789.6896 C637.3667,790.476 549.8229,796.0031 489.725,832.2917 C463.9365,847.8635 441.6979,872.9271 425.2552,895.3469 " fill="none" id="enough_subsidy-to-Active" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="422.0448,899.7927,430.9117,894.6322,425.0943,895.5705,424.1561,889.7531,422.0448,899.7927" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="159.375" x="501.1833" y="855.3528">[subsidy =&gt; MinSubsidy]</text></g><!--MD5=[b28e49d736ff51ef4520c1dd3977963e]
+link enough_subsidy to InsufficientSubsidy--><g id="link_enough_subsidy_InsufficientSubsidy"><path d="M680.35,801.1708 C680.35,820.7792 680.35,861.5875 680.35,894.5406 " fill="none" id="enough_subsidy-to-InsufficientSubsidy" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="680.35,899.7573,684.5167,890.3823,680.35,894.549,676.1833,890.3823,680.35,899.7573" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="148.9583" x="691.8083" y="855.3528">[subsidy &lt; MinSubsidy]</text></g><!--MD5=[b768e549d97c6d09413d52451a882c13]
+link Active to Closed--><g id="link_Active_Closed"><path d="M394.9333,990.0219 C394.9333,1018.0031 394.9333,1054.224 394.9333,1083.1146 " fill="none" id="Active-to-Closed" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="394.9333,1088.4208,399.1,1079.0458,394.9333,1083.2125,390.7667,1079.0458,394.9333,1088.4208" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="123.9583" x="406.3917" y="1043.8944">Market period ends</text></g><!--MD5=[aa8b0d087a7ef2a5baaaadceadce49f9]
+link Closed to Reported--><g id="link_Closed_Reported"><path d="M394.9333,1178.5635 C394.9333,1206.5448 394.9333,1242.7656 394.9333,1271.6563 " fill="none" id="Closed-to-Reported" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="394.9333,1276.9625,399.1,1267.5875,394.9333,1271.7542,390.7667,1267.5875,394.9333,1276.9625" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="361.4583" x="406.3917" y="1232.4361">Outcome reported by oracle or after timeout by anybody</text></g><!--MD5=[014c23bfd69a9e46379179b2d9f143a4]
+link Reported to Disputed--><g id="link_Reported_Disputed"><path d="M291.7823,1359.6812 C275.2917,1369.7417 260.074,1382.3135 249.1,1397.9167 C236.525,1415.7958 232.1625,1439.3667 231.2323,1460.226 " fill="none" id="Reported-to-Disputed" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="231.0677,1465.4656,235.5269,1456.2262,231.2314,1460.2599,227.1977,1455.9643,231.0677,1465.4656" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="228.125" x="260.5583" y="1420.9778">Dispute started within DisputePeriod</text></g><!--MD5=[cd0d785d00fb30cfb7b9f32466ea54f1]
+link Reported to Resolved--><g id="link_Reported_Resolved"><path d="M478.575,1366.6792 C488.9104,1375.6135 498.0302,1386 504.3083,1397.9167 C550.9167,1486.3906 553.7375,1535.9865 504.3083,1622.9167 C492.549,1643.5983 472.5833,1659.1739 451.9687,1670.6156 " fill="none" id="Reported-to-Resolved" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="447.2833,1673.1411,457.5128,1672.3598,451.8678,1670.6695,453.5581,1665.0246,447.2833,1673.1411" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="247.9167" x="552.225" y="1515.2486">No dispute started within DisputePeriod</text></g><!--MD5=[b052f21181e20ee087efaf73dcf65008]
+link Disputed to Resolved--><g id="link_Disputed_Resolved"><path d="M219.6062,1555.3917 C214.9583,1577.2021 213.8354,1603.0604 226.1833,1622.9167 C243.524,1650.8034 274.6281,1668.6276 304.2083,1679.8636 " fill="none" id="Disputed-to-Resolved" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="309.324,1681.7482,301.9674,1674.5975,304.4367,1679.9477,299.0866,1682.417,309.324,1681.7482" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="251.0417" x="237.6417" y="1609.5194">DisputePeriod passed after first dispute</text></g><!--MD5=[1dd4b60283bfac687c6103bbffa9b0d4]
+@startuml
+!theme materia
+
+'States
+state Active : Market can be traded
+state Closed : Trading is over
+state CollectingSubsidy : Rikiddo market needs funding
+state Disputed: Market outcome is disputed
+state InsufficientSubsidy : Market suspended due to insufficient subsidy
+state Proposed : Market has to be approved by ApproveOrigin
+state Reported : Market outcome is reported
+state Resolved : Market resolved
+
+'Choices
+state cpmm_or_rikiddo <<choice>>
+state advised_or_proposed_cpmm <<choice>>
+state enough_subsidy <<choice>>
+
+'Create market
+[*] - -> advised_or_proposed_cpmm : Create market
+advised_or_proposed_cpmm - -> cpmm_or_rikiddo : [creation == MarketCreation::Permissionless]
+advised_or_proposed_cpmm - -> Proposed : [creation == MarketCreation::Advised]
+
+cpmm_or_rikiddo - -> Active : [scoring_rule == ScoringRule::CPMM]
+cpmm_or_rikiddo - -> CollectingSubsidy : [scoring_rule == ScoringRule::Rikiddo]
+
+'Delete or activate a market
+Proposed - -> cpmm_or_rikiddo : ApproveOrigin accepts market
+Proposed - -> [*] : RejectOrigin rejects market \n or approval period passes
+
+CollectingSubsidy - -> enough_subsidy : Market trading period starts
+enough_subsidy - -> Active : [subsidy => MinSubsidy]
+enough_subsidy - -> InsufficientSubsidy : [subsidy < MinSubsidy]
+
+'Report market
+Active - -> Closed: Market period ends
+Closed - -> Reported : Outcome reported by oracle or after timeout by anybody
+
+'Dispute or resolve directly
+Reported - -> Disputed : Dispute started within DisputePeriod
+Reported - -> Resolved : No dispute started within DisputePeriod
+
+'Disputed market resolves
+Disputed - -> Resolved : DisputePeriod passed after first dispute
+@enduml
+
+@startuml
+
+
+
+skinparam backgroundColor transparent
+skinparam useBetaStyle false
+
+
+
+
+
+
+<style>
+  root {
+    BackgroundColor transparent
+    FontColor #FFF
+    HyperLinkColor #fd7e14
+    LineColor #1a78c2
+    LineThickness 1
+    Margin 10
+    Padding 6
+    Shadowing 0.0
+  }
+  node {
+   Padding 15
+   roundcorner 20
+   BackgroundColor #2196F3-#1a78c2
+  }
+  caption {
+    LineThickness 0
+  }
+  footer {
+    LineThickness 0
+  }
+  groupHeader {
+    BackgroundColor #fff
+    FontColor #9C27B0
+    FontStyle bold
+  }
+  header {
+    LineThickness 0
+  }
+  referenceHeader {
+    BackgroundColor transparent
+    FontColor #222
+    FontStyle bold
+  }
+  separator {
+    BackgroundColor #222
+    FontColor transparent
+    FontStyle bold
+  }
+  title {
+	FontSize 20
+	BorderRoundCorner            8
+	BorderThickness 	         1
+	BackgroundColor  #fff-#fff
+	FontColor #2196F3
+	BorderColor #fff
+  }
+  nwdiagDiagram {
+	network {
+			FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3    
+		LineColor #2196F3
+		LineThickness 1.0
+		FontColor #1a78c2
+	}
+	server {
+			FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	}
+	arrow {
+		FontColor #1a78c2
+		LineColor #1a78c2
+	}
+	group {
+		BackGroundColor #fff
+		LineColor $LIGHT_DARK
+		LineThickness 2.0
+		Margin 5
+		Padding 5
+	}
+  }
+  ganttDiagram {
+	task {
+			FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+		LineColor #2196F3
+		Margin 10
+		Padding 6
+	}
+	note {
+		FontColor #FFF
+		LineColor #7D1F8D
+		BackGroundColor #9C27B0
+	}
+	separator {
+		LineColor #fff
+		BackGroundColor #fff-#cccccc
+		FontColor #222
+	}
+	milestone {
+		FontColor #9C27B0
+		FontSize 16
+		FontStyle italic
+		BackGroundColor #fff
+		LineColor #cccccc
+	}
+	timeline {
+		BackgroundColor #fff
+		FontColor #222
+	}
+	closed {
+		BackgroundColor #CC7A00
+		FontColor #FFF
+	}
+  }
+</style>
+skinparam defaultFontName       "Verdana"
+skinparam defaultFontSize       12
+skinparam dpi                   100
+skinparam shadowing             true
+skinparam roundcorner           8
+skinparam ParticipantPadding    40
+skinparam BoxPadding            40
+skinparam Padding               10
+skinparam ArrowColor            #666
+skinparam stereotype {
+    CBackgroundColor #fff
+    CBorderColor #cccccc
+    ABackgroundColor #70bf73
+    ABorderColor #3D8C40
+    IBackgroundColor #B7161C
+    IBorderColor #b7161c
+    EBackgroundColor #ffad33
+    EBorderColor #CC7A00
+    NBackgroundColor #b052c0
+    NBorderColor #7D1F8D
+}
+skinparam title {
+	FontColor	                 #2196F3
+	BorderColor	                 #cccccc
+	FontSize	    	         20
+	BorderRoundCorner            8
+	BorderThickness 	         1
+	BackgroundColor              #fff-#fff
+}
+
+skinparam legend {
+	BackgroundColor #fff
+	BorderColor #cccccc
+	FontColor #222
+}
+
+skinparam swimlane {
+	BorderColor #9C27B0
+	BorderThickness 2
+	TitleBackgroundColor  #fff-#fff
+	TitleFontColor #2196F3
+}
+
+
+skinparam activity {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	BarColor #4CAF50
+	StartColor #9C27B0
+	EndColor #9C27B0
+	DiamondBackgroundColor #FFF-#fff
+  	DiamondBorderColor #cccccc
+	DiamondFontColor #222
+}
+
+
+skinparam participant {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	ParticipantBorderThickness 2
+}
+
+
+skinparam actor {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	FontColor #222
+}
+
+
+skinparam arrow {
+	Thickness 3
+	Color #2196F3
+	FontColor #222
+}
+
+
+skinparam sequence {
+	BorderColor #2196F3
+	TitleFontColor #2196F3
+	BackgroundColor transparent
+	StartColor #2196F3
+	EndColor #2196F3
+	BoxBackgroundColor #fff
+	BoxBorderColor #666
+	BoxFontColor #222
+	DelayFontColor #222
+	LifeLineBorderColor #cccccc
+	LifeLineBorderThickness 2
+	LifeLineBackgroundColor #fff
+	GroupBorderColor #666
+	GroupFontColor #222
+	GroupHeaderFontColor #9C27B0
+	DividerBackgroundColor #FFF-#fff
+    DividerBorderColor #666
+    DividerBorderThickness 2
+    DividerFontColor #222
+	ReferenceBackgroundColor transparent
+	ReferenceBorderColor #666
+	ReferenceFontColor #222
+	ReferenceHeaderFontColor #9C27B0
+	StereotypeFontColor #FFF
+}
+
+
+skinparam partition {
+	BorderColor #2196F3
+	FontColor #2196F3
+	BackgroundColor transparent
+}
+
+
+skinparam collections {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+}
+
+
+skinparam control {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	FontColor #222
+}
+
+
+skinparam entity {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	FontColor #222
+}
+
+
+skinparam boundary {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	FontColor #222
+}
+
+
+skinparam agent {
+	BackgroundColor #orange
+	BorderColor #999999
+	FontColor #333333
+}
+
+
+skinparam note {
+	BorderThickness 1
+	BackgroundColor #b052c0-#9C27B0
+	BorderColor #9C27B0
+	FontColor #FFF
+}
+
+
+skinparam artifact {
+	BackgroundColor #FFF-#fff
+	BorderColor #666
+	FontColor #666
+}
+
+
+skinparam component {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+}
+
+
+skinparam interface {
+	BackgroundColor  #B7161C
+	BorderColor  #e51c23
+	FontColor #222
+}
+
+
+skinparam storage {
+	BackgroundColor #ffad33-#ff9800
+  	BorderColor #ff9800
+	FontColor #FFF
+}
+
+
+skinparam node {
+	BackgroundColor #fff-#fff
+	BorderColor #222
+	FontColor #222
+}
+
+
+skinparam cloud {
+	BackgroundColor #F2FCFE-#eeeeee
+	BorderColor #F2FCFE
+	FontColor #222
+}
+
+
+skinparam database {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	FontColor #222
+}
+
+
+skinparam class {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	HeaderBackgroundColor #2196F3-#1a78c2
+	StereotypeFontColor #222
+	BorderThickness 1
+	AttributeFontColor #fff
+	AttributeFontSize 11
+}
+
+
+skinparam object {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	StereotypeFontColor #222
+	BorderThickness 1
+	AttributeFontColor #222
+	AttributeFontSize 11
+}
+
+
+skinparam usecase {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	BorderThickness 2
+	StereotypeFontColor #2196F3
+}
+
+
+skinparam rectangle {
+	FontColor #2196F3
+	BackgroundColor #fff-#fff
+	BorderThickness 2
+	StereotypeFontColor #2196F3
+}
+
+
+skinparam package {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	BackgroundColor #fff-#fff
+	BorderThickness 2
+}
+
+
+skinparam folder {
+	BackgroundColor #FFF-#fff
+  	BorderColor #ff9800
+	FontColor #ff9800
+	BorderThickness 2
+}
+
+
+skinparam frame {
+	BackgroundColor #FFF-#fff
+  	BorderColor #9C27B0
+	FontColor #9C27B0
+	BorderThickness 2
+}
+
+
+skinparam state {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+	BorderColor #1a78c2
+	StartColor #9C27B0
+	EndColor #9C27B0
+	AttributeFontColor #222
+	AttributeFontSize 11
+}
+
+
+skinparam queue {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+}
+
+
+skinparam card {
+	BackgroundColor #b052c0-#9C27B0
+	BorderColor #9C27B0
+	FontColor #FFF
+}
+
+
+skinparam file {
+	BackgroundColor #fff-#fff
+	BorderColor #666
+	FontColor #666
+
+}
+
+
+skinparam stack {
+		FontColor #FFF
+	BorderColor #2196F3
+	BackgroundColor #4dabf5-#2196F3
+}
+
+state Active : Market can be traded
+state Closed : Trading is over
+state CollectingSubsidy : Rikiddo market needs funding
+state Disputed: Market outcome is disputed
+state InsufficientSubsidy : Market suspended due to insufficient subsidy
+state Proposed : Market has to be approved by ApproveOrigin
+state Reported : Market outcome is reported
+state Resolved : Market resolved
+
+state cpmm_or_rikiddo <<choice>>
+state advised_or_proposed_cpmm <<choice>>
+state enough_subsidy <<choice>>
+
+[*] - -> advised_or_proposed_cpmm : Create market
+advised_or_proposed_cpmm - -> cpmm_or_rikiddo : [creation == MarketCreation::Permissionless]
+advised_or_proposed_cpmm - -> Proposed : [creation == MarketCreation::Advised]
+
+cpmm_or_rikiddo - -> Active : [scoring_rule == ScoringRule::CPMM]
+cpmm_or_rikiddo - -> CollectingSubsidy : [scoring_rule == ScoringRule::Rikiddo]
+
+Proposed - -> cpmm_or_rikiddo : ApproveOrigin accepts market
+Proposed - -> [*] : RejectOrigin rejects market \n or approval period passes
+
+CollectingSubsidy - -> enough_subsidy : Market trading period starts
+enough_subsidy - -> Active : [subsidy => MinSubsidy]
+enough_subsidy - -> InsufficientSubsidy : [subsidy < MinSubsidy]
+
+Active - -> Closed: Market period ends
+Closed - -> Reported : Outcome reported by oracle or after timeout by anybody
+
+Reported - -> Disputed : Dispute started within DisputePeriod
+Reported - -> Resolved : No dispute started within DisputePeriod
+
+Disputed - -> Resolved : DisputePeriod passed after first dispute
+@enduml
+
+PlantUML version 1.2022.6beta5(Unknown compile time)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

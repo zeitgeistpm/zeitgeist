@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 //! # Authorized
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -34,7 +51,7 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -58,7 +75,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
-            if let MarketDisputeMechanism::Authorized(ref account_id) = market.mdm {
+            if let MarketDisputeMechanism::Authorized(ref account_id) = market.dispute_mechanism {
                 if account_id != &who {
                     return Err(Error::<T>::NotAuthorizedForThisMarket.into());
                 }
@@ -172,7 +189,7 @@ where
         creator_fee: 0,
         creator: T::PalletId::get().into_account(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
-        mdm: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
+        dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized(ai),
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),

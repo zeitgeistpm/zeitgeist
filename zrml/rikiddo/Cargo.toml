@@ -23,6 +23,7 @@ mock = [
     "pallet-balances",
     "pallet-timestamp",
     "sp-io",
+    "zeitgeist-primitives/mock",
 ]
 std = [
     "frame-support/std",
@@ -33,9 +34,12 @@ std = [
     "substrate-fixed/std",
     "zeitgeist-primitives/std",
 ]
+try-runtime = [
+  "frame-support/try-runtime",
+]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-rikiddo"
-version = "0.3.2"
+version = "0.3.5"

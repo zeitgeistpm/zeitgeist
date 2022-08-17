@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{pool::ScoringRule, types::OutcomeReport};
 use alloc::vec::Vec;
 use core::ops::{Range, RangeInclusive};
@@ -10,7 +27,7 @@ use sp_runtime::RuntimeDebug;
 /// * `AI`: Account Id
 /// * `BN`: Block Number
 /// * `M`: Moment (Time moment)
-#[derive(Clone, Decode, Encode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Market<AI, BN, M> {
     /// Creator of this market.
     pub creator: AI,
@@ -36,7 +53,7 @@ pub struct Market<AI, BN, M> {
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
-    pub mdm: MarketDisputeMechanism<AI>,
+    pub dispute_mechanism: MarketDisputeMechanism<AI>,
 }
 
 impl<AI, BN, M> Market<AI, BN, M> {
@@ -89,7 +106,7 @@ where
 }
 
 /// Defines the type of market creation.
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum MarketCreation {
     // A completely permissionless market that requires a higher
     // validity bond. May resolve as `Invalid`.
@@ -99,7 +116,7 @@ pub enum MarketCreation {
     Advised,
 }
 
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct MarketDispute<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
@@ -107,7 +124,7 @@ pub struct MarketDispute<AccountId, BlockNumber> {
 }
 
 /// How a market should resolve disputes
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum MarketDisputeMechanism<AI> {
     Authorized(AI),
     Court,
@@ -135,7 +152,7 @@ pub enum MarketPeriod<BN, M> {
 impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> {
     fn max_encoded_len() -> usize {
         // Since it is an enum, the biggest element is the only one of interest here.
-        BN::max_encoded_len().max(M::max_encoded_len()).saturating_mul(2)
+        BN::max_encoded_len().max(M::max_encoded_len()).saturating_mul(2).saturating_add(1)
     }
 }
 
@@ -166,7 +183,7 @@ pub enum MarketStatus {
 
 /// Defines the type of market.
 /// All markets also have themin_assets_out `Invalid` resolution.
-#[derive(Clone, Decode, Encode, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum MarketType {
     /// A market with a number of categorical outcomes.
     Categorical(u16),
@@ -176,11 +193,11 @@ pub enum MarketType {
 
 impl MaxEncodedLen for MarketType {
     fn max_encoded_len() -> usize {
-        u128::max_encoded_len().saturating_mul(2)
+        u128::max_encoded_len().saturating_mul(2).saturating_add(1)
     }
 }
 
-#[derive(Clone, Decode, Encode, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Report<AccountId, BlockNumber> {
     pub at: BlockNumber,
     pub by: AccountId,
@@ -271,8 +288,21 @@ mod tests {
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,
-            mdm: MarketDisputeMechanism::Authorized(9),
+            dispute_mechanism: MarketDisputeMechanism::Authorized(9),
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
+    }
+    #[test]
+    fn max_encoded_len_market_type() {
+        // `MarketType::Scalar` is the largest enum variant.
+        let market_type = MarketType::Scalar(1u128..=2);
+        let len = parity_scale_codec::Encode::encode(&market_type).len();
+        assert_eq!(MarketType::max_encoded_len(), len);
+    }
+    #[test]
+    fn max_encoded_len_market_period() {
+        let market_period: MarketPeriod<u32, u32> = MarketPeriod::Block(Default::default());
+        let len = parity_scale_codec::Encode::encode(&market_period).len();
+        assert_eq!(MarketPeriod::<u32, u32>::max_encoded_len(), len);
     }
 }

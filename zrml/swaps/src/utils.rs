@@ -1,3 +1,26 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the license above but
+// published without copyright notice by Balancer Labs
+// (<https://balancer.finance>, contact@balancer.finance) in the
+// balancer-core repository
+// <https://github.com/balancer-labs/balancer-core>.
+
 use crate::{
     check_arithm_rslt::CheckArithmRslt,
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
@@ -30,17 +53,17 @@ where
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
     let pool_account = Pallet::<T>::pool_account_id(p.pool_id);
 
-    let asset_balance = T::Shares::free_balance(p.asset, &pool_account);
+    let asset_balance = T::AssetManager::free_balance(p.asset, &pool_account);
     (p.ensure_balance)(asset_balance)?;
 
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
-    let total_issuance = T::Shares::total_issuance(pool_shares_id);
+    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
     Pallet::<T>::burn_pool_shares(p.pool_id, &p.who, pool_amount)?;
-    T::Shares::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
+    T::AssetManager::transfer(p.asset, &pool_account, &p.who, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         asset: p.asset,
@@ -67,16 +90,16 @@ where
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
     let pool_account_id = Pallet::<T>::pool_account_id(p.pool_id);
-    let total_issuance = T::Shares::total_issuance(pool_shares_id);
+    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
-    let asset_balance = T::Shares::free_balance(p.asset, p.pool_account_id);
+    let asset_balance = T::AssetManager::free_balance(p.asset, p.pool_account_id);
 
     let asset_amount = (p.asset_amount)(asset_balance, total_issuance)?;
     let pool_amount = (p.pool_amount)(asset_balance, total_issuance)?;
 
     Pallet::<T>::mint_pool_shares(p.pool_id, &p.who, pool_amount)?;
-    T::Shares::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
+    T::AssetManager::transfer(p.asset, &p.who, &pool_account_id, asset_amount)?;
 
     (p.event)(PoolAssetEvent {
         asset: p.asset,
@@ -100,18 +123,17 @@ where
 {
     ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
-    let total_issuance = T::Shares::total_issuance(pool_shares_id);
+    let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
-    let ratio: BalanceOf<T> =
-        bdiv(p.pool_amount.saturated_into(), total_issuance.saturated_into())?.saturated_into();
+    let ratio = bdiv(p.pool_amount.saturated_into(), total_issuance.saturated_into())?;
     Pallet::<T>::check_provided_values_len_must_equal_assets_len(&p.pool.assets, &p.asset_bounds)?;
-    ensure!(ratio != Zero::zero(), Error::<T>::MathApproximation);
+    ensure!(ratio != 0, Error::<T>::MathApproximation);
 
     let mut transferred = Vec::with_capacity(p.asset_bounds.len());
 
     for (asset, amount_bound) in p.pool.assets.iter().cloned().zip(p.asset_bounds.iter().cloned()) {
-        let balance = T::Shares::free_balance(asset, p.pool_account_id);
-        let amount = bmul(ratio.saturated_into(), balance.saturated_into())?.saturated_into();
+        let balance = T::AssetManager::free_balance(asset, p.pool_account_id);
+        let amount = bmul(ratio, balance.saturated_into())?.saturated_into();
         let fee = (p.fee)(amount)?;
         let amount_minus_fee = amount.check_sub_rslt(&fee)?;
         transferred.push(amount_minus_fee);
@@ -151,58 +173,70 @@ where
     }
 
     let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
-    ensure!(spot_price_before <= p.max_price, Error::<T>::BadLimitPrice);
+    if let Some(max_price) = p.max_price {
+        ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
+    }
 
     let [asset_amount_in, asset_amount_out] = (p.asset_amounts)()?;
 
-    if p.pool.scoring_rule == ScoringRule::CPMM {
-        T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-        T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
-    } else {
-        let base_asset = p.pool.base_asset;
+    match p.pool.scoring_rule {
+        ScoringRule::CPMM => {
+            T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+            T::AssetManager::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
+        }
+        ScoringRule::RikiddoSigmoidFeeMarketEma => {
+            let base_asset = p.pool.base_asset;
 
-        if p.asset_in == base_asset {
-            T::Shares::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
-            T::Shares::deposit(p.asset_out, &p.who, asset_amount_out)?;
-        } else if p.asset_out == base_asset {
-            // We can use the lightweight withdraw here, since event assets are not reserved.
-            T::Shares::withdraw(p.asset_in, &p.who, asset_amount_in)?;
-            T::Shares::transfer(p.asset_out, p.pool_account_id, &p.who, asset_amount_out)?;
-        } else {
-            // Just for safety, should already be checked in p.asset_amounts.
-            return Err(Error::<T>::UnsupportedTrade.into());
+            if p.asset_in == base_asset {
+                T::AssetManager::transfer(p.asset_in, &p.who, p.pool_account_id, asset_amount_in)?;
+                T::AssetManager::deposit(p.asset_out, &p.who, asset_amount_out)?;
+            } else if p.asset_out == base_asset {
+                // We can use the lightweight withdraw here, since event assets are not reserved.
+                T::AssetManager::withdraw(p.asset_in, &p.who, asset_amount_in)?;
+                T::AssetManager::transfer(
+                    p.asset_out,
+                    p.pool_account_id,
+                    &p.who,
+                    asset_amount_out,
+                )?;
+            } else {
+                // Just for safety, should already be checked in p.asset_amounts.
+                return Err(Error::<T>::UnsupportedTrade.into());
+            }
         }
     }
 
     let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
 
     // Allow little tolerance
-    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-        ensure!(
+    match p.pool.scoring_rule {
+        ScoringRule::CPMM => {
+            ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation)
+        }
+        ScoringRule::RikiddoSigmoidFeeMarketEma => ensure!(
             spot_price_before.saturating_sub(spot_price_after) < 20u8.into(),
             Error::<T>::MathApproximation
-        );
-    } else {
-        ensure!(spot_price_after >= spot_price_before, Error::<T>::MathApproximation);
+        ),
     }
 
-    ensure!(spot_price_after <= p.max_price, Error::<T>::BadLimitPrice);
+    if let Some(max_price) = p.max_price {
+        ensure!(spot_price_after <= max_price, Error::<T>::BadLimitPrice);
+    }
 
-    if p.pool.scoring_rule == ScoringRule::CPMM {
-        ensure!(
+    match p.pool.scoring_rule {
+        ScoringRule::CPMM => ensure!(
             spot_price_before
                 <= bdiv(asset_amount_in.saturated_into(), asset_amount_out.saturated_into())?
                     .saturated_into(),
             Error::<T>::MathApproximation
-        );
-    }
-
-    if p.pool.scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
-        // Currently the only allowed trades are base_currency <-> event asset. We count the
-        // volume in base_currency.
-        let base_asset = p.pool.base_asset;
-        let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
-        T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
+        ),
+        ScoringRule::RikiddoSigmoidFeeMarketEma => {
+            // Currently the only allowed trades are base_currency <-> event asset. We count the
+            // volume in base_currency.
+            let base_asset = p.pool.base_asset;
+            let volume = if p.asset_in == base_asset { asset_amount_in } else { asset_amount_out };
+            T::RikiddoSigmoidFeeMarketEma::update_volume(p.pool_id, volume)?;
+        }
     }
 
     (p.event)(SwapEvent {
@@ -269,11 +303,11 @@ where
     T: Config,
 {
     pub(crate) asset_amounts: F1,
-    pub(crate) asset_bound: BalanceOf<T>,
+    pub(crate) asset_bound: Option<BalanceOf<T>>,
     pub(crate) asset_in: Asset<T::MarketId>,
     pub(crate) asset_out: Asset<T::MarketId>,
     pub(crate) event: F2,
-    pub(crate) max_price: BalanceOf<T>,
+    pub(crate) max_price: Option<BalanceOf<T>>,
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_id: PoolId,
     pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,

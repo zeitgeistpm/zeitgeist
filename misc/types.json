@@ -122,7 +122,7 @@
     "status": "MarketStatus",
     "report": "Option<Report>",
     "resolvedOutcome": "Option<OutcomeReport>",
-    "mdm": "MarketDisputeMechanism"
+    "dispute_mechanism": "MarketDisputeMechanism"
   },
   "MarketCreation": {
     "_enum": [
@@ -288,7 +288,9 @@
     "_enum": [
       "Active",
       "CollectingSubsidy",
-      "Stale"
+      "Closed",
+      "Clean",
+      "Initialized"
     ]
   },
   "RegistrationInfo": {

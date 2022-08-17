@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 pub use crate::{
     asset::*, market::*, max_runtime_usize::*, outcome_report::OutcomeReport, pool::*,
     pool_status::PoolStatus, proxy_type::*, serde_wrapper::*,
@@ -8,8 +25,8 @@ use frame_support::dispatch::{Decode, Encode, Weight};
 use scale_info::TypeInfo;
 use sp_runtime::{
     generic,
-    traits::{IdentifyAccount, Verify},
-    MultiSignature,
+    traits::{BlakeTwo256, IdentifyAccount, Verify},
+    MultiSignature, OpaqueExtrinsic,
 };
 
 /// Signed counter-part of Balance
@@ -25,6 +42,9 @@ pub type AccountIndex = u64;
 
 /// Balance of an account.
 pub type Balance = u128;
+
+/// Block type.
+pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 
 /// An index to a block.
 pub type BlockNumber = u64;
@@ -66,6 +86,9 @@ pub type Index = u64;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
+
+/// Block header type as expected by this runtime.
+pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem;

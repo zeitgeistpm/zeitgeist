@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 use substrate_fixed::{types::extra::U64, FixedI128, FixedU128};
 
 use super::{ema_market_volume::ema_create_test_struct, max_allowed_error};
@@ -22,17 +39,17 @@ pub(super) fn initial_outstanding_assets(num_assets: u32, subsidy: f64, minimum_
     subsidy / (fee_times_num * num_assets_f64.ln() + 1f64)
 }
 
-fn ln_exp_sum(exponents: &Vec<f64>) -> f64 {
+fn ln_exp_sum(exponents: &[f64]) -> f64 {
     exponents.iter().fold(0f64, |acc, val| acc + val.exp()).ln()
 }
 
-pub(super) fn cost(fee: f64, balances: &Vec<f64>) -> f64 {
+pub(super) fn cost(fee: f64, balances: &[f64]) -> f64 {
     let fee_times_sum = fee * balances.iter().sum::<f64>();
-    let exponents = balances.iter().map(|e| e / fee_times_sum).collect();
+    let exponents = balances.iter().map(|e| e / fee_times_sum).collect::<Vec<f64>>();
     fee_times_sum * ln_exp_sum(&exponents)
 }
 
-fn price_first_quotient(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
+fn price_first_quotient(fee: f64, balances: &[f64], balance_in_question: f64) -> f64 {
     let balance_sum = balances.iter().sum::<f64>();
     let fee_times_sum = fee * balance_sum;
     let balance_exponential_results: Vec<f64> =
@@ -41,7 +58,7 @@ fn price_first_quotient(fee: f64, balances: &Vec<f64>, balance_in_question: f64)
     ((balance_in_question / fee_times_sum).exp() * balance_sum) / denominator
 }
 
-fn price_second_quotient(fee: f64, balances: &Vec<f64>) -> f64 {
+fn price_second_quotient(fee: f64, balances: &[f64]) -> f64 {
     let balance_sum = balances.iter().sum::<f64>();
     let fee_times_sum = fee * balance_sum;
     let balance_exponential_results: Vec<f64> =
@@ -55,7 +72,7 @@ fn price_second_quotient(fee: f64, balances: &Vec<f64>) -> f64 {
         / denominator
 }
 
-pub(super) fn price(fee: f64, balances: &Vec<f64>, balance_in_question: f64) -> f64 {
+pub(super) fn price(fee: f64, balances: &[f64], balance_in_question: f64) -> f64 {
     let balance_sum = balances.iter().sum::<f64>();
     let fee_times_sum = fee * balance_sum;
     let balance_exponential_results: Vec<f64> =

@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(test)]
 
 use crate::{
@@ -5,7 +22,7 @@ use crate::{
         Balances, Court, ExtBuilder, Origin, RandomnessCollectiveFlip, Runtime, System, ALICE, BOB,
         CHARLIE, INITIAL_BALANCE,
     },
-    Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes, RESERVE_ID,
+    Error, Juror, JurorStatus, Jurors, RequestedJurors, Votes,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -25,7 +42,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     creator_fee: 0,
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    mdm: MarketDisputeMechanism::Court,
+    dispute_mechanism: MarketDisputeMechanism::Court,
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
@@ -50,11 +67,11 @@ fn exit_court_successfully_removes_a_juror_and_frees_balances() {
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 1);
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
         assert_ok!(Court::exit_court(Origin::signed(ALICE)));
         assert_eq!(Jurors::<Runtime>::iter().count(), 0);
         assert_eq!(Balances::free_balance(ALICE), INITIAL_BALANCE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 0);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 0);
     });
 }
 
@@ -74,12 +91,12 @@ fn join_court_reserves_balance_according_to_the_number_of_jurors() {
         assert_eq!(Balances::free_balance(ALICE), 1000 * BASE);
         assert_ok!(Court::join_court(Origin::signed(ALICE)));
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
 
         assert_eq!(Balances::free_balance(BOB), 1000 * BASE);
         assert_ok!(Court::join_court(Origin::signed(BOB)));
         assert_eq!(Balances::free_balance(BOB), 996 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 4 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 4 * BASE);
     });
 }
 
@@ -109,7 +126,7 @@ fn join_court_will_not_insert_an_already_stored_juror() {
 fn on_dispute_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::SimpleDisputes;
+        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         assert_noop!(
             Court::on_dispute(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
@@ -121,7 +138,7 @@ fn on_dispute_denies_non_court_markets() {
 fn on_resolution_denies_non_court_markets() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market = DEFAULT_MARKET;
-        market.mdm = MarketDisputeMechanism::SimpleDisputes;
+        market.dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         assert_noop!(
             Court::on_resolution(&[], &0, &market),
             Error::<Runtime>::MarketDoesNotHaveCourtMechanism
@@ -158,11 +175,11 @@ fn on_resolution_awards_winners_and_slashes_losers() {
         Court::vote(Origin::signed(CHARLIE), 0, OutcomeReport::Scalar(3)).unwrap();
         let _ = Court::on_resolution(&[], &0, &DEFAULT_MARKET).unwrap();
         assert_eq!(Balances::free_balance(ALICE), 998 * BASE + 3 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &ALICE), 2 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &ALICE), 2 * BASE);
         assert_eq!(Balances::free_balance(BOB), 996 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 4 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 4 * BASE);
         assert_eq!(Balances::free_balance(CHARLIE), 994 * BASE);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &CHARLIE), 3 * BASE);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &CHARLIE), 3 * BASE);
     });
 }
 
@@ -226,7 +243,7 @@ fn on_resolution_punishes_tardy_jurors_that_failed_to_vote_a_second_time() {
         let slash = join_court_stake / 5;
         assert_eq!(Balances::free_balance(Court::treasury_account_id()), INITIAL_BALANCE + slash);
         assert_eq!(Balances::free_balance(BOB), INITIAL_BALANCE - slash);
-        assert_eq!(Balances::reserved_balance_named(&RESERVE_ID, &BOB), 0);
+        assert_eq!(Balances::reserved_balance_named(&Court::reserve_id(), &BOB), 0);
     });
 }
 
@@ -253,14 +270,14 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
         setup_blocks(123);
 
         let mut rng = Court::rng();
-        let random_jurors = Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        let random_jurors = Court::random_jurors(DEFAULT_SET_OF_JURORS, 2, &mut rng);
         let mut at_least_one_set_is_different = false;
 
         for _ in 0..100 {
             setup_blocks(1);
 
             let another_set_of_random_jurors =
-                Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
+                Court::random_jurors(DEFAULT_SET_OF_JURORS, 2, &mut rng);
             let mut iter = another_set_of_random_jurors.iter();
 
             if let Some(juror) = iter.next() {
@@ -277,7 +294,7 @@ fn random_jurors_returns_an_unique_different_subset_of_jurors() {
             }
         }
 
-        assert_eq!(at_least_one_set_is_different, true);
+        assert!(at_least_one_set_is_different);
     });
 }
 
@@ -286,7 +303,7 @@ fn random_jurors_returns_a_subset_of_jurors() {
     ExtBuilder::default().build().execute_with(|| {
         setup_blocks(123);
         let mut rng = Court::rng();
-        let random_jurors = Court::random_jurors(&DEFAULT_SET_OF_JURORS, 2, &mut rng);
+        let random_jurors = Court::random_jurors(DEFAULT_SET_OF_JURORS, 2, &mut rng);
         for (_, juror) in random_jurors {
             assert!(DEFAULT_SET_OF_JURORS.iter().any(|el| &el.1 == juror));
         }

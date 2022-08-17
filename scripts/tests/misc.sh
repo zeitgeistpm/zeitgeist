@@ -13,6 +13,8 @@ test_package_with_feature primitives std
 
 no_runtime_benchmarks=('court' 'market-commons' 'rikiddo')
 
+cargo test --package zeitgeist-runtime --lib -- --nocapture
+
 for package in zrml/*
 do
   test_package_with_feature "$package" std

@@ -34,7 +34,12 @@ sp-session = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/p
 sp-storage = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-transaction-pool = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+sp-trie = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 substrate-frame-rpc-system = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
+
+# Try-Runtime
+
+try-runtime-cli = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 
 # Benchmark
 
@@ -66,7 +71,6 @@ sc-chain-spec = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.co
 sc-network = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sc-tracing = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 serde = { features = ["derive"], optional = true, version = "1.0.136" }
-sp-trie = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-keystore = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-prometheus-endpoint = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 
@@ -94,15 +98,17 @@ log = { optional = true, version = "0.4.14" }
 
 # Zeitgeist
 
+battery-station-runtime = { path = "../runtime/battery-station", optional = true }
 zeitgeist-primitives = { path = "../primitives" }
-zeitgeist-runtime = { path = "../runtime" }
+zeitgeist-runtime = { path = "../runtime/zeitgeist", optional = true }
 zrml-liquidity-mining = { path = "../zrml/liquidity-mining" }
 zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 
 [features]
-default = []
+default = ["with-battery-station-runtime", "with-zeitgeist-runtime"]
 parachain = [
-    "zeitgeist-runtime/parachain",
+    "battery-station-runtime?/parachain",
+    "zeitgeist-runtime?/parachain",
 
     # Cumulus
 
@@ -132,7 +138,6 @@ parachain = [
     "sc-tracing",
     "serde",
     "sp-keystore",
-    "sp-trie",
     "substrate-prometheus-endpoint",
 
     # Polkadot
@@ -144,10 +149,18 @@ parachain = [
     "polkadot-test-service",
 ]
 runtime-benchmarks = [
+    "battery-station-runtime?/runtime-benchmarks",
     "frame-benchmarking/runtime-benchmarks",
     "polkadot-service?/runtime-benchmarks",
-    "zeitgeist-runtime/runtime-benchmarks"
+    "zeitgeist-runtime?/runtime-benchmarks",
 ]
+try-runtime = [
+    "battery-station-runtime?/try-runtime",
+    "zeitgeist-runtime?/try-runtime",
+    "try-runtime-cli",
+]
+with-battery-station-runtime = ["battery-station-runtime"]
+with-zeitgeist-runtime = ["zeitgeist-runtime"]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
@@ -156,7 +169,7 @@ description = "An evolving blockchain for prediction markets and futarchy."
 edition = "2021"
 homepage = "https://zeitgeist.pm"
 name = "zeitgeist-node"
-version = "0.3.2"
+version = "0.3.5"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

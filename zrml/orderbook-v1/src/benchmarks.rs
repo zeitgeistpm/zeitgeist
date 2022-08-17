@@ -1,8 +1,26 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![allow(
     // Auto-generated code is a no man's land
     clippy::integer_arithmetic
 )]
 #![cfg(feature = "runtime-benchmarks")]
+#![allow(clippy::type_complexity)]
 
 use super::*;
 #[cfg(test)]
@@ -19,7 +37,7 @@ fn generate_funded_account<T: Config>(seed: Option<u32>) -> Result<T::AccountId,
     let acc = if let Some(s) = seed { account("AssetHolder", 0, s) } else { whitelisted_caller() };
 
     let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), 0);
-    let _ = T::Shares::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
+    T::Shares::deposit(asset, &acc, BASE.saturating_mul(1_000).saturated_into())?;
     let _ = T::Currency::deposit_creating(&acc, BASE.saturating_mul(1_000).saturated_into());
     Ok(acc)
 }

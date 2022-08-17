@@ -1,13 +1,35 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 use super::{
     cli::{Cli, Subcommand},
     command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
-    service::{new_partial, ExecutorDispatch},
+    service::{new_chain_ops, new_full, IdentifyVariant},
 };
 use frame_benchmarking_cli::BenchmarkCmd;
 use sc_cli::SubstrateCli;
-use sc_service::PartialComponents;
 use std::sync::Arc;
-use zeitgeist_runtime::{Block, RuntimeApi};
+#[cfg(feature = "with-battery-station-runtime")]
+use {
+    super::service::BatteryStationExecutor,
+    battery_station_runtime::RuntimeApi as BatteryStationRuntimeApi,
+};
+#[cfg(feature = "with-zeitgeist-runtime")]
+use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
 #[cfg(feature = "parachain")]
 use {
     sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
@@ -19,57 +41,135 @@ pub fn run() -> sc_cli::Result<()> {
 
     // Set default chain on parachain to zeitgeist and on standalone to dev
     #[cfg(feature = "parachain")]
-    if cli.run.base.shared_params.chain == None {
+    if cli.run.base.shared_params.chain.is_none() {
         cli.run.base.shared_params.chain = Some("zeitgeist".to_string());
     }
     #[cfg(not(feature = "parachain"))]
-    if cli.run.shared_params.chain == None {
+    if cli.run.shared_params.chain.is_none() {
         cli.run.shared_params.dev = true;
     }
 
     match &cli.subcommand {
         Some(Subcommand::Benchmark(cmd)) => {
             let runner = cli.create_runner(cmd)?;
+            let chain_spec = &runner.config().chain_spec;
 
-            runner.sync_run(|config| {
-                let PartialComponents { client, backend, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
-
+            match cmd {
                 // This switch needs to be in the client, since the client decides
                 // which sub-commands it wants to support.
-                match cmd {
-                    BenchmarkCmd::Pallet(cmd) => {
-                        if !cfg!(feature = "runtime-benchmarks") {
-                            return Err("Runtime benchmarking wasn't enabled when building the \
-                                        node. You can enable it with `--features \
-                                        runtime-benchmarks`."
-                                .into());
-                        }
-
-                        cmd.run::<Block, ExecutorDispatch>(config)
+                BenchmarkCmd::Pallet(cmd) => {
+                    if !cfg!(feature = "runtime-benchmarks") {
+                        return Err("Runtime benchmarking wasn't enabled when building the node. \
+                                    You can enable it with `--features runtime-benchmarks`."
+                            .into());
                     }
-                    BenchmarkCmd::Block(cmd) => cmd.run(client),
-                    BenchmarkCmd::Storage(cmd) => {
-                        let db = backend.expose_db();
-                        let storage = backend.expose_storage();
 
-                        cmd.run(config, client, db, storage)
+                    match chain_spec {
+                        #[cfg(feature = "with-zeitgeist-runtime")]
+                        spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                            cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config)
+                        }),
+                        #[cfg(feature = "with-battery-station-runtime")]
+                        _ => runner.sync_run(|config| {
+                            cmd.run::<battery_station_runtime::Block, BatteryStationExecutor>(
+                                config,
+                            )
+                        }),
+                        #[cfg(not(feature = "with-battery-station-runtime"))]
+                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                     }
-                    BenchmarkCmd::Overhead(cmd) => {
-                        if cfg!(feature = "parachain") {
-                            Err("Overhead is only supported in standalone chain".into())
-                        } else {
-                            let ext_builder = BenchmarkExtrinsicBuilder::new(client.clone());
+                }
+                BenchmarkCmd::Block(cmd) => match chain_spec {
+                    #[cfg(feature = "with-zeitgeist-runtime")]
+                    spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                        let params = crate::service::new_partial::<
+                            zeitgeist_runtime::RuntimeApi,
+                            ZeitgeistExecutor,
+                        >(&config)?;
+                        cmd.run(params.client)
+                    }),
+                    #[cfg(feature = "with-battery-station-runtime")]
+                    _ => runner.sync_run(|config| {
+                        let params = crate::service::new_partial::<
+                            battery_station_runtime::RuntimeApi,
+                            BatteryStationExecutor,
+                        >(&config)?;
+                        cmd.run(params.client)
+                    }),
+                    #[cfg(not(feature = "with-battery-station-runtime"))]
+                    _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+                },
+                BenchmarkCmd::Storage(cmd) => match chain_spec {
+                    #[cfg(feature = "with-zeitgeist-runtime")]
+                    spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                        let params = crate::service::new_partial::<
+                            zeitgeist_runtime::RuntimeApi,
+                            ZeitgeistExecutor,
+                        >(&config)?;
+
+                        let db = params.backend.expose_db();
+                        let storage = params.backend.expose_storage();
+
+                        cmd.run(config, params.client, db, storage)
+                    }),
+                    #[cfg(feature = "with-battery-station-runtime")]
+                    _ => runner.sync_run(|config| {
+                        let params = crate::service::new_partial::<
+                            battery_station_runtime::RuntimeApi,
+                            BatteryStationExecutor,
+                        >(&config)?;
+
+                        let db = params.backend.expose_db();
+                        let storage = params.backend.expose_storage();
+
+                        cmd.run(config, params.client, db, storage)
+                    }),
+                    #[cfg(not(feature = "with-battery-station-runtime"))]
+                    _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+                },
+
+                BenchmarkCmd::Overhead(cmd) => {
+                    if cfg!(feature = "parachain") {
+                        return Err("Overhead is only supported in standalone chain".into());
+                    }
+                    match chain_spec {
+                        #[cfg(feature = "with-zeitgeist-runtime")]
+                        spec if spec.is_zeitgeist() => runner.sync_run(|config| {
+                            let params = crate::service::new_partial::<
+                                zeitgeist_runtime::RuntimeApi,
+                                ZeitgeistExecutor,
+                            >(&config)?;
+
+                            let ext_builder =
+                                BenchmarkExtrinsicBuilder::new(params.client.clone(), true);
                             cmd.run(
                                 config,
-                                client,
+                                params.client,
                                 inherent_benchmark_data()?,
                                 Arc::new(ext_builder),
                             )
-                        }
+                        }),
+                        #[cfg(feature = "with-battery-station-runtime")]
+                        _ => runner.sync_run(|config| {
+                            let params = crate::service::new_partial::<
+                                battery_station_runtime::RuntimeApi,
+                                BatteryStationExecutor,
+                            >(&config)?;
+
+                            let ext_builder =
+                                BenchmarkExtrinsicBuilder::new(params.client.clone(), false);
+                            cmd.run(
+                                config,
+                                params.client,
+                                inherent_benchmark_data()?,
+                                Arc::new(ext_builder),
+                            )
+                        }),
+                        #[cfg(not(feature = "with-battery-station-runtime"))]
+                        _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
                     }
                 }
-            })
+            }
         }
         Some(Subcommand::BuildSpec(cmd)) => {
             let runner = cli.create_runner(cmd)?;
@@ -77,17 +177,15 @@ pub fn run() -> sc_cli::Result<()> {
         }
         Some(Subcommand::CheckBlock(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, import_queue, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+            runner.async_run(|mut config| {
+                let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
         Some(Subcommand::ExportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+            runner.async_run(|mut config| {
+                let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
@@ -95,11 +193,8 @@ pub fn run() -> sc_cli::Result<()> {
         Some(Subcommand::ExportHeader(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
-            runner.sync_run(|config| {
-                let PartialComponents { client, .. }: crate::service::ParachainPartialComponents<
-                    ExecutorDispatch,
-                    RuntimeApi,
-                > = crate::service::new_partial(&config)?;
+            runner.sync_run(|mut config| {
+                let (client, _, _, _) = new_chain_ops(&mut config)?;
 
                 match client.block(&cmd.input.parse()?) {
                     Ok(Some(block)) => {
@@ -122,13 +217,39 @@ pub fn run() -> sc_cli::Result<()> {
             )?;
             let state_version = Cli::native_runtime_version(chain_spec).state_version();
 
-            let block: zeitgeist_runtime::Block =
-                cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)?;
-            let raw_header = block.header().encode();
-            let buf = if params.raw {
-                raw_header
-            } else {
-                format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+            let buf = match chain_spec {
+                #[cfg(feature = "with-zeitgeist-runtime")]
+                spec if spec.is_zeitgeist() => {
+                    let block: zeitgeist_runtime::Block =
+                        cumulus_client_service::genesis::generate_genesis_block(
+                            chain_spec,
+                            state_version,
+                        )?;
+                    let raw_header = block.header().encode();
+
+                    if params.raw {
+                        raw_header
+                    } else {
+                        format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+                    }
+                }
+                #[cfg(feature = "with-battery-station-runtime")]
+                _ => {
+                    let block: battery_station_runtime::Block =
+                        cumulus_client_service::genesis::generate_genesis_block(
+                            chain_spec,
+                            state_version,
+                        )?;
+                    let raw_header = block.header().encode();
+
+                    if params.raw {
+                        raw_header
+                    } else {
+                        format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+                    }
+                }
+                #[cfg(not(feature = "with-battery-station-runtime"))]
+                _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
             };
 
             if let Some(output) = &params.output {
@@ -163,17 +284,15 @@ pub fn run() -> sc_cli::Result<()> {
         }
         Some(Subcommand::ExportState(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+            runner.async_run(|mut config| {
+                let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
         Some(Subcommand::ImportBlocks(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, import_queue, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+            runner.async_run(|mut config| {
+                let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -207,18 +326,56 @@ pub fn run() -> sc_cli::Result<()> {
         }
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.async_run(|config| {
-                let PartialComponents { client, task_manager, backend, .. } =
-                    new_partial::<RuntimeApi, ExecutorDispatch>(&config)?;
+            runner.async_run(|mut config| {
+                let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
 
-                let aux_revert = Box::new(move |client, _, blocks| {
-                    sc_finality_grandpa::revert(client, blocks)?;
-                    Ok(())
-                });
-
-                Ok((cmd.run(client, backend, Some(aux_revert)), task_manager))
+                Ok((cmd.run(client, backend, None), task_manager))
             })
         }
+        #[cfg(feature = "try-runtime")]
+        Some(Subcommand::TryRuntime(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
+            let chain_spec = &runner.config().chain_spec;
+
+            match chain_spec {
+                #[cfg(feature = "with-zeitgeist-runtime")]
+                spec if spec.is_zeitgeist() => {
+                    runner.async_run(|config| {
+                        // we don't need any of the components of new_partial, just a runtime, or a task
+                        // manager to do `async_run`.
+                        let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                        let task_manager =
+                            sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                                .map_err(|e| {
+                                    sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                                })?;
+                        return Ok((
+                            cmd.run::<zeitgeist_runtime::Block, ZeitgeistExecutor>(config),
+                            task_manager,
+                        ));
+                    })
+                }
+                #[cfg(feature = "with-battery-station-runtime")]
+                _ => runner.async_run(|config| {
+                    let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+                    let task_manager =
+                        sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
+                            .map_err(|e| {
+                                sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+                            })?;
+                    return Ok((
+                        cmd.run::<battery_station_runtime::Block, BatteryStationExecutor>(config),
+                        task_manager,
+                    ));
+                }),
+                #[cfg(not(feature = "with-battery-station-runtime"))]
+                _ => Err("Invalid chain spec"),
+            }
+        }
+        #[cfg(not(feature = "try-runtime"))]
+        Some(Subcommand::TryRuntime) => Err("TryRuntime wasn't enabled when building the node. \
+                                             You can enable it with `--features try-runtime`."
+            .into()),
         None => none_command(&cli),
     }
 }
@@ -270,10 +427,28 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain Account: {}", parachain_account);
         log::info!("Parachain genesis state: {}", genesis_state);
 
-        crate::service::new_full(parachain_config, parachain_id, polkadot_config)
+        match &parachain_config.chain_spec {
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
+                parachain_config,
+                parachain_id,
+                polkadot_config,
+            )
             .await
             .map(|r| r.0)
-            .map_err(Into::into)
+            .map_err(Into::into),
+            #[cfg(feature = "with-battery-station-runtime")]
+            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
+                parachain_config,
+                parachain_id,
+                polkadot_config,
+            )
+            .await
+            .map(|r| r.0)
+            .map_err(Into::into),
+            #[cfg(not(feature = "with-battery-station-runtime"))]
+            _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+        }
     })
 }
 
@@ -281,10 +456,30 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 fn none_command(cli: &Cli) -> sc_cli::Result<()> {
     let runner = cli.create_runner(&cli.run)?;
     runner.run_node_until_exit(|config| async move {
-        match config.role {
-            sc_cli::Role::Light => return Err("Light client not supported!".into()),
-            _ => crate::service::new_full(config),
+        if let sc_cli::Role::Light = config.role {
+            return Err("Light client not supported!".into());
         }
-        .map_err(sc_cli::Error::Service)
+
+        match &config.chain_spec {
+            #[cfg(feature = "with-zeitgeist-runtime")]
+            spec if spec.is_zeitgeist() => {
+                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config)
+                    .map_err(sc_cli::Error::Service)
+            }
+            #[cfg(feature = "with-battery-station-runtime")]
+            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(config)
+                .map_err(sc_cli::Error::Service),
+            #[cfg(all(
+                not(feature = "with-battery-station-runtime"),
+                feature = "with-zeitgeist-runtime"
+            ))]
+            _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(config)
+                .map_err(sc_cli::Error::Service),
+            #[cfg(all(
+                not(feature = "with-battery-station-runtime"),
+                not(feature = "with-zeitgeist-runtime")
+            ))]
+            _ => panic!("{}", crate::BATTERY_STATION_RUNTIME_NOT_AVAILABLE),
+        }
     })
 }

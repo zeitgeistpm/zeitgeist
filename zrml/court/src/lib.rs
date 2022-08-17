@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 //! # Court
 
 // It is important to note that if a categorical market has only two outcomes, then winners
@@ -5,6 +22,7 @@
 // simply registered as `JurorStatus::Tardy`.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::type_complexity)]
 
 extern crate alloc;
 
@@ -12,6 +30,7 @@ mod benchmarks;
 mod court_pallet_api;
 mod juror;
 mod juror_status;
+pub mod migrations;
 mod mock;
 mod tests;
 pub mod weights;
@@ -32,7 +51,7 @@ mod pallet {
     use core::marker::PhantomData;
     use frame_support::{
         dispatch::DispatchResult,
-        pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
+        pallet_prelude::{CountedStorageMap, StorageDoubleMap, StorageValue, ValueQuery},
         traits::{
             BalanceStatus, Currency, Get, Hooks, IsType, NamedReservableCurrency, Randomness,
             StorageVersion,
@@ -46,19 +65,16 @@ mod pallet {
         ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::CourtPalletId,
         traits::DisputeApi,
         types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
-    pub(crate) const RESERVE_ID: [u8; 8] = CourtPalletId::get().0;
-
     // Number of jurors for an initial market dispute
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;
@@ -93,10 +109,10 @@ mod pallet {
             if Jurors::<T>::get(&who).is_some() {
                 return Err(Error::<T>::JurorAlreadyExists.into());
             }
-            let jurors_num = Jurors::<T>::iter().count();
+            let jurors_num = Jurors::<T>::count() as usize;
             let jurors_num_plus_one = jurors_num.checked_add(1).ok_or(ArithmeticError::Overflow)?;
             let stake = Self::current_required_stake(jurors_num_plus_one);
-            CurrencyOf::<T>::reserve_named(&RESERVE_ID, &who, stake)?;
+            CurrencyOf::<T>::reserve_named(&Self::reserve_id(), &who, stake)?;
             let juror = Juror { status: JurorStatus::Ok };
             Jurors::<T>::insert(&who, juror.clone());
             Self::deposit_event(Event::JoinedJuror(who, juror));
@@ -208,6 +224,12 @@ mod pallet {
             jurors.choose_multiple(rng, actual_len).collect()
         }
 
+        /// The reserve ID of the court pallet.
+        #[inline]
+        pub fn reserve_id() -> [u8; 8] {
+            T::PalletId::get().0
+        }
+
         // Returns a pseudo random number generator implementation based on the seed
         // provided by the `Config::Random` type and the `JurorsSelectionNonce` storage.
         pub(crate) fn rng() -> impl RngCore {
@@ -284,11 +306,13 @@ mod pallet {
             let treasury_account_id = Self::treasury_account_id();
 
             let slash_and_remove_juror = |ai: &T::AccountId| {
-                let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, ai);
-                // Division will never overflow
-                let slash = all_reserved / BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR);
+                let all_reserved = CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), ai);
+                // Unsigned division will never overflow
+                let slash = all_reserved
+                    .checked_div(&BalanceOf::<T>::from(TARDY_PUNISHMENT_DIVISOR))
+                    .ok_or(DispatchError::Other("Zero division"))?;
                 let _ = CurrencyOf::<T>::repatriate_reserved_named(
-                    &RESERVE_ID,
+                    &Self::reserve_id(),
                     ai,
                     &treasury_account_id,
                     slash,
@@ -370,10 +394,13 @@ mod pallet {
                 if outcome == &winner_outcome {
                     total_winners = total_winners.saturating_add(BalanceOf::<T>::from(1u8));
                 } else {
-                    let all_reserved = CurrencyOf::<T>::reserved_balance_named(&RESERVE_ID, jai);
-                    // Division will never overflow
-                    let slash = all_reserved / BalanceOf::<T>::from(2u8);
-                    CurrencyOf::<T>::slash_reserved_named(&RESERVE_ID, jai, slash);
+                    let all_reserved =
+                        CurrencyOf::<T>::reserved_balance_named(&Self::reserve_id(), jai);
+                    // Unsigned division will never overflow
+                    let slash = all_reserved
+                        .checked_div(&BalanceOf::<T>::from(2u8))
+                        .ok_or(DispatchError::Other("Zero division"))?;
+                    CurrencyOf::<T>::slash_reserved_named(&Self::reserve_id(), jai, slash);
                     total_incentives = total_incentives.saturating_add(slash);
                 }
             }
@@ -442,7 +469,7 @@ mod pallet {
 
         // Obliterates all stored references of a juror un-reserving balances.
         fn remove_juror_from_all_courts_of_all_markets(ai: &T::AccountId) {
-            CurrencyOf::<T>::unreserve_all_named(&RESERVE_ID, ai);
+            CurrencyOf::<T>::unreserve_all_named(&Self::reserve_id(), ai);
             Jurors::<T>::remove(ai);
             let mut market_ids = BTreeSet::new();
             market_ids.extend(RequestedJurors::<T>::iter().map(|el| el.0));
@@ -473,7 +500,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            if market.mdm != MarketDisputeMechanism::Court {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
             let jurors: Vec<_> = Jurors::<T>::iter().collect();
@@ -497,7 +524,7 @@ mod pallet {
             market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            if market.mdm != MarketDisputeMechanism::Court {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
                 return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
             }
             let votes: Vec<_> = Votes::<T>::iter_prefix(market_id).collect();
@@ -525,7 +552,7 @@ mod pallet {
 
     /// Accounts that stake funds to decide outcomes.
     #[pallet::storage]
-    pub type Jurors<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
+    pub type Jurors<T: Config> = CountedStorageMap<_, Blake2_128Concat, T::AccountId, Juror>;
 
     /// An extra layer of pseudo randomness.
     #[pallet::storage]

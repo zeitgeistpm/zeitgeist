@@ -1,0 +1,46 @@
+@startuml
+!theme materia
+
+'States
+state Active : Market can be traded
+state Closed : Trading is over
+state CollectingSubsidy : Rikiddo market needs funding
+state Disputed: Market outcome is disputed
+state InsufficientSubsidy : Market suspended due to insufficient subsidy
+state Proposed : Market has to be approved by ApproveOrigin
+state Reported : Market outcome is reported
+state Resolved : Market resolved
+
+'Choices
+state cpmm_or_rikiddo <<choice>>
+state advised_or_proposed_cpmm <<choice>>
+state enough_subsidy <<choice>>
+
+'Create market
+[*] --> advised_or_proposed_cpmm : Create market
+advised_or_proposed_cpmm --> cpmm_or_rikiddo : [creation == MarketCreation::Permissionless]
+advised_or_proposed_cpmm --> Proposed : [creation == MarketCreation::Advised]
+
+cpmm_or_rikiddo --> Active : [scoring_rule == ScoringRule::CPMM]
+cpmm_or_rikiddo --> CollectingSubsidy : [scoring_rule == ScoringRule::Rikiddo]
+
+'Delete or activate a market
+Proposed --> cpmm_or_rikiddo : ApproveOrigin accepts market
+Proposed --> [*] : RejectOrigin rejects market \n or approval period passes
+
+CollectingSubsidy --> enough_subsidy : Market trading period starts
+enough_subsidy --> Active : [subsidy => MinSubsidy]
+enough_subsidy --> InsufficientSubsidy : [subsidy < MinSubsidy]
+
+'Report market
+Active --> Closed: Market period ends
+Closed --> Reported : Outcome reported by oracle or after timeout by anybody
+
+'Dispute or resolve directly
+Reported --> Disputed : Dispute started within DisputePeriod
+Reported --> Resolved : No dispute started within DisputePeriod
+
+'Disputed market resolves
+Disputed --> Resolved : DisputePeriod passed after first dispute
+
+@enduml

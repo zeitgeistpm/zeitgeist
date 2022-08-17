@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{market::MarketDispute, outcome_report::OutcomeReport, types::Market};
 use frame_support::dispatch::DispatchResult;
 use sp_runtime::DispatchError;
@@ -13,7 +30,7 @@ pub trait DisputeApi {
     /// Initiate a dispute of a reported outcome.
     ///
     /// Further interaction with the dispute API (if necessary) **should** happen through an
-    /// associated pallet. **May** assume that `market.mdm` refers to the calling dispute API.
+    /// associated pallet. **May** assume that `market.dispute_mechanism` refers to the calling dispute API.
     fn on_dispute(
         previous_disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
         market_id: &Self::MarketId,
@@ -23,7 +40,7 @@ pub trait DisputeApi {
     /// Manage market resolution of a disputed market.
     ///
     /// **Should** only be called if the market was disputed before resolving. **May** assume that
-    /// `market.mdm` refers to the calling dispute API.
+    /// `market.dispute_mechanism` refers to the calling dispute API.
     ///
     /// # Returns
     ///

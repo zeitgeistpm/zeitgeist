@@ -1,3 +1,20 @@
+// Copyright 2021-2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 #![cfg(test)]
 
 use crate::{
@@ -52,7 +69,7 @@ fn distribute_market_incentives_removes_market_and_distributes_all_incentives_to
         // In this case, each market have the same amount of incentives
         let market_incentives = ExtBuilder::default().per_block_incentives / 2;
         // Perpetual balance for the entire campaign
-        let entire_market_perpetual_balance = market_incentives * 1 / 1000;
+        let entire_market_perpetual_balance = market_incentives / 1000;
         // Account only stayed 1 block out of 4 (25%), i.e, lost 75% of the perpetual balance
         let actual_market_perpetual_balance = entire_market_perpetual_balance / 4;
         // Ordinary balance
@@ -189,7 +206,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             creator_fee: 0,
             creator: 0,
             market_type: MarketType::Categorical(0),
-            mdm: MarketDisputeMechanism::SimpleDisputes,
+            dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
             metadata: vec![],
             oracle: 0,
             period: MarketPeriod::Block(period),
