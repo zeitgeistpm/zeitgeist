@@ -66,8 +66,11 @@ fn create_market_common_parameters<T: Config>(
     let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
-    let deadlines =
-        Deadlines { oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: 1_u32 };
+    let deadlines = Deadlines {
+        oracle_delay: 1_u32,
+        oracle_duration: 1_u32,
+        dispute_duration: T::MinDisputePeriod::get(),
+    };
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;

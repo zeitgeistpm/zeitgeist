@@ -29,7 +29,7 @@ use frame_support::{
     traits::{Hooks, NamedReservableCurrency},
 };
 use zeitgeist_primitives::{
-    constants::BASE,
+    constants::{BASE, MIN_DISPUTE_PERIOD},
     traits::DisputeApi,
     types::{
         Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -46,7 +46,11 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
-    deadlines: Deadlines { oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: 1_u32 },
+    deadlines: Deadlines {
+        oracle_delay: 1_u32,
+        oracle_duration: 1_u32,
+        dispute_duration: MIN_DISPUTE_PERIOD,
+    },
     report: None,
     resolved_outcome: None,
     status: MarketStatus::Closed,

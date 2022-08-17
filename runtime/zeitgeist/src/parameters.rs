@@ -156,6 +156,9 @@ parameter_types! {
     // 2_678_400_000 = 31 days.
     /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
+    /// Minimum number od blocks for dispute duration, user can not specify value smaller than
+    /// this.
+    pub const MinDisputePeriod: u32 = MIN_DISPUTE_PERIOD;
     // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
     // Note: ReportingPeriod and DisputePeriod are specified in create_market() extrinsic.
     /// The maximum market period.

@@ -589,6 +589,10 @@ mod pallet {
                 oracle_duration: BLOCKS_PER_DAY as u32,
                 dispute_duration: BLOCKS_PER_DAY as u32,
             });
+            ensure!(
+                deadlines.dispute_duration >= T::MinDisputePeriod::get(),
+                Error::<T>::DisputeDurationSmallerThanMinDisputePeriod
+            );
 
             let market = Market {
                 creation,
@@ -1126,6 +1130,11 @@ mod pallet {
         #[pallet::constant]
         type MaxDisputes: Get<u32>;
 
+        /// The minimum number of blocks allowed to be specified as dispute_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MinDisputePeriod: Get<u32>;
+
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
@@ -1227,6 +1236,8 @@ mod pallet {
         NotAllowedToReportYet,
         /// Oracle is not allowed to report as market.deadlines.oracle_duration has passed.
         OracleNotAllowedReportingNow,
+        /// Specified dispute_duration is smaller than MinDisputePeriod.
+        DisputeDurationSmallerThanMinDisputePeriod,
     }
 
     #[pallet::event]

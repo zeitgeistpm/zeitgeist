@@ -43,6 +43,7 @@ parameter_types! {
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
+    pub const MinDisputePeriod: u32 = MIN_DISPUTE_PERIOD;
 }
 
 // Simple disputes parameters
