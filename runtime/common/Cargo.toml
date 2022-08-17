@@ -29,38 +29,38 @@ parachain-staking = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-
 cfg-if = { version = "1.0.0" }
 
 [features]
-default=["std"]
-std=[
-    "cumulus-pallet-xcmp-queue?/std",
-    "frame-system/std",
-    "frame-support/std",
-    "orml-currencies/std",
-    "orml-tokens/std",
-    "pallet-author-mapping?/std",
-    "pallet-author-slot-filter?/std",
-    "pallet-balances/std",
-    "pallet-collective/std",
-    "pallet-democracy/std",
-    "pallet-identity/std",
-    "pallet-membership/std",
-    "pallet-multisig/std",
-    "pallet-preimage/std",
-    "pallet-proxy/std",
-    "pallet-randomness-collective-flip/std",
-    "pallet-scheduler/std",
-    "pallet-timestamp/std",
-    "pallet-transaction-payment-rpc-runtime-api/std",
-    "pallet-transaction-payment/std",
-    "pallet-treasury/std",
-    "pallet-utility/std",
-    "pallet-vesting/std",
-    "parachain-staking?/std",
+default = ["std"]
+std = [
+  "cumulus-pallet-xcmp-queue?/std",
+  "frame-system/std",
+  "frame-support/std",
+  "orml-currencies/std",
+  "orml-tokens/std",
+  "pallet-author-mapping?/std",
+  "pallet-author-slot-filter?/std",
+  "pallet-balances/std",
+  "pallet-collective/std",
+  "pallet-democracy/std",
+  "pallet-identity/std",
+  "pallet-membership/std",
+  "pallet-multisig/std",
+  "pallet-preimage/std",
+  "pallet-proxy/std",
+  "pallet-randomness-collective-flip/std",
+  "pallet-scheduler/std",
+  "pallet-timestamp/std",
+  "pallet-transaction-payment-rpc-runtime-api/std",
+  "pallet-transaction-payment/std",
+  "pallet-treasury/std",
+  "pallet-utility/std",
+  "pallet-vesting/std",
+  "parachain-staking?/std",
 ]
-parachain=[
-    "cumulus-pallet-xcmp-queue",
-    "pallet-author-mapping",
-    "pallet-author-slot-filter",
-    "parachain-staking",
+parachain = [
+  "cumulus-pallet-xcmp-queue",
+  "pallet-author-mapping",
+  "pallet-author-slot-filter",
+  "parachain-staking",
 ]
 
 [package]

@@ -3,11 +3,16 @@ frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = 
 frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+parity-scale-codec = { default-features = false, features = [
+  "derive",
+  "max-encoded-len",
+], version = "3.0.0" }
 sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = [
+  "derive",
+] }
 zrml-authorized = { default-features = false, path = "../authorized" }
 zrml-court = { default-features = false, path = "../court" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
@@ -24,7 +29,9 @@ pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github
 sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
-zrml-prediction-markets-runtime-api = { features = ["std"], optional = true, path = "./runtime-api" }
+zrml-prediction-markets-runtime-api = { features = [
+  "std",
+], optional = true, path = "./runtime-api" }
 zrml-rikiddo = { optional = true, path = "../rikiddo" }
 zrml-swaps = { optional = true, path = "../swaps" }
 
@@ -36,43 +43,41 @@ more-asserts = "0.2"
 [features]
 default = ["std"]
 mock = [
-    "orml-currencies",
-    "orml-tokens",
-    "pallet-balances",
-    "pallet-randomness-collective-flip",
-    "pallet-timestamp",
-    "sp-api",
-    "sp-io",
-    "substrate-fixed",
-    "zeitgeist-primitives/mock",
-    "zrml-prediction-markets-runtime-api",
-    "zrml-rikiddo",
-    "zrml-swaps",
+  "orml-currencies",
+  "orml-tokens",
+  "pallet-balances",
+  "pallet-randomness-collective-flip",
+  "pallet-timestamp",
+  "sp-api",
+  "sp-io",
+  "substrate-fixed",
+  "zeitgeist-primitives/mock",
+  "zrml-prediction-markets-runtime-api",
+  "zrml-rikiddo",
+  "zrml-swaps",
 ]
 runtime-benchmarks = [
-    "frame-benchmarking/runtime-benchmarks",
-    "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks",
-    "zeitgeist-primitives/mock",
+  "frame-benchmarking/runtime-benchmarks",
+  "frame-support/runtime-benchmarks",
+  "frame-system/runtime-benchmarks",
+  "zeitgeist-primitives/mock",
 ]
 std = [
-    "frame-benchmarking?/std",
-    "frame-support/std",
-    "frame-system/std",
-    "orml-traits/std",
-    "parity-scale-codec/std",
-    "sp-arithmetic/std",
-    "sp-runtime/std",
-    "zeitgeist-primitives/std",
-    "zrml-authorized/std",
-    "zrml-court/std",
-    "zrml-liquidity-mining/std",
-    "zrml-market-commons/std",
-    "zrml-simple-disputes/std",
+  "frame-benchmarking?/std",
+  "frame-support/std",
+  "frame-system/std",
+  "orml-traits/std",
+  "parity-scale-codec/std",
+  "sp-arithmetic/std",
+  "sp-runtime/std",
+  "zeitgeist-primitives/std",
+  "zrml-authorized/std",
+  "zrml-court/std",
+  "zrml-liquidity-mining/std",
+  "zrml-market-commons/std",
+  "zrml-simple-disputes/std",
 ]
-try-runtime = [
-  "frame-support/try-runtime",
-]
+try-runtime = ["frame-support/try-runtime"]
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
