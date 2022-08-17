@@ -50,7 +50,7 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: /misc/*.lcov
+          files: ../../misc/*.lcov
 
   fuzz:
     name: Fuzz
@@ -85,4 +85,4 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: /misc/*.lcov
+          files: ../../misc/*.lcov

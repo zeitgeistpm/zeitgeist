@@ -26,4 +26,4 @@ do
   fi
 done
 
-grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o misc/tests.lcov
+grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o ../../misc/tests.lcov
