@@ -37,7 +37,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::BASE,
+    constants::{BASE, MIN_DISPUTE_PERIOD},
     traits::Swaps as _,
     types::{
         Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
@@ -157,7 +157,7 @@ benchmarks! {
                 metadata: vec![0; 50],
                 oracle: caller.clone(),
                 period: MarketPeriod::Block(0u32.into()..1u32.into()),
-                deadlines: Deadlines{ oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: 1_u32},
+                deadlines: Deadlines{oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: MIN_DISPUTE_PERIOD},
                 report: None,
                 resolved_outcome: None,
                 scoring_rule: ScoringRule::CPMM,
