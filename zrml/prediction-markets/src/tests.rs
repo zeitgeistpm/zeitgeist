@@ -1679,44 +1679,6 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
 }
 
 #[test]
-fn it_does_not_allow_oracle_to_report_the_outcome_of_a_market_after_oracle_duration() {
-    ExtBuilder::default().build().execute_with(|| {
-        let end = 100;
-        simple_create_categorical_market::<Runtime>(
-            MarketCreation::Permissionless,
-            0..end,
-            ScoringRule::CPMM,
-        );
-
-        let market = MarketCommons::market(&0).unwrap();
-        let oracle_delay = end + market.deadlines.oracle_delay as u64;
-        let report_at = oracle_delay + market.deadlines.oracle_duration as u64 + 1;
-        run_to_block(report_at);
-
-        let market = MarketCommons::market(&0).unwrap();
-        assert_eq!(market.status, MarketStatus::Closed);
-        assert!(market.report.is_none());
-
-        assert_noop!(
-            PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(1)),
-            Error::<Runtime>::OracleNotAllowedReportingNow
-        );
-
-        assert_ok!(PredictionMarkets::report(
-            Origin::signed(CHARLIE),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-
-        let market_after = MarketCommons::market(&0).unwrap();
-        let report = market_after.report.unwrap();
-        assert_eq!(market_after.status, MarketStatus::Reported);
-        assert_eq!(report.outcome, OutcomeReport::Categorical(1));
-        assert_eq!(report.by, CHARLIE);
-    });
-}
-
-#[test]
 fn report_fails_on_mismatched_outcome_for_categorical_market() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;

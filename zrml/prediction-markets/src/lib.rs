@@ -966,8 +966,6 @@ mod pallet {
                         sender_is_oracle || origin_has_permission,
                         Error::<T>::ReporterNotOracle
                     );
-                } else {
-                    ensure!(sender != market.oracle, Error::<T>::OracleNotAllowedReportingNow);
                 }
 
                 market.report = Some(market_report.clone());
@@ -1234,8 +1232,6 @@ mod pallet {
         InvalidOutcomeRange,
         /// Can not report before market.deadlines.oracle_delay is ended.
         NotAllowedToReportYet,
-        /// Oracle is not allowed to report as market.deadlines.oracle_duration has passed.
-        OracleNotAllowedReportingNow,
         /// Specified dispute_duration is smaller than MinDisputePeriod.
         DisputeDurationSmallerThanMinDisputePeriod,
     }
