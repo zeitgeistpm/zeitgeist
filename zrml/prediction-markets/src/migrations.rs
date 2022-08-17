@@ -438,7 +438,7 @@ mod tests {
     fn test_market_ids_per_open_block_on_runtime_upgrade() {
         ExtBuilder::default().build().execute_with(|| {
             setup_chain();
-            assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 1_000 * BASE));
+            assert_ok!(AssetManager::deposit(Asset::ZTG, &ALICE, 1_000 * BASE));
 
             // Markets which end here will have to be closed on migration:
             let time_11: MomentOf<Runtime> = (11 * MILLISECS_PER_BLOCK).into();

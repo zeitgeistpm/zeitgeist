@@ -180,7 +180,7 @@ mod pallet {
             let slash_market_creator = |amount| {
                 T::AssetManager::slash_reserved_named(
                     &Self::reserve_id(),
-                    Asset::Ztg,
+                    Asset::ZTG,
                     &market.creator,
                     amount,
                 );
@@ -216,9 +216,9 @@ mod pallet {
                 }
             }
             T::AssetManager::slash(
-                Asset::Ztg,
+                Asset::ZTG,
                 &market_account,
-                T::AssetManager::free_balance(Asset::Ztg, &market_account),
+                T::AssetManager::free_balance(Asset::ZTG, &market_account),
             );
             if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
                 T::Swaps::destroy_pool(pool_id)?;
@@ -345,7 +345,7 @@ mod pallet {
 
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
-                    Asset::Ztg,
+                    Asset::ZTG,
                     &m.creator,
                     T::AdvisoryBond::get(),
                 );
@@ -402,7 +402,7 @@ mod pallet {
             Self::validate_dispute(&disputes, &market, num_disputes, &outcome)?;
             T::AssetManager::reserve_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
+                Asset::ZTG,
                 &who,
                 default_dispute_bond::<T>(disputes.len()),
             )?;
@@ -557,7 +557,7 @@ mod pallet {
                     let required_bond = T::ValidityBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
-                        Asset::Ztg,
+                        Asset::ZTG,
                         &sender,
                         required_bond,
                     )?;
@@ -571,7 +571,7 @@ mod pallet {
                     let required_bond = T::AdvisoryBond::get().saturating_add(T::OracleBond::get());
                     T::AssetManager::reserve_named(
                         &Self::reserve_id(),
-                        Asset::Ztg,
+                        Asset::ZTG,
                         &sender,
                         required_bond,
                     )?;
@@ -691,7 +691,7 @@ mod pallet {
             Self::ensure_market_is_active(&market)?;
 
             let mut assets = Self::outcome_assets(market_id, &market);
-            let base_asset = Asset::Ztg;
+            let base_asset = Asset::ZTG;
             assets.push(base_asset);
             let base_asset_weight = weights.iter().fold(0u128, |acc, val| acc.saturating_add(*val));
             weights.push(base_asset_weight);
@@ -771,7 +771,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(Asset::Ztg, &market_account)
+                        T::AssetManager::free_balance(Asset::ZTG, &market_account)
                             >= winning_balance,
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -825,7 +825,7 @@ mod pallet {
                     // Ensure the market account has enough to pay out - if this is
                     // ever not true then we have an accounting problem.
                     ensure!(
-                        T::AssetManager::free_balance(Asset::Ztg, &market_account)
+                        T::AssetManager::free_balance(Asset::ZTG, &market_account)
                             >= long_payout.saturating_add(short_payout),
                         Error::<T>::InsufficientFundsInMarketAccount,
                     );
@@ -842,10 +842,10 @@ mod pallet {
                 T::AssetManager::slash(currency_id, &sender, balance);
 
                 // Pay out the winner.
-                let remaining_bal = T::AssetManager::free_balance(Asset::Ztg, &market_account);
+                let remaining_bal = T::AssetManager::free_balance(Asset::ZTG, &market_account);
                 let actual_payout = payout.min(remaining_bal);
 
-                T::AssetManager::transfer(Asset::Ztg, &market_account, &sender, actual_payout)?;
+                T::AssetManager::transfer(Asset::ZTG, &market_account, &sender, actual_payout)?;
                 // The if-check prevents scalar markets to emit events even if sender only owns one
                 // of the outcome tokens.
                 if balance != <BalanceOf<T>>::zero() {
@@ -976,7 +976,7 @@ mod pallet {
 
             let market_account = Self::market_account(market_id);
             ensure!(
-                T::AssetManager::free_balance(Asset::Ztg, &market_account) >= amount,
+                T::AssetManager::free_balance(Asset::ZTG, &market_account) >= amount,
                 "Market account does not have sufficient reserves.",
             );
 
@@ -997,7 +997,7 @@ mod pallet {
                 T::AssetManager::slash(*asset, &sender, amount);
             }
 
-            T::AssetManager::transfer(Asset::Ztg, &market_account, &sender, amount)?;
+            T::AssetManager::transfer(Asset::ZTG, &market_account, &sender, amount)?;
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
@@ -1525,7 +1525,7 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure!(amount != BalanceOf::<T>::zero(), Error::<T>::ZeroAmount);
             ensure!(
-                T::AssetManager::free_balance(Asset::Ztg, &who) >= amount,
+                T::AssetManager::free_balance(Asset::ZTG, &who) >= amount,
                 Error::<T>::NotEnoughBalance
             );
 
@@ -1534,7 +1534,7 @@ mod pallet {
             Self::ensure_market_is_active(&market)?;
 
             let market_account = Self::market_account(market_id);
-            T::AssetManager::transfer(Asset::Ztg, &who, &market_account, amount)?;
+            T::AssetManager::transfer(Asset::ZTG, &who, &market_account, amount)?;
 
             let assets = Self::outcome_assets(market_id, &market);
             for asset in assets.iter() {
@@ -1556,13 +1556,13 @@ mod pallet {
             let creator = &market.creator;
             T::AssetManager::slash_reserved_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
+                Asset::ZTG,
                 creator,
                 T::AdvisoryBond::get(),
             );
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
+                Asset::ZTG,
                 creator,
                 T::OracleBond::get(),
             );
@@ -1580,13 +1580,13 @@ mod pallet {
             let creator = &market.creator;
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
+                Asset::ZTG,
                 creator,
                 T::AdvisoryBond::get(),
             );
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
+                Asset::ZTG,
                 creator,
                 T::OracleBond::get(),
             );
@@ -1829,7 +1829,7 @@ mod pallet {
             if market.creation == MarketCreation::Permissionless {
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
-                    Asset::Ztg,
+                    Asset::ZTG,
                     &market.creator,
                     T::ValidityBond::get(),
                 );
@@ -1846,14 +1846,14 @@ mod pallet {
                     if report.by == market.oracle {
                         T::AssetManager::unreserve_named(
                             &Self::reserve_id(),
-                            Asset::Ztg,
+                            Asset::ZTG,
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
                         let excess = T::AssetManager::slash_reserved_named(
                             &Self::reserve_id(),
-                            Asset::Ztg,
+                            Asset::ZTG,
                             &market.creator,
                             T::OracleBond::get(),
                         );
@@ -1861,7 +1861,7 @@ mod pallet {
                         let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
 
                         if let Err(err) =
-                            T::AssetManager::deposit(Asset::Ztg, &report.by, negative_imbalance)
+                            T::AssetManager::deposit(Asset::ZTG, &report.by, negative_imbalance)
                         {
                             log::warn!(
                                 "[PredictionMarkets] Cannot deposit to the reporter. error: {:?}",
@@ -1898,14 +1898,14 @@ mod pallet {
                     if report.outcome == resolved_outcome {
                         T::AssetManager::unreserve_named(
                             &Self::reserve_id(),
-                            Asset::Ztg,
+                            Asset::ZTG,
                             &market.creator,
                             T::OracleBond::get(),
                         );
                     } else {
                         let excess = T::AssetManager::slash_reserved_named(
                             &Self::reserve_id(),
-                            Asset::Ztg,
+                            Asset::ZTG,
                             &market.creator,
                             T::OracleBond::get(),
                         );
@@ -1920,7 +1920,7 @@ mod pallet {
                         if dispute.outcome == resolved_outcome {
                             T::AssetManager::unreserve_named(
                                 &Self::reserve_id(),
-                                Asset::Ztg,
+                                Asset::ZTG,
                                 &dispute.by,
                                 actual_bond,
                             );
@@ -1929,7 +1929,7 @@ mod pallet {
                         } else {
                             let excess = T::AssetManager::slash_reserved_named(
                                 &Self::reserve_id(),
-                                Asset::Ztg,
+                                Asset::ZTG,
                                 &dispute.by,
                                 actual_bond,
                             );
@@ -1952,7 +1952,7 @@ mod pallet {
                             overall_imbalance = overall_imbalance.saturating_sub(reward);
 
                             if let Err(err) =
-                                T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
+                                T::AssetManager::deposit(Asset::ZTG, correct_reporter, reward)
                             {
                                 log::warn!(
                                     "[PredictionMarkets] Cannot deposit to the correct reporter. \
@@ -2086,7 +2086,7 @@ mod pallet {
                                                 .saturating_add(T::OracleBond::get());
                                             T::AssetManager::unreserve_named(
                                                 &Self::reserve_id(),
-                                                Asset::Ztg,
+                                                Asset::ZTG,
                                                 &m.creator,
                                                 required_bond,
                                             );
@@ -2095,7 +2095,7 @@ mod pallet {
                                             // was approved. Approval is inevitable to reach this.
                                             T::AssetManager::unreserve_named(
                                                 &Self::reserve_id(),
-                                                Asset::Ztg,
+                                                Asset::ZTG,
                                                 &m.creator,
                                                 T::OracleBond::get(),
                                             );
@@ -2309,7 +2309,7 @@ mod pallet {
             );
 
             let mut assets = Self::outcome_assets(market_id, market);
-            let base_asset = Asset::Ztg;
+            let base_asset = Asset::ZTG;
             assets.push(base_asset);
             let total_assets = assets.len();
 
