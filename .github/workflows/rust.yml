@@ -68,6 +68,9 @@ jobs:
           override: true
           profile: minimal
           components: rustfmt, clippy, llvm-tools-preview
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
 
       - name: Download grcov
         run: |
