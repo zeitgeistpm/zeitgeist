@@ -43,10 +43,10 @@ parameter_types! {
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
-    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
-    pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
-    pub const MaxOracleDelay: BlockNumber = MAX_ORACLE_DELAY;
-    pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
+    pub const MinDisputeDuration: BlockNumber = 2;
+    pub const MaxDisputeDuration: BlockNumber = 5;
+    pub const MaxOracleDelay: BlockNumber = 2;
+    pub const MaxOracleDuration: BlockNumber = 2;
 }
 
 // Simple disputes parameters

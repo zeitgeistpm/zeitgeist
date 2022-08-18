@@ -89,7 +89,7 @@ fn create_market_common<T: Config>(
     let _ = Call::<T>::create_market {
         oracle,
         period,
-        deadlines: Some(deadlines),
+        deadlines,
         metadata,
         creation,
         market_type: options,
@@ -338,7 +338,7 @@ benchmarks! {
     create_market {
         let (caller, oracle, period, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-    }: _(RawOrigin::Signed(caller), oracle, period, Some(deadlines), metadata, creation,
+    }: _(RawOrigin::Signed(caller), oracle, period, deadlines, metadata, creation,
             MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 

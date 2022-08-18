@@ -118,7 +118,7 @@ mod pallet {
         DispatchError, DispatchResult, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        constants::{BLOCKS_PER_DAY, MILLISECS_PER_BLOCK},
+        constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
@@ -471,7 +471,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Option<Deadlines<T::BlockNumber>>,
+            deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
             dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
@@ -525,7 +525,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
-            deadlines: Option<Deadlines<T::BlockNumber>>,
+            deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
@@ -584,12 +584,6 @@ mod pallet {
                     MarketStatus::Proposed
                 }
             };
-            let blocks_per_day: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
-            let deadlines = deadlines.unwrap_or(Deadlines {
-                oracle_delay: blocks_per_day,
-                oracle_duration: blocks_per_day,
-                dispute_duration: blocks_per_day,
-            });
             ensure!(
                 deadlines.dispute_duration >= T::MinDisputeDuration::get(),
                 Error::<T>::DisputeDurationSmallerThanMinDisputeDuration

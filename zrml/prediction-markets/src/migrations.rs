@@ -405,8 +405,8 @@ mod tests {
         constants::{BASE, MILLISECS_PER_BLOCK},
         traits::Swaps as SwapsApi,
         types::{
-            Asset, BlockNumber, MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash,
-            PoolStatus,
+            Asset, BlockNumber, Deadlines, MarketDisputeMechanism, MarketPeriod, MarketType,
+            MultiHash, PoolStatus,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -521,11 +521,16 @@ mod tests {
     fn create_test_market_with_pool(period: MarketPeriod<BlockNumber, MomentOf<Runtime>>) {
         let amount = 100 * BASE;
         let category_count = 5;
+        let deadlines = Deadlines {
+            oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
+            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+        };
         assert_ok!(PredictionMarkets::create_cpmm_market_and_deploy_assets(
             Origin::signed(ALICE),
             BOB,
             period,
-            None,
+            deadlines,
             gen_metadata(0),
             MarketType::Categorical(category_count),
             MarketDisputeMechanism::Authorized(CHARLIE),
