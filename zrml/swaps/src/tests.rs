@@ -35,7 +35,7 @@ use sp_runtime::SaturatedConversion;
 #[allow(unused_imports)]
 use test_case::test_case;
 use zeitgeist_primitives::{
-    constants::{BASE, MIN_DISPUTE_PERIOD},
+    constants::{BASE, MIN_DISPUTE_DURATION},
     traits::Swaps as _,
     types::{
         AccountIdTest, Asset, BlockNumber, Deadlines, Market, MarketCreation,
@@ -3109,7 +3109,7 @@ fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
         deadlines: Deadlines {
             oracle_delay: 1,
             oracle_duration: 1,
-            dispute_duration: MIN_DISPUTE_PERIOD,
+            dispute_duration: MIN_DISPUTE_DURATION,
         },
         report: None,
         resolved_outcome: None,

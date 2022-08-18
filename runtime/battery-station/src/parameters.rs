@@ -157,9 +157,9 @@ parameter_types! {
     /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
     /// Minimum block period for a dispute.
-    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_PERIOD;
+    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
     /// Maximum block period for a dispute.
-    pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_PERIOD;
+    pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
     /// Maximum block period for a oracle_delay.
     pub const MaxOracleDelay: BlockNumber = MAX_ORACLE_DELAY;
     /// Maximum block period for a oracle_duration.
