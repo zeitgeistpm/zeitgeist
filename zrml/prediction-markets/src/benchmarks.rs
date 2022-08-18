@@ -69,7 +69,7 @@ fn create_market_common_parameters<T: Config>(
     let deadlines = Deadlines::<T::BlockNumber> {
         oracle_delay: 1_u32.into(),
         oracle_duration: 1_u32.into(),
-        dispute_duration: T::MinDisputePeriod::get(),
+        dispute_duration: T::MinDisputeDuration::get(),
     };
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;

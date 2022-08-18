@@ -591,12 +591,12 @@ mod pallet {
                 dispute_duration: blocks_per_day,
             });
             ensure!(
-                deadlines.dispute_duration >= T::MinDisputePeriod::get(),
-                Error::<T>::DisputeDurationSmallerThanMinDisputePeriod
+                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
+                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
             );
             ensure!(
-                deadlines.dispute_duration <= T::MaxDisputePeriod::get(),
-                Error::<T>::DisputeDurationGraterThanMaxDisputePeriod
+                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
+                Error::<T>::DisputeDurationGraterThanMaxDisputeDuration
             );
             ensure!(
                 deadlines.oracle_delay <= T::MaxOracleDelay::get(),
@@ -1144,7 +1144,7 @@ mod pallet {
         /// The minimum number of blocks allowed to be specified as dispute_duration
         /// in create_market.
         #[pallet::constant]
-        type MinDisputePeriod: Get<Self::BlockNumber>;
+        type MinDisputeDuration: Get<Self::BlockNumber>;
 
         /// The maximum number of blocks allowed to be specified as oracle_delay
         /// in create_market.
@@ -1159,7 +1159,7 @@ mod pallet {
         /// The maximum number of blocks allowed to be specified as dispute_duration
         /// in create_market.
         #[pallet::constant]
-        type MaxDisputePeriod: Get<Self::BlockNumber>;
+        type MaxDisputeDuration: Get<Self::BlockNumber>;
 
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
@@ -1260,10 +1260,10 @@ mod pallet {
         InvalidOutcomeRange,
         /// Can not report before market.deadlines.oracle_delay is ended.
         NotAllowedToReportYet,
-        /// Specified dispute_duration is smaller than MinDisputePeriod.
-        DisputeDurationSmallerThanMinDisputePeriod,
-        /// Specified dispute_duration is grater than MaxDisputePeriod.
-        DisputeDurationGraterThanMaxDisputePeriod,
+        /// Specified dispute_duration is smaller than MinDisputeDuration.
+        DisputeDurationSmallerThanMinDisputeDuration,
+        /// Specified dispute_duration is grater than MaxDisputeDuration.
+        DisputeDurationGraterThanMaxDisputeDuration,
         /// Specified oracle_delay is grater than MaxOracleDelay.
         OracleDelayGraterThanMaxOracleDelay,
         /// Specified oracle_duration is grater than MaxOracleDuration.

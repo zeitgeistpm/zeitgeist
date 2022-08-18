@@ -869,8 +869,8 @@ macro_rules! impl_config_traits {
             type MarketCommons = MarketCommons;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
-            type MinDisputePeriod = MinDisputePeriod;
-            type MaxDisputePeriod = MaxDisputePeriod;
+            type MinDisputeDuration = MinDisputeDuration;
+            type MaxDisputeDuration = MaxDisputeDuration;
             type MaxOracleDelay = MaxOracleDelay;
             type MaxOracleDuration = MaxOracleDuration;
             type MaxSubsidyPeriod = MaxSubsidyPeriod;

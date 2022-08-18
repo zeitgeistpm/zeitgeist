@@ -37,10 +37,10 @@ use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputePeriod,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputeDuration,
         MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOracleDelay, MaxOracleDuration, MaxOutRatio,
         MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinDisputePeriod, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinCategories, MinDisputeDuration, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
         MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, BASE, CENT,
         MILLISECS_PER_BLOCK,
     },
@@ -109,8 +109,8 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
-    type MinDisputePeriod = MinDisputePeriod;
-    type MaxDisputePeriod = MaxDisputePeriod;
+    type MinDisputeDuration = MinDisputeDuration;
+    type MaxDisputeDuration = MaxDisputeDuration;
     type MaxOracleDelay = MaxOracleDelay;
     type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;

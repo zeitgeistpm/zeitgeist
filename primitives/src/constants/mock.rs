@@ -37,14 +37,14 @@ parameter_types! {
     pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    // Requirements: MaxPeriod + OracleDuration + MaxDisputes * DisputePeriod < u64::MAX.
-    // Note: OracleDuration and DisputePeriod as specified in create_market() extrinsic.
+    // Requirements: MaxPeriod + OracleDuration + MaxDisputes * DisputeDuration < u64::MAX.
+    // Note: OracleDuration and DisputeDuration as specified in create_market() extrinsic.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
-    pub const MinDisputePeriod: BlockNumber = MIN_DISPUTE_PERIOD;
-    pub const MaxDisputePeriod: BlockNumber = MAX_DISPUTE_PERIOD;
+    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_PERIOD;
+    pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_PERIOD;
     pub const MaxOracleDelay: BlockNumber = MAX_ORACLE_DELAY;
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
 }

@@ -221,7 +221,7 @@ fn crate_market_fails_on_min_dispute_period() {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
             oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: <Runtime as crate::Config>::MinDisputePeriod::get() - 1,
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get() - 1,
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -235,7 +235,7 @@ fn crate_market_fails_on_min_dispute_period() {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::DisputeDurationSmallerThanMinDisputePeriod
+            crate::Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
         );
     });
 }
@@ -246,7 +246,7 @@ fn crate_market_fails_on_max_dispute_period() {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
             oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: <Runtime as crate::Config>::MaxDisputePeriod::get() + 1,
+            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get() + 1,
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -260,7 +260,7 @@ fn crate_market_fails_on_max_dispute_period() {
                 MarketDisputeMechanism::SimpleDisputes,
                 ScoringRule::CPMM,
             ),
-            crate::Error::<Runtime>::DisputeDurationGraterThanMaxDisputePeriod
+            crate::Error::<Runtime>::DisputeDurationGraterThanMaxDisputeDuration
         );
     });
 }
@@ -271,7 +271,7 @@ fn crate_market_fails_on_max_oracle_delay() {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get() + 1,
             oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: <Runtime as crate::Config>::MaxDisputePeriod::get(),
+            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
         };
         assert_noop!(
             PredictionMarkets::create_market(
@@ -296,7 +296,7 @@ fn crate_market_fails_on_max_oracle_duration() {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
             oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get() + 1,
-            dispute_duration: <Runtime as crate::Config>::MaxDisputePeriod::get(),
+            dispute_duration: <Runtime as crate::Config>::MaxDisputeDuration::get(),
         };
         assert_noop!(
             PredictionMarkets::create_market(

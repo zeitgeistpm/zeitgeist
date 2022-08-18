@@ -506,7 +506,7 @@ mod tests {
             MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids);
             System::set_block_number(System::current_block_number() + dispute_period - 1);
             CleanUpStorageForResolvedOrClosedMarkets::<Runtime>::on_runtime_upgrade();
-            // storage is untouched as DisputePeriod is not reached.
+            // storage is untouched as DisputeDuration is not reached.
             assert_eq!(MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block).len(), 2);
             assert_eq!(MarketIdsPerReportBlock::<Runtime>::get(dispute_block).len(), 2);
         });
