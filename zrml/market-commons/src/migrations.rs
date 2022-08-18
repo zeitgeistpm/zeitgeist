@@ -86,32 +86,25 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
             oracle_duration: blocks_per_day,
             dispute_duration: blocks_per_day,
         };
-        for (key, market) in storage_iter::<Option<LegacyMarketOf<T>>>(MARKET_COMMONS, MARKETS) {
+        for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-            if let Some(legacy_market) = market {
-                let new_market = Market {
-                    creator: legacy_market.creator,
-                    creation: legacy_market.creation,
-                    creator_fee: legacy_market.creator_fee,
-                    oracle: legacy_market.oracle,
-                    metadata: legacy_market.metadata,
-                    market_type: legacy_market.market_type,
-                    period: legacy_market.period,
-                    scoring_rule: legacy_market.scoring_rule,
-                    status: legacy_market.status,
-                    report: legacy_market.report,
-                    resolved_outcome: legacy_market.resolved_outcome,
-                    dispute_mechanism: legacy_market.dispute_mechanism,
-                    deadlines,
-                };
-                put_storage_value::<Option<MarketOf<T>>>(
-                    MARKET_COMMONS,
-                    MARKETS,
-                    &key,
-                    Some(new_market),
-                );
-                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            }
+            let new_market = Market {
+                creator: legacy_market.creator,
+                creation: legacy_market.creation,
+                creator_fee: legacy_market.creator_fee,
+                oracle: legacy_market.oracle,
+                metadata: legacy_market.metadata,
+                market_type: legacy_market.market_type,
+                period: legacy_market.period,
+                scoring_rule: legacy_market.scoring_rule,
+                status: legacy_market.status,
+                report: legacy_market.report,
+                resolved_outcome: legacy_market.resolved_outcome,
+                dispute_mechanism: legacy_market.dispute_mechanism,
+                deadlines,
+            };
+            put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
         log::info!("Completed updates of markets");
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
@@ -130,14 +123,12 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
             oracle_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
             dispute_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
         };
-        for (market_id, market) in storage_iter::<Option<MarketOf<T>>>(MARKET_COMMONS, MARKETS) {
-            if let Some(market) = market {
-                assert_eq!(
-                    market.deadlines, deadlines,
-                    "found unexpected deadlines in market. market_id: {:?}, deadlines: {:?}",
-                    market_id, market.deadlines
-                );
-            }
+        for (market_id, market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
+            assert_eq!(
+                market.deadlines, deadlines,
+                "found unexpected deadlines in market. market_id: {:?}, deadlines: {:?}",
+                market_id, market.deadlines
+            );
         }
         Ok(())
     }
@@ -146,9 +137,12 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::{ExtBuilder, Runtime};
+    use crate::{
+        mock::{ExtBuilder, Runtime},
+        Markets,
+    };
     use core::fmt::Debug;
-    use frame_support::{storage::migration::get_storage_value, Blake2_128Concat, StorageHasher};
+    use frame_support::{Blake2_128Concat, StorageHasher};
     use parity_scale_codec::Encode;
 
     type MarketId = <Runtime as Config>::MarketId;
@@ -158,21 +152,14 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
             let (legacy_markets, expected_markets) = create_test_data();
-            populate_test_data::<Blake2_128Concat, MarketId, Option<LegacyMarketOf<Runtime>>>(
+            populate_test_data::<Blake2_128Concat, MarketId, LegacyMarketOf<Runtime>>(
                 MARKET_COMMONS,
                 MARKETS,
                 legacy_markets,
             );
             UpdateMarketsForDeadlines::<Runtime>::on_runtime_upgrade();
             for (market_id, market_expected) in expected_markets.iter().enumerate() {
-                let key_hash = key_to_hash::<Blake2_128Concat, MarketId>(market_id);
-                let market_actual = get_storage_value::<Option<MarketOf<Runtime>>>(
-                    MARKET_COMMONS,
-                    MARKETS,
-                    &key_hash,
-                )
-                .unwrap()
-                .unwrap(); // Unwrap twice because get_storage returns an option!
+                let market_actual = Markets::<Runtime>::get(&(market_id as u128)).unwrap();
                 assert_eq!(market_actual, *market_expected);
             }
         });
@@ -200,9 +187,9 @@ mod tests {
         K::try_from(key).unwrap().using_encoded(H::hash).as_ref().to_vec()
     }
 
-    fn create_test_data() -> (Vec<Option<LegacyMarketOf<Runtime>>>, Vec<MarketOf<Runtime>>) {
-        let old_markets: Vec<Option<LegacyMarketOf<Runtime>>> = vec![
-            Some(LegacyMarket {
+    fn create_test_data() -> (Vec<LegacyMarketOf<Runtime>>, Vec<MarketOf<Runtime>>) {
+        let old_markets: Vec<LegacyMarketOf<Runtime>> = vec![
+            LegacyMarket {
                 creator: 1_u128,
                 creation: MarketCreation::Permissionless,
                 creator_fee: 100_u8,
@@ -215,8 +202,8 @@ mod tests {
                 report: None,
                 resolved_outcome: None,
                 dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
-            }),
-            Some(LegacyMarket {
+            },
+            LegacyMarket {
                 creator: 1_u128,
                 creation: MarketCreation::Advised,
                 creator_fee: 100_u8,
@@ -229,7 +216,7 @@ mod tests {
                 report: None,
                 resolved_outcome: None,
                 dispute_mechanism: MarketDisputeMechanism::Authorized(3_u128),
-            }),
+            },
         ];
         let deadlines = Deadlines {
             oracle_delay: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
