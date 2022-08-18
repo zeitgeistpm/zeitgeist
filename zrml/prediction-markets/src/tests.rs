@@ -36,9 +36,9 @@ use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, BLOCKS_PER_DAY, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
-        Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
-        MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, PoolStatus, ScalarPosition,
-        ScoringRule,
+        Asset, BlockNumber, Deadlines, Market, MarketCreation, MarketDisputeMechanism,
+        MarketPeriod, MarketStatus, MarketType, Moment, MultiHash, OutcomeReport, PoolStatus,
+        ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -211,6 +211,106 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::InvalidOutcomeRange
+        );
+    });
+}
+
+#[test]
+fn crate_market_fails_on_min_dispute_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
+            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as crate::Config>::MinDisputePeriod::get() - 1,
+        };
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                Some(deadlines),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::DisputeDurationSmallerThanMinDisputePeriod
+        );
+    });
+}
+
+#[test]
+fn crate_market_fails_on_max_dispute_period() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
+            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as crate::Config>::MaxDisputePeriod::get() + 1,
+        };
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                Some(deadlines),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::DisputeDurationGraterThanMaxDisputePeriod
+        );
+    });
+}
+
+#[test]
+fn crate_market_fails_on_max_oracle_delay() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get() + 1,
+            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
+            dispute_duration: <Runtime as crate::Config>::MaxDisputePeriod::get(),
+        };
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                Some(deadlines),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::OracleDelayGraterThanMaxOracleDelay
+        );
+    });
+}
+
+#[test]
+fn crate_market_fails_on_max_oracle_duration() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
+            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get() + 1,
+            dispute_duration: <Runtime as crate::Config>::MaxDisputePeriod::get(),
+        };
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                Some(deadlines),
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::OracleDurationGraterThanMaxOracleDuration
         );
     });
 }

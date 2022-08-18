@@ -74,8 +74,15 @@ pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 // Prediction Markets
 /// Max. categories in a prediction market.
 pub const MAX_CATEGORIES: u16 = 10;
-/// Minimum block numbers for a dispute_period.
-pub const MIN_DISPUTE_PERIOD: u32 = 50;
+/// Minimum block period for a dispute.
+pub const MIN_DISPUTE_PERIOD: BlockNumber = 6 * BLOCKS_PER_HOUR;
+/// Maximum block period for a dispute.
+pub const MAX_DISPUTE_PERIOD: BlockNumber = BLOCKS_PER_DAY;
+/// Maximum block period for an oracle_delay.
+pub const MAX_ORACLE_DELAY: BlockNumber = BLOCKS_PER_DAY;
+/// Maximum block period for an oracle_duration.
+pub const MAX_ORACLE_DURATION: BlockNumber = BLOCKS_PER_DAY;
+
 /// Pallet identifier, mainly used for named balance reserves.
 pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
 

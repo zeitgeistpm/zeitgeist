@@ -181,7 +181,7 @@ where
     T: crate::Config,
 {
     use frame_support::traits::Get;
-    use sp_runtime::traits::AccountIdConversion;
+    use sp_runtime::{traits::AccountIdConversion, SaturatedConversion};
     use zeitgeist_primitives::{constants::MIN_DISPUTE_PERIOD, types::ScoringRule};
 
     zeitgeist_primitives::types::Market {
@@ -194,9 +194,9 @@ where
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
         deadlines: zeitgeist_primitives::types::Deadlines {
-            oracle_delay: 1_u32,
-            oracle_duration: 1_u32,
-            dispute_duration: MIN_DISPUTE_PERIOD,
+            oracle_delay: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: MIN_DISPUTE_PERIOD.saturated_into::<u32>().into(),
         },
         report: None,
         resolved_outcome: None,

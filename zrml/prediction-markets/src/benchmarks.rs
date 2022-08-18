@@ -56,7 +56,7 @@ fn create_market_common_parameters<T: Config>(
         T::AccountId,
         T::AccountId,
         MarketPeriod<T::BlockNumber, MomentOf<T>>,
-        Deadlines,
+        Deadlines<T::BlockNumber>,
         MultiHash,
         MarketCreation,
     ),
@@ -66,9 +66,9 @@ fn create_market_common_parameters<T: Config>(
     let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
-    let deadlines = Deadlines {
-        oracle_delay: 1_u32,
-        oracle_duration: 1_u32,
+    let deadlines = Deadlines::<T::BlockNumber> {
+        oracle_delay: 1_u32.into(),
+        oracle_duration: 1_u32.into(),
         dispute_duration: T::MinDisputePeriod::get(),
     };
     let mut metadata = [0u8; 50];
@@ -519,8 +519,8 @@ benchmarks! {
             .dispatch_bypass_filter(close_origin)?;
     let end: u32 =
         T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
-    let oracle_delay : u32 = market.deadlines.oracle_delay * MILLISECS_PER_BLOCK;
-    let oracle_duration : u32 = market.deadlines.oracle_duration * MILLISECS_PER_BLOCK;
+    let oracle_delay : u32 = market.deadlines.oracle_delay.saturated_into::<u32>() * MILLISECS_PER_BLOCK;
+    let oracle_duration : u32 = market.deadlines.oracle_duration.saturated_into::<u32>() * MILLISECS_PER_BLOCK;
     pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay + oracle_duration).into());
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 

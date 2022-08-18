@@ -42,8 +42,8 @@ const MARKET_DUMMY: Market<AccountIdTest, BlockNumber, Moment> = Market {
     oracle: 0,
     period: MarketPeriod::Block(0..100),
     deadlines: Deadlines {
-        oracle_delay: 1_u32,
-        oracle_duration: 1_u32,
+        oracle_delay: 1_u64,
+        oracle_duration: 1_u64,
         dispute_duration: MIN_DISPUTE_PERIOD,
     },
     report: None,

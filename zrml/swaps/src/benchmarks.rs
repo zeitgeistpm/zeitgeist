@@ -157,7 +157,7 @@ benchmarks! {
                 metadata: vec![0; 50],
                 oracle: caller.clone(),
                 period: MarketPeriod::Block(0u32.into()..1u32.into()),
-                deadlines: Deadlines{oracle_delay: 1_u32, oracle_duration: 1_u32, dispute_duration: MIN_DISPUTE_PERIOD},
+                deadlines: Deadlines{oracle_delay: 1_u32.into(), oracle_duration: 1_u32.into(), dispute_duration: MIN_DISPUTE_PERIOD.saturated_into::<u32>().into()},
                 report: None,
                 resolved_outcome: None,
                 scoring_rule: ScoringRule::CPMM,

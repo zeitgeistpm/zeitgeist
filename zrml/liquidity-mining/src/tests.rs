@@ -214,8 +214,8 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             oracle: 0,
             period: MarketPeriod::Block(period),
             deadlines: Deadlines {
-                oracle_delay: 1_u32,
-                oracle_duration: 1_u32,
+                oracle_delay: 1_u64,
+                oracle_duration: 1_u64,
                 dispute_duration: MIN_DISPUTE_PERIOD,
             },
             report: None,

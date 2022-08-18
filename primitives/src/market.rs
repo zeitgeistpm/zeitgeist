@@ -45,7 +45,7 @@ pub struct Market<AI, BN, M> {
     /// Market start and end
     pub period: MarketPeriod<BN, M>,
     /// Market deadlines.
-    pub deadlines: Deadlines,
+    pub deadlines: Deadlines<BN>,
     /// The scoring rule used for the market.
     pub scoring_rule: ScoringRule,
     /// The current status of the market.
@@ -99,7 +99,7 @@ where
             .saturating_add(u8::max_encoded_len().saturating_mul(68))
             .saturating_add(MarketType::max_encoded_len())
             .saturating_add(<MarketPeriod<BN, M>>::max_encoded_len())
-            .saturating_add(Deadlines::max_encoded_len())
+            .saturating_add(Deadlines::<BN>::max_encoded_len())
             .saturating_add(ScoringRule::max_encoded_len())
             .saturating_add(MarketStatus::max_encoded_len())
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
@@ -164,10 +164,10 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
 /// as they just represent some duration in terms of number of blocks.
 /// Number of blocks can be easily converted to Moment.
 #[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub struct Deadlines {
-    pub oracle_delay: u32,
-    pub oracle_duration: u32,
-    pub dispute_duration: u32,
+pub struct Deadlines<BN> {
+    pub oracle_delay: BN,
+    pub oracle_duration: BN,
+    pub dispute_duration: BN,
 }
 
 /// Defines the state of the market.
@@ -298,7 +298,12 @@ mod tests {
             metadata: vec![4u8; 5],
             market_type, // : MarketType::Categorical(6),
             period: MarketPeriod::Block(7..8),
-            deadlines: Deadlines { oracle_delay: 1, oracle_duration: 1, dispute_duration: 1 },
+            deadlines: Deadlines {
+                oracle_delay: 1_u32,
+                oracle_duration: 1_u32,
+                dispute_duration: 1_u32,
+            },
+
             scoring_rule: ScoringRule::CPMM,
             status: MarketStatus::Active,
             report: None,

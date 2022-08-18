@@ -22,6 +22,7 @@ use frame_support::{
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
 };
+use sp_runtime::traits::SaturatedConversion;
 extern crate alloc;
 use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode};
@@ -79,10 +80,11 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
             return total_weight;
         }
         log::info!("Starting updates of markets");
+        let blocks_per_day: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
         let deadlines = Deadlines {
-            oracle_delay: BLOCKS_PER_DAY as u32,
-            oracle_duration: BLOCKS_PER_DAY as u32,
-            dispute_duration: BLOCKS_PER_DAY as u32,
+            oracle_delay: blocks_per_day,
+            oracle_duration: blocks_per_day,
+            dispute_duration: blocks_per_day,
         };
         for (key, market) in storage_iter::<Option<LegacyMarketOf<T>>>(MARKET_COMMONS, MARKETS) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
@@ -124,9 +126,9 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         let deadlines = Deadlines {
-            oracle_delay: BLOCKS_PER_DAY as u32,
-            oracle_duration: BLOCKS_PER_DAY as u32,
-            dispute_duration: BLOCKS_PER_DAY as u32,
+            oracle_delay: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
+            oracle_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
+            dispute_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
         };
         for (market_id, market) in storage_iter::<Option<MarketOf<T>>>(MARKET_COMMONS, MARKETS) {
             if let Some(market) = market {
@@ -230,9 +232,9 @@ mod tests {
             }),
         ];
         let deadlines = Deadlines {
-            oracle_delay: BLOCKS_PER_DAY as u32,
-            oracle_duration: BLOCKS_PER_DAY as u32,
-            dispute_duration: BLOCKS_PER_DAY as u32,
+            oracle_delay: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
+            oracle_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
+            dispute_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
         };
         let expected_markets: Vec<MarketOf<Runtime>> = vec![
             Market {

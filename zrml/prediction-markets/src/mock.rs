@@ -37,11 +37,12 @@ use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputePeriod, MinLiquidity,
-        MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputePeriod,
+        MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOracleDelay, MaxOracleDuration, MaxOutRatio,
+        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinDisputePeriod, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -109,6 +110,9 @@ impl crate::Config for Runtime {
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MinDisputePeriod = MinDisputePeriod;
+    type MaxDisputePeriod = MaxDisputePeriod;
+    type MaxOracleDelay = MaxOracleDelay;
+    type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
