@@ -21,11 +21,7 @@
 // balancer-core repository
 // <https://github.com/balancer-labs/balancer-core>.
 
-//! # Swaps
-//!
-//! A module to handle swapping shares out for different ones. Allows
-//! liquidity providers to deposit full outcome shares and earn fees.
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
 
