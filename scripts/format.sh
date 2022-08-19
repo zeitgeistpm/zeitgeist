@@ -60,19 +60,6 @@ taplo_fmt() {
     check_return_code
 }
 
-taplo_validate() {
-    taplo_verbose=""
-    if [[ ${verbose} = "verbose" ]]; then
-        taplo_verbose="--verbose"
-    fi
-
-    echo "Running taplo validation ..."
-
-    taplo check ${taplo_verbose}
-
-    check_return_code
-}
-
 # install taplo if it isn't already
 has_taplo=$(whereis taplo)
 if [[ ${has_taplo} = "taplo: " ]]; then
@@ -100,5 +87,4 @@ for arg in "$@"; do
 done
 
 cargo_fmt
-taplo_validate
 taplo_fmt
