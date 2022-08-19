@@ -957,7 +957,7 @@ mod pallet {
             ReserveIdentifier = [u8; 8],
         >;
 
-        /// See [`AuthorizedPalletApi`].
+        /// See [`zrml_authorized::AuthorizedPalletApi`].
         type Authorized: zrml_authorized::AuthorizedPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
@@ -970,7 +970,7 @@ mod pallet {
         /// The origin that is allowed to close markets.
         type CloseOrigin: EnsureOrigin<Self::Origin>;
 
-        /// See [`CourtPalletApi`].
+        /// See [`zrml_court::CourtPalletApi`].
         type Court: zrml_court::CourtPalletApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
@@ -1054,7 +1054,7 @@ mod pallet {
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
 
-        /// See [`SimpleDisputesPalletApi`].
+        /// See [`DisputeApi`].
         type SimpleDisputes: DisputeApi<
             AccountId = Self::AccountId,
             Balance = BalanceOf<Self>,
