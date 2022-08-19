@@ -467,7 +467,9 @@ dependencies = [
  "orml-benchmarking",
  "orml-currencies",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -5270,8 +5272,8 @@ source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits",
- "orml-utilities",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
+ "orml-utilities 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5287,7 +5289,7 @@ source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5303,7 +5305,25 @@ dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
  "num-traits",
- "orml-utilities",
+ "orml-utilities 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
+name = "orml-traits"
+version = "0.4.1-dev"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "orml-utilities 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5343,12 +5363,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
 source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest#d6a7fb53042ab3bf4a5b02d597a14cf02f43ba97"
 dependencies = [
  "frame-support",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=polkadot-0.9.19-latest)",
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
@@ -12651,7 +12685,7 @@ dependencies = [
  "frame-system",
  "orml-currencies",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -12686,7 +12720,7 @@ dependencies = [
  "orml-benchmarking",
  "orml-currencies",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "orml-unknown-tokens",
  "orml-xcm-support",
  "pallet-aura",
@@ -12847,7 +12881,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -12878,7 +12912,7 @@ dependencies = [
  "more-asserts",
  "orml-currencies",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
@@ -12999,7 +13033,7 @@ dependencies = [
  "more-asserts",
  "orml-currencies",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -13024,7 +13058,7 @@ dependencies = [
  "arbitrary",
  "frame-support",
  "libfuzzer-sys",
- "orml-traits",
+ "orml-traits 0.4.1-dev (git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=2022-06-v0.9.19)",
  "rand 0.8.5",
  "sp-runtime",
  "zeitgeist-primitives",

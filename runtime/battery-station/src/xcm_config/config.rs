@@ -1,5 +1,5 @@
 use crate::{
-    AccountId, Ancestry, Balance, Balances, Call, Currency, MaxInstructions, Origin,
+    AccountId, Ancestry, Balance, Balances, Call, AssetManager, MaxInstructions, Origin,
     ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayLocation, RelayNetwork, Runtime,
     UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
@@ -42,7 +42,7 @@ impl Config for XcmConfig {
     /// The outer call dispatch type.
     type Call = Call;
     // Filters multi native assets whose reserve is same with `origin`.
-    type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
+    type IsReserve = (); // MultiNativeAsset<AbsoluteReserveProvider>;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
     /// Means of inverting a location.
@@ -81,11 +81,11 @@ parameter_types! {
 /// Means for transacting assets on this chain.
 pub type MultiAssetTransactor = MultiCurrencyAdapter<
     // All known Assets will be processed by the following MultiCurrency implementation.
-    Currency,
+    AssetManager,
     // Any unknown Assets will be processed by the following implementation.
     UnknownTokens,
     // This means that this adapter should handle any token that `AssetConvert` can convert
-    // using Currency and UnknownTokens in all other cases.
+    // using AssetManager and UnknownTokens in all other cases.
     IsNativeConcrete<AssetT, AssetConvert>,
     // Our chain's account ID type (we can't get away without mentioning it explicitly).
     AccountId,
@@ -96,7 +96,7 @@ pub type MultiAssetTransactor = MultiCurrencyAdapter<
     // Struct that provides functions to convert `Asset` <=> `MultiLocation`.
     AssetConvert,
     // In case of deposit failure, known assets will be placed in treasury.
-    DepositToAlternative<ZeitgeistTreasuryAccount, Currency, AssetT, AccountId, Balance>,
+    DepositToAlternative<ZeitgeistTreasuryAccount, AssetManager, AssetT, AccountId, Balance>,
 >;
 
 /// AssetConvert
@@ -208,7 +208,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
     // foreign chains who want to have a local sovereign account on this chain which they control.
     SovereignSignedViaLocation<LocationToAccountId, Origin>,
-    // Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
+    // Native converter for Relay-chain (Parent) location; will convert to a `Relay` origin when
     // recognized.
     RelayChainAsNative<RelayChainOrigin, Origin>,
     // Native converter for sibling Parachains; will convert to a `SiblingPara` origin when

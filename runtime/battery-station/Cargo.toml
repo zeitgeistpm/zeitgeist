@@ -316,8 +316,6 @@ try-runtime = [
     # ORML runtime pallets
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
-    "orml-unknown-tokens?/try-runtime",
-    "orml-xcm-support?/try-runtime",
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",
