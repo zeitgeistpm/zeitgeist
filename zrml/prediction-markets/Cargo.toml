@@ -26,7 +26,7 @@ substrate-fixed = { optional = true, git = "https://github.com/encointer/substra
 zrml-prediction-markets-runtime-api = { features = ["std"], optional = true, path = "./runtime-api" }
 zrml-rikiddo = { optional = true, path = "../rikiddo" }
 zrml-swaps = { optional = true, path = "../swaps" }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true , default-features = false }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
 
 [dev-dependencies]
 zrml-prediction-markets = { features = ["mock"], path = "." }

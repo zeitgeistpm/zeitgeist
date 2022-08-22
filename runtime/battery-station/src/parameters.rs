@@ -164,8 +164,6 @@ parameter_types! {
     pub const MaxOracleDelay: BlockNumber = MAX_ORACLE_DELAY;
     /// Maximum block period for a oracle_duration.
     pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
-    // Requirements: MaxPeriod + OracleDuration + MaxDisputes * DisputeDuration < u64::MAX.
-    // Note: OracleDuration and DisputeDuration as specified in create_market() extrinsic.
     /// The maximum market period.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the

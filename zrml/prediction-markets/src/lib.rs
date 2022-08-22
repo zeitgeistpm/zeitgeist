@@ -925,6 +925,10 @@ mod pallet {
             T::MarketCommons::mutate_market(&market_id, |market| {
                 ensure!(market.report.is_none(), Error::<T>::MarketAlreadyReported);
                 Self::ensure_market_is_closed(market)?;
+                ensure!(
+                    market.matches_outcome_report(&market_report.outcome),
+                    Error::<T>::OutcomeMismatch
+                );
 
                 let mut should_check_origin = false;
                 match market.period {
@@ -960,11 +964,6 @@ mod pallet {
                         }
                     }
                 }
-
-                ensure!(
-                    market.matches_outcome_report(&market_report.outcome),
-                    Error::<T>::OutcomeMismatch
-                );
 
                 if should_check_origin {
                     let sender_is_oracle = sender == market.oracle;
