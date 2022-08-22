@@ -33,7 +33,7 @@ use test_case::test_case;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::AccountIdConversion;
 use zeitgeist_primitives::{
-    constants::mock::{DisputeFactor, BASE, BLOCKS_PER_DAY, CENT, MILLISECS_PER_BLOCK},
+    constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
     types::{
         Asset, BlockNumber, Deadlines, Market, MarketCreation, MarketDisputeMechanism,
@@ -48,8 +48,8 @@ const SENTINEL_AMOUNT: u128 = BASE;
 
 fn get_deadlines<T: crate::Config>() -> Deadlines<T::BlockNumber> {
     Deadlines {
-        oracle_delay: T::MaxOracleDelay::get(),
-        oracle_duration: T::MaxOracleDuration::get(),
+        oracle_delay: 1_u32.into(),
+        oracle_duration: 1_u32.into(),
         dispute_duration: T::MinDisputeDuration::get(),
     }
 }
@@ -2501,7 +2501,7 @@ fn full_scalar_market_lifecycle() {
         let market = MarketCommons::market(&0).unwrap();
 
         set_timestamp_for_on_initialize(100_000_000);
-        let report_at = 7200 + 2;
+        let report_at = 2;
         run_to_block(report_at); // Trigger `on_initialize`; must be at least block #2.
         let oracle_delay: u64 = market.deadlines.oracle_delay as u64 * MILLISECS_PER_BLOCK as u64;
         set_timestamp_for_on_initialize(
@@ -2523,7 +2523,7 @@ fn full_scalar_market_lifecycle() {
         let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 1);
 
-        run_blocks(7200 + 7200 + 2);
+        run_blocks(report_at + 2);
 
         let market_after_resolve = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
@@ -3390,7 +3390,8 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
     ));
     // (Eve now has 100 SHORT, Charlie has 100 LONG)
 
-    let oracle_dealy = end + BLOCKS_PER_DAY;
+    let market = MarketCommons::market(&0).unwrap();
+    let oracle_dealy = end + market.deadlines.oracle_delay;
     run_to_block(oracle_dealy + 1);
     assert_ok!(PredictionMarkets::report(
         Origin::signed(BOB),
