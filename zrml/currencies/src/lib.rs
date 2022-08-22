@@ -25,7 +25,7 @@
 //! It implements same traits as implemented by orml_currencies, prediction-market pallet uses this
 //! pallet instead of orml_currencies. All calls are redirected to orml_currencies after updating
 //! the above mapping.
-//! 
+//!
 //!
 //! ## Interface
 //!
@@ -48,31 +48,36 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-    use frame_support::{pallet_prelude::*, traits::Currency, serde::de::value, IterableStorageDoubleMap};
-    use frame_system::pallet_prelude::*;
-    use orml_traits::{MultiCurrency, NamedMultiReservableCurrency, MultiReservableCurrency, BalanceStatus};
-    use orml_tokens::AccountData;
-    use sp_runtime::SaturatedConversion;
-    use zeitgeist_primitives::{traits::ZeitgeistAssetManager, types::Asset};
-    use sp_runtime::DispatchResult;
     use core::result;
+    use frame_support::pallet_prelude::* ;
+    use orml_traits::{
+        BalanceStatus, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency,
+    };
+    use sp_runtime::DispatchResult;
+    use zeitgeist_primitives::traits::ZeitgeistAssetManager;
 
     use crate::weights::WeightInfoZeitgeist;
 
-    pub(crate) type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+    pub(crate) type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
 
-    pub(crate) type CurrencyIdOf<T> = <<T as Config>::Currencies as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+    pub(crate) type CurrencyIdOf<T> = <<T as Config>::Currencies as MultiCurrency<
+        <T as frame_system::Config>::AccountId,
+    >>::CurrencyId;
 
-    pub(crate) type ReserveIdentifierOf<T> = <<T as Config>::Currencies as NamedMultiReservableCurrency<<T as frame_system::Config>::AccountId,>>::ReserveIdentifier;
+    pub(crate) type ReserveIdentifierOf<T> =
+        <<T as Config>::Currencies as NamedMultiReservableCurrency<
+            <T as frame_system::Config>::AccountId,
+        >>::ReserveIdentifier;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         type WeightInfo: WeightInfoZeitgeist;
 
-        type Currencies: ZeitgeistAssetManager<Self::AccountId> ;
+        type Currencies: ZeitgeistAssetManager<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -81,102 +86,125 @@ pub mod pallet {
 
     /// Keep track of accounts which ever posessed an asset of given currency_id.
     #[pallet::storage]
-    pub type Accounts<T: Config> = StorageDoubleMap<_, Blake2_128Concat, CurrencyIdOf<T>, Blake2_128Concat, T::AccountId, (), OptionQuery>;
+    pub type Accounts<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        CurrencyIdOf<T>,
+        Blake2_128Concat,
+        T::AccountId,
+        (),
+        OptionQuery,
+    >;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    pub enum Event<T: Config> {
-    }
+    pub enum Event<T: Config> {}
 
     #[pallet::error]
-    pub enum Error<T> {
-    }
+    pub enum Error<T> {}
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
-    }
+    impl<T: Config> Pallet<T> {}
 
     impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
         type ReserveIdentifier = ReserveIdentifierOf<T>;
-        	fn slash_reserved_named(
-		id: &Self::ReserveIdentifier,
-		currency_id: Self::CurrencyId,
-		who: &T::AccountId,
-		value: Self::Balance,
-	) -> Self::Balance {
-                T::Currencies::slash_reserved_named(id, currency_id, who, value)
-	}
+        fn slash_reserved_named(
+            id: &Self::ReserveIdentifier,
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            value: Self::Balance,
+        ) -> Self::Balance {
+            T::Currencies::slash_reserved_named(id, currency_id, who, value)
+        }
 
-	fn reserved_balance_named(
-		id: &Self::ReserveIdentifier,
-		currency_id: Self::CurrencyId,
-		who: &T::AccountId,
-	) -> Self::Balance {
-        T::Currencies::reserved_balance_named(id, currency_id, who)
-	}
+        fn reserved_balance_named(
+            id: &Self::ReserveIdentifier,
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+        ) -> Self::Balance {
+            T::Currencies::reserved_balance_named(id, currency_id, who)
+        }
 
-	fn reserve_named(
-		id: &Self::ReserveIdentifier,
-		currency_id: Self::CurrencyId,
-		who: &T::AccountId,
-		value: Self::Balance,
-	) -> DispatchResult {
-        T::Currencies::reserve_named(id, currency_id, who, value)
-	}
+        fn reserve_named(
+            id: &Self::ReserveIdentifier,
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            value: Self::Balance,
+        ) -> DispatchResult {
+            T::Currencies::reserve_named(id, currency_id, who, value)
+        }
 
-	fn unreserve_named(
-		id: &Self::ReserveIdentifier,
-		currency_id: Self::CurrencyId,
-		who: &T::AccountId,
-		value: Self::Balance,
-	) -> Self::Balance {
-        T::Currencies::unreserve_named(id, currency_id, who, value)
-	}
+        fn unreserve_named(
+            id: &Self::ReserveIdentifier,
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            value: Self::Balance,
+        ) -> Self::Balance {
+            T::Currencies::unreserve_named(id, currency_id, who, value)
+        }
 
-	fn repatriate_reserved_named(
-		id: &Self::ReserveIdentifier,
-		currency_id: Self::CurrencyId,
-		slashed: &T::AccountId,
-		beneficiary: &T::AccountId,
-		value: Self::Balance,
-		status: BalanceStatus,
-	) -> result::Result<Self::Balance, DispatchError> {
-        T::Currencies::repatriate_reserved_named(id, currency_id, slashed, beneficiary, value, status)
-	}
+        fn repatriate_reserved_named(
+            id: &Self::ReserveIdentifier,
+            currency_id: Self::CurrencyId,
+            slashed: &T::AccountId,
+            beneficiary: &T::AccountId,
+            value: Self::Balance,
+            status: BalanceStatus,
+        ) -> result::Result<Self::Balance, DispatchError> {
+            T::Currencies::repatriate_reserved_named(
+                id,
+                currency_id,
+                slashed,
+                beneficiary,
+                value,
+                status,
+            )
+        }
     }
 
     impl<T: Config> MultiReservableCurrency<T::AccountId> for Pallet<T> {
-        fn can_reserve(currency_id: Self::CurrencyId, who: &T::AccountId, value: Self::Balance) -> bool {
+        fn can_reserve(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            value: Self::Balance,
+        ) -> bool {
             T::Currencies::can_reserve(currency_id, who, value)
         }
-        fn slash_reserved(currency_id: Self::CurrencyId, who: &T::AccountId, value: Self::Balance) -> Self::Balance {
-        T::Currencies::slash_reserved(currency_id, who, value)     
+        fn slash_reserved(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            value: Self::Balance,
+        ) -> Self::Balance {
+            T::Currencies::slash_reserved(currency_id, who, value)
         }
         fn reserved_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
             T::Currencies::reserved_balance(currency_id, who)
-            
         }
-        fn reserve(currency_id: Self::CurrencyId, who: &T::AccountId, value: Self::Balance) -> DispatchResult {
+        fn reserve(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            value: Self::Balance,
+        ) -> DispatchResult {
             T::Currencies::reserve(currency_id, who, value)
-            
         }
-        
-        fn unreserve(currency_id: Self::CurrencyId, who: &T::AccountId, value: Self::Balance) -> Self::Balance {
-            T::Currencies::unreserve(currency_id, who, value)
-            
-        }
-        
-        fn repatriate_reserved(currency_id: Self::CurrencyId,
-                     slashed: &T::AccountId,
-                     beneficiary: &T::AccountId,
-                     value: Self::Balance,
-                     status: BalanceStatus,
-                 ) -> result::Result<Self::Balance, DispatchError> {
-            T::Currencies::repatriate_reserved(currency_id, slashed, beneficiary, value, status)
-        } 
-        
-     
 
+        fn unreserve(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            value: Self::Balance,
+        ) -> Self::Balance {
+            T::Currencies::unreserve(currency_id, who, value)
+        }
+
+        fn repatriate_reserved(
+            currency_id: Self::CurrencyId,
+            slashed: &T::AccountId,
+            beneficiary: &T::AccountId,
+            value: Self::Balance,
+            status: BalanceStatus,
+        ) -> result::Result<Self::Balance, DispatchError> {
+            T::Currencies::repatriate_reserved(currency_id, slashed, beneficiary, value, status)
+        }
     }
 
     impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
@@ -194,47 +222,70 @@ pub mod pallet {
         fn free_balance(currency_id: Self::CurrencyId, who: &T::AccountId) -> Self::Balance {
             T::Currencies::free_balance(currency_id, who)
         }
-        fn ensure_can_withdraw(currency_id: Self::CurrencyId, who:&T::AccountId, amount: Self::Balance) -> DispatchResult {
+        fn ensure_can_withdraw(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            amount: Self::Balance,
+        ) -> DispatchResult {
             T::Currencies::ensure_can_withdraw(currency_id, who, amount)
         }
-        fn transfer(currency_id: Self::CurrencyId, from:&T::AccountId, to:&T::AccountId, amount: Self::Balance) -> DispatchResult {
+        fn transfer(
+            currency_id: Self::CurrencyId,
+            from: &T::AccountId,
+            to: &T::AccountId,
+            amount: Self::Balance,
+        ) -> DispatchResult {
             Accounts::<T>::insert(currency_id, to, ());
             T::Currencies::transfer(currency_id, from, to, amount)
         }
-        fn deposit(currency_id: Self::CurrencyId, who:&T::AccountId, amount: Self::Balance) -> DispatchResult {
+        fn deposit(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            amount: Self::Balance,
+        ) -> DispatchResult {
             Accounts::<T>::insert(currency_id, who, ());
             T::Currencies::deposit(currency_id, who, amount)
         }
-        fn withdraw(currency_id: Self::CurrencyId, who:&T::AccountId, amount: Self::Balance) -> DispatchResult {
+        fn withdraw(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            amount: Self::Balance,
+        ) -> DispatchResult {
             T::Currencies::withdraw(currency_id, who, amount)
         }
 
-        fn can_slash(currency_id: Self::CurrencyId, who:&T::AccountId, amount: Self::Balance) -> bool {
+        fn can_slash(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            amount: Self::Balance,
+        ) -> bool {
             T::Currencies::can_slash(currency_id, who, amount)
         }
-        fn slash(currency_id: Self::CurrencyId, who:&T::AccountId, amount: Self::Balance) -> Self::Balance {
+        fn slash(
+            currency_id: Self::CurrencyId,
+            who: &T::AccountId,
+            amount: Self::Balance,
+        ) -> Self::Balance {
             T::Currencies::slash(currency_id, who, amount)
         }
     }
 
-   impl<T: Config> ZeitgeistAssetManager<T::AccountId> for Pallet<T> {
-       
-           fn accounts_by_currency_id(
-        currency_id: Self::CurrencyId,
-    ) -> Result<(usize, Vec<T::AccountId>), DispatchError> {
-               // T::Currencies::accounts_by_currency_id(currency_id);
-               let accounts : Vec<T::AccountId> = Accounts::<T>::iter_prefix(currency_id).map(|(k2, _v)| k2).collect();
-               Ok((accounts.len(), accounts))
+    impl<T: Config> ZeitgeistAssetManager<T::AccountId> for Pallet<T> {
+        fn accounts_by_currency_id(
+            currency_id: Self::CurrencyId,
+        ) -> Result<(usize, Vec<T::AccountId>), DispatchError> {
+            // T::Currencies::accounts_by_currency_id(currency_id);
+            let accounts: Vec<T::AccountId> =
+                Accounts::<T>::iter_prefix(currency_id).map(|(k2, _v)| k2).collect();
+            Ok((accounts.len(), accounts))
+        }
+
+        fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> Result<(), DispatchError>
+        where
+            I: Iterator<Item = T::AccountId>,
+        {
+            Accounts::<T>::remove_prefix(currency_id, None);
+            T::Currencies::destroy_all(currency_id, accounts)
+        }
     }
-
-    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> Result<(), DispatchError>
-            where
-        I: Iterator<Item = T::AccountId>,
-    {
-        Accounts::<T>::remove_prefix(currency_id, None);
-        T::Currencies::destroy_all(currency_id, accounts)
-    }
-
-
-   } 
 }

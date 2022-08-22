@@ -35,7 +35,10 @@ use frame_system::RawOrigin;
 use sp_runtime::SaturatedConversion;
 use zeitgeist_primitives::constants::BASE;
 
-benchmarks! {
-}
+benchmarks! {}
 
-impl_benchmark_test_suite!(Currencies, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
+impl_benchmark_test_suite!(
+    Currencies,
+    crate::mock::ExtBuilder::default().build(),
+    crate::mock::Runtime
+);

@@ -25,8 +25,13 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::mock::{BlockHashCount, MaxReserves, BASE, GetNativeCurrencyId, ExistentialDeposits},
-    types::{AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, UncheckedExtrinsicTest, Amount, BasicCurrencyAdapter, CurrencyId},
+    constants::mock::{
+        BlockHashCount, ExistentialDeposits, GetNativeCurrencyId, MaxReserves, BASE,
+    },
+    types::{
+        AccountIdTest, Amount, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest, CurrencyId,
+        Hash, Index, UncheckedExtrinsicTest,
+    },
 };
 
 pub const ALICE: AccountIdTest = 0;

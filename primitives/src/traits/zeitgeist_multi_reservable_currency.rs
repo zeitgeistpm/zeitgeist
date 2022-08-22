@@ -18,7 +18,7 @@
 #![allow(clippy::type_complexity)]
 use alloc::vec::Vec;
 use frame_support::traits::Get;
-use orml_tokens::{AccountData, Accounts, TotalIssuance};
+use orml_tokens::{Accounts, TotalIssuance};
 use orml_traits::currency::NamedMultiReservableCurrency;
 use sp_runtime::DispatchError;
 
@@ -52,10 +52,12 @@ where
         )]
         let accounts = <Accounts<T>>::iter()
             .filter_map(|(k0, k1, _v)| {
-                if k1 == currency_id { 
-
-                total += 1;
-                    Some(k0) } else { None }
+                if k1 == currency_id {
+                    total += 1;
+                    Some(k0)
+                } else {
+                    None
+                }
             })
             .collect();
         Ok((total, accounts))
