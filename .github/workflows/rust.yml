@@ -38,8 +38,12 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
         
+      - name: Format
+        run: ./scripts/tests/format.sh --check
+
       - name: Tests
         run: ./scripts/tests/${{ matrix.scripts }}.sh
+
 
   fuzz:
     name: Fuzz
