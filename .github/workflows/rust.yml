@@ -38,11 +38,12 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
         
-      - name: Format
-        uses: actions-rs/install@v0.1
+      - uses: actions-rs/install@v0.1
         with:
           crate: taplo-cli
           use-tool-cache: true
+
+      - name: Format
         run: ./scripts/tests/format.sh --check
 
       - name: Tests
