@@ -21,6 +21,8 @@ verbose=""
 check_return_code() {
     if [ $? -eq 0 ]; then
         echo "OK"
+    else
+        exit 1
     fi
 }
 
