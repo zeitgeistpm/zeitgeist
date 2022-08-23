@@ -16,15 +16,15 @@ zeitgeist-primitives = { default-features = false, features = ["mock"], path = "
 [features]
 default = ["std"]
 std = [
-  "frame-support/std",
-  "frame-system/std",
-  "parity-scale-codec/std",
-  "sp-arithmetic/std",
-  "sp-runtime/std",
-  "zeitgeist-primitives/std",
+    "frame-support/std",
+    "frame-system/std",
+    "parity-scale-codec/std",
+    "sp-arithmetic/std",
+    "sp-runtime/std",
+    "zeitgeist-primitives/std",
 ]
 try-runtime = [
-  "frame-support/try-runtime",
+    "frame-support/try-runtime",
 ]
 
 [package]

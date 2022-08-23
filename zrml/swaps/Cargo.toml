@@ -30,35 +30,35 @@ zrml-swaps = { features = ["mock"], path = "." }
 [features]
 default = ["std"]
 mock = [
-  "orml-currencies",
-  "orml-tokens",
-  "pallet-balances",
-  "pallet-timestamp",
-  "sp-api",
-  "sp-io",
-  "zeitgeist-primitives/mock",
-  "zrml-swaps-runtime-api",
+    "orml-currencies",
+    "orml-tokens",
+    "pallet-balances",
+    "pallet-timestamp",
+    "sp-api",
+    "sp-io",
+    "zeitgeist-primitives/mock",
+    "zrml-swaps-runtime-api",
 ]
 runtime-benchmarks = [
-  "frame-benchmarking/runtime-benchmarks",
-  "frame-support/runtime-benchmarks",
-  "frame-system/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
 ]
 std = [
-  "frame-benchmarking?/std",
-  "frame-support/std",
-  "frame-system/std",
-  "orml-traits/std",
-  "parity-scale-codec/std",
-  "sp-runtime/std",
-  "substrate-fixed/std",
-  "zeitgeist-primitives/std",
-  "zrml-market-commons/std",
-  "zrml-liquidity-mining/std",
-  "zrml-rikiddo/std",
+    "frame-benchmarking?/std",
+    "frame-support/std",
+    "frame-system/std",
+    "orml-traits/std",
+    "parity-scale-codec/std",
+    "sp-runtime/std",
+    "substrate-fixed/std",
+    "zeitgeist-primitives/std",
+    "zrml-market-commons/std",
+    "zrml-liquidity-mining/std",
+    "zrml-rikiddo/std",
 ]
 try-runtime = [
-  "frame-support/try-runtime",
+    "frame-support/try-runtime",
 ]
 
 [package]

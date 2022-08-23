@@ -107,57 +107,57 @@ zrml-swaps-rpc = { path = "../zrml/swaps/rpc" }
 [features]
 default = ["with-battery-station-runtime", "with-zeitgeist-runtime"]
 parachain = [
-  "battery-station-runtime?/parachain",
-  "zeitgeist-runtime?/parachain",
+    "battery-station-runtime?/parachain",
+    "zeitgeist-runtime?/parachain",
 
-  # Cumulus
+    # Cumulus
 
-  "cumulus-client-cli",
-  "cumulus-client-collator",
-  "cumulus-client-consensus-common",
-  "cumulus-client-consensus-relay-chain",
-  "cumulus-client-network",
-  "cumulus-client-service",
-  "cumulus-primitives-core",
-  "cumulus-primitives-parachain-inherent",
-  "cumulus-relay-chain-inprocess-interface",
-  "cumulus-relay-chain-interface",
-  "cumulus-relay-chain-rpc-interface",
+    "cumulus-client-cli",
+    "cumulus-client-collator",
+    "cumulus-client-consensus-common",
+    "cumulus-client-consensus-relay-chain",
+    "cumulus-client-network",
+    "cumulus-client-service",
+    "cumulus-primitives-core",
+    "cumulus-primitives-parachain-inherent",
+    "cumulus-relay-chain-inprocess-interface",
+    "cumulus-relay-chain-interface",
+    "cumulus-relay-chain-rpc-interface",
 
 
-  # Parachain
+    # Parachain
 
-  "log",
-  "nimbus-consensus",
-  "nimbus-primitives",
-  "pallet-author-inherent",
-  "parachain-staking",
-  "parity-scale-codec",
-  "sc-chain-spec",
-  "sc-network",
-  "sc-tracing",
-  "serde",
-  "sp-keystore",
-  "substrate-prometheus-endpoint",
+    "log",
+    "nimbus-consensus",
+    "nimbus-primitives",
+    "pallet-author-inherent",
+    "parachain-staking",
+    "parity-scale-codec",
+    "sc-chain-spec",
+    "sc-network",
+    "sc-tracing",
+    "serde",
+    "sp-keystore",
+    "substrate-prometheus-endpoint",
 
-  # Polkadot
+    # Polkadot
 
-  "polkadot-cli",
-  "polkadot-parachain",
-  "polkadot-primitives",
-  "polkadot-service",
-  "polkadot-test-service",
+    "polkadot-cli",
+    "polkadot-parachain",
+    "polkadot-primitives",
+    "polkadot-service",
+    "polkadot-test-service",
 ]
 runtime-benchmarks = [
-  "battery-station-runtime?/runtime-benchmarks",
-  "frame-benchmarking/runtime-benchmarks",
-  "polkadot-service?/runtime-benchmarks",
-  "zeitgeist-runtime?/runtime-benchmarks",
+    "battery-station-runtime?/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "polkadot-service?/runtime-benchmarks",
+    "zeitgeist-runtime?/runtime-benchmarks",
 ]
 try-runtime = [
-  "battery-station-runtime?/try-runtime",
-  "zeitgeist-runtime?/try-runtime",
-  "try-runtime-cli",
+    "battery-station-runtime?/try-runtime",
+    "zeitgeist-runtime?/try-runtime",
+    "try-runtime-cli",
 ]
 with-battery-station-runtime = ["battery-station-runtime"]
 with-zeitgeist-runtime = ["zeitgeist-runtime"]

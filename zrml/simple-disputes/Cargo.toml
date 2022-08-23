@@ -17,21 +17,21 @@ zeitgeist-primitives = { default-features = false, features = ["mock"], path = "
 [features]
 default = ["std"]
 runtime-benchmarks = [
-  "frame-benchmarking/runtime-benchmarks",
-  "frame-support/runtime-benchmarks",
-  "frame-system/runtime-benchmarks",
+    "frame-benchmarking/runtime-benchmarks",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
 ]
 std = [
-  "frame-benchmarking?/std",
-  "frame-support/std",
-  "frame-system/std",
-  "parity-scale-codec/std",
-  "sp-runtime/std",
-  "zeitgeist-primitives/std",
-  "zrml-market-commons/std",
+    "frame-benchmarking?/std",
+    "frame-support/std",
+    "frame-system/std",
+    "parity-scale-codec/std",
+    "sp-runtime/std",
+    "zeitgeist-primitives/std",
+    "zrml-market-commons/std",
 ]
 try-runtime = [
-  "frame-support/try-runtime",
+    "frame-support/try-runtime",
 ]
 
 [package]

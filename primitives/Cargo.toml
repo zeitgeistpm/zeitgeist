@@ -18,15 +18,15 @@ test-case = "2.0.2"
 default = ["std"]
 mock = []
 std = [
-  "frame-support/std",
-  "frame-system/std",
-  "orml-currencies/std",
-  "orml-tokens/std",
-  "orml-traits/std",
-  "parity-scale-codec/std",
-  "serde",
-  "sp-core/std",
-  "sp-runtime/std",
+    "frame-support/std",
+    "frame-system/std",
+    "orml-currencies/std",
+    "orml-tokens/std",
+    "orml-traits/std",
+    "parity-scale-codec/std",
+    "serde",
+    "sp-core/std",
+    "sp-runtime/std",
 ]
 
 [package]

@@ -20,22 +20,22 @@ zrml-rikiddo = { features = ["mock"], path = "." }
 [features]
 default = ["std"]
 mock = [
-  "pallet-balances",
-  "pallet-timestamp",
-  "sp-io",
-  "zeitgeist-primitives/mock",
+    "pallet-balances",
+    "pallet-timestamp",
+    "sp-io",
+    "zeitgeist-primitives/mock",
 ]
 std = [
-  "frame-support/std",
-  "frame-system/std",
-  "parity-scale-codec/std",
-  "sp-core/std",
-  "sp-runtime/std",
-  "substrate-fixed/std",
-  "zeitgeist-primitives/std",
+    "frame-support/std",
+    "frame-system/std",
+    "parity-scale-codec/std",
+    "sp-core/std",
+    "sp-runtime/std",
+    "substrate-fixed/std",
+    "zeitgeist-primitives/std",
 ]
 try-runtime = [
-  "frame-support/try-runtime",
+    "frame-support/try-runtime",
 ]
 
 [package]
