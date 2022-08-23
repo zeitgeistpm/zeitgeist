@@ -10,17 +10,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  tests:
-    name: Tests
+  format:
+    name: Format
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        scripts: [
-          "clippy",
-          "misc",
-          "parachain",
-          "standalone"
-        ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -33,43 +25,66 @@ jobs:
           default: true
           override: true
           profile: minimal
-          components: rustfmt, clippy
-
-      - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
+          components: rustfmt
         
       - uses: actions-rs/install@v0.1
         with:
           crate: taplo-cli
-          use-tool-cache: true
 
       - name: Format
         run: ./scripts/tests/format.sh --check
 
-      - name: Tests
-        run: ./scripts/tests/${{ matrix.scripts }}.sh
+  # tests:
+  #   name: Tests
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       scripts: [
+  #         "clippy",
+  #         "misc",
+  #         "parachain",
+  #         "standalone"
+  #       ]
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v2
 
+  #     - name: Install rust toolchain
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: nightly
+  #         target: wasm32-unknown-unknown
+  #         default: true
+  #         override: true
+  #         profile: minimal
+  #         components: rustfmt, clippy
 
-  fuzz:
-    name: Fuzz
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+  #     - name: Cache Dependencies
+  #       uses: Swatinem/rust-cache@v1
 
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: wasm32-unknown-unknown
-          default: true
-          override: true
-          profile: minimal
-          components: rustfmt, clippy
+  #     - name: Tests
+  #       run: ./scripts/tests/${{ matrix.scripts }}.sh
 
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-fuzz
-          use-tool-cache: true
+  # fuzz:
+  #   name: Fuzz
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v2
 
-      - run: ./scripts/tests/fuzz.sh
+  #     - name: Install rust toolchain
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: nightly
+  #         target: wasm32-unknown-unknown
+  #         default: true
+  #         override: true
+  #         profile: minimal
+  #         components: rustfmt, clippy
+
+  #     - uses: actions-rs/install@v0.1
+  #       with:
+  #         crate: cargo-fuzz
+  #         use-tool-cache: true
+
+  #     - run: ./scripts/tests/fuzz.sh
