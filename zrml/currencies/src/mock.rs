@@ -19,7 +19,6 @@
 
 use crate::{self as zrml_currencies};
 use frame_support::{construct_runtime, ord_parameter_types, traits::Everything};
-use frame_system::EnsureSignedBy;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -37,7 +36,8 @@ use zeitgeist_primitives::{
 pub const ALICE: AccountIdTest = 0;
 pub const BOB: AccountIdTest = 1;
 pub const CHARLIE: AccountIdTest = 2;
-pub const SUDO: AccountIdTest = 1337;
+
+pub const SUDO: AccountIdTest = 10001;
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
@@ -61,7 +61,6 @@ construct_runtime!(
 impl crate::Config for Runtime {
     type Event = Event;
     type Currencies = OrmlCurrencies;
-    type WeightInfo = zrml_currencies::weights::WeightInfo<Runtime>;
 }
 
 impl frame_system::Config for Runtime {

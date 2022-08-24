@@ -40,23 +40,19 @@
 
 extern crate alloc;
 
-mod benchmarks;
 mod mock;
 mod tests;
-pub mod weights;
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
     use core::result;
-    use frame_support::pallet_prelude::* ;
+    use frame_support::pallet_prelude::*;
     use orml_traits::{
         BalanceStatus, MultiCurrency, MultiReservableCurrency, NamedMultiReservableCurrency,
     };
     use sp_runtime::DispatchResult;
     use zeitgeist_primitives::traits::ZeitgeistAssetManager;
-
-    use crate::weights::WeightInfoZeitgeist;
 
     pub(crate) type BalanceOf<T> = <<T as Config>::Currencies as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -74,8 +70,6 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-        type WeightInfo: WeightInfoZeitgeist;
 
         type Currencies: ZeitgeistAssetManager<Self::AccountId>;
     }
@@ -97,7 +91,6 @@ pub mod pallet {
     >;
 
     #[pallet::event]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {}
 
     #[pallet::error]
@@ -274,7 +267,6 @@ pub mod pallet {
         fn accounts_by_currency_id(
             currency_id: Self::CurrencyId,
         ) -> Result<(usize, Vec<T::AccountId>), DispatchError> {
-            // T::Currencies::accounts_by_currency_id(currency_id);
             let accounts: Vec<T::AccountId> =
                 Accounts::<T>::iter_prefix(currency_id).map(|(k2, _v)| k2).collect();
             Ok((accounts.len(), accounts))

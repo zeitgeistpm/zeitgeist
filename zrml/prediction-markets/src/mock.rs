@@ -193,7 +193,6 @@ impl pallet_balances::Config for Runtime {
 
 impl zrml_currencies::Config for Runtime {
     type Event = Event;
-    type WeightInfo = zrml_currencies::weights::WeightInfo<Runtime>;
     type Currencies = AssetManager;
 }
 
