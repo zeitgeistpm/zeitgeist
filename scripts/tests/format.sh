@@ -67,6 +67,11 @@ has_taplo=$(whereis taplo)
 if [[ ${has_taplo} = "taplo: " ]]; then
     cargo install taplo-cli 2>/dev/null
 fi
+# install rustfmt if it isn't already
+has_rustfmt=$(whereis rustfmt)
+if [[ ${has_rustfmt} = "rustfmt: " ]]; then
+    rustup component add rustfmt
+fi
 
 for arg in "$@"; do
     case $arg in
