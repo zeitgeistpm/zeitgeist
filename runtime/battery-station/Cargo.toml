@@ -102,6 +102,7 @@ zrml-rikiddo = { default-features = false, path = "../../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../../zrml/simple-disputes" }
 zrml-styx = { default-features = false, path = "../../zrml/styx" }
 zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
+zrml-currencies = { default-features = false, path = "../../zrml/currencies" }
 zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
 
 [dev-dependencies]
@@ -180,6 +181,7 @@ runtime-benchmarks = [
     "zrml-simple-disputes/runtime-benchmarks",
     "zrml-styx/runtime-benchmarks",
     "zrml-swaps/runtime-benchmarks",
+    "zrml-currencies/runtime-benchmarks",
 ]
 std = [
     "frame-executive/std",
@@ -278,6 +280,7 @@ std = [
     "zrml-styx/std",
     "zrml-swaps-runtime-api/std",
     "zrml-swaps/std",
+    "zrml-currencies/std",
 ]
 try-runtime = [
     "frame-executive/try-runtime",
@@ -322,6 +325,7 @@ try-runtime = [
     "zrml-simple-disputes/try-runtime",
     "zrml-styx/try-runtime",
     "zrml-swaps/try-runtime",
+    "zrml-currencies/try-runtime",
 
     # Parachain
     "pallet-author-mapping?/try-runtime",

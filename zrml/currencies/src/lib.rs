@@ -46,6 +46,7 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
+    use alloc::vec::Vec;
     use core::result;
     use frame_support::pallet_prelude::*;
     use orml_traits::{

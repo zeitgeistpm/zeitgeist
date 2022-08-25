@@ -250,6 +250,7 @@ macro_rules! create_runtime {
                 Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
                 PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
                 Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
+                Currencies: zrml_currencies::{Call, Event<T>, Pallet, Storage} = 59,
 
                 $($additional_pallets)*
             }
@@ -849,6 +850,11 @@ macro_rules! impl_config_traits {
             fn remove_shares(_: &Self::AccountId, _: &Self::MarketId, _: Self::Balance) {}
         }
 
+        impl zrml_currencies::Config for Runtime {
+            type Event = Event;
+            type Currencies = AssetManager;
+        }
+
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type ApproveOrigin = EnsureOneOf<
@@ -879,7 +885,7 @@ macro_rules! impl_config_traits {
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type ReportingPeriod = ReportingPeriod;
             type ResolveOrigin = EnsureRoot<AccountId>;
-            type AssetManager = AssetManager;
+            type AssetManager = Currencies;
             type SimpleDisputes = SimpleDisputes;
             type Swaps = Swaps;
             type ValidityBond = ValidityBond;
