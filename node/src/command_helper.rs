@@ -45,7 +45,7 @@ impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     }
 }
 
-impl<'a, RuntimeApi, Executor: NativeExecutionDispatch + 'static>
+impl<RuntimeApi, Executor: NativeExecutionDispatch + 'static>
     frame_benchmarking_cli::ExtrinsicBuilder for BenchmarkExtrinsicBuilder<RuntimeApi, Executor>
 {
     fn remark(&self, nonce: u32) -> std::result::Result<OpaqueExtrinsic, &'static str> {
