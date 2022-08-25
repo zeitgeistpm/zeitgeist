@@ -82,6 +82,8 @@ construct_runtime!(
     }
 );
 
+pub type AssetManager = ZrmlCurrencies;
+
 impl zrml_currencies::Config for Runtime {
     type Event = Event;
     type Currencies = Currencies;
