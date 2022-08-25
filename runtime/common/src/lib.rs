@@ -937,7 +937,7 @@ macro_rules! impl_config_traits {
             type MinWeight = MinWeight;
             type PalletId = SwapsPalletId;
             type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-            type AssetManager = AssetManager;
+            type AssetManager = Currencies;
             type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
         }
 

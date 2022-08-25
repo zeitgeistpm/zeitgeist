@@ -121,7 +121,6 @@ impl crate::Config for Runtime {
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
-    // type AssetManager = AssetManager;
     type AssetManager = ZrmlCurrencies;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;
@@ -279,7 +278,6 @@ impl zrml_swaps::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    // type AssetManager = AssetManager;
     type AssetManager = ZrmlCurrencies;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }

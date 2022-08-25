@@ -15,6 +15,7 @@ zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 # Mock
 
 orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+zrml-currencies = { path = "../currencies", optional = true }
 orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
@@ -38,6 +39,7 @@ mock = [
     "sp-io",
     "zeitgeist-primitives/mock",
     "zrml-swaps-runtime-api",
+    "zrml-currencies",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

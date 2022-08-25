@@ -13060,6 +13060,7 @@ dependencies = [
  "substrate-fixed",
  "test-case",
  "zeitgeist-primitives",
+ "zrml-currencies",
  "zrml-liquidity-mining",
  "zrml-market-commons",
  "zrml-rikiddo",

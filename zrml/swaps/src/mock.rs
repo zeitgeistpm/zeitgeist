@@ -71,6 +71,7 @@ construct_runtime!(
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Currencies: orml_currencies::{Pallet},
+        ZrmlCurrencies: zrml_currencies::{Call, Pallet, Storage, Event<T>},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
@@ -81,7 +82,10 @@ construct_runtime!(
     }
 );
 
-pub type AssetManager = Currencies;
+impl zrml_currencies::Config for Runtime {
+    type Event = Event;
+    type Currencies = Currencies;
+}
 
 impl crate::Config for Runtime {
     type Event = Event;
@@ -104,7 +108,7 @@ impl crate::Config for Runtime {
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
-    type AssetManager = AssetManager;
+    type AssetManager = ZrmlCurrencies;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
