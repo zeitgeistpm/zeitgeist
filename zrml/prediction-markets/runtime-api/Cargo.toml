@@ -8,7 +8,7 @@ default = ["std"]
 std = [
     "parity-scale-codec/std",
     "sp-api/std",
-    "zeitgeist-primitives/std"
+    "zeitgeist-primitives/std",
 ]
 
 [package]
