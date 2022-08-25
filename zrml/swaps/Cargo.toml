@@ -15,12 +15,12 @@ zrml-rikiddo = { default-features = false, path = "../rikiddo" }
 # Mock
 
 orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-zrml-currencies = { path = "../currencies", optional = true }
 orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+zrml-currencies = { path = "../currencies", optional = true }
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]

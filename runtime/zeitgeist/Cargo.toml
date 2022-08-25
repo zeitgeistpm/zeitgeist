@@ -94,6 +94,7 @@ common-runtime = { default-features = false, path = "../common" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-authorized = { default-features = false, path = "../../zrml/authorized" }
 zrml-court = { default-features = false, path = "../../zrml/court" }
+zrml-currencies = { default-features = false, path = "../../zrml/currencies" }
 zrml-liquidity-mining = { default-features = false, path = "../../zrml/liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../../zrml/market-commons" }
 zrml-prediction-markets = { default-features = false, path = "../../zrml/prediction-markets" }
@@ -101,7 +102,6 @@ zrml-rikiddo = { default-features = false, path = "../../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../../zrml/simple-disputes" }
 zrml-styx = { default-features = false, path = "../../zrml/styx" }
 zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
-zrml-currencies = { default-features = false, path = "../../zrml/currencies" }
 zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
 
 [dev-dependencies]

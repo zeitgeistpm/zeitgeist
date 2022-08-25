@@ -16,7 +16,6 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 # Mock
 
-zrml-currencies = { optional = true, path = "../currencies" }
 orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
@@ -25,6 +24,7 @@ pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github
 sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
+zrml-currencies = { optional = true, path = "../currencies" }
 zrml-prediction-markets-runtime-api = { features = ["std"], optional = true, path = "./runtime-api" }
 zrml-rikiddo = { optional = true, path = "../rikiddo" }
 zrml-swaps = { optional = true, path = "../swaps" }
