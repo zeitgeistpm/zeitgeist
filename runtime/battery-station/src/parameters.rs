@@ -288,6 +288,35 @@ parameter_types! {
     /// Pallet identifier, mainly used for named balance reserves.
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 
+    // Bounties
+    /// The amount held on deposit for placing a bounty proposal.
+    pub const BountyDepositBase : Balance = 10 * BASE;
+    /// The delay period for which a bounty beneficiary need to wait before claim the payout.
+    pub const BountyDepositPayoutDelay : BlockNumber = 3 * BLOCKS_PER_DAY;
+
+    /// Bounty duration in blocks.
+    pub const BountyUpdatePeriod : BlockNumber = 14 * BLOCKS_PER_DAY;
+
+    /// The curator deposit is calculated as a percentage of the curator fee.
+    ///
+    /// This deposit has optional upper and lower bounds with `CuratorDepositMax` and
+    /// `CuratorDepositMin`.
+    pub const CuratorDepositMultiplier : Permill = Permill::from_percent(75);
+
+    /// Maximum amount of funds that should be placed in a deposit for making a proposal.
+    pub const CuratorDepositMax : Option<Balance> = None;
+    /// Minimum amount of funds that should be placed in a deposit for making a proposal.
+    pub const CuratorDepositMin : Option<Balance> = None;
+    /// Minimum value for a bounty.
+    pub const BountyValueMinimum: Balance = 1 * BASE;
+
+    /// The amount held on deposit per byte within the tip report reason or bounty description.
+    pub DataDepositPerByte : Balance =  1 * BASE;
+    /// Maximum acceptable reason length.
+    ///
+    /// Benchmarks depend on this value, be sure to update weights file when changing this value
+    pub MaximumReasonLength : u32 = 256;
+
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
 }
