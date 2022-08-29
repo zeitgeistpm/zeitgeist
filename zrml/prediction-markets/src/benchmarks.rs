@@ -109,9 +109,11 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     let (caller, market_id) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
-    let end: u32 =
-        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
+    let market = T::MarketCommons::market(&market_id).unwrap();
+    let end: u32 = T::MaxSubsidyPeriod::get().saturated_into::<u32>(); // used in market creation as end
+    let oracle_delay: u32 =
+        (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
@@ -200,9 +202,11 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     let resolve_origin = T::ResolveOrigin::successful_origin();
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(close_origin)?;
-    let end: u32 =
-        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + 2 * MILLISECS_PER_BLOCK).into());
+    let market = T::MarketCommons::market(&market_id).unwrap();
+    let end: u32 = T::MaxSubsidyPeriod::get().saturated_into::<u32>(); // used in market creation as end
+    let oracle_delay: u32 =
+        (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let _ = Call::<T>::admin_move_market_to_resolved { market_id }
@@ -512,16 +516,15 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
-        let market = T::MarketCommons::market(&0_u32.into()).unwrap();
+    let market = T::MarketCommons::market(&market_id).unwrap();
         let outcome = OutcomeReport::Categorical(0);
         let close_origin = T::CloseOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
             .dispatch_bypass_filter(close_origin)?;
-    let end: u32 =
-        T::MaxSubsidyPeriod::get().try_into().map_err(|_| "Moment to u32 conversion failed")?;
-    let oracle_delay : u32 = market.deadlines.oracle_delay.saturated_into::<u32>() * MILLISECS_PER_BLOCK;
-    let oracle_duration : u32 = market.deadlines.oracle_duration.saturated_into::<u32>() * MILLISECS_PER_BLOCK;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay + oracle_duration).into());
+    let market = T::MarketCommons::market(&market_id).unwrap();
+    let end : u32 = T::MaxSubsidyPeriod::get().saturated_into::<u32>(); // used in market creation as end
+    let oracle_delay : u32 = (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     sell_complete_set {

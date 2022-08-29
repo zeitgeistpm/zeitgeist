@@ -16,8 +16,8 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    CacheSize, Config, Disputes, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
-    MarketIdsPerOpenTimeFrame, MarketIdsPerReportBlock, Pallet,
+    CacheSize, Config, Disputes, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock,
+    Pallet,
 };
 use frame_support::{
     dispatch::Weight,
@@ -30,10 +30,7 @@ use frame_support::{
 use sp_runtime::{traits::Saturating, SaturatedConversion};
 extern crate alloc;
 use alloc::vec::Vec;
-use zeitgeist_primitives::{
-    constants::BLOCKS_PER_DAY,
-    types::{MarketPeriod, MarketStatus, PoolStatus},
-};
+use zeitgeist_primitives::constants::BLOCKS_PER_DAY;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2;
@@ -138,16 +135,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
 }
 
 mod utility {
-    use crate::{BalanceOf, Config, MarketIdOf};
-    use alloc::vec::Vec;
     use frame_support::{
-        migration::{get_storage_value, put_storage_value},
         storage::{storage_prefix, unhashed},
         traits::StorageVersion,
-        Blake2_128Concat, StorageHasher,
     };
-    use parity_scale_codec::Encode;
-    use zeitgeist_primitives::types::{Pool, PoolId};
 
     pub fn storage_prefix_of_market_common_pallet() -> [u8; 32] {
         storage_prefix(b"MarketCommons", b":__STORAGE_VERSION__:")
@@ -162,19 +153,13 @@ mod utility {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{mock::*, CacheSize, Disputes, MomentOf};
+    use crate::{mock::*, CacheSize, Disputes};
     use alloc::{vec, vec::Vec};
     use frame_support::{assert_ok, storage::unhashed};
-    use orml_traits::MultiCurrency;
     use sp_runtime::traits::BlockNumberProvider;
-    use zeitgeist_primitives::{
-        constants::{BASE, MILLISECS_PER_BLOCK},
-        traits::Swaps as SwapsApi,
-        types::{
-            Asset, BlockNumber, Deadlines, Market, MarketCreation, MarketDispute,
-            MarketDisputeMechanism, MarketPeriod, MarketType, MultiHash, OutcomeReport, PoolStatus,
-            Report,
-        },
+    use zeitgeist_primitives::types::{
+        Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
+        MarketStatus, MarketType, OutcomeReport, Report,
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -193,7 +178,7 @@ mod tests {
             MigrateMarketIdsPerBlockStorage::<Runtime>::on_runtime_upgrade();
             assert_eq!(
                 StorageVersion::get::<Pallet<Runtime>>(),
-               PREDICTION_MARKETS_NEXT_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE 
+                PREDICTION_MARKETS_NEXT_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE
             );
         });
     }
@@ -260,10 +245,12 @@ mod tests {
     }
 
     fn setup_chain() {
-        StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE)
-            .put::<Pallet<Runtime>>();
-            let key = utility::storage_prefix_of_market_common_pallet();
-            unhashed::put(&key, &StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION));
+        StorageVersion::new(
+            PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE,
+        )
+        .put::<Pallet<Runtime>>();
+        let key = utility::storage_prefix_of_market_common_pallet();
+        unhashed::put(&key, &StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION));
     }
 
     fn create_test_market() {

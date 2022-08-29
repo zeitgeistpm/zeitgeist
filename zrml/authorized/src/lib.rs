@@ -181,8 +181,8 @@ where
     T: crate::Config,
 {
     use frame_support::traits::Get;
-    use sp_runtime::{traits::AccountIdConversion, SaturatedConversion};
-    use zeitgeist_primitives::{constants::MIN_DISPUTE_DURATION, types::ScoringRule};
+    use sp_runtime::traits::AccountIdConversion;
+    use zeitgeist_primitives::types::ScoringRule;
 
     zeitgeist_primitives::types::Market {
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
@@ -196,7 +196,7 @@ where
         deadlines: zeitgeist_primitives::types::Deadlines {
             oracle_delay: 1_u32.into(),
             oracle_duration: 1_u32.into(),
-            dispute_duration: MIN_DISPUTE_DURATION.saturated_into::<u32>().into(),
+            dispute_duration: 1_u32.into(),
         },
         report: None,
         resolved_outcome: None,

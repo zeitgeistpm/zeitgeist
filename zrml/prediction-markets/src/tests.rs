@@ -224,7 +224,7 @@ fn create_scalar_market_fails_on_invalid_range(range: RangeInclusive<u128>) {
 }
 
 #[test]
-fn crate_market_fails_on_min_dispute_period() {
+fn create_market_fails_on_min_dispute_period() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
@@ -249,7 +249,7 @@ fn crate_market_fails_on_min_dispute_period() {
 }
 
 #[test]
-fn crate_market_fails_on_max_dispute_period() {
+fn create_market_fails_on_max_dispute_period() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
@@ -274,7 +274,7 @@ fn crate_market_fails_on_max_dispute_period() {
 }
 
 #[test]
-fn crate_market_fails_on_max_oracle_delay() {
+fn create_market_fails_on_max_oracle_delay() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get() + 1,
@@ -299,7 +299,7 @@ fn crate_market_fails_on_max_oracle_delay() {
 }
 
 #[test]
-fn crate_market_fails_on_max_oracle_duration() {
+fn create_market_fails_on_max_oracle_duration() {
     ExtBuilder::default().build().execute_with(|| {
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
@@ -358,7 +358,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_reported() {
             ScoringRule::CPMM,
         );
         let market = MarketCommons::market(&0).unwrap();
-        run_to_block(end + market.deadlines.oracle_delay as u64 + 1);
+        run_to_block(end + market.deadlines.oracle_delay + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
@@ -438,12 +438,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(
-            oracle_delay
-                + market.deadlines.oracle_duration as u64
-                + market.deadlines.dispute_duration as u64
-                + 1,
-        );
+        run_blocks(market.deadlines.dispute_duration);
         assert_eq!(Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE), 0);
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(
@@ -607,12 +602,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(
-            oracle_delay
-                + market.deadlines.oracle_duration as u64
-                + market.deadlines.dispute_duration as u64
-                + 1,
-        );
+        run_blocks(market.deadlines.dispute_duration);
         assert_eq!(Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE), 0);
         assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
         assert_ok!(Balances::reserve_named(
@@ -1969,7 +1959,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         let id = reported_ids[0];
         assert_eq!(id, 0);
 
-        run_blocks(report_at + market.deadlines.oracle_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
 
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Resolved);
@@ -2077,7 +2067,7 @@ fn it_resolves_a_disputed_market() {
         );
         assert_eq!(market_ids_3.len(), 1);
 
-        run_blocks(dispute_at_2 + market.deadlines.dispute_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -2196,7 +2186,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 3);
 
-        run_blocks(dispute_at_2 + market.deadlines.dispute_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(&0);
@@ -2242,7 +2232,7 @@ fn it_allows_to_redeem_shares() {
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(oracle_delay + 1 + market.deadlines.oracle_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Resolved);
 
@@ -2523,7 +2513,7 @@ fn full_scalar_market_lifecycle() {
         let disputes = crate::Disputes::<Runtime>::get(&0);
         assert_eq!(disputes.len(), 1);
 
-        run_blocks(report_at + 2);
+        run_blocks(market.deadlines.dispute_duration);
 
         let market_after_resolve = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
@@ -2770,7 +2760,7 @@ fn authorized_correctly_resolves_disputed_market() {
         );
         assert_eq!(market_ids_3.len(), 1);
 
-        run_blocks(dispute_at_2 + market.deadlines.dispute_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -2847,7 +2837,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        run_blocks(oracle_delay + market.deadlines.dispute_duration as u64 + 2);
+        run_blocks(market.deadlines.dispute_duration);
         let market_after = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(&0);
@@ -3079,7 +3069,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(report_at + market.deadlines.dispute_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
         // Check that validity bond didn't get slashed, but oracle bond did
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + ValidityBond::get());
@@ -3120,7 +3110,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(report_at + market.deadlines.dispute_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
         // Check that nothing got slashed
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before + OracleBond::get());
@@ -3161,7 +3151,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
             0,
             OutcomeReport::Categorical(1)
         ));
-        run_blocks(report_at + market.deadlines.dispute_duration as u64);
+        run_blocks(market.deadlines.dispute_duration);
         // Check that oracle bond got slashed
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
         assert_eq!(Balances::free_balance(&ALICE), alice_balance_before);
@@ -3391,8 +3381,8 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
     // (Eve now has 100 SHORT, Charlie has 100 LONG)
 
     let market = MarketCommons::market(&0).unwrap();
-    let oracle_dealy = end + market.deadlines.oracle_delay;
-    run_to_block(oracle_dealy + 1);
+    let oracle_delay = end + market.deadlines.oracle_delay;
+    run_to_block(oracle_delay + 1);
     assert_ok!(PredictionMarkets::report(
         Origin::signed(BOB),
         0,
@@ -3401,11 +3391,11 @@ fn scalar_market_correctly_resolves_common(reported_value: u128) {
     let market_after_report = MarketCommons::market(&0).unwrap();
     assert!(market_after_report.report.is_some());
     let report = market_after_report.report.unwrap();
-    assert_eq!(report.at, oracle_dealy + 1);
+    assert_eq!(report.at, oracle_delay + 1);
     assert_eq!(report.by, BOB);
     assert_eq!(report.outcome, OutcomeReport::Scalar(reported_value));
 
-    run_blocks(oracle_dealy + 2);
+    run_blocks(market.deadlines.dispute_duration);
     let market_after_resolve = MarketCommons::market(&0).unwrap();
     assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
 

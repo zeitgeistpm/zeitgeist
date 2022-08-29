@@ -24,12 +24,9 @@ use crate::{
 };
 use frame_support::{assert_err, assert_noop, assert_ok};
 use sp_runtime::DispatchError;
-use zeitgeist_primitives::{
-    constants::MIN_DISPUTE_DURATION,
-    types::{
-        AccountIdTest, BlockNumber, Deadlines, Market, MarketCreation, MarketDisputeMechanism,
-        MarketPeriod, MarketStatus, MarketType, Moment, ScoringRule,
-    },
+use zeitgeist_primitives::types::{
+    AccountIdTest, BlockNumber, Deadlines, Market, MarketCreation, MarketDisputeMechanism,
+    MarketPeriod, MarketStatus, MarketType, Moment, ScoringRule,
 };
 
 const MARKET_DUMMY: Market<AccountIdTest, BlockNumber, Moment> = Market {
@@ -41,11 +38,7 @@ const MARKET_DUMMY: Market<AccountIdTest, BlockNumber, Moment> = Market {
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
-    deadlines: Deadlines {
-        oracle_delay: 1_u64,
-        oracle_duration: 1_u64,
-        dispute_duration: MIN_DISPUTE_DURATION,
-    },
+    deadlines: Deadlines { oracle_delay: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,

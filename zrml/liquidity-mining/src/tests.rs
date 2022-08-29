@@ -30,12 +30,9 @@ use frame_support::{
     traits::{Currency, OnFinalize},
 };
 use frame_system::RawOrigin;
-use zeitgeist_primitives::{
-    constants::MIN_DISPUTE_DURATION,
-    types::{
-        Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, ScoringRule,
-    },
+use zeitgeist_primitives::types::{
+    Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+    MarketType, ScoringRule,
 };
 use zrml_market_commons::Markets;
 
@@ -216,7 +213,7 @@ fn create_default_market(market_id: u128, period: Range<u64>) {
             deadlines: Deadlines {
                 oracle_delay: 1_u64,
                 oracle_duration: 1_u64,
-                dispute_duration: MIN_DISPUTE_DURATION,
+                dispute_duration: 1_u64,
             },
             report: None,
             resolved_outcome: None,

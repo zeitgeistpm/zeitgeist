@@ -160,9 +160,6 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
 }
 
 /// Defines deadlines for market.
-/// All three members of structure are of type `u32`
-/// as they just represent some duration in terms of number of blocks.
-/// Number of blocks can be easily converted to Moment.
 #[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Deadlines<BN> {
     pub oracle_delay: BN,

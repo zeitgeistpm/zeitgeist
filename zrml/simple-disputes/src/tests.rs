@@ -23,7 +23,6 @@ use crate::{
 };
 use frame_support::assert_noop;
 use zeitgeist_primitives::{
-    constants::MIN_DISPUTE_DURATION,
     traits::DisputeApi,
     types::{
         Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
@@ -40,11 +39,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
-    deadlines: Deadlines {
-        oracle_delay: 1_u64,
-        oracle_duration: 1_u64,
-        dispute_duration: MIN_DISPUTE_DURATION,
-    },
+    deadlines: Deadlines { oracle_delay: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
     scoring_rule: ScoringRule::CPMM,
