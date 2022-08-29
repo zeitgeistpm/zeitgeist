@@ -3,7 +3,7 @@
 - Added new field `deadlines` in Market structure, which has `oracle_delay`,
   `oracle_duration` and `dispute_duration` fields, all represents duration in
   number of blocks. `create_market` extrinsic has new parameter to specify these
-  deadlines, passing `None` means opting for default values as configured in pallet.
+  deadlines.
 
 # v0.3.5
 
