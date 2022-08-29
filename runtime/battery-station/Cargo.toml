@@ -42,7 +42,7 @@ substrate-fixed = { default-features = false, features = ["serde"], git = "https
 
 # Try-Runtime
 
-frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate"}
+frame-try-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
 
 # Benchmark
 
@@ -307,7 +307,7 @@ try-runtime = [
     # Other Parity runtime pallets
     "pallet-identity/try-runtime",
     "pallet-utility/try-runtime",
-    
+
     # ORML runtime pallets
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",

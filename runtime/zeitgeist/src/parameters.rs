@@ -291,7 +291,7 @@ parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 
     // Vesting
-    pub const MinVestedTransfer: Balance = CENT;
+    pub const MinVestedTransfer: Balance = ExistentialDeposit::get();
 }
 
 parameter_type_with_key! {

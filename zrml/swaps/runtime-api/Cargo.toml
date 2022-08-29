@@ -10,7 +10,7 @@ std = [
     "parity-scale-codec/std",
     "sp-api/std",
     "sp-runtime/std",
-    "zeitgeist-primitives/std"
+    "zeitgeist-primitives/std",
 ]
 
 [package]
