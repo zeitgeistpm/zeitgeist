@@ -80,6 +80,10 @@ parameter_types! {
     pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
     /// Vote lock identifier, mainly used for the LockableCurrency on the native token.
     pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
+    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+    pub const MaxOwners: u32 = 10;
+    /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
+    pub const MaxOutcomeVotes: u32 = 50;
     /// The minimum required amount to vote on an outcome.
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
     /// The maximum number of voting outcomes.

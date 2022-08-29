@@ -911,6 +911,8 @@ macro_rules! impl_config_traits {
             type Event = Event;
             type GlobalDisputesPalletId = GlobalDisputesPalletId;
             type MarketCommons = MarketCommons;
+            type MaxOutcomeVotes = MaxOutcomeVotes;
+            type MaxOwners = MaxOwners;
             type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
             type RemoveKeysLimit = RemoveKeysLimit;
             type VoteLockIdentifier = VoteLockIdentifier;

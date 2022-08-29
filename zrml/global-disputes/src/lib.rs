@@ -1,8 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-extern crate alloc;
-
 mod benchmarks;
 mod global_disputes_pallet_api;
 mod mock;
@@ -15,14 +13,14 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
-    use alloc::{vec, vec::Vec};
     use core::marker::PhantomData;
     use frame_support::{
-        ensure,
+        ensure, log,
         pallet_prelude::{
-            ConstU32, Decode, DispatchResultWithPostInfo, Encode, MaxEncodedLen, OptionQuery,
-            StorageDoubleMap, StorageMap, TypeInfo,
+            Decode, DispatchResult, DispatchResultWithPostInfo, Encode, MaxEncodedLen, OptionQuery,
+            StorageDoubleMap, StorageMap, TypeInfo, ValueQuery,
         },
+        sp_runtime::{traits::StaticLookup, RuntimeDebug},
         storage::child::KillStorageResult,
         traits::{
             Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,
@@ -32,6 +30,7 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::traits::{AccountIdConversion, CheckedDiv, Saturating, Zero};
+    use sp_std::{vec, vec::Vec};
     use zeitgeist_primitives::types::OutcomeReport;
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -40,24 +39,46 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-    pub type OutcomeInfoOf<T> = OutcomeInfo<BalanceOf<T>, AccountIdOf<T>>;
-    pub type WinnerInfoOf<T> = WinnerInfo<BalanceOf<T>, AccountIdOf<T>>;
+    pub type OutcomeInfoOf<T> = OutcomeInfo<BalanceOf<T>, OwnerInfoOf<T>>;
+    pub type WinnerInfoOf<T> = WinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>;
+    type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+    type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
+    type LockInfoOf<T> = LockInfo<MarketIdOf<T>, BalanceOf<T>>;
+
+    #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+    pub struct LockInfo<MarketId, Balance>(Vec<(MarketId, Balance)>);
+
+    impl<MarketId, Balance> Default for LockInfo<MarketId, Balance> {
+        fn default() -> Self {
+            Self(Vec::new())
+        }
+    }
+
+    impl<MarketId, Balance> MaxEncodedLen for LockInfo<MarketId, Balance>
+    where
+        Balance: MaxEncodedLen,
+        MarketId: MaxEncodedLen,
+    {
+        fn max_encoded_len() -> usize {
+            MarketId::max_encoded_len().saturating_add(Balance::max_encoded_len())
+        }
+    }
 
     #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-    pub struct OutcomeInfo<Balance, AccountId> {
+    pub struct OutcomeInfo<Balance, OwnerInfo> {
         pub outcome_sum: Balance,
-        pub owners: BoundedVec<AccountId, ConstU32<10>>,
+        pub owners: OwnerInfo,
     }
 
     #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-    pub struct WinnerInfo<Balance, AccountId> {
+    pub struct WinnerInfo<Balance, OwnerInfo> {
         pub outcome: OutcomeReport,
         pub vote_sum: Balance,
         pub is_finished: bool,
-        pub owners: BoundedVec<AccountId, ConstU32<10>>,
+        pub owners: OwnerInfo,
     }
 
-    impl<Balance: Saturating, AccountId> WinnerInfo<Balance, AccountId> {
+    impl<Balance: Saturating, OwnerInfo: Default> WinnerInfo<Balance, OwnerInfo> {
         pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
             WinnerInfo { outcome, vote_sum, is_finished: false, owners: Default::default() }
         }
@@ -158,7 +179,7 @@ mod pallet {
         }
 
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::vote_on_outcome())]
+        #[pallet::weight(T::WeightInfo::vote_on_outcome(T::MaxOwners::get(), T::MaxOwners::get()))]
         pub fn vote_on_outcome(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
@@ -175,40 +196,52 @@ mod pallet {
 
             let mut outcome_info =
                 <Outcomes<T>>::get(market_id, &outcome).ok_or(Error::<T>::OutcomeDoesNotExist)?;
+            let winner_owners_len = winner_info.owners.len() as u32;
+            let outcome_owners_len = outcome_info.owners.len() as u32;
 
-            <LockInfoOf<T>>::mutate(&sender, market_id, |lock_info| {
-                // The `outcome_sum` never decreases (only increases) to allow
-                // caching the outcome with the highest `outcome_sum`.
-                // If the `outcome_sum` decreases, it would lead to more storage,
-                // because the winning outcome could have a smaller `outcome_sum`
-                // than the second highest `outcome_sum`.
-                let add_to_outcome_sum = |a| {
-                    outcome_info.outcome_sum = outcome_info.outcome_sum.saturating_add(a);
-                    <Winners<T>>::mutate(market_id, |highest| {
-                        *highest = Some(highest.clone().map_or(
-                            WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum),
-                            |prev_winner_info| {
-                                if outcome_info.outcome_sum >= prev_winner_info.vote_sum {
-                                    WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum)
-                                } else {
-                                    prev_winner_info
-                                }
-                            },
-                        ));
-                    });
-                    <Outcomes<T>>::insert(market_id, &outcome, outcome_info);
-                };
-                if let Some(prev_highest_amount) = lock_info {
-                    if amount > *prev_highest_amount {
-                        let diff = amount.saturating_sub(*prev_highest_amount);
-                        add_to_outcome_sum(diff);
-                        *lock_info = Some(amount);
+            // The `outcome_sum` never decreases (only increases) to allow
+            // caching the outcome with the highest `outcome_sum`.
+            // If the `outcome_sum` decreases, it would lead to more storage,
+            // because the winning outcome could have a smaller `outcome_sum`
+            // than the second highest `outcome_sum`.
+            let add_to_outcome_sum = |a| {
+                outcome_info.outcome_sum = outcome_info.outcome_sum.saturating_add(a);
+                <Winners<T>>::mutate(market_id, |highest| {
+                    *highest = Some(highest.clone().map_or(
+                        WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum),
+                        |prev_winner_info| {
+                            if outcome_info.outcome_sum >= prev_winner_info.vote_sum {
+                                WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum)
+                            } else {
+                                prev_winner_info
+                            }
+                        },
+                    ));
+                });
+                <Outcomes<T>>::insert(market_id, &outcome, outcome_info);
+            };
+
+            <Locks<T>>::try_mutate(&sender, |LockInfo(ref mut lock_info)| -> DispatchResult {
+                match lock_info.binary_search_by_key(&market_id, |i| i.0) {
+                    Ok(i) => {
+                        let prev_highest_amount: BalanceOf<T> = lock_info[i].1;
+                        if amount > prev_highest_amount {
+                            let diff = amount.saturating_sub(prev_highest_amount);
+                            add_to_outcome_sum(diff);
+                            lock_info[i].1 = amount;
+                        }
                     }
-                } else {
-                    add_to_outcome_sum(amount);
-                    *lock_info = Some(amount);
+                    Err(i) => {
+                        ensure!(
+                            lock_info.len() as u32 <= T::MaxOutcomeVotes::get(),
+                            Error::<T>::MaxVotesReached
+                        );
+                        add_to_outcome_sum(amount);
+                        lock_info.insert(i, (market_id, amount));
+                    }
                 }
-            });
+                Ok(())
+            })?;
 
             T::Currency::extend_lock(
                 T::VoteLockIdentifier::get(),
@@ -218,33 +251,30 @@ mod pallet {
             );
 
             Self::deposit_event(Event::VotedOnOutcome(market_id, outcome, amount));
-            Ok(Some(T::WeightInfo::vote_on_outcome()).into())
+            Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, winner_owners_len)).into())
         }
 
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::unlock_vote_balance())]
         pub fn unlock_vote_balance(
             origin: OriginFor<T>,
-            voter: T::AccountId,
+            voter: AccountIdLookupOf<T>,
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
+            let voter = T::Lookup::lookup(voter)?;
 
             let mut lock_needed: BalanceOf<T> = Zero::zero();
-            let mut resolved_ids = Vec::new();
-            for (market_id, locked_balance) in <LockInfoOf<T>>::iter_prefix(&voter) {
-                match <Winners<T>>::get(market_id) {
-                    Some(winner_info) if winner_info.is_finished => {
-                        resolved_ids.push(market_id);
-                        continue;
+            <Locks<T>>::mutate(&voter, |LockInfo(ref mut lock_info)| {
+                lock_info.retain(|(market_id, locked_balance)| {
+                    match <Winners<T>>::get(market_id) {
+                        Some(winner_info) if winner_info.is_finished => false,
+                        _ => {
+                            lock_needed = lock_needed.max(*locked_balance);
+                            true
+                        }
                     }
-                    _ => (),
-                }
-                lock_needed = lock_needed.max(locked_balance);
-            }
-
-            for market_id in resolved_ids {
-                <LockInfoOf<T>>::remove(&voter, market_id);
-            }
+                });
+            });
 
             if lock_needed.is_zero() {
                 T::Currency::remove_lock(T::VoteLockIdentifier::get(), &voter);
@@ -277,6 +307,14 @@ mod pallet {
             AccountId = Self::AccountId,
             BlockNumber = Self::BlockNumber,
         >;
+
+        /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
+        #[pallet::constant]
+        type MaxOutcomeVotes: Get<u32>;
+
+        /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+        #[pallet::constant]
+        type MaxOwners: Get<u32>;
 
         /// The minimum required amount to vote on an outcome.
         #[pallet::constant]
@@ -313,6 +351,8 @@ mod pallet {
         OutcomeDoesNotExist,
         /// The global dispute period is not over yet. The winner is not yet determined.
         UnfinishedGlobalDispute,
+        /// The maximum number of votes for this account is reached.
+        MaxVotesReached,
     }
 
     #[pallet::event]
@@ -375,10 +415,18 @@ mod pallet {
                     update_winner(outcome_sum);
                     outcome_info.outcome_sum = outcome_sum;
                     // there can not be more than MaxDisputes owners
-                    let _ = outcome_info.owners.try_push(owner.clone());
-                    <Outcomes<T>>::insert(market_id, outcome, outcome_info);
+                    if outcome_info.owners.try_push(owner.clone()).is_ok() {
+                        <Outcomes<T>>::insert(market_id, outcome, outcome_info);
+                    } else {
+                        log::warn!(
+                            "Warning: The voting outcome was not added.  This happens because \
+                             there are too many voting outcome owners (length is {:?}).",
+                            &outcome_info.owners.len()
+                        );
+                    }
                 }
                 None => {
+                    // adding one item to BoundedVec can not fail
                     if let Ok(owners) = BoundedVec::try_from(vec![owner.clone()]) {
                         update_winner(vote_balance);
                         let outcome_info = OutcomeInfo { outcome_sum: vote_balance, owners };
@@ -413,15 +461,8 @@ mod pallet {
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]
-    pub type LockInfoOf<T: Config> = StorageDoubleMap<
-        _,
-        Twox64Concat,
-        T::AccountId,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        BalanceOf<T>,
-        OptionQuery,
-    >;
+    pub type Locks<T: Config> =
+        StorageMap<_, Twox64Concat, T::AccountId, LockInfoOf<T>, ValueQuery>;
 
     /// Maps the market id to the outcome and providing information about the outcome.
     #[pallet::storage]
