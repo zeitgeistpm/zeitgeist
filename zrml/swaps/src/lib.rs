@@ -794,7 +794,7 @@ mod pallet {
         BelowMinimumWeight,
         /// Some funds could not be transferred due to a too low balance.
         InsufficientBalance,
-        /// Liquidity provided to new Balancer pool is less than `MinLiquidity`.
+        /// Liquidity provided to new CPMM pool is less than `MinLiquidity`.
         InsufficientLiquidity,
         /// The market was not started since the subsidy goal was not reached.
         InsufficientSubsidy,

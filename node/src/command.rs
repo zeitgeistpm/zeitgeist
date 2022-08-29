@@ -41,11 +41,11 @@ pub fn run() -> sc_cli::Result<()> {
 
     // Set default chain on parachain to zeitgeist and on standalone to dev
     #[cfg(feature = "parachain")]
-    if cli.run.base.shared_params.chain == None {
+    if cli.run.base.shared_params.chain.is_none() {
         cli.run.base.shared_params.chain = Some("zeitgeist".to_string());
     }
     #[cfg(not(feature = "parachain"))]
-    if cli.run.shared_params.chain == None {
+    if cli.run.shared_params.chain.is_none() {
         cli.run.shared_params.dev = true;
     }
 
