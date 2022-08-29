@@ -40,7 +40,8 @@ construct_runtime!(
 
 parameter_types! {
     pub const MinOutcomes: u32 = 2;
-    pub const MaxOutcomeLimit: u32 = u32::MAX;
+    pub const MaxGlobalDisputeVotes: u32 = 50;
+    pub const MaxOwners: u32 = 10;
 }
 
 impl crate::Config for Runtime {
@@ -48,6 +49,8 @@ impl crate::Config for Runtime {
     type Event = Event;
     type GlobalDisputesPalletId = GlobalDisputesPalletId;
     type MarketCommons = MarketCommons;
+    type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
+    type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type RemoveKeysLimit = RemoveKeysLimit;
     type VoteLockIdentifier = VoteLockIdentifier;

@@ -233,7 +233,7 @@ mod pallet {
                     }
                     Err(i) => {
                         ensure!(
-                            lock_info.len() as u32 <= T::MaxOutcomeVotes::get(),
+                            lock_info.len() as u32 <= T::MaxGlobalDisputeVotes::get(),
                             Error::<T>::MaxVotesReached
                         );
                         add_to_outcome_sum(amount);
@@ -310,7 +310,7 @@ mod pallet {
 
         /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
         #[pallet::constant]
-        type MaxOutcomeVotes: Get<u32>;
+        type MaxGlobalDisputeVotes: Get<u32>;
 
         /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
         #[pallet::constant]
