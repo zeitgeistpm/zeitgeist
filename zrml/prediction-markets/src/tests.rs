@@ -1827,14 +1827,13 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
         // let market = MarketCommons::market(&1).unwrap();
 
         // set the timestamp
-    Timestamp::set_timestamp(100_000_000 + MILLISECS_PER_BLOCK as u64);
+        Timestamp::set_timestamp(100_000_000 + MILLISECS_PER_BLOCK as u64);
         run_blocks(2); // Trigger `on_initialize`; must be at least block #2.
 
-        assert_noop!(PredictionMarkets::report(
-            Origin::signed(EVE),
-            1,
-            OutcomeReport::Categorical(1)
-        ), Error::<Runtime>::ReporterNotOracle);
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(EVE), 1, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::ReporterNotOracle
+        );
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             1,

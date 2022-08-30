@@ -72,7 +72,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
 
         let market_ids_per_dispute: Vec<DisputeBlockToMarketIdsTuple<T>> =
             market_ids_per_dispute_iterator.collect();
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(market_ids_per_dispute.len() as u64));
+        total_weight = total_weight
+            .saturating_add(T::DbWeight::get().reads(market_ids_per_dispute.len() as u64));
         for (dispute_start_block, market_ids) in &market_ids_per_dispute {
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             // NOTE: These migration only makes sense on BS runtime so its fine to assume
@@ -104,7 +105,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
         // }
         let market_ids_per_report: Vec<DisputeBlockToMarketIdsTuple<T>> =
             market_ids_per_report_iterator.collect();
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(market_ids_per_report.len() as u64));
+        total_weight = total_weight
+            .saturating_add(T::DbWeight::get().reads(market_ids_per_report.len() as u64));
         for (dispute_start_block, market_ids) in &market_ids_per_report {
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             // NOTE: These migration only makes sense on BS runtime so its fine to assume
@@ -137,7 +139,11 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
             for market_id in market_ids {
                 let disputes = Disputes::<T>::get(&market_id);
                 let dispute = disputes.last().ok_or("No dispute found")?;
-                assert_eq!(key, dispute.at + dispute_period, "key in MarketIdsPerDisputeBlock must be equal to dispute.at + disputed_period");
+                assert_eq!(
+                    key,
+                    dispute.at + dispute_period,
+                    "key in MarketIdsPerDisputeBlock must be equal to dispute.at + disputed_period"
+                );
             }
         }
         for (key, market_ids) in MarketIdsPerReportBlock::<T>::iter() {
@@ -145,7 +151,11 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
                 let market =
                     T::MarketCommons::market(&market_id).map_err(|_| "invalid market_id")?;
                 let report = market.report.ok_or("No report found")?;
-                assert_eq!(key, report.at + dispute_period, "key in MarketIdsPerReportBlock must be equal to report.at + dispute_period");
+                assert_eq!(
+                    key,
+                    report.at + dispute_period,
+                    "key in MarketIdsPerReportBlock must be equal to report.at + dispute_period"
+                );
             }
         }
         Ok(())
