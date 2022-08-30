@@ -1726,7 +1726,7 @@ fn it_does_not_allows_to_report_the_outcome_of_a_market_before_oracle_delay_is_o
             ScoringRule::CPMM,
         );
 
-        run_to_block(end + 1);
+        run_to_block(end);
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
@@ -1740,7 +1740,7 @@ fn it_does_not_allows_to_report_the_outcome_of_a_market_before_oracle_delay_is_o
 }
 
 #[test]
-fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duration() {
+fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duration_blocks() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 100;
         simple_create_categorical_market::<Runtime>(
@@ -1773,6 +1773,73 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
         assert_eq!(market_after.status, MarketStatus::Reported);
         assert_eq!(report.outcome, OutcomeReport::Categorical(1));
         assert_eq!(report.by, market_after.oracle);
+    });
+}
+
+#[test]
+fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duration_moment() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 100;
+        simple_create_categorical_market::<Runtime>(
+            MarketCreation::Permissionless,
+            0..end,
+            ScoringRule::CPMM,
+        );
+
+        let market = MarketCommons::market(&0).unwrap();
+        let oracle_delay = end + market.deadlines.oracle_delay as u64;
+        run_to_block(oracle_delay + 1);
+
+        let market = MarketCommons::market(&0).unwrap();
+        assert_eq!(market.status, MarketStatus::Closed);
+        assert!(market.report.is_none());
+
+        assert_noop!(
+            PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
+            Error::<Runtime>::ReporterNotOracle
+        );
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let market_after = MarketCommons::market(&0).unwrap();
+        let report = market_after.report.unwrap();
+        assert_eq!(market_after.status, MarketStatus::Reported);
+        assert_eq!(report.outcome, OutcomeReport::Categorical(1));
+        assert_eq!(report.by, market_after.oracle);
+
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Timestamp(0..100_000_000),
+            get_deadlines::<Runtime>(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(2),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+
+        assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(BOB), 1, CENT));
+        // let market = MarketCommons::market(&1).unwrap();
+
+        // set the timestamp
+    Timestamp::set_timestamp(100_000_000 + MILLISECS_PER_BLOCK as u64);
+        run_blocks(2); // Trigger `on_initialize`; must be at least block #2.
+
+        assert_noop!(PredictionMarkets::report(
+            Origin::signed(EVE),
+            1,
+            OutcomeReport::Categorical(1)
+        ), Error::<Runtime>::ReporterNotOracle);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            1,
+            OutcomeReport::Categorical(1)
+        ));
     });
 }
 

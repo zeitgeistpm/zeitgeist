@@ -119,7 +119,7 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         let deadlines = Deadlines {
-            oracle_delay: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
+            oracle_delay: 0_u32.into(),
             oracle_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
             dispute_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
         };

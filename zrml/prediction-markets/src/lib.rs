@@ -936,7 +936,7 @@ mod pallet {
                         let oracle_delay_end =
                             range.end.saturating_add(market.deadlines.oracle_delay);
                         ensure!(
-                            oracle_delay_end < current_block,
+                            oracle_delay_end <= current_block,
                             Error::<T>::NotAllowedToReportYet
                         );
                         let oracle_duration_end =
@@ -952,7 +952,7 @@ mod pallet {
                             oracle_delay_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
                         let oracle_delay_end = range.end.saturating_add(oracle_delay_in_ms);
                         let now = T::MarketCommons::now();
-                        ensure!(oracle_delay_end < now, Error::<T>::NotAllowedToReportYet);
+                        ensure!(oracle_delay_end <= now, Error::<T>::NotAllowedToReportYet);
                         let oracle_duration_in_moments: MomentOf<T> =
                             market.deadlines.oracle_duration.saturated_into::<u32>().into();
                         let oracle_duration_in_ms =
@@ -1255,11 +1255,11 @@ mod pallet {
         NotAllowedToReportYet,
         /// Specified dispute_duration is smaller than MinDisputeDuration.
         DisputeDurationSmallerThanMinDisputeDuration,
-        /// Specified dispute_duration is grater than MaxDisputeDuration.
+        /// Specified dispute_duration is greater than MaxDisputeDuration.
         DisputeDurationGraterThanMaxDisputeDuration,
-        /// Specified oracle_delay is grater than MaxOracleDelay.
+        /// Specified oracle_delay is greater than MaxOracleDelay.
         OracleDelayGraterThanMaxOracleDelay,
-        /// Specified oracle_duration is grater than MaxOracleDuration.
+        /// Specified oracle_duration is greater than MaxOracleDuration.
         OracleDurationGraterThanMaxOracleDuration,
     }
 
