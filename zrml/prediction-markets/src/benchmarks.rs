@@ -38,8 +38,9 @@ use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule, SubsidyUntil,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+        MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
+        SubsidyUntil,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -351,6 +352,40 @@ benchmarks! {
         let market = T::MarketCommons::market(&Default::default()).unwrap();
         T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
     }
+
+    start_global_dispute {
+        // ./target/debug/zeitgeist benchmark pallet --chain=dev --steps=20 --repeat=50 --pallet=zrml_prediction_markets --extrinsic='start_global_dispute' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/prediction-markets/src/weights_global_dispute.rs
+
+        // how to get crate::CacheSize::get().unwrap().into() correctly?
+        let m in 1..62;
+
+        // no benchmarking component for max disputes here, because MaxDisputes is enforced for the extrinsic
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX)
+        )?;
+
+        // first element is the market id from above
+        let mut market_ids: BoundedVec<MarketIdOf<T>, crate::CacheSize> = BoundedVec::try_from(vec![market_id]).unwrap();
+        for i in 0..m {
+            market_ids.try_push(i.saturated_into()).unwrap();
+        }
+
+        let max_dispute_len = T::MaxDisputes::get();
+        for i in 0..max_dispute_len {
+            // ensure that the MarketIdsPerDisputeBlock does not interfere with the start_global_dispute execution block
+            <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
+            let disputor: T::AccountId = account("Disputor", i.into(), 0);
+            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into());
+            let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Scalar(i.into()) }
+                .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
+        }
+
+        let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
+        <frame_system::Pallet<T>>::set_block_number(current_block);
+        crate::MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
+    }: _(RawOrigin::Signed(caller), market_id)
 
     do_reject_market {
         let (_, market_id) = create_market_common::<T>(

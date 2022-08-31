@@ -38,11 +38,12 @@ use zeitgeist_primitives::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, GlobalDisputePeriod, GlobalDisputesPalletId, LiquidityMiningPalletId,
-        MaxAssets, MaxCategories, MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio,
-        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinLiquidity, MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, PmPalletId, RemoveKeysLimit, SimpleDisputesPalletId, StakeWeight,
-        SwapsPalletId, VoteLockIdentifier, VotingOutcomeFee, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxAssets, MaxCategories, MaxDisputes, MaxGlobalDisputeVotes, MaxInRatio, MaxMarketPeriod,
+        MaxOutRatio, MaxOwners, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight,
+        MaxWeight, MinAssets, MinCategories, MinLiquidity, MinOutcomeVoteAmount, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, RemoveKeysLimit,
+        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, VoteLockIdentifier, VotingOutcomeFee,
+        BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -261,6 +262,8 @@ impl zrml_global_disputes::Config for Runtime {
     type Currency = Balances;
     type GlobalDisputesPalletId = GlobalDisputesPalletId;
     type VoteLockIdentifier = VoteLockIdentifier;
+    type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
+    type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type RemoveKeysLimit = RemoveKeysLimit;
     type VotingOutcomeFee = VotingOutcomeFee;

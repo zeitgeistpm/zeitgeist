@@ -467,7 +467,7 @@ mod pallet {
             );
 
             ensure!(
-                T::GlobalDisputes::is_started(&market_id),
+                T::GlobalDisputes::is_not_started(&market_id),
                 Error::<T>::GlobalDisputeAlreadyStarted
             );
 

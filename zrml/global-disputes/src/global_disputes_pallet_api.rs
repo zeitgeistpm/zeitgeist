@@ -28,4 +28,6 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     fn get_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 
     fn is_started(market_id: &MarketId) -> bool;
+
+    fn is_not_started(market_id: &MarketId) -> bool;
 }

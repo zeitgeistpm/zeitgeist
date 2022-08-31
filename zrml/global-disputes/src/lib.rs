@@ -176,7 +176,8 @@ mod pallet {
                             let owners_len = winner_info.owners.len() as u32;
                             debug_assert!(
                                 owners_len != 0u32,
-                                "Global Disputes: This should never happen, because one owner is always written."
+                                "Global Disputes: This should never happen, because one owner is \
+                                 always written."
                             );
                             if !reward_account_free_balance.is_zero() {
                                 let mut remainder = reward_account_free_balance;
@@ -186,7 +187,8 @@ mod pallet {
                                     reward_account_free_balance.checked_div(&owners_len_in_balance)
                                 {
                                     for winner in winner_info.owners.iter() {
-                                        let reward = remainder.min(reward_per_each); // *Should* always be equal to `reward_per_each`
+                                        // *Should* always be equal to `reward_per_each`
+                                        let reward = remainder.min(reward_per_each);
                                         remainder = remainder.saturating_sub(reward);
                                         // Reward the loosing funds to the winners without charging a transfer fee
                                         let _ = T::Currency::resolve_into_existing(
@@ -268,6 +270,8 @@ mod pallet {
                     match lock_info.binary_search_by_key(&market_id, |i| i.0) {
                         Ok(i) => {
                             let prev_highest_amount: BalanceOf<T> = lock_info[i].1;
+                            // concious decision here to not throw an error when the new amount is not higher
+                            // because the user would have to pay worst case fees then
                             if amount > prev_highest_amount {
                                 let diff = amount.saturating_sub(prev_highest_amount);
                                 add_to_outcome_sum(diff);
@@ -504,6 +508,10 @@ mod pallet {
 
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
             <Winners<T>>::get(market_id).is_some()
+        }
+
+        fn is_not_started(market_id: &MarketIdOf<T>) -> bool {
+            <Winners<T>>::get(market_id).is_none()
         }
     }
 
