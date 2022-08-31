@@ -38,9 +38,8 @@ use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
-        SubsidyUntil,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
+        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule, SubsidyUntil,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
