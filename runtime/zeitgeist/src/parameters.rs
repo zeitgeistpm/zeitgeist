@@ -301,14 +301,14 @@ parameter_types! {
     ///
     /// This deposit has optional upper and lower bounds with `CuratorDepositMax` and
     /// `CuratorDepositMin`.
-    pub const CuratorDepositMultiplier : Permill = Permill::from_percent(5);
+    pub const CuratorDepositMultiplier : Permill = Permill::from_percent(50);
 
     /// Maximum amount of funds that should be placed in a deposit for making a proposal.
-    pub const CuratorDepositMax : Option<Balance> = None;
+    pub const CuratorDepositMax : Balance = 200 * BASE;
     /// Minimum amount of funds that should be placed in a deposit for making a proposal.
-    pub const CuratorDepositMin : Option<Balance> = None;
+    pub const CuratorDepositMin : Balance = 10 * BASE;
     /// Minimum value for a bounty.
-    pub const BountyValueMinimum: Balance = 2 * BASE;
+    pub const BountyValueMinimum: Balance = 1 * BASE;
 
     /// The amount held on deposit per byte within the tip report reason or bounty description.
     pub DataDepositPerByte : Balance =  1 * BASE;

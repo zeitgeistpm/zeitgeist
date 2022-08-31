@@ -781,7 +781,7 @@ macro_rules! impl_config_traits {
             type DataDepositPerByte = DataDepositPerByte;
             type Event = Event;
             type MaximumReasonLength = MaximumReasonLength;
-            type WeightInfo = ();
+            type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
             type ChildBountyManager = ();
         }
 
