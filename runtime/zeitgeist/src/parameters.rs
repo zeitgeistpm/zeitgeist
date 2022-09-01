@@ -308,10 +308,10 @@ parameter_types! {
     /// Minimum amount of funds that should be placed in a deposit for making a proposal.
     pub const CuratorDepositMin : Balance = 10 * BASE;
     /// Minimum value for a bounty.
-    pub const BountyValueMinimum: Balance = 1 * BASE;
+    pub const BountyValueMinimum: Balance = BASE;
 
     /// The amount held on deposit per byte within the tip report reason or bounty description.
-    pub DataDepositPerByte : Balance =  1 * BASE;
+    pub DataDepositPerByte : Balance = BASE;
     /// Maximum acceptable reason length.
     ///
     /// Benchmarks depend on this value, be sure to update weights file when changing this value
