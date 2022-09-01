@@ -10,10 +10,10 @@ sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, g
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-authorized = { default-features = false, path = "../authorized" }
 zrml-court = { default-features = false, path = "../court" }
+zrml-global-disputes = { default-features = false, path = "../global-disputes" }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
-zrml-global-disputes = { default-features = false, path = "../global-disputes" }
 
 # Mock
 

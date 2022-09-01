@@ -449,7 +449,7 @@ mod pallet {
         /// NOTE:
         /// The outcomes of the disputes and the report outcome is added to the global dispute voting outcomes.
         /// The bond of each dispute is the initial vote amount.
-        #[pallet::weight(5000)]
+        #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get()))]
         #[transactional]
         pub fn start_global_dispute(
             origin: OriginFor<T>,
@@ -496,13 +496,17 @@ mod pallet {
             Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
 
             let curr_block_num = <frame_system::Pallet<T>>::block_number();
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
-                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
+            let market_ids_len = <MarketIdsPerDisputeBlock<T>>::try_mutate(
+                curr_block_num,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
 
             Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
-            Ok(().into())
+            Ok((Some(T::WeightInfo::start_global_dispute(market_ids_len))).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified

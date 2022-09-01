@@ -353,9 +353,7 @@ benchmarks! {
     }
 
     start_global_dispute {
-        // ./target/debug/zeitgeist benchmark pallet --chain=dev --steps=20 --repeat=50 --pallet=zrml_prediction_markets --extrinsic='start_global_dispute' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/prediction-markets/src/weights_global_dispute.rs
-
-        // how to get crate::CacheSize::get().unwrap().into() correctly?
+        // CacheSize::get() does not work
         let m in 1..62;
 
         // no benchmarking component for max disputes here, because MaxDisputes is enforced for the extrinsic
@@ -375,7 +373,7 @@ benchmarks! {
         for i in 0..max_dispute_len {
             // ensure that the MarketIdsPerDisputeBlock does not interfere with the start_global_dispute execution block
             <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
-            let disputor: T::AccountId = account("Disputor", i.into(), 0);
+            let disputor: T::AccountId = account("Disputor", i, 0);
             let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into());
             let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Scalar(i.into()) }
                 .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;

@@ -48,9 +48,9 @@ where
 benchmarks! {
     vote_on_outcome {
         // only Outcomes owners, but not Winners owners is present during vote_on_outcome
-        let o in 1..(T::MaxOwners::get().into());
+        let o in 1..T::MaxOwners::get();
 
-        let v in 0..(T::MaxGlobalDisputeVotes::get().into());
+        let v in 0..T::MaxGlobalDisputeVotes::get();
 
         let caller: T::AccountId = whitelisted_caller();
         // ensure that we get the worst case to actually insert the new item at the end of the binary search
@@ -78,8 +78,8 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller), market_id, outcome, amount)
 
     unlock_vote_balance {
-        let l in 0..(T::MaxGlobalDisputeVotes::get().into());
-        let o in 0..(T::MaxOwners::get().into());
+        let l in 0..T::MaxGlobalDisputeVotes::get();
+        let o in 0..T::MaxOwners::get();
 
         let vote_sum = 42u128.saturated_into();
         let mut owners = Vec::new();
@@ -90,7 +90,7 @@ benchmarks! {
         let owners = BoundedVec::try_from(owners).unwrap();
         let outcome = OutcomeReport::Scalar(0);
         // is_finished is true, because we want the worst case to actually delete list items of the locks
-        let winner_info = WinnerInfo {outcome: outcome.clone(), vote_sum, is_finished: true, owners};
+        let winner_info = WinnerInfo {outcome, vote_sum, is_finished: true, owners};
 
         let caller: T::AccountId = whitelisted_caller();
         let voter: T::AccountId = account("voter", 0, 0);
@@ -102,8 +102,8 @@ benchmarks! {
             vote_locks.push((market_id, locked_balance));
             <Winners<T>>::insert(market_id, winner_info.clone());
         }
-        <Locks<T>>::insert(voter.clone(), LockInfo(vote_locks));
-    }: _(RawOrigin::Signed(caller.clone()), voter_lookup.clone())
+        <Locks<T>>::insert(voter, LockInfo(vote_locks));
+    }: _(RawOrigin::Signed(caller), voter_lookup)
 
     add_vote_outcome {
         // concious decision for using component 0..MaxOwners here
@@ -111,7 +111,7 @@ benchmarks! {
         // Winners counts processing time for the decoding of the owners vector.
         // then if the owner information is not present on Winners, the owner info is present on Outcomes
         // this happens in the case, that Outcomes is not none at the query time.
-        let w in 0..(T::MaxOwners::get().into());
+        let w in 0..T::MaxOwners::get();
 
         let mut owners = Vec::new();
         for i in 0..w {
@@ -124,14 +124,14 @@ benchmarks! {
         let caller: T::AccountId = whitelisted_caller();
         let market_id: MarketIdOf<T> = 0u128.saturated_into();
         let outcome = OutcomeReport::Scalar(20);
-        <Winners<T>>::insert(market_id, winner_info.clone());
+        <Winners<T>>::insert(market_id, winner_info);
         deposit::<T>(&caller);
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome)
 
     reward_outcome_owner {
-        let o in 0..(T::MaxOwners::get().into());
+        let o in 0..T::MaxOwners::get();
 
-        let k in 0..(T::RemoveKeysLimit::get().into());
+        let k in 0..T::RemoveKeysLimit::get();
 
         let market_id: MarketIdOf<T> = 0u128.saturated_into();
 
@@ -149,10 +149,10 @@ benchmarks! {
         let winner_outcome = OutcomeReport::Scalar(0);
 
         let outcome_info = OutcomeInfo {outcome_sum: 42u128.saturated_into(), owners};
-        <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info.clone());
+        <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info);
 
-        let winner_info = WinnerInfo {outcome: winner_outcome.clone(), vote_sum: 42u128.saturated_into(), is_finished: true, owners: Default::default()};
-        <Winners<T>>::insert(market_id, winner_info.clone());
+        let winner_info = WinnerInfo {outcome: winner_outcome, vote_sum: 42u128.saturated_into(), is_finished: true, owners: Default::default()};
+        <Winners<T>>::insert(market_id, winner_info);
 
         let reward_account = GlobalDisputes::<T>::reward_account(&market_id);
         let _ = T::Currency::deposit_creating(&reward_account, 100_000u128.saturated_into());

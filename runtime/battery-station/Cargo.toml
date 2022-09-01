@@ -95,12 +95,12 @@ common-runtime = { default-features = false, path = "../common" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-authorized = { default-features = false, path = "../../zrml/authorized" }
 zrml-court = { default-features = false, path = "../../zrml/court" }
+zrml-global-disputes = { default-features = false, path = "../../zrml/global-disputes" }
 zrml-liquidity-mining = { default-features = false, path = "../../zrml/liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../../zrml/market-commons" }
 zrml-prediction-markets = { default-features = false, path = "../../zrml/prediction-markets" }
 zrml-rikiddo = { default-features = false, path = "../../zrml/rikiddo" }
 zrml-simple-disputes = { default-features = false, path = "../../zrml/simple-disputes" }
-zrml-global-disputes = { default-features = false, path = "../../zrml/global-disputes" }
 zrml-styx = { default-features = false, path = "../../zrml/styx" }
 zrml-swaps = { default-features = false, path = "../../zrml/swaps" }
 zrml-swaps-runtime-api = { default-features = false, path = "../../zrml/swaps/runtime-api" }
