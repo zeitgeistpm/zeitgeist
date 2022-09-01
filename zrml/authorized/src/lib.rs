@@ -81,9 +81,7 @@ mod pallet {
                     AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
                     Ok(())
                 }
-                _ => {
-                    Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
-                }
+                _ => Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into()),
             }
         }
     }
