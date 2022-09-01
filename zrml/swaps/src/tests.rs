@@ -3102,7 +3102,7 @@ fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
         creator_fee: 0,
         creator: ALICE,
         market_type: MarketType::Categorical(categories),
-        dispute_mechanism: MarketDisputeMechanism::Authorized(ALICE),
+        dispute_mechanism: MarketDisputeMechanism::Authorized,
         metadata: vec![0; 50],
         oracle: ALICE,
         period: MarketPeriod::Block(0..1),

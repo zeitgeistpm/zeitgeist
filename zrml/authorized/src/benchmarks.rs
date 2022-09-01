@@ -24,17 +24,18 @@
 #[cfg(test)]
 use crate::Pallet as Court;
 use crate::{market_mock, Call, Config, Pallet};
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_system::RawOrigin;
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite};
+use frame_support::traits::EnsureOrigin;
 use zeitgeist_primitives::types::OutcomeReport;
 use zrml_market_commons::MarketCommonsPalletApi;
 
 benchmarks! {
     authorize_market_outcome {
-        let caller: T::AccountId = whitelisted_caller();
-        let market = market_mock::<T>(caller.clone());
+        let origin = T::AuthorizedDisputeResolutionOrigin::successful_origin();
+        let market = market_mock::<T>();
         T::MarketCommons::push_market(market).unwrap();
-    }: _(RawOrigin::Signed(caller), 0u32.into(), OutcomeReport::Scalar(1))
+    }: _<T::Origin>(origin, 0u32.into(), OutcomeReport::Scalar(1))
+    verify {}
 }
 
 impl_benchmark_test_suite!(Court, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);

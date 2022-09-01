@@ -32,7 +32,7 @@ use zrml_market_commons::Markets;
 #[test]
 fn authorize_market_outcome_inserts_a_new_outcome() {
     ExtBuilder::default().build().execute_with(|| {
-        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(ALICE),
             0,
@@ -59,7 +59,7 @@ fn authorize_market_outcome_fails_if_market_does_not_exist() {
 #[test]
 fn authorize_market_outcome_fails_on_non_authorized_market() {
     ExtBuilder::default().build().execute_with(|| {
-        let mut market = market_mock::<Runtime>(ALICE);
+        let mut market = market_mock::<Runtime>();
         market.dispute_mechanism = MarketDisputeMechanism::Court;
         Markets::<Runtime>::insert(0, market);
         assert_noop!(
@@ -76,7 +76,7 @@ fn authorize_market_outcome_fails_on_non_authorized_market() {
 #[test]
 fn authorize_market_outcome_fails_on_undisputed_market() {
     ExtBuilder::default().build().execute_with(|| {
-        let mut market = market_mock::<Runtime>(ALICE);
+        let mut market = market_mock::<Runtime>();
         market.status = MarketStatus::Active;
         Markets::<Runtime>::insert(0, market);
         assert_noop!(
@@ -93,7 +93,7 @@ fn authorize_market_outcome_fails_on_undisputed_market() {
 #[test]
 fn authorize_market_outcome_fails_on_invalid_report() {
     ExtBuilder::default().build().execute_with(|| {
-        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_noop!(
             Authorized::authorize_market_outcome(
                 Origin::signed(ALICE),
@@ -108,10 +108,10 @@ fn authorize_market_outcome_fails_on_invalid_report() {
 #[test]
 fn authorize_market_outcome_fails_on_unauthorized_account() {
     ExtBuilder::default().build().execute_with(|| {
-        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_noop!(
             Authorized::authorize_market_outcome(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)),
-            Error::<Runtime>::NotAuthorizedForThisMarket,
+            Error::<Runtime>::NotAuthorizedForDisputeResolution,
         );
     });
 }
@@ -119,7 +119,7 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
 #[test]
 fn on_resolution_fails_if_no_report_was_submitted() {
     ExtBuilder::default().build().execute_with(|| {
-        let report = Authorized::on_resolution(&[], &0, &market_mock::<Runtime>(ALICE)).unwrap();
+        let report = Authorized::on_resolution(&[], &0, &market_mock::<Runtime>()).unwrap();
         assert!(report.is_none());
     });
 }
@@ -127,7 +127,7 @@ fn on_resolution_fails_if_no_report_was_submitted() {
 #[test]
 fn on_resolution_removes_stored_outcomes() {
     ExtBuilder::default().build().execute_with(|| {
-        let market = market_mock::<Runtime>(ALICE);
+        let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(0, &market);
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(ALICE),
@@ -147,7 +147,7 @@ fn on_resolution_removes_stored_outcomes() {
 #[test]
 fn on_resolution_returns_the_reported_outcome() {
     ExtBuilder::default().build().execute_with(|| {
-        let market = market_mock::<Runtime>(ALICE);
+        let market = market_mock::<Runtime>();
         Markets::<Runtime>::insert(0, &market);
         // Authorize outcome, then overwrite it.
         assert_ok!(Authorized::authorize_market_outcome(
@@ -170,8 +170,8 @@ fn on_resolution_returns_the_reported_outcome() {
 #[test]
 fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
     ExtBuilder::default().build().execute_with(|| {
-        Markets::<Runtime>::insert(0, market_mock::<Runtime>(ALICE));
-        Markets::<Runtime>::insert(1, market_mock::<Runtime>(ALICE));
+        Markets::<Runtime>::insert(0, market_mock::<Runtime>());
+        Markets::<Runtime>::insert(1, market_mock::<Runtime>());
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(ALICE),
             0,

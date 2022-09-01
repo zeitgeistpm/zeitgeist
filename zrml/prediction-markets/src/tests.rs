@@ -1269,7 +1269,7 @@ fn create_categorical_market_fails_if_market_begin_is_equal_to_end() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized(CHARLIE),
+                MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::InvalidMarketPeriod,
@@ -1305,7 +1305,7 @@ fn create_categorical_market_fails_if_market_period_is_invalid(
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized(CHARLIE),
+                MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::InvalidMarketPeriod,
@@ -1326,7 +1326,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized(CHARLIE),
+                MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::InvalidMarketPeriod,
@@ -1341,7 +1341,7 @@ fn create_categorical_market_fails_if_end_is_not_far_enough_ahead() {
                 gen_metadata(0),
                 MarketCreation::Permissionless,
                 MarketType::Categorical(3),
-                MarketDisputeMechanism::Authorized(CHARLIE),
+                MarketDisputeMechanism::Authorized,
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::InvalidMarketPeriod,
@@ -1913,7 +1913,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized(ALICE),
+            MarketDisputeMechanism::Authorized,
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
@@ -2427,7 +2427,7 @@ fn authorized_correctly_resolves_disputed_market() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized(FRED),
+            MarketDisputeMechanism::Authorized,
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
@@ -2448,12 +2448,12 @@ fn authorized_correctly_resolves_disputed_market() {
 
         // Fred authorizses an outcome, but fat-fingers it on the first try.
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(FRED),
+            Origin::signed(ALICE),
             0,
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(FRED),
+            Origin::signed(ALICE),
             0,
             OutcomeReport::Categorical(1)
         ));
@@ -2552,7 +2552,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
-            MarketDisputeMechanism::Authorized(FRED),
+            MarketDisputeMechanism::Authorized,
             ScoringRule::CPMM,
         ));
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), market_id, CENT));

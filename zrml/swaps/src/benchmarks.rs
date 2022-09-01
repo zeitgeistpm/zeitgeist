@@ -153,7 +153,7 @@ benchmarks! {
                 creator_fee: 0,
                 creator: caller.clone(),
                 market_type: MarketType::Categorical(5),
-                dispute_mechanism: MarketDisputeMechanism::Authorized(caller.clone()),
+                dispute_mechanism: MarketDisputeMechanism::Authorized,
                 metadata: vec![0; 50],
                 oracle: caller.clone(),
                 period: MarketPeriod::Block(0u32.into()..1u32.into()),

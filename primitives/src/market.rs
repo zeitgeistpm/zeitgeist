@@ -53,7 +53,7 @@ pub struct Market<AI, BN, M> {
     /// The resolved outcome.
     pub resolved_outcome: Option<OutcomeReport>,
     /// See [`MarketDisputeMechanism`].
-    pub dispute_mechanism: MarketDisputeMechanism<AI>,
+    pub dispute_mechanism: MarketDisputeMechanism,
 }
 
 impl<AI, BN, M> Market<AI, BN, M> {
@@ -101,7 +101,7 @@ where
             .saturating_add(MarketStatus::max_encoded_len())
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
             .saturating_add(<Option<OutcomeReport>>::max_encoded_len())
-            .saturating_add(<MarketDisputeMechanism<AI>>::max_encoded_len())
+            .saturating_add(<MarketDisputeMechanism>::max_encoded_len())
     }
 }
 
@@ -125,8 +125,8 @@ pub struct MarketDispute<AccountId, BlockNumber> {
 
 /// How a market should resolve disputes
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum MarketDisputeMechanism<AI> {
-    Authorized(AI),
+pub enum MarketDisputeMechanism {
+    Authorized,
     Court,
     SimpleDisputes,
 }
@@ -288,7 +288,7 @@ mod tests {
             status: MarketStatus::Active,
             report: None,
             resolved_outcome: None,
-            dispute_mechanism: MarketDisputeMechanism::Authorized(9),
+            dispute_mechanism: MarketDisputeMechanism::Authorized,
         };
         assert_eq!(market.matches_outcome_report(&outcome_report), expected);
     }

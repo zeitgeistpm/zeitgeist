@@ -407,7 +407,7 @@ mod pallet {
                 default_dispute_bond::<T>(disputes.len()),
             )?;
             match market.dispute_mechanism {
-                MarketDisputeMechanism::Authorized(_) => {
+                MarketDisputeMechanism::Authorized => {
                     T::Authorized::on_dispute(&disputes, &market_id, &market)?
                 }
                 MarketDisputeMechanism::Court => {
@@ -470,7 +470,7 @@ mod pallet {
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             weights: Vec<u128>,
@@ -523,7 +523,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -1876,7 +1876,7 @@ mod pallet {
                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
                     // the oracle's report.
                     let resolved_outcome_option = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized(_) => {
+                        MarketDisputeMechanism::Authorized => {
                             T::Authorized::on_resolution(&disputes, market_id, market)?
                         }
                         MarketDisputeMechanism::Court => {

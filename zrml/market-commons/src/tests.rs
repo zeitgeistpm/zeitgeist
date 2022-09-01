@@ -34,7 +34,7 @@ const MARKET_DUMMY: Market<AccountIdTest, BlockNumber, Moment> = Market {
     creator_fee: 0,
     creator: 0,
     market_type: MarketType::Scalar(0..=100),
-    dispute_mechanism: MarketDisputeMechanism::Authorized(0),
+    dispute_mechanism: MarketDisputeMechanism::Authorized,
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
