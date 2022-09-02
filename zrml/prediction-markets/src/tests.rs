@@ -621,7 +621,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         assert_eq!(market.report.unwrap().outcome, outcome_report);
         assert_eq!(market.resolved_outcome.unwrap(), outcome_report);
         System::assert_last_event(
-            Event::MarketResolved(market_id, MarketStatus::Resolved, outcome_report).into(),
+            Event::MarketResolved(market_id, outcome_report).into(),
         );
 
         assert_eq!(

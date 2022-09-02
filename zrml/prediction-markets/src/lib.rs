@@ -426,11 +426,7 @@ mod pallet {
             <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
-            Self::deposit_event(Event::MarketDisputed(
-                market_id,
-                MarketStatus::Disputed,
-                market_dispute,
-            ));
+            Self::deposit_event(Event::MarketDisputed(market_id, market_dispute));
             Self::calculate_actual_weight(
                 &T::WeightInfo::dispute,
                 num_disputes,
@@ -947,11 +943,7 @@ mod pallet {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
-            Self::deposit_event(Event::MarketReported(
-                market_id,
-                MarketStatus::Reported,
-                market_report,
-            ));
+            Self::deposit_event(Event::MarketReported(market_id, market_report));
             Ok(())
         }
 
@@ -1228,15 +1220,15 @@ mod pallet {
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
         /// A market has been disputed \[market_id, new_market_status, new_outcome\]
-        MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
+        MarketDisputed(MarketIdOf<T>, MarketDispute<T::AccountId, T::BlockNumber>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
-        MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
+        MarketReported(MarketIdOf<T>, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
-        MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
+        MarketResolved(MarketIdOf<T>, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount_redeemed, payout, who\]
@@ -1989,11 +1981,7 @@ mod pallet {
                 Ok(())
             })?;
             Disputes::<T>::remove(market_id);
-            Self::deposit_event(Event::MarketResolved(
-                *market_id,
-                MarketStatus::Resolved,
-                resolved_outcome,
-            ));
+            Self::deposit_event(Event::MarketResolved(*market_id, resolved_outcome));
             Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
                 market,
                 total_accounts,
