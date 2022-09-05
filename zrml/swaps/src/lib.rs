@@ -220,7 +220,7 @@ mod pallet {
                 let mut real_amount = amount;
                 let transferred;
 
-                if let Some(subsidy) = <SubsidyProviders<T>>::get(&pool_id, &who) {
+                if let Some(subsidy) = <SubsidyProviders<T>>::get(pool_id, &who) {
                     if amount > subsidy {
                         real_amount = subsidy;
                     }
@@ -250,14 +250,14 @@ mod pallet {
                     let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
 
                     if new_amount > zero_balance && missing == zero_balance {
-                        <SubsidyProviders<T>>::insert(&pool_id, &who, new_amount);
+                        <SubsidyProviders<T>>::insert(pool_id, &who, new_amount);
                         pool.total_subsidy = Some(
                             total_subsidy
                                 .checked_sub(&transferred)
                                 .ok_or(ArithmeticError::Overflow)?,
                         );
                     } else {
-                        let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
+                        let _ = <SubsidyProviders<T>>::take(pool_id, &who);
                         pool.total_subsidy = Some(
                             total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?,
                         );
@@ -463,7 +463,7 @@ mod pallet {
 
                 let total_subsidy = pool.total_subsidy.ok_or(Error::<T>::PoolMissingSubsidy)?;
                 <SubsidyProviders<T>>::try_mutate::<_, _, _, DispatchError, _>(
-                    &pool_id,
+                    pool_id,
                     &who,
                     |user_subsidy| {
                         if let Some(prev_val) = user_subsidy {
