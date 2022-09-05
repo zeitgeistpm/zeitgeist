@@ -620,9 +620,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
         assert_eq!(market.status, MarketStatus::Resolved);
         assert_eq!(market.report.unwrap().outcome, outcome_report);
         assert_eq!(market.resolved_outcome.unwrap(), outcome_report);
-        System::assert_last_event(
-            Event::MarketResolved(market_id, outcome_report).into(),
-        );
+        System::assert_last_event(Event::MarketResolved(market_id, outcome_report).into());
 
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
