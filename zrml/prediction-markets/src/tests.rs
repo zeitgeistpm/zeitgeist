@@ -2448,12 +2448,12 @@ fn authorized_correctly_resolves_disputed_market() {
 
         // Fred authorizses an outcome, but fat-fingers it on the first try.
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(ALICE),
+            Origin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(0)
         ));
         assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(ALICE),
+            Origin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
             OutcomeReport::Categorical(1)
         ));

@@ -1,3 +1,7 @@
+# v0.3.6
+
+- Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence `MarketDisputeMechanism::Authorized` does not nead account_id.
+
 # v0.3.5
 
 - Added `Initialized` status for pools. A pool now starts in `Initialized`
