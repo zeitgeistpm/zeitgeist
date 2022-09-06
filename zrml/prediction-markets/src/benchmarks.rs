@@ -358,8 +358,28 @@ benchmarks! {
     // Beware! We're only benchmarking categorical markets (scalar market creation is essentially
     // the same).
     create_market {
+        // cache size for MarketIdsPerCloseTimeFrame and MarketIdsPerCloseBlock bounded vector limit
+        let m in 0..63;
+
         let (caller, oracle, period, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
+        match period.clone() {
+            MarketPeriod::Block(range) => {
+                for i in 0..m {
+                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
+                        ids.try_push(i.into())
+                    }).unwrap();
+                }
+            }
+            MarketPeriod::Timestamp(range) => {
+                for i in 0..m {
+                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                        Pallet::<T>::calculate_time_frame_of_moment(range.end),
+                        |ids| ids.try_push(i.into()),
+                    ).unwrap();
+                }
+            }
+        }
     }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation,
             MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)

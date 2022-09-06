@@ -51,7 +51,7 @@ pub trait WeightInfoZeitgeist {
     fn admin_move_market_to_resolved_overhead() -> Weight;
     fn approve_market() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
-    fn create_market() -> Weight;
+    fn create_market(m: u32) -> Weight;
     fn deploy_swap_pool_for_market(a: u32) -> Weight;
     fn dispute_authorized(d: u32) -> Weight;
     fn do_reject_market() -> Weight;
@@ -168,8 +168,10 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons MarketCounter (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
     // Storage: MarketCommons Markets (r:0 w:1)
-    fn create_market() -> Weight {
-        (108_560_000 as Weight)
+    fn create_market(m: u32) -> Weight {
+        (524_508_000 as Weight)
+            // Standard Error: 16_000
+            .saturating_add((68_000 as Weight).saturating_mul(m as Weight))
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }

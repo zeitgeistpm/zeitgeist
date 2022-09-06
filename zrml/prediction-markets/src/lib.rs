@@ -387,7 +387,7 @@ mod pallet {
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
         #[pallet::weight(
-            T::WeightInfo::create_market()
+            T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
                 T::MaxCategories::get().into(),
@@ -423,7 +423,7 @@ mod pallet {
                 ScoringRule::CPMM,
             )?
             .actual_weight
-            .unwrap_or_else(T::WeightInfo::create_market);
+            .unwrap_or_else(|| T::WeightInfo::create_market(CacheSize::get()));
 
             // Deploy the swap pool and populate it.
             let asset_count = match market_type {
@@ -449,7 +449,7 @@ mod pallet {
             Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
         }
 
-        #[pallet::weight(T::WeightInfo::create_market())]
+        #[pallet::weight(T::WeightInfo::create_market(CacheSize::get()))]
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
@@ -536,23 +536,26 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            match period {
-                MarketPeriod::Block(range) => {
-                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                    })?;
-                }
-                MarketPeriod::Timestamp(range) => {
-                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                        Self::calculate_time_frame_of_moment(range.end),
-                        |ids| ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow),
-                    )?;
-                }
-            }
+            let ids_amount: u32 = match period {
+                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
+                    range.end,
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                )?,
+                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    Self::calculate_time_frame_of_moment(range.end),
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                )?,
+            };
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
-            Ok(Some(T::WeightInfo::create_market().saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
         }
 
         /// Buy complete sets and deploy a pool with specified liquidity for a market.
