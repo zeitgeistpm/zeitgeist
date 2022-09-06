@@ -1224,8 +1224,8 @@ mod pallet {
             if pool.pool_status == PoolStatus::Clean {
                 return Ok(());
             }
-            let total_issuance = T::AssetManager::total_issuance(Self::pool_shares_id(pool_id));
             let pool_shares_id = Self::pool_shares_id(pool_id);
+            let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
             let max_withdraw =
                 total_issuance.saturating_sub(Self::min_balance(pool_shares_id).saturated_into());
             ensure!(amount <= max_withdraw, Error::<T>::PoolDrain);
