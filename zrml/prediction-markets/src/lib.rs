@@ -1219,15 +1219,15 @@ mod pallet {
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
-        /// A market has been disputed \[market_id, new_market_status, new_outcome\]
+        /// A market has been disputed \[market_id, new_outcome\]
         MarketDisputed(MarketIdOf<T>, MarketDispute<T::AccountId, T::BlockNumber>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
         /// A pending market has been rejected as invalid. \[market_id\]
         MarketRejected(MarketIdOf<T>),
-        /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
+        /// A market has been reported on \[market_id, reported_outcome\]
         MarketReported(MarketIdOf<T>, Report<T::AccountId, T::BlockNumber>),
-        /// A market has been resolved \[market_id, new_market_status, real_outcome\]
+        /// A market has been resolved \[market_id, real_outcome\]
         MarketResolved(MarketIdOf<T>, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),

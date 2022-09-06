@@ -1,3 +1,8 @@
+# v0.3.6
+ 
+- MarketDisputed, MarketReported and MarketResolved events from prediction market will not have market status.
+  The name of event suggests unique market status, hence no need of market status in event.
+
 # v0.3.5
 
 - Added `Initialized` status for pools. A pool now starts in `Initialized`
