@@ -54,7 +54,6 @@ pub trait WeightInfoZeitgeist {
     fn create_market(m: u32) -> Weight;
     fn deploy_swap_pool_for_market(a: u32) -> Weight;
     fn dispute_authorized(d: u32) -> Weight;
-    fn do_reject_market() -> Weight;
     fn handle_expired_advised_market() -> Weight;
     fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight;
     fn internal_resolve_categorical_disputed(a: u32, b: u32, c: u32, d: u32) -> Weight;
@@ -64,7 +63,7 @@ pub trait WeightInfoZeitgeist {
     fn process_subsidy_collecting_markets_raw(a: u32) -> Weight;
     fn redeem_shares_categorical() -> Weight;
     fn redeem_shares_scalar() -> Weight;
-    fn reject_market() -> Weight;
+    fn reject_market(c: u32, o: u32) -> Weight;
     fn report() -> Weight;
     fn sell_complete_set(a: u32) -> Weight;
     fn start_subsidy(a: u32) -> Weight;
@@ -208,13 +207,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
-    fn do_reject_market() -> Weight {
-        (135_300_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
-    }
-    // Storage: Balances Reserves (r:1 w:1)
-    // Storage: MarketCommons Markets (r:1 w:1)
     fn handle_expired_advised_market() -> Weight {
         (105_580_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
@@ -300,8 +292,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
-    fn reject_market() -> Weight {
-        (169_491_000 as Weight)
+    fn reject_market(c: u32, o: u32) -> Weight {
+        (948_539_000 as Weight)
+            // Standard Error: 67_000
+            .saturating_add((121_000 as Weight).saturating_mul(c as Weight))
+            // Standard Error: 67_000
+            .saturating_add((140_000 as Weight).saturating_mul(o as Weight))
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }

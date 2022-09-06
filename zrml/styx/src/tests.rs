@@ -29,7 +29,7 @@ fn cross_slashes_funds_and_stores_crossing() {
         assert_ok!(Styx::cross(Origin::signed(ALICE)));
         let balance_after_crossing = Balances::free_balance(&ALICE);
         let diff = original_balance - balance_after_crossing;
-        assert!(Crossings::<Runtime>::contains_key(&ALICE));
+        assert!(Crossings::<Runtime>::contains_key(ALICE));
         assert_eq!(diff, burn_amount);
     });
 }

@@ -425,15 +425,6 @@ benchmarks! {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     }
 
-    do_reject_market {
-        let (_, market_id) = create_market_common::<T>(
-            MarketCreation::Advised,
-            MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
-        )?;
-        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
-    }: { Pallet::<T>::do_reject_market(&market_id, market)? }
-
     handle_expired_advised_market {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
@@ -550,16 +541,51 @@ benchmarks! {
     }: redeem_shares(RawOrigin::Signed(caller), market_id)
 
     reject_market {
+        let c in 0..63;
+        let o in 0..63;
+
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
+
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+        match market.period.clone() {
+            MarketPeriod::Block(range) => {
+                for i in 0..o {
+                    MarketIdsPerOpenBlock::<T>::try_mutate(range.start, |ids| {
+                        ids.try_push(i.into())
+                    }).unwrap();
+                }
+                for i in 0..c {
+                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
+                        ids.try_push(i.into())
+                    }).unwrap();
+                }
+            }
+            MarketPeriod::Timestamp(range) => {
+                for i in 0..o {
+                    MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                        Pallet::<T>::calculate_time_frame_of_moment(range.start),
+                        |ids| ids.try_push(i.into()),
+                    ).unwrap();
+                }
+                for i in 0..c {
+                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                        Pallet::<T>::calculate_time_frame_of_moment(range.end),
+                        |ids| ids.try_push(i.into()),
+                    ).unwrap();
+                }
+            }
+        }
+
         let reject_origin = T::RejectOrigin::successful_origin();
         let call = Call::<T>::reject_market { market_id };
     }: { call.dispatch_bypass_filter(reject_origin)? }
 
     report {
+        let m in 0..63;
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -569,6 +595,12 @@ benchmarks! {
         let close_origin = T::CloseOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
             .dispatch_bypass_filter(close_origin)?;
+        let current_block = frame_system::Pallet::<T>::block_number();
+        for i in 0..m {
+            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
+                ids.try_push(i.into())
+            }).unwrap();
+        }
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     sell_complete_set {

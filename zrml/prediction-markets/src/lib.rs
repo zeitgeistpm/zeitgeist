@@ -808,7 +808,7 @@ mod pallet {
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
-        #[pallet::weight((T::WeightInfo::reject_market(), Pays::No))]
+        #[pallet::weight((T::WeightInfo::reject_market(CacheSize::get(), CacheSize::get()), Pays::No))]
         #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
@@ -816,11 +816,11 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RejectOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
             Self::do_reject_market(&market_id, market)?;
             // The RejectOrigin should not pay fees for providing this service
-            Ok((None, Pays::No).into())
+            Ok((Some(T::WeightInfo::reject_market(close_ids_len, open_ids_len)), Pays::No).into())
         }
 
         /// Reports the outcome of a market.
@@ -1381,55 +1381,63 @@ mod pallet {
         }
 
         // Manually remove market from cache for auto close.
-        fn clear_auto_close(market_id: &MarketIdOf<T>) -> DispatchResult {
+        fn clear_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
 
             // No-op if market isn't cached for auto close according to its state.
             match market.status {
                 MarketStatus::Active | MarketStatus::Proposed => (),
-                _ => return Ok(()),
+                _ => return Ok(0u32),
             };
 
-            match market.period {
+            let close_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerCloseBlock::<T>::mutate(&range.end, |ids| {
+                    MarketIdsPerCloseBlock::<T>::mutate(&range.end, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.end);
-                    MarketIdsPerCloseTimeFrame::<T>::mutate(&time_frame, |ids| {
+                    MarketIdsPerCloseTimeFrame::<T>::mutate(&time_frame, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
             };
-            Ok(())
+            Ok(close_ids_len)
         }
 
         // Manually remove market from cache for auto open.
-        fn clear_auto_open(market_id: &MarketIdOf<T>) -> DispatchResult {
+        fn clear_auto_open(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
 
             // No-op if market isn't cached for auto open according to its state.
             match market.status {
                 MarketStatus::Active | MarketStatus::Proposed => (),
-                _ => return Ok(()),
+                _ => return Ok(0u32),
             };
 
-            match market.period {
+            let open_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerOpenBlock::<T>::mutate(&range.start, |ids| {
+                    MarketIdsPerOpenBlock::<T>::mutate(&range.start, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.start);
-                    MarketIdsPerOpenTimeFrame::<T>::mutate(&time_frame, |ids| {
+                    MarketIdsPerOpenTimeFrame::<T>::mutate(&time_frame, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
             };
-            Ok(())
+            Ok(open_ids_len)
         }
 
         /// Clears this market from being stored for automatic resolution.
