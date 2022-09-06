@@ -53,7 +53,7 @@ pub trait WeightInfoZeitgeist {
     fn buy_complete_set(a: u32) -> Weight;
     fn create_market() -> Weight;
     fn deploy_swap_pool_for_market(a: u32) -> Weight;
-    fn dispute(a: u32) -> Weight;
+    fn dispute_authorized(d: u32) -> Weight;
     fn do_reject_market() -> Weight;
     fn handle_expired_advised_market() -> Weight;
     fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight;
@@ -192,10 +192,17 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(8 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
     }
-    // Storage: PredictionMarkets Disputes (r:1 w:0)
-    // Storage: MarketCommons Markets (r:1 w:0)
-    fn dispute(_a: u32) -> Weight {
-        (18_813_000 as Weight).saturating_add(T::DbWeight::get().reads(2 as Weight))
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: Balances Reserves (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
+    fn dispute_authorized(d: u32) -> Weight {
+        (605_246_000 as Weight)
+            // Standard Error: 401_000
+            .saturating_add((4_424_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(5 as Weight))
+            .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)

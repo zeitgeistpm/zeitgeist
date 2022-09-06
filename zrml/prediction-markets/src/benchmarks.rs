@@ -91,12 +91,54 @@ fn create_market_common<T: Config>(
     Ok((caller, market_id))
 }
 
+// Create a market based on common parameters
+fn create_market_common_with_dispute_mechanism<T: Config>(
+    permission: MarketCreation,
+    options: MarketType,
+    scoring_rule: ScoringRule,
+    dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    let (caller, oracle, period, metadata, creation) =
+        create_market_common_parameters::<T>(permission)?;
+    let _ = Call::<T>::create_market {
+        oracle,
+        period,
+        metadata,
+        creation,
+        market_type: options,
+        dispute_mechanism,
+        scoring_rule,
+    }
+    .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    let market_id = T::MarketCommons::latest_market_id()?;
+    Ok((caller, market_id))
+}
+
 fn create_close_and_report_market<T: Config>(
     permission: MarketCreation,
     options: MarketType,
     outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
+    let _ = Call::<T>::admin_move_market_to_closed { market_id }
+        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
+    let _ = Call::<T>::report { market_id, outcome }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    Ok((caller, market_id))
+}
+
+fn create_close_and_report_market_with_dispute_mechanism<T: Config>(
+    permission: MarketCreation,
+    options: MarketType,
+    outcome: OutcomeReport,
+    dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    let (caller, market_id) = create_market_common_with_dispute_mechanism::<T>(
+        permission,
+        options,
+        ScoringRule::CPMM,
+        dispute_mechanism,
+    )?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
     let _ = Call::<T>::report { market_id, outcome }
@@ -338,18 +380,29 @@ benchmarks! {
         let weights = vec![MinWeight::get(); weight_len];
     }: _(RawOrigin::Signed(caller), market_id, max_swap_fee, min_liquidity, weights)
 
-    dispute {
-        let a in 0..(T::MaxDisputes::get() - 1) as u32;
-        let (caller, market_id) = create_close_and_report_market::<T>(
+    dispute_authorized {
+        let d in 0..(T::MaxDisputes::get() - 1) as u32;
+
+        let report_outcome = OutcomeReport::Scalar(u128::MAX);
+        let admin = account("admin", 0, 0);
+        let (caller, market_id) = create_close_and_report_market_with_dispute_mechanism::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
-            OutcomeReport::Scalar(42)
+            report_outcome,
+            MarketDisputeMechanism::Authorized(admin),
         )?;
-    }:  {
-        let origin = caller.clone();
-        let disputes = crate::Disputes::<T>::get(&market_id);
-        let market = T::MarketCommons::market(&Default::default()).unwrap();
-        T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+
+        for i in 0..d {
+            let outcome = OutcomeReport::Scalar(i.into());
+            let disputor = account("disputor", i, 0);
+            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into());
+            let _ = Call::<T>::dispute { market_id, outcome }.dispatch_bypass_filter(RawOrigin::Signed(disputor).into())?;
+        }
+
+        let dispute_outcome = OutcomeReport::Scalar((d + 1).into());
+        let call = Call::<T>::dispute { market_id, outcome: dispute_outcome };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     }
 
     do_reject_market {

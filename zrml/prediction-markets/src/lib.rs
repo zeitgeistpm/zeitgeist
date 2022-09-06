@@ -317,7 +317,7 @@ mod pallet {
             Self::do_buy_complete_set(sender, market_id, amount)
         }
 
-        #[pallet::weight(T::WeightInfo::dispute(T::MaxDisputes::get()))]
+        #[pallet::weight(T::WeightInfo::dispute_authorized(T::MaxDisputes::get()))]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -365,8 +365,9 @@ mod pallet {
                 MarketStatus::Disputed,
                 market_dispute,
             ));
+            // TODO(#782): add court benchmark
             Self::calculate_actual_weight(
-                &T::WeightInfo::dispute,
+                &T::WeightInfo::dispute_authorized,
                 num_disputes,
                 T::MaxDisputes::get(),
             )
