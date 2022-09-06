@@ -35,9 +35,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{
-        MaxSwapFee, MinLiquidity, MinWeight, BASE, BLOCKS_PER_DAY, MILLISECS_PER_BLOCK,
-    },
+    constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
     traits::DisputeApi,
     types::{
         Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
@@ -110,7 +108,12 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
     let market = T::MarketCommons::market(&market_id).unwrap();
-    let end: u32 = T::MaxSubsidyPeriod::get().saturated_into::<u32>(); // used in market creation as end
+    let end: u32 = match market.period {
+        MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
+        _ => {
+            return Err("MarketPeriod is block_number based");
+        }
+    };
     let oracle_delay: u32 =
         (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
     pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
@@ -203,7 +206,12 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(close_origin)?;
     let market = T::MarketCommons::market(&market_id).unwrap();
-    let end: u32 = T::MaxSubsidyPeriod::get().saturated_into::<u32>(); // used in market creation as end
+    let end: u32 = match market.period {
+        MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
+        _ => {
+            return Err("MarketPeriod is block_number based");
+        }
+    };
     let oracle_delay: u32 =
         (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
     pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
@@ -466,7 +474,7 @@ benchmarks! {
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + (BLOCKS_PER_DAY as u32).into();
+        let starting_block = frame_system::Pallet::<T>::block_number() + 2_u32.into();
     }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
 
     // Benchmark iteration and market validity check without ending subsidy / discarding market.
@@ -516,15 +524,22 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             ScoringRule::CPMM
         )?;
-    let market = T::MarketCommons::market(&market_id).unwrap();
+        let market = T::MarketCommons::market(&market_id).unwrap();
         let outcome = OutcomeReport::Categorical(0);
         let close_origin = T::CloseOrigin::successful_origin();
         let _ = Call::<T>::admin_move_market_to_closed { market_id }
-            .dispatch_bypass_filter(close_origin)?;
-    let market = T::MarketCommons::market(&market_id).unwrap();
-    let end : u32 = T::MaxSubsidyPeriod::get().saturated_into::<u32>(); // used in market creation as end
-    let oracle_delay : u32 = (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
+        .dispatch_bypass_filter(close_origin)?;
+        let market = T::MarketCommons::market(&market_id).unwrap();
+        let end : u32 = match market.period {
+            MarketPeriod::Timestamp(range) => {
+                range.end.saturated_into::<u32>()
+            },
+            _ => {
+                return Err(frame_benchmarking::BenchmarkError::Stop("MarketPeriod is block_number based"));
+            },
+        };
+        let oracle_delay : u32 = (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+        pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     sell_complete_set {

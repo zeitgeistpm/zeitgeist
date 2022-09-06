@@ -36,8 +36,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (zrml_market_commons::migrations::UpdateMarketsForDeadlines<Runtime>,
-             zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>),
+            (
+                zrml_market_commons::migrations::UpdateMarketsForDeadlines<Runtime>,
+                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>
+            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;

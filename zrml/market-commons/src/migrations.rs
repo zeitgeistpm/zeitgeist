@@ -158,8 +158,9 @@ mod tests {
                 legacy_markets,
             );
             UpdateMarketsForDeadlines::<Runtime>::on_runtime_upgrade();
+            assert_eq!(StorageVersion::get::<Pallet<Runtime>>(), MARKET_COMMONS_NEXT_STORAGE_VERSION);
             for (market_id, market_expected) in expected_markets.iter().enumerate() {
-                let market_actual = Markets::<Runtime>::get(&(market_id as u128)).unwrap();
+                let market_actual = Markets::<Runtime>::get(market_id as u128).unwrap();
                 assert_eq!(market_actual, *market_expected);
             }
         });

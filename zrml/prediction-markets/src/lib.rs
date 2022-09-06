@@ -590,15 +590,15 @@ mod pallet {
             );
             ensure!(
                 deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
-                Error::<T>::DisputeDurationGraterThanMaxDisputeDuration
+                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
             );
             ensure!(
                 deadlines.oracle_delay <= T::MaxOracleDelay::get(),
-                Error::<T>::OracleDelayGraterThanMaxOracleDelay
+                Error::<T>::OracleDelayGreaterThanMaxOracleDelay
             );
             ensure!(
                 deadlines.oracle_duration <= T::MaxOracleDuration::get(),
-                Error::<T>::OracleDurationGraterThanMaxOracleDuration
+                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
             );
 
             let market = Market {
@@ -631,10 +631,10 @@ mod pallet {
                     })?;
                 }
                 MarketPeriod::Timestamp(range) => {
-                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                        Self::calculate_time_frame_of_moment(range.end),
-                        |ids| ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow),
-                    )?;
+                    let key = Self::calculate_time_frame_of_moment(range.end);
+                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(key, |ids| {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
+                    })?;
                 }
             }
 
@@ -1256,11 +1256,11 @@ mod pallet {
         /// Specified dispute_duration is smaller than MinDisputeDuration.
         DisputeDurationSmallerThanMinDisputeDuration,
         /// Specified dispute_duration is greater than MaxDisputeDuration.
-        DisputeDurationGraterThanMaxDisputeDuration,
+        DisputeDurationGreaterThanMaxDisputeDuration,
         /// Specified oracle_delay is greater than MaxOracleDelay.
-        OracleDelayGraterThanMaxOracleDelay,
+        OracleDelayGreaterThanMaxOracleDelay,
         /// Specified oracle_duration is greater than MaxOracleDuration.
-        OracleDurationGraterThanMaxOracleDuration,
+        OracleDurationGreaterThanMaxOracleDuration,
     }
 
     #[pallet::event]
