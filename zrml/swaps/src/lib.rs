@@ -110,6 +110,11 @@ mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Clean up the pool of a resolved market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)` if the market is scalar, `O(n)` where `n` is the number of
+        /// assets if the market is categorical.
         #[pallet::weight(T::WeightInfo::admin_clean_up_pool())]
         #[transactional]
         pub fn admin_clean_up_pool(
@@ -117,6 +122,7 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
+            // TODO(#785): This is not properly benchmarked for Rikiddo yet!
             ensure_root(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             let pool_id = T::MarketCommons::market_pool(&market_id)?;
