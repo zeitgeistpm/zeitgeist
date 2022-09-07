@@ -197,16 +197,6 @@ mod pallet {
 
             // Delete market's outcome assets, clear market and delete pool if necessary.
             let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
-                // if let Ok((total_accounts, accounts)) =
-                //     T::AssetManager::accounts_by_currency_id(asset)
-                // {
-                //     share_accounts = share_accounts.saturating_add(accounts.len());
-                //     let _ = T::AssetManager::destroy_all(asset, /*accounts.iter().cloned()*/);
-                //     Some(total_accounts)
-                // } else {
-                //     // native currency case
-                //     None
-                // }
                 if let Ok(accounts) = T::AssetManager::destroy_all(asset) {
                     share_accounts = share_accounts.saturating_add(accounts);
                     Some(0)
@@ -1760,24 +1750,13 @@ mod pallet {
                             if idx == winning_asset_idx {
                                 return 0;
                             }
-                            // let (total_accounts, accounts) =
-                            //     T::AssetManager::accounts_by_currency_id(asset)
-                            //         .unwrap_or((0usize, vec![]));
-                            // total_asset_accounts =
-                            //     total_asset_accounts.saturating_add(accounts.len());
-
-                            // let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
                             let _ = T::AssetManager::destroy_all(asset);
-                            // total_accounts
                             0
                         } else {
                             0
                         }
                     };
 
-                    // if let Some(first_asset) = assets_iter.next() {
-                    //     total_accounts = manage_asset(first_asset, winning_asset_idx);
-                    // }
                     for asset in assets_iter {
                         let _ = manage_asset(asset, winning_asset_idx);
                     }
