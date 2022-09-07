@@ -57,7 +57,7 @@ pub trait WeightInfoZeitgeist {
     fn pool_join_subsidy() -> Weight;
     fn pool_join_with_exact_asset_amount() -> Weight;
     fn pool_join_with_exact_pool_amount() -> Weight;
-    fn clean_up_pool_without_reward_distribution(a: u32) -> Weight;
+    fn clean_up_pool_categorical_without_reward_distribution(a: u32) -> Weight;
     fn swap_exact_amount_in_cpmm() -> Weight;
     fn swap_exact_amount_in_rikiddo(a: u32) -> Weight;
     fn swap_exact_amount_out_cpmm() -> Weight;
@@ -207,7 +207,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: Swaps Pools (r:1 w:1)
-    fn clean_up_pool_without_reward_distribution(a: u32) -> Weight {
+    fn clean_up_pool_categorical_without_reward_distribution(a: u32) -> Weight {
         (54_143_000 as Weight)
             // Standard Error: 28_000
             .saturating_add((1_588_000 as Weight).saturating_mul(a as Weight))

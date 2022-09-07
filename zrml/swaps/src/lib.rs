@@ -1364,7 +1364,12 @@ mod pallet {
                 .ok_or(Error::<T>::AssetNotBound)
         }
 
-        fn clean_up_pool_categorical(
+        /// Remove losing assets from the pool and distribute Rikiddo rewards.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)` where `n` is the number of assets in the pool.
+        pub(crate) fn clean_up_pool_categorical(
             pool_id: PoolId,
             outcome_report: &OutcomeReport,
             winner_payout_account: &T::AccountId,
@@ -1410,7 +1415,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            Ok(T::WeightInfo::clean_up_pool_without_reward_distribution(
+            Ok(T::WeightInfo::clean_up_pool_categorical_without_reward_distribution(
                 total_assets.saturated_into(),
             )
             .saturating_add(extra_weight))

@@ -381,7 +381,7 @@ benchmarks! {
         let max_asset_amount: BalanceOf<T> = T::MinLiquidity::get();
     }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, max_asset_amount)
 
-    clean_up_pool_without_reward_distribution {
+    clean_up_pool_categorical_without_reward_distribution {
         // Total possible outcomes
         let a in 3..T::MaxAssets::get().into();
 
@@ -395,16 +395,17 @@ benchmarks! {
             Some(a.saturated_into()),
             None,
             ScoringRule::CPMM,
-            false
+            false,
         );
         let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
-            pool.pool_status = PoolStatus::Closed; Ok(())
+            pool.pool_status = PoolStatus::Closed;
+            Ok(())
         });
     }: {
-        Pallet::<T>::clean_up_pool(
-            &MarketType::Categorical(a as u16),
-            pool_id, &OutcomeReport::Categorical(0),
-            &account("ScrapCollector", 0, 0)
+        Pallet::<T>::clean_up_pool_categorical(
+            pool_id,
+            &OutcomeReport::Categorical(0),
+            &account("ScrapCollector", 0, 0),
         )?;
     }
 
