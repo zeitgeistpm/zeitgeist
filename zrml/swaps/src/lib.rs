@@ -142,7 +142,7 @@ mod pallet {
                 // this function.
                 MarketType::Categorical(category_count) => {
                     T::WeightInfo::admin_clean_up_pool_cpmm_categorical(
-                        category_count.saturating_add(1) as u32
+                        category_count.saturating_add(1) as u32,
                     )
                 }
             };

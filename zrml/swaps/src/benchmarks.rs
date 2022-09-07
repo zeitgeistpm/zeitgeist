@@ -26,9 +26,9 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
+use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{Config};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -41,7 +41,7 @@ use zeitgeist_primitives::{
     traits::Swaps as _,
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, PoolStatus, ScoringRule, PoolId,
+        MarketType, OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
