@@ -367,7 +367,7 @@ mod pallet {
             ));
             // TODO(#782): add court benchmark
             Self::calculate_actual_weight(
-                &T::WeightInfo::dispute_authorized,
+                T::WeightInfo::dispute_authorized,
                 num_disputes,
                 T::MaxDisputes::get(),
             )
@@ -651,7 +651,7 @@ mod pallet {
                     let current_block = <frame_system::Pallet<T>>::block_number();
                     let open_block = range.start;
                     if current_block < open_block {
-                        MarketIdsPerOpenBlock::<T>::try_mutate(&open_block, |ids| {
+                        MarketIdsPerOpenBlock::<T>::try_mutate(open_block, |ids| {
                             ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
                         })?;
                     } else {
@@ -663,7 +663,7 @@ mod pallet {
                         Self::calculate_time_frame_of_moment(T::MarketCommons::now());
                     let open_time_frame = Self::calculate_time_frame_of_moment(range.start);
                     if current_time_frame < open_time_frame {
-                        MarketIdsPerOpenTimeFrame::<T>::try_mutate(&open_time_frame, |ids| {
+                        MarketIdsPerOpenTimeFrame::<T>::try_mutate(open_time_frame, |ids| {
                             ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
                         })?;
                     } else {
@@ -881,7 +881,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            MarketIdsPerReportBlock::<T>::try_mutate(&current_block, |ids| {
+            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
@@ -940,7 +940,7 @@ mod pallet {
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(&T::WeightInfo::sell_complete_set, assets_len, max_cats)
+            Self::calculate_actual_weight(T::WeightInfo::sell_complete_set, assets_len, max_cats)
         }
     }
 
@@ -1392,7 +1392,7 @@ mod pallet {
 
             let close_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerCloseBlock::<T>::mutate(&range.end, |ids| -> u32 {
+                    MarketIdsPerCloseBlock::<T>::mutate(range.end, |ids| -> u32 {
                         let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                         ids_len
@@ -1400,7 +1400,7 @@ mod pallet {
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.end);
-                    MarketIdsPerCloseTimeFrame::<T>::mutate(&time_frame, |ids| -> u32 {
+                    MarketIdsPerCloseTimeFrame::<T>::mutate(time_frame, |ids| -> u32 {
                         let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                         ids_len
@@ -1422,7 +1422,7 @@ mod pallet {
 
             let open_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerOpenBlock::<T>::mutate(&range.start, |ids| -> u32 {
+                    MarketIdsPerOpenBlock::<T>::mutate(range.start, |ids| -> u32 {
                         let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                         ids_len
@@ -1430,7 +1430,7 @@ mod pallet {
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.start);
-                    MarketIdsPerOpenTimeFrame::<T>::mutate(&time_frame, |ids| -> u32 {
+                    MarketIdsPerOpenTimeFrame::<T>::mutate(time_frame, |ids| -> u32 {
                         let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                         ids_len
@@ -1445,7 +1445,7 @@ mod pallet {
             let market = T::MarketCommons::market(market_id)?;
             if market.status == MarketStatus::Reported {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                MarketIdsPerReportBlock::<T>::mutate(&report.at, |ids| {
+                MarketIdsPerReportBlock::<T>::mutate(report.at, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
@@ -1453,9 +1453,9 @@ mod pallet {
                 let disputes = Disputes::<T>::get(market_id);
                 if let Some(last_dispute) = disputes.last() {
                     let at = last_dispute.at;
-                    let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(&at);
+                    let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(at);
                     remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
-                    MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
+                    MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| {
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                     });
                 }
@@ -1491,7 +1491,7 @@ mod pallet {
 
             let assets_len: u32 = assets.len().saturated_into();
             let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(&T::WeightInfo::buy_complete_set, assets_len, max_cats)
+            Self::calculate_actual_weight(T::WeightInfo::buy_complete_set, assets_len, max_cats)
         }
 
         pub(crate) fn do_reject_market(
@@ -2122,7 +2122,7 @@ mod pallet {
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
                 let at = last_dispute.at;
-                MarketIdsPerDisputeBlock::<T>::mutate(&at, |ids| {
+                MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
@@ -2157,18 +2157,18 @@ mod pallet {
                 Query = BoundedVec<MarketIdOf<T>, CacheSize>,
             >,
         {
-            for market_id in MarketIdsPerBlock::get(&block_number).iter() {
+            for market_id in MarketIdsPerBlock::get(block_number).iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
-            MarketIdsPerBlock::remove(&block_number);
+            MarketIdsPerBlock::remove(block_number);
 
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerTimeFrame::get(&time_frame).iter() {
+                for market_id in MarketIdsPerTimeFrame::get(time_frame).iter() {
                     let market = T::MarketCommons::market(market_id)?;
                     mutation(market_id, market)?;
                 }
-                MarketIdsPerTimeFrame::remove(&time_frame);
+                MarketIdsPerTimeFrame::remove(time_frame);
             }
 
             Ok(())
@@ -2189,20 +2189,20 @@ mod pallet {
             let block = now.saturating_sub(dispute_period);
 
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(&block).iter() {
+            for id in MarketIdsPerReportBlock::<T>::get(block).iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
                 }
             }
-            MarketIdsPerReportBlock::<T>::remove(&block);
+            MarketIdsPerReportBlock::<T>::remove(block);
 
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(&block).iter() {
+            for id in MarketIdsPerDisputeBlock::<T>::get(block).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
-            MarketIdsPerDisputeBlock::<T>::remove(&block);
+            MarketIdsPerDisputeBlock::<T>::remove(block);
 
             Ok(())
         }

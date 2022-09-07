@@ -288,7 +288,7 @@ benchmarks! {
 
         for i in 0..c.min(T::MaxDisputes::get()) {
             let origin = caller.clone();
-            let disputes = crate::Disputes::<T>::get(&market_id);
+            let disputes = crate::Disputes::<T>::get(market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
             T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
@@ -446,7 +446,7 @@ benchmarks! {
         let (_, market_id) = setup_resolve_common_categorical_after_dispute::<T>(a, b, c_u16)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(&market_id);
+        let disputes = crate::Disputes::<T>::get(market_id);
         T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
     }
 
@@ -465,13 +465,13 @@ benchmarks! {
 
         for i in 0..c.min(d) {
             let origin = caller.clone();
-            let disputes = crate::Disputes::<T>::get(&market_id);
+            let disputes = crate::Disputes::<T>::get(market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
             T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(&market_id);
+        let disputes = crate::Disputes::<T>::get(market_id);
         T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
     }
 
@@ -481,7 +481,7 @@ benchmarks! {
         let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(&market_id);
+        let disputes = crate::Disputes::<T>::get(market_id);
         T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
     }
 
@@ -493,14 +493,14 @@ benchmarks! {
         let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d {
-            let disputes = crate::Disputes::<T>::get(&market_id);
+            let disputes = crate::Disputes::<T>::get(market_id);
             let origin = caller.clone();
             let market = T::MarketCommons::market(&Default::default()).unwrap();
             T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(&market_id);
+        let disputes = crate::Disputes::<T>::get(market_id);
         T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
     }
 
