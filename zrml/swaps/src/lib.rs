@@ -114,14 +114,16 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(1)` if the market is scalar, `O(n)` where `n` is the number of
-        /// assets if the market is categorical.
-        #[pallet::weight(T::WeightInfo::admin_clean_up_pool())]
+        /// assets in the pool if the market is categorical.
+        #[pallet::weight(
+            T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32)
+        )]
         #[transactional]
         pub fn admin_clean_up_pool(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome_report: OutcomeReport,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             // TODO(#785): This is not properly benchmarked for Rikiddo yet!
             ensure_root(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
@@ -132,7 +134,19 @@ mod pallet {
                 &outcome_report,
                 &Self::pool_account_id(pool_id),
             )?;
-            Ok(())
+            let weight_info = match market.market_type {
+                MarketType::Scalar(_) => T::WeightInfo::admin_clean_up_pool_cpmm_scalar(),
+                // This is a time-efficient way of getting the number of assets, but makes the
+                // assumption that `assets = category_count + 1`. This is definitely a code smell
+                // and a result of not separating `prediction-markets` from `swaps` properly in
+                // this function.
+                MarketType::Categorical(category_count) => {
+                    T::WeightInfo::admin_clean_up_pool_cpmm_categorical(
+                        category_count.saturating_add(1) as u32
+                    )
+                }
+            };
+            Ok(Some(weight_info).into())
         }
 
         /// Pool - Exit

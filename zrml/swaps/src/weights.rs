@@ -45,7 +45,8 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_swaps (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_clean_up_pool() -> Weight;
+    fn admin_clean_up_pool_cpmm_categorical(a: u32) -> Weight;
+    fn admin_clean_up_pool_cpmm_scalar() -> Weight;
     fn end_subsidy_phase(a: u32, b: u32) -> Weight;
     fn destroy_pool_in_subsidy_phase(a: u32) -> Weight;
     fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight;
@@ -71,7 +72,16 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: MarketCommons MarketPool (r:1 w:0)
     // Storage: Swaps Pools (r:1 w:1)
-    fn admin_clean_up_pool() -> Weight {
+    fn admin_clean_up_pool_cpmm_categorical(_: u32) -> Weight {
+        (87_620_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(4 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:0)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    // Storage: Swaps Pools (r:1 w:1)
+    fn admin_clean_up_pool_cpmm_scalar() -> Weight {
         (87_620_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))

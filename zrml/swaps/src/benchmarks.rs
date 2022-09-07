@@ -26,9 +26,9 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
+use crate::{Config};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -41,7 +41,7 @@ use zeitgeist_primitives::{
     traits::Swaps as _,
     types::{
         Asset, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, PoolStatus, ScoringRule,
+        MarketType, OutcomeReport, PoolStatus, ScoringRule, PoolId,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -145,14 +145,18 @@ fn bench_create_pool<T: Config>(
 }
 
 benchmarks! {
-    admin_clean_up_pool {
+    admin_clean_up_pool_cpmm_categorical {
+        // We're excluding the case of two assets, which would leave us with only one outcome
+        // token, which makes no sense in the context of prediction markets.
+        let a in 3..T::MaxAssets::get().into();
+        let category_count = (a - 1) as u16;
         let caller: T::AccountId = whitelisted_caller();
         T::MarketCommons::push_market(
             Market {
                 creation: MarketCreation::Permissionless,
                 creator_fee: 0,
                 creator: caller.clone(),
-                market_type: MarketType::Categorical(5),
+                market_type: MarketType::Categorical(category_count),
                 dispute_mechanism: MarketDisputeMechanism::Authorized(caller.clone()),
                 metadata: vec![0; 50],
                 oracle: caller.clone(),
@@ -163,12 +167,58 @@ benchmarks! {
                 status: MarketStatus::Active,
             }
         )?;
-        let _ = T::MarketCommons::insert_market_pool(0u32.saturated_into(), 0u128);
-        let _ = bench_create_pool::<T>(caller, Some(T::MaxAssets::get().into()), None, ScoringRule::CPMM, false);
-        let _ = Pallet::<T>::mutate_pool(0, |pool| {
-            pool.pool_status = PoolStatus::Closed; Ok(())
+        let market_id = T::MarketCommons::latest_market_id()?;
+        let pool_id: PoolId = 0;
+        let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
+        let _ = bench_create_pool::<T>(caller, Some(a as usize), None, ScoringRule::CPMM, false);
+        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
+            pool.pool_status = PoolStatus::Closed;
+            Ok(())
         });
-    }: _(RawOrigin::Root, 0u32.into(), OutcomeReport::Categorical(0))
+
+        let call = Call::<T>::admin_clean_up_pool {
+            market_id,
+            outcome_report: OutcomeReport::Categorical(0),
+        };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Root.into())?;
+    }
+
+    admin_clean_up_pool_cpmm_scalar {
+        let caller: T::AccountId = whitelisted_caller();
+        T::MarketCommons::push_market(
+            Market {
+                creation: MarketCreation::Permissionless,
+                creator_fee: 0,
+                creator: caller.clone(),
+                market_type: MarketType::Scalar(0..=99),
+                dispute_mechanism: MarketDisputeMechanism::Authorized(caller.clone()),
+                metadata: vec![0; 50],
+                oracle: caller.clone(),
+                period: MarketPeriod::Block(0u32.into()..1u32.into()),
+                report: None,
+                resolved_outcome: None,
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Active,
+            }
+        )?;
+        let market_id = T::MarketCommons::latest_market_id()?;
+        let pool_id: PoolId = 0;
+        let asset_count = 3;
+        let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
+        let _ = bench_create_pool::<T>(caller, Some(asset_count), None, ScoringRule::CPMM, false);
+        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
+            pool.pool_status = PoolStatus::Closed;
+            Ok(())
+        });
+
+        let call = Call::<T>::admin_clean_up_pool {
+            market_id,
+            outcome_report: OutcomeReport::Scalar(33),
+        };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Root.into())?;
+    }
 
     end_subsidy_phase {
         // Total assets
