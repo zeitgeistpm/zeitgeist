@@ -52,7 +52,8 @@ pub trait WeightInfoZeitgeist {
     fn approve_market() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
     fn create_market(m: u32) -> Weight;
-    fn deploy_swap_pool_for_market(a: u32) -> Weight;
+    fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32) -> Weight;
+    fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight;
     fn dispute_authorized(d: u32) -> Weight;
     fn handle_expired_advised_market() -> Weight;
     fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight;
@@ -184,13 +185,31 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
     // Storage: MarketCommons MarketPool (r:1 w:1)
     // Storage: Swaps Pools (r:0 w:1)
-    fn deploy_swap_pool_for_market(a: u32) -> Weight {
-        (204_757_000 as Weight)
-            // Standard Error: 87_000
-            .saturating_add((67_450_000 as Weight).saturating_mul(a as Weight))
+    fn deploy_swap_pool_for_market_future_pool(a: u32, _o: u32) -> Weight {
+        (1_565_055_000 as Weight)
+            // Standard Error: 3_691_000
+            .saturating_add((409_425_000 as Weight).saturating_mul(a as Weight))
             .saturating_add(T::DbWeight::get().reads(9 as Weight))
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes(8 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:0)
+    // Storage: Swaps NextPoolId (r:1 w:1)
+    // Storage: Tokens Accounts (r:5 w:5)
+    // Storage: System Account (r:1 w:1)
+    // Storage: Tokens TotalIssuance (r:1 w:1)
+    // Storage: Timestamp Now (r:1 w:0)
+    // Storage: MarketCommons MarketPool (r:1 w:1)
+    // Storage: Swaps Pools (r:0 w:1)
+    fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight {
+        (1_018_731_000 as Weight)
+            // Standard Error: 12_710_000
+            .saturating_add((487_722_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(8 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(7 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)

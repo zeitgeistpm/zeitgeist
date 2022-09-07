@@ -36,10 +36,11 @@ use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
-    traits::DisputeApi,
+    traits::{DisputeApi, Swaps},
     types::{
         Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule, SubsidyUntil,
+        MaxRuntimeUsize, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
+        SubsidyUntil,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -91,6 +92,7 @@ fn create_market_common<T: Config>(
     Ok((caller, market_id))
 }
 
+// TODO use mutate_market for that dispute_mechanism change
 // Create a market based on common parameters
 fn create_market_common_with_dispute_mechanism<T: Config>(
     permission: MarketCreation,
@@ -384,13 +386,40 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
 
-    deploy_swap_pool_for_market {
+    deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
+        let o in 0..63;
+
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
             ScoringRule::CPMM
         )?;
+
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            market.period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
+            Ok(())
+        })?;
+
+        assert!(Pallet::<T>::calculate_time_frame_of_moment(T::MarketCommons::now()) < Pallet::<T>::calculate_time_frame_of_moment(T::MinSubsidyPeriod::get()));
+
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+        match market.period.clone() {
+            MarketPeriod::Block(range) => {
+                panic!("Use timestamp instead of block, because it should be the heavier path.");
+            }
+            MarketPeriod::Timestamp(range) => {
+                for i in 0..o {
+                    MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                        Pallet::<T>::calculate_time_frame_of_moment(range.start),
+                        |ids| ids.try_push(i.into()),
+                    ).unwrap();
+                }
+            }
+        }
+
+        let prev_len = MarketIdsPerOpenTimeFrame::<T>::get(Pallet::<T>::calculate_time_frame_of_moment(T::MinSubsidyPeriod::get())).len();
+
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
         let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
@@ -398,7 +427,48 @@ benchmarks! {
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
-    }: _(RawOrigin::Signed(caller), market_id, max_swap_fee, min_liquidity, weights)
+
+        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee, amount: min_liquidity, weights };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+    } verify {
+        let current_len = MarketIdsPerOpenTimeFrame::<T>::get(Pallet::<T>::calculate_time_frame_of_moment(T::MinSubsidyPeriod::get())).len();
+        assert!(current_len - 1 == prev_len);
+    }
+
+    deploy_swap_pool_for_market_open_pool {
+        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
+
+        let (caller, market_id) = create_market_common::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(a.saturated_into()),
+            ScoringRule::CPMM
+        )?;
+
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            // We need to ensure, that period range start is now, because we would like to open the pool now
+            market.period = MarketPeriod::Timestamp(T::MarketCommons::now()..T::MaxSubsidyPeriod::get());
+            Ok(())
+        })?;
+
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+
+        let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
+        let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
+        let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
+            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+
+        let weight_len: usize = MaxRuntimeUsize::from(a).into();
+        let weights = vec![MinWeight::get(); weight_len];
+
+        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee, amount: min_liquidity, weights };
+    }: {
+        call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
+    } verify {
+        let market_pool_id = T::MarketCommons::market_pool(&market_id.saturated_into()).unwrap();
+        let pool = T::Swaps::pool(market_pool_id).unwrap();
+        assert!(pool.pool_status == PoolStatus::Active);
+    }
 
     dispute_authorized {
         let d in 0..(T::MaxDisputes::get() - 1) as u32;

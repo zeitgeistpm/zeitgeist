@@ -389,7 +389,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
+            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(
                 T::MaxCategories::get().into(),
             ))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
@@ -441,7 +441,9 @@ mod pallet {
             .actual_weight
             .unwrap_or_else(|| {
                 T::WeightInfo::buy_complete_set(asset_count.into())
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(asset_count.into()))
+                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(
+                        asset_count.into(),
+                    ))
                     .saturating_add(5_000_000_000.saturating_mul(asset_count.into()))
                     .saturating_add(T::DbWeight::get().reads(2 as Weight))
             });
@@ -570,7 +572,7 @@ mod pallet {
         ///     swaps pallet.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
+            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(
                 T::MaxCategories::get().into(),
             ))
             // Overly generous estimation, since we have no access to Swaps WeightInfo
@@ -593,9 +595,9 @@ mod pallet {
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
             let weights_len = weights.len();
             Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?;
-            Ok(Some(weight_bcs.saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                weights_len.saturated_into(),
-            )))
+            Ok(Some(weight_bcs.saturating_add(
+                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights_len.saturated_into()),
+            ))
             .into())
         }
 
@@ -612,7 +614,7 @@ mod pallet {
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
         ///     swaps pallet.
         #[pallet::weight(
-            T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
+            T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32).max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(weights.len() as u32, CacheSize::get()))
         )]
         #[transactional]
         pub fn deploy_swap_pool_for_market(
@@ -621,7 +623,7 @@ mod pallet {
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             mut weights: Vec<u128>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -629,8 +631,15 @@ mod pallet {
             Self::ensure_market_is_active(&market)?;
 
             let mut assets = Self::outcome_assets(market_id, &market);
+            let weights_len = weights.len() as u32;
+            // although this extrinsic is transactional and this check is inside Swaps::create_pool
+            // the iteration over weights happens still before the check in Swaps::create_pool
+            // this could stall the chain, because a malicious user puts a large vector in
+            ensure!(weights.len() == assets.len(), Error::<T>::WeightsLenMustEqualAssetsLen);
+
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
+
             let base_asset_weight = weights.iter().fold(0u128, |acc, val| acc.saturating_add(*val));
             weights.push(base_asset_weight);
 
@@ -646,16 +655,22 @@ mod pallet {
             )?;
 
             // Open the pool now or cache it for later
-            match market.period {
+            let ids_len: Option<u32> = match market.period {
                 MarketPeriod::Block(ref range) => {
                     let current_block = <frame_system::Pallet<T>>::block_number();
                     let open_block = range.start;
                     if current_block < open_block {
-                        MarketIdsPerOpenBlock::<T>::try_mutate(open_block, |ids| {
-                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                        })?;
+                        let ids_len = MarketIdsPerOpenBlock::<T>::try_mutate(
+                            open_block,
+                            |ids| -> Result<u32, DispatchError> {
+                                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                                Ok(ids.len() as u32)
+                            },
+                        )?;
+                        Some(ids_len)
                     } else {
                         T::Swaps::open_pool(pool_id)?;
+                        None
                     }
                 }
                 MarketPeriod::Timestamp(ref range) => {
@@ -663,18 +678,36 @@ mod pallet {
                         Self::calculate_time_frame_of_moment(T::MarketCommons::now());
                     let open_time_frame = Self::calculate_time_frame_of_moment(range.start);
                     if current_time_frame < open_time_frame {
-                        MarketIdsPerOpenTimeFrame::<T>::try_mutate(open_time_frame, |ids| {
-                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                        })?;
+                        let ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                            open_time_frame,
+                            |ids| -> Result<u32, DispatchError> {
+                                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                                Ok(ids.len() as u32)
+                            },
+                        )?;
+                        Some(ids_len)
                     } else {
                         T::Swaps::open_pool(pool_id)?;
+                        None
                     }
                 }
             };
 
             // This errors if a pool already exists!
             T::MarketCommons::insert_market_pool(market_id, pool_id)?;
-            Ok(())
+            match ids_len {
+                Some(market_ids_len) => {
+                    Ok(Some(T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                        weights_len,
+                        market_ids_len,
+                    ))
+                    .into())
+                }
+                None => {
+                    Ok(Some(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights_len))
+                        .into())
+                }
+            }
         }
 
         /// Redeems the winning shares of a prediction market.
@@ -1137,6 +1170,8 @@ mod pallet {
         InvalidMarketPeriod,
         /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
+        /// The weights length has to be equal to the assets length.
+        WeightsLenMustEqualAssetsLen,
     }
 
     #[pallet::event]
@@ -1497,7 +1532,7 @@ mod pallet {
         pub(crate) fn do_reject_market(
             market_id: &MarketIdOf<T>,
             market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> Result<Weight, DispatchError> {
+        ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
             T::AssetManager::slash_reserved_named(
@@ -1515,7 +1550,7 @@ mod pallet {
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketRejected(*market_id));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
-            Ok(T::WeightInfo::do_reject_market())
+            Ok(())
         }
 
         pub(crate) fn handle_expired_advised_market(
