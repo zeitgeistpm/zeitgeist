@@ -404,7 +404,7 @@ benchmarks! {
         assert!(Pallet::<T>::calculate_time_frame_of_moment(T::MarketCommons::now()) < Pallet::<T>::calculate_time_frame_of_moment(T::MinSubsidyPeriod::get()));
 
         let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
-        match market.period.clone() {
+        match market.period {
             MarketPeriod::Block(range) => {
                 panic!("Use timestamp instead of block, because it should be the heavier path.");
             }
@@ -621,7 +621,7 @@ benchmarks! {
         )?;
 
         let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
-        match market.period.clone() {
+        match market.period {
             MarketPeriod::Block(range) => {
                 for i in 0..o {
                     MarketIdsPerOpenBlock::<T>::try_mutate(range.start, |ids| {
