@@ -1965,12 +1965,14 @@ mod pallet {
                 pool.pool_status = PoolStatus::Clean;
                 Ok(())
             })?;
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1)); // mutate_pool
             if let MarketType::Categorical(_) = market_type {
-                weight = weight.saturating_add(Self::clean_up_pool_categorical(
+                let extra_weight = Self::clean_up_pool_categorical(
                     pool_id,
                     outcome_report,
                     winner_payout_account,
-                )?);
+                )?;
+                weight = weight.saturating_add(extra_weight);
             }
             Self::deposit_event(Event::<T>::PoolCleanedUp(pool_id));
             // (No extra work required for scalar markets!)
