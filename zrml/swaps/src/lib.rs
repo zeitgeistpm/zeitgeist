@@ -1578,8 +1578,9 @@ mod pallet {
             let pool_share_id = Self::pool_shares_id(pool_id);
             let (_, liquidity_providers) =
                 T::AssetManager::accounts_by_currency_id(pool_share_id).unwrap_or((0usize, vec![]));
-            let _ =
-                T::AssetManager::destroy_all(pool_share_id, liquidity_providers.iter().cloned());
+            let _ = T::AssetManager::destroy_all(
+                pool_share_id, /*liquidity_providers.iter().cloned()*/
+            );
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
             // TODO(#603): Fix weight calculation.

@@ -150,10 +150,8 @@ mod pallet {
         #[pallet::weight((
             T::WeightInfo::admin_destroy_reported_market(
                 900,
-                900,
                 T::MaxCategories::get().into()
             ).max(T::WeightInfo::admin_destroy_disputed_market(
-                900,
                 900,
                 T::MaxCategories::get().into()
             )), Pays::No))]
@@ -199,14 +197,20 @@ mod pallet {
 
             // Delete market's outcome assets, clear market and delete pool if necessary.
             let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
-                if let Ok((total_accounts, accounts)) =
-                    T::AssetManager::accounts_by_currency_id(asset)
-                {
-                    share_accounts = share_accounts.saturating_add(accounts.len());
-                    let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
-                    Some(total_accounts)
+                // if let Ok((total_accounts, accounts)) =
+                //     T::AssetManager::accounts_by_currency_id(asset)
+                // {
+                //     share_accounts = share_accounts.saturating_add(accounts.len());
+                //     let _ = T::AssetManager::destroy_all(asset, /*accounts.iter().cloned()*/);
+                //     Some(total_accounts)
+                // } else {
+                //     // native currency case
+                //     None
+                // }
+                if let Ok(accounts) = T::AssetManager::destroy_all(asset) {
+                    share_accounts = share_accounts.saturating_add(accounts);
+                    Some(0)
                 } else {
-                    // native currency case
                     None
                 }
             };
@@ -238,7 +242,6 @@ mod pallet {
             if market_status == MarketStatus::Reported {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_reported_market(
-                        total_accounts.saturated_into(),
                         share_accounts.saturated_into(),
                         outcome_assets_amount.saturated_into(),
                     )),
@@ -248,7 +251,6 @@ mod pallet {
             } else if market_status == MarketStatus::Disputed {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_disputed_market(
-                        total_accounts.saturated_into(),
                         share_accounts.saturated_into(),
                         outcome_assets_amount.saturated_into(),
                     )),
@@ -1742,8 +1744,8 @@ mod pallet {
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
-        ) -> Result<[usize; 3], DispatchError> {
-            let mut total_accounts: usize = 0;
+        ) -> Result<[usize; 2], DispatchError> {
+            // let mut total_accounts: usize = 0;
             let mut total_asset_accounts: usize = 0;
             let mut total_categories: usize = 0;
 
@@ -1758,29 +1760,31 @@ mod pallet {
                             if idx == winning_asset_idx {
                                 return 0;
                             }
-                            let (total_accounts, accounts) =
-                                T::AssetManager::accounts_by_currency_id(asset)
-                                    .unwrap_or((0usize, vec![]));
-                            total_asset_accounts =
-                                total_asset_accounts.saturating_add(accounts.len());
+                            // let (total_accounts, accounts) =
+                            //     T::AssetManager::accounts_by_currency_id(asset)
+                            //         .unwrap_or((0usize, vec![]));
+                            // total_asset_accounts =
+                            //     total_asset_accounts.saturating_add(accounts.len());
 
-                            let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
-                            total_accounts
+                            // let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
+                            let _ = T::AssetManager::destroy_all(asset);
+                            // total_accounts
+                            0
                         } else {
                             0
                         }
                     };
 
-                    if let Some(first_asset) = assets_iter.next() {
-                        total_accounts = manage_asset(first_asset, winning_asset_idx);
-                    }
+                    // if let Some(first_asset) = assets_iter.next() {
+                    //     total_accounts = manage_asset(first_asset, winning_asset_idx);
+                    // }
                     for asset in assets_iter {
                         let _ = manage_asset(asset, winning_asset_idx);
                     }
                 }
             }
 
-            Ok([total_accounts, total_asset_accounts, total_categories])
+            Ok([total_asset_accounts, total_categories])
         }
 
         pub(crate) fn open_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
@@ -1975,10 +1979,10 @@ mod pallet {
             let mut total_asset_accounts = 0u32;
             let mut total_categories = 0u32;
 
-            if let Ok([local_total_accounts, local_total_asset_accounts, local_total_categories]) =
+            if let Ok([local_total_asset_accounts, local_total_categories]) =
                 Self::manage_resolved_categorical_market(market, market_id, &resolved_outcome)
             {
-                total_accounts = local_total_accounts.saturated_into();
+                // total_accounts = local_total_accounts.saturated_into();
                 total_asset_accounts = local_total_asset_accounts.saturated_into();
                 total_categories = local_total_categories.saturated_into();
             }

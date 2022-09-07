@@ -33,9 +33,12 @@ pub trait ZeitgeistAssetManager<AccountId>: NamedMultiReservableCurrency<Account
 
     /// Destroy all assets of a `currency_id` for the given `accounts`.
     /// If the `currency_id` is the native currency, then return false.
-    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> Result<(), DispatchError>
-    where
-        I: Iterator<Item = AccountId>;
+    fn destroy_all(currency_id: Self::CurrencyId) -> Result<usize, DispatchError>;
+    // where
+    //     I: Iterator<Item = AccountId>;
+
+    fn remove(currency_id: Self::CurrencyId, account: AccountId) -> Result<(), DispatchError>;
+    fn remove_total_issuance(currency_id: Self::CurrencyId) -> Result<(), DispatchError>;
 }
 
 impl<T> ZeitgeistAssetManager<T::AccountId> for orml_tokens::Pallet<T>
@@ -52,24 +55,34 @@ where
         )]
         let accounts = <Accounts<T>>::iter()
             .filter_map(|(k0, k1, _v)| {
-                if k1 == currency_id {
-                    total += 1;
-                    Some(k0)
-                } else {
-                    None
-                }
+                total += 1;
+                if k1 == currency_id { Some(k0) } else { None }
             })
             .collect();
         Ok((total, accounts))
     }
 
-    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> Result<(), DispatchError>
-    where
-        I: Iterator<Item = T::AccountId>,
+    fn destroy_all(
+        currency_id: Self::CurrencyId, /* accounts: I*/
+    ) -> Result<usize, DispatchError>
+// where
+    //     I: Iterator<Item = T::AccountId>,
     {
+        let mut number_of_accounts = 0_usize;
+        let (_total_accounts, accounts) = Self::accounts_by_currency_id(currency_id)?;
         for k0 in accounts {
+            number_of_accounts += 1;
             <Accounts<T>>::remove(k0, currency_id);
         }
+        <TotalIssuance<T>>::remove(currency_id);
+        Ok(number_of_accounts)
+    }
+
+    fn remove(currency_id: Self::CurrencyId, account: T::AccountId) -> Result<(), DispatchError> {
+        <Accounts<T>>::remove(account, currency_id);
+        Ok(())
+    }
+    fn remove_total_issuance(currency_id: Self::CurrencyId) -> Result<(), DispatchError> {
         <TotalIssuance<T>>::remove(currency_id);
         Ok(())
     }
@@ -92,14 +105,31 @@ where
         }
     }
 
-    fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> Result<(), DispatchError>
-    where
-        I: Iterator<Item = T::AccountId>,
+    fn destroy_all(
+        currency_id: Self::CurrencyId, /* accounts: I*/
+    ) -> Result<usize, DispatchError>
+// where
+    //     I: Iterator<Item = T::AccountId>,
     {
         if currency_id == T::GetNativeCurrencyId::get() {
             Err(DispatchError::Other("NotForNativeCurrency"))
         } else {
-            T::MultiCurrency::destroy_all(currency_id, accounts)
+            T::MultiCurrency::destroy_all(currency_id)
+        }
+    }
+
+    fn remove(currency_id: Self::CurrencyId, account: T::AccountId) -> Result<(), DispatchError> {
+        if currency_id == T::GetNativeCurrencyId::get() {
+            Err(DispatchError::Other("NotForNativeCurrency"))
+        } else {
+            T::MultiCurrency::remove(currency_id, account)
+        }
+    }
+    fn remove_total_issuance(currency_id: Self::CurrencyId) -> Result<(), DispatchError> {
+        if currency_id == T::GetNativeCurrencyId::get() {
+            Err(DispatchError::Other("NotForNativeCurrency"))
+        } else {
+            T::MultiCurrency::remove_total_issuance(currency_id)
         }
     }
 }

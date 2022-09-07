@@ -273,12 +273,33 @@ pub mod pallet {
             Ok((accounts.len(), accounts))
         }
 
-        fn destroy_all<I>(currency_id: Self::CurrencyId, accounts: I) -> Result<(), DispatchError>
-        where
-            I: Iterator<Item = T::AccountId>,
+        fn destroy_all(
+            currency_id: Self::CurrencyId, /*_accounts: I*/
+        ) -> Result<usize, DispatchError>
+// where
+        //     I: Iterator<Item = T::AccountId>,
         {
-            Accounts::<T>::remove_prefix(currency_id, None);
-            T::Currencies::destroy_all(currency_id, accounts)
+            // Accounts::<T>::remove_prefix(currency_id, None);
+            // T::Currencies::destroy_all(currency_id, accounts)
+            let mut accounts = 0_usize;
+            for (account, _) in Accounts::<T>::drain_prefix(currency_id) {
+                accounts += 1;
+                T::Currencies::remove(currency_id, account)?;
+            }
+            T::Currencies::remove_total_issuance(currency_id)?;
+            Ok(accounts)
+        }
+
+        fn remove(
+            currency_id: Self::CurrencyId,
+            account: T::AccountId,
+        ) -> Result<(), DispatchError> {
+            Accounts::<T>::remove(currency_id, account);
+            Ok(())
+        }
+
+        fn remove_total_issuance(currency_id: Self::CurrencyId) -> Result<(), DispatchError> {
+            T::Currencies::remove_total_issuance(currency_id)
         }
     }
 }
