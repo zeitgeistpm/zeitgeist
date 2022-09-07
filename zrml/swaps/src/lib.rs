@@ -103,6 +103,7 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+    type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
     const MIN_BALANCE: u128 = CENT;
 
@@ -113,7 +114,7 @@ mod pallet {
         #[transactional]
         pub fn admin_clean_up_pool(
             origin: OriginFor<T>,
-            #[pallet::compact] market_id: <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+            #[pallet::compact] market_id: MarketIdOf<T>,
             outcome_report: OutcomeReport,
         ) -> DispatchResult {
             ensure_root(origin)?;
@@ -140,7 +141,17 @@ mod pallet {
         /// retrieved assets.
         /// * `min_assets_out`: List of asset lower bounds. No asset should be lower than the
         /// provided values.
-        #[pallet::weight(T::WeightInfo::pool_exit(min_assets_out.len() as u32))]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool
+        // Using `min_assets_out.len()` is fine because we don't iterate over the assets before
+        // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
+        // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
+        // though.
+        #[pallet::weight(T::WeightInfo::pool_exit(
+            min_assets_out.len().min(T::MaxAssets::get().into()) as u32
+        ))]
         #[transactional]
         pub fn pool_exit(
             origin: OriginFor<T>,
@@ -389,7 +400,17 @@ mod pallet {
         /// * `pool_amount`: The amount of LP shares for this pool that should be minted to the provider.
         /// * `max_assets_in`: List of asset upper bounds. No asset should be greater than the
         /// provided values.
-        #[pallet::weight(T::WeightInfo::pool_join(max_assets_in.len() as u32))]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)` where `n` is the number of assets in the specified pool
+        // Using `min_assets_out.len()` is fine because we don't iterate over the assets before
+        // verifying that `min_assets_out` has the correct length. We do limit the linear factor to
+        // the maximum number of assets to prevent unnecessary spending in case of erroneous input,
+        // though.
+        #[pallet::weight(T::WeightInfo::pool_join(
+            max_assets_in.len().min(T::MaxAssets::get().into()) as u32
+        ))]
         #[transactional]
         pub fn pool_join(
             origin: OriginFor<T>,
