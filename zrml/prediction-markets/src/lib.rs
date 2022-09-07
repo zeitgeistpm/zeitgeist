@@ -389,14 +389,8 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(
-                T::MaxCategories::get().into(),
-            ))
-            // Overly generous estimation, since we have no access to Swaps WeightInfo
-            // (it is loosely coupled to this pallet using a trait). Contains weight for
-            // create_pool() and swap_exact_amount_in().
-            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+                .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(weights.len() as u32, CacheSize::get())))
         )]
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
@@ -440,12 +434,14 @@ mod pallet {
             )?
             .actual_weight
             .unwrap_or_else(|| {
-                T::WeightInfo::buy_complete_set(asset_count.into())
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(
-                        asset_count.into(),
-                    ))
-                    .saturating_add(5_000_000_000.saturating_mul(asset_count.into()))
-                    .saturating_add(T::DbWeight::get().reads(2 as Weight))
+                T::WeightInfo::buy_complete_set(asset_count.into()).saturating_add(
+                    T::WeightInfo::deploy_swap_pool_for_market_open_pool(asset_count.into()).max(
+                        T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                            asset_count.into(),
+                            CacheSize::get(),
+                        ),
+                    ),
+                )
             });
 
             Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
@@ -572,14 +568,8 @@ mod pallet {
         ///     swaps pallet.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(
-                T::MaxCategories::get().into(),
-            ))
-            // Overly generous estimation, since we have no access to Swaps WeightInfo
-            // (it is loosely coupled to this pallet using a trait). Contains weight for
-            // create_pool() and swap_exact_amount_in()
-            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+                .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(weights.len() as u32, CacheSize::get())))
         )]
         #[transactional]
         pub fn deploy_swap_pool_and_additional_liquidity(
@@ -593,12 +583,19 @@ mod pallet {
             let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
                 .actual_weight
                 .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
-            let weights_len = weights.len();
-            Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?;
-            Ok(Some(weight_bcs.saturating_add(
-                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights_len.saturated_into()),
-            ))
-            .into())
+            let weights_len = weights.len() as u32;
+            let weight_deploy =
+                Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?
+                    .actual_weight
+                    .unwrap_or_else(|| {
+                        T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights_len).max(
+                            T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                                weights_len,
+                                CacheSize::get(),
+                            ),
+                        )
+                    });
+            Ok(Some(weight_bcs.saturating_add(weight_deploy)).into())
         }
 
         /// Deploy a pool with specified liquidity for a market.

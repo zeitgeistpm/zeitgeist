@@ -25,7 +25,7 @@ use crate::{
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
     assert_err, assert_noop, assert_ok,
-    dispatch::{DispatchError, DispatchResult},
+    dispatch::{DispatchError, DispatchResultWithPostInfo},
     traits::{Get, NamedReservableCurrency, OnInitialize},
 };
 use test_case::test_case;
@@ -2724,7 +2724,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_short() {
                     (category_count - 1).into()
                 ],
             ),
-            zrml_swaps::Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen,
+            Error::<Runtime>::WeightsLenMustEqualAssetsLen,
         );
     });
 }
@@ -2759,7 +2759,7 @@ fn deploy_swap_pool_for_market_returns_error_if_weights_is_too_long() {
                     (category_count + 1).into()
                 ],
             ),
-            zrml_swaps::Error::<Runtime>::ProvidedValuesLenMustEqualAssetsLen,
+            Error::<Runtime>::WeightsLenMustEqualAssetsLen,
         );
     });
 }
@@ -3053,7 +3053,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
     });
 }
 
-fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResult {
+fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> DispatchResultWithPostInfo {
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
