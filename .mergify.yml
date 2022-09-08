@@ -3,9 +3,14 @@ queue_rules:
    conditions: []
 
 pull_request_rules:
-  - name: Automatic merge on approval
+  - name: Use merge queue
     conditions:
       - base=main
+      - label=s:accepted
     actions:
+      label:
+        remove:
+          - s:in-progress
+          - s:review-needed
       queue:
         name: default
