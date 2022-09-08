@@ -51,7 +51,7 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
     {
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
-        Currencies: zrml_currencies::{Event<T>, Pallet, Storage},
+        Currencies: zrml_currencies::{Storage},
         OrmlCurrencies: orml_currencies::{Call, Pallet, Storage},
         System: frame_system::{Call, Config, Event<T>, Pallet, Storage},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
@@ -59,8 +59,8 @@ construct_runtime!(
 );
 
 impl crate::Config for Runtime {
-    type Event = Event;
     type Currencies = OrmlCurrencies;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
 impl frame_system::Config for Runtime {

@@ -39,8 +39,8 @@ pub trait WeightInfoZeitgeist {
     fn dispute(a: u32) -> Weight;
     fn do_reject_market() -> Weight;
     fn handle_expired_advised_market() -> Weight;
-    fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight;
-    fn internal_resolve_categorical_disputed(a: u32, b: u32, c: u32, d: u32) -> Weight;
+    fn internal_resolve_categorical_reported(b: u32, c: u32) -> Weight;
+    fn internal_resolve_categorical_disputed(b: u32, c: u32, d: u32) -> Weight;
     fn internal_resolve_scalar_reported() -> Weight;
     fn internal_resolve_scalar_disputed(d: u32) -> Weight;
     fn on_initialize_resolve_overhead() -> Weight;
@@ -201,10 +201,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: PredictionMarkets Disputes (r:1 w:0)
-    fn internal_resolve_categorical_reported(a: u32, b: u32, c: u32) -> Weight {
+    fn internal_resolve_categorical_reported(b: u32, c: u32) -> Weight {
         (10_658_000 as Weight)
-            // Standard Error: 0
-            .saturating_add((12_000 as Weight).saturating_mul(a as Weight))
             // Standard Error: 0
             .saturating_add((56_000 as Weight).saturating_mul(b as Weight))
             // Standard Error: 0
@@ -213,10 +211,8 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: PredictionMarkets Disputes (r:1 w:0)
-    fn internal_resolve_categorical_disputed(a: u32, b: u32, c: u32, _d: u32) -> Weight {
+    fn internal_resolve_categorical_disputed(b: u32, c: u32, _d: u32) -> Weight {
         (10_496_000 as Weight)
-            // Standard Error: 0
-            .saturating_add((8_000 as Weight).saturating_mul(a as Weight))
             // Standard Error: 0
             .saturating_add((50_000 as Weight).saturating_mul(b as Weight))
             // Standard Error: 0

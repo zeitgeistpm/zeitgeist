@@ -83,7 +83,7 @@ construct_runtime!(
         Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
         Court: zrml_court::{Event<T>, Pallet, Storage},
         AssetManager: orml_currencies::{Call, Pallet, Storage},
-        ZrmlCurrencies: zrml_currencies::{Call, Pallet, Storage, Event<T>},
+        ZrmlCurrencies: zrml_currencies::{Storage},
         LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
         MarketCommons: zrml_market_commons::{Pallet, Storage},
         PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
@@ -191,8 +191,8 @@ impl pallet_balances::Config for Runtime {
 }
 
 impl zrml_currencies::Config for Runtime {
-    type Event = Event;
     type Currencies = AssetManager;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}

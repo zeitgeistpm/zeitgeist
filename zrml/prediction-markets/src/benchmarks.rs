@@ -104,25 +104,12 @@ fn create_close_and_report_market<T: Config>(
     Ok((caller, market_id))
 }
 
-// Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
+// Generates `acc_asset` accounts, which own `asset`
 fn generate_accounts_with_assets<T: Config>(
-    // acc_total: u32,
     acc_asset: u32,
     asset: Asset<MarketIdOf<T>>,
 ) -> Result<(), &'static str> {
     let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    // let fake_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(u128::MAX.saturated_into(), 0);
-    // let mut mut_acc_asset = acc_asset;
-
-    // for i in 0..acc_total {
-    //     let acc = account("AssetHolder", i, 0);
-    //     if mut_acc_asset > 0 {
-    //         T::AssetManager::deposit(asset, &acc, min_liquidity)?;
-    //         mut_acc_asset -= 1;
-    //     } else {
-    //         T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
-    //     }
-    // }
     for i in 0..acc_asset {
         let acc = account("AssetHolder", i, 0);
         T::AssetManager::deposit(asset, &acc, min_liquidity)?;
@@ -133,7 +120,6 @@ fn generate_accounts_with_assets<T: Config>(
 
 // Setup a reported categorical market and create accounts with outcome assets.
 fn setup_resolve_common_categorical<T: Config>(
-    // acc_total: u32,
     acc_asset: u32,
     categories: u16,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
@@ -143,7 +129,6 @@ fn setup_resolve_common_categorical<T: Config>(
         OutcomeReport::Categorical(categories.saturating_sub(1)),
     )?;
     generate_accounts_with_assets::<T>(
-        // acc_total,
         acc_asset,
         Asset::CategoricalOutcome(market_id, categories.saturating_sub(1)),
     )?;
@@ -152,12 +137,10 @@ fn setup_resolve_common_categorical<T: Config>(
 
 // Setup a disputed categorical market and create accounts with outcome assets.
 fn setup_resolve_common_categorical_after_dispute<T: Config>(
-    acc_total: u32,
     acc_asset: u32,
     categories: u16,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) =
-        setup_resolve_common_categorical::<T>(/*acc_total,*/ acc_asset, categories)?;
+    let (caller, market_id) = setup_resolve_common_categorical::<T>(acc_asset, categories)?;
     let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Categorical(0) }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
@@ -200,7 +183,6 @@ fn setup_redeem_shares_common<T: Config>(
 
 // Setup a reported scalar market and create accounts with outcome assets.
 fn setup_resolve_common_scalar<T: Config>(
-    // acc_total: u32,
     acc_asset: u32,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = create_close_and_report_market::<T>(
@@ -209,7 +191,6 @@ fn setup_resolve_common_scalar<T: Config>(
         OutcomeReport::Scalar(u128::MAX),
     )?;
     generate_accounts_with_assets::<T>(
-        // acc_total,
         acc_asset,
         Asset::ScalarOutcome(market_id, ScalarPosition::Long),
     )?;
@@ -218,10 +199,9 @@ fn setup_resolve_common_scalar<T: Config>(
 
 // Setup a disputed scalar market and create accounts with outcome assets.
 fn setup_resolve_common_scalar_after_dispute<T: Config>(
-    acc_total: u32,
     acc_asset: u32,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) = setup_resolve_common_scalar::<T>(/*acc_total,*/ acc_asset)?;
+    let (caller, market_id) = setup_resolve_common_scalar::<T>(acc_asset)?;
     let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Scalar(1u128) }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
@@ -229,7 +209,6 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
 
 benchmarks! {
     admin_destroy_disputed_market{
-        // a = total accounts
         // An higher number increases the benchmark runtime significantly, while increasing the
         // error due to a lower number of repetitions (the data points that are used to approximate
         // the weight function weight(a) are less precise).
@@ -238,7 +217,6 @@ benchmarks! {
         // the function and its constant gradient fairly well, provided that these few data points
         // are very precise (many repetitions). If the gradient is well estimated, any value can be
         // derived, up to infinity, assuming that at no point the function fn(a) is non-linear.
-        // let a in 0..10;
         // b = num. accounts with assets
         // Unfortunately frame-benchmarking does not allow to b = b.min(a) here
         let b in 0..10;
@@ -260,8 +238,6 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(destroy_origin)? }
 
     admin_destroy_reported_market{
-        // a = total accounts
-        // let a in 0..10;
         // b = num. accounts with assets
         let b in 0..10;
         // c = num. asset types
@@ -289,9 +265,8 @@ benchmarks! {
     // is the resulting weight from this benchmark minus the weight for
     // fn `internal_resolve` of a reported and non-disputed scalar market.
     admin_move_market_to_resolved_overhead {
-        let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar::<T>(/*total_accounts,*/ asset_accounts)?;
+        let (_, market_id) = setup_resolve_common_scalar::<T>(asset_accounts)?;
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: { call.dispatch_bypass_filter(close_origin)? }
@@ -375,15 +350,13 @@ benchmarks! {
     }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
 
     internal_resolve_categorical_reported {
-        // a = total accounts
-        let a in 0..10;
         // b = num. accounts with assets
         let b in 0..10;
         // c = num. asset types
         let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
         let c_u16 = c.saturated_into();
-        let (_, market_id) = setup_resolve_common_categorical_after_dispute::<T>(a, b, c_u16)?;
+        let (_, market_id) = setup_resolve_common_categorical_after_dispute::<T>(b, c_u16)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(&market_id);
@@ -391,8 +364,6 @@ benchmarks! {
     }
 
     internal_resolve_categorical_disputed {
-        // a = total accounts
-        let a in 0..10;
         // b = num. accounts with assets
         let b in 0..10;
         // c = num. asset types
@@ -401,7 +372,7 @@ benchmarks! {
         let d in 0..T::MaxDisputes::get();
 
         let c_u16 = c.saturated_into();
-        let (caller, market_id) = setup_resolve_common_categorical_after_dispute::<T>(a, b, c_u16)?;
+        let (caller, market_id) = setup_resolve_common_categorical_after_dispute::<T>(b, c_u16)?;
 
         for i in 0..c.min(d) {
             let origin = caller.clone();
@@ -418,7 +389,7 @@ benchmarks! {
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(&market_id);
@@ -430,7 +401,7 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(asset_accounts)?;
 
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(&market_id);

@@ -163,7 +163,6 @@ mod pallet {
             // TODO(#618): Not implemented for Rikiddo!
             T::DestroyOrigin::ensure_origin(origin)?;
 
-            let mut total_accounts = 0usize;
             let mut share_accounts = 0usize;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
@@ -205,9 +204,7 @@ mod pallet {
                 }
             };
             for asset in outcome_assets.into_iter() {
-                if let Some(total) = destroy_asset(asset) {
-                    total_accounts = total;
-                }
+                destroy_asset(asset);
             }
             T::AssetManager::slash(
                 Asset::Ztg,
@@ -280,7 +277,6 @@ mod pallet {
         ////
         #[pallet::weight((T::WeightInfo::admin_move_market_to_resolved_overhead()
             .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
-                4_200,
                 4_200,
                 T::MaxCategories::get().into()
             ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
@@ -1608,7 +1604,6 @@ mod pallet {
 
         fn calculate_internal_resolve_weight(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            total_accounts: u32,
             total_asset_accounts: u32,
             total_categories: u32,
             total_disputes: u32,
@@ -1616,13 +1611,11 @@ mod pallet {
             if let MarketType::Categorical(_) = market.market_type {
                 if let MarketStatus::Reported = market.status {
                     T::WeightInfo::internal_resolve_categorical_reported(
-                        total_accounts,
                         total_asset_accounts,
                         total_categories,
                     )
                 } else {
                     T::WeightInfo::internal_resolve_categorical_disputed(
-                        total_accounts,
                         total_asset_accounts,
                         total_categories,
                         total_disputes,
@@ -1735,7 +1728,6 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             outcome_report: &OutcomeReport,
         ) -> Result<[usize; 2], DispatchError> {
-            // let mut total_accounts: usize = 0;
             let mut total_asset_accounts: usize = 0;
             let mut total_categories: usize = 0;
 
@@ -1744,21 +1736,19 @@ mod pallet {
                     let assets = Self::outcome_assets(*market_id, market);
                     total_categories = assets.len().saturated_into();
 
-                    let mut assets_iter = assets.iter().cloned();
                     let mut manage_asset = |asset: Asset<_>, winning_asset_idx| {
                         if let Asset::CategoricalOutcome(_, idx) = asset {
-                            if idx == winning_asset_idx {
-                                return 0;
+                            if idx != winning_asset_idx {
+                                if let Ok(accounts) = T::AssetManager::destroy_all(asset) {
+                                    total_asset_accounts =
+                                        total_asset_accounts.saturating_add(accounts);
+                                }
                             }
-                            let _ = T::AssetManager::destroy_all(asset);
-                            0
-                        } else {
-                            0
                         }
                     };
 
-                    for asset in assets_iter {
-                        let _ = manage_asset(asset, winning_asset_idx);
+                    for asset in assets {
+                        manage_asset(asset, winning_asset_idx);
                     }
                 }
             }
@@ -1954,14 +1944,12 @@ mod pallet {
             total_weight = total_weight.saturating_add(clean_up_weight);
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
-            let mut total_accounts = 0u32;
             let mut total_asset_accounts = 0u32;
             let mut total_categories = 0u32;
 
             if let Ok([local_total_asset_accounts, local_total_categories]) =
                 Self::manage_resolved_categorical_market(market, market_id, &resolved_outcome)
             {
-                // total_accounts = local_total_accounts.saturated_into();
                 total_asset_accounts = local_total_asset_accounts.saturated_into();
                 total_categories = local_total_categories.saturated_into();
             }
@@ -1979,7 +1967,6 @@ mod pallet {
             ));
             Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
                 market,
-                total_accounts,
                 total_asset_accounts,
                 total_categories,
                 disputes.len().saturated_into(),

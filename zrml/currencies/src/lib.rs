@@ -70,9 +70,10 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
         type Currencies: ZeitgeistAssetManager<Self::AccountId>;
+
+        #[pallet::constant]
+        type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
     }
 
     #[pallet::pallet]
@@ -90,15 +91,6 @@ pub mod pallet {
         (),
         OptionQuery,
     >;
-
-    #[pallet::event]
-    pub enum Event<T: Config> {}
-
-    #[pallet::error]
-    pub enum Error<T> {}
-
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {}
 
     impl<T: Config> NamedMultiReservableCurrency<T::AccountId> for Pallet<T> {
         type ReserveIdentifier = ReserveIdentifierOf<T>;
@@ -229,7 +221,9 @@ pub mod pallet {
             to: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            Accounts::<T>::insert(currency_id, to, ());
+            if T::GetNativeCurrencyId::get() != currency_id {
+                Accounts::<T>::insert(currency_id, to, ());
+            }
             T::Currencies::transfer(currency_id, from, to, amount)
         }
         fn deposit(
@@ -237,7 +231,9 @@ pub mod pallet {
             who: &T::AccountId,
             amount: Self::Balance,
         ) -> DispatchResult {
-            Accounts::<T>::insert(currency_id, who, ());
+            if T::GetNativeCurrencyId::get() != currency_id {
+                Accounts::<T>::insert(currency_id, who, ());
+            }
             T::Currencies::deposit(currency_id, who, amount)
         }
         fn withdraw(
