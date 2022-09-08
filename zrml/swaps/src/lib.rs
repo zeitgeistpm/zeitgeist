@@ -265,7 +265,7 @@ mod pallet {
                         log::warn!(
                             "[Swaps] Data inconsistency: More subsidy provided than currently \
                              reserved.
-                        Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
+                             Pool: {:?}, User: {:?}, Unreserved: {:?}, Previously reserved: {:?}",
                             pool_id,
                             who,
                             transferred,
@@ -284,7 +284,7 @@ mod pallet {
                                 .ok_or(ArithmeticError::Overflow)?,
                         );
                     } else {
-                        let _ = <SubsidyProviders<T>>::take(&pool_id, &who);
+                        <SubsidyProviders<T>>::remove(&pool_id, &who);
                         pool.total_subsidy = Some(
                             total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?,
                         );
