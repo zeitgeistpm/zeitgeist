@@ -226,6 +226,10 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be unreserved.
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be removed from subsidy.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: O(1)
         #[pallet::weight(T::WeightInfo::pool_exit_subsidy())]
         #[transactional]
         pub fn pool_exit_subsidy(
@@ -478,6 +482,10 @@ mod pallet {
         /// * `origin`: Liquidity Provider (LP). The account whose assets should be reserved.
         /// * `pool_id`: Unique pool identifier.
         /// * `amount`: The amount of base currency that should be added to subsidy.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: O(1)
         #[pallet::weight(T::WeightInfo::pool_join_subsidy())]
         #[transactional]
         pub fn pool_join_subsidy(
