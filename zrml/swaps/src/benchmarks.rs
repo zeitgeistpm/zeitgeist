@@ -26,9 +26,9 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::Config;
 #[cfg(test)]
 use crate::Pallet as Swaps;
+use crate::{fixed::bmul, Config};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -460,15 +460,46 @@ benchmarks! {
     }
 
     swap_exact_amount_in_cpmm {
-        let a = T::MaxAssets::get();
+        let asset_count = T::MaxAssets::get();
+        let balance: BalanceOf<T> = T::MinLiquidity::get();
+        let asset_amount_in: BalanceOf<T> = bmul(
+            balance.saturated_into(),
+            T::MaxInRatio::get().saturated_into(),
+        )
+        .unwrap()
+        .saturated_into();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
-            Some(T::MinLiquidity::get() * 2u32.into()), ScoringRule::CPMM, false);
-        let asset_amount_in: BalanceOf<T> = BASE.saturated_into();
-        let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u32.into());
-        let max_price = Some(T::MinLiquidity::get() * 2u32.into());
-    }: swap_exact_amount_in(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount_in,
-            assets[T::MaxAssets::get() as usize - 1], min_asset_amount_out, max_price)
+        let (pool_id, assets, ..) = bench_create_pool::<T>(
+            caller.clone(),
+            Some(asset_count as usize),
+            Some(balance),
+            ScoringRule::CPMM,
+            false,
+        );
+        let asset_in = assets[0];
+        T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
+        let asset_out = assets[T::MaxAssets::get() as usize - 1];
+        let weight_in = T::MinWeight::get();
+        let weight_out = 10 * weight_in;
+        let pool_id = 0;
+        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
+            let mut weights = pool.weights.as_ref().unwrap().clone();
+            weights.insert(asset_in, weight_in);
+            weights.insert(asset_out, weight_out);
+            pool.weights = Some(weights);
+            Ok(())
+        });
+        let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u128.saturated_into());
+        let max_price = Some(u128::MAX.saturated_into());
+    }: swap_exact_amount_in(
+        RawOrigin::Signed(caller),
+        pool_id,
+        asset_in,
+        asset_amount_in,
+        asset_out,
+        min_asset_amount_out,
+        max_price
+    )
 
     swap_exact_amount_in_rikiddo {
         let a in 3 .. T::MaxAssets::get().into();
