@@ -491,6 +491,11 @@ benchmarks! {
     }
 
     swap_exact_amount_in_cpmm {
+        // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have
+        // shown that y = 3/4, weight_ratio=1/2 (almost) maximizes the number of iterations for
+        // calculating y^r within the set of values allowed in `swap_exact_amount_in` (see
+        // `math::calc_out_given_in`). To get these values, we use the following parameters:
+        // amount_in = 1/3 * balance_in, weight_in = 1, weight_out = 2.
         let asset_count = T::MaxAssets::get();
         let balance: BalanceOf<T> = T::MinLiquidity::get();
         let asset_amount_in: BalanceOf<T> = bmul(
@@ -500,7 +505,7 @@ benchmarks! {
         .unwrap()
         .saturated_into();
         let weight_in = T::MinWeight::get();
-        let weight_out = 10 * weight_in;
+        let weight_out = 2 * weight_in;
         let mut weights = vec![weight_in; asset_count as usize];
         weights[asset_count as usize - 1] = weight_out;
         let caller: T::AccountId = whitelisted_caller();
@@ -545,21 +550,46 @@ benchmarks! {
             *assets.last().unwrap(), min_asset_amount_out, max_price)
 
     swap_exact_amount_out_cpmm {
-        let a = T::MaxAssets::get();
+        // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have
+        // shown that y = 3/2, weight_ratio=1/4 (almost) maximizes the number of iterations for
+        // calculating y^r within the set of values allowed in `swap_exact_amount_out` (see
+        // `math::calc_in_given_out`). To get these values, we use the following parameters:
+        // amount_out = 1/3 * balance_out, weight_out = 1, weight_in = 4.
+        let asset_count = T::MaxAssets::get();
+        let balance: BalanceOf<T> = T::MinLiquidity::get();
+        let asset_amount_out: BalanceOf<T> = bmul(
+            balance.saturated_into(),
+            T::MaxOutRatio::get().saturated_into(),
+        )
+        .unwrap()
+        .saturated_into();
+        let weight_out = T::MinWeight::get();
+        let weight_in = 4 * weight_out;
+        let mut weights = vec![weight_in; asset_count as usize];
+        weights[asset_count as usize - 1] = weight_out;
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, assets, ..) = bench_create_pool::<T>(
             caller.clone(),
-            Some(a as usize),
-            Some(T::MinLiquidity::get() * 2u32.into()),
+            Some(asset_count as usize),
+            Some(balance),
             ScoringRule::CPMM,
             false,
-            None,
+            Some(weights),
         );
-        let max_asset_amount_in: Option<BalanceOf<T>> = Some(T::MinLiquidity::get());
-        let asset_amount_out: BalanceOf<T> = BASE.saturated_into();
-        let max_price = Some(T::MinLiquidity::get() * 2u32.into());
-    }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, assets[0], max_asset_amount_in,
-            assets[T::MaxAssets::get() as usize - 1], asset_amount_out, max_price)
+        let asset_in = assets[0];
+        T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
+        let asset_out = assets[asset_count as usize - 1];
+        let max_asset_amount_in: Option<BalanceOf<T>> = Some(u128::MAX.saturated_into());
+        let max_price = Some(u128::MAX.saturated_into());
+    }: swap_exact_amount_out(
+        RawOrigin::Signed(caller),
+        pool_id,
+        asset_in,
+        max_asset_amount_in,
+        asset_out,
+        asset_amount_out,
+        max_price
+    )
 
     swap_exact_amount_out_rikiddo {
         let a in 3 .. T::MaxAssets::get().into();
