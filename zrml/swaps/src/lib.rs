@@ -1004,10 +1004,10 @@ mod pallet {
             base_asset: Asset<T::MarketId>,
             winning_asset: Asset<T::MarketId>,
             winner_payout_account: &T::AccountId,
-        ) -> Weight {
+        ) -> Result<Weight, DispatchError> {
             // CPMM handling of market profit not supported
             if pool.scoring_rule == ScoringRule::CPMM {
-                return 1_000_000;
+                return Ok(1_000_000);
             }
 
             // Total pool shares
@@ -1040,12 +1040,11 @@ mod pallet {
                     total_amm_funds,
                     total_winning_assets
                 );
-                return T::DbWeight::get().reads(6);
+                return Ok(T::DbWeight::get().reads(6));
             };
 
             // Iterate through every share holder and exchange shares for rewards.
-            let (total_accounts_num, share_accounts) =
-                T::AssetManager::accounts_by_currency_id(shares_id).unwrap_or((0usize, vec![]));
+            let share_accounts = T::AssetManager::accounts_by_currency_id(shares_id)?;
             let share_accounts_num = share_accounts.len();
 
             for share_holder_account in share_accounts {
@@ -1122,10 +1121,7 @@ mod pallet {
                 amm_profit,
             ));
 
-            T::WeightInfo::distribute_pool_share_rewards(
-                total_accounts_num.saturated_into(),
-                share_accounts_num.saturated_into(),
-            )
+            Ok(T::WeightInfo::distribute_pool_share_rewards(share_accounts_num.saturated_into()))
         }
 
         pub fn get_spot_price(
@@ -1385,7 +1381,7 @@ mod pallet {
                         base_asset,
                         winning_asset_unwrapped,
                         winner_payout_account,
-                    );
+                    )?;
                     extra_weight = extra_weight.saturating_add(T::DbWeight::get().writes(1));
                     extra_weight = extra_weight.saturating_add(distribute_weight);
                 }
@@ -1576,7 +1572,7 @@ mod pallet {
                 T::AssetManager::slash(asset, &pool_account, amount);
             }
             let pool_share_id = Self::pool_shares_id(pool_id);
-            let _ = T::AssetManager::destroy_all(pool_share_id);
+            T::AssetManager::destroy_all(pool_share_id)?;
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
             // TODO(#603): Fix weight calculation.

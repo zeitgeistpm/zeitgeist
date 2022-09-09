@@ -263,20 +263,13 @@ pub mod pallet {
     impl<T: Config> ZeitgeistAssetManager<T::AccountId> for Pallet<T> {
         fn accounts_by_currency_id(
             currency_id: Self::CurrencyId,
-        ) -> Result<(usize, Vec<T::AccountId>), DispatchError> {
+        ) -> Result<Vec<T::AccountId>, DispatchError> {
             let accounts: Vec<T::AccountId> =
                 Accounts::<T>::iter_prefix(currency_id).map(|(k2, _v)| k2).collect();
-            Ok((accounts.len(), accounts))
+            Ok(accounts)
         }
 
-        fn destroy_all(
-            currency_id: Self::CurrencyId, /*_accounts: I*/
-        ) -> Result<usize, DispatchError>
-// where
-        //     I: Iterator<Item = T::AccountId>,
-        {
-            // Accounts::<T>::remove_prefix(currency_id, None);
-            // T::Currencies::destroy_all(currency_id, accounts)
+        fn destroy_all(currency_id: Self::CurrencyId) -> Result<usize, DispatchError> {
             let mut accounts = 0_usize;
             for (account, _) in Accounts::<T>::drain_prefix(currency_id) {
                 accounts += 1;

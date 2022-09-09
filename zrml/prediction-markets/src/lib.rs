@@ -195,16 +195,9 @@ mod pallet {
             }
 
             // Delete market's outcome assets, clear market and delete pool if necessary.
-            let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
-                if let Ok(accounts) = T::AssetManager::destroy_all(asset) {
-                    share_accounts = share_accounts.saturating_add(accounts);
-                    Some(0)
-                } else {
-                    None
-                }
-            };
             for asset in outcome_assets.into_iter() {
-                destroy_asset(asset);
+                let accounts = T::AssetManager::destroy_all(asset)?;
+                share_accounts = share_accounts.saturating_add(accounts);
             }
             T::AssetManager::slash(
                 Asset::Ztg,
@@ -1736,19 +1729,14 @@ mod pallet {
                     let assets = Self::outcome_assets(*market_id, market);
                     total_categories = assets.len().saturated_into();
 
-                    let mut manage_asset = |asset: Asset<_>, winning_asset_idx| {
+                    for asset in assets {
                         if let Asset::CategoricalOutcome(_, idx) = asset {
                             if idx != winning_asset_idx {
-                                if let Ok(accounts) = T::AssetManager::destroy_all(asset) {
-                                    total_asset_accounts =
-                                        total_asset_accounts.saturating_add(accounts);
-                                }
+                                let accounts = T::AssetManager::destroy_all(asset)?;
+                                total_asset_accounts =
+                                    total_asset_accounts.saturating_add(accounts);
                             }
                         }
-                    };
-
-                    for asset in assets {
-                        manage_asset(asset, winning_asset_idx);
                     }
                 }
             }

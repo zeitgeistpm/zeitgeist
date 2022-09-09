@@ -455,13 +455,13 @@ fn distribute_pool_share_rewards() {
         // Distribute pool share rewards
         let pool = Swaps::pool(pool_id).unwrap();
         let winner_payout_account: AccountIdTest = 1337;
-        Swaps::distribute_pool_share_rewards(
+        assert_ok!(Swaps::distribute_pool_share_rewards(
             &pool,
             pool_id,
             base_asset,
             winning_asset,
             &winner_payout_account,
-        );
+        ));
 
         // Check if every subsidy provider got their fair share (percentage)
         assert_ne!(Currencies::total_balance(base_asset, &subsidy_providers[0]), 0);

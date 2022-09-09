@@ -520,7 +520,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         for asset in outcome_assets.clone() {
             let accounts = ZrmlCurrencies::accounts_by_currency_id(asset).unwrap();
             let accounts_from_tokens = Tokens::accounts_by_currency_id(asset).unwrap();
-            assert_eq!(accounts.1, accounts_from_tokens.1);
+            assert_eq!(accounts, accounts_from_tokens);
         }
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
         for asset in outcome_assets {

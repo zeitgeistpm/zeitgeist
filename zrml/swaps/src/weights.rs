@@ -48,7 +48,7 @@ pub trait WeightInfoZeitgeist {
     fn admin_clean_up_pool() -> Weight;
     fn end_subsidy_phase(a: u32, b: u32) -> Weight;
     fn destroy_pool_in_subsidy_phase(a: u32) -> Weight;
-    fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight;
+    fn distribute_pool_share_rewards(b: u32) -> Weight;
     fn pool_exit(a: u32) -> Weight;
     fn pool_exit_subsidy() -> Weight;
     fn pool_exit_with_exact_asset_amount() -> Weight;
@@ -110,14 +110,11 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Tokens TotalIssuance (r:2 w:1)
     // Storage: Tokens Accounts (r:46 w:22)
     // Storage: System Account (r:2 w:1)
-    fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight {
+    fn distribute_pool_share_rewards(b: u32) -> Weight {
         (84_849_000 as Weight)
-            // Standard Error: 383_000
-            .saturating_add((50_924_000 as Weight).saturating_mul(a as Weight))
             // Standard Error: 383_000
             .saturating_add((85_505_000 as Weight).saturating_mul(b as Weight))
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
-            .saturating_add(T::DbWeight::get().reads((3 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(b as Weight)))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(b as Weight)))

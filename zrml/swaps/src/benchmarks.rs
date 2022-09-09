@@ -46,10 +46,10 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
-// Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
+// Generates `acc_total` accounts, each of which have `num_assets` different assets.
 fn generate_accounts_with_assets<T: Config>(
     acc_total: u32,
-    acc_asset: u16,
+    num_assets: u16,
     acc_amount: BalanceOf<T>,
 ) -> Result<Vec<T::AccountId>, &'static str> {
     let mut accounts = Vec::new();
@@ -57,7 +57,7 @@ fn generate_accounts_with_assets<T: Config>(
     for i in 0..acc_total {
         let acc = account("AssetHolder", i, 0);
 
-        for j in 0..acc_asset {
+        for j in 0..num_assets {
             let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), j);
             T::AssetManager::deposit(asset, &acc, acc_amount)?;
         }
@@ -174,7 +174,7 @@ benchmarks! {
         // Total assets
         let a in (T::MinAssets::get().into())..T::MaxAssets::get().into();
         // Total subsidy providers
-        let b in 0..10;
+        let b in 1..10;
 
         // Create pool with a assets
         let caller: T::AccountId = whitelisted_caller();
@@ -203,7 +203,7 @@ benchmarks! {
 
     destroy_pool_in_subsidy_phase {
         // Total subsidy providers
-        let a in 0..10;
+        let a in 1..10;
         let min_assets_plus_base_asset = 3u16;
 
         // Create pool with assets
@@ -232,17 +232,15 @@ benchmarks! {
     }: { Pallet::<T>::destroy_pool_in_subsidy_phase(pool_id)? }
 
     distribute_pool_share_rewards {
-        // Total accounts
-        let a in 10..20;
         // Total pool share holders
-        let b in 0..10;
+        let b in 1..10;
 
         let min_assets_plus_base_asset = 3u16;
         let amount = T::MinSubsidy::get();
 
         // Create a accounts, add MinSubsidy base assets
         let accounts = generate_accounts_with_assets::<T>(
-            a,
+            b,
             min_assets_plus_base_asset,
             amount,
         ).unwrap();
@@ -264,7 +262,7 @@ benchmarks! {
         Pallet::<T>::end_subsidy_phase(pool_id)?;
         let pool = <Pools<T>>::get(pool_id).unwrap();
     }: {
-        Pallet::<T>::distribute_pool_share_rewards(
+        let _ = Pallet::<T>::distribute_pool_share_rewards(
             &pool,
             pool_id,
             pool.base_asset,

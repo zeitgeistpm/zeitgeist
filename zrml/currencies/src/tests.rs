@@ -43,10 +43,10 @@ proptest! {
             <Currencies as MultiCurrency<AccountIdTest>>::transfer(currency_id, account_a, account_b, (balance/2).into()).expect("deposit failed");
             let account_from_currencies_zrml = <Currencies as ZeitgeistAssetManager<AccountIdTest>>::accounts_by_currency_id(currency_id).expect("accounts_by_currency_id failed");
             let account_from_currencies_orml = <OrmlCurrencies as ZeitgeistAssetManager<AccountIdTest>>::accounts_by_currency_id(currency_id).expect("accounts_by_currency_id failed");
-            let unique_accounts_zrml = BTreeSet::from_iter(account_from_currencies_zrml.1.iter());
+            let unique_accounts_zrml = BTreeSet::from_iter(account_from_currencies_zrml.iter());
             // any account in orml has balance for given currency,
             // must have been noted in zrml's storage
-            for account in account_from_currencies_orml.1 {
+            for account in account_from_currencies_orml {
                 assert!(unique_accounts_zrml.contains(&account));
             }
         }
