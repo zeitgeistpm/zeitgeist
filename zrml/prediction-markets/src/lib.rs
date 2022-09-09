@@ -195,11 +195,16 @@ mod pallet {
         }
 
         /// Allows the `CloseOrigin` to immediately move an open market to closed.
-        //
+        ///
         // ***** IMPORTANT *****
         //
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
+        //
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where n is the number of market ids, which open at the same time as the specified market,
+        /// and m is the number of market ids, which close at the same time as the specified market.
         #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(CacheSize::get(), CacheSize::get()), Pays::No))]
         #[transactional]
         pub fn admin_move_market_to_closed(
@@ -223,7 +228,6 @@ mod pallet {
 
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
-        ////
         #[pallet::weight((T::WeightInfo::admin_move_market_to_resolved_overhead()
             .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
                 4_200,
@@ -257,6 +261,9 @@ mod pallet {
         ///
         /// NOTE: Can only be called by the `ApproveOrigin`.
         ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
         #[transactional]
         pub fn approve_market(
@@ -309,6 +316,10 @@ mod pallet {
         // Unfortunately this information can only be retrieved with a storage call, therefore
         // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
         // This also occurs in numerous other functions.
+        //
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where n is the number of outcome assets for the categorical market.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
         )]
@@ -322,6 +333,11 @@ mod pallet {
             Self::do_buy_complete_set(sender, market_id, amount)
         }
 
+        /// Dispute on a market that has been reported or already disputed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where n is the number of outstanding disputes.
         #[pallet::weight(T::WeightInfo::dispute_authorized(T::MaxDisputes::get()))]
         #[transactional]
         pub fn dispute(
@@ -391,6 +407,15 @@ mod pallet {
         /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// create_market: `O(n)`, where n is the number of market ids, which close at the same time as the specified market.
+        /// buy_complete_set: `O(n)`, where n is the number of outcome assets for the categorical market.
+        /// deploy_swap_pool_for_market_open_pool: `O(n)`, where n is the number of outcome assets for the categorical market.
+        /// deploy_swap_pool_for_market_future_pool: `O(n + m)`, where n is the number of outcome assets for the categorical market
+        /// and m is the number of market ids, which open at the same time as the specified market.
         #[pallet::weight(
             T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
@@ -452,6 +477,12 @@ mod pallet {
             Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
         }
 
+        /// Creates a market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// `O(n)`, where n is the number of market ids, which close at the same time as the specified market.
         #[pallet::weight(T::WeightInfo::create_market(CacheSize::get()))]
         #[transactional]
         pub fn create_market(
@@ -572,6 +603,14 @@ mod pallet {
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
         ///     swaps pallet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// buy_complete_set: `O(n)`, where n is the number of outcome assets for the categorical market.
+        /// deploy_swap_pool_for_market_open_pool: `O(n)`, where n is the number of outcome assets for the categorical market.
+        /// deploy_swap_pool_for_market_future_pool: `O(n + m)`, where n is the number of outcome assets for the categorical market
+        /// and m is the number of market ids, which open at the same time as the specified market.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
             .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
@@ -616,6 +655,11 @@ mod pallet {
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
         ///     swaps pallet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// deploy_swap_pool_for_market_open_pool: `O(n)`, where n is the number of outcome assets for the categorical market.
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32).max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(weights.len() as u32, CacheSize::get()))
         )]
@@ -715,6 +759,9 @@ mod pallet {
 
         /// Redeems the winning shares of a prediction market.
         ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::redeem_shares_categorical()
             .max(T::WeightInfo::redeem_shares_scalar())
         )]
@@ -844,6 +891,11 @@ mod pallet {
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where n is the number of market ids, which open at the same time as the specified market,
+        /// and m is the number of market ids, which close at the same time as the specified market.
         #[pallet::weight((T::WeightInfo::reject_market(CacheSize::get(), CacheSize::get()), Pays::No))]
         #[transactional]
         pub fn reject_market(
@@ -861,6 +913,9 @@ mod pallet {
 
         /// Reports the outcome of a market.
         ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where n is the number of market ids, which reported at the same time as the specified market.
         #[pallet::weight(T::WeightInfo::report(CacheSize::get()))]
         #[transactional]
         pub fn report(
@@ -936,6 +991,10 @@ mod pallet {
         /// Sells a complete set of outcomes shares for a market.
         ///
         /// Each complete set is sold for one unit of the market's base asset.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where n is the number of assets for a categorical market.
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
