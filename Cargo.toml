@@ -48,3 +48,14 @@ resolver = "2"
 [patch."https://github.com/purestake/moonbeam"]
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
 parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
+
+[profile.production]
+inherits = "release"
+lto = true
+codegen-units = 1
+incremental = false
+
+[profile.release]
+opt-level = 3
+# Zeitgeist runtime requires unwinding.
+panic = "unwind"
