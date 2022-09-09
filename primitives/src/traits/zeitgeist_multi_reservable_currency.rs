@@ -25,7 +25,7 @@ use sp_runtime::DispatchError;
 /// Custom `NamedMultiReservableCurrency` trait.
 pub trait ZeitgeistAssetManager<AccountId>: NamedMultiReservableCurrency<AccountId> {
     /// Return all accounts that hold assets of a given `currency_id`.
-    /// If the `currency_id` is the native currency, then return None.
+    /// If the `currency_id` is the native currency returns error.
     fn accounts_by_currency_id(
         currency_id: Self::CurrencyId,
     ) -> Result<Vec<AccountId>, DispatchError>;
