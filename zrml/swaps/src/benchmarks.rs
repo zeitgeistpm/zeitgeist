@@ -102,6 +102,7 @@ fn bench_create_pool<T: Config>(
     asset_amount: Option<BalanceOf<T>>,
     scoring_rule: ScoringRule,
     subsidize: bool,
+    weights: Option<Vec<u128>>,
 ) -> (u128, Vec<Asset<T::MarketId>>, T::MarketId) {
     let asset_count_unwrapped: usize = {
         match asset_count {
@@ -112,7 +113,11 @@ fn bench_create_pool<T: Config>(
 
     let market_id = T::MarketId::from(0u8);
     let assets = generate_assets::<T>(&caller, asset_count_unwrapped, asset_amount);
-    let weights = vec![T::MinWeight::get(); asset_count_unwrapped];
+    let some_weights = if weights.is_some() {
+        weights
+    } else {
+        Some(vec![T::MinWeight::get(); asset_count_unwrapped])
+    };
     let base_asset = *assets.last().unwrap();
 
     let _ = Pallet::<T>::create_pool(
@@ -123,7 +128,7 @@ fn bench_create_pool<T: Config>(
         scoring_rule,
         if scoring_rule == ScoringRule::CPMM { Some(Zero::zero()) } else { None },
         if scoring_rule == ScoringRule::CPMM { Some(T::MinLiquidity::get()) } else { None },
-        if scoring_rule == ScoringRule::CPMM { Some(weights) } else { None },
+        if scoring_rule == ScoringRule::CPMM { some_weights } else { None },
     )
     .unwrap();
     let pool_id = <NextPoolId<T>>::get() - 1;
@@ -170,7 +175,14 @@ benchmarks! {
         let market_id = T::MarketCommons::latest_market_id()?;
         let pool_id: PoolId = 0;
         let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
-        let _ = bench_create_pool::<T>(caller, Some(a as usize), None, ScoringRule::CPMM, false);
+        let _ = bench_create_pool::<T>(
+            caller,
+            Some(a as usize),
+            None,
+            ScoringRule::CPMM,
+            false,
+            None,
+        );
         let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
             pool.pool_status = PoolStatus::Closed;
             Ok(())
@@ -206,7 +218,14 @@ benchmarks! {
         let pool_id: PoolId = 0;
         let asset_count = 3;
         let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
-        let _ = bench_create_pool::<T>(caller, Some(asset_count), None, ScoringRule::CPMM, false);
+        let _ = bench_create_pool::<T>(
+            caller,
+            Some(asset_count),
+            None,
+            ScoringRule::CPMM,
+            false,
+            None,
+        );
         let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
             pool.pool_status = PoolStatus::Closed;
             Ok(())
@@ -233,7 +252,8 @@ benchmarks! {
             Some(a.saturated_into()),
             None,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
-            false
+            false,
+            None,
         );
         let amount = T::MinSubsidy::get();
 
@@ -263,7 +283,8 @@ benchmarks! {
             Some(min_assets_plus_base_asset.into()),
             None,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
-            false
+            false,
+            None,
         );
         let amount = T::MinSubsidy::get();
 
@@ -302,7 +323,8 @@ benchmarks! {
             Some(min_assets_plus_base_asset.into()),
             None,
             ScoringRule::RikiddoSigmoidFeeMarketEma,
-            false
+            false,
+            None,
         );
 
         // Join subsidy with b accounts
@@ -331,7 +353,8 @@ benchmarks! {
             Some(a as usize),
             Some(T::MinLiquidity::get() * 2u32.into()),
             ScoringRule::CPMM,
-            false
+            false,
+            None,
         );
         let pool_amount = T::MinLiquidity::get() / 2u32.into();
         let min_assets_out = vec![0u32.into(); a as usize];
@@ -344,7 +367,8 @@ benchmarks! {
             None,
             Some(T::MinSubsidy::get()),
             ScoringRule::RikiddoSigmoidFeeMarketEma,
-            false
+            false,
+            None,
         );
         let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
             .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
@@ -358,7 +382,8 @@ benchmarks! {
             Some(a as usize),
             None,
             ScoringRule::CPMM,
-            false
+            false,
+            None,
         );
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
         let pool_amount = T::MinLiquidity::get();
@@ -372,7 +397,8 @@ benchmarks! {
             Some(a as usize),
             None,
             ScoringRule::CPMM,
-            false
+            false,
+            None,
         );
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
         let pool_amount = 0u32.into();
@@ -386,7 +412,8 @@ benchmarks! {
             Some(a as usize),
             Some(T::MinLiquidity::get() * 2u32.into()),
             ScoringRule::CPMM,
-            false
+            false,
+            None,
         );
         let pool_amount = T::MinLiquidity::get();
         let max_assets_in = vec![T::MinLiquidity::get(); a as usize];
@@ -399,7 +426,8 @@ benchmarks! {
             None,
             Some(T::MinSubsidy::get()),
             ScoringRule::RikiddoSigmoidFeeMarketEma,
-            false
+            false,
+            None,
         );
     }: _(RawOrigin::Signed(caller), pool_id, T::MinSubsidy::get())
 
@@ -411,7 +439,8 @@ benchmarks! {
             Some(a as usize),
             Some(T::MinLiquidity::get() * 2u32.into()),
             ScoringRule::CPMM,
-            false
+            false,
+            None,
         );
         let asset_amount: BalanceOf<T> = BASE.saturated_into();
         let min_pool_amount = 0u32.into();
@@ -425,7 +454,8 @@ benchmarks! {
             Some(a as usize),
             Some(T::MinLiquidity::get() * 2u32.into()),
             ScoringRule::CPMM,
-            false
+            false,
+            None,
         );
         let pool_amount = BASE.saturated_into();
         let max_asset_amount: BalanceOf<T> = T::MinLiquidity::get();
@@ -446,6 +476,7 @@ benchmarks! {
             None,
             ScoringRule::CPMM,
             false,
+            None,
         );
         let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
             pool.pool_status = PoolStatus::Closed;
@@ -468,6 +499,10 @@ benchmarks! {
         )
         .unwrap()
         .saturated_into();
+        let weight_in = T::MinWeight::get();
+        let weight_out = 10 * weight_in;
+        let mut weights = vec![weight_in; asset_count as usize];
+        weights[asset_count as usize - 1] = weight_out;
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, assets, ..) = bench_create_pool::<T>(
             caller.clone(),
@@ -475,20 +510,11 @@ benchmarks! {
             Some(balance),
             ScoringRule::CPMM,
             false,
+            Some(weights),
         );
         let asset_in = assets[0];
         T::AssetManager::deposit(asset_in, &caller, u64::MAX.saturated_into()).unwrap();
-        let asset_out = assets[T::MaxAssets::get() as usize - 1];
-        let weight_in = T::MinWeight::get();
-        let weight_out = 10 * weight_in;
-        let pool_id = 0;
-        let _ = Pallet::<T>::mutate_pool(pool_id, |pool| {
-            let mut weights = pool.weights.as_ref().unwrap().clone();
-            weights.insert(asset_in, weight_in);
-            weights.insert(asset_out, weight_out);
-            pool.weights = Some(weights);
-            Ok(())
-        });
+        let asset_out = assets[asset_count as usize - 1];
         let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u128.saturated_into());
         let max_price = Some(u128::MAX.saturated_into());
     }: swap_exact_amount_in(
@@ -504,8 +530,14 @@ benchmarks! {
     swap_exact_amount_in_rikiddo {
         let a in 3 .. T::MaxAssets::get().into();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
-            Some(BASE.saturated_into()), ScoringRule::RikiddoSigmoidFeeMarketEma, true);
+        let (pool_id, assets, ..) = bench_create_pool::<T>(
+            caller.clone(),
+            Some(a as usize),
+            Some(BASE.saturated_into()),
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            true,
+            None,
+        );
         let asset_amount_in: BalanceOf<T> = BASE.saturated_into();
         let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u32.into());
         let max_price = Some((BASE * 1024).saturated_into());
@@ -515,8 +547,14 @@ benchmarks! {
     swap_exact_amount_out_cpmm {
         let a = T::MaxAssets::get();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
-            Some(T::MinLiquidity::get() * 2u32.into()), ScoringRule::CPMM, false);
+        let (pool_id, assets, ..) = bench_create_pool::<T>(
+            caller.clone(),
+            Some(a as usize),
+            Some(T::MinLiquidity::get() * 2u32.into()),
+            ScoringRule::CPMM,
+            false,
+            None,
+        );
         let max_asset_amount_in: Option<BalanceOf<T>> = Some(T::MinLiquidity::get());
         let asset_amount_out: BalanceOf<T> = BASE.saturated_into();
         let max_price = Some(T::MinLiquidity::get() * 2u32.into());
@@ -526,8 +564,14 @@ benchmarks! {
     swap_exact_amount_out_rikiddo {
         let a in 3 .. T::MaxAssets::get().into();
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(caller.clone(), Some(a as usize),
-            Some(BASE.saturated_into()), ScoringRule::RikiddoSigmoidFeeMarketEma, true);
+        let (pool_id, assets, ..) = bench_create_pool::<T>(
+            caller.clone(),
+            Some(a as usize),
+            Some(BASE.saturated_into()),
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            true,
+            None,
+        );
         let max_asset_amount_in: Option<BalanceOf<T>> = Some((BASE * 1024).saturated_into());
         let asset_amount_out: BalanceOf<T> = BASE.saturated_into();
         let max_price = Some((BASE * 1024).saturated_into());
