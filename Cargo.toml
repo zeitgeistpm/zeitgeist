@@ -50,10 +50,10 @@ pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branc
 parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
 
 [profile.production]
-inherits = "release"
-lto = true
 codegen-units = 1
 incremental = false
+inherits = "release"
+lto = true
 
 [profile.release]
 opt-level = 3
