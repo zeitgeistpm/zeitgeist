@@ -200,7 +200,7 @@ mod pallet {
         //
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(), Pays::No))]
+        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(CacheSize::get(), CacheSize::get()), Pays::No))]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -210,11 +210,15 @@ mod pallet {
             T::CloseOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_market_is_active(&market)?;
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
             Self::close_market(&market_id)?;
             // The CloseOrigin should not pay fees for providing this service
-            Ok((None, Pays::No).into())
+            Ok((
+                Some(T::WeightInfo::admin_move_market_to_closed(open_ids_len, close_ids_len)),
+                Pays::No,
+            )
+                .into())
         }
 
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
@@ -259,6 +263,7 @@ mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
             T::ApproveOrigin::ensure_origin(origin)?;
             let mut extra_weight = 0;
             let mut status = MarketStatus::Active;
@@ -459,6 +464,7 @@ mod pallet {
             dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
 
@@ -855,13 +861,13 @@ mod pallet {
 
         /// Reports the outcome of a market.
         ///
-        #[pallet::weight(T::WeightInfo::report())]
+        #[pallet::weight(T::WeightInfo::report(CacheSize::get()))]
         #[transactional]
         pub fn report(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
@@ -911,16 +917,20 @@ mod pallet {
                 Ok(())
             })?;
 
-            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
-                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
+            let ids_len = MarketIdsPerReportBlock::<T>::try_mutate(
+                current_block,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
 
             Self::deposit_event(Event::MarketReported(
                 market_id,
                 MarketStatus::Reported,
                 market_report,
             ));
-            Ok(())
+            Ok(Some(T::WeightInfo::report(ids_len)).into())
         }
 
         /// Sells a complete set of outcomes shares for a market.
