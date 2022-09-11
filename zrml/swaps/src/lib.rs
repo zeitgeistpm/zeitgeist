@@ -288,7 +288,7 @@ mod pallet {
                                 .ok_or(ArithmeticError::Overflow)?,
                         );
                     } else {
-                        <SubsidyProviders<T>>::remove(&pool_id, &who);
+                        <SubsidyProviders<T>>::remove(pool_id, &who);
                         pool.total_subsidy = Some(
                             total_subsidy.checked_sub(&subsidy).ok_or(ArithmeticError::Overflow)?,
                         );
