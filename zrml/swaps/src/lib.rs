@@ -321,6 +321,10 @@ mod pallet {
         /// * `asset_amount`: Asset amount that is leaving the pool.
         /// * `max_pool_amount`: The calculated amount of assets for the pool must be equal or
         /// greater than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_asset_amount())]
         // MARK(non-transactional): Immediately calls and returns a transactional.
         pub fn pool_exit_with_exact_asset_amount(
@@ -354,6 +358,10 @@ mod pallet {
         /// * `pool_amount`: Pool amount that is entering the pool.
         /// * `min_asset_amount`: The calculated amount for the asset must the equal or less
         /// than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::pool_exit_with_exact_pool_amount())]
         #[transactional]
         pub fn pool_exit_with_exact_pool_amount(
@@ -551,6 +559,10 @@ mod pallet {
         /// * `asset_amount`: Asset amount that is entering the pool.
         /// * `min_pool_amount`: The calculated amount for the pool must be equal or greater
         /// than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: O(1)
         // MARK(non-transactional): Immediately calls and returns a transactional.
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_asset_amount())]
         pub fn pool_join_with_exact_asset_amount(
@@ -584,6 +596,10 @@ mod pallet {
         /// * `pool_amount`: Asset amount that is entering the pool.
         /// * `max_asset_amount`: The calculated amount of assets for the pool must be equal or
         /// less than the given value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::pool_join_with_exact_pool_amount())]
         #[transactional]
         pub fn pool_join_with_exact_pool_amount(
@@ -648,6 +664,11 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `min_asset_amount_out`: Minimum asset amount that can leave the pool.
         /// * `max_price`: Market price must be equal or less than the provided value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
+        /// assets if the scoring rule is Rikiddo.
         #[pallet::weight(T::WeightInfo::swap_exact_amount_in_rikiddo(T::MaxAssets::get().into()))]
         #[transactional]
         pub fn swap_exact_amount_in(
@@ -685,6 +706,11 @@ mod pallet {
         /// * `asset_out`: Asset leaving the pool.
         /// * `asset_amount_out`: Amount that will be transferred from the pool to the provider.
         /// * `max_price`: Market price must be equal or less than the provided value.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
+        /// assets if the scoring rule is Rikiddo.
         #[pallet::weight(T::WeightInfo::swap_exact_amount_out_rikiddo(T::MaxAssets::get().into()))]
         #[transactional]
         pub fn swap_exact_amount_out(
