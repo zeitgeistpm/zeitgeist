@@ -62,16 +62,18 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: grcov
+          use-tool-cache: true
+
       - name: Tests
         run: ./scripts/tests/${{ matrix.scripts }}.sh
-
-      - id: coverage
-        uses: actions-rs/grcov@v0.1
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: ${{ steps.coverage.outputs.report }}
+          files: ./tmp/*.lcov
 
   fuzz:
     name: Fuzz
@@ -92,6 +94,11 @@ jobs:
       
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: grcov
+          use-tool-cache: true
       
       - uses: actions-rs/install@v0.1
         with:
@@ -100,10 +107,7 @@ jobs:
 
       - run: ./scripts/tests/fuzz.sh
 
-      - id: coverage
-        uses: actions-rs/grcov@v0.1
-
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: ${{ steps.coverage.outputs.report }}
+          files: ./tmp/*.lcov
