@@ -669,7 +669,8 @@ mod pallet {
         ///
         /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
         /// assets if the scoring rule is Rikiddo.
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_in_rikiddo(T::MaxAssets::get().into()))]
+        // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_in_cpmm())]
         #[transactional]
         pub fn swap_exact_amount_in(
             origin: OriginFor<T>,
@@ -711,7 +712,8 @@ mod pallet {
         ///
         /// Complexity: `O(1)` if the scoring rule is CPMM, `O(n)` where `n` is the amount of
         /// assets if the scoring rule is Rikiddo.
-        #[pallet::weight(T::WeightInfo::swap_exact_amount_out_rikiddo(T::MaxAssets::get().into()))]
+        // TODO(#790): Replace with maximum of CPMM and Rikiddo benchmark!
+        #[pallet::weight(T::WeightInfo::swap_exact_amount_out_cpmm())]
         #[transactional]
         pub fn swap_exact_amount_out(
             origin: OriginFor<T>,
