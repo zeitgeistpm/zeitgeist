@@ -25,5 +25,3 @@ do
     echo "TEST $package std,runtime-benchmarks"
   fi
 done
-
-grcov . --binary-path ./target/release/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o misc/tests.lcov
