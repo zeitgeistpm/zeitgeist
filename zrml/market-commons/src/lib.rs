@@ -15,11 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Common market parameters used by `Simple disputes` and `Prediction markets` pallets.
-//!
-//! As stated by the contract of `MarketCommonsPalletApi::now`, the caller must ensure that the
-//! time implementation returns milliseconds.
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;

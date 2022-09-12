@@ -10,6 +10,30 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          default: true
+          override: true
+          profile: minimal
+          components: rustfmt
+        
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: taplo-cli
+
+      - name: Format
+        run: ./scripts/tests/format.sh --check
+
   tests:
     name: Tests
     runs-on: ubuntu-latest

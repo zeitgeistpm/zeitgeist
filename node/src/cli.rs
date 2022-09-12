@@ -308,8 +308,8 @@ where
 /// return them from a function. For returning them from a function there exists
 /// [`Client`]. However, the problem on how to use this client instance still
 /// exists. This trait "solves" it in a dirty way. It requires a type to
-/// implement this trait and than the [`execute_with_client`](ExecuteWithClient:
-/// :execute_with_client) function can be called with any possible client
+/// implement this trait and than the [`execute_with_client`](ExecuteWithClient::execute_with_client)
+/// function can be called with any possible client
 /// instance.
 ///
 /// In a perfect world, we could make a closure work in this way.

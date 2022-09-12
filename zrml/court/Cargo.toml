@@ -5,15 +5,15 @@ frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 rand = { default-features = false, features = ["alloc", "std_rng"], version = "0.8" }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 
 [dev-dependencies]
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate"}
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, features = ["mock"], path = "../../primitives" }
 
@@ -22,7 +22,7 @@ default = ["std"]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks"
+    "frame-system/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",
@@ -31,10 +31,10 @@ std = [
     "parity-scale-codec/std",
     "sp-runtime/std",
     "zeitgeist-primitives/std",
-    "zrml-market-commons/std"
+    "zrml-market-commons/std",
 ]
 try-runtime = [
-  "frame-support/try-runtime",
+    "frame-support/try-runtime",
 ]
 
 [package]

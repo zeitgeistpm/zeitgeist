@@ -6,8 +6,6 @@ set -euxo pipefail
 
 . "$(dirname "$0")/aux-functions.sh" --source-only
 
-cargo fmt --all -- --check
-
 test_package_with_feature primitives default
 test_package_with_feature primitives std
 

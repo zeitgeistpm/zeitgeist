@@ -15,7 +15,7 @@ sc-client-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.co
 sc-consensus = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-executor = { branch = "moonbeam-polkadot-v0.9.19", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
 sc-keystore = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
-sc-rpc = { branch = "moonbeam-polkadot-v0.9.19",  git = "https://github.com/purestake/substrate" }
+sc-rpc = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-rpc-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-service = { branch = "moonbeam-polkadot-v0.9.19", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
 sc-telemetry = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
@@ -91,7 +91,7 @@ sp-finality-grandpa = { branch = "moonbeam-polkadot-v0.9.19", git = "https://git
 
 # Utility
 cfg-if = { version = "1.0.0" }
-clap = { version = "3.1.6", features = [ "derive" ] }
+clap = { version = "3.1.6", features = ["derive"] }
 hex-literal = { version = "0.3.4" }
 jsonrpc-core = { version = "18.0.0" }
 log = { optional = true, version = "0.4.14" }
@@ -123,7 +123,7 @@ parachain = [
     "cumulus-relay-chain-inprocess-interface",
     "cumulus-relay-chain-interface",
     "cumulus-relay-chain-rpc-interface",
-    
+
 
     # Parachain
 
