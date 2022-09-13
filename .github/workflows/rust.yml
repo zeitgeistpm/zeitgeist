@@ -10,63 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: wasm32-unknown-unknown
-          default: true
-          override: true
-          profile: minimal
-          components: rustfmt
-        
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: taplo-cli
-
-      - name: Format
-        run: ./scripts/tests/format.sh --check
-
-  checks:
-    name: Checks
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        scripts: [
-          "clippy",
-          "parachain",
-          "standalone"
-        ]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: wasm32-unknown-unknown
-          default: true
-          override: true
-          profile: minimal
-          components: rustfmt, clippy
-
-      - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
-
-      - name: Checks
-        run: ./scripts/tests/${{ matrix.scripts }}.sh
-
-  tests:
-    needs: checks
-    name: Tests
+  init:
+    name: Initialisation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -85,6 +30,38 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v1
 
+  format:
+    needs: init
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: taplo-cli
+
+      - name: Format
+        run: ./scripts/tests/format.sh --check
+
+  checks:
+    needs: init
+    name: Checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scripts: [
+          "clippy",
+          "parachain",
+          "standalone"
+        ]
+    steps:
+      - name: Checks
+        run: ./scripts/tests/${{ matrix.scripts }}.sh
+
+  tests:
+    needs: init
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions-rs/install@v0.1
         with:
           crate: grcov
