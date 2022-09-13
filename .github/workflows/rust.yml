@@ -100,6 +100,9 @@ jobs:
         with:
           files: ${{ runner.temp }}/zeitgeist-test-coverage.lcov
           fail_ci_if_error: true
+          flags: tests
+          verbose: true
+          name: unit-tests
 
   fuzz:
     name: Fuzz
@@ -138,3 +141,6 @@ jobs:
         with: 
           files: ${{ runner.temp }}/zeitgeist-fuzz-coverage.lcov
           fail_ci_if_error: true
+          flags: fuzz
+          verbose: true
+          name: fuzz-tests
