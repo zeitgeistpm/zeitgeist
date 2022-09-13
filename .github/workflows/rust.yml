@@ -34,17 +34,40 @@ jobs:
       - name: Format
         run: ./scripts/tests/format.sh --check
 
-  tests:
-    name: Tests
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
     strategy:
       matrix:
         scripts: [
           "clippy",
-          "misc",
           "parachain",
           "standalone"
         ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          default: true
+          override: true
+          profile: minimal
+          components: rustfmt, clippy
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: Checks
+        run: ./scripts/tests/${{ matrix.scripts }}.sh
+
+  tests:
+    needs: checks
+    name: Tests
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -68,7 +91,7 @@ jobs:
           use-tool-cache: true
 
       - name: Tests
-        run: ./scripts/tests/${{ matrix.scripts }}.sh
+        run: ./scripts/tests/misc.sh
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
