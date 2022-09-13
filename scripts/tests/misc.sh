@@ -24,5 +24,4 @@ do
   fi
 done
 
-mkdir tmp
-grcov . --binary-path ./target/release/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o tmp/tests.lcov
+grcov . --binary-path ./target/release/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o $RUNNER_TEMP/zeitgeist-test-coverage.lcov
