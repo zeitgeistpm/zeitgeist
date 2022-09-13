@@ -73,7 +73,9 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: ${{ env.RUNNER_TEMP }}/zeitgeist-test-coverage.lcov
+          directory: ${{ runner.temp }}
+          files: ./zeitgeist-test-coverage.lcov
+          fail_ci_if_error: true
 
   fuzz:
     name: Fuzz
@@ -110,4 +112,6 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          files: ${{ env.RUNNER_TEMP }}/zeitgeist-fuzz-coverage.lcov
+          directory: ${{ runner.temp }}
+          files: ./zeitgeist-fuzz-coverage.lcov
+          fail_ci_if_error: true
