@@ -35,6 +35,9 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - uses: actions-rs/install@v0.1
         with:
           crate: taplo-cli
@@ -54,6 +57,9 @@ jobs:
           "standalone"
         ]
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Checks
         run: ./scripts/tests/${{ matrix.scripts }}.sh
 
@@ -62,10 +68,16 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - uses: actions-rs/install@v0.1
         with:
           crate: grcov
           use-tool-cache: true
+      
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
 
       - name: Tests
         run: ./scripts/tests/misc.sh
@@ -92,9 +104,6 @@ jobs:
           override: true
           profile: minimal
           components: rustfmt, clippy, llvm-tools-preview
-      
-      - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v1
 
       - uses: actions-rs/install@v0.1
         with:
@@ -105,6 +114,9 @@ jobs:
         with:
           crate: cargo-fuzz
           use-tool-cache: true
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
 
       - run: ./scripts/tests/fuzz.sh
 
