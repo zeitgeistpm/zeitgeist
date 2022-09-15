@@ -344,25 +344,17 @@ benchmarks! {
     create_market {
         let m in 0..63;
 
-        let (caller, oracle, period, metadata, creation) =
+        let (caller, oracle, _, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
 
-        match period.clone() {
-            MarketPeriod::Block(range) => {
-                for i in 0..m {
-                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
-                        ids.try_push(i.into())
-                    }).unwrap();
-                }
-            }
-            MarketPeriod::Timestamp(range) => {
-                for i in 0..m {
-                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                        Pallet::<T>::calculate_time_frame_of_moment(range.end),
-                        |ids| ids.try_push(i.into()),
-                    ).unwrap();
-                }
-            }
+        let range_end = T::MaxSubsidyPeriod::get();
+        let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..range_end);
+
+        for i in 0..m {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
         }
     }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -385,7 +377,10 @@ benchmarks! {
             Ok(())
         })?;
 
-        assert!(Pallet::<T>::calculate_time_frame_of_moment(T::MarketCommons::now()) < Pallet::<T>::calculate_time_frame_of_moment(T::MinSubsidyPeriod::get()));
+        assert!(
+            Pallet::<T>::calculate_time_frame_of_moment(T::MarketCommons::now())
+                < Pallet::<T>::calculate_time_frame_of_moment(range_start)
+        );
 
         for i in 0..o {
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
@@ -394,22 +389,25 @@ benchmarks! {
             ).unwrap();
         }
 
-        let prev_len = MarketIdsPerOpenTimeFrame::<T>::get(Pallet::<T>::calculate_time_frame_of_moment(T::MinSubsidyPeriod::get())).len();
+        let prev_len = MarketIdsPerOpenTimeFrame::<T>::get(
+            Pallet::<T>::calculate_time_frame_of_moment(range_start)).len();
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
-        let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let _ = Pallet::<T>::buy_complete_set(RawOrigin::Signed(caller.clone()).into(),
+            market_id, min_liquidity).unwrap();
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
 
-        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee, amount: min_liquidity, weights };
+        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee,
+            amount: min_liquidity, weights };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        let current_len = MarketIdsPerOpenTimeFrame::<T>::get(Pallet::<T>::calculate_time_frame_of_moment(T::MinSubsidyPeriod::get())).len();
-        assert!(current_len - 1 == prev_len);
+        let current_len = MarketIdsPerOpenTimeFrame::<T>::get(
+            Pallet::<T>::calculate_time_frame_of_moment(range_start)).len();
+        assert!(current_len == prev_len + 1);
     }
 
     deploy_swap_pool_for_market_open_pool {
@@ -431,13 +429,14 @@ benchmarks! {
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
-        let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let _ = Pallet::<T>::buy_complete_set(RawOrigin::Signed(caller.clone()).into(),
+            market_id, min_liquidity).unwrap();
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
 
-        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee, amount: min_liquidity, weights };
+        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee,
+            amount: min_liquidity, weights };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
@@ -466,7 +465,7 @@ benchmarks! {
             let outcome = OutcomeReport::Scalar(i.into());
             let disputor = account("disputor", i, 0);
             let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into());
-            let _ = Call::<T>::dispute { market_id, outcome }.dispatch_bypass_filter(RawOrigin::Signed(disputor).into())?;
+            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
         }
 
         let dispute_outcome = OutcomeReport::Scalar((d + 1).into());
@@ -635,7 +634,7 @@ benchmarks! {
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            // ensure to check the origin
+            // ensure range.start is now to get the heaviest path
             market.period = MarketPeriod::Timestamp(T::MarketCommons::now()..T::MaxSubsidyPeriod::get());
             // ensure sender is oracle to succeed extrinsic call
             market.oracle = caller.clone();
@@ -644,8 +643,7 @@ benchmarks! {
 
         let outcome = OutcomeReport::Categorical(0);
         let close_origin = T::CloseOrigin::successful_origin();
-        let _ = Call::<T>::admin_move_market_to_closed { market_id }
-            .dispatch_bypass_filter(close_origin)?;
+        let _ = Pallet::<T>::admin_move_market_to_closed(close_origin, market_id).unwrap();
         let current_block = frame_system::Pallet::<T>::block_number();
         for i in 0..m {
             MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
@@ -662,8 +660,8 @@ benchmarks! {
             ScoringRule::CPMM
         )?;
         let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
-        let _ = Call::<T>::buy_complete_set { market_id, amount }
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let _ = Pallet::<T>::buy_complete_set(
+                RawOrigin::Signed(caller.clone()).into(), market_id, amount).unwrap();
     }: _(RawOrigin::Signed(caller), market_id, amount)
 
     start_subsidy {
