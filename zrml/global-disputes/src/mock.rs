@@ -56,7 +56,6 @@ construct_runtime!(
 );
 
 parameter_types! {
-    pub const MinOutcomes: u32 = 2;
     pub const MaxGlobalDisputeVotes: u32 = 50;
     pub const MaxOwners: u32 = 10;
 }

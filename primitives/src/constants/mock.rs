@@ -26,7 +26,6 @@ parameter_types! {
     pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
     pub const MaxGlobalDisputeVotes: u32 = 50;
     pub const MaxOwners: u32 = 10;
-    pub const MinOutcomes: u32 = 2;
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
     pub const RemoveKeysLimit: u32 = 250;
     pub const VotingOutcomeFee: Balance = 100 * CENT;

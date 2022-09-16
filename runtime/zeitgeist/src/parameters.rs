@@ -86,8 +86,6 @@ parameter_types! {
     pub const MaxGlobalDisputeVotes: u32 = 50;
     /// The minimum required amount to vote on an outcome.
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
-    /// The minimum number of voting outcomes.
-    pub const MinOutcomes: u32 = 2;
     /// The fee required to add a voting outcome.
     pub const VotingOutcomeFee: Balance = 100 * CENT;
     /// The remove limit for the Outcomes storage double map.
