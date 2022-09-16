@@ -152,6 +152,7 @@ mod pallet {
                 ExistenceRequirement::AllowDeath,
             )?;
 
+            Self::deposit_event(Event::AddedVotingOutcome { market_id, outcome });
             // charge weight for successfully have no owners in Winners and no owners in empty Outcomes
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
@@ -445,6 +446,8 @@ mod pallet {
     where
         T: Config,
     {
+        /// A new voting outcome has been added.
+        AddedVotingOutcome { market_id: MarketIdOf<T>, outcome: OutcomeReport },
         /// The winner of the global dispute system is determined.
         GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
         /// The outcome owner has been rewarded.
