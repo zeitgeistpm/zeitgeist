@@ -38,7 +38,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     /// # Returns
     ///
     /// Returns the winning outcome.
-    fn get_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
+    fn determine_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 
     /// Check if global dispute started.
     fn is_started(market_id: &MarketId) -> bool;

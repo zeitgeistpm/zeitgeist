@@ -550,7 +550,7 @@ mod pallet {
             Ok(())
         }
 
-        fn get_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
+        fn determine_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
             match <Winners<T>>::get(market_id) {
                 Some(mut winner_info) => {
                     winner_info.is_finished = true;

@@ -300,7 +300,7 @@ fn vote_fails_if_insufficient_amount() {
 }
 
 #[test]
-fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonical_outcome() {
+fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonical_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
         GlobalDisputes::push_voting_outcome(
@@ -389,7 +389,7 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
             .into(),
         );
         assert_eq!(
-            &GlobalDisputes::get_voting_winner(&market_id).unwrap(),
+            &GlobalDisputes::determine_voting_winner(&market_id).unwrap(),
             &OutcomeReport::Scalar(60)
         );
         System::assert_last_event(
@@ -543,7 +543,7 @@ fn reserve_fails_with_fully_locked_balance() {
 }
 
 #[test]
-fn get_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canonical_outcome() {
+fn determine_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canonical_outcome() {
     ExtBuilder::default().build().execute_with(|| {
         let mut market_id = 0u128;
         let reinitialize_outcomes = |market_id| {
@@ -633,7 +633,7 @@ fn get_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canonical_o
         );
 
         assert_eq!(
-            GlobalDisputes::get_voting_winner(&market_id).unwrap(),
+            GlobalDisputes::determine_voting_winner(&market_id).unwrap(),
             OutcomeReport::Scalar(40)
         );
 
@@ -696,7 +696,7 @@ fn get_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canonical_o
         );
 
         assert_eq!(
-            GlobalDisputes::get_voting_winner(&market_id).unwrap(),
+            GlobalDisputes::determine_voting_winner(&market_id).unwrap(),
             OutcomeReport::Scalar(60)
         );
 
@@ -728,7 +728,7 @@ fn get_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canonical_o
         ));
 
         assert_eq!(
-            GlobalDisputes::get_voting_winner(&market_id).unwrap(),
+            GlobalDisputes::determine_voting_winner(&market_id).unwrap(),
             OutcomeReport::Scalar(0)
         );
 
@@ -810,7 +810,7 @@ fn get_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canonical_o
         );
 
         assert_eq!(
-            GlobalDisputes::get_voting_winner(&market_id).unwrap(),
+            GlobalDisputes::determine_voting_winner(&market_id).unwrap(),
             OutcomeReport::Scalar(0)
         );
     });
@@ -852,7 +852,7 @@ fn reward_outcome_owner_cleans_outcome_info() {
             }
         );
 
-        assert!(GlobalDisputes::get_voting_winner(&market_id).is_some());
+        assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
@@ -892,7 +892,7 @@ fn unlock_clears_lock_info() {
             50 * BASE
         ));
 
-        assert!(GlobalDisputes::get_voting_winner(&market_id).is_some());
+        assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id, 50 * BASE)]));
 
@@ -1043,7 +1043,7 @@ fn locking_works_for_one_market() {
         assert_eq!(<Locks<Runtime>>::get(EVE), LockInfo(vec![(market_id, 20 * BASE)]));
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
-        assert!(GlobalDisputes::get_voting_winner(&market_id).is_some());
+        assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id, 50 * BASE)]));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
@@ -1153,7 +1153,7 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
         // market_id_1 has stronger locks
-        assert!(GlobalDisputes::get_voting_winner(&market_id_1).is_some());
+        assert!(GlobalDisputes::determine_voting_winner(&market_id_1).is_some());
 
         assert_eq!(
             <Locks<Runtime>>::get(ALICE),
@@ -1175,7 +1175,7 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
         assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_2, 30 * BASE)]));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(30 * BASE)]);
 
-        assert!(GlobalDisputes::get_voting_winner(&market_id_2).is_some());
+        assert!(GlobalDisputes::determine_voting_winner(&market_id_2).is_some());
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_2, 30 * BASE)]));
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
@@ -1266,7 +1266,7 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
         // market_id_2 has weaker locks
-        assert!(GlobalDisputes::get_voting_winner(&market_id_2).is_some());
+        assert!(GlobalDisputes::determine_voting_winner(&market_id_2).is_some());
 
         assert_eq!(
             <Locks<Runtime>>::get(ALICE),
@@ -1288,7 +1288,7 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
         assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_1, 50 * BASE)]));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
 
-        assert!(GlobalDisputes::get_voting_winner(&market_id_1).is_some());
+        assert!(GlobalDisputes::determine_voting_winner(&market_id_1).is_some());
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_1, 50 * BASE)]));
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);

@@ -1982,7 +1982,7 @@ mod pallet {
                         }
                     };
 
-                    if let Some(o) = T::GlobalDisputes::get_voting_winner(market_id) {
+                    if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
                         resolved_outcome_option = Some(o);
                     }
 
