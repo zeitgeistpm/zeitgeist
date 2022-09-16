@@ -4,7 +4,7 @@ A module for setting one out of multiple outcomes with the most locked native to
 
 ## Overview
 
-This is the default process if a dispute mechanism (e. g. Court) fails to resolve, because the `MaxDisputes` amount of disputes is reached. In the zeitgeist ecosystem this grants the ability to lock native tokens in a voting mechanism on multiple outcomes for determining the outcome on which the market resolves.
+This is the default process when a dispute mechanism (e. g. Court) fails to resolve. In the zeitgeist ecosystem this grants the ability to lock native tokens by voting on one of multiple outcomes to determine the canonical outcome on which the market finally resolves.
 
 `outcome_sum` - The actual amount of native tokens for one outcome, which is used to calculate the outcome with the most locked native tokens.
 
