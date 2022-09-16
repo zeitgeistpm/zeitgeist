@@ -22,6 +22,7 @@ parameter_types! {
 
 // Global disputes parameters
 parameter_types! {
+    pub const GlobalDisputeLockId: LockIdentifier = *b"zge/vote";
     pub const GlobalDisputesPalletId: PalletId = PalletId(*b"zge/gldp");
     pub const MaxGlobalDisputeVotes: u32 = 50;
     pub const MaxOutcomeLimit: u32 = u32::MAX;
@@ -29,7 +30,6 @@ parameter_types! {
     pub const MinOutcomes: u32 = 2;
     pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
     pub const RemoveKeysLimit: u32 = 250;
-    pub const VoteLockIdentifier: LockIdentifier = *b"zge/vote";
     pub const VotingOutcomeFee: Balance = 100 * CENT;
 }
 

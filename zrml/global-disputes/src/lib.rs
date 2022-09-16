@@ -292,7 +292,7 @@ mod pallet {
             )?;
 
             T::Currency::extend_lock(
-                T::VoteLockIdentifier::get(),
+                T::GlobalDisputeLockId::get(),
                 &sender,
                 amount,
                 WithdrawReasons::TRANSFER,
@@ -332,10 +332,10 @@ mod pallet {
                 });
 
             if lock_needed.is_zero() {
-                T::Currency::remove_lock(T::VoteLockIdentifier::get(), &voter);
+                T::Currency::remove_lock(T::GlobalDisputeLockId::get(), &voter);
             } else {
                 T::Currency::set_lock(
-                    T::VoteLockIdentifier::get(),
+                    T::GlobalDisputeLockId::get(),
                     &voter,
                     lock_needed,
                     WithdrawReasons::TRANSFER,
@@ -354,6 +354,10 @@ mod pallet {
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The vote lock identifier.
+        #[pallet::constant]
+        type GlobalDisputeLockId: Get<LockIdentifier>;
 
         /// The pallet identifier.
         #[pallet::constant]
@@ -380,10 +384,6 @@ mod pallet {
         /// The maximum number of keys to remove from a storage map.
         #[pallet::constant]
         type RemoveKeysLimit: Get<u32>;
-
-        /// The vote lock identifier.
-        #[pallet::constant]
-        type VoteLockIdentifier: Get<LockIdentifier>;
 
         /// The fee required to add a voting outcome.
         #[pallet::constant]

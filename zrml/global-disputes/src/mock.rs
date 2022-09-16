@@ -25,8 +25,8 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::mock::{
-        BlockHashCount, GlobalDisputesPalletId, MaxReserves, MinOutcomeVoteAmount, MinimumPeriod,
-        RemoveKeysLimit, VoteLockIdentifier, VotingOutcomeFee, BASE,
+        BlockHashCount, GlobalDisputeLockId, GlobalDisputesPalletId, MaxReserves,
+        MinOutcomeVoteAmount, MinimumPeriod, RemoveKeysLimit, VotingOutcomeFee, BASE,
     },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
@@ -64,13 +64,13 @@ parameter_types! {
 impl crate::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
+    type GlobalDisputeLockId = GlobalDisputeLockId;
     type GlobalDisputesPalletId = GlobalDisputesPalletId;
     type MarketCommons = MarketCommons;
     type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
     type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
     type RemoveKeysLimit = RemoveKeysLimit;
-    type VoteLockIdentifier = VoteLockIdentifier;
     type VotingOutcomeFee = VotingOutcomeFee;
     type WeightInfo = crate::weights::WeightInfo<Runtime>;
 }

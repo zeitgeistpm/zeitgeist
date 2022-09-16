@@ -29,12 +29,12 @@ use frame_support::{
 use pallet_balances::{BalanceLock, Error as BalancesError};
 use sp_runtime::traits::Zero;
 use zeitgeist_primitives::{
-    constants::mock::{MinOutcomeVoteAmount, VoteLockIdentifier, VotingOutcomeFee, BASE},
+    constants::mock::{GlobalDisputeLockId, MinOutcomeVoteAmount, VotingOutcomeFee, BASE},
     types::OutcomeReport,
 };
 
 fn the_lock(amount: u128) -> BalanceLock<u128> {
-    BalanceLock { id: VoteLockIdentifier::get(), amount, reasons: pallet_balances::Reasons::Misc }
+    BalanceLock { id: GlobalDisputeLockId::get(), amount, reasons: pallet_balances::Reasons::Misc }
 }
 
 #[test]

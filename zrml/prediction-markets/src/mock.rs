@@ -37,12 +37,12 @@ use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, GlobalDisputePeriod, GlobalDisputesPalletId, LiquidityMiningPalletId,
-        MaxAssets, MaxCategories, MaxDisputes, MaxGlobalDisputeVotes, MaxInRatio, MaxMarketPeriod,
-        MaxOutRatio, MaxOwners, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight,
-        MaxWeight, MinAssets, MinCategories, MinLiquidity, MinOutcomeVoteAmount, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, RemoveKeysLimit,
-        SimpleDisputesPalletId, StakeWeight, SwapsPalletId, VoteLockIdentifier, VotingOutcomeFee,
+        GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId,
+        LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxGlobalDisputeVotes,
+        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxOwners, MaxReserves, MaxSubsidyPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity,
+        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId,
+        RemoveKeysLimit, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, VotingOutcomeFee,
         BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
@@ -260,8 +260,8 @@ impl zrml_global_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;
     type Currency = Balances;
+    type GlobalDisputeLockId = GlobalDisputeLockId;
     type GlobalDisputesPalletId = GlobalDisputesPalletId;
-    type VoteLockIdentifier = VoteLockIdentifier;
     type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
     type MaxOwners = MaxOwners;
     type MinOutcomeVoteAmount = MinOutcomeVoteAmount;

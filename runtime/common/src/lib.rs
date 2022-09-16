@@ -909,13 +909,13 @@ macro_rules! impl_config_traits {
         impl zrml_global_disputes::Config for Runtime {
             type Currency = Balances;
             type Event = Event;
+            type GlobalDisputeLockId = GlobalDisputeLockId;
             type GlobalDisputesPalletId = GlobalDisputesPalletId;
             type MarketCommons = MarketCommons;
             type MaxGlobalDisputeVotes = MaxGlobalDisputeVotes;
             type MaxOwners = MaxOwners;
             type MinOutcomeVoteAmount = MinOutcomeVoteAmount;
             type RemoveKeysLimit = RemoveKeysLimit;
-            type VoteLockIdentifier = VoteLockIdentifier;
             type VotingOutcomeFee = VotingOutcomeFee;
             type WeightInfo = zrml_global_disputes::weights::WeightInfo<Runtime>;
         }
