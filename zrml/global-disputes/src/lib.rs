@@ -111,6 +111,14 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Add voting outcome to a global dispute in exchange for a constant fee. 
+        /// Errors if the voting outcome already exists or 
+        /// if the global dispute has not started or has already finished.
+        /// 
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of owner(s) of the outcome
+        /// in the case that this gets called for an already existing outcome.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::add_vote_outcome(T::MaxOwners::get()))]
         pub fn add_vote_outcome(
@@ -147,6 +155,13 @@ mod pallet {
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
 
+        /// Reward the collected fees to the owner(s) of a voting outcome.
+        /// Fails if the global dispute is not concluded yet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of all existing outcomes for a global dispute,
+        /// and `m` is the number of owners for the winning outcome.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::reward_outcome_owner(
             T::MaxOwners::get(),
@@ -227,6 +242,13 @@ mod pallet {
             Ok((Some(T::WeightInfo::reward_outcome_owner(owners_len, removed_keys_amount))).into())
         }
 
+        /// Vote on existing voting outcomes by locking native tokens. 
+        /// Fails if the global dispute has not started or has already finished.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of all current votes on global disputes,
+        /// and `m` is the number of owners for the specified outcome.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::vote_on_outcome(
             T::MaxOwners::get(),
@@ -310,6 +332,13 @@ mod pallet {
             Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, vote_lock_counter)).into())
         }
 
+        /// Return all locked native tokens in a global dispute. 
+        /// Fails if the global dispute is not concluded yet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of all current votes on global disputes,
+        /// and `m` is the number of owners for the winning outcome.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::unlock_vote_balance(
             T::MaxGlobalDisputeVotes::get(),
