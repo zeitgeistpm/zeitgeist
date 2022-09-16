@@ -87,7 +87,7 @@ parameter_types! {
     /// The minimum required amount to vote on an outcome.
     pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
     /// The fee required to add a voting outcome.
-    pub const VotingOutcomeFee: Balance = 100 * CENT;
+    pub const VotingOutcomeFee: Balance = 200 * BASE;
     /// The remove limit for the Outcomes storage double map.
     pub const RemoveKeysLimit: u32 = 250;
 
