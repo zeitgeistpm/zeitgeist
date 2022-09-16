@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+use sp_runtime::DispatchResult;
 use zeitgeist_primitives::types::OutcomeReport;
 
 pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
@@ -23,7 +24,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
         outcome: OutcomeReport,
         owner: &AccountId,
         vote_balance: Balance,
-    );
+    ) -> DispatchResult;
 
     fn get_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 

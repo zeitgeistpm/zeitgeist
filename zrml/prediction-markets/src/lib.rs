@@ -473,22 +473,26 @@ mod pallet {
 
             // add report outcome to voting choices
             if let Some(report) = market.report {
-                T::GlobalDisputes::push_voting_outcome(
+                let res = T::GlobalDisputes::push_voting_outcome(
                     &market_id,
                     report.outcome,
                     &report.by,
                     <BalanceOf<T>>::zero(),
-                );
+                )
+                .map_err(|_| log::warn!("Push of report voting outcome failed."));
+                debug_assert!(res.is_ok());
             }
 
             for (index, MarketDispute { at: _, by, outcome }) in disputes.iter().enumerate() {
                 let dispute_bond = default_dispute_bond::<T>(index);
-                T::GlobalDisputes::push_voting_outcome(
+                let res = T::GlobalDisputes::push_voting_outcome(
                     &market_id,
                     outcome.clone(),
                     by,
                     dispute_bond,
-                );
+                )
+                .map_err(|_| log::warn!("Push of dispute voting outcome failed."));
+                debug_assert!(res.is_ok());
             }
 
             // ensure, that global disputes controls the resolution now

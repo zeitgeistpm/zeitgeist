@@ -46,7 +46,10 @@ mod pallet {
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use sp_runtime::traits::{AccountIdConversion, CheckedDiv, Saturating, Zero};
+    use sp_runtime::{
+        traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
+        DispatchResult,
+    };
     use sp_std::{vec, vec::Vec};
     use zeitgeist_primitives::types::OutcomeReport;
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -139,6 +142,8 @@ mod pallet {
 
             let voting_outcome_fee = T::VotingOutcomeFee::get();
 
+            Self::push_voting_outcome(&market_id, outcome.clone(), &sender, voting_outcome_fee)?;
+
             let reward_account = Self::reward_account(&market_id);
 
             T::Currency::transfer(
@@ -147,8 +152,6 @@ mod pallet {
                 voting_outcome_fee,
                 ExistenceRequirement::AllowDeath,
             )?;
-
-            Self::push_voting_outcome(&market_id, outcome.clone(), &sender, voting_outcome_fee);
 
             Self::deposit_event(Event::AddedVotingOutcome { market_id, outcome });
             // charge weight for successfully have no owners in Winners and no owners in empty Outcomes
@@ -488,9 +491,11 @@ mod pallet {
             outcome: OutcomeReport,
             owner: &T::AccountId,
             vote_balance: BalanceOf<T>,
-        ) {
+        ) -> DispatchResult {
             match <Winners<T>>::get(market_id) {
-                Some(winner_info) if winner_info.is_finished => return,
+                Some(winner_info) if winner_info.is_finished => {
+                    return Err(Error::<T>::GlobalDisputeAlreadyFinished.into());
+                }
                 _ => (),
             }
             let update_winner = |b| {
@@ -532,6 +537,7 @@ mod pallet {
                     }
                 }
             }
+            Ok(())
         }
 
         fn get_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
