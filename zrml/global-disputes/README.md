@@ -24,5 +24,5 @@ This is the default process when a dispute mechanism (e. g. Court) fails to reso
 #### Private Pallet API
 
 - `push_voting_outcome` - Start a global dispute, add an initial voting outcome and vote on it.
-- `get_voting_winner` - This is meant to be called to finish a global dispute. Determine the outcome with the highest `outcome_sum` as the winner.
+- `get_voting_winner` - Determine the canonical voting outcome based on total locked tokens.
 - `is_started` - Check if the global dispute started already.
