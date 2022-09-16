@@ -243,10 +243,10 @@ macro_rules! create_runtime {
                 LiquidityMining: zrml_liquidity_mining::{Call, Config<T>, Event<T>, Pallet, Storage} = 53,
                 RikiddoSigmoidFeeMarketEma: zrml_rikiddo::<Instance1>::{Pallet, Storage} = 54,
                 SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage} = 55,
-                GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 56,
-                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 57,
-                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 58,
-                Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 59,
+                Swaps: zrml_swaps::{Call, Event<T>, Pallet, Storage} = 56,
+                PredictionMarkets: zrml_prediction_markets::{Call, Event<T>, Pallet, Storage} = 57,
+                Styx: zrml_styx::{Call, Event<T>, Pallet, Storage} = 58,
+                GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
 
                 $($additional_pallets)*
             }
