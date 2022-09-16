@@ -190,57 +190,65 @@ mod pallet {
                         winner_info.outcome_info = outcome_info;
                     }
 
-                    let (owners_len, removed_keys_amount) = match <Outcomes<T>>::remove_prefix(
-                        market_id,
-                        Some(T::RemoveKeysLimit::get()),
-                    ) {
+                    match <Outcomes<T>>::remove_prefix(market_id, Some(T::RemoveKeysLimit::get())) {
                         KillStorageResult::AllRemoved(removed_keys_amount) => {
                             let reward_account = Self::reward_account(&market_id);
                             let reward_account_free_balance =
                                 T::Currency::free_balance(&reward_account);
                             let owners_len = winner_info.outcome_info.owners.len() as u32;
-                            debug_assert!(
-                                owners_len != 0u32,
-                                "Global Disputes: This should never happen, because one owner is \
-                                 always written."
-                            );
-                            if !reward_account_free_balance.is_zero() {
-                                let mut remainder = reward_account_free_balance;
-                                let owners_len_in_balance: BalanceOf<T> =
-                                    <BalanceOf<T>>::from(owners_len);
-                                if let Some(reward_per_each) =
-                                    reward_account_free_balance.checked_div(&owners_len_in_balance)
-                                {
-                                    for winner in winner_info.outcome_info.owners.iter() {
-                                        // *Should* always be equal to `reward_per_each`
-                                        let reward = remainder.min(reward_per_each);
-                                        remainder = remainder.saturating_sub(reward);
-                                        // Reward the loosing funds to the winners without charging a transfer fee
-                                        let _ = T::Currency::resolve_into_existing(
-                                            winner,
-                                            T::Currency::withdraw(
-                                                &reward_account,
-                                                reward,
-                                                WithdrawReasons::TRANSFER,
-                                                ExistenceRequirement::AllowDeath,
-                                            )?,
-                                        );
-                                    }
-                                }
-                                Self::deposit_event(Event::OutcomeOwnersRewarded {
-                                    market_id,
-                                    owners: winner_info.outcome_info.owners.to_vec(),
-                                });
+                            let at_least_one_owner_str = "Global Disputes: There should be always \
+                                                          at least one owner for a voting outcome.";
+                            debug_assert!(owners_len != 0u32, "{}", at_least_one_owner_str);
+                            if reward_account_free_balance.is_zero() {
+                                Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
+                                return Ok((owners_len, removed_keys_amount));
                             }
+                            let mut remainder = reward_account_free_balance;
+                            let owners_len_in_balance: BalanceOf<T> =
+                                <BalanceOf<T>>::from(owners_len);
+                            if let Some(reward_per_each) =
+                                reward_account_free_balance.checked_div(&owners_len_in_balance)
+                            {
+                                for winner in winner_info.outcome_info.owners.iter() {
+                                    // *Should* always be equal to `reward_per_each`
+                                    let reward = remainder.min(reward_per_each);
+                                    remainder = remainder.saturating_sub(reward);
+                                    // Reward the loosing funds to the winners without charging a transfer fee
+                                    let _ = T::Currency::resolve_into_existing(
+                                        winner,
+                                        T::Currency::withdraw(
+                                            &reward_account,
+                                            reward,
+                                            WithdrawReasons::TRANSFER,
+                                            ExistenceRequirement::AllowDeath,
+                                        )?,
+                                    );
+                                }
+                            } else {
+                                log::error!("{}", at_least_one_owner_str);
+                            }
+                            if !remainder.is_zero() {
+                                log::error!(
+                                    "Global Disputes: The reward remainder for the market id {:?} 
+                                    should be zero after the reward process. Reward remainder \
+                                     amount: {:?}",
+                                    &market_id,
+                                    remainder
+                                );
+                                debug_assert!(false);
+                            }
+                            Self::deposit_event(Event::OutcomeOwnersRewarded {
+                                market_id,
+                                owners: winner_info.outcome_info.owners.to_vec(),
+                            });
                             Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
-                            (owners_len, removed_keys_amount)
+                            Ok((owners_len, removed_keys_amount))
                         }
                         KillStorageResult::SomeRemaining(removed_keys_amount) => {
                             Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
-                            (0u32, removed_keys_amount)
+                            Ok((0u32, removed_keys_amount))
                         }
-                    };
-                    Ok((owners_len, removed_keys_amount))
+                    }
                 },
             )?;
 
