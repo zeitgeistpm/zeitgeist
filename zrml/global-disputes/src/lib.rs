@@ -81,17 +81,25 @@ mod pallet {
         }
     }
 
+    /// The information about a voting outcome of a global dispute.
     #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
     pub struct OutcomeInfo<Balance, OwnerInfo> {
+        /// The current sum of all locks on this outcome.
         pub outcome_sum: Balance,
+        /// The vector of owners of the outcome.
         pub owners: OwnerInfo,
     }
 
+    /// The information about the current highest winning outcome.
     #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
     pub struct WinnerInfo<Balance, OwnerInfo> {
+        /// The outcome, which is in the lead.
         pub outcome: OutcomeReport,
+        /// The current sum of all locks on the winning outcome.
         pub vote_sum: Balance,
+        /// Check, if the global dispute is finished.
         pub is_finished: bool,
+        /// The vector of owners of the winning outcome.
         pub owners: OwnerInfo,
     }
 
