@@ -16,7 +16,7 @@ This is the default process when a dispute mechanism (e. g. Court) fails to reso
 
 - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for a constant fee. Errors if the voting outcome already exists or if the global dispute has not started or has already finished.
 - `vote_on_outcome` - Vote on existing voting outcomes by locking native tokens. Fails if the global dispute has not started or has already finished.
-- `unlock_vote_balance` - All locked native tokens due to voting of finished global disputes get returned.
+- `unlock_vote_balance` - Return all locked native tokens in a global dispute. Fails if the global dispute is not concluded yet.
 - `reward_outcome_owner` - The collected fees for adding voting outcomes are rewarded to the winning outcome owner/s (only one owner per outcome exists when using `add_vote_outcome`, but multiple owners can exist when calling `push_voting_outcome`).
 
 #### Private Pallet API
