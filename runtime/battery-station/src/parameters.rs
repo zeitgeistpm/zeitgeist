@@ -165,7 +165,7 @@ parameter_types! {
     /// by `DisputePeriod`.
     pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
     /// The period for a global dispute to end.
-    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
+    pub const GlobalDisputePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
