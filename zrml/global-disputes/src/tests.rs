@@ -59,10 +59,6 @@ fn add_vote_outcome_works() {
             market_id,
             OutcomeReport::Scalar(20),
         ));
-        System::assert_last_event(
-            Event::<Runtime>::AddedVotingOutcome { market_id, outcome: OutcomeReport::Scalar(20) }
-                .into(),
-        );
         assert_eq!(
             Balances::free_balance(&ALICE),
             free_balance_alice_before - VotingOutcomeFee::get()
