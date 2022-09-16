@@ -336,6 +336,7 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
         ));
         System::assert_last_event(
             Event::<Runtime>::VotedOnOutcome {
+                voter: ALICE,
                 market_id,
                 outcome: OutcomeReport::Scalar(0),
                 vote_amount: 42 * BASE,
@@ -350,6 +351,7 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
         ));
         System::assert_last_event(
             Event::<Runtime>::VotedOnOutcome {
+                voter: BOB,
                 market_id,
                 outcome: OutcomeReport::Scalar(20),
                 vote_amount: 42 * BASE,
@@ -364,6 +366,7 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
         ));
         System::assert_last_event(
             Event::<Runtime>::VotedOnOutcome {
+                voter: CHARLIE,
                 market_id,
                 outcome: OutcomeReport::Scalar(40),
                 vote_amount: 42 * BASE,
@@ -378,6 +381,7 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
         ));
         System::assert_last_event(
             Event::<Runtime>::VotedOnOutcome {
+                voter: EVE,
                 market_id,
                 outcome: OutcomeReport::Scalar(60),
                 vote_amount: 42 * BASE,

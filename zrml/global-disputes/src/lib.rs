@@ -265,8 +265,8 @@ mod pallet {
             outcome: OutcomeReport,
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            ensure!(amount <= T::Currency::free_balance(&sender), Error::<T>::InsufficientAmount);
+            let voter = ensure_signed(origin)?;
+            ensure!(amount <= T::Currency::free_balance(&voter), Error::<T>::InsufficientAmount);
             ensure!(amount >= T::MinOutcomeVoteAmount::get(), Error::<T>::AmountTooLow);
 
             let winner_info =
@@ -289,7 +289,7 @@ mod pallet {
             };
 
             let vote_lock_counter = <Locks<T>>::try_mutate(
-                &sender,
+                &voter,
                 |LockInfo(ref mut lock_info)| -> Result<u32, DispatchError> {
                     match lock_info.binary_search_by_key(&market_id, |i| i.0) {
                         Ok(i) => {
@@ -317,12 +317,17 @@ mod pallet {
 
             T::Currency::extend_lock(
                 T::GlobalDisputeLockId::get(),
-                &sender,
+                &voter,
                 amount,
                 WithdrawReasons::TRANSFER,
             );
 
-            Self::deposit_event(Event::VotedOnOutcome { market_id, outcome, vote_amount: amount });
+            Self::deposit_event(Event::VotedOnOutcome {
+                market_id,
+                voter,
+                outcome,
+                vote_amount: amount,
+            });
             Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, vote_lock_counter)).into())
         }
 
@@ -465,6 +470,7 @@ mod pallet {
         OutcomesFullyCleaned { market_id: MarketIdOf<T> },
         /// A vote happened on an outcome.
         VotedOnOutcome {
+            voter: AccountIdOf<T>,
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
             vote_amount: BalanceOf<T>,
