@@ -369,7 +369,7 @@ mod pallet {
             BlockNumber = Self::BlockNumber,
         >;
 
-        /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
+        /// The maximum numbers of distinct markets on which one account can simultaneously vote on outcomes.
         #[pallet::constant]
         type MaxGlobalDisputeVotes: Get<u32>;
 
