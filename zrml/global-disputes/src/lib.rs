@@ -111,10 +111,10 @@ mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Add voting outcome to a global dispute in exchange for a constant fee. 
-        /// Errors if the voting outcome already exists or 
+        /// Add voting outcome to a global dispute in exchange for a constant fee.
+        /// Errors if the voting outcome already exists or
         /// if the global dispute has not started or has already finished.
-        /// 
+        ///
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of owner(s) of the outcome
@@ -242,7 +242,7 @@ mod pallet {
             Ok((Some(T::WeightInfo::reward_outcome_owner(owners_len, removed_keys_amount))).into())
         }
 
-        /// Vote on existing voting outcomes by locking native tokens. 
+        /// Vote on existing voting outcomes by locking native tokens.
         /// Fails if the global dispute has not started or has already finished.
         ///
         /// # Weight
@@ -332,7 +332,7 @@ mod pallet {
             Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, vote_lock_counter)).into())
         }
 
-        /// Return all locked native tokens in a global dispute. 
+        /// Return all locked native tokens in a global dispute.
         /// Fails if the global dispute is not concluded yet.
         ///
         /// # Weight
