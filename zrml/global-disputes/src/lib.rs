@@ -98,17 +98,16 @@ mod pallet {
     pub struct WinnerInfo<Balance, OwnerInfo> {
         /// The outcome, which is in the lead.
         pub outcome: OutcomeReport,
-        /// The current sum of all locks on the winning outcome.
-        pub vote_sum: Balance,
+        /// The information about the winning outcome.
+        pub outcome_info: OutcomeInfo<Balance, OwnerInfo>,
         /// Check, if the global dispute is finished.
         pub is_finished: bool,
-        /// The vector of owners of the winning outcome.
-        pub owners: OwnerInfo,
     }
 
     impl<Balance: Saturating, OwnerInfo: Default> WinnerInfo<Balance, OwnerInfo> {
         pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
-            WinnerInfo { outcome, vote_sum, is_finished: false, owners: Default::default() }
+            let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners: Default::default() };
+            WinnerInfo { outcome, is_finished: false, outcome_info }
         }
     }
 
@@ -188,7 +187,7 @@ mod pallet {
                     {
                         // storage write is needed here in case, that the first call of reward_outcome_owner doesn't reward the owners
                         // this can happen if there are more than RemoveKeysLimit keys (for KillStorageResult::SomeRemaining)
-                        winner_info.owners = outcome_info.owners;
+                        winner_info.outcome_info = outcome_info;
                     }
 
                     let (owners_len, removed_keys_amount) = match <Outcomes<T>>::remove_prefix(
@@ -199,7 +198,7 @@ mod pallet {
                             let reward_account = Self::reward_account(&market_id);
                             let reward_account_free_balance =
                                 T::Currency::free_balance(&reward_account);
-                            let owners_len = winner_info.owners.len() as u32;
+                            let owners_len = winner_info.outcome_info.owners.len() as u32;
                             debug_assert!(
                                 owners_len != 0u32,
                                 "Global Disputes: This should never happen, because one owner is \
@@ -212,7 +211,7 @@ mod pallet {
                                 if let Some(reward_per_each) =
                                     reward_account_free_balance.checked_div(&owners_len_in_balance)
                                 {
-                                    for winner in winner_info.owners.iter() {
+                                    for winner in winner_info.outcome_info.owners.iter() {
                                         // *Should* always be equal to `reward_per_each`
                                         let reward = remainder.min(reward_per_each);
                                         remainder = remainder.saturating_sub(reward);
@@ -286,7 +285,8 @@ mod pallet {
                     *highest = Some(highest.clone().map_or(
                         WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum),
                         |prev_winner_info| {
-                            if outcome_info.outcome_sum >= prev_winner_info.vote_sum {
+                            if outcome_info.outcome_sum >= prev_winner_info.outcome_info.outcome_sum
+                            {
                                 WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum)
                             } else {
                                 prev_winner_info
@@ -503,7 +503,7 @@ mod pallet {
                     *highest = Some(highest.clone().map_or(
                         WinnerInfo::new(outcome.clone(), b),
                         |prev_winner_info| {
-                            if b >= prev_winner_info.vote_sum {
+                            if b >= prev_winner_info.outcome_info.outcome_sum {
                                 WinnerInfo::new(outcome.clone(), b)
                             } else {
                                 prev_winner_info

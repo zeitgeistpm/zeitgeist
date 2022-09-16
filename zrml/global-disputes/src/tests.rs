@@ -181,9 +181,8 @@ fn reward_outcome_owner_works_for_multiple_owners() {
         );
         let winner_info = WinnerInfo {
             outcome: OutcomeReport::Scalar(20),
-            vote_sum: 10 * BASE,
             is_finished: true,
-            owners: Default::default(),
+            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
         };
         <Winners<Runtime>>::insert(market_id, winner_info);
 
@@ -227,9 +226,8 @@ fn reward_outcome_owner_works_for_one_owner() {
         );
         let winner_info = WinnerInfo {
             outcome: OutcomeReport::Scalar(20),
-            vote_sum: 10 * BASE,
             is_finished: true,
-            owners: Default::default(),
+            outcome_info: OutcomeInfo { outcome_sum: 10 * BASE, owners: Default::default() },
         };
         <Winners<Runtime>>::insert(market_id, winner_info);
 
