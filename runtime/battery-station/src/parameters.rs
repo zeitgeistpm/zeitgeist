@@ -85,7 +85,7 @@ parameter_types! {
     /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
     pub const MaxGlobalDisputeVotes: u32 = 50;
     /// The minimum required amount to vote on an outcome.
-    pub const MinOutcomeVoteAmount: Balance = 10 * CENT;
+    pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
     /// The fee required to add a voting outcome.
     pub const VotingOutcomeFee: Balance = 100 * CENT;
     /// The remove limit for the Outcomes storage double map.
