@@ -105,9 +105,6 @@ pub type PoolId = u128;
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
 
-/// The outcome index which is chosen of all pushed outcomes for the global dispute system.
-pub type OutcomeIndex = u32;
-
 // Tests
 
 pub type AccountIdTest = u128;
