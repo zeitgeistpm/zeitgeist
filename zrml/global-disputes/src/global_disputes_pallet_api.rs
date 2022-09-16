@@ -18,7 +18,14 @@
 use sp_runtime::DispatchResult;
 use zeitgeist_primitives::types::OutcomeReport;
 
+/// The trait to initiate and resolve the global disputes.
 pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
+    /// Push a voting outcome for one global dispute.
+    ///
+    /// # Returns
+    ///
+    /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
+    /// returned, this means that the dispute could not be resolved.
     fn push_voting_outcome(
         market_id: &MarketId,
         outcome: OutcomeReport,
@@ -26,9 +33,16 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
         vote_balance: Balance,
     ) -> DispatchResult;
 
+    /// Determine the winner of a global dispute.
+    ///
+    /// # Returns
+    ///
+    /// Returns the winning outcome.
     fn get_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 
+    /// Check if global dispute started.
     fn is_started(market_id: &MarketId) -> bool;
 
+    /// Check if a global dispute has not already been started.
     fn is_not_started(market_id: &MarketId) -> bool;
 }
