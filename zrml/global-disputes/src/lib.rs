@@ -296,32 +296,32 @@ mod pallet {
                 <Outcomes<T>>::insert(market_id, &outcome, outcome_info);
             };
 
-            let vote_lock_counter = <Locks<T>>::try_mutate(
-                &voter,
-                |LockInfo(ref mut lock_info)| -> Result<u32, DispatchError> {
-                    match lock_info.binary_search_by_key(&market_id, |i| i.0) {
-                        Ok(i) => {
-                            let prev_highest_amount: BalanceOf<T> = lock_info[i].1;
-                            // concious decision here to not throw an error when the new amount is not higher
-                            // because the user would have to pay worst case fees then
-                            if amount > prev_highest_amount {
-                                let diff = amount.saturating_sub(prev_highest_amount);
-                                add_to_outcome_sum(diff);
-                                lock_info[i].1 = amount;
-                            }
-                        }
-                        Err(i) => {
-                            ensure!(
-                                lock_info.len() as u32 <= T::MaxGlobalDisputeVotes::get(),
-                                Error::<T>::MaxVotesReached
-                            );
-                            add_to_outcome_sum(amount);
-                            lock_info.insert(i, (market_id, amount));
-                        }
+            let LockInfo(ref mut lock_info) = <Locks<T>>::get(&voter);
+
+            let vote_lock_counter = lock_info.len() as u32;
+
+            match lock_info.binary_search_by_key(&market_id, |i| i.0) {
+                Ok(i) => {
+                    let prev_highest_amount: BalanceOf<T> = lock_info[i].1;
+                    if amount > prev_highest_amount {
+                        let diff = amount.saturating_sub(prev_highest_amount);
+                        add_to_outcome_sum(diff);
+                        lock_info[i].1 = amount;
+                    } else {
+                        // concious decision here to not throw an error when the new amount is not higher
+                        // because the user would have to pay worst case fees then
+                        return Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, vote_lock_counter)).into());
                     }
-                    Ok(lock_info.len() as u32)
-                },
-            )?;
+                }
+                Err(i) => {
+                    ensure!(
+                        lock_info.len() as u32 <= T::MaxGlobalDisputeVotes::get(),
+                        Error::<T>::MaxVotesReached
+                    );
+                    add_to_outcome_sum(amount);
+                    lock_info.insert(i, (market_id, amount));
+                }
+            }
 
             T::Currency::extend_lock(
                 T::GlobalDisputeLockId::get(),
@@ -329,6 +329,8 @@ mod pallet {
                 amount,
                 WithdrawReasons::TRANSFER,
             );
+
+            <Locks<T>>::insert(&voter, LockInfo(lock_info.to_vec()));
 
             Self::deposit_event(Event::VotedOnOutcome {
                 market_id,
