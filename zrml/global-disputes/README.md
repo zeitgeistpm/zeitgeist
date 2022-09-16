@@ -15,7 +15,7 @@ This is the default process when a dispute mechanism (e. g. Court) fails to reso
 #### Public Dispatches
 
 - `add_vote_outcome` - After a global dispute is started and before it's finished, everyone can add a voting outcome for a constant fee. If the outcome already exists, an error is returned. There can only be one owner of the outcome.
-- `vote_on_outcome` - After a global dispute is started and before it's finished, everyone can vote with locking native tokens on existing voting outcomes. The `outcome_sum` is increased only for the surplus. This means that multiple votes can be cast on outcomes. As long as the voting amount increases, only the increased difference amount is included in the `outcome_sum`. This method allows to store less on the chain, but still have the opportunity to vote on multiple outcomes without the attack vector to vote with the exact same locked tokens multiple times.
+- `vote_on_outcome` - Vote on existing voting outcomes by locking native tokens. Fails if the global dispute has not started or has already finished.
 - `unlock_vote_balance` - All locked native tokens due to voting of finished global disputes get returned.
 - `reward_outcome_owner` - The collected fees for adding voting outcomes are rewarded to the winning outcome owner/s (only one owner per outcome exists when using `add_vote_outcome`, but multiple owners can exist when calling `push_voting_outcome`).
 
