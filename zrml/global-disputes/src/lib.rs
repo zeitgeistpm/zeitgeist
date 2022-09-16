@@ -128,7 +128,7 @@ mod pallet {
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
+            let owner = ensure_signed(origin)?;
 
             let winner_info =
                 <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
@@ -141,18 +141,18 @@ mod pallet {
 
             let voting_outcome_fee = T::VotingOutcomeFee::get();
 
-            Self::push_voting_outcome(&market_id, outcome.clone(), &sender, voting_outcome_fee)?;
+            Self::push_voting_outcome(&market_id, outcome.clone(), &owner, voting_outcome_fee)?;
 
             let reward_account = Self::reward_account(&market_id);
 
             T::Currency::transfer(
-                &sender,
+                &owner,
                 &reward_account,
                 voting_outcome_fee,
                 ExistenceRequirement::AllowDeath,
             )?;
 
-            Self::deposit_event(Event::AddedVotingOutcome { market_id, outcome });
+            Self::deposit_event(Event::AddedVotingOutcome { market_id, owner, outcome });
             // charge weight for successfully have no owners in Winners and no owners in empty Outcomes
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
@@ -227,7 +227,10 @@ mod pallet {
                                         );
                                     }
                                 }
-                                Self::deposit_event(Event::OutcomeOwnerRewarded { market_id });
+                                Self::deposit_event(Event::OutcomeOwnersRewarded {
+                                    market_id,
+                                    owners: winner_info.outcome_info.owners.to_vec(),
+                                });
                             }
                             Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
                             (owners_len, removed_keys_amount)
@@ -447,11 +450,15 @@ mod pallet {
         T: Config,
     {
         /// A new voting outcome has been added.
-        AddedVotingOutcome { market_id: MarketIdOf<T>, outcome: OutcomeReport },
+        AddedVotingOutcome {
+            market_id: MarketIdOf<T>,
+            owner: AccountIdOf<T>,
+            outcome: OutcomeReport,
+        },
         /// The winner of the global dispute system is determined.
         GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
         /// The outcome owner has been rewarded.
-        OutcomeOwnerRewarded { market_id: MarketIdOf<T> },
+        OutcomeOwnersRewarded { market_id: MarketIdOf<T>, owners: Vec<AccountIdOf<T>> },
         /// The outcomes storage item is partially cleaned.
         OutcomesPartiallyCleaned { market_id: MarketIdOf<T> },
         /// The outcomes storage item is fully cleaned.

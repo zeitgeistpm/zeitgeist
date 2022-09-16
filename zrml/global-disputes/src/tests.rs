@@ -60,8 +60,12 @@ fn add_vote_outcome_works() {
             OutcomeReport::Scalar(20),
         ));
         System::assert_last_event(
-            Event::<Runtime>::AddedVotingOutcome { market_id, outcome: OutcomeReport::Scalar(20) }
-                .into(),
+            Event::<Runtime>::AddedVotingOutcome {
+                market_id,
+                owner: ALICE,
+                outcome: OutcomeReport::Scalar(20),
+            }
+            .into(),
         );
         assert_eq!(
             Balances::free_balance(&ALICE),
@@ -192,7 +196,13 @@ fn reward_outcome_owner_works_for_multiple_owners() {
 
         assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
 
-        System::assert_has_event(Event::<Runtime>::OutcomeOwnerRewarded { market_id }.into());
+        System::assert_has_event(
+            Event::<Runtime>::OutcomeOwnersRewarded {
+                market_id,
+                owners: vec![ALICE, BOB, CHARLIE],
+            }
+            .into(),
+        );
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
         assert_eq!(
             Balances::free_balance(&ALICE),
@@ -235,7 +245,9 @@ fn reward_outcome_owner_works_for_one_owner() {
 
         assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
 
-        System::assert_has_event(Event::<Runtime>::OutcomeOwnerRewarded { market_id }.into());
+        System::assert_has_event(
+            Event::<Runtime>::OutcomeOwnersRewarded { market_id, owners: vec![ALICE] }.into(),
+        );
         System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
         assert_eq!(
             Balances::free_balance(&ALICE),
