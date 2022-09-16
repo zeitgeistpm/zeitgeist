@@ -281,19 +281,7 @@ mod pallet {
             // than the second highest `outcome_sum`.
             let add_to_outcome_sum = |a| {
                 outcome_info.outcome_sum = outcome_info.outcome_sum.saturating_add(a);
-                <Winners<T>>::mutate(market_id, |highest| {
-                    *highest = Some(highest.clone().map_or(
-                        WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum),
-                        |prev_winner_info| {
-                            if outcome_info.outcome_sum >= prev_winner_info.outcome_info.outcome_sum
-                            {
-                                WinnerInfo::new(outcome.clone(), outcome_info.outcome_sum)
-                            } else {
-                                prev_winner_info
-                            }
-                        },
-                    ));
-                });
+                Self::update_winner(&market_id, &outcome, outcome_info.outcome_sum);
                 <Outcomes<T>>::insert(market_id, &outcome, outcome_info);
             };
 
@@ -480,6 +468,21 @@ mod pallet {
         pub fn reward_account(market_id: &MarketIdOf<T>) -> T::AccountId {
             T::GlobalDisputesPalletId::get().into_sub_account(market_id)
         }
+
+        fn update_winner(market_id: &MarketIdOf<T>, outcome: &OutcomeReport, amount: BalanceOf<T>) {
+            <Winners<T>>::mutate(market_id, |highest: &mut Option<WinnerInfoOf<T>>| {
+                *highest = Some(highest.clone().map_or(
+                    WinnerInfo::new(outcome.clone(), amount),
+                    |prev_winner_info| {
+                        if amount >= prev_winner_info.outcome_info.outcome_sum {
+                            WinnerInfo::new(outcome.clone(), amount)
+                        } else {
+                            prev_winner_info
+                        }
+                    },
+                ));
+            });
+        }
     }
 
     impl<T> GlobalDisputesPalletApi<MarketIdOf<T>, AccountIdOf<T>, BalanceOf<T>> for Pallet<T>
@@ -498,24 +501,10 @@ mod pallet {
                 }
                 _ => (),
             }
-            let update_winner = |b| {
-                <Winners<T>>::mutate(market_id, |highest: &mut Option<WinnerInfoOf<T>>| {
-                    *highest = Some(highest.clone().map_or(
-                        WinnerInfo::new(outcome.clone(), b),
-                        |prev_winner_info| {
-                            if b >= prev_winner_info.outcome_info.outcome_sum {
-                                WinnerInfo::new(outcome.clone(), b)
-                            } else {
-                                prev_winner_info
-                            }
-                        },
-                    ));
-                });
-            };
             match <Outcomes<T>>::get(market_id, &outcome) {
                 Some(mut outcome_info) => {
                     let outcome_sum = outcome_info.outcome_sum.saturating_add(vote_balance);
-                    update_winner(outcome_sum);
+                    Self::update_winner(market_id, &outcome, outcome_sum);
                     outcome_info.outcome_sum = outcome_sum;
                     // there can not be more than MaxDisputes owners
                     if outcome_info.owners.try_push(owner.clone()).is_ok() {
@@ -531,7 +520,7 @@ mod pallet {
                 None => {
                     // adding one item to BoundedVec can not fail
                     if let Ok(owners) = BoundedVec::try_from(vec![owner.clone()]) {
-                        update_winner(vote_balance);
+                        Self::update_winner(market_id, &outcome, vote_balance);
                         let outcome_info = OutcomeInfo { outcome_sum: vote_balance, owners };
                         <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                     }
