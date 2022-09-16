@@ -150,7 +150,7 @@ mod pallet {
 
             Self::push_voting_outcome(&market_id, outcome.clone(), &sender, voting_outcome_fee);
 
-            Self::deposit_event(Event::AddedVotingOutcome(market_id, outcome));
+            Self::deposit_event(Event::AddedVotingOutcome { market_id, outcome });
             // charge weight for successfully have no owners in Winners and no owners in empty Outcomes
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
@@ -225,13 +225,13 @@ mod pallet {
                                         );
                                     }
                                 }
-                                Self::deposit_event(Event::OutcomeOwnerRewarded(market_id));
+                                Self::deposit_event(Event::OutcomeOwnerRewarded { market_id });
                             }
-                            Self::deposit_event(Event::OutcomesFullyCleaned(market_id));
+                            Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
                             (owners_len, removed_keys_amount)
                         }
                         KillStorageResult::SomeRemaining(removed_keys_amount) => {
-                            Self::deposit_event(Event::OutcomesPartiallyCleaned(market_id));
+                            Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
                             (0u32, removed_keys_amount)
                         }
                     };
@@ -328,7 +328,7 @@ mod pallet {
                 WithdrawReasons::TRANSFER,
             );
 
-            Self::deposit_event(Event::VotedOnOutcome(market_id, outcome, amount));
+            Self::deposit_event(Event::VotedOnOutcome { market_id, outcome, vote_amount: amount });
             Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, vote_lock_counter)).into())
         }
 
@@ -455,18 +455,22 @@ mod pallet {
     where
         T: Config,
     {
-        /// A new voting outcome has been added. \[market_id, outcome_report\]
-        AddedVotingOutcome(MarketIdOf<T>, OutcomeReport),
-        /// The winner of the global dispute system is determined. \[market_id\]
-        GlobalDisputeWinnerDetermined(MarketIdOf<T>),
-        /// The outcome owner has been rewarded. \[market_id\]
-        OutcomeOwnerRewarded(MarketIdOf<T>),
-        /// The outcomes storage item is partially cleaned. \[market_id\]
-        OutcomesPartiallyCleaned(MarketIdOf<T>),
-        /// The outcomes storage item is fully cleaned. \[market_id\]
-        OutcomesFullyCleaned(MarketIdOf<T>),
-        /// A vote happened on an outcome. \[market_id, outcome, vote_amount\]
-        VotedOnOutcome(MarketIdOf<T>, OutcomeReport, BalanceOf<T>),
+        /// A new voting outcome has been added.
+        AddedVotingOutcome { market_id: MarketIdOf<T>, outcome: OutcomeReport },
+        /// The winner of the global dispute system is determined.
+        GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
+        /// The outcome owner has been rewarded.
+        OutcomeOwnerRewarded { market_id: MarketIdOf<T> },
+        /// The outcomes storage item is partially cleaned.
+        OutcomesPartiallyCleaned { market_id: MarketIdOf<T> },
+        /// The outcomes storage item is fully cleaned.
+        OutcomesFullyCleaned { market_id: MarketIdOf<T> },
+        /// A vote happened on an outcome.
+        VotedOnOutcome {
+            market_id: MarketIdOf<T>,
+            outcome: OutcomeReport,
+            vote_amount: BalanceOf<T>,
+        },
     }
 
     impl<T: Config> Pallet<T> {
@@ -536,7 +540,9 @@ mod pallet {
                     winner_info.is_finished = true;
                     let winner_outcome = winner_info.outcome.clone();
                     <Winners<T>>::insert(market_id, winner_info);
-                    Self::deposit_event(Event::GlobalDisputeWinnerDetermined(*market_id));
+                    Self::deposit_event(Event::GlobalDisputeWinnerDetermined {
+                        market_id: *market_id,
+                    });
                     Some(winner_outcome)
                 }
                 _ => None,

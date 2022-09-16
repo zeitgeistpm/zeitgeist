@@ -60,7 +60,8 @@ fn add_vote_outcome_works() {
             OutcomeReport::Scalar(20),
         ));
         System::assert_last_event(
-            Event::<Runtime>::AddedVotingOutcome(market_id, OutcomeReport::Scalar(20)).into(),
+            Event::<Runtime>::AddedVotingOutcome { market_id, outcome: OutcomeReport::Scalar(20) }
+                .into(),
         );
         assert_eq!(
             Balances::free_balance(&ALICE),
@@ -192,8 +193,8 @@ fn reward_outcome_owner_works_for_multiple_owners() {
 
         assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
 
-        System::assert_has_event(Event::<Runtime>::OutcomeOwnerRewarded(market_id).into());
-        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned(market_id).into());
+        System::assert_has_event(Event::<Runtime>::OutcomeOwnerRewarded { market_id }.into());
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
         assert_eq!(
             Balances::free_balance(&ALICE),
             free_balance_alice_before + VotingOutcomeFee::get()
@@ -236,8 +237,8 @@ fn reward_outcome_owner_works_for_one_owner() {
 
         assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
 
-        System::assert_has_event(Event::<Runtime>::OutcomeOwnerRewarded(market_id).into());
-        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned(market_id).into());
+        System::assert_has_event(Event::<Runtime>::OutcomeOwnerRewarded { market_id }.into());
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
         assert_eq!(
             Balances::free_balance(&ALICE),
             free_balance_alice_before + 3 * VotingOutcomeFee::get()
@@ -324,7 +325,12 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
             42 * BASE
         ));
         System::assert_last_event(
-            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(0), 42 * BASE).into(),
+            Event::<Runtime>::VotedOnOutcome {
+                market_id,
+                outcome: OutcomeReport::Scalar(0),
+                vote_amount: 42 * BASE,
+            }
+            .into(),
         );
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(BOB),
@@ -333,8 +339,12 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
             42 * BASE
         ));
         System::assert_last_event(
-            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(20), 42 * BASE)
-                .into(),
+            Event::<Runtime>::VotedOnOutcome {
+                market_id,
+                outcome: OutcomeReport::Scalar(20),
+                vote_amount: 42 * BASE,
+            }
+            .into(),
         );
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(CHARLIE),
@@ -343,8 +353,12 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
             42 * BASE
         ));
         System::assert_last_event(
-            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(40), 42 * BASE)
-                .into(),
+            Event::<Runtime>::VotedOnOutcome {
+                market_id,
+                outcome: OutcomeReport::Scalar(40),
+                vote_amount: 42 * BASE,
+            }
+            .into(),
         );
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(EVE),
@@ -353,15 +367,19 @@ fn get_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_canonic
             42 * BASE
         ));
         System::assert_last_event(
-            Event::<Runtime>::VotedOnOutcome(market_id, OutcomeReport::Scalar(60), 42 * BASE)
-                .into(),
+            Event::<Runtime>::VotedOnOutcome {
+                market_id,
+                outcome: OutcomeReport::Scalar(60),
+                vote_amount: 42 * BASE,
+            }
+            .into(),
         );
         assert_eq!(
             &GlobalDisputes::get_voting_winner(&market_id).unwrap(),
             &OutcomeReport::Scalar(60)
         );
         System::assert_last_event(
-            Event::<Runtime>::GlobalDisputeWinnerDetermined(market_id).into(),
+            Event::<Runtime>::GlobalDisputeWinnerDetermined { market_id }.into(),
         );
     });
 }
