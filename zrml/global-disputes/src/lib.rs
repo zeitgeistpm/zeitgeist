@@ -394,7 +394,7 @@ mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The currency to allow locking native token for voting.
+        /// The currency implementation used to lock tokens for voting.
         type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
