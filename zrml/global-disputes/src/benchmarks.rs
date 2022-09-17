@@ -36,7 +36,6 @@ use sp_runtime::traits::{Bounded, SaturatedConversion};
 use sp_std::prelude::*;
 use zeitgeist_primitives::types::OutcomeReport;
 
-// ./target/release/zeitgeist benchmark pallet --chain=dev --steps=20 --repeat=50 --pallet=zrml_global_disputes --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=./misc/weight_template.hbs --output=./zrml/global-disputes/src/weights.rs
 
 fn deposit<T>(caller: &T::AccountId)
 where
