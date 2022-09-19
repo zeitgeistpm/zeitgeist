@@ -178,16 +178,13 @@ mod pallet {
                                     // *Should* always be equal to `reward_per_each`
                                     let reward = remainder.min(reward_per_each);
                                     remainder = remainder.saturating_sub(reward);
-                                    // Reward the loosing funds to the winners without charging a transfer fee
-                                    let _ = T::Currency::resolve_into_existing(
-                                        winner,
-                                        T::Currency::withdraw(
-                                            &reward_account,
-                                            reward,
-                                            WithdrawReasons::TRANSFER,
-                                            ExistenceRequirement::AllowDeath,
-                                        )?,
-                                    );
+                                    // Reward the loosing funds to the winners
+                                    T::Currency::transfer(
+                                        &reward_account,
+                                        &winner,
+                                        reward,
+                                        ExistenceRequirement::AllowDeath,
+                                    )?;
                                 }
                             } else {
                                 log::error!("{}", at_least_one_owner_str);
