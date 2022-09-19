@@ -35,8 +35,7 @@ mod pallet {
     use frame_support::{
         ensure, log,
         pallet_prelude::{
-            DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap,
-            ValueQuery,
+            DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap, ValueQuery,
         },
         sp_runtime::traits::StaticLookup,
         traits::{
@@ -54,6 +53,50 @@ mod pallet {
     use zeitgeist_primitives::types::OutcomeReport;
     use zrml_market_commons::MarketCommonsPalletApi;
 
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        /// The currency implementation used to lock tokens for voting.
+        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The vote lock identifier.
+        #[pallet::constant]
+        type GlobalDisputeLockId: Get<LockIdentifier>;
+
+        /// The pallet identifier.
+        #[pallet::constant]
+        type GlobalDisputesPalletId: Get<PalletId>;
+
+        /// To reference the market id type.
+        type MarketCommons: MarketCommonsPalletApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+        >;
+
+        /// The maximum numbers of distinct markets on which one account can simultaneously vote on outcomes.
+        #[pallet::constant]
+        type MaxGlobalDisputeVotes: Get<u32>;
+
+        /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+        #[pallet::constant]
+        type MaxOwners: Get<u32>;
+
+        /// The minimum required amount to vote on an outcome.
+        #[pallet::constant]
+        type MinOutcomeVoteAmount: Get<BalanceOf<Self>>;
+
+        /// The maximum number of keys to remove from a storage map.
+        #[pallet::constant]
+        type RemoveKeysLimit: Get<u32>;
+
+        /// The fee required to add a voting outcome.
+        #[pallet::constant]
+        type VotingOutcomeFee: Get<BalanceOf<Self>>;
+
+        type WeightInfo: WeightInfoZeitgeist;
+    }
+
     pub(crate) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
@@ -65,6 +108,82 @@ mod pallet {
     type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
+
+    #[pallet::pallet]
+    pub struct Pallet<T>(PhantomData<T>);
+
+    /// All highest lock information (vote id, outcome index and locked balance) for a particular voter.
+    ///
+    /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
+    #[pallet::storage]
+    pub type Locks<T: Config> =
+        StorageMap<_, Twox64Concat, T::AccountId, LockInfoOf<T>, ValueQuery>;
+
+    /// Maps the market id to the outcome and providing information about the outcome.
+    #[pallet::storage]
+    pub type Outcomes<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        MarketIdOf<T>,
+        Blake2_128Concat,
+        OutcomeReport,
+        OutcomeInfoOf<T>,
+        OptionQuery,
+    >;
+
+    /// Maps the market id to all information about the winner outcome and if the global dispute is finished.
+    #[pallet::storage]
+    pub type Winners<T: Config> =
+        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
+
+    #[pallet::event]
+    #[pallet::generate_deposit(fn deposit_event)]
+    pub enum Event<T>
+    where
+        T: Config,
+    {
+        /// A new voting outcome has been added.
+        AddedVotingOutcome {
+            market_id: MarketIdOf<T>,
+            owner: AccountIdOf<T>,
+            outcome: OutcomeReport,
+        },
+        /// The winner of the global dispute system is determined.
+        GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
+        /// The outcome owner has been rewarded.
+        OutcomeOwnersRewarded { market_id: MarketIdOf<T>, owners: Vec<AccountIdOf<T>> },
+        /// The outcomes storage item is partially cleaned.
+        OutcomesPartiallyCleaned { market_id: MarketIdOf<T> },
+        /// The outcomes storage item is fully cleaned.
+        OutcomesFullyCleaned { market_id: MarketIdOf<T> },
+        /// A vote happened on an outcome.
+        VotedOnOutcome {
+            voter: AccountIdOf<T>,
+            market_id: MarketIdOf<T>,
+            outcome: OutcomeReport,
+            vote_amount: BalanceOf<T>,
+        },
+    }
+
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Sender tried to vote with an amount below a defined minium.
+        AmountTooLow,
+        /// The global dispute period is already over and the winner is determined.
+        GlobalDisputeAlreadyFinished,
+        /// Sender does not have enough funds for the vote on an outcome.
+        InsufficientAmount,
+        /// No global dispute present at the moment.
+        NoGlobalDisputeStarted,
+        /// The voting outcome has been already added.
+        OutcomeAlreadyExists,
+        /// The outcome specified is not present in the voting outcomes.
+        OutcomeDoesNotExist,
+        /// The global dispute period is not over yet. The winner is not yet determined.
+        UnfinishedGlobalDispute,
+        /// The maximum number of votes for this account is reached.
+        MaxVotesReached,
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -372,99 +491,6 @@ mod pallet {
         }
     }
 
-    #[pallet::config]
-    pub trait Config: frame_system::Config {
-        /// The currency implementation used to lock tokens for voting.
-        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
-
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-        /// The vote lock identifier.
-        #[pallet::constant]
-        type GlobalDisputeLockId: Get<LockIdentifier>;
-
-        /// The pallet identifier.
-        #[pallet::constant]
-        type GlobalDisputesPalletId: Get<PalletId>;
-
-        /// To reference the market id type.
-        type MarketCommons: MarketCommonsPalletApi<
-            AccountId = Self::AccountId,
-            BlockNumber = Self::BlockNumber,
-        >;
-
-        /// The maximum numbers of distinct markets on which one account can simultaneously vote on outcomes.
-        #[pallet::constant]
-        type MaxGlobalDisputeVotes: Get<u32>;
-
-        /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
-        #[pallet::constant]
-        type MaxOwners: Get<u32>;
-
-        /// The minimum required amount to vote on an outcome.
-        #[pallet::constant]
-        type MinOutcomeVoteAmount: Get<BalanceOf<Self>>;
-
-        /// The maximum number of keys to remove from a storage map.
-        #[pallet::constant]
-        type RemoveKeysLimit: Get<u32>;
-
-        /// The fee required to add a voting outcome.
-        #[pallet::constant]
-        type VotingOutcomeFee: Get<BalanceOf<Self>>;
-
-        type WeightInfo: WeightInfoZeitgeist;
-    }
-
-    #[pallet::error]
-    pub enum Error<T> {
-        /// Sender tried to vote with an amount below a defined minium.
-        AmountTooLow,
-        /// The global dispute period is already over and the winner is determined.
-        GlobalDisputeAlreadyFinished,
-        /// Sender does not have enough funds for the vote on an outcome.
-        InsufficientAmount,
-        /// No global dispute present at the moment.
-        NoGlobalDisputeStarted,
-        /// The voting outcome has been already added.
-        OutcomeAlreadyExists,
-        /// The outcome specified is not present in the voting outcomes.
-        OutcomeDoesNotExist,
-        /// The global dispute period is not over yet. The winner is not yet determined.
-        UnfinishedGlobalDispute,
-        /// The maximum number of votes for this account is reached.
-        MaxVotesReached,
-    }
-
-    #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
-    pub enum Event<T>
-    where
-        T: Config,
-    {
-        /// A new voting outcome has been added.
-        AddedVotingOutcome {
-            market_id: MarketIdOf<T>,
-            owner: AccountIdOf<T>,
-            outcome: OutcomeReport,
-        },
-        /// The winner of the global dispute system is determined.
-        GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
-        /// The outcome owner has been rewarded.
-        OutcomeOwnersRewarded { market_id: MarketIdOf<T>, owners: Vec<AccountIdOf<T>> },
-        /// The outcomes storage item is partially cleaned.
-        OutcomesPartiallyCleaned { market_id: MarketIdOf<T> },
-        /// The outcomes storage item is fully cleaned.
-        OutcomesFullyCleaned { market_id: MarketIdOf<T> },
-        /// A vote happened on an outcome.
-        VotedOnOutcome {
-            voter: AccountIdOf<T>,
-            market_id: MarketIdOf<T>,
-            outcome: OutcomeReport,
-            vote_amount: BalanceOf<T>,
-        },
-    }
-
     impl<T: Config> Pallet<T> {
         pub fn reward_account(market_id: &MarketIdOf<T>) -> T::AccountId {
             T::GlobalDisputesPalletId::get().into_sub_account(market_id)
@@ -549,31 +575,4 @@ mod pallet {
             <Winners<T>>::get(market_id).is_some()
         }
     }
-
-    #[pallet::pallet]
-    pub struct Pallet<T>(PhantomData<T>);
-
-    /// All highest lock information (vote id, outcome index and locked balance) for a particular voter.
-    ///
-    /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
-    #[pallet::storage]
-    pub type Locks<T: Config> =
-        StorageMap<_, Twox64Concat, T::AccountId, LockInfoOf<T>, ValueQuery>;
-
-    /// Maps the market id to the outcome and providing information about the outcome.
-    #[pallet::storage]
-    pub type Outcomes<T: Config> = StorageDoubleMap<
-        _,
-        Blake2_128Concat,
-        MarketIdOf<T>,
-        Blake2_128Concat,
-        OutcomeReport,
-        OutcomeInfoOf<T>,
-        OptionQuery,
-    >;
-
-    /// Maps the market id to all information about the winner outcome and if the global dispute is finished.
-    #[pallet::storage]
-    pub type Winners<T: Config> =
-        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
 }
