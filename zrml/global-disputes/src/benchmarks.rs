@@ -36,7 +36,6 @@ use sp_runtime::traits::{Bounded, SaturatedConversion};
 use sp_std::prelude::*;
 use zeitgeist_primitives::types::OutcomeReport;
 
-
 fn deposit<T>(caller: &T::AccountId)
 where
     T: Config,

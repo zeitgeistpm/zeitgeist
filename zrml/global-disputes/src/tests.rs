@@ -18,8 +18,8 @@
 #![cfg(test)]
 
 use crate::{
-    global_disputes_pallet_api::GlobalDisputesPalletApi, mock::*, Error, Event, LockInfo, Locks,
-    OutcomeInfo, Outcomes, WinnerInfo, Winners,
+    global_disputes_pallet_api::GlobalDisputesPalletApi, mock::*, Error, Event, Locks, OutcomeInfo,
+    Outcomes, WinnerInfo, Winners,
 };
 use frame_support::{
     assert_noop, assert_ok,
@@ -894,11 +894,11 @@ fn unlock_clears_lock_info() {
 
         assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id, 50 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id, 50 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
     });
 }
 
@@ -1000,13 +1000,13 @@ fn locking_works_for_one_market() {
             40 * BASE,
         );
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(CHARLIE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(CHARLIE), vec![]);
         assert!(Balances::locks(CHARLIE).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(EVE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(EVE), vec![]);
         assert!(Balances::locks(EVE).is_empty());
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
@@ -1034,47 +1034,47 @@ fn locking_works_for_one_market() {
             20 * BASE
         ));
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id, 50 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![(market_id, 40 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id, 40 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(CHARLIE), LockInfo(vec![(market_id, 30 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(CHARLIE), vec![(market_id, 30 * BASE)]);
         assert_eq!(Balances::locks(CHARLIE), vec![the_lock(30 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(EVE), LockInfo(vec![(market_id, 20 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(EVE), vec![(market_id, 20 * BASE)]);
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
         assert!(GlobalDisputes::determine_voting_winner(&market_id).is_some());
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id, 50 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
 
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![(market_id, 40 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id, 40 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(CHARLIE), LockInfo(vec![(market_id, 30 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(CHARLIE), vec![(market_id, 30 * BASE)]);
         assert_eq!(Balances::locks(CHARLIE), vec![the_lock(30 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(EVE), LockInfo(vec![(market_id, 20 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(EVE), vec![(market_id, 20 * BASE)]);
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(CHARLIE), LockInfo(vec![(market_id, 30 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(CHARLIE), vec![(market_id, 30 * BASE)]);
         assert_eq!(Balances::locks(CHARLIE), vec![the_lock(30 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(EVE), LockInfo(vec![(market_id, 20 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(EVE), vec![(market_id, 20 * BASE)]);
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(CHARLIE), CHARLIE));
-        assert_eq!(<Locks<Runtime>>::get(CHARLIE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(CHARLIE), vec![]);
         assert!(Balances::locks(CHARLIE).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(EVE), LockInfo(vec![(market_id, 20 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(EVE), vec![(market_id, 20 * BASE)]);
         assert_eq!(Balances::locks(EVE), vec![the_lock(20 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(EVE), EVE));
-        assert_eq!(<Locks<Runtime>>::get(EVE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(EVE), vec![]);
         assert!(Balances::locks(EVE).is_empty());
     });
 }
@@ -1110,9 +1110,9 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
             20 * BASE,
         );
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
@@ -1143,12 +1143,12 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
 
         assert_eq!(
             <Locks<Runtime>>::get(ALICE),
-            LockInfo(vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)])
+            vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)]
         );
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
         assert_eq!(
             <Locks<Runtime>>::get(BOB),
-            LockInfo(vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)])
+            vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)]
         );
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
@@ -1157,36 +1157,36 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
 
         assert_eq!(
             <Locks<Runtime>>::get(ALICE),
-            LockInfo(vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)])
+            vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)]
         );
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_2, 30 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_2, 30 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(30 * BASE)]);
         assert_eq!(
             <Locks<Runtime>>::get(BOB),
-            LockInfo(vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)])
+            vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)]
         );
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![(market_id_2, 20 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_2, 20 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(20 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_2, 30 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_2, 30 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(30 * BASE)]);
 
         assert!(GlobalDisputes::determine_voting_winner(&market_id_2).is_some());
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_2, 30 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_2, 30 * BASE)]);
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![(market_id_2, 20 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_2, 20 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(20 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
     });
 }
@@ -1223,9 +1223,9 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
             20 * BASE,
         );
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
@@ -1256,12 +1256,12 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
 
         assert_eq!(
             <Locks<Runtime>>::get(ALICE),
-            LockInfo(vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)])
+            vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)]
         );
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
         assert_eq!(
             <Locks<Runtime>>::get(BOB),
-            LockInfo(vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)])
+            vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)]
         );
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
@@ -1270,37 +1270,37 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
 
         assert_eq!(
             <Locks<Runtime>>::get(ALICE),
-            LockInfo(vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)])
+            vec![(market_id_1, 50 * BASE), (market_id_2, 30 * BASE)]
         );
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_1, 50 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_1, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
         assert_eq!(
             <Locks<Runtime>>::get(BOB),
-            LockInfo(vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)])
+            vec![(market_id_1, 40 * BASE), (market_id_2, 20 * BASE)]
         );
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![(market_id_1, 40 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_1, 40 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_1, 50 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_1, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
 
         assert!(GlobalDisputes::determine_voting_winner(&market_id_1).is_some());
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![(market_id_1, 50 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![(market_id_1, 50 * BASE)]);
         assert_eq!(Balances::locks(ALICE), vec![the_lock(50 * BASE)]);
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
 
-        assert_eq!(<Locks<Runtime>>::get(ALICE), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![(market_id_1, 40 * BASE)]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![(market_id_1, 40 * BASE)]);
         assert_eq!(Balances::locks(BOB), vec![the_lock(40 * BASE)]);
 
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
-        assert_eq!(<Locks<Runtime>>::get(BOB), LockInfo(vec![]));
+        assert_eq!(<Locks<Runtime>>::get(BOB), vec![]);
         assert!(Balances::locks(BOB).is_empty());
     });
 }

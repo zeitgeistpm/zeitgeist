@@ -37,7 +37,7 @@ mod pallet {
             Decode, DispatchError, DispatchResultWithPostInfo, Encode, MaxEncodedLen, OptionQuery,
             StorageDoubleMap, StorageMap, TypeInfo, ValueQuery,
         },
-        sp_runtime::{traits::StaticLookup, RuntimeDebug},
+        sp_runtime::traits::StaticLookup,
         storage::child::KillStorageResult,
         traits::{
             Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,
@@ -63,26 +63,8 @@ mod pallet {
     pub type WinnerInfoOf<T> = WinnerInfo<BalanceOf<T>, OwnerInfoOf<T>>;
     type AccountIdLookupOf<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
-    type LockInfoOf<T> = LockInfo<MarketIdOf<T>, BalanceOf<T>>;
-
-    #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-    pub struct LockInfo<MarketId, Balance>(pub Vec<(MarketId, Balance)>);
-
-    impl<MarketId, Balance> Default for LockInfo<MarketId, Balance> {
-        fn default() -> Self {
-            Self(Vec::new())
-        }
-    }
-
-    impl<MarketId, Balance> MaxEncodedLen for LockInfo<MarketId, Balance>
-    where
-        Balance: MaxEncodedLen,
-        MarketId: MaxEncodedLen,
-    {
-        fn max_encoded_len() -> usize {
-            MarketId::max_encoded_len().saturating_add(Balance::max_encoded_len())
-        }
-    }
+    pub type LockInfoOf<T> =
+        BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
 
     /// The information about a voting outcome of a global dispute.
     #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
@@ -296,7 +278,7 @@ mod pallet {
                 <Outcomes<T>>::insert(market_id, &outcome, outcome_info);
             };
 
-            let LockInfo(ref mut lock_info) = <Locks<T>>::get(&voter);
+            let mut lock_info = <Locks<T>>::get(&voter);
 
             let vote_lock_counter = lock_info.len() as u32;
 
@@ -310,16 +292,18 @@ mod pallet {
                     } else {
                         // concious decision here to not throw an error when the new amount is not higher
                         // because the user would have to pay worst case fees then
-                        return Ok(Some(T::WeightInfo::vote_on_outcome(outcome_owners_len, vote_lock_counter)).into());
+                        return Ok(Some(T::WeightInfo::vote_on_outcome(
+                            outcome_owners_len,
+                            vote_lock_counter,
+                        ))
+                        .into());
                     }
                 }
                 Err(i) => {
-                    ensure!(
-                        lock_info.len() as u32 <= T::MaxGlobalDisputeVotes::get(),
-                        Error::<T>::MaxVotesReached
-                    );
+                    lock_info
+                        .try_insert(i, (market_id, amount))
+                        .map_err(|_| Error::<T>::MaxVotesReached)?;
                     add_to_outcome_sum(amount);
-                    lock_info.insert(i, (market_id, amount));
                 }
             }
 
@@ -330,7 +314,7 @@ mod pallet {
                 WithdrawReasons::TRANSFER,
             );
 
-            <Locks<T>>::insert(&voter, LockInfo(lock_info.to_vec()));
+            <Locks<T>>::insert(&voter, lock_info);
 
             Self::deposit_event(Event::VotedOnOutcome {
                 market_id,
@@ -361,21 +345,18 @@ mod pallet {
             let voter = T::Lookup::lookup(voter)?;
 
             let mut lock_needed: BalanceOf<T> = Zero::zero();
-            let vote_lock_counter =
-                <Locks<T>>::mutate(&voter, |LockInfo(ref mut lock_info)| -> u32 {
-                    let vote_lock_counter = lock_info.len() as u32;
-                    lock_info.retain(|&(market_id, locked_balance)| {
-                        // weight component MaxOwners comes from querying the winner information
-                        match <Winners<T>>::get(market_id) {
-                            Some(winner_info) if winner_info.is_finished => false,
-                            _ => {
-                                lock_needed = lock_needed.max(locked_balance);
-                                true
-                            }
-                        }
-                    });
-                    vote_lock_counter
-                });
+            let mut lock_info = <Locks<T>>::get(&voter);
+            let vote_lock_counter = lock_info.len() as u32;
+            lock_info.retain(|&(market_id, locked_balance)| {
+                // weight component MaxOwners comes from querying the winner information
+                match <Winners<T>>::get(market_id) {
+                    Some(winner_info) if winner_info.is_finished => false,
+                    _ => {
+                        lock_needed = lock_needed.max(locked_balance);
+                        true
+                    }
+                }
+            });
 
             if lock_needed.is_zero() {
                 T::Currency::remove_lock(T::GlobalDisputeLockId::get(), &voter);
@@ -387,6 +368,8 @@ mod pallet {
                     WithdrawReasons::TRANSFER,
                 );
             }
+
+            <Locks<T>>::insert(&voter, lock_info);
 
             // use the worst case for owners length, because otherwise we would have to count each in Locks
             Ok(Some(T::WeightInfo::unlock_vote_balance(vote_lock_counter, T::MaxOwners::get()))
