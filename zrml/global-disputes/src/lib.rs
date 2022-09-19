@@ -72,6 +72,11 @@ mod pallet {
         /// Add voting outcome to a global dispute in exchange for a constant fee.
         /// Errors if the voting outcome already exists or
         /// if the global dispute has not started or has already finished.
+        /// 
+        /// # Arguments
+        /// 
+        /// - `market_id`: The id of the market.
+		/// - `outcome`: The outcome report to add.
         ///
         /// # Weight
         ///
@@ -115,7 +120,11 @@ mod pallet {
 
         /// Reward the collected fees to the owner(s) of a voting outcome.
         /// Fails if the global dispute is not concluded yet.
-        ///
+        /// 
+        /// # Arguments
+        /// 
+        /// - `market_id`: The id of the market.
+        /// 
         /// # Weight
         ///
         /// Complexity: `O(n + m)`, where `n` is the number of all existing outcomes for a global dispute,
@@ -213,6 +222,12 @@ mod pallet {
 
         /// Vote on existing voting outcomes by locking native tokens.
         /// Fails if the global dispute has not started or has already finished.
+        /// 
+        /// # Arguments
+        /// 
+        /// - `market_id`: The id of the market.
+		/// - `outcome`: The existing outcome report to vote on.
+        /// - `amount`: The amount to vote with.
         ///
         /// # Weight
         ///
@@ -301,6 +316,10 @@ mod pallet {
 
         /// Return all locked native tokens in a global dispute.
         /// Fails if the global dispute is not concluded yet.
+        /// 
+        /// # Arguments
+        /// 
+        /// - `voter`: The account id lookup to unlock funds for.
         ///
         /// # Weight
         ///
