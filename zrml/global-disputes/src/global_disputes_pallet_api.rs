@@ -44,5 +44,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     fn is_started(market_id: &MarketId) -> bool;
 
     /// Check if a global dispute has not already been started.
-    fn is_not_started(market_id: &MarketId) -> bool;
+    fn is_not_started(market_id: &MarketId) -> bool {
+        !Self::is_started(market_id)
+    }
 }

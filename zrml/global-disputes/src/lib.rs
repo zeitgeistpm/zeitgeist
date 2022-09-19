@@ -570,10 +570,6 @@ mod pallet {
         fn is_started(market_id: &MarketIdOf<T>) -> bool {
             <Winners<T>>::get(market_id).is_some()
         }
-
-        fn is_not_started(market_id: &MarketIdOf<T>) -> bool {
-            <Winners<T>>::get(market_id).is_none()
-        }
     }
 
     #[pallet::pallet]
