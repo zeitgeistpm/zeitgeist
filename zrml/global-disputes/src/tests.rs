@@ -18,8 +18,10 @@
 #![cfg(test)]
 
 use crate::{
-    global_disputes_pallet_api::GlobalDisputesPalletApi, mock::*, Error, Event, Locks, OutcomeInfo,
-    Outcomes, WinnerInfo, Winners,
+    global_disputes_pallet_api::GlobalDisputesPalletApi,
+    mock::*,
+    types::{OutcomeInfo, WinnerInfo},
+    Error, Event, Locks, Outcomes, Winners,
 };
 use frame_support::{
     assert_noop, assert_ok,

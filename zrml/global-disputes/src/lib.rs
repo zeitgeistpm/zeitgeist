@@ -22,6 +22,7 @@ mod benchmarks;
 mod global_disputes_pallet_api;
 mod mock;
 mod tests;
+pub mod types;
 pub mod weights;
 
 pub use global_disputes_pallet_api::GlobalDisputesPalletApi;
@@ -29,13 +30,13 @@ pub use pallet::*;
 
 #[frame_support::pallet]
 mod pallet {
-    use crate::{weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
+    use crate::{types::*, weights::WeightInfoZeitgeist, GlobalDisputesPalletApi};
     use core::marker::PhantomData;
     use frame_support::{
         ensure, log,
         pallet_prelude::{
-            Decode, DispatchError, DispatchResultWithPostInfo, Encode, MaxEncodedLen, OptionQuery,
-            StorageDoubleMap, StorageMap, TypeInfo, ValueQuery,
+            DispatchError, DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap,
+            ValueQuery,
         },
         sp_runtime::traits::StaticLookup,
         storage::child::KillStorageResult,
@@ -65,33 +66,6 @@ mod pallet {
     type OwnerInfoOf<T> = BoundedVec<AccountIdOf<T>, <T as Config>::MaxOwners>;
     pub type LockInfoOf<T> =
         BoundedVec<(MarketIdOf<T>, BalanceOf<T>), <T as Config>::MaxGlobalDisputeVotes>;
-
-    /// The information about a voting outcome of a global dispute.
-    #[derive(Debug, TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-    pub struct OutcomeInfo<Balance, OwnerInfo> {
-        /// The current sum of all locks on this outcome.
-        pub outcome_sum: Balance,
-        /// The vector of owners of the outcome.
-        pub owners: OwnerInfo,
-    }
-
-    /// The information about the current highest winning outcome.
-    #[derive(TypeInfo, Decode, Encode, MaxEncodedLen, Clone, PartialEq, Eq)]
-    pub struct WinnerInfo<Balance, OwnerInfo> {
-        /// The outcome, which is in the lead.
-        pub outcome: OutcomeReport,
-        /// The information about the winning outcome.
-        pub outcome_info: OutcomeInfo<Balance, OwnerInfo>,
-        /// Check, if the global dispute is finished.
-        pub is_finished: bool,
-    }
-
-    impl<Balance: Saturating, OwnerInfo: Default> WinnerInfo<Balance, OwnerInfo> {
-        pub fn new(outcome: OutcomeReport, vote_sum: Balance) -> Self {
-            let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners: Default::default() };
-            WinnerInfo { outcome, is_finished: false, outcome_info }
-        }
-    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
