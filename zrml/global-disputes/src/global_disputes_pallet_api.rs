@@ -22,6 +22,12 @@ use zeitgeist_primitives::types::OutcomeReport;
 pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     /// Push a voting outcome for one global dispute.
     ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
+    /// - `outcome` - The voting outcome to push.
+    /// - `owner` - The owner of the outcome.
+    /// - `vote_balance` - The initial vote amount for the specified outcome.
+    ///
     /// # Returns
     ///
     /// Returns the dispute mechanism's report if available, otherwise `None`. If `None` is
@@ -35,15 +41,24 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
 
     /// Determine the winner of a global dispute.
     ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
+    ///
     /// # Returns
     ///
     /// Returns the winning outcome.
     fn determine_voting_winner(market_id: &MarketId) -> Option<OutcomeReport>;
 
     /// Check if global dispute started.
+    ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
     fn is_started(market_id: &MarketId) -> bool;
 
     /// Check if a global dispute has not already been started.
+    ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
     fn is_not_started(market_id: &MarketId) -> bool {
         !Self::is_started(market_id)
     }
