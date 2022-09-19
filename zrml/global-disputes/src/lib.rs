@@ -35,11 +35,10 @@ mod pallet {
     use frame_support::{
         ensure, log,
         pallet_prelude::{
-            DispatchError, DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap,
+            DispatchResultWithPostInfo, OptionQuery, StorageDoubleMap, StorageMap,
             ValueQuery,
         },
         sp_runtime::traits::StaticLookup,
-        storage::child::KillStorageResult,
         traits::{
             Currency, ExistenceRequirement, Get, IsType, LockIdentifier, LockableCurrency,
             WithdrawReasons,
@@ -140,79 +139,85 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let (owners_len, removed_keys_amount) = <Winners<T>>::try_mutate(
+            let mut winner_info =
+                <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+            ensure!(winner_info.is_finished, Error::<T>::UnfinishedGlobalDispute);
+
+            // move the winning outcome info to Winners before it gets drained
+            if let Some(outcome_info) = <Outcomes<T>>::get(market_id, &winner_info.outcome) {
+                // storage write is needed here in case, that the first call of reward_outcome_owner doesn't reward the owners
+                // this can happen if there are more than RemoveKeysLimit keys to remove
+                winner_info.outcome_info = outcome_info;
+                <Winners<T>>::insert(market_id, winner_info.clone());
+            }
+
+            let mut removed_keys_amount = 0u32;
+            for _ in <Outcomes<T>>::drain_prefix(market_id) {
+                removed_keys_amount = removed_keys_amount.saturating_add(1u32);
+                if removed_keys_amount >= T::RemoveKeysLimit::get() {
+                    Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
+                    // benchmark component `owner` only meant for the winning outcome
+                    return Ok((Some(T::WeightInfo::reward_outcome_owner(
+                        0u32,
+                        removed_keys_amount,
+                    )))
+                    .into());
+                }
+            }
+
+            let reward_account = Self::reward_account(&market_id);
+            let reward_account_free_balance = T::Currency::free_balance(&reward_account);
+            let owners_len = winner_info.outcome_info.owners.len() as u32;
+            let at_least_one_owner_str =
+                "Global Disputes: There should be always at least one owner for a voting outcome.";
+            debug_assert!(owners_len != 0u32, "{}", at_least_one_owner_str);
+            if reward_account_free_balance.is_zero() {
+                // return early case if there is no reward
+                Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
+                return Ok((Some(T::WeightInfo::reward_outcome_owner(
+                    owners_len,
+                    removed_keys_amount,
+                )))
+                .into());
+            }
+
+            let mut remainder = reward_account_free_balance;
+            let owners_len_in_balance: BalanceOf<T> = <BalanceOf<T>>::from(owners_len);
+            if let Some(reward_per_each) =
+                reward_account_free_balance.checked_div(&owners_len_in_balance)
+            {
+                for winner in winner_info.outcome_info.owners.iter() {
+                    // *Should* always be equal to `reward_per_each`
+                    let reward = remainder.min(reward_per_each);
+                    remainder = remainder.saturating_sub(reward);
+                    // Reward the loosing funds to the winners
+                    T::Currency::transfer(
+                        &reward_account,
+                        winner,
+                        reward,
+                        ExistenceRequirement::AllowDeath,
+                    )?;
+                }
+            } else {
+                log::error!("{}", at_least_one_owner_str);
+            }
+
+            if !remainder.is_zero() {
+                log::error!(
+                    "Global Disputes: The reward remainder for the market id {:?} 
+                    should be zero after the reward process. Reward remainder amount: {:?}",
+                    &market_id,
+                    remainder
+                );
+                debug_assert!(false);
+            }
+
+            Self::deposit_event(Event::OutcomeOwnersRewarded {
                 market_id,
-                |winner_info: &mut Option<WinnerInfoOf<T>>| -> Result<(u32, u32), DispatchError> {
-                    let mut winner_info =
-                        winner_info.as_mut().ok_or(Error::<T>::NoGlobalDisputeStarted)?;
-                    ensure!(winner_info.is_finished, Error::<T>::UnfinishedGlobalDispute);
+                owners: winner_info.outcome_info.owners.to_vec(),
+            });
 
-                    // Outcome can be None when the second call happens in case RemoveKeysLimit is not reached
-                    if let Some(outcome_info) = <Outcomes<T>>::get(market_id, &winner_info.outcome)
-                    {
-                        // storage write is needed here in case, that the first call of reward_outcome_owner doesn't reward the owners
-                        // this can happen if there are more than RemoveKeysLimit keys (for KillStorageResult::SomeRemaining)
-                        winner_info.outcome_info = outcome_info;
-                    }
-
-                    match <Outcomes<T>>::remove_prefix(market_id, Some(T::RemoveKeysLimit::get())) {
-                        KillStorageResult::AllRemoved(removed_keys_amount) => {
-                            let reward_account = Self::reward_account(&market_id);
-                            let reward_account_free_balance =
-                                T::Currency::free_balance(&reward_account);
-                            let owners_len = winner_info.outcome_info.owners.len() as u32;
-                            let at_least_one_owner_str = "Global Disputes: There should be always \
-                                                          at least one owner for a voting outcome.";
-                            debug_assert!(owners_len != 0u32, "{}", at_least_one_owner_str);
-                            if reward_account_free_balance.is_zero() {
-                                Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
-                                return Ok((owners_len, removed_keys_amount));
-                            }
-                            let mut remainder = reward_account_free_balance;
-                            let owners_len_in_balance: BalanceOf<T> =
-                                <BalanceOf<T>>::from(owners_len);
-                            if let Some(reward_per_each) =
-                                reward_account_free_balance.checked_div(&owners_len_in_balance)
-                            {
-                                for winner in winner_info.outcome_info.owners.iter() {
-                                    // *Should* always be equal to `reward_per_each`
-                                    let reward = remainder.min(reward_per_each);
-                                    remainder = remainder.saturating_sub(reward);
-                                    // Reward the loosing funds to the winners
-                                    T::Currency::transfer(
-                                        &reward_account,
-                                        &winner,
-                                        reward,
-                                        ExistenceRequirement::AllowDeath,
-                                    )?;
-                                }
-                            } else {
-                                log::error!("{}", at_least_one_owner_str);
-                            }
-                            if !remainder.is_zero() {
-                                log::error!(
-                                    "Global Disputes: The reward remainder for the market id {:?} 
-                                    should be zero after the reward process. Reward remainder \
-                                     amount: {:?}",
-                                    &market_id,
-                                    remainder
-                                );
-                                debug_assert!(false);
-                            }
-                            Self::deposit_event(Event::OutcomeOwnersRewarded {
-                                market_id,
-                                owners: winner_info.outcome_info.owners.to_vec(),
-                            });
-                            Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
-                            Ok((owners_len, removed_keys_amount))
-                        }
-                        KillStorageResult::SomeRemaining(removed_keys_amount) => {
-                            Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
-                            Ok((0u32, removed_keys_amount))
-                        }
-                    }
-                },
-            )?;
+            Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
 
             Ok((Some(T::WeightInfo::reward_outcome_owner(owners_len, removed_keys_amount))).into())
         }
