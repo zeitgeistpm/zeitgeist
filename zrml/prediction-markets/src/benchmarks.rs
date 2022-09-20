@@ -404,7 +404,9 @@ benchmarks! {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
         let current_len = MarketIdsPerOpenTimeFrame::<T>::get(
-            Pallet::<T>::calculate_time_frame_of_moment(range_start)).len();
+            Pallet::<T>::calculate_time_frame_of_moment(range_start),
+        )
+        .len();
         assert!(current_len == prev_len + 1);
     }
 
