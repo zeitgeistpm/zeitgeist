@@ -339,7 +339,10 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(T::WeightInfo::dispute_authorized(T::MaxDisputes::get(), CacheSize::get()))]
+        #[pallet::weight(T::WeightInfo::dispute_authorized(
+            T::MaxDisputes::get(),
+            CacheSize::get()
+        ))]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,

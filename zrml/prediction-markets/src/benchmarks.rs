@@ -49,25 +49,15 @@ use zrml_market_commons::MarketCommonsPalletApi;
 // amount of native currency
 fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
-) -> Result<
-    (
-        T::AccountId,
-        T::AccountId,
-        MarketPeriod<T::BlockNumber, MomentOf<T>>,
-        MultiHash,
-        MarketCreation,
-    ),
-    &'static str,
-> {
+) -> Result<(T::AccountId, T::AccountId, MultiHash, MarketCreation), &'static str> {
     let caller: T::AccountId = whitelisted_caller();
     T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into()).unwrap();
     let oracle = caller.clone();
-    let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;
     let creation = permission;
-    Ok((caller, oracle, period, MultiHash::Sha3_384(metadata), creation))
+    Ok((caller, oracle, MultiHash::Sha3_384(metadata), creation))
 }
 
 // Create a market based on common parameters
@@ -75,9 +65,12 @@ fn create_market_common<T: Config>(
     permission: MarketCreation,
     options: MarketType,
     scoring_rule: ScoringRule,
+    period: Option<MarketPeriod<T::BlockNumber, MomentOf<T>>>,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, oracle, period, metadata, creation) =
-        create_market_common_parameters::<T>(permission)?;
+    let range_start: MomentOf<T> = 100_000u64.saturated_into();
+    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
+    let (caller, oracle, metadata, creation) = create_market_common_parameters::<T>(permission)?;
     let _ = Call::<T>::create_market {
         oracle,
         period,
@@ -97,7 +90,9 @@ fn create_close_and_report_market<T: Config>(
     options: MarketType,
     outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) = create_market_common::<T>(permission, options, ScoringRule::CPMM)?;
+    let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
+    let (caller, market_id) =
+        create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
     let _ = Call::<T>::report { market_id, outcome }
@@ -172,6 +167,7 @@ fn setup_redeem_shares_common<T: Config>(
         MarketCreation::Permissionless,
         market_type.clone(),
         ScoringRule::CPMM,
+        None,
     )?;
     let outcome: OutcomeReport;
 
@@ -283,18 +279,14 @@ benchmarks! {
         let o in 0..63;
         let c in 0..63;
 
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
-
-        let range_start = T::MinSubsidyPeriod::get();
-        let range_end = T::MaxSubsidyPeriod::get();
-        T::MarketCommons::mutate_market(&market_id, |market| {
-            market.period = MarketPeriod::Timestamp(range_start..range_end);
-            Ok(())
-        })?;
 
         for i in 0..o {
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
@@ -330,7 +322,8 @@ benchmarks! {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            None,
         )?;
 
         let approve_origin = T::ApproveOrigin::successful_origin();
@@ -342,7 +335,8 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            None,
         )?;
         let amount = BASE * 1_000;
     }: _(RawOrigin::Signed(caller), market_id, amount.saturated_into())
@@ -352,7 +346,7 @@ benchmarks! {
     create_market {
         let m in 0..63;
 
-        let (caller, oracle, _, metadata, creation) =
+        let (caller, oracle, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
 
         let range_end = T::MaxSubsidyPeriod::get();
@@ -372,18 +366,14 @@ benchmarks! {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let o in 0..63;
 
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
-
-        let range_start = T::MinSubsidyPeriod::get();
-        let range_end = T::MaxSubsidyPeriod::get();
-        T::MarketCommons::mutate_market(&market_id, |market| {
-            market.period = MarketPeriod::Timestamp(range_start..range_end);
-            Ok(())
-        })?;
 
         assert!(
             Pallet::<T>::calculate_time_frame_of_moment(T::MarketCommons::now())
@@ -421,17 +411,15 @@ benchmarks! {
     deploy_swap_pool_for_market_open_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
+        // We need to ensure, that period range start is now, because we would like to open the pool now
+        let range_start: MomentOf<T> = T::MarketCommons::now();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
-
-        T::MarketCommons::mutate_market(&market_id, |market| {
-            // We need to ensure, that period range start is now, because we would like to open the pool now
-            market.period = MarketPeriod::Timestamp(T::MarketCommons::now()..T::MaxSubsidyPeriod::get());
-            Ok(())
-        })?;
 
         let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
 
@@ -495,7 +483,8 @@ benchmarks! {
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get())),
         )?;
         let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
     }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
@@ -610,18 +599,14 @@ benchmarks! {
         let c in 0..63;
         let o in 0..63;
 
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
-
-        let range_start = T::MinSubsidyPeriod::get();
-        let range_end = T::MaxSubsidyPeriod::get();
-        T::MarketCommons::mutate_market(&market_id, |market| {
-            market.period = MarketPeriod::Timestamp(range_start..range_end);
-            Ok(())
-        })?;
 
         for i in 0..o {
             MarketIdsPerOpenTimeFrame::<T>::try_mutate(
@@ -644,15 +629,17 @@ benchmarks! {
     report {
         let m in 0..63;
 
+        // ensure range.start is now to get the heaviest path
+        let range_start: MomentOf<T> = T::MarketCommons::now();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(T::MaxCategories::get()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
 
         T::MarketCommons::mutate_market(&market_id, |market| {
-            // ensure range.start is now to get the heaviest path
-            market.period = MarketPeriod::Timestamp(T::MarketCommons::now()..T::MaxSubsidyPeriod::get());
             // ensure sender is oracle to succeed extrinsic call
             market.oracle = caller.clone();
             Ok(())
@@ -674,7 +661,8 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Permissionless,
             MarketType::Categorical(a.saturated_into()),
-            ScoringRule::CPMM
+            ScoringRule::CPMM,
+            None,
         )?;
         let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
         let _ = Pallet::<T>::buy_complete_set(
@@ -689,7 +677,8 @@ benchmarks! {
         let (caller, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(a.saturated_into()),
-            ScoringRule::RikiddoSigmoidFeeMarketEma
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            Some(MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get())),
         )?;
         let mut market_clone = None;
         T::MarketCommons::mutate_market(&market_id, |market| {

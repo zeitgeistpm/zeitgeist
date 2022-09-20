@@ -189,7 +189,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
     // Storage: MarketCommons MarketPool (r:1 w:1)
     // Storage: Swaps Pools (r:0 w:1)
-    fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32, ) -> Weight {
+    fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32) -> Weight {
         (80_762_000 as Weight)
             // Standard Error: 17_000
             .saturating_add((26_803_000 as Weight).saturating_mul(a as Weight))
