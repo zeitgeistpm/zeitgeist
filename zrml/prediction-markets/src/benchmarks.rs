@@ -413,7 +413,8 @@ benchmarks! {
     deploy_swap_pool_for_market_open_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
-        // We need to ensure, that period range start is now, because we would like to open the pool now
+        // We need to ensure, that period range start is now,
+        // because we would like to open the pool now
         let range_start: MomentOf<T> = T::MarketCommons::now();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let (caller, market_id) = create_market_common::<T>(
@@ -535,7 +536,9 @@ benchmarks! {
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(
+            total_accounts, asset_accounts
+        )?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(market_id);
@@ -547,7 +550,9 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(
+            total_accounts, asset_accounts
+        )?;
 
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(market_id);

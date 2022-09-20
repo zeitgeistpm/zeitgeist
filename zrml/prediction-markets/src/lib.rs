@@ -200,13 +200,18 @@ mod pallet {
         ///
         /// Complexity: `O(n + m)`, where `n` is the number of market ids,
         /// which open at the same time as the specified market,
-        /// and `m` is the number of market ids, which close at the same time as the specified market.
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
         //
         // ***** IMPORTANT *****
         //
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(CacheSize::get(), CacheSize::get()), Pays::No))]
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_closed(
+                CacheSize::get(), CacheSize::get()), Pays::No
+            )
+        )]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -313,17 +318,16 @@ mod pallet {
         /// the five outcome tokens.
         ///
         /// NOTE: This is the only way to create new shares of outcome tokens.
-        // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
-        // Unfortunately this information can only be retrieved with a storage call, therefore
-        // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
-        // This also occurs in numerous other functions.
-        //
+        /// 
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outcome assets in the market.
-        #[pallet::weight(
-            T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-        )]
+        // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
+        // Unfortunately this information can only be retrieved with a storage call, therefore
+        // The worst-case scenario is assumed
+        // and the correct weight is calculated at the end of this function.
+        // This also occurs in numerous other functions.
+        #[pallet::weight(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))]
         #[transactional]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
@@ -411,16 +415,25 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity:
-        /// - create_market: `O(n)`, where `n` is the number of market ids, which close at the same time as the specified market.
-        /// - buy_complete_set: `O(n)`, where `n` is the number of outcome assets for the categorical market.
-        /// - deploy_swap_pool_for_market_open_pool: `O(n)`, where n is the number of outcome assets for the categorical market.
-        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`, where `n` is the number of outcome assets for the categorical market
-        /// and `m` is the number of market ids, which open at the same time as the specified market.
+        /// - create_market: `O(n)`, where `n` is the number of market ids, 
+        /// which close at the same time as the specified market.
+        /// - buy_complete_set: `O(n)`, where `n` is the number of outcome assets 
+        /// for the categorical market.
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`, 
+        /// where n is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`, 
+        /// where `n` is the number of outcome assets for the categorical market
+        /// and `m` is the number of market ids, 
+        /// which open at the same time as the specified market.
         #[pallet::weight(
             T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
-                .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(weights.len() as u32, CacheSize::get())))
+            .saturating_add(
+                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+                .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                )
+            ))
         )]
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
@@ -481,7 +494,8 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is the number of market ids, which close at the same time as the specified market.
+        /// Complexity: `O(n)`, where `n` is the number of market ids, 
+        /// which close at the same time as the specified market.
         #[pallet::weight(T::WeightInfo::create_market(CacheSize::get()))]
         #[transactional]
         pub fn create_market(
@@ -606,16 +620,23 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity:
-        /// - buy_complete_set: `O(n)`, where `n` is the number of outcome assets for the categorical market.
+        /// - buy_complete_set: `O(n)`, 
+        /// where `n` is the number of outcome assets for the categorical market.
         /// - deploy_swap_pool_for_market_open_pool: `O(n)`,
         /// where `n` is the number of outcome assets for the categorical market.
         /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
         /// where `n` is the number of outcome assets for the categorical market,
-        /// and `m` is the number of market ids, which open at the same time as the specified market.
+        /// and `m` is the number of market ids, 
+        /// which open at the same time as the specified market.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
-            .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(weights.len() as u32, CacheSize::get())))
+            .saturating_add(
+                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+            .max(
+                T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                ))
+            )
         )]
         #[transactional]
         pub fn deploy_swap_pool_and_additional_liquidity(
@@ -660,12 +681,19 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity:
-        /// - deploy_swap_pool_for_market_open_pool: `O(n)`, where `n` is the number of outcome assets for the categorical market.
-        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`, where `n` is the number of outcome assets for the categorical market,
-        /// and `m` is the number of market ids, which open at the same time as the specified market.
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`, 
+        /// where `n` is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`, 
+        /// where `n` is the number of outcome assets for the categorical market,
+        /// and `m` is the number of market ids, 
+        /// which open at the same time as the specified market.
         #[pallet::weight(
             T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
-            .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(weights.len() as u32, CacheSize::get()))
+            .max(
+                T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                )
+            )
         )]
         #[transactional]
         pub fn deploy_swap_pool_for_market(
@@ -898,8 +926,11 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n + m)`, where `n` is the number of market ids, which open at the same time as the specified market,
-        /// and `m` is the number of market ids, which close at the same time as the specified market.
+        /// Complexity: `O(n + m)`, 
+        /// where `n` is the number of market ids, 
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids, 
+        /// which close at the same time as the specified market.
         #[pallet::weight((
             T::WeightInfo::reject_market(CacheSize::get(), CacheSize::get()),
             Pays::No,
@@ -922,7 +953,8 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is the number of market ids, which reported at the same time as the specified market.
+        /// Complexity: `O(n)`, where `n` is the number of market ids, 
+        /// which reported at the same time as the specified market.
         #[pallet::weight(T::WeightInfo::report(CacheSize::get()))]
         #[transactional]
         pub fn report(
@@ -1269,7 +1301,8 @@ mod pallet {
         MarketDestroyed(MarketIdOf<T>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
-        /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
+        /// A market was discarded after failing to gather enough subsidy. 
+        /// \[market_id, new_market_status\]
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
@@ -1285,7 +1318,8 @@ mod pallet {
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount_redeemed, payout, who\]
+        /// An amount of winning outcomes have been redeemed 
+        /// \[market_id, currency_id, amount_redeemed, payout, who\]
         TokensRedeemed(
             MarketIdOf<T>,
             Asset<MarketIdOf<T>>,
@@ -2002,7 +2036,8 @@ mod pallet {
                         overall_imbalance.checked_div(&correct_reporters.len().saturated_into())
                     {
                         for correct_reporter in &correct_reporters {
-                            let reward = overall_imbalance.min(reward_per_each); // *Should* always be equal to `reward_per_each`
+                            // *Should* always be equal to `reward_per_each`
+                            let reward = overall_imbalance.min(reward_per_each);
                             overall_imbalance = overall_imbalance.saturating_sub(reward);
 
                             if let Err(err) =
