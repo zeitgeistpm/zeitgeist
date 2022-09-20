@@ -221,10 +221,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
-    fn dispute_authorized(d: u32) -> Weight {
-        (49_826_000 as Weight)
-            // Standard Error: 17_000
-            .saturating_add((617_000 as Weight).saturating_mul(d as Weight))
+    fn dispute_authorized(d: u32, b: u32) -> Weight {
+        (46_162_000 as Weight)
+            // Standard Error: 10_000
+            .saturating_add((990_000 as Weight).saturating_mul(d as Weight))
+            // Standard Error: 0
+            .saturating_add((33_000 as Weight).saturating_mul(b as Weight))
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }

@@ -60,7 +60,7 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into());
+    T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into()).unwrap();
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
     let mut metadata = [0u8; 50];
@@ -118,10 +118,10 @@ fn generate_accounts_with_assets<T: Config>(
     for i in 0..acc_total {
         let acc = account("AssetHolder", i, 0);
         if mut_acc_asset > 0 {
-            T::AssetManager::deposit(asset, &acc, min_liquidity)?;
+            T::AssetManager::deposit(asset, &acc, min_liquidity).unwrap();
             mut_acc_asset -= 1;
         } else {
-            T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
+            T::AssetManager::deposit(fake_asset, &acc, min_liquidity).unwrap();
         }
     }
 
@@ -155,8 +155,12 @@ fn setup_resolve_common_categorical_after_dispute<T: Config>(
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) =
         setup_resolve_common_categorical::<T>(acc_total, acc_asset, categories)?;
-    let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Categorical(0) }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    Pallet::<T>::dispute(
+        RawOrigin::Signed(caller.clone()).into(),
+        market_id,
+        OutcomeReport::Categorical(0),
+    )
+    .unwrap();
     Ok((caller, market_id))
 }
 
@@ -219,8 +223,12 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
     acc_asset: u32,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = setup_resolve_common_scalar::<T>(acc_total, acc_asset)?;
-    let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Scalar(1u128) }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    Pallet::<T>::dispute(
+        RawOrigin::Signed(caller.clone()).into(),
+        market_id,
+        OutcomeReport::Scalar(1u128),
+    )
+    .unwrap();
     Ok((caller, market_id))
 }
 
@@ -447,6 +455,7 @@ benchmarks! {
 
     dispute_authorized {
         let d in 0..(T::MaxDisputes::get() - 1) as u32;
+        let b in 0..63;
 
         let report_outcome = OutcomeReport::Scalar(u128::MAX);
         let (caller, market_id) = create_close_and_report_market::<T>(
@@ -464,8 +473,16 @@ benchmarks! {
         for i in 0..d {
             let outcome = OutcomeReport::Scalar(i.into());
             let disputor = account("disputor", i, 0);
-            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into());
-            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
+            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into()).unwrap();
+            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
+        }
+
+        let now = frame_system::Pallet::<T>::block_number();
+        for i in 0..b {
+            MarketIdsPerDisputeBlock::<T>::try_mutate(
+                now,
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
         }
 
         let dispute_outcome = OutcomeReport::Scalar((d + 1).into());
