@@ -392,14 +392,22 @@ benchmarks! {
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
-        let _ = Pallet::<T>::buy_complete_set(RawOrigin::Signed(caller.clone()).into(),
-            market_id, min_liquidity).unwrap();
+        let _ = Pallet::<T>::buy_complete_set(
+            RawOrigin::Signed(caller.clone()).into(), 
+            market_id, 
+            min_liquidity
+        )
+        .unwrap();
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
 
-        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee,
-            amount: min_liquidity, weights };
+        let call = Call::<T>::deploy_swap_pool_for_market {
+            market_id, 
+            swap_fee: max_swap_fee, 
+            amount: min_liquidity, 
+            weights
+        };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
@@ -428,14 +436,19 @@ benchmarks! {
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
-        let _ = Pallet::<T>::buy_complete_set(RawOrigin::Signed(caller.clone()).into(),
-            market_id, min_liquidity).unwrap();
+        let _ = Pallet::<T>::buy_complete_set(
+            RawOrigin::Signed(caller.clone()).into(), 
+            market_id, 
+            min_liquidity
+        )
+        .unwrap();
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
 
-        let call = Call::<T>::deploy_swap_pool_for_market { market_id, swap_fee: max_swap_fee,
-            amount: min_liquidity, weights };
+        let call = Call::<T>::deploy_swap_pool_for_market {
+            market_id, swap_fee: max_swap_fee, amount: min_liquidity, weights
+        };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
@@ -673,7 +686,11 @@ benchmarks! {
         )?;
         let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
         let _ = Pallet::<T>::buy_complete_set(
-                RawOrigin::Signed(caller.clone()).into(), market_id, amount).unwrap();
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id,
+            amount,
+        )
+        .unwrap();
     }: _(RawOrigin::Signed(caller), market_id, amount)
 
     start_subsidy {
