@@ -339,7 +339,7 @@ mod pallet {
         /// # Weight
         ///
         /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
-        #[pallet::weight(T::WeightInfo::dispute_authorized(T::MaxDisputes::get()))]
+        #[pallet::weight(T::WeightInfo::dispute_authorized(T::MaxDisputes::get(), CacheSize::get()))]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -388,11 +388,7 @@ mod pallet {
                 market_dispute,
             ));
             // TODO(#782): add court benchmark
-            Self::calculate_actual_weight(
-                T::WeightInfo::dispute_authorized,
-                num_disputes,
-                T::MaxDisputes::get(),
-            )
+            Ok((Some(T::WeightInfo::dispute_authorized(num_disputes, CacheSize::get()))).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
