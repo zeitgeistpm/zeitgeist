@@ -393,8 +393,8 @@ benchmarks! {
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
         let _ = Pallet::<T>::buy_complete_set(
-            RawOrigin::Signed(caller.clone()).into(), 
-            market_id, 
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id,
             min_liquidity
         )
         .unwrap();
@@ -403,9 +403,9 @@ benchmarks! {
         let weights = vec![MinWeight::get(); weight_len];
 
         let call = Call::<T>::deploy_swap_pool_for_market {
-            market_id, 
-            swap_fee: max_swap_fee, 
-            amount: min_liquidity, 
+            market_id,
+            swap_fee: max_swap_fee,
+            amount: min_liquidity,
             weights
         };
     }: {
@@ -437,8 +437,8 @@ benchmarks! {
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
         let _ = Pallet::<T>::buy_complete_set(
-            RawOrigin::Signed(caller.clone()).into(), 
-            market_id, 
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id,
             min_liquidity
         )
         .unwrap();
