@@ -900,7 +900,10 @@ mod pallet {
         ///
         /// Complexity: `O(n + m)`, where `n` is the number of market ids, which open at the same time as the specified market,
         /// and `m` is the number of market ids, which close at the same time as the specified market.
-        #[pallet::weight((T::WeightInfo::reject_market(CacheSize::get(), CacheSize::get()), Pays::No))]
+        #[pallet::weight((
+            T::WeightInfo::reject_market(CacheSize::get(), CacheSize::get()),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
