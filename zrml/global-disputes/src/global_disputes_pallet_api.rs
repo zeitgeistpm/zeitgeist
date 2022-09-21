@@ -26,7 +26,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
     /// - `market_id` - The id of the market.
     /// - `outcome` - The voting outcome to push.
     /// - `owner` - The owner of the outcome.
-    /// - `vote_balance` - The initial vote amount for the specified outcome.
+    /// - `initial_vote_balance` - The initial vote amount for the specified outcome.
     ///
     /// # Returns
     ///
@@ -36,7 +36,7 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
         market_id: &MarketId,
         outcome: OutcomeReport,
         owner: &AccountId,
-        vote_balance: Balance,
+        initial_vote_balance: Balance,
     ) -> DispatchResult;
 
     /// Determine the winner of a global dispute.

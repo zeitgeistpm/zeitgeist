@@ -543,7 +543,7 @@ mod pallet {
             market_id: &MarketIdOf<T>,
             outcome: OutcomeReport,
             owner: &T::AccountId,
-            vote_balance: BalanceOf<T>,
+            initial_vote_balance: BalanceOf<T>,
         ) -> DispatchResult {
             match <Winners<T>>::get(market_id) {
                 Some(winner_info) if winner_info.is_finished => {
@@ -553,7 +553,7 @@ mod pallet {
             }
             match <Outcomes<T>>::get(market_id, &outcome) {
                 Some(mut outcome_info) => {
-                    let outcome_sum = outcome_info.outcome_sum.saturating_add(vote_balance);
+                    let outcome_sum = outcome_info.outcome_sum.saturating_add(initial_vote_balance);
                     Self::update_winner(market_id, &outcome, outcome_sum);
                     outcome_info.outcome_sum = outcome_sum;
                     // there can not be more than MaxDisputes owners
@@ -570,9 +570,13 @@ mod pallet {
                 None => {
                     // adding one item to BoundedVec can not fail
                     if let Ok(owners) = BoundedVec::try_from(vec![owner.clone()]) {
-                        Self::update_winner(market_id, &outcome, vote_balance);
-                        let outcome_info = OutcomeInfo { outcome_sum: vote_balance, owners };
+                        Self::update_winner(market_id, &outcome, initial_vote_balance);
+                        let outcome_info =
+                            OutcomeInfo { outcome_sum: initial_vote_balance, owners };
                         <Outcomes<T>>::insert(market_id, outcome, outcome_info);
+                    } else {
+                        log::error!("Global Disputes: Could not construct a bounded vector.");
+                        debug_assert!(false);
                     }
                 }
             }
