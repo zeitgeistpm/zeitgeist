@@ -43,7 +43,7 @@ fn deposit<T>(caller: &T::AccountId)
 where
     T: Config,
 {
-    let _ = T::Currency::deposit_creating(caller, BalanceOf::<T>::max_value());
+    let _ = T::Currency::deposit_creating(caller, BalanceOf::<T>::max_value() / 2u128.saturated_into());
 }
 
 benchmarks! {
