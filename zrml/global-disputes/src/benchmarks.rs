@@ -54,6 +54,7 @@ benchmarks! {
         // only Outcomes owners, but not Winners owners is present during vote_on_outcome
         let o in 1..T::MaxOwners::get();
 
+        // ensure we have one vote left for the call
         let v in 0..((T::MaxGlobalDisputeVotes::get() - 1).into());
 
         let caller: T::AccountId = whitelisted_caller();
@@ -94,11 +95,11 @@ benchmarks! {
 
     unlock_vote_balance {
         let l in 0..T::MaxGlobalDisputeVotes::get();
-        let o in 0..T::MaxOwners::get();
+        let o in 1..T::MaxOwners::get();
 
         let vote_sum = 42u128.saturated_into();
         let mut owners = Vec::new();
-        for i in 0..o {
+        for i in 1..=o {
             let owner = account("winners_owner", i, 0);
             owners.push(owner);
         }
@@ -132,10 +133,10 @@ benchmarks! {
         // then if the owner information is not present on Winners, 
         // the owner info is present on Outcomes
         // this happens in the case, that Outcomes is not none at the query time.
-        let w in 0..T::MaxOwners::get();
+        let w in 1..T::MaxOwners::get();
 
         let mut owners = Vec::new();
-        for i in 0..w {
+        for i in 1..=w {
             let owner = account("winners_owner", i, 0);
             owners.push(owner);
         }
@@ -155,7 +156,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome)
 
     reward_outcome_owner {
-        let o in 0..T::MaxOwners::get();
+        let o in 1..T::MaxOwners::get();
 
         let k in 0..T::RemoveKeysLimit::get();
 
@@ -173,7 +174,7 @@ benchmarks! {
         }
 
         let mut owners = Vec::new();
-        for i in 0..o {
+        for i in 1..=o {
             let owner = account("winners_owner", i, 0);
             owners.push(owner);
         }
