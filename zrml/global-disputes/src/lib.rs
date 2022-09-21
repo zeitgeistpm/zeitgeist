@@ -317,15 +317,21 @@ mod pallet {
                     let reward = remainder.min(reward_per_each);
                     remainder = remainder.saturating_sub(reward);
                     // Reward the loosing funds to the winners
-                    T::Currency::transfer(
+                    let res = T::Currency::transfer(
                         &reward_account,
                         winner,
                         reward,
                         ExistenceRequirement::AllowDeath,
-                    )?;
+                    );
+                    // not really much we can do if it fails
+                    debug_assert!(
+                        res.is_ok(),
+                        "Global Disputes: Rewarding a outcome owner failed."
+                    );
                 }
             } else {
                 log::error!("{}", at_least_one_owner_str);
+                debug_assert!(false);
             }
 
             if !remainder.is_zero() {
