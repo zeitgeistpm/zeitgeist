@@ -460,13 +460,9 @@ mod pallet {
                 ScoringRule::CPMM,
             )?
             .actual_weight
-            .unwrap_or_else(|| T::WeightInfo::create_market(CacheSize::get()));
+            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
 
             // Deploy the swap pool and populate it.
-            let asset_count = match market_type {
-                MarketType::Categorical(value) => value,
-                MarketType::Scalar(_) => 2,
-            };
             let market_id = T::MarketCommons::latest_market_id()?;
             let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liquidity(
                 origin,
@@ -476,16 +472,7 @@ mod pallet {
                 weights.clone(),
             )?
             .actual_weight
-            .unwrap_or_else(|| {
-                T::WeightInfo::buy_complete_set(asset_count.into()).saturating_add(
-                    T::WeightInfo::deploy_swap_pool_for_market_open_pool(asset_count.into()).max(
-                        T::WeightInfo::deploy_swap_pool_for_market_future_pool(
-                            asset_count.into(),
-                            CacheSize::get(),
-                        ),
-                    ),
-                )
-            });
+            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
 
             Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
         }
@@ -649,19 +636,11 @@ mod pallet {
             ensure_signed(origin.clone())?;
             let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
                 .actual_weight
-                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
-            let weights_len = weights.len() as u32;
+                .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
             let weight_deploy =
                 Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?
                     .actual_weight
-                    .unwrap_or_else(|| {
-                        T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights_len).max(
-                            T::WeightInfo::deploy_swap_pool_for_market_future_pool(
-                                weights_len,
-                                CacheSize::get(),
-                            ),
-                        )
-                    });
+                    .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
             Ok(Some(weight_bcs.saturating_add(weight_deploy)).into())
         }
 
@@ -1267,8 +1246,10 @@ mod pallet {
         StorageOverflow,
         /// Too many categories for a categorical market.
         TooManyCategories,
-        /// Catch-all error for invalid market status
+        /// Catch-all error for invalid market status.
         InvalidMarketStatus,
+        /// The post dispatch should never be None.
+        UnexpectedNoneInPostInfo,
         /// An amount was illegally specified as zero.
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
