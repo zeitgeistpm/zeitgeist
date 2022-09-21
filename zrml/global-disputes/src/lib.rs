@@ -462,6 +462,9 @@ mod pallet {
             let mut lock_needed: BalanceOf<T> = Zero::zero();
             let mut lock_info = <Locks<T>>::get(&voter);
             let vote_lock_counter = lock_info.len() as u32;
+            // Inside retain we follow these rules:
+            // 1. Remove all locks from resolved (/ finished) global disputes.
+            // 2. Then find the maximum lock from all unresolved global disputes.
             lock_info.retain(|&(market_id, locked_balance)| {
                 // weight component MaxOwners comes from querying the winner information
                 match <Winners<T>>::get(market_id) {
