@@ -468,10 +468,22 @@ mod pallet {
             lock_info.retain(|&(market_id, locked_balance)| {
                 // weight component MaxOwners comes from querying the winner information
                 match <Winners<T>>::get(market_id) {
-                    Some(winner_info) if winner_info.is_finished => false,
-                    _ => {
-                        lock_needed = lock_needed.max(locked_balance);
-                        true
+                    Some(winner_info) => {
+                        if winner_info.is_finished {
+                            false
+                        } else {
+                            lock_needed = lock_needed.max(locked_balance);
+                            true
+                        }
+                    }
+                    None => {
+                        log::warn!(
+                            "Global Disputes: Winner info is not found for market with id {:?}.",
+                            market_id
+                        );
+                        debug_assert!(false);
+                        // unlock these funds
+                        false
                     }
                 }
             });
@@ -543,8 +555,8 @@ mod pallet {
                         <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                     } else {
                         log::warn!(
-                            "Warning: The voting outcome was not added.  This happens because \
-                             there are too many voting outcome owners (length is {:?}).",
+                            "Global Disputes: The voting outcome was not added.  This happens \
+                             because there are too many voting outcome owners (length is {:?}).",
                             &outcome_info.owners.len()
                         );
                     }
