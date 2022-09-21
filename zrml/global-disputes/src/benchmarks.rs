@@ -1,4 +1,3 @@
-
 //! Global Disputes pallet benchmarking.
 
 // Copyright 2021-2022 Zeitgeist PM LLC.
@@ -43,18 +42,16 @@ fn deposit<T>(caller: &T::AccountId)
 where
     T: Config,
 {
-    let _ = T::Currency::deposit_creating(
-        caller, 
-        BalanceOf::<T>::max_value() / 2u128.saturated_into()
-    );
+    let _ =
+        T::Currency::deposit_creating(caller, BalanceOf::<T>::max_value() / 2u128.saturated_into());
 }
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
-	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+    frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
 fn assert_has_event<T: Config>(generic_event: <T as Config>::Event) {
-	frame_system::Pallet::<T>::assert_has_event(generic_event.into());
+    frame_system::Pallet::<T>::assert_has_event(generic_event.into());
 }
 
 benchmarks! {
@@ -66,7 +63,7 @@ benchmarks! {
         let v in 0..((T::MaxGlobalDisputeVotes::get() - 1).into());
 
         let caller: T::AccountId = whitelisted_caller();
-        // ensure that we get the worst case 
+        // ensure that we get the worst case
         // to actually insert the new item at the end of the binary search
         let market_id: MarketIdOf<T> = v.into();
         let outcome = OutcomeReport::Scalar(0);
@@ -75,16 +72,16 @@ benchmarks! {
         for i in 1..=o {
             let owner = account("outcomes_owner", i, 0);
             GlobalDisputes::<T>::push_voting_outcome(
-                &market_id, 
+                &market_id,
                 outcome.clone(),
-                &owner, 
+                &owner,
                 10_000u128.saturated_into()
             )
             .unwrap();
         }
 
         let mut vote_locks: BoundedVec<(
-            MarketIdOf<T>, 
+            MarketIdOf<T>,
             BalanceOf<T>
         ), T::MaxGlobalDisputeVotes> = Default::default();
         for i in 0..v {
@@ -94,15 +91,15 @@ benchmarks! {
         }
         <Locks<T>>::insert(caller.clone(), vote_locks);
 
-        // minus one to ensure, that we use the worst case 
+        // minus one to ensure, that we use the worst case
         // for using a new winner info after the vote_on_outcome call
         let vote_sum = amount - 1u128.saturated_into();
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners: Default::default() };
         let winner_info = WinnerInfo {outcome: outcome.clone(), is_finished: false, outcome_info};
         <Winners<T>>::insert(market_id, winner_info);
-    }: _(RawOrigin::Signed(caller.clone()), market_id, outcome.clone(), amount) 
+    }: _(RawOrigin::Signed(caller.clone()), market_id, outcome.clone(), amount)
     verify {
-        assert_last_event::<T>(Event::VotedOnOutcome::<T> { 
+        assert_last_event::<T>(Event::VotedOnOutcome::<T> {
             market_id,
             voter: caller,
             outcome,
@@ -123,7 +120,7 @@ benchmarks! {
         let owners = BoundedVec::try_from(owners).unwrap();
         let outcome = OutcomeReport::Scalar(0);
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners };
-        // is_finished is true, 
+        // is_finished is true,
         // because we want the worst case to actually delete list items of the locks
         let winner_info = WinnerInfo {outcome, is_finished: true, outcome_info};
 
@@ -131,7 +128,7 @@ benchmarks! {
         let voter: T::AccountId = account("voter", 0, 0);
         let voter_lookup = T::Lookup::unlookup(voter.clone());
         let mut vote_locks: BoundedVec<(
-            MarketIdOf<T>, 
+            MarketIdOf<T>,
             BalanceOf<T>
         ), T::MaxGlobalDisputeVotes> = Default::default();
         for i in 0..l {
@@ -151,7 +148,7 @@ benchmarks! {
         // concious decision for using component 0..MaxOwners here
         // because although we check that is_finished is false,
         // Winners counts processing time for the decoding of the owners vector.
-        // then if the owner information is not present on Winners, 
+        // then if the owner information is not present on Winners,
         // the owner info is present on Outcomes
         // this happens in the case, that Outcomes is not none at the query time.
         let w in 1..T::MaxOwners::get();
@@ -164,8 +161,8 @@ benchmarks! {
         let owners = BoundedVec::try_from(owners).unwrap();
         let outcome_info = OutcomeInfo { outcome_sum: 42u128.saturated_into(), owners };
         let winner_info = WinnerInfo {
-            outcome: OutcomeReport::Scalar(0), 
-            is_finished: false, 
+            outcome: OutcomeReport::Scalar(0),
+            is_finished: false,
             outcome_info
         };
 
@@ -176,7 +173,7 @@ benchmarks! {
         deposit::<T>(&caller);
     }: _(RawOrigin::Signed(caller.clone()), market_id, outcome.clone())
     verify {
-        assert_last_event::<T>(Event::AddedVotingOutcome::<T> { 
+        assert_last_event::<T>(Event::AddedVotingOutcome::<T> {
             market_id,
             owner: caller,
             outcome: outcome.clone(),
@@ -202,9 +199,9 @@ benchmarks! {
         for i in 1..=k {
             let owner = account("outcomes_owner", i, 0);
             GlobalDisputes::<T>::push_voting_outcome(
-                &market_id, 
-                OutcomeReport::Scalar(i.into()), 
-                &owner, 
+                &market_id,
+                OutcomeReport::Scalar(i.into()),
+                &owner,
                 1_000u128.saturated_into()
             )
             .unwrap();
@@ -219,13 +216,13 @@ benchmarks! {
         let winner_outcome = OutcomeReport::Scalar(0);
 
         let outcome_info = OutcomeInfo {
-            outcome_sum: 42u128.saturated_into(), 
+            outcome_sum: 42u128.saturated_into(),
             owners: owners.clone()
         };
         <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info);
 
         let outcome_info = OutcomeInfo {
-            outcome_sum: 42u128.saturated_into(), 
+            outcome_sum: 42u128.saturated_into(),
             owners: Default::default()
         };
         let winner_info = WinnerInfo {outcome: winner_outcome, is_finished: true, outcome_info};
