@@ -49,6 +49,14 @@ where
     );
 }
 
+fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+}
+
+fn assert_has_event<T: Config>(generic_event: <T as Config>::Event) {
+	frame_system::Pallet::<T>::assert_has_event(generic_event.into());
+}
+
 benchmarks! {
     vote_on_outcome {
         // only Outcomes owners, but not Winners owners is present during vote_on_outcome
@@ -67,7 +75,8 @@ benchmarks! {
         for i in 1..=o {
             let owner = account("outcomes_owner", i, 0);
             GlobalDisputes::<T>::push_voting_outcome(
-                &market_id, OutcomeReport::Scalar(0), 
+                &market_id, 
+                outcome.clone(),
                 &owner, 
                 10_000u128.saturated_into()
             )
@@ -91,7 +100,15 @@ benchmarks! {
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners: Default::default() };
         let winner_info = WinnerInfo {outcome: outcome.clone(), is_finished: false, outcome_info};
         <Winners<T>>::insert(market_id, winner_info);
-    }: _(RawOrigin::Signed(caller), market_id, outcome, amount)
+    }: _(RawOrigin::Signed(caller.clone()), market_id, outcome.clone(), amount) 
+    verify {
+        assert_last_event::<T>(Event::VotedOnOutcome::<T> { 
+            market_id,
+            voter: caller,
+            outcome,
+            vote_amount: amount,
+        }.into());
+    }
 
     unlock_vote_balance {
         let l in 0..T::MaxGlobalDisputeVotes::get();
@@ -124,7 +141,11 @@ benchmarks! {
             <Winners<T>>::insert(market_id, winner_info.clone());
         }
         <Locks<T>>::insert(voter, vote_locks);
-    }: _(RawOrigin::Signed(caller), voter_lookup)
+    }: _(RawOrigin::Signed(caller.clone()), voter_lookup)
+    verify {
+        let lock_info = <Locks<T>>::get(&caller);
+        assert!(lock_info.is_empty());
+    }
 
     add_vote_outcome {
         // concious decision for using component 0..MaxOwners here
@@ -153,16 +174,32 @@ benchmarks! {
         let outcome = OutcomeReport::Scalar(20);
         <Winners<T>>::insert(market_id, winner_info);
         deposit::<T>(&caller);
-    }: _(RawOrigin::Signed(caller.clone()), market_id, outcome)
+    }: _(RawOrigin::Signed(caller.clone()), market_id, outcome.clone())
+    verify {
+        assert_last_event::<T>(Event::AddedVotingOutcome::<T> { 
+            market_id,
+            owner: caller,
+            outcome: outcome.clone(),
+        }.into());
+        let winner_info = <Winners<T>>::get(market_id).unwrap();
+        assert_eq!(winner_info.outcome_info.outcome_sum, T::VotingOutcomeFee::get());
+        // zero owners as long as dispute not finished and reward_outcome_owner not happened
+        assert_eq!(winner_info.outcome_info.owners.len(), 0usize);
+
+        let outcomes_item = <Outcomes<T>>::get(market_id, outcome).unwrap();
+        assert_eq!(outcomes_item.outcome_sum, T::VotingOutcomeFee::get());
+        assert_eq!(outcomes_item.owners.len(), 1usize);
+    }
 
     reward_outcome_owner {
         let o in 1..T::MaxOwners::get();
 
-        let k in 0..T::RemoveKeysLimit::get();
+        // RemoveKeysLimit - 2 to ensure that we actually fully clean and return at the end
+        let k in 1..(T::RemoveKeysLimit::get() - 2);
 
         let market_id: MarketIdOf<T> = 0u128.saturated_into();
 
-        for i in 0..=k {
+        for i in 1..=k {
             let owner = account("outcomes_owner", i, 0);
             GlobalDisputes::<T>::push_voting_outcome(
                 &market_id, 
@@ -178,10 +215,13 @@ benchmarks! {
             let owner = account("winners_owner", i, 0);
             owners.push(owner);
         }
-        let owners = BoundedVec::try_from(owners).unwrap();
+        let owners = BoundedVec::try_from(owners.clone()).unwrap();
         let winner_outcome = OutcomeReport::Scalar(0);
 
-        let outcome_info = OutcomeInfo {outcome_sum: 42u128.saturated_into(), owners};
+        let outcome_info = OutcomeInfo {
+            outcome_sum: 42u128.saturated_into(), 
+            owners: owners.clone()
+        };
         <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info);
 
         let outcome_info = OutcomeInfo {
@@ -200,6 +240,12 @@ benchmarks! {
 
         deposit::<T>(&caller);
     }: _(RawOrigin::Signed(caller.clone()), market_id)
+    verify {
+        assert!(<Outcomes<T>>::iter_prefix(market_id).next().is_none());
+        let winner_info = <Winners<T>>::get(market_id).unwrap();
+        assert!(winner_info.outcome_info.owners.len() == o as usize);
+        assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> { market_id }.into());
+    }
 }
 
 impl_benchmark_test_suite!(
