@@ -50,7 +50,8 @@ fn add_vote_outcome_works() {
                 OutcomeReport::Scalar(0),
                 &ALICE,
                 10 * BASE,
-            );
+            )
+            .unwrap();
         };
         init_global_dispute();
         let free_balance_alice_before = Balances::free_balance(&ALICE);
@@ -125,7 +126,8 @@ fn add_vote_outcome_fails_if_outcome_already_exists() {
                 OutcomeReport::Scalar(0),
                 &ALICE,
                 10 * BASE,
-            );
+            )
+            .unwrap();
         };
         init_global_dispute();
         <Outcomes<Runtime>>::insert(
@@ -155,7 +157,8 @@ fn add_vote_outcome_fails_if_balance_too_low() {
                 OutcomeReport::Scalar(0),
                 &ALICE,
                 10 * BASE,
-            );
+            )
+            .unwrap();
         };
         init_global_dispute();
         assert_noop!(
@@ -269,25 +272,29 @@ fn vote_fails_if_insufficient_amount() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(40),
             &ALICE,
             30 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(60),
             &ALICE,
             40 * BASE,
-        );
+        )
+        .unwrap();
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -310,25 +317,29 @@ fn determine_voting_winner_sets_the_last_outcome_for_same_vote_balances_as_the_c
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(40),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(60),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
@@ -421,14 +432,16 @@ fn reserve_before_init_vote_outcome_is_not_allowed_for_voting() {
             OutcomeReport::Scalar(0),
             &ALICE,
             reserved_balance_disputor,
-        );
+        )
+        .unwrap();
 
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             reserved_balance_disputor * 2,
-        );
+        )
+        .unwrap();
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -466,14 +479,16 @@ fn transfer_fails_with_fully_locked_balance() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
 
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
 
         let disputor = &ALICE;
         let free_balance_disputor_before = Balances::free_balance(disputor);
@@ -510,14 +525,16 @@ fn reserve_fails_with_fully_locked_balance() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
 
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
 
         let disputor = &ALICE;
         let free_balance_disputor_before = Balances::free_balance(disputor);
@@ -554,27 +571,31 @@ fn determine_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canon
                 OutcomeReport::Scalar(0),
                 &ALICE,
                 100 * BASE,
-            );
+            )
+            .unwrap();
 
             GlobalDisputes::push_voting_outcome(
                 &market_id,
                 OutcomeReport::Scalar(20),
                 &ALICE,
                 100 * BASE,
-            );
+            )
+            .unwrap();
             GlobalDisputes::push_voting_outcome(
                 &market_id,
                 OutcomeReport::Scalar(40),
                 &ALICE,
                 100 * BASE,
-            );
+            )
+            .unwrap();
 
             GlobalDisputes::push_voting_outcome(
                 &market_id,
                 OutcomeReport::Scalar(60),
                 &ALICE,
                 100 * BASE,
-            );
+            )
+            .unwrap();
         };
 
         market_id += 1;
@@ -824,8 +845,8 @@ fn determine_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canon
 fn reward_outcome_owner_cleans_outcome_info() {
     ExtBuilder::default().build().execute_with(|| {
         let market_id = 0u128;
-        GlobalDisputes::push_voting_outcome(&market_id, OutcomeReport::Scalar(0), &ALICE, 0);
-        GlobalDisputes::push_voting_outcome(&market_id, OutcomeReport::Scalar(20), &ALICE, 0);
+        GlobalDisputes::push_voting_outcome(&market_id, OutcomeReport::Scalar(0), &ALICE, 0).unwrap();
+        GlobalDisputes::push_voting_outcome(&market_id, OutcomeReport::Scalar(20), &ALICE, 0).unwrap();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
@@ -881,13 +902,13 @@ fn unlock_clears_lock_info() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        ).unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        ).unwrap();
 
         assert_ok!(GlobalDisputes::vote_on_outcome(
             Origin::signed(ALICE),
@@ -915,25 +936,25 @@ fn vote_fails_if_outcome_does_not_exist() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        ).unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        ).unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(40),
             &ALICE,
             30 * BASE,
-        );
+        ).unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(60),
             &ALICE,
             40 * BASE,
-        );
+        ).unwrap();
 
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
@@ -956,13 +977,15 @@ fn vote_fails_for_insufficient_funds() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
         assert_noop!(
             GlobalDisputes::vote_on_outcome(
                 Origin::signed(POOR_PAUL),
@@ -984,25 +1007,25 @@ fn locking_works_for_one_market() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        ).unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        ).unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(40),
             &ALICE,
             30 * BASE,
-        );
+        ).unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id,
             OutcomeReport::Scalar(60),
             &ALICE,
             40 * BASE,
-        );
+        ).unwrap();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
@@ -1093,26 +1116,30 @@ fn locking_works_for_two_markets_with_stronger_first_unlock() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id_1,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
 
         GlobalDisputes::push_voting_outcome(
             &market_id_2,
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id_2,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
@@ -1206,26 +1233,30 @@ fn locking_works_for_two_markets_with_weaker_first_unlock() {
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id_1,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
 
         GlobalDisputes::push_voting_outcome(
             &market_id_2,
             OutcomeReport::Scalar(0),
             &ALICE,
             10 * BASE,
-        );
+        )
+        .unwrap();
         GlobalDisputes::push_voting_outcome(
             &market_id_2,
             OutcomeReport::Scalar(20),
             &ALICE,
             20 * BASE,
-        );
+        )
+        .unwrap();
 
         assert_eq!(<Locks<Runtime>>::get(ALICE), vec![]);
         assert!(Balances::locks(ALICE).is_empty());
