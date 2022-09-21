@@ -74,11 +74,13 @@ mod pallet {
             BlockNumber = Self::BlockNumber,
         >;
 
-        /// The maximum numbers of distinct markets on which one account can simultaneously vote on outcomes.
+        /// The maximum numbers of distinct markets
+        /// on which one account can simultaneously vote on outcomes.
         #[pallet::constant]
         type MaxGlobalDisputeVotes: Get<u32>;
 
-        /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+        /// The maximum number of owners
+        /// for a voting outcome for private API calls of `push_voting_outcome`.
         #[pallet::constant]
         type MaxOwners: Get<u32>;
 
@@ -112,7 +114,8 @@ mod pallet {
     #[pallet::pallet]
     pub struct Pallet<T>(PhantomData<T>);
 
-    /// All highest lock information (vote id, outcome index and locked balance) for a particular voter.
+    /// All highest lock information (vote id, outcome index and locked balance)
+    /// for a particular voter.
     ///
     /// TWOX-NOTE: SAFE as `AccountId`s are crypto hashes anyway.
     #[pallet::storage]
@@ -131,7 +134,8 @@ mod pallet {
         OptionQuery,
     >;
 
-    /// Maps the market id to all information about the winner outcome and if the global dispute is finished.
+    /// Maps the market id to all information
+    /// about the winner outcome and if the global dispute is finished.
     #[pallet::storage]
     pub type Winners<T: Config> =
         StorageMap<_, Blake2_128Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
@@ -232,7 +236,8 @@ mod pallet {
             )?;
 
             Self::deposit_event(Event::AddedVotingOutcome { market_id, owner, outcome });
-            // charge weight for successfully have no owners in Winners and no owners in empty Outcomes
+            // charge weight for successfully have no owners
+            // in Winners and no owners in empty Outcomes
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
 
@@ -245,7 +250,8 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n + m)`, where `n` is the number of all existing outcomes for a global dispute,
+        /// Complexity: `O(n + m)`,
+        /// where `n` is the number of all existing outcomes for a global dispute,
         /// and `m` is the number of owners for the winning outcome.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::reward_outcome_owner(
@@ -264,7 +270,8 @@ mod pallet {
 
             // move the winning outcome info to Winners before it gets drained
             if let Some(outcome_info) = <Outcomes<T>>::get(market_id, &winner_info.outcome) {
-                // storage write is needed here in case, that the first call of reward_outcome_owner doesn't reward the owners
+                // storage write is needed here in case,
+                // that the first call of reward_outcome_owner doesn't reward the owners
                 // this can happen if there are more than RemoveKeysLimit keys to remove
                 winner_info.outcome_info = outcome_info;
                 <Winners<T>>::insert(market_id, winner_info.clone());
@@ -366,7 +373,8 @@ mod pallet {
             #[pallet::compact] amount: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let voter = ensure_signed(origin)?;
-            ensure!(amount <= T::Currency::free_balance(&voter), Error::<T>::InsufficientAmount);
+            let voter_free_balance = T::Currency::free_balance(&voter);
+            ensure!(amount <= voter_free_balance, Error::<T>::InsufficientAmount);
             ensure!(amount >= T::MinOutcomeVoteAmount::get(), Error::<T>::AmountTooLow);
 
             let winner_info =
@@ -392,35 +400,28 @@ mod pallet {
 
             let vote_lock_counter = lock_info.len() as u32;
 
-            match lock_info.binary_search_by_key(&market_id, |i| i.0) {
+            let lock_amount = match lock_info.binary_search_by_key(&market_id, |i| i.0) {
                 Ok(i) => {
-                    let prev_highest_amount: BalanceOf<T> = lock_info[i].1;
-                    if amount > prev_highest_amount {
-                        let diff = amount.saturating_sub(prev_highest_amount);
-                        add_to_outcome_sum(diff);
-                        lock_info[i].1 = amount;
-                    } else {
-                        // concious decision here to not throw an error when the new amount is not higher
-                        // because the user would have to pay worst case fees then
-                        return Ok(Some(T::WeightInfo::vote_on_outcome(
-                            outcome_owners_len,
-                            vote_lock_counter,
-                        ))
-                        .into());
-                    }
+                    let prev_amount_acc: BalanceOf<T> = lock_info[i].1;
+                    let new_amount_acc = amount.saturating_add(prev_amount_acc);
+                    ensure!(new_amount_acc <= voter_free_balance, Error::<T>::InsufficientAmount);
+                    add_to_outcome_sum(amount);
+                    lock_info[i].1 = new_amount_acc;
+                    new_amount_acc
                 }
                 Err(i) => {
                     lock_info
                         .try_insert(i, (market_id, amount))
                         .map_err(|_| Error::<T>::MaxVotesReached)?;
                     add_to_outcome_sum(amount);
+                    amount
                 }
-            }
+            };
 
             T::Currency::extend_lock(
                 T::GlobalDisputeLockId::get(),
                 &voter,
-                amount,
+                lock_amount,
                 WithdrawReasons::TRANSFER,
             );
 
@@ -485,7 +486,8 @@ mod pallet {
 
             <Locks<T>>::insert(&voter, lock_info);
 
-            // use the worst case for owners length, because otherwise we would have to count each in Locks
+            // use the worst case for owners length,
+            // because otherwise we would have to count each in Locks
             Ok(Some(T::WeightInfo::unlock_vote_balance(vote_lock_counter, T::MaxOwners::get()))
                 .into())
         }

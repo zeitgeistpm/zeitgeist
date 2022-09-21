@@ -776,7 +776,8 @@ fn determine_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canon
         assert_eq!(
             <Outcomes<Runtime>>::get(market_id, OutcomeReport::Scalar(20)).unwrap(),
             OutcomeInfo {
-                outcome_sum: 110 * BASE,
+                // votes accumulating now
+                outcome_sum: 111 * BASE,
                 owners: BoundedVec::try_from(vec![ALICE]).unwrap()
             }
         );
@@ -802,18 +803,19 @@ fn determine_voting_winner_sets_the_highest_vote_of_outcome_markets_as_the_canon
             OutcomeReport::Scalar(20),
             40 * BASE
         ));
-        // Alice updates here voting balance (instead of accumulating)
+        // votes accumulate
         assert_eq!(
             <Outcomes<Runtime>>::get(market_id, OutcomeReport::Scalar(20)).unwrap(),
             OutcomeInfo {
-                outcome_sum: 140 * BASE,
+                outcome_sum: 151 * BASE,
                 owners: BoundedVec::try_from(vec![ALICE]).unwrap()
             }
         );
 
+        // 151 BASE for outcome 20 against 150 BASE for outcome 0
         assert_eq!(
             GlobalDisputes::determine_voting_winner(&market_id).unwrap(),
-            OutcomeReport::Scalar(0)
+            OutcomeReport::Scalar(20)
         );
     });
 }
