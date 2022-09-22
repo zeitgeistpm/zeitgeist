@@ -56,7 +56,7 @@ benchmarks! {
         let o in 1..T::MaxOwners::get();
 
         // ensure we have one vote left for the call
-        let v in 0..((T::MaxGlobalDisputeVotes::get() - 1).into());
+        let v in 0..(T::MaxGlobalDisputeVotes::get() - 1);
 
         let caller: T::AccountId = whitelisted_caller();
         // ensure that we get the worst case
@@ -201,7 +201,7 @@ benchmarks! {
             is_finished: true,
             outcome_info: OutcomeInfo {
                 outcome_sum: 42u128.saturated_into(),
-                owners: owners.clone(),
+                owners,
             },
         };
         <Winners<T>>::insert(market_id, winner_info.clone());
@@ -224,7 +224,7 @@ benchmarks! {
         )
         .unwrap();
     } verify {
-        assert!(winner_info.clone().outcome_info.owners.len() == o as usize);
+        assert!(winner_info.outcome_info.owners.len() == o as usize);
         assert_last_event::<T>(Event::OutcomeOwnersRewarded::<T> {
             market_id,
             owners: owners_vec,
@@ -250,10 +250,10 @@ benchmarks! {
             is_finished: true,
             outcome_info: OutcomeInfo {
                 outcome_sum: 42u128.saturated_into(),
-                owners: owners.clone(),
+                owners,
             },
         };
-        <Winners<T>>::insert(market_id, winner_info.clone());
+        <Winners<T>>::insert(market_id, winner_info);
 
         let caller: T::AccountId = whitelisted_caller();
 
@@ -301,7 +301,7 @@ benchmarks! {
 
         let outcome_info = OutcomeInfo {
             outcome_sum: 42u128.saturated_into(),
-            owners: owners.clone()
+            owners
         };
         <Outcomes<T>>::insert(market_id, winner_outcome.clone(), outcome_info);
 

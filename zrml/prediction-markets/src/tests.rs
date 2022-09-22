@@ -1666,7 +1666,9 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         assert_eq!(dispute.by, CHARLIE);
         assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
-        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_at);
+        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(
+            &dispute_at + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
     });
@@ -1729,7 +1731,9 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
             OutcomeReport::Categorical(1)
         ));
 
-        let reported_ids = MarketIdsPerReportBlock::<Runtime>::get(&report_at);
+        let reported_ids = MarketIdsPerReportBlock::<Runtime>::get(
+            &report_at + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(reported_ids.len(), 1);
         let id = reported_ids[0];
         assert_eq!(id, 0);
@@ -1826,13 +1830,19 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_at_0);
+        let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
+            &dispute_at_0 + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(market_ids_1.len(), 0);
 
-        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_at_1);
+        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
+            &dispute_at_1 + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(market_ids_2.len(), 0);
 
-        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_at_2);
+        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
+            &dispute_at_2 + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(market_ids_3.len(), 1);
 
         run_blocks(<Runtime as Config>::DisputePeriod::get());
@@ -2491,13 +2501,19 @@ fn authorized_correctly_resolves_disputed_market() {
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
-        let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_at_0);
+        let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
+            &dispute_at_0 + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(market_ids_1.len(), 0);
 
-        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_at_1);
+        let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
+            &dispute_at_1 + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(market_ids_2.len(), 0);
 
-        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_at_2);
+        let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
+            &dispute_at_2 + <Runtime as Config>::DisputePeriod::get(),
+        );
         assert_eq!(market_ids_3.len(), 1);
 
         run_blocks(<Runtime as Config>::DisputePeriod::get());

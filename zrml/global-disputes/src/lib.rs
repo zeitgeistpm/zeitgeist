@@ -281,7 +281,7 @@ mod pallet {
                 // that the first call of reward_outcome_owner doesn't reward the owners
                 // this can happen if there are more than RemoveKeysLimit keys to remove
                 winner_info.outcome_info = outcome_info;
-                <Winners<T>>::insert(market_id, winner_info.clone());
+                <Winners<T>>::insert(market_id, winner_info);
             }
 
             let mut all_purged = true;
@@ -301,9 +301,7 @@ mod pallet {
             }
 
             // weight for max owners, because we don't know
-            return Ok(
-                (Some(T::WeightInfo::purge_outcomes(removed_keys_amount, owners_len))).into()
-            );
+            Ok((Some(T::WeightInfo::purge_outcomes(removed_keys_amount, owners_len))).into())
         }
 
         /// Reward the collected fees to the owner(s) of a voting outcome.
