@@ -90,7 +90,9 @@ fn create_close_and_report_market<T: Config>(
     options: MarketType,
     outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
+    let range_start: MomentOf<T> = 100_000u64.saturated_into();
+    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+    let period = MarketPeriod::Timestamp(range_start..range_end);
     let (caller, market_id) =
         create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
