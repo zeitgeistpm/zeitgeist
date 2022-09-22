@@ -395,7 +395,7 @@ benchmarks! {
         let _ = Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
-            min_liquidity
+            min_liquidity,
         )
         .unwrap();
 
@@ -406,7 +406,7 @@ benchmarks! {
             market_id,
             swap_fee: max_swap_fee,
             amount: min_liquidity,
-            weights
+            weights,
         };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
@@ -439,7 +439,7 @@ benchmarks! {
         let _ = Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
-            min_liquidity
+            min_liquidity,
         )
         .unwrap();
 
@@ -447,7 +447,10 @@ benchmarks! {
         let weights = vec![MinWeight::get(); weight_len];
 
         let call = Call::<T>::deploy_swap_pool_for_market {
-            market_id, swap_fee: max_swap_fee, amount: min_liquidity, weights
+            market_id,
+            swap_fee: max_swap_fee,
+            amount: min_liquidity,
+            weights,
         };
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
@@ -549,9 +552,8 @@ benchmarks! {
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(
-            total_accounts, asset_accounts
-        )?;
+        let (_, market_id) =
+            setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(market_id);
@@ -563,9 +565,8 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(
-            total_accounts, asset_accounts
-        )?;
+        let (caller, market_id) =
+            setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(market_id);
