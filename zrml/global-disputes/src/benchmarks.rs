@@ -34,7 +34,7 @@ use frame_support::{
     BoundedVec,
 };
 use frame_system::RawOrigin;
-use sp_runtime::traits::{Bounded, SaturatedConversion};
+use sp_runtime::traits::{Bounded, SaturatedConversion, Saturating};
 use sp_std::prelude::*;
 use zeitgeist_primitives::types::OutcomeReport;
 
@@ -48,10 +48,6 @@ where
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
-}
-
-fn assert_has_event<T: Config>(generic_event: <T as Config>::Event) {
-    frame_system::Pallet::<T>::assert_has_event(generic_event.into());
 }
 
 benchmarks! {
@@ -75,7 +71,7 @@ benchmarks! {
                 &market_id,
                 outcome.clone(),
                 &owner,
-                10_000u128.saturated_into()
+                1_000_000_000u128.saturated_into()
             )
             .unwrap();
         }
@@ -188,11 +184,99 @@ benchmarks! {
         assert_eq!(outcomes_item.owners.len(), 1usize);
     }
 
-    reward_outcome_owner {
+    reward_outcome_owner_with_funds {
         let o in 1..T::MaxOwners::get();
 
+        let market_id: MarketIdOf<T> = 0u128.saturated_into();
+
+        let mut owners_vec = Vec::new();
+        for i in 1..=o {
+            let owner = account("winners_owner", i, 0);
+            owners_vec.push(owner);
+        }
+        let owners = BoundedVec::try_from(owners_vec.clone()).unwrap();
+
+        let winner_info = WinnerInfo {
+            outcome: OutcomeReport::Scalar(0),
+            is_finished: true,
+            outcome_info: OutcomeInfo {
+                outcome_sum: 42u128.saturated_into(),
+                owners: owners.clone(),
+            },
+        };
+        <Winners<T>>::insert(market_id, winner_info.clone());
+
+        let reward_account = GlobalDisputes::<T>::reward_account(&market_id);
+        let _ = T::Currency::deposit_creating(
+            &reward_account,
+            T::VotingOutcomeFee::get().saturating_mul(10u128.saturated_into()),
+        );
+
+        let caller: T::AccountId = whitelisted_caller();
+
+        let outcome = OutcomeReport::Scalar(20);
+
+        deposit::<T>(&caller);
+    }: {
+        <Pallet<T>>::reward_outcome_owner(
+            RawOrigin::Signed(caller.clone()).into(),
+            market_id
+        )
+        .unwrap();
+    } verify {
+        assert!(winner_info.clone().outcome_info.owners.len() == o as usize);
+        assert_last_event::<T>(Event::OutcomeOwnersRewarded::<T> {
+            market_id,
+            owners: owners_vec,
+        }
+        .into());
+        assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
+    }
+
+    reward_outcome_owner_no_funds {
+        let o in 1..T::MaxOwners::get();
+
+        let market_id: MarketIdOf<T> = 0u128.saturated_into();
+
+        let mut owners = Vec::new();
+        for i in 1..=o {
+            let owner = account("winners_owner", i, 0);
+            owners.push(owner);
+        }
+        let owners = BoundedVec::try_from(owners.clone()).unwrap();
+
+        let winner_info = WinnerInfo {
+            outcome: OutcomeReport::Scalar(0),
+            is_finished: true,
+            outcome_info: OutcomeInfo {
+                outcome_sum: 42u128.saturated_into(),
+                owners: owners.clone(),
+            },
+        };
+        <Winners<T>>::insert(market_id, winner_info.clone());
+
+        let caller: T::AccountId = whitelisted_caller();
+
+        let outcome = OutcomeReport::Scalar(20);
+
+        let reward_account = GlobalDisputes::<T>::reward_account(&market_id);
+        assert!(T::Currency::free_balance(&reward_account) == 0u128.saturated_into());
+
+        deposit::<T>(&caller);
+    }: {
+        <Pallet<T>>::reward_outcome_owner(RawOrigin::Signed(caller.clone()).into(), market_id).unwrap();
+    } verify {
+        assert_last_event::<T>(Event::NonReward::<T> {
+            market_id,
+        }
+        .into());
+    }
+
+    purge_outcomes {
         // RemoveKeysLimit - 2 to ensure that we actually fully clean and return at the end
         let k in 1..(T::RemoveKeysLimit::get() - 2);
+
+        let o in 1..T::MaxOwners::get();
 
         let market_id: MarketIdOf<T> = 0u128.saturated_into();
 
@@ -202,7 +286,7 @@ benchmarks! {
                 &market_id,
                 OutcomeReport::Scalar(i.into()),
                 &owner,
-                1_000u128.saturated_into()
+                1_000_000_000u128.saturated_into()
             )
             .unwrap();
         }
@@ -228,9 +312,6 @@ benchmarks! {
         let winner_info = WinnerInfo {outcome: winner_outcome, is_finished: true, outcome_info};
         <Winners<T>>::insert(market_id, winner_info);
 
-        let reward_account = GlobalDisputes::<T>::reward_account(&market_id);
-        let _ = T::Currency::deposit_creating(&reward_account, 100_000u128.saturated_into());
-
         let caller: T::AccountId = whitelisted_caller();
 
         let outcome = OutcomeReport::Scalar(20);
@@ -239,9 +320,10 @@ benchmarks! {
     }: _(RawOrigin::Signed(caller.clone()), market_id)
     verify {
         assert!(<Outcomes<T>>::iter_prefix(market_id).next().is_none());
-        let winner_info = <Winners<T>>::get(market_id).unwrap();
-        assert!(winner_info.outcome_info.owners.len() == o as usize);
-        assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> { market_id }.into());
+        assert_last_event::<T>(Event::OutcomesFullyCleaned::<T> {
+            market_id,
+        }
+        .into());
     }
 }
 

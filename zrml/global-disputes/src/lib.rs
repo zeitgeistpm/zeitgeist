@@ -47,7 +47,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
-        DispatchResult,
+        DispatchResult, SaturatedConversion,
     };
     use sp_std::{vec, vec::Vec};
     use zeitgeist_primitives::types::OutcomeReport;
@@ -154,6 +154,8 @@ mod pallet {
         },
         /// The winner of the global dispute system is determined.
         GlobalDisputeWinnerDetermined { market_id: MarketIdOf<T> },
+        /// No funds could be spent as reward to the outcome owner(s).
+        NonReward { market_id: MarketIdOf<T> },
         /// The outcome owner has been rewarded.
         OutcomeOwnersRewarded { market_id: MarketIdOf<T>, owners: Vec<AccountIdOf<T>> },
         /// The outcomes storage item is partially cleaned.
@@ -187,6 +189,8 @@ mod pallet {
         UnfinishedGlobalDispute,
         /// The maximum number of votes for this account is reached.
         MaxVotesReached,
+        /// The outcomes are not fully cleaned yet.
+        OutcomesNotFullyCleaned,
     }
 
     #[pallet::call]
@@ -241,7 +245,7 @@ mod pallet {
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
 
-        /// Reward the collected fees to the owner(s) of a voting outcome.
+        /// Purge all outcomes to allow the winning outcome owner(s) to get their reward.
         /// Fails if the global dispute is not concluded yet.
         ///
         /// # Arguments
@@ -250,15 +254,14 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n + m)`,
-        /// where `n` is the number of all existing outcomes for a global dispute,
-        /// and `m` is the number of owners for the winning outcome.
+        /// Complexity: `O(n)`,
+        /// where `n` is the number of all existing outcomes for a global dispute.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::reward_outcome_owner(
-            T::MaxOwners::get(),
-            T::RemoveKeysLimit::get()
+        #[pallet::weight(T::WeightInfo::purge_outcomes(
+            T::RemoveKeysLimit::get(),
+            T::MaxOwners::get()
         ))]
-        pub fn reward_outcome_owner(
+        pub fn purge_outcomes(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
@@ -268,8 +271,12 @@ mod pallet {
                 <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
             ensure!(winner_info.is_finished, Error::<T>::UnfinishedGlobalDispute);
 
+            let winning_outcome: Option<OutcomeInfoOf<T>> =
+                <Outcomes<T>>::get(market_id, &winner_info.outcome);
+            let mut owners_len = 0u32;
             // move the winning outcome info to Winners before it gets drained
-            if let Some(outcome_info) = <Outcomes<T>>::get(market_id, &winner_info.outcome) {
+            if let Some(outcome_info) = winning_outcome {
+                owners_len = outcome_info.owners.len() as u32;
                 // storage write is needed here in case,
                 // that the first call of reward_outcome_owner doesn't reward the owners
                 // this can happen if there are more than RemoveKeysLimit keys to remove
@@ -277,19 +284,55 @@ mod pallet {
                 <Winners<T>>::insert(market_id, winner_info.clone());
             }
 
+            let mut all_purged = true;
             let mut removed_keys_amount = 0u32;
-            for _ in <Outcomes<T>>::drain_prefix(market_id) {
+            for (_, i) in <Outcomes<T>>::drain_prefix(market_id) {
+                owners_len = owners_len.max(i.owners.len() as u32);
                 removed_keys_amount = removed_keys_amount.saturating_add(1u32);
                 if removed_keys_amount >= T::RemoveKeysLimit::get() {
-                    Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
-                    // benchmark component `owner` only meant for the winning outcome
-                    return Ok((Some(T::WeightInfo::reward_outcome_owner(
-                        0u32,
-                        removed_keys_amount,
-                    )))
-                    .into());
+                    all_purged = false;
                 }
             }
+
+            if all_purged {
+                Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
+            } else {
+                Self::deposit_event(Event::OutcomesPartiallyCleaned { market_id });
+            }
+
+            // weight for max owners, because we don't know
+            return Ok(
+                (Some(T::WeightInfo::purge_outcomes(removed_keys_amount, owners_len))).into()
+            );
+        }
+
+        /// Reward the collected fees to the owner(s) of a voting outcome.
+        /// Fails if outcomes is not already purged.
+        ///
+        /// # Arguments
+        ///
+        /// - `market_id`: The id of the market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of owners for the winning outcome.
+        #[frame_support::transactional]
+        #[pallet::weight(T::WeightInfo::reward_outcome_owner_no_funds(T::MaxOwners::get())
+            .max(T::WeightInfo::reward_outcome_owner_with_funds(T::MaxOwners::get())))]
+        pub fn reward_outcome_owner(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_signed(origin)?;
+
+            ensure!(
+                <Outcomes<T>>::iter_prefix(market_id).next().is_none(),
+                <Error<T>>::OutcomesNotFullyCleaned
+            );
+
+            let winner_info =
+                <Winners<T>>::get(market_id).ok_or(Error::<T>::NoGlobalDisputeStarted)?;
+            ensure!(winner_info.is_finished, Error::<T>::UnfinishedGlobalDispute);
 
             let reward_account = Self::reward_account(&market_id);
             let reward_account_free_balance = T::Currency::free_balance(&reward_account);
@@ -297,14 +340,11 @@ mod pallet {
             let at_least_one_owner_str =
                 "Global Disputes: There should be always at least one owner for a voting outcome.";
             debug_assert!(owners_len != 0u32, "{}", at_least_one_owner_str);
+
             if reward_account_free_balance.is_zero() {
+                Self::deposit_event(Event::NonReward { market_id });
                 // return early case if there is no reward
-                Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
-                return Ok((Some(T::WeightInfo::reward_outcome_owner(
-                    owners_len,
-                    removed_keys_amount,
-                )))
-                .into());
+                return Ok((Some(T::WeightInfo::reward_outcome_owner_no_funds(owners_len))).into());
             }
 
             let mut remainder = reward_account_free_balance;
@@ -334,10 +374,11 @@ mod pallet {
                 debug_assert!(false);
             }
 
-            if !remainder.is_zero() {
-                log::error!(
+            // because of division remainders allow some dust
+            if 100u128.saturated_into::<BalanceOf<T>>() < remainder {
+                log::warn!(
                     "Global Disputes: The reward remainder for the market id {:?} 
-                    should be zero after the reward process. Reward remainder amount: {:?}",
+                    should be near zero after the reward process. Reward remainder amount: {:?}",
                     &market_id,
                     remainder
                 );
@@ -349,9 +390,7 @@ mod pallet {
                 owners: winner_info.outcome_info.owners.to_vec(),
             });
 
-            Self::deposit_event(Event::OutcomesFullyCleaned { market_id });
-
-            Ok((Some(T::WeightInfo::reward_outcome_owner(owners_len, removed_keys_amount))).into())
+            Ok((Some(T::WeightInfo::reward_outcome_owner_with_funds(owners_len))).into())
         }
 
         /// Vote on existing voting outcomes by locking native tokens.

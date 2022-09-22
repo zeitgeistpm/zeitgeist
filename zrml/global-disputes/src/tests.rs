@@ -199,16 +199,19 @@ fn reward_outcome_owner_works_for_multiple_owners() {
         let free_balance_bob_before = Balances::free_balance(&BOB);
         let free_balance_charlie_before = Balances::free_balance(&CHARLIE);
 
+        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
+
         assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
 
-        System::assert_has_event(
+        System::assert_last_event(
             Event::<Runtime>::OutcomeOwnersRewarded {
                 market_id,
                 owners: vec![ALICE, BOB, CHARLIE],
             }
             .into(),
         );
-        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
         assert_eq!(
             Balances::free_balance(&ALICE),
             free_balance_alice_before + VotingOutcomeFee::get()
@@ -246,14 +249,18 @@ fn reward_outcome_owner_works_for_one_owner() {
         };
         <Winners<Runtime>>::insert(market_id, winner_info);
 
+        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
+
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
+
         let free_balance_alice_before = Balances::free_balance(&ALICE);
 
-        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id,));
+        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(ALICE), market_id));
 
-        System::assert_has_event(
+        System::assert_last_event(
             Event::<Runtime>::OutcomeOwnersRewarded { market_id, owners: vec![ALICE] }.into(),
         );
-        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
+
         assert_eq!(
             Balances::free_balance(&ALICE),
             free_balance_alice_before + 3 * VotingOutcomeFee::get()
@@ -884,11 +891,11 @@ fn reward_outcome_owner_cleans_outcome_info() {
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(ALICE), ALICE));
         assert_ok!(GlobalDisputes::unlock_vote_balance(Origin::signed(BOB), BOB));
 
-        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(BOB), market_id,));
+        assert_ok!(GlobalDisputes::purge_outcomes(Origin::signed(ALICE), market_id,));
 
-        // figure out why this doesnt emit: System::assert_has_event(PEvent::<Runtime>::OutcomesFullyCleaned(market_id).into());
-        // System::assert_last_event(PEvent::<Runtime>::OutcomesFullyCleaned(market_id).into());
-        // System::assert_has_event(PEvent::<Runtime>::OutcomesFullyCleaned(market_id).into());
+        System::assert_last_event(Event::<Runtime>::OutcomesFullyCleaned { market_id }.into());
+
+        assert_ok!(GlobalDisputes::reward_outcome_owner(Origin::signed(BOB), market_id,));
 
         assert_eq!(<Outcomes<Runtime>>::iter_prefix(market_id).next(), None);
     });
