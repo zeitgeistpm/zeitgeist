@@ -947,6 +947,7 @@ mod pallet {
         #[pallet::constant]
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
+        /// The percentage of the advisory bond that gets slashed when a market is rejected.
         #[pallet::constant]
         type AdvisoryBondSlashPercentage: Get<Percent>;
 
