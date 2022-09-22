@@ -415,7 +415,7 @@ benchmarks! {
             Pallet::<T>::calculate_time_frame_of_moment(range_start),
         )
         .len();
-        assert!(current_len == prev_len + 1);
+        assert_eq!(current_len, prev_len + 1);
     }
 
     deploy_swap_pool_for_market_open_pool {
@@ -457,7 +457,7 @@ benchmarks! {
     } verify {
         let market_pool_id = T::MarketCommons::market_pool(&market_id.saturated_into()).unwrap();
         let pool = T::Swaps::pool(market_pool_id).unwrap();
-        assert!(pool.pool_status == PoolStatus::Active);
+        assert_eq!(pool.pool_status, PoolStatus::Active);
     }
 
     dispute_authorized {

@@ -1056,7 +1056,7 @@ mod pallet {
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
-            Ok((T::WeightInfo::sell_complete_set(assets_len)).into())
+            Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
         }
     }
 
