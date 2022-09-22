@@ -1056,8 +1056,7 @@ mod pallet {
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
-            let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(T::WeightInfo::sell_complete_set, assets_len, max_cats)
+            Ok((T::WeightInfo::sell_complete_set(assets_len)).into())
         }
     }
 
@@ -1613,8 +1612,7 @@ mod pallet {
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
 
             let assets_len: u32 = assets.len().saturated_into();
-            let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(T::WeightInfo::buy_complete_set, assets_len, max_cats)
+            Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into())
         }
 
         pub(crate) fn do_reject_market(
@@ -1666,21 +1664,6 @@ mod pallet {
 
         pub(crate) fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
             time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
-        }
-
-        fn calculate_actual_weight<F>(
-            func: F,
-            weight_parameter: u32,
-            max_weight_parameter: u32,
-        ) -> DispatchResultWithPostInfo
-        where
-            F: Fn(u32) -> Weight,
-        {
-            if weight_parameter == max_weight_parameter {
-                Ok(None.into())
-            } else {
-                Ok(Some(func(weight_parameter)).into())
-            }
         }
 
         fn calculate_internal_resolve_weight(
