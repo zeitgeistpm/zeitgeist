@@ -8,7 +8,7 @@
   - `vote_on_outcome` - Vote on existing voting outcomes by locking native tokens. 
     Fails if the global dispute has not started or has already finished.
   - `unlock_vote_balance` - Return all locked native tokens in a global dispute. 
-    Fails if the global dispute is not concluded yet.
+    If the global dispute is not concluded yet the lock remains.
   - `purge_outcomes` - Purge all outcomes to allow the winning outcome owner(s) 
     to get their reward. Fails if the global dispute is not concluded yet.
   - `reward_outcome_owner` - Reward the collected fees to the owner(s) 
