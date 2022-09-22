@@ -15,17 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Orderbook
-//!
-//! A module to trade shares using a naive on-chain orderbook.
-//!
-//! ## Overview
-//!
-//! ## Interface
-//!
-//! ### Dispatches
-//!
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;

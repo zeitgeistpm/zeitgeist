@@ -1659,7 +1659,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Disputed);
 
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 1);
         let dispute = &disputes[0];
         assert_eq!(dispute.at, dispute_at);
@@ -1667,8 +1667,9 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
         let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(
-            &dispute_at + <Runtime as Config>::DisputePeriod::get(),
+            dispute_at + <Runtime as Config>::DisputePeriod::get(),
         );
+
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
     });
@@ -1732,7 +1733,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         ));
 
         let reported_ids = MarketIdsPerReportBlock::<Runtime>::get(
-            &report_at + <Runtime as Config>::DisputePeriod::get(),
+            report_at + <Runtime as Config>::DisputePeriod::get(),
         );
         assert_eq!(reported_ids.len(), 1);
         let id = reported_ids[0];
@@ -1826,30 +1827,31 @@ fn it_resolves_a_disputed_market() {
         assert_eq!(eve_reserved, DisputeBond::get() + 2 * DisputeFactor::get());
 
         // check disputes length
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            &dispute_at_0 + <Runtime as Config>::DisputePeriod::get(),
+            dispute_at_0 + <Runtime as Config>::DisputePeriod::get(),
         );
         assert_eq!(market_ids_1.len(), 0);
 
         let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            &dispute_at_1 + <Runtime as Config>::DisputePeriod::get(),
+            dispute_at_1 + <Runtime as Config>::DisputePeriod::get(),
         );
         assert_eq!(market_ids_2.len(), 0);
 
         let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            &dispute_at_2 + <Runtime as Config>::DisputePeriod::get(),
+            dispute_at_2 + <Runtime as Config>::DisputePeriod::get(),
         );
+
         assert_eq!(market_ids_3.len(), 1);
 
         run_blocks(<Runtime as Config>::DisputePeriod::get());
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 0);
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
@@ -1958,13 +1960,13 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
 
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         let eve_reserved = Balances::reserved_balance(&EVE);
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 3);
 
         run_blocks(<Runtime as Config>::DisputePeriod::get());
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 0);
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
 
@@ -2272,14 +2274,14 @@ fn full_scalar_market_lifecycle() {
 
         // dispute
         assert_ok!(PredictionMarkets::dispute(Origin::signed(DAVE), 0, OutcomeReport::Scalar(25)));
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 1);
 
         run_blocks(<Runtime as Config>::DisputePeriod::get());
 
         let market_after_resolve = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after_resolve.status, MarketStatus::Resolved);
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 0);
 
         // give EVE some shares
@@ -2497,30 +2499,31 @@ fn authorized_correctly_resolves_disputed_market() {
         assert_eq!(eve_reserved, DisputeBond::get() + 2 * DisputeFactor::get());
 
         // check disputes length
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 3);
 
         // make sure the old mappings of market id per dispute block are erased
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            &dispute_at_0 + <Runtime as Config>::DisputePeriod::get(),
+            dispute_at_0 + <Runtime as Config>::DisputePeriod::get(),
         );
         assert_eq!(market_ids_1.len(), 0);
 
         let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            &dispute_at_1 + <Runtime as Config>::DisputePeriod::get(),
+            dispute_at_1 + <Runtime as Config>::DisputePeriod::get(),
         );
         assert_eq!(market_ids_2.len(), 0);
 
         let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            &dispute_at_2 + <Runtime as Config>::DisputePeriod::get(),
+            dispute_at_2 + <Runtime as Config>::DisputePeriod::get(),
         );
+
         assert_eq!(market_ids_3.len(), 1);
 
         run_blocks(<Runtime as Config>::DisputePeriod::get());
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 0);
 
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), 0));
@@ -2594,7 +2597,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         run_blocks(<Runtime as Config>::DisputePeriod::get());
         let market_after = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
-        let disputes = crate::Disputes::<Runtime>::get(&0);
+        let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 0);
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(CHARLIE), market_id));
 

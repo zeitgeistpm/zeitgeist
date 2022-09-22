@@ -231,7 +231,7 @@ parameter_types! {
     /// The maximum fee that is charged for swaps and single asset LP operations.
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     /// The sum of all weights of the assets within the pool is limited by `MaxTotalWeight`.
-    pub const MaxTotalWeight: Balance = 128 * BASE;
+    pub const MaxTotalWeight: Balance = MaxWeight::get() * 2;
     /// The maximum weight a single asset can have.
     pub const MaxWeight: Balance = 64 * BASE;
     /// Minimum amount of liquidity required to launch a CPMM pool.
