@@ -1,7 +1,7 @@
 # v0.3.6
 
-- Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100% to 10% by
-  introducing a new on-chain variable `AdvisoryBondSlashPercentage`.
+- Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
+  to 10% by introducing a new on-chain variable `AdvisoryBondSlashPercentage`.
 
 # v0.3.5
 
