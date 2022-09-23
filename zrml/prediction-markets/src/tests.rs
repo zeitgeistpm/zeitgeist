@@ -17,6 +17,7 @@
 
 #![cfg(all(feature = "mock", test))]
 #![allow(clippy::reversed_empty_ranges)]
+#![cfg(feature = "with-global-disputes")]
 
 use crate::{
     mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,

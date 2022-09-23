@@ -20,6 +20,7 @@
     clippy::integer_arithmetic
 )]
 #![cfg(feature = "mock")]
+#![cfg(feature = "with-global-disputes")]
 
 use crate as prediction_markets;
 use frame_support::{
@@ -37,19 +38,24 @@ use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId,
-        LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes, MaxGlobalDisputeVotes,
-        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxOwners, MaxReserves, MaxSubsidyPeriod,
-        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity,
-        MinOutcomeVoteAmount, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId,
-        RemoveKeysLimit, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, VotingOutcomeFee,
-        BASE, CENT, MILLISECS_PER_BLOCK,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
+        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
+        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        StakeWeight, SwapsPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
         CurrencyId, Hash, Index, MarketId, Moment, PoolId, SerdeWrapper, UncheckedExtrinsicTest,
     },
 };
+
+#[cfg(feature = "with-global-disputes")]
+use zeitgeist_primitives::constants::mock::{
+    GlobalDisputeLockId, GlobalDisputePeriod, GlobalDisputesPalletId, MaxGlobalDisputeVotes,
+    MaxOwners, MinOutcomeVoteAmount, RemoveKeysLimit, VotingOutcomeFee,
+};
+
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 
 pub const ALICE: AccountIdTest = 0;
@@ -256,6 +262,7 @@ impl zrml_simple_disputes::Config for Runtime {
     type PalletId = SimpleDisputesPalletId;
 }
 
+#[cfg(feature = "with-global-disputes")]
 impl zrml_global_disputes::Config for Runtime {
     type Event = Event;
     type MarketCommons = MarketCommons;

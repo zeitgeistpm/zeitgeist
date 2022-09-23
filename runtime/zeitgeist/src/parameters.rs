@@ -24,7 +24,6 @@
 use super::VERSION;
 use frame_support::{
     parameter_types,
-    traits::LockIdentifier,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         DispatchClass, Weight,
@@ -74,22 +73,6 @@ parameter_types! {
     /// This value is multiplied by the current number of jurors to determine the stake
     /// the juror has to pay.
     pub const StakeWeight: u128 = 2 * BASE;
-
-    // Global Disputes
-    /// Vote lock identifier, mainly used for the LockableCurrency on the native token.
-    pub const GlobalDisputeLockId: LockIdentifier = GLOBAL_DISPUTES_LOCK_ID;
-    /// Pallet identifier
-    pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
-    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
-    pub const MaxOwners: u32 = 10;
-    /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
-    pub const MaxGlobalDisputeVotes: u32 = 50;
-    /// The minimum required amount to vote on an outcome.
-    pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
-    /// The fee required to add a voting outcome.
-    pub const VotingOutcomeFee: Balance = 200 * BASE;
-    /// The remove limit for the Outcomes storage double map.
-    pub const RemoveKeysLimit: u32 = 250;
 
     // Democracy
     /// How often (in blocks) new public referenda are launched.
@@ -164,8 +147,6 @@ parameter_types! {
     /// After reporting the outcome and after every dispute, the dispute period is extended
     /// by `DisputePeriod`.
     pub const DisputePeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
-    /// The period for a global dispute to end.
-    pub const GlobalDisputePeriod: BlockNumber = 7 * BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.

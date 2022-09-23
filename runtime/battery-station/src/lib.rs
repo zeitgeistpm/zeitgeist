@@ -94,35 +94,25 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 #[derive(scale_info::TypeInfo)]
 pub struct IsCallable;
 
-// Currently disables Court, Rikiddo and creation of markets using Court or SimpleDisputes
-// dispute mechanism.
-// Disallow GlobalDisputes until we use Court. GlobalDisputes with authorized is not allowed.
+// Currently disables Court, Rikiddo and creation of markets using Court.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
         use zeitgeist_primitives::types::{
-            MarketDisputeMechanism::{Court, SimpleDisputes},
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            MarketDisputeMechanism::Court, ScoringRule::RikiddoSigmoidFeeMarketEma,
         };
-        use zrml_prediction_markets::Call::{
-            create_cpmm_market_and_deploy_assets, create_market, start_global_dispute,
-        };
+        use zrml_prediction_markets::Call::{create_cpmm_market_and_deploy_assets, create_market};
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
             Call::Court(_) => false,
-            Call::GlobalDisputes(_) => false,
             Call::LiquidityMining(_) => false,
             Call::PredictionMarkets(inner_call) => {
                 match inner_call {
                     // Disable Rikiddo markets
                     create_market { scoring_rule: RikiddoSigmoidFeeMarketEma, .. } => false,
-                    // Disable Court & SimpleDisputes dispute resolution mechanism
-                    create_market { dispute_mechanism: Court | SimpleDisputes, .. } => false,
-                    create_cpmm_market_and_deploy_assets {
-                        dispute_mechanism: Court | SimpleDisputes,
-                        ..
-                    } => false,
-                    start_global_dispute { market_id: _ } => false,
+                    // Disable Court dispute resolution mechanism
+                    create_market { dispute_mechanism: Court, .. } => false,
+                    create_cpmm_market_and_deploy_assets { dispute_mechanism: Court, .. } => false,
                     _ => true,
                 }
             }

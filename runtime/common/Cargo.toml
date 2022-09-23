@@ -62,6 +62,7 @@ std = [
     "pallet-vesting/std",
     "parachain-staking?/std",
 ]
+with-global-disputes = []
 
 [package]
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
