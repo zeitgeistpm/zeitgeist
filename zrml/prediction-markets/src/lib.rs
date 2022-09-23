@@ -1925,7 +1925,6 @@ mod pallet {
 
                     #[cfg(feature = "with-global-disputes")]
                     if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
-                        #[cfg(feature = "with-global-disputes")]
                         resolved_outcome_option = Some(o);
                     }
 
