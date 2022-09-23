@@ -158,7 +158,7 @@ benchmarks! {
                 oracle: caller.clone(),
                 period: MarketPeriod::Block(0u32.into()..1u32.into()),
                 deadlines: Deadlines {
-                    oracle_delay: 1_u32.into(),
+                    grace_period: 1_u32.into(),
                     oracle_duration: 1_u32.into(),
                     dispute_duration: 1_u32.into()
                 },

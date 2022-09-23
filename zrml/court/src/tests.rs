@@ -46,7 +46,7 @@ const DEFAULT_MARKET: Market<u128, u64, u64> = Market {
     metadata: vec![],
     oracle: 0,
     period: MarketPeriod::Block(0..100),
-    deadlines: Deadlines { oracle_delay: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
+    deadlines: Deadlines { grace_period: 1_u64, oracle_duration: 1_u64, dispute_duration: 1_u64 },
     report: None,
     resolved_outcome: None,
     status: MarketStatus::Closed,

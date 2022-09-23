@@ -78,8 +78,8 @@ pub const MAX_CATEGORIES: u16 = 10;
 pub const MIN_DISPUTE_DURATION: BlockNumber = 6 * BLOCKS_PER_HOUR;
 /// Maximum block period for a dispute.
 pub const MAX_DISPUTE_DURATION: BlockNumber = BLOCKS_PER_DAY;
-/// Maximum block period for an oracle_delay.
-pub const MAX_ORACLE_DELAY: BlockNumber = BLOCKS_PER_DAY;
+/// Maximum block period for an grace_period.
+pub const MAX_GRACE_PERIOD: BlockNumber = BLOCKS_PER_DAY;
 /// Maximum block period for an oracle_duration.
 pub const MAX_ORACLE_DURATION: BlockNumber = BLOCKS_PER_DAY;
 

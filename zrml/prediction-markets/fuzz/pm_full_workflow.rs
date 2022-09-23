@@ -34,7 +34,7 @@ fuzz_target!(|data: Data| {
         System::set_block_number(1);
 
         let deadlines = Deadlines {
-            oracle_delay: 1_u32.into(),
+            grace_period: 1_u32.into(),
             oracle_duration: 1_u32.into(),
             dispute_duration: 3_u32.into(),
         };

@@ -1,6 +1,6 @@
 # v0.3.6
 
-- Added new field `deadlines` in Market structure, which has `oracle_delay`,
+- Added new field `deadlines` in Market structure, which has `grace_period`,
   `oracle_duration` and `dispute_duration` fields, all represents duration in
   number of blocks. `create_market` extrinsic has new parameter to specify these
   deadlines.

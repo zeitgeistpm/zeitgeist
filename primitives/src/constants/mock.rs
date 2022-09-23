@@ -43,7 +43,7 @@ parameter_types! {
     pub const ValidityBond: Balance = 50 * CENT;
     pub const MinDisputeDuration: BlockNumber = 2;
     pub const MaxDisputeDuration: BlockNumber = 5;
-    pub const MaxOracleDelay: BlockNumber = 2;
+    pub const MaxGracePeriod: BlockNumber = 2;
     pub const MaxOracleDuration: BlockNumber = 2;
 }
 

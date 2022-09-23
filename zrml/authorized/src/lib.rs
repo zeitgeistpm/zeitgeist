@@ -194,7 +194,7 @@ where
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
         deadlines: zeitgeist_primitives::types::Deadlines {
-            oracle_delay: 1_u32.into(),
+            grace_period: 1_u32.into(),
             oracle_duration: 1_u32.into(),
             dispute_duration: 1_u32.into(),
         },

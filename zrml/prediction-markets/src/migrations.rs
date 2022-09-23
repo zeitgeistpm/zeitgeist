@@ -339,7 +339,7 @@ mod tests {
         };
 
         let deadlines = Deadlines {
-            oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
+            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
             oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
             dispute_duration,
         };

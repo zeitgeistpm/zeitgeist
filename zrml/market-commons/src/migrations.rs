@@ -87,7 +87,7 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
             BLOCKS_PER_DAY.saturated_into::<u32>().into()
         };
         let oracle_duration: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
-        let deadlines = Deadlines { oracle_delay: 0_u32.into(), oracle_duration, dispute_duration };
+        let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
         for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             let new_market = Market {
@@ -127,7 +127,7 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
             BLOCKS_PER_DAY.saturated_into::<u32>().into()
         };
         let oracle_duration: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
-        let deadlines = Deadlines { oracle_delay: 0_u32.into(), oracle_duration, dispute_duration };
+        let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
         for (market_id, market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
             assert_eq!(
                 market.deadlines, deadlines,
@@ -235,7 +235,7 @@ mod tests {
         };
         let oracle_duration: <Runtime as frame_system::Config>::BlockNumber =
             BLOCKS_PER_DAY.saturated_into::<u32>().into();
-        let deadlines = Deadlines { oracle_delay: 0_u32.into(), oracle_duration, dispute_duration };
+        let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
         let expected_markets: Vec<MarketOf<Runtime>> = vec![
             Market {
                 creator: 1_u128,

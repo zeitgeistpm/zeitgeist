@@ -593,8 +593,8 @@ mod pallet {
                 Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
             );
             ensure!(
-                deadlines.oracle_delay <= T::MaxOracleDelay::get(),
-                Error::<T>::OracleDelayGreaterThanMaxOracleDelay
+                deadlines.grace_period <= T::MaxGracePeriod::get(),
+                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
             );
             ensure!(
                 deadlines.oracle_duration <= T::MaxOracleDuration::get(),
@@ -935,32 +935,32 @@ mod pallet {
                 //      but that will be the case after thousands of years time. So it is fine.
                 match market.period {
                     MarketPeriod::Block(ref range) => {
-                        let oracle_delay_end =
-                            range.end.saturating_add(market.deadlines.oracle_delay);
+                        let grace_period_end =
+                            range.end.saturating_add(market.deadlines.grace_period);
                         ensure!(
-                            oracle_delay_end <= current_block,
+                            grace_period_end <= current_block,
                             Error::<T>::NotAllowedToReportYet
                         );
                         let oracle_duration_end =
-                            oracle_delay_end.saturating_add(market.deadlines.oracle_duration);
+                            grace_period_end.saturating_add(market.deadlines.oracle_duration);
                         if current_block <= oracle_duration_end {
                             should_check_origin = true;
                         }
                     }
                     MarketPeriod::Timestamp(ref range) => {
-                        let oracle_delay_in_moments: MomentOf<T> =
-                            market.deadlines.oracle_delay.saturated_into::<u32>().into();
-                        let oracle_delay_in_ms =
-                            oracle_delay_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        let oracle_delay_end = range.end.saturating_add(oracle_delay_in_ms);
+                        let grace_period_in_moments: MomentOf<T> =
+                            market.deadlines.grace_period.saturated_into::<u32>().into();
+                        let grace_period_in_ms =
+                            grace_period_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let grace_period_end = range.end.saturating_add(grace_period_in_ms);
                         let now = T::MarketCommons::now();
-                        ensure!(oracle_delay_end <= now, Error::<T>::NotAllowedToReportYet);
+                        ensure!(grace_period_end <= now, Error::<T>::NotAllowedToReportYet);
                         let oracle_duration_in_moments: MomentOf<T> =
                             market.deadlines.oracle_duration.saturated_into::<u32>().into();
                         let oracle_duration_in_ms =
                             oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
                         let oracle_duration_end =
-                            oracle_delay_end.saturating_add(oracle_duration_in_ms);
+                            grace_period_end.saturating_add(oracle_duration_in_ms);
                         if now <= oracle_duration_end {
                             should_check_origin = true;
                         }
@@ -1141,10 +1141,10 @@ mod pallet {
         #[pallet::constant]
         type MinDisputeDuration: Get<Self::BlockNumber>;
 
-        /// The maximum number of blocks allowed to be specified as oracle_delay
+        /// The maximum number of blocks allowed to be specified as grace_period
         /// in create_market.
         #[pallet::constant]
-        type MaxOracleDelay: Get<Self::BlockNumber>;
+        type MaxGracePeriod: Get<Self::BlockNumber>;
 
         /// The maximum number of blocks allowed to be specified as oracle_duration
         /// in create_market.
@@ -1253,14 +1253,14 @@ mod pallet {
         InvalidMarketPeriod,
         /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
-        /// Can not report before market.deadlines.oracle_delay is ended.
+        /// Can not report before market.deadlines.grace_period is ended.
         NotAllowedToReportYet,
         /// Specified dispute_duration is smaller than MinDisputeDuration.
         DisputeDurationSmallerThanMinDisputeDuration,
         /// Specified dispute_duration is greater than MaxDisputeDuration.
         DisputeDurationGreaterThanMaxDisputeDuration,
-        /// Specified oracle_delay is greater than MaxOracleDelay.
-        OracleDelayGreaterThanMaxOracleDelay,
+        /// Specified grace_period is greater than MaxGracePeriod.
+        GracePeriodGreaterThanMaxGracePeriod,
         /// Specified oracle_duration is greater than MaxOracleDuration.
         OracleDurationGreaterThanMaxOracleDuration,
     }

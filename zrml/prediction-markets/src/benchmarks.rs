@@ -65,7 +65,7 @@ fn create_market_common_parameters<T: Config>(
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
     let deadlines = Deadlines::<T::BlockNumber> {
-        oracle_delay: 1_u32.into(),
+        grace_period: 1_u32.into(),
         oracle_duration: 1_u32.into(),
         dispute_duration: T::MinDisputeDuration::get(),
     };
@@ -114,9 +114,9 @@ fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
             return Err("MarketPeriod is block_number based");
         }
     };
-    let oracle_delay: u32 =
-        (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
+    let grace_period: u32 =
+        (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
@@ -212,9 +212,9 @@ fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
             return Err("MarketPeriod is block_number based");
         }
     };
-    let oracle_delay: u32 =
-        (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-    pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
+    let grace_period: u32 =
+        (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
     let _ = Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let _ = Call::<T>::admin_move_market_to_resolved { market_id }
@@ -538,8 +538,8 @@ benchmarks! {
                 return Err(frame_benchmarking::BenchmarkError::Stop("MarketPeriod is block_number based"));
             },
         };
-        let oracle_delay : u32 = (market.deadlines.oracle_delay.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
-        pallet_timestamp::Pallet::<T>::set_timestamp((end + oracle_delay).into());
+        let grace_period : u32 = (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+        pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
     sell_complete_set {

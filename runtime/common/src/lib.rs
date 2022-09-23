@@ -870,7 +870,7 @@ macro_rules! impl_config_traits {
             type MaxDisputes = MaxDisputes;
             type MinDisputeDuration = MinDisputeDuration;
             type MaxDisputeDuration = MaxDisputeDuration;
-            type MaxOracleDelay = MaxOracleDelay;
+            type MaxGracePeriod = MaxGracePeriod;
             type MaxOracleDuration = MaxOracleDuration;
             type MaxSubsidyPeriod = MaxSubsidyPeriod;
             type MaxMarketPeriod = MaxMarketPeriod;

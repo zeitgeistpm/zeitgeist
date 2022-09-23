@@ -162,7 +162,7 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
 /// Defines deadlines for market.
 #[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct Deadlines<BN> {
-    pub oracle_delay: BN,
+    pub grace_period: BN,
     pub oracle_duration: BN,
     pub dispute_duration: BN,
 }
@@ -296,7 +296,7 @@ mod tests {
             market_type, // : MarketType::Categorical(6),
             period: MarketPeriod::Block(7..8),
             deadlines: Deadlines {
-                oracle_delay: 1_u32,
+                grace_period: 1_u32,
                 oracle_duration: 1_u32,
                 dispute_duration: 1_u32,
             },
