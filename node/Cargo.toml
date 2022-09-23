@@ -160,6 +160,7 @@ try-runtime = [
     "try-runtime-cli",
 ]
 with-battery-station-runtime = ["battery-station-runtime"]
+with-global-disputes = []
 with-zeitgeist-runtime = ["zeitgeist-runtime"]
 
 [package]
