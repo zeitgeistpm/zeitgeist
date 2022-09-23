@@ -24,7 +24,6 @@
 use super::VERSION;
 use frame_support::{
     parameter_types,
-    traits::LockIdentifier,
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
         DispatchClass, Weight,
@@ -37,6 +36,9 @@ use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
+
+#[cfg(feature = "with-global-disputes")]
+use frame_support::traits::LockIdentifier;
 
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
