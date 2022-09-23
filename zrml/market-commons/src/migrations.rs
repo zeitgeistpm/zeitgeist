@@ -80,12 +80,14 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
             return total_weight;
         }
         log::info!("Starting updates of markets");
-        let blocks_per_day: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
-        let deadlines = Deadlines {
-            oracle_delay: 0_u32.into(),
-            oracle_duration: blocks_per_day,
-            dispute_duration: blocks_per_day,
+        let dispute_duration = if cfg!(feature = "with-zeitgeist-runtime") {
+            (4_u64 * BLOCKS_PER_DAY).saturated_into::<u32>().into()
+        } else {
+            // assuming battery-station
+            BLOCKS_PER_DAY.saturated_into::<u32>().into()
         };
+        let oracle_duration: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
+        let deadlines = Deadlines { oracle_delay: 0_u32.into(), oracle_duration, dispute_duration };
         for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             let new_market = Market {
@@ -118,11 +120,14 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        let deadlines = Deadlines {
-            oracle_delay: 0_u32.into(),
-            oracle_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
-            dispute_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
+        let dispute_duration = if cfg!(feature = "with-zeitgeist-runtime") {
+            (4_u64 * BLOCKS_PER_DAY).saturated_into::<u32>().into()
+        } else {
+            // assuming battery-station
+            BLOCKS_PER_DAY.saturated_into::<u32>().into()
         };
+        let oracle_duration: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
+        let deadlines = Deadlines { oracle_delay: 0_u32.into(), oracle_duration, dispute_duration };
         for (market_id, market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
             assert_eq!(
                 market.deadlines, deadlines,
@@ -158,7 +163,10 @@ mod tests {
                 legacy_markets,
             );
             UpdateMarketsForDeadlines::<Runtime>::on_runtime_upgrade();
-            assert_eq!(StorageVersion::get::<Pallet<Runtime>>(), MARKET_COMMONS_NEXT_STORAGE_VERSION);
+            assert_eq!(
+                StorageVersion::get::<Pallet<Runtime>>(),
+                MARKET_COMMONS_NEXT_STORAGE_VERSION
+            );
             for (market_id, market_expected) in expected_markets.iter().enumerate() {
                 let market_actual = Markets::<Runtime>::get(market_id as u128).unwrap();
                 assert_eq!(market_actual, *market_expected);
@@ -219,11 +227,15 @@ mod tests {
                 dispute_mechanism: MarketDisputeMechanism::Authorized(3_u128),
             },
         ];
-        let deadlines = Deadlines {
-            oracle_delay: 0_u32.into(),
-            oracle_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
-            dispute_duration: BLOCKS_PER_DAY.saturated_into::<u32>().into(),
+        let dispute_duration = if cfg!(feature = "with-zeitgeist-runtime") {
+            (4_u64 * BLOCKS_PER_DAY).saturated_into::<u32>().into()
+        } else {
+            // assuming battery-station
+            BLOCKS_PER_DAY.saturated_into::<u32>().into()
         };
+        let oracle_duration: <Runtime as frame_system::Config>::BlockNumber =
+            BLOCKS_PER_DAY.saturated_into::<u32>().into();
+        let deadlines = Deadlines { oracle_delay: 0_u32.into(), oracle_duration, dispute_duration };
         let expected_markets: Vec<MarketOf<Runtime>> = vec![
             Market {
                 creator: 1_u128,

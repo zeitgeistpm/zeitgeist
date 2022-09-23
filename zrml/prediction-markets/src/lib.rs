@@ -130,7 +130,7 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -931,6 +931,8 @@ mod pallet {
                 );
 
                 let mut should_check_origin = false;
+                //NOTE: Saturating operation in following block may saturate to u32::MAX value
+                //      but that will be the case after thousands of years time. So it is fine.
                 match market.period {
                     MarketPeriod::Block(ref range) => {
                         let oracle_delay_end =

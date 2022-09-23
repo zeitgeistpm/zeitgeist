@@ -76,10 +76,14 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
             .saturating_add(T::DbWeight::get().reads(market_ids_per_dispute.len() as u64));
         for (dispute_start_block, market_ids) in &market_ids_per_dispute {
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            // NOTE: These migration only makes sense on BS runtime so its fine to assume
-            // DisputePeriod equal to BLOCKS_PER_DAY
-            let dispute_period: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
-            let new_dispute_start_block = dispute_start_block.saturating_add(dispute_period);
+            let dispute_duration = if cfg!(feature = "with-zeitgeist-runtime") {
+                (4_u64 * BLOCKS_PER_DAY).saturated_into::<u32>().into()
+            } else {
+                // assuming battery-station
+                BLOCKS_PER_DAY.saturated_into::<u32>().into()
+            };
+
+            let new_dispute_start_block = dispute_start_block.saturating_add(dispute_duration);
             MarketIdsPerDisputeBlock::<T>::insert(new_dispute_start_block, market_ids);
         }
         for (dispute_start_block, _market_ids) in market_ids_per_dispute {
@@ -93,26 +97,20 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
                 b"MarketIdsPerReportBlock",
             );
 
-        // let market_ids_per_report: Vec<_> = market_ids_per_report_iterator.collect();
-        // for (dispute_start_block, market_ids) in market_ids_per_report {
-        //     total_weight = total_weight.saturating_add(T::DbWeight::get().writes(2));
-        //     // NOTE: These migration only makes sense on BS runtime so its fine to assume
-        //     // DisputePeriod equal to BLOCKS_PER_DAY
-        //     let dispute_period: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
-        //     let new_dispute_start_block = dispute_start_block.saturating_add(dispute_period);
-        //     MarketIdsPerReportBlock::<T>::insert(new_dispute_start_block, market_ids);
-        //     MarketIdsPerReportBlock::<T>::remove(dispute_start_block);
-        // }
         let market_ids_per_report: Vec<DisputeBlockToMarketIdsTuple<T>> =
             market_ids_per_report_iterator.collect();
         total_weight = total_weight
             .saturating_add(T::DbWeight::get().reads(market_ids_per_report.len() as u64));
         for (dispute_start_block, market_ids) in &market_ids_per_report {
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            // NOTE: These migration only makes sense on BS runtime so its fine to assume
-            // DisputePeriod equal to BLOCKS_PER_DAY
-            let dispute_period: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
-            let new_dispute_start_block = dispute_start_block.saturating_add(dispute_period);
+            let dispute_duration = if cfg!(feature = "with-zeitgeist-runtime") {
+                (4_u64 * BLOCKS_PER_DAY).saturated_into::<u32>().into()
+            } else {
+                // assuming battery-station
+                BLOCKS_PER_DAY.saturated_into::<u32>().into()
+            };
+
+            let new_dispute_start_block = dispute_start_block.saturating_add(dispute_duration);
             MarketIdsPerReportBlock::<T>::insert(new_dispute_start_block, market_ids);
         }
         for (dispute_start_block, _market_ids) in market_ids_per_report {
@@ -134,15 +132,17 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        let dispute_period: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
         for (key, market_ids) in MarketIdsPerDisputeBlock::<T>::iter() {
             for market_id in market_ids {
+                let market =
+                    T::MarketCommons::market(&market_id).map_err(|_| "invalid market_id")?;
                 let disputes = Disputes::<T>::get(&market_id);
                 let dispute = disputes.last().ok_or("No dispute found")?;
                 assert_eq!(
                     key,
-                    dispute.at + dispute_period,
-                    "key in MarketIdsPerDisputeBlock must be equal to dispute.at + disputed_period"
+                    dispute.at + market.deadlines.dispute_duration,
+                    "key in MarketIdsPerDisputeBlock must be equal to dispute.at + \
+                     disputed_duration"
                 );
             }
         }
@@ -153,8 +153,8 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
                 let report = market.report.ok_or("No report found")?;
                 assert_eq!(
                     key,
-                    report.at + dispute_period,
-                    "key in MarketIdsPerReportBlock must be equal to report.at + dispute_period"
+                    report.at + market.deadlines.dispute_duration,
+                    "key in MarketIdsPerReportBlock must be equal to report.at + dispute_duration"
                 );
             }
         }
@@ -162,11 +162,21 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
     }
 }
 
+// We use these utilities to prevent having to make the swaps pallet a dependency of
+// prediciton-markets. The calls are based on the implementation of `StorageVersion`, found here:
+// https://github.com/paritytech/substrate/blob/bc7a1e6c19aec92bfa247d8ca68ec63e07061032/frame/support/src/traits/metadata.rs#L168-L230
+// and previous migrations.
 mod utility {
+    use crate::{BalanceOf, Config, MarketIdOf};
+    use alloc::vec::Vec;
     use frame_support::{
+        migration::{get_storage_value, put_storage_value},
         storage::{storage_prefix, unhashed},
         traits::StorageVersion,
+        Blake2_128Concat, StorageHasher,
     };
+    use parity_scale_codec::Encode;
+    use zeitgeist_primitives::types::{Pool, PoolId};
 
     pub fn storage_prefix_of_market_common_pallet() -> [u8; 32] {
         storage_prefix(b"MarketCommons", b":__STORAGE_VERSION__:")
@@ -175,6 +185,45 @@ mod utility {
     pub fn get_on_chain_storage_version_of_market_commons_pallet() -> StorageVersion {
         let key = storage_prefix_of_market_common_pallet();
         unhashed::get_or_default(&key)
+    }
+
+    #[allow(unused)]
+    const SWAPS: &[u8] = b"Swaps";
+    #[allow(unused)]
+    const POOLS: &[u8] = b"Pools";
+    #[allow(unused)]
+    fn storage_prefix_of_swaps_pallet() -> [u8; 32] {
+        storage_prefix(b"Swaps", b":__STORAGE_VERSION__:")
+    }
+    #[allow(unused)]
+    fn key_to_hash<H, K>(key: K) -> Vec<u8>
+    where
+        H: StorageHasher,
+        K: Encode,
+    {
+        key.using_encoded(H::hash).as_ref().to_vec()
+    }
+    #[allow(unused)]
+    pub fn get_on_chain_storage_version_of_swaps_pallet() -> StorageVersion {
+        let key = storage_prefix_of_swaps_pallet();
+        unhashed::get_or_default(&key)
+    }
+    #[allow(unused)]
+    pub fn put_storage_version_of_swaps_pallet(value: u16) {
+        let key = storage_prefix_of_swaps_pallet();
+        unhashed::put(&key, &StorageVersion::new(value));
+    }
+    #[allow(unused)]
+    pub fn get_pool<T: Config>(pool_id: PoolId) -> Option<Pool<BalanceOf<T>, MarketIdOf<T>>> {
+        let hash = key_to_hash::<Blake2_128Concat, PoolId>(pool_id);
+        let pool_maybe =
+            get_storage_value::<Option<Pool<BalanceOf<T>, MarketIdOf<T>>>>(SWAPS, POOLS, &hash);
+        pool_maybe.unwrap_or(None)
+    }
+    #[allow(unused)]
+    pub fn set_pool<T: Config>(pool_id: PoolId, pool: Pool<BalanceOf<T>, MarketIdOf<T>>) {
+        let hash = key_to_hash::<Blake2_128Concat, PoolId>(pool_id);
+        put_storage_value(SWAPS, POOLS, &hash, Some(pool));
     }
 }
 
@@ -282,10 +331,17 @@ mod tests {
     }
 
     fn create_test_market() {
+        let dispute_duration = if cfg!(feature = "with-zeitgeist-runtime") {
+            (4_u64 * BLOCKS_PER_DAY).saturated_into::<u32>().into()
+        } else {
+            // assuming battery-station
+            BLOCKS_PER_DAY.saturated_into::<u32>().into()
+        };
+
         let deadlines = Deadlines {
             oracle_delay: <Runtime as crate::Config>::MaxOracleDelay::get(),
             oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration: (BLOCKS_PER_DAY as u32).into(),
+            dispute_duration,
         };
         let mut metadata = [0; 50];
         metadata[0] = 0x15;
