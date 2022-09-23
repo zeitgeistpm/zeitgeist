@@ -1495,7 +1495,7 @@ mod pallet {
             let advisory_bond_slash_amount =
                 T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
             let advisory_bond_unreserve_amount =
-                T::AdvisoryBond::get() - advisory_bond_slash_amount;
+                T::AdvisoryBond::get().saturating_sub(advisory_bond_slash_amount);
             T::AssetManager::slash_reserved_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
@@ -1506,7 +1506,7 @@ mod pallet {
                 &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
-                T::OracleBond::get() + advisory_bond_unreserve_amount,
+                T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
             );
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketRejected(*market_id));
