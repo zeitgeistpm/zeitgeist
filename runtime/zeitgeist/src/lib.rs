@@ -17,6 +17,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
+#![cfg(not(feature = "with-global-disputes"))]
 
 extern crate alloc;
 

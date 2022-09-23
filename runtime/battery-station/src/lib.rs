@@ -123,8 +123,14 @@ impl Contains<Call> for IsCallable {
 
 decl_common_types!();
 
+#[cfg(feature = "with-global-disputes")]
 create_runtime_with_additional_pallets!(
-    // Others
+    GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
+    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
+create_runtime_with_additional_pallets!(
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
 );
 

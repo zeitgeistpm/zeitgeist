@@ -967,7 +967,8 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_signed(origin)?;
 
-            let mut weight: Weight = 0u64.into();
+            #[allow(dead_code, unused)]
+            let mut weight: Weight = T::WeightInfo::start_global_dispute(CacheSize::get());
 
             #[cfg(feature = "with-global-disputes")]
             {
@@ -1026,10 +1027,6 @@ mod pallet {
                 Self::deposit_event(Event::GlobalDisputeStarted(market_id));
 
                 weight = T::WeightInfo::start_global_dispute(market_ids_len);
-            }
-
-            if weight.is_zero() {
-                weight = T::WeightInfo::start_global_dispute(CacheSize::get());
             }
 
             Ok(Some(weight).into())
@@ -1924,26 +1921,31 @@ mod pallet {
                     report.outcome.clone()
                 }
                 MarketStatus::Disputed => {
-                    // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
-                    // the oracle's report.
-                    #[allow(dead_code, unused)]
-                    let mut resolved_outcome_option = match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized(_) => {
-                            T::Authorized::on_resolution(&disputes, market_id, market)?
-                        }
-                        MarketDisputeMechanism::Court => {
-                            T::Court::on_resolution(&disputes, market_id, market)?
-                        }
-                        MarketDisputeMechanism::SimpleDisputes => {
-                            T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
-                        }
-                    };
+                    
+                    let mut resolved_outcome_option = None;
 
                     #[cfg(feature = "with-global-disputes")]
                     if let Some(o) = T::GlobalDisputes::determine_voting_winner(market_id) {
+                        #[cfg(feature = "with-global-disputes")]
                         resolved_outcome_option = Some(o);
                     }
 
+                    if resolved_outcome_option.is_none() {
+                        resolved_outcome_option = match market.dispute_mechanism {
+                            MarketDisputeMechanism::Authorized(_) => {
+                                T::Authorized::on_resolution(&disputes, market_id, market)?
+                            }
+                            MarketDisputeMechanism::Court => {
+                                T::Court::on_resolution(&disputes, market_id, market)?
+                            }
+                            MarketDisputeMechanism::SimpleDisputes => {
+                                T::SimpleDisputes::on_resolution(&disputes, market_id, market)?
+                            }
+                        };
+                    }
+                    
+                    // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
+                    // the oracle's report.
                     let resolved_outcome =
                         resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 

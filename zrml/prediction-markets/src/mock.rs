@@ -20,7 +20,6 @@
     clippy::integer_arithmetic
 )]
 #![cfg(feature = "mock")]
-#![cfg(feature = "with-global-disputes")]
 
 use crate as prediction_markets;
 use frame_support::{
@@ -80,6 +79,7 @@ parameter_types! {
     pub const DisputeBond: Balance = 109 * CENT;
 }
 
+#[cfg(feature = "with-global-disputes")]
 construct_runtime!(
     pub enum Runtime
     where
@@ -98,6 +98,31 @@ construct_runtime!(
         RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
         SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         GlobalDisputes: zrml_global_disputes::{Event<T>, Pallet, Storage},
+        Swaps: zrml_swaps::{Call, Event<T>, Pallet},
+        System: frame_system::{Config, Event<T>, Pallet, Storage},
+        Timestamp: pallet_timestamp::{Pallet},
+        Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+    }
+);
+
+#[cfg(not(feature = "with-global-disputes"))]
+construct_runtime!(
+    pub enum Runtime
+    where
+        Block = BlockTest<Runtime>,
+        NodeBlock = BlockTest<Runtime>,
+        UncheckedExtrinsic = UncheckedExtrinsicTest<Runtime>,
+    {
+        Authorized: zrml_authorized::{Event<T>, Pallet, Storage},
+        Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage},
+        Court: zrml_court::{Event<T>, Pallet, Storage},
+        AssetManager: orml_currencies::{Call, Pallet, Storage},
+        LiquidityMining: zrml_liquidity_mining::{Config<T>, Event<T>, Pallet},
+        MarketCommons: zrml_market_commons::{Pallet, Storage},
+        PredictionMarkets: prediction_markets::{Event<T>, Pallet, Storage},
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
+        RikiddoSigmoidFeeMarketEma: zrml_rikiddo::{Pallet, Storage},
+        SimpleDisputes: zrml_simple_disputes::{Event<T>, Pallet, Storage},
         Swaps: zrml_swaps::{Call, Event<T>, Pallet},
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
@@ -131,7 +156,9 @@ impl crate::Config for Runtime {
     type ReportingPeriod = ReportingPeriod;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
+    #[cfg(feature = "with-global-disputes")]
     type GlobalDisputes = GlobalDisputes;
+    #[cfg(feature = "with-global-disputes")]
     type GlobalDisputePeriod = GlobalDisputePeriod;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;

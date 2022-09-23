@@ -132,7 +132,7 @@ macro_rules! decl_common_types {
             frame_support::PalletId: AccountIdConversion<AccountId>,
         {
             fn contains(ai: &AccountId) -> bool {
-                let pallets = vec![
+                let mut pallets = vec![
                     AuthorizedPalletId::get(),
                     CourtPalletId::get(),
                     LiquidityMiningPalletId::get(),
@@ -258,12 +258,6 @@ macro_rules! create_runtime {
 #[macro_export]
 macro_rules! create_runtime_with_additional_pallets {
     ($($additional_pallets:tt)*) => {
-        #[cfg(feature = "with-global-disputes")]
-        create_runtime!(
-            GlobalDisputes: zrml_global_disputes::{Call, Event<T>, Pallet, Storage} = 59,
-            $($additional_pallets)*
-        );
-
         #[cfg(feature = "parachain")]
         create_runtime!(
             // System

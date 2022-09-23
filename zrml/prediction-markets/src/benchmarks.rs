@@ -28,21 +28,24 @@ use crate::Pallet as PredictionMarket;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    traits::{EnsureOrigin, Get, Hooks},
-    BoundedVec,
+    traits::{EnsureOrigin, Get},
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{One, SaturatedConversion, Zero};
+use sp_runtime::traits::SaturatedConversion;
 use zeitgeist_primitives::{
     constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
     traits::DisputeApi,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule, SubsidyUntil,
+        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketType,
+        MaxRuntimeUsize, MultiHash, OutcomeReport, ScalarPosition, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
+
+use frame_support::{traits::Hooks, BoundedVec};
+use sp_runtime::traits::{One, Zero};
+use zeitgeist_primitives::types::{MarketStatus, SubsidyUntil};
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency

@@ -49,7 +49,6 @@ mock = [
     "zrml-prediction-markets-runtime-api",
     "zrml-rikiddo",
     "zrml-swaps",
-    "zrml-global-disputes",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

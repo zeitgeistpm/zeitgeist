@@ -75,22 +75,6 @@ parameter_types! {
     /// the juror has to pay.
     pub const StakeWeight: u128 = 2 * BASE;
 
-    // Global Disputes
-    /// Vote lock identifier, mainly used for the LockableCurrency on the native token.
-    pub const GlobalDisputeLockId: LockIdentifier = GLOBAL_DISPUTES_LOCK_ID;
-    /// Pallet identifier
-    pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
-    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
-    pub const MaxOwners: u32 = 10;
-    /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
-    pub const MaxGlobalDisputeVotes: u32 = 50;
-    /// The minimum required amount to vote on an outcome.
-    pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
-    /// The fee required to add a voting outcome.
-    pub const VotingOutcomeFee: Balance = 200 * BASE;
-    /// The remove limit for the Outcomes storage double map.
-    pub const RemoveKeysLimit: u32 = 250;
-
     // Democracy
     /// How often (in blocks) new public referenda are launched.
     pub const LaunchPeriod: BlockNumber = 5 * BLOCKS_PER_DAY;
@@ -167,7 +151,7 @@ parameter_types! {
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.
-    pub const MaxDisputes: u16 = 6;
+    pub const MaxDisputes: u16 = 3;
     /// Minimum number of categories. The trivial minimum is 2, which represents a binary market.
     pub const MinCategories: u16 = 2;
     // 60_000 = 1 minute. Should be raised to something more reasonable in the future.
@@ -311,8 +295,23 @@ parameter_types! {
 
 #[cfg(feature = "with-global-disputes")]
 parameter_types! {
+    // Global Disputes
+    /// Vote lock identifier, mainly used for the LockableCurrency on the native token.
+    pub const GlobalDisputeLockId: LockIdentifier = GLOBAL_DISPUTES_LOCK_ID;
+    /// Pallet identifier
+    pub const GlobalDisputesPalletId: PalletId = GLOBAL_DISPUTES_PALLET_ID;
     /// The period for a global dispute to end.
     pub const GlobalDisputePeriod: BlockNumber = 3 * BLOCKS_PER_DAY;
+    /// The maximum number of owners for a voting outcome for private API calls of `push_voting_outcome`.
+    pub const MaxOwners: u32 = 10;
+    /// The maximum number of market ids (participate in multiple different global disputes at the same time) for one account to vote on outcomes.
+    pub const MaxGlobalDisputeVotes: u32 = 50;
+    /// The minimum required amount to vote on an outcome.
+    pub const MinOutcomeVoteAmount: Balance = 10 * BASE;
+    /// The fee required to add a voting outcome.
+    pub const VotingOutcomeFee: Balance = 200 * BASE;
+    /// The remove limit for the Outcomes storage double map.
+    pub const RemoveKeysLimit: u32 = 250;
 }
 
 parameter_type_with_key! {
