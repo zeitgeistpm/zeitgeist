@@ -16,7 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    AccountId, Ancestry, Balance, Balances, Call, AssetManager, MaxInstructions, Origin,
+    AccountId, Ancestry, Balance, Balances, Call, CurrencyId, AssetManager, MaxInstructions, Origin,
     ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayLocation, RelayNetwork, Runtime,
     UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
@@ -89,7 +89,6 @@ pub type Barrier = (
     // Subscriptions for version tracking are OK.
     AllowSubscriptionsFrom<Everything>,
 );
-type AssetT = <Runtime as orml_tokens::Config>::CurrencyId;
 
 parameter_types! {
     pub CheckAccount: AccountId = PolkadotXcm::check_account();
@@ -103,17 +102,17 @@ pub type MultiAssetTransactor = MultiCurrencyAdapter<
     UnknownTokens,
     // This means that this adapter should handle any token that `AssetConvert` can convert
     // using AssetManager and UnknownTokens in all other cases.
-    IsNativeConcrete<AssetT, AssetConvert>,
+    IsNativeConcrete<CurrencyId, AssetConvert>,
     // Our chain's account ID type (we can't get away without mentioning it explicitly).
     sp_runtime::AccountId32,
     // Convert an XCM `MultiLocation` into a local account id.
     LocationToAccountId,
     // The AssetId that corresponds to the native currency.
-    AssetT,
+    CurrencyId,
     // Struct that provides functions to convert `Asset` <=> `MultiLocation`.
     AssetConvert,
     // In case of deposit failure, known assets will be placed in treasury.
-    DepositToAlternative<ZeitgeistTreasuryAccount, AssetManager, AssetT, AccountId, Balance>,
+    DepositToAlternative<ZeitgeistTreasuryAccount, AssetManager, CurrencyId, AccountId, Balance>,
 >;
 
 /// AssetConvert
@@ -125,8 +124,8 @@ pub struct AssetConvert;
 /// Convert our `Asset` type into its `MultiLocation` representation.
 /// Other chains need to know how this conversion takes place in order to
 /// handle it on their side.
-impl Convert<AssetT, Option<MultiLocation>> for AssetConvert {
-    fn convert(id: AssetT) -> Option<MultiLocation> {
+impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
+    fn convert(id: CurrencyId) -> Option<MultiLocation> {
         let x = match id {
             Asset::ZTG => MultiLocation::new(
                 1,
@@ -145,8 +144,8 @@ impl Convert<AssetT, Option<MultiLocation>> for AssetConvert {
 /// Convert an incoming `MultiLocation` into a `Asset` if possible.
 /// Here we need to know the canonical representation of all the tokens we handle in order to
 /// correctly convert their `MultiLocation` representation into our internal `Asset` type.
-impl xcm_executor::traits::Convert<MultiLocation, AssetT> for AssetConvert {
-    fn convert(location: MultiLocation) -> Result<AssetT, MultiLocation> {
+impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
+    fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
             MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
                 parachains::zeitgeist::ZTG_KEY => Ok(Asset::ZTG),
@@ -169,8 +168,8 @@ impl xcm_executor::traits::Convert<MultiLocation, AssetT> for AssetConvert {
     }
 }
 
-impl Convert<MultiAsset, Option<AssetT>> for AssetConvert {
-    fn convert(asset: MultiAsset) -> Option<AssetT> {
+impl Convert<MultiAsset, Option<CurrencyId>> for AssetConvert {
+    fn convert(asset: MultiAsset) -> Option<CurrencyId> {
         if let MultiAsset { id: Concrete(location), .. } = asset {
             <AssetConvert as xcm_executor::traits::Convert<_, _>>::convert(location).ok()
         } else {
@@ -179,8 +178,8 @@ impl Convert<MultiAsset, Option<AssetT>> for AssetConvert {
     }
 }
 
-impl Convert<MultiLocation, Option<AssetT>> for AssetConvert {
-    fn convert(location: MultiLocation) -> Option<AssetT> {
+impl Convert<MultiLocation, Option<CurrencyId>> for AssetConvert {
+    fn convert(location: MultiLocation) -> Option<CurrencyId> {
         <AssetConvert as xcm_executor::traits::Convert<_, _>>::convert(location).ok()
     }
 }

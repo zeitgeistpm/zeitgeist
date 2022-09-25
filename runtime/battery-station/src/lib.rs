@@ -152,7 +152,7 @@ impl pallet_sudo::Config for Runtime {
 impl orml_asset_registry::Config for Runtime {
 	type AssetId = CurrencyId;
 	type AssetProcessor = asset_registry::CustomAssetProcessor;
-	type AuthorityOrigin = asset_registry::AuthorityOrigin<Origin, EnsureRootOr<HalfOfCouncil>>;
+	type AuthorityOrigin = EnsureRootOrTwoThirdsCouncil;
 	type Balance = Balance;
 	type CustomMetadata = CustomMetadata;
 	type Event = Event;
