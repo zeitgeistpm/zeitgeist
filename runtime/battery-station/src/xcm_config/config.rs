@@ -1,3 +1,20 @@
+// Copyright 2022 Zeitgeist PM LLC.
+//
+// This file is part of Zeitgeist.
+//
+// Zeitgeist is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the
+// Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// Zeitgeist is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+
 use crate::{
     AccountId, Ancestry, Balance, Balances, Call, AssetManager, MaxInstructions, Origin,
     ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayLocation, RelayNetwork, Runtime,
@@ -42,7 +59,7 @@ impl Config for XcmConfig {
     /// The outer call dispatch type.
     type Call = Call;
     // Filters multi native assets whose reserve is same with `origin`.
-    type IsReserve = (); // MultiNativeAsset<AbsoluteReserveProvider>;
+    type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
     /// Means of inverting a location.
@@ -88,7 +105,7 @@ pub type MultiAssetTransactor = MultiCurrencyAdapter<
     // using AssetManager and UnknownTokens in all other cases.
     IsNativeConcrete<AssetT, AssetConvert>,
     // Our chain's account ID type (we can't get away without mentioning it explicitly).
-    AccountId,
+    sp_runtime::AccountId32,
     // Convert an XCM `MultiLocation` into a local account id.
     LocationToAccountId,
     // The AssetId that corresponds to the native currency.
@@ -104,8 +121,6 @@ pub type MultiAssetTransactor = MultiCurrencyAdapter<
 /// A currency locally is identified with a `Asset` variant but in the network it is identified
 /// in the form of a `MultiLocation`, in this case a pair (Para-Id, Currency-Id).
 pub struct AssetConvert;
-// TODO: Use KSM or ROC depending on runtime that's built
-const RELAY_CURRENCY: AssetT = Asset::ROC;
 
 /// Convert our `Asset` type into its `MultiLocation` representation.
 /// Other chains need to know how this conversion takes place in order to
@@ -113,14 +128,6 @@ const RELAY_CURRENCY: AssetT = Asset::ROC;
 impl Convert<AssetT, Option<MultiLocation>> for AssetConvert {
     fn convert(id: AssetT) -> Option<MultiLocation> {
         let x = match id {
-            RELAY_CURRENCY => MultiLocation::parent(),
-            Asset::AUSD => MultiLocation::new(
-                1,
-                X2(
-                    Parachain(parachains::karura::ID),
-                    GeneralKey(parachains::karura::AUSD_KEY.into()),
-                ),
-            ),
             Asset::ZTG => MultiLocation::new(
                 1,
                 X2(
@@ -128,6 +135,7 @@ impl Convert<AssetT, Option<MultiLocation>> for AssetConvert {
                     GeneralKey(parachains::zeitgeist::ZTG_KEY.to_vec()),
                 ),
             ),
+            // TODO: Asset registry
             _ => return None,
         };
         Some(x)
@@ -139,32 +147,24 @@ impl Convert<AssetT, Option<MultiLocation>> for AssetConvert {
 /// correctly convert their `MultiLocation` representation into our internal `Asset` type.
 impl xcm_executor::traits::Convert<MultiLocation, AssetT> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<AssetT, MultiLocation> {
-        if location == MultiLocation::parent() {
-            return Ok(RELAY_CURRENCY);
-        }
-
         match location.clone() {
             MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
                 parachains::zeitgeist::ZTG_KEY => Ok(Asset::ZTG),
-                _ => Err(location.clone()),
+                _ => Err(location),
             },
             MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } => {
                 match para_id {
                     parachains::zeitgeist::ID => match &key[..] {
                         parachains::zeitgeist::ZTG_KEY => Ok(Asset::ZTG),
-                        _ => Err(location.clone()),
+                        _ => Err(location),
                     },
 
-                    parachains::karura::ID => match &key[..] {
-                        parachains::karura::AUSD_KEY => Ok(Asset::AUSD),
-                        _ => Err(location.clone()),
-                    },
-
-                    // TODO: MOVR
-                    _ => Err(location.clone()),
+                    _ => Err(location),
                 }
             }
-            _ => Err(location.clone()),
+
+            // TODO: Asset registry
+            _ => Err(location),
         }
     }
 }

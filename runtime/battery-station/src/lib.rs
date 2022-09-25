@@ -128,17 +128,38 @@ impl Contains<Call> for IsCallable {
 
 decl_common_types!();
 
+#[cfg(not(feature = "parachain"))]
 create_runtime_with_additional_pallets!(
     // Others
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
-    UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 151,
 );
+
+#[cfg(feature = "parachain")]
+create_runtime_with_additional_pallets!(
+    // Others
+    Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
+    AssetRegistry: orml_unknown_tokens::{Pallet, Storage, Event} = 151,
+    UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 152,
+);
+
 
 impl pallet_sudo::Config for Runtime {
     type Call = Call;
     type Event = Event;
 }
 
+#[cfg(feature = "parachain")]
+impl orml_asset_registry::Config for Runtime {
+	type AssetId = CurrencyId;
+	type AssetProcessor = asset_registry::CustomAssetProcessor;
+	type AuthorityOrigin = asset_registry::AuthorityOrigin<Origin, EnsureRootOr<HalfOfCouncil>>;
+	type Balance = Balance;
+	type CustomMetadata = CustomMetadata;
+	type Event = Event;
+	type WeightInfo = ();
+}
+
+#[cfg(feature = "parachain")]
 impl orml_unknown_tokens::Config for Runtime {
     type Event = Event;
 }

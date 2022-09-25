@@ -6,10 +6,10 @@ frame-executive = { branch = "moonbeam-polkadot-v0.9.19", default-features = fal
 frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 frame-system-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-benchmarking = { branch = "2022-06-v0.9.19", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-currencies = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-tokens = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
-orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-benchmarking = { branch = "7e1123e-v0.9.19", default-features = false, optional = true, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-currencies = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-tokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+orml-traits = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-democracy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -83,8 +83,9 @@ hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.8", default-features = false, optional = true }
 
 # XCM
-orml-xcm-support = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-unknown-tokens = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-asset-registry = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-xcm-support = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-unknown-tokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm-builder = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
@@ -134,6 +135,7 @@ parachain = [
 
     # XCM
 
+    "orml-asset-registry",
     "orml-unknown-tokens",
     "orml-xcm-support",
     "pallet-xcm",
@@ -263,6 +265,7 @@ std = [
 
     # XCM
 
+    "orml-asset-registry?/std",
     "orml-unknown-tokens?/std",
     "orml-xcm-support?/std",
     "pallet-xcm?/std",
@@ -314,8 +317,10 @@ try-runtime = [
     "pallet-utility/try-runtime",
     
     # ORML runtime pallets
+    "orml-asset-registry?/try-runtime",
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
+    "orml-unknown-tokens?/try-runtime",
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",
