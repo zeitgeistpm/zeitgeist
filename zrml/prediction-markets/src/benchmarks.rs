@@ -59,7 +59,7 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    let _ = T::AssetManager::deposit(Asset::ZTG, &caller, (u128::MAX).saturated_into());
+    let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into());
     let oracle = caller.clone();
     let period = MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get());
     let mut metadata = [0u8; 50];

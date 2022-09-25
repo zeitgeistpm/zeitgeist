@@ -70,8 +70,8 @@ parachain-staking = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-
 polkadot-parachain = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 
 # XCM
-orml-xcm-support = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-unknown-tokens = { branch = "polkadot-0.9.19-latest", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-xcm-support = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-unknown-tokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm-builder = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }

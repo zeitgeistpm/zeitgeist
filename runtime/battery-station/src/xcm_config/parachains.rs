@@ -31,6 +31,3 @@ pub mod zeitgeist {
     pub const ID: u32 = 2101;
     pub const ZTG_KEY: &[u8] = &[0, 1];
 }
-
-// TODO: Integrate MOVR
-// TODO: Integrate USDT

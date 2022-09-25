@@ -35,11 +35,11 @@ extern crate alloc;
 mod utils;
 
 mod benchmarks;
-mod check_arithm_rslt;
+pub mod check_arithm_rslt;
 mod consts;
 mod events;
-mod fixed;
-mod math;
+pub mod fixed;
+pub mod math;
 pub mod migrations;
 pub mod mock;
 mod tests;

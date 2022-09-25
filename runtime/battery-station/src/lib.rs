@@ -53,10 +53,10 @@ use zeitgeist_primitives::{constants::*, types::*};
 use zrml_rikiddo::types::{EmaMarketVolume, FeeSigmoid, RikiddoSigmoidMV};
 #[cfg(feature = "parachain")]
 use {
-    frame_support::traits::{Everything, Nothing},
+    frame_support::traits::{AsEnsureOriginWithArg, Everything, Nothing},
     frame_system::EnsureSigned,
     xcm_builder::{EnsureXcmOrigin, FixedWeightBounds, LocationInverter},
-    xcm_config::{config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter}},
+    xcm_config::{asset_registry::{CustomAssetProcessor, CustomMetadata}, config::{LocalOriginToLocation, XcmConfig, XcmOriginToTransactDispatchOrigin, XcmRouter}},
 };
 
 use frame_support::construct_runtime;
@@ -138,7 +138,7 @@ create_runtime_with_additional_pallets!(
 create_runtime_with_additional_pallets!(
     // Others
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
-    AssetRegistry: orml_unknown_tokens::{Pallet, Storage, Event} = 151,
+    AssetRegistry: orml_asset_registry::{Call, Config<T>, Event<T>, Pallet, Storage} = 151,
     UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 152,
 );
 
@@ -151,8 +151,8 @@ impl pallet_sudo::Config for Runtime {
 #[cfg(feature = "parachain")]
 impl orml_asset_registry::Config for Runtime {
 	type AssetId = CurrencyId;
-	type AssetProcessor = asset_registry::CustomAssetProcessor;
-	type AuthorityOrigin = EnsureRootOrTwoThirdsCouncil;
+	type AssetProcessor = CustomAssetProcessor;
+	type AuthorityOrigin = AsEnsureOriginWithArg<EnsureRootOrTwoThirdsCouncil>;
 	type Balance = Balance;
 	type CustomMetadata = CustomMetadata;
 	type Event = Event;

@@ -17,7 +17,7 @@
 
 use crate::{
     AccountId, Ancestry, Balance, Balances, Call, CurrencyId, AssetManager, MaxInstructions, Origin,
-    ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayLocation, RelayNetwork, Runtime,
+    ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayLocation, RelayNetwork, 
     UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
 };
 use super::parachains;
@@ -104,7 +104,7 @@ pub type MultiAssetTransactor = MultiCurrencyAdapter<
     // using AssetManager and UnknownTokens in all other cases.
     IsNativeConcrete<CurrencyId, AssetConvert>,
     // Our chain's account ID type (we can't get away without mentioning it explicitly).
-    sp_runtime::AccountId32,
+    AccountId,
     // Convert an XCM `MultiLocation` into a local account id.
     LocationToAccountId,
     // The AssetId that corresponds to the native currency.
@@ -127,7 +127,7 @@ pub struct AssetConvert;
 impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
     fn convert(id: CurrencyId) -> Option<MultiLocation> {
         let x = match id {
-            Asset::ZTG => MultiLocation::new(
+            Asset::Ztg => MultiLocation::new(
                 1,
                 X2(
                     Parachain(parachains::zeitgeist::ID),
@@ -148,13 +148,13 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
             MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
-                parachains::zeitgeist::ZTG_KEY => Ok(Asset::ZTG),
+                parachains::zeitgeist::ZTG_KEY => Ok(Asset::Ztg),
                 _ => Err(location),
             },
             MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } => {
                 match para_id {
                     parachains::zeitgeist::ID => match &key[..] {
-                        parachains::zeitgeist::ZTG_KEY => Ok(Asset::ZTG),
+                        parachains::zeitgeist::ZTG_KEY => Ok(Asset::Ztg),
                         _ => Err(location),
                     },
 
