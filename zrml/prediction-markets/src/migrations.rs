@@ -229,7 +229,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
             for market_id in market_ids {
                 let market =
                     T::MarketCommons::market(&market_id).map_err(|_| "invalid market_id")?;
-                let disputes = Disputes::<T>::get(&market_id);
+                let disputes = Disputes::<T>::get(market_id);
                 let dispute = disputes.last().ok_or("No dispute found")?;
                 assert_eq!(
                     key,

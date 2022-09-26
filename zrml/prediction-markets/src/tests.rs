@@ -1751,7 +1751,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
         let dispute_ends_at = dispute_at + market.deadlines.dispute_duration;
-        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_ends_at);
+        let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_ends_at);
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
     });

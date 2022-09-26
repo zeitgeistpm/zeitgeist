@@ -919,7 +919,7 @@ mod pallet {
             let market = T::MarketCommons::market(&market_id)?;
             let block_after_dispute_duration =
                 current_block.saturating_add(market.deadlines.dispute_duration);
-            MarketIdsPerReportBlock::<T>::try_mutate(&block_after_dispute_duration, |ids| {
+            MarketIdsPerReportBlock::<T>::try_mutate(block_after_dispute_duration, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
 
@@ -1509,7 +1509,7 @@ mod pallet {
                 let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
                 let dispute_duration_ends_at_block =
                     report.at.saturating_add(market.deadlines.dispute_duration);
-                MarketIdsPerReportBlock::<T>::mutate(&dispute_duration_ends_at_block, |ids| {
+                MarketIdsPerReportBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
@@ -1518,7 +1518,7 @@ mod pallet {
                 if let Some(last_dispute) = disputes.last() {
                     let dispute_duration_ends_at_block =
                         last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                    MarketIdsPerDisputeBlock::<T>::mutate(&dispute_duration_ends_at_block, |ids| {
+                    MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
                     });
                 }
@@ -2187,7 +2187,7 @@ mod pallet {
                 let market = T::MarketCommons::market(market_id)?;
                 let dispute_duration_ends_at_block =
                     last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                MarketIdsPerDisputeBlock::<T>::mutate(&dispute_duration_ends_at_block, |ids| {
+                MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
@@ -2247,20 +2247,20 @@ mod pallet {
             ) -> DispatchResult,
         {
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(&now).iter() {
+            for id in MarketIdsPerReportBlock::<T>::get(now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
                 }
             }
-            MarketIdsPerReportBlock::<T>::remove(&now);
+            MarketIdsPerReportBlock::<T>::remove(now);
 
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(&now).iter() {
+            for id in MarketIdsPerDisputeBlock::<T>::get(now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
-            MarketIdsPerDisputeBlock::<T>::remove(&now);
+            MarketIdsPerDisputeBlock::<T>::remove(now);
 
             Ok(())
         }
