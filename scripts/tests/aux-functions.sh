@@ -15,5 +15,6 @@ test_package_with_feature() {
     local features=$2
 
     /bin/echo -e "\e[0;33m***** Testing '$package' with features '$features' *****\e[0m\n"
-    CARGO_INCREMENTAL=0 RUSTFLAGS="-Cinstrument-coverage" LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw" cargo test --features $features --manifest-path $package/Cargo.toml --no-default-features --release
+    # default rustc profile dev is used to get better test coverage reports
+    CARGO_INCREMENTAL=0 RUSTFLAGS="-Cinstrument-coverage" LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw" cargo test --features $features --manifest-path $package/Cargo.toml --no-default-features
 }

@@ -48,3 +48,7 @@ resolver = "2"
 [patch."https://github.com/purestake/moonbeam"]
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
 parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
+
+[profile.fuzz]
+inherits = "dev"
+debug-assertions = false
