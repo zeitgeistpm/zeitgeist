@@ -37,7 +37,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_market_commons::migrations::UpdateMarketsForDeadlines<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
                 zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>
             ),
         >;
@@ -860,6 +860,7 @@ macro_rules! impl_config_traits {
             type DestroyOrigin = EnsureRootOrAllAdvisoryCommittee;
             type DisputeBond = DisputeBond;
             type DisputeFactor = DisputeFactor;
+            type DisputePeriod = DisputePeriod;
             type Event = Event;
             // LiquidityMining is currently unstable.
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.

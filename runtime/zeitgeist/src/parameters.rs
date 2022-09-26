@@ -144,6 +144,9 @@ parameter_types! {
     pub const DisputeBond: Balance = 2_000 * BASE;
     /// `DisputeBond` is increased by this factor after every dispute.
     pub const DisputeFactor: Balance = 2 * BASE;
+    /// After reporting the outcome and after every dispute, the dispute period is extended
+    /// by `DisputePeriod`.
+    pub const DisputePeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// Maximum Categories a prediciton market can have (excluding base asset).
     pub const MaxCategories: u16 = MAX_CATEGORIES;
     /// Maximum number of disputes.

@@ -1156,6 +1156,11 @@ mod pallet {
         #[pallet::constant]
         type MaxDisputeDuration: Get<Self::BlockNumber>;
 
+        //NOTE: DisputePeriod will be removed once relevant migrations are executed.
+        /// The number of blocks the dispute period remains open.
+        #[pallet::constant]
+        type DisputePeriod: Get<Self::BlockNumber>;
+
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
