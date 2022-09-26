@@ -371,7 +371,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
         let end = 2;
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -407,7 +407,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_resolved() {
         let end = 2;
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -483,7 +483,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_reported() {
         simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -514,7 +514,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_disputed() {
         simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -550,7 +550,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_resolved() {
         simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -686,7 +686,7 @@ fn admin_move_market_to_resolved_resolves_reported_market() {
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         let category = 1;
         let outcome_report = OutcomeReport::Categorical(category);
@@ -1537,7 +1537,7 @@ fn it_allows_to_report_the_outcome_of_a_market() {
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
 
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
 
         let market = MarketCommons::market(&0).unwrap();
@@ -1597,7 +1597,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
 
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
 
         let market = MarketCommons::market(&0).unwrap();
@@ -1645,7 +1645,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
         // set the timestamp
         set_timestamp_for_on_initialize(100_000_000);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2.
-        let grace_period: u64 = market.deadlines.grace_period as u64 * MILLISECS_PER_BLOCK as u64;
+        let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
         set_timestamp_for_on_initialize(100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64);
 
         assert_noop!(
@@ -1666,7 +1666,7 @@ fn report_fails_on_mismatched_outcome_for_categorical_market() {
         let end = 100;
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(123)),
@@ -1684,7 +1684,7 @@ fn report_fails_on_out_of_range_outcome_for_categorical_market() {
         let end = 100;
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(2)),
@@ -1702,7 +1702,7 @@ fn report_fails_on_mismatched_outcome_for_scalar_market() {
         let end = 100;
         simple_create_scalar_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Categorical(0)),
@@ -1722,7 +1722,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 
         // Run to the end of the trading phase.
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
 
         assert_ok!(PredictionMarkets::report(
@@ -1750,7 +1750,7 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         assert_eq!(dispute.by, CHARLIE);
         assert_eq!(dispute.outcome, OutcomeReport::Categorical(0));
 
-        let dispute_ends_at = dispute_at + market.deadlines.dispute_duration as u64;
+        let dispute_ends_at = dispute_at + market.deadlines.dispute_duration;
         let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(&dispute_ends_at);
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
@@ -1765,11 +1765,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
 
         let market = MarketCommons::market(&0).unwrap();
         // Just skip to waaaay overdue.
-        run_to_block(
-            end + market.deadlines.grace_period as u64
-                + market.deadlines.oracle_duration as u64
-                + 1,
-        );
+        run_to_block(end + market.deadlines.grace_period + market.deadlines.oracle_duration + 1);
 
         assert_ok!(PredictionMarkets::report(
             Origin::signed(ALICE), // alice reports her own market now
@@ -1785,8 +1781,7 @@ fn it_allows_anyone_to_report_an_unreported_market() {
 
         // make sure it still resolves
         run_to_block(
-            frame_system::Pallet::<Runtime>::block_number()
-                + market.deadlines.dispute_duration as u64,
+            frame_system::Pallet::<Runtime>::block_number() + market.deadlines.dispute_duration,
         );
 
         let market_after = MarketCommons::market(&0).unwrap();
@@ -1803,7 +1798,7 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
         let market = MarketCommons::market(&0).unwrap();
-        let report_at = end + market.deadlines.grace_period as u64 + 1;
+        let report_at = end + market.deadlines.grace_period + 1;
         run_to_block(report_at);
 
         assert_ok!(PredictionMarkets::report(
@@ -1812,9 +1807,8 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
             OutcomeReport::Categorical(1)
         ));
 
-        let reported_ids = MarketIdsPerReportBlock::<Runtime>::get(
-            report_at + market.deadlines.dispute_duration as u64,
-        );
+        let reported_ids =
+            MarketIdsPerReportBlock::<Runtime>::get(report_at + market.deadlines.dispute_duration);
         assert_eq!(reported_ids.len(), 1);
         let id = reported_ids[0];
         assert_eq!(id, 0);
@@ -1854,7 +1848,7 @@ fn it_resolves_a_disputed_market() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
         let market = MarketCommons::market(&0).unwrap();
 
-        let report_at = end + market.deadlines.grace_period as u64 + 1;
+        let report_at = end + market.deadlines.grace_period + 1;
         run_to_block(report_at);
 
         assert_ok!(PredictionMarkets::report(
@@ -1909,17 +1903,17 @@ fn it_resolves_a_disputed_market() {
 
         // make sure the old mappings of market id per dispute block are erased
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_0 + market.deadlines.dispute_duration as u64,
+            dispute_at_0 + market.deadlines.dispute_duration,
         );
         assert_eq!(market_ids_1.len(), 0);
 
         let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_1 + market.deadlines.dispute_duration as u64,
+            dispute_at_1 + market.deadlines.dispute_duration,
         );
         assert_eq!(market_ids_2.len(), 0);
 
         let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_2 + market.deadlines.dispute_duration as u64,
+            dispute_at_2 + market.deadlines.dispute_duration,
         );
         assert_eq!(market_ids_3.len(), 1);
 
@@ -2004,7 +1998,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = market.deadlines.grace_period as u64;
+        let grace_period = market.deadlines.grace_period;
         run_to_block(end + grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -2072,7 +2066,7 @@ fn it_allows_to_redeem_shares() {
 
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
 
         assert_ok!(PredictionMarkets::report(
@@ -2294,7 +2288,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         // set the timestamp
         set_timestamp_for_on_initialize(100_000_000);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2.
-        let grace_period: u64 = market.deadlines.grace_period as u64 * MILLISECS_PER_BLOCK as u64;
+        let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
         set_timestamp_for_on_initialize(
             100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64 + MILLISECS_PER_BLOCK as u64,
         );
@@ -2341,7 +2335,7 @@ fn full_scalar_market_lifecycle() {
         set_timestamp_for_on_initialize(100_000_000);
         let report_at = 2;
         run_to_block(report_at); // Trigger `on_initialize`; must be at least block #2.
-        let grace_period: u64 = market.deadlines.grace_period as u64 * MILLISECS_PER_BLOCK as u64;
+        let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
         set_timestamp_for_on_initialize(
             100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64 + MILLISECS_PER_BLOCK as u64,
         );
@@ -2493,7 +2487,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, 3 * BASE));
         let market = MarketCommons::market(&0).unwrap();
 
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -2501,7 +2495,7 @@ fn market_resolve_does_not_hold_liquidity_withdraw() {
             OutcomeReport::Categorical(2)
         ));
 
-        run_to_block(grace_period + market.deadlines.dispute_duration as u64 + 2);
+        run_to_block(grace_period + market.deadlines.dispute_duration + 2);
         assert_ok!(Swaps::pool_exit(Origin::signed(FRED), 0, BASE * 100, vec![0, 0]));
         assert_ok!(PredictionMarkets::redeem_shares(Origin::signed(BOB), 0));
     })
@@ -2525,7 +2519,7 @@ fn authorized_correctly_resolves_disputed_market() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), 0, CENT));
 
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -2586,17 +2580,17 @@ fn authorized_correctly_resolves_disputed_market() {
 
         // make sure the old mappings of market id per dispute block are erased
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_0 + market.deadlines.dispute_duration as u64,
+            dispute_at_0 + market.deadlines.dispute_duration,
         );
         assert_eq!(market_ids_1.len(), 0);
 
         let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_1 + market.deadlines.dispute_duration as u64,
+            dispute_at_1 + market.deadlines.dispute_duration,
         );
         assert_eq!(market_ids_2.len(), 0);
 
         let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_2 + market.deadlines.dispute_duration as u64,
+            dispute_at_2 + market.deadlines.dispute_duration,
         );
         assert_eq!(market_ids_3.len(), 1);
 
@@ -2659,7 +2653,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(CHARLIE), market_id, CENT));
 
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -2756,14 +2750,14 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
         );
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
             0,
             OutcomeReport::Categorical(0)
         ));
-        run_to_block(grace_period + market.deadlines.dispute_duration as u64 + 1);
+        run_to_block(grace_period + market.deadlines.dispute_duration + 1);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT);
         assert_eq!(
             Balances::free_balance(&ALICE),
@@ -2901,8 +2895,8 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_permissionless_mark
             SENTINEL_AMOUNT + ValidityBond::get() + OracleBond::get()
         );
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
-        let report_at = grace_period + market.deadlines.oracle_duration as u64 + 1;
+        let grace_period = end + market.deadlines.grace_period;
+        let report_at = grace_period + market.deadlines.oracle_duration + 1;
         run_to_block(report_at);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(CHARLIE),
@@ -2942,7 +2936,7 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
+        let grace_period = end + market.deadlines.grace_period;
         let report_at = grace_period + 1;
         run_to_block(report_at);
         assert_ok!(PredictionMarkets::report(
@@ -2983,8 +2977,8 @@ fn on_resolution_correctly_reserves_and_unreserves_bonds_for_approved_advised_ma
         let alice_balance_before = Balances::free_balance(&ALICE);
         assert_eq!(Balances::reserved_balance(&ALICE), SENTINEL_AMOUNT + OracleBond::get());
         let market = MarketCommons::market(&0).unwrap();
-        let grace_period = end + market.deadlines.grace_period as u64;
-        let report_at = grace_period + market.deadlines.oracle_duration as u64 + 1;
+        let grace_period = end + market.deadlines.grace_period;
+        let report_at = grace_period + market.deadlines.oracle_duration + 1;
         run_to_block(report_at);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(CHARLIE),
@@ -3175,7 +3169,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
         set_timestamp_for_on_initialize(100_000_000);
         // Trigger hooks which close the market.
         run_to_block(2);
-        let grace_period: u64 = market.deadlines.grace_period as u64 * MILLISECS_PER_BLOCK as u64;
+        let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
         set_timestamp_for_on_initialize(
             100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64 + MILLISECS_PER_BLOCK as u64,
         );
