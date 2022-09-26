@@ -46,11 +46,11 @@ fn authority_keys_from_seed(
 
 generate_generic_genesis_function! {
     battery_station_runtime,
-    asset_registry: battery_station_runtime::AssetRegistryConfig { 
-        assets: vec![], 
+    asset_registry: battery_station_runtime::AssetRegistryConfig {
+        assets: vec![],
         last_asset_id: ForeignAsset(0),
     },
-    sudo: battery_station_runtime::SudoConfig { 
+    sudo: battery_station_runtime::SudoConfig {
         key: Some(get_account_id_from_seed::<sr25519::Public>("Alice")),
     },
 }

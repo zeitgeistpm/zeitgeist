@@ -15,13 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Balance, CurrencyId, xcm_config::asset_registry::CustomMetadata};
-use core::{marker::PhantomData};
+use crate::{xcm_config::asset_registry::CustomMetadata, Balance, CurrencyId};
+use core::marker::PhantomData;
 use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
 use xcm::latest::MultiLocation;
-use zeitgeist_primitives::{
-    constants::BalanceFractionalDecimals,
-};
+use zeitgeist_primitives::constants::BalanceFractionalDecimals;
 use zrml_swaps::check_arithm_rslt::CheckArithmRslt;
 
 /// The fee cost per second for transferring the native token in cents.
@@ -60,17 +58,17 @@ pub fn bmul(a: u128, b: u128, base: u128) -> Option<u128> {
 pub struct FixedConversionRateProvider<OrmlAssetRegistry>(PhantomData<OrmlAssetRegistry>);
 
 impl<
-        OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
-            AssetId = CurrencyId,
-            Balance = Balance,
-            CustomMetadata = CustomMetadata,
-        >,
-    > orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry>
+    OrmlAssetRegistry: orml_traits::asset_registry::Inspect<
+        AssetId = CurrencyId,
+        Balance = Balance,
+        CustomMetadata = CustomMetadata,
+    >,
+> orml_traits::FixedConversionRateProvider for FixedConversionRateProvider<OrmlAssetRegistry>
 {
     fn get_fee_per_second(location: &MultiLocation) -> Option<u128> {
         let metadata = OrmlAssetRegistry::metadata_by_location(&location)?;
         let default_per_second = default_per_second(metadata.decimals);
-        
+
         if let Some(fee_factor) = metadata.additional.xcm.fee_factor {
             bmul(default_per_second, fee_factor, metadata.decimals.into())
         } else {

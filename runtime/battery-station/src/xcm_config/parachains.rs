@@ -23,8 +23,7 @@
 /// never change once defined since they help define the canonical id
 /// of said tokens in the network, which is relevant for XCM transfers.
 
-
 pub mod zeitgeist {
     pub const ID: u32 = 2101;
-    pub const ZTG_KEY: &[u8] = &[0,1];
+    pub const ZTG_KEY: &[u8] = &[0, 1];
 }
