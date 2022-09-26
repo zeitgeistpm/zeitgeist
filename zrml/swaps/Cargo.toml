@@ -4,10 +4,10 @@ frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 orml-traits = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 substrate-fixed = { default-features = false, git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 zrml-liquidity-mining = { default-features = false, path = "../liquidity-mining" }
 zrml-market-commons = { default-features = false, path = "../market-commons" }
 zrml-rikiddo = { default-features = false, path = "../rikiddo" }
@@ -23,9 +23,9 @@ sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purest
 zrml-swaps-runtime-api = { optional = true, path = "./runtime-api" }
 
 [dev-dependencies]
-zrml-swaps = { features = ["mock"], path = "." }
-test-case = "2.0.2"
 more-asserts = "0.2"
+test-case = "2.0.2"
+zrml-swaps = { features = ["mock"], path = "." }
 
 [features]
 default = ["std"]
@@ -42,7 +42,7 @@ mock = [
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks"
+    "frame-system/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",
@@ -58,7 +58,7 @@ std = [
     "zrml-rikiddo/std",
 ]
 try-runtime = [
-  "frame-support/try-runtime",
+    "frame-support/try-runtime",
 ]
 
 [package]

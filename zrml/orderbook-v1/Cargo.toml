@@ -5,9 +5,9 @@ frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false
 frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 orml-traits = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
 # Mock
 orml-tokens = { branch = "7e1123e-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
@@ -28,7 +28,7 @@ mock = [
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
-    "frame-system/runtime-benchmarks"
+    "frame-system/runtime-benchmarks",
 ]
 std = [
     "frame-benchmarking?/std",
@@ -40,7 +40,7 @@ std = [
     "zeitgeist-primitives/std",
 ]
 try-runtime = [
-  "frame-support/try-runtime",
+    "frame-support/try-runtime",
 ]
 
 [package]

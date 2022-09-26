@@ -29,8 +29,14 @@ parachain-staking = { rev = "78db06c0203f61b35059304f7194ed5c10dcfda8", default-
 cfg-if = { version = "1.0.0" }
 
 [features]
-default=["std"]
-std=[
+default = ["std"]
+parachain = [
+    "cumulus-pallet-xcmp-queue",
+    "pallet-author-mapping",
+    "pallet-author-slot-filter",
+    "parachain-staking",
+]
+std = [
     "cumulus-pallet-xcmp-queue?/std",
     "frame-system/std",
     "frame-support/std",
@@ -55,12 +61,6 @@ std=[
     "pallet-utility/std",
     "pallet-vesting/std",
     "parachain-staking?/std",
-]
-parachain=[
-    "cumulus-pallet-xcmp-queue",
-    "pallet-author-mapping",
-    "pallet-author-slot-filter",
-    "parachain-staking",
 ]
 
 [package]
