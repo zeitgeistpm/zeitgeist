@@ -24,4 +24,4 @@ do
   fi
 done
 
-grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o $RUNNER_TEMP/zeitgeist-test-coverage.lcov
+grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --llvm --ignore '../*' --ignore "/*" -o $RUNNER_TEMP/zeitgeist-test-coverage.lcov
