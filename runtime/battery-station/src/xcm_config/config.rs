@@ -16,14 +16,14 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    AssetManager, AccountId, Ancestry, Balance, Balances, Call, CurrencyId, MaxInstructions, Origin,
-    ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayLocation, RelayNetwork, 
+    AssetManager, AccountId, Ancestry, Balance, Call, CurrencyId, MaxInstructions, Origin,
+    ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, 
     UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount, AssetRegistry
 };
 use super::{fees::{native_per_second, FixedConversionRateProvider}, parachains::zeitgeist::ZTG_KEY};
 
-use alloc::{vec};
-use frame_support::{match_types, parameter_types, traits::Everything, weights::IdentityFee};
+use alloc::vec::Vec;
+use frame_support::{match_types, parameter_types, traits::Everything};
 use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
 use orml_traits::{MultiCurrency, location::AbsoluteReserveProvider};
 use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset, UnknownAsset};
@@ -39,7 +39,7 @@ use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, FixedWeightBounds, FixedRateOfFungible, LocationInverter, 
     ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-    UsingComponents, TakeRevenue,
+    TakeRevenue,
 };
 use xcm_executor::Config;
 use xcm::opaque::latest::Fungibility::Fungible;
@@ -139,8 +139,8 @@ parameter_types! {
 	pub ZtgPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
             0,
-            X1(GeneralKey(ZTG_KEY)),
-        ),
+            X1(general_key(ZTG_KEY)),
+        ).into(),
 		native_per_second(),
 	);
 }
@@ -180,7 +180,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
         match id {
             Asset::Ztg => Some(MultiLocation::new(
                 0,
-                X1(GeneralKey(ZTG_KEY)),
+                X1(general_key(ZTG_KEY)),
             ).into()),
             Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
             _ => None,
@@ -194,10 +194,13 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
-            MultiLocation::new(
-                0,
-                X1(GeneralKey(ZTG_KEY)),
-            ) => Ok(Asset::Ztg),
+            MultiLocation {
+                parents: 0,
+                interior: X1(GeneralKey(key)),
+            } => match &key[..] {
+                ZTG_KEY => Ok(CurrencyId::Ztg),
+                _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
+            }
             _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
         }
     }
@@ -270,4 +273,9 @@ match_types! {
         // Potentially change "Unit" to "Executive" for mainnet once we have separate runtimes
         MultiLocation { parents: 1, interior: Junctions::X1(Junction::Plurality { id: BodyId::Unit, .. }) }
     };
+}
+
+#[inline]
+fn general_key(key: &[u8]) -> Junction {
+    GeneralKey(Vec::from(key))
 }
