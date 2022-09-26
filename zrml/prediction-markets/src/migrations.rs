@@ -28,16 +28,13 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec, Twox64Concat,
 };
-use sp_runtime::{traits::Saturating, SaturatedConversion};
+use sp_runtime::traits::Saturating;
 extern crate alloc;
 use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode};
-use zeitgeist_primitives::{
-    constants::BLOCKS_PER_DAY,
-    types::{
-        Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-        MarketType, OutcomeReport, Report, ScoringRule,
-    },
+use zeitgeist_primitives::types::{
+    Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+    MarketType, OutcomeReport, Report, ScoringRule,
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -94,8 +91,9 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
         }
         log::info!("Starting updates of markets");
         let dispute_duration = T::DisputePeriod::get();
-        let oracle_duration: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
+        let oracle_duration = T::ReportingPeriod::get();
         let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
+        let mut new_markets_data: Vec<(Vec<u8>, MarketOf<T>)> = Vec::new();
         for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             let new_market = Market {
@@ -113,6 +111,9 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
                 dispute_mechanism: legacy_market.dispute_mechanism,
                 deadlines,
             };
+            new_markets_data.push((key, new_market));
+        }
+        for (key, new_market) in new_markets_data {
             put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
@@ -129,7 +130,7 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
         let dispute_duration = T::DisputePeriod::get();
-        let oracle_duration: T::BlockNumber = BLOCKS_PER_DAY.saturated_into::<u32>().into();
+        let oracle_duration = T::ReportingPeriod::get();
         let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
         for (market_id, market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
             assert_eq!(
@@ -462,8 +463,7 @@ mod tests {
             },
         ];
         let dispute_duration = <Runtime as Config>::DisputePeriod::get();
-        let oracle_duration: <Runtime as frame_system::Config>::BlockNumber =
-            BLOCKS_PER_DAY.saturated_into::<u32>().into();
+        let oracle_duration = <Runtime as Config>::ReportingPeriod::get();
         let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
         let expected_markets: Vec<MarketOf<Runtime>> = vec![
             Market {

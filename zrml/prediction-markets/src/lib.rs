@@ -1176,6 +1176,11 @@ mod pallet {
         #[pallet::constant]
         type OracleBond: Get<BalanceOf<Self>>;
 
+        //NOTE: ReportingPeriod will be removed once relevant migrations are executed.
+        /// The number of blocks the reporting period remains open.
+        #[pallet::constant]
+        type ReportingPeriod: Get<Self::BlockNumber>;
+
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
 

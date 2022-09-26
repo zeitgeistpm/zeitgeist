@@ -174,6 +174,8 @@ parameter_types! {
     pub const OracleBond: Balance = 200 * BASE;
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
+    /// Timeframe during which the oracle can report the final outcome after the market closed.
+    pub const ReportingPeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;
