@@ -15,12 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Court
-
 // It is important to note that if a categorical market has only two outcomes, then winners
 // won't receive any rewards because accounts of the most voted outcome on the loser side are
 // simply registered as `JurorStatus::Tardy`.
 
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
 
