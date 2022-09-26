@@ -16,7 +16,6 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(feature = "with-zeitgeist-runtime")]
-#![cfg(not(feature = "with-global-disputes"))]
 
 use super::{AdditionalChainSpec, EndowedAccountWithBalance};
 use crate::chain_spec::{generate_generic_genesis_function, telemetry_endpoints, token_properties};
