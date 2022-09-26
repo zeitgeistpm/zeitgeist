@@ -22,12 +22,9 @@
 /// and must always match the value there defined, which is expected to
 /// never change once defined since they help define the canonical id
 /// of said tokens in the network, which is relevant for XCM transfers.
-pub mod karura {
-    pub const ID: u32 = 2000;
-    pub const AUSD_KEY: &[u8] = &[0, 129];
-}
+
 
 pub mod zeitgeist {
     pub const ID: u32 = 2101;
-    pub const ZTG_KEY: &[u8] = &[0, 1];
+    pub const ZTG_KEY: &[u8] = &[0,1];
 }

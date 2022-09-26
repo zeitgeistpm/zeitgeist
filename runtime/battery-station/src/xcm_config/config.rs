@@ -16,29 +16,33 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    AccountId, Ancestry, Balance, Balances, Call, CurrencyId, AssetManager, MaxInstructions, Origin,
+    AssetManager, AccountId, Ancestry, Balance, Balances, Call, CurrencyId, MaxInstructions, Origin,
     ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayLocation, RelayNetwork, 
-    UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount,
+    UnitWeightCost, UnknownTokens, XcmpQueue, ZeitgeistTreasuryAccount, AssetRegistry
 };
-use super::parachains;
+use super::{fees::{native_per_second, FixedConversionRateProvider}, parachains::zeitgeist::ZTG_KEY};
+
+use alloc::{vec};
 use frame_support::{match_types, parameter_types, traits::Everything, weights::IdentityFee};
-use orml_traits::location::AbsoluteReserveProvider;
-use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
+use orml_asset_registry::{AssetRegistryTrader, FixedRateAssetRegistryTrader};
+use orml_traits::{MultiCurrency, location::AbsoluteReserveProvider};
+use orml_xcm_support::{DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset, UnknownAsset};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
 use xcm::latest::{
-    prelude::{Concrete, GeneralKey, MultiAsset, Parachain, X1, X2},
+    prelude::{GeneralKey, X1, AssetId, Concrete, MultiAsset},
     BodyId, Junction, Junctions, MultiLocation,
 };
 use xcm_builder::{
     AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-    AllowTopLevelPaidExecutionFrom, FixedWeightBounds, LocationInverter, 
+    AllowTopLevelPaidExecutionFrom, FixedWeightBounds, FixedRateOfFungible, LocationInverter, 
     ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-    UsingComponents,
+    UsingComponents, TakeRevenue,
 };
 use xcm_executor::Config;
+use xcm::opaque::latest::Fungibility::Fungible;
 use zeitgeist_primitives::types::Asset;
 
 pub struct XcmConfig;
@@ -58,7 +62,8 @@ impl Config for XcmConfig {
     type Barrier = Barrier;
     /// The outer call dispatch type.
     type Call = Call;
-    // Filters multi native assets whose reserve is same with `origin`.
+    /// Combinations of (Location, Asset) pairs which we trust as reserves.
+    // Trust the parent chain, sibling parachains and children chains of this chain.
     type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
     type IsTeleporter = ();
@@ -70,8 +75,8 @@ impl Config for XcmConfig {
     type ResponseHandler = PolkadotXcm;
     /// Module that handles subscription requests.
     type SubscriptionService = PolkadotXcm;
-    /// TODO: The means of purchasing weight credit for XCM execution.
-    type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
+    /// The means of purchasing weight credit for XCM execution.
+    type Trader = Trader;
     /// TODO: The means of determining an XCM message's weight.
     type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
     /// How to send an onward XCM message.
@@ -90,15 +95,61 @@ pub type Barrier = (
     AllowSubscriptionsFrom<Everything>,
 );
 
+/// The means of purchasing weight credit for XCM execution.
+/// Every token that is accepted for XC transfers should be handled here.
+pub type Trader = (
+    // In case the asset in question is the native currency, it will charge
+    // the default base fee per second and deposits them into treasury
+	FixedRateOfFungible<ZtgPerSecond, ToTreasury>,
+    // For all other assets the base fee per second will tried to be derived
+    // through the `fee_factor` entry in the asset registry. If the asset is
+    // not present in the asset registry, the default base fee per second is used.
+    // Deposits all fees into the treasury.
+	AssetRegistryTrader<
+		FixedRateAssetRegistryTrader<FixedConversionRateProvider<AssetRegistry>>,
+		ToTreasury,
+	>,
+);
+
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+        use xcm_executor::traits::Convert;
+
+		if let MultiAsset {
+			id: Concrete(location),
+			fun: Fungible(amount),
+		} = revenue.clone()
+		{
+			if let Ok(asset_id) =
+				<AssetConvert as Convert<MultiLocation, CurrencyId>>::convert(location.clone())
+			{
+				let _ = AssetManager::deposit(asset_id, &ZeitgeistTreasuryAccount::get(), amount);
+			} else {
+                // TODO this is wrong, use target as second parameter
+                let _ = UnknownTokens::deposit(&revenue, &location);
+            }
+		}
+	}
+}
+
 parameter_types! {
     pub CheckAccount: AccountId = PolkadotXcm::check_account();
+    /// The amount of ZTG charged per second of execution.
+	pub ZtgPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+            0,
+            X1(GeneralKey(ZTG_KEY)),
+        ),
+		native_per_second(),
+	);
 }
 
 /// Means for transacting assets on this chain.
 pub type MultiAssetTransactor = MultiCurrencyAdapter<
     // All known Assets will be processed by the following MultiCurrency implementation.
     AssetManager,
-    // Any unknown Assets will be processed by the following implementation.
+    // Any unknown Assets will be processed by the following UnknownAsset implementation.
     UnknownTokens,
     // This means that this adapter should handle any token that `AssetConvert` can convert
     // using AssetManager and UnknownTokens in all other cases.
@@ -126,18 +177,14 @@ pub struct AssetConvert;
 /// handle it on their side.
 impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
     fn convert(id: CurrencyId) -> Option<MultiLocation> {
-        let x = match id {
-            Asset::Ztg => MultiLocation::new(
-                1,
-                X2(
-                    Parachain(parachains::zeitgeist::ID),
-                    GeneralKey(parachains::zeitgeist::ZTG_KEY.to_vec()),
-                ),
-            ),
-            // TODO: Asset registry
-            _ => return None,
-        };
-        Some(x)
+        match id {
+            Asset::Ztg => Some(MultiLocation::new(
+                0,
+                X1(GeneralKey(ZTG_KEY)),
+            ).into()),
+            Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
+            _ => None,
+        }
     }
 }
 
@@ -147,23 +194,11 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
 impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
-            MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
-                parachains::zeitgeist::ZTG_KEY => Ok(Asset::Ztg),
-                _ => Err(location),
-            },
-            MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } => {
-                match para_id {
-                    parachains::zeitgeist::ID => match &key[..] {
-                        parachains::zeitgeist::ZTG_KEY => Ok(Asset::Ztg),
-                        _ => Err(location),
-                    },
-
-                    _ => Err(location),
-                }
-            }
-
-            // TODO: Asset registry
-            _ => Err(location),
+            MultiLocation::new(
+                0,
+                X1(GeneralKey(ZTG_KEY)),
+            ) => Ok(Asset::Ztg),
+            _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
         }
     }
 }
