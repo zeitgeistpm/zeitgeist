@@ -160,7 +160,7 @@ benchmarks! {
                 deadlines: Deadlines {
                     grace_period: 1_u32.into(),
                     oracle_duration: 1_u32.into(),
-                    dispute_duration: 1_u32.into()
+                    dispute_duration: 1_u32.into(),
                 },
                 report: None,
                 resolved_outcome: None,

@@ -119,6 +119,7 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
         }
         log::info!("Completed updates of markets");
         utility::put_storage_version_of_market_commons_pallet(MARKET_COMMONS_NEXT_STORAGE_VERSION);
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         total_weight
     }
 

@@ -300,7 +300,6 @@ mod tests {
                 oracle_duration: 1_u32,
                 dispute_duration: 1_u32,
             },
-
             scoring_rule: ScoringRule::CPMM,
             status: MarketStatus::Active,
             report: None,

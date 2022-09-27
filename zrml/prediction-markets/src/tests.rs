@@ -372,6 +372,7 @@ fn admin_destroy_market_correctly_slashes_permissionless_market_disputed() {
         simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
+        assert_ne!(grace_period, 0);
         run_to_block(grace_period + 1);
         assert_ok!(PredictionMarkets::report(
             Origin::signed(BOB),
@@ -1598,7 +1599,7 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
 
         let market = MarketCommons::market(&0).unwrap();
         let grace_period = end + market.deadlines.grace_period;
-        run_to_block(grace_period + 1);
+        run_to_block(grace_period);
 
         let market = MarketCommons::market(&0).unwrap();
         assert_eq!(market.status, MarketStatus::Closed);
@@ -3170,9 +3171,7 @@ fn report_fails_if_reporter_is_not_the_oracle() {
         // Trigger hooks which close the market.
         run_to_block(2);
         let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
-        set_timestamp_for_on_initialize(
-            100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64 + MILLISECS_PER_BLOCK as u64,
-        );
+        set_timestamp_for_on_initialize(100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64);
         assert_noop!(
             PredictionMarkets::report(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             Error::<Runtime>::ReporterNotOracle,

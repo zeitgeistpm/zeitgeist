@@ -350,9 +350,17 @@ benchmarks! {
     create_market {
         let (caller, oracle, period, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
-    }: _(RawOrigin::Signed(caller), oracle, period, deadlines, metadata, creation,
-            MarketType::Categorical(T::MaxCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
+    }: _(
+    RawOrigin::Signed(caller),
+    oracle,
+    period,
+    deadlines,
+    metadata,
+    creation,
+    MarketType::Categorical(T::MaxCategories::get()),
+    MarketDisputeMechanism::SimpleDisputes,
+    ScoringRule::CPMM
+    )
 
     deploy_swap_pool_for_market {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -535,10 +543,13 @@ benchmarks! {
                 range.end.saturated_into::<u32>()
             },
             _ => {
-                return Err(frame_benchmarking::BenchmarkError::Stop("MarketPeriod is block_number based"));
+                return Err(frame_benchmarking::BenchmarkError::Stop(
+                          "MarketPeriod is block_number based"
+                        ));
             },
         };
-        let grace_period : u32 = (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+        let grace_period : u32 =
+            (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
         pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
     }: _(RawOrigin::Signed(caller), market_id, outcome)
 
