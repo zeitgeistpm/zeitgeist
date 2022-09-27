@@ -119,12 +119,7 @@ jobs:
           default: true
           override: true
           profile: minimal
-          components: rustfmt, clippy, llvm-tools-preview
-
-      - uses: actions-rs/install@v0.1
-        with:
-          crate: grcov
-          use-tool-cache: true
+          components: rustfmt, clippy
       
       - uses: actions-rs/install@v0.1
         with:
@@ -135,12 +130,3 @@ jobs:
         uses: Swatinem/rust-cache@v1
 
       - run: ./scripts/tests/fuzz.sh
-
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
-        with: 
-          files: ${{ runner.temp }}/zeitgeist-fuzz-coverage.lcov
-          fail_ci_if_error: true
-          flags: fuzz
-          verbose: true
-          name: fuzz-tests
