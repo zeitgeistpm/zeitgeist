@@ -196,7 +196,7 @@ benchmarks! {
 
     admin_clean_up_pool_cpmm_scalar {
         let caller: T::AccountId = whitelisted_caller();
-        T::MarketCommons::push_market(
+        let market_id = T::MarketCommons::push_market(
             Market {
                 creation: MarketCreation::Permissionless,
                 creator_fee: 0,
@@ -212,7 +212,6 @@ benchmarks! {
                 status: MarketStatus::Active,
             }
         )?;
-        let market_id = T::MarketCommons::latest_market_id()?;
         let pool_id: PoolId = 0;
         let asset_count = 3;
         let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
