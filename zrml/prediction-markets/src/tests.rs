@@ -524,9 +524,6 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &market_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &market_account), 0);
         assert_eq!(AssetManager::free_balance(Asset::Ztg, &market_account), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
-        assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
         assert_eq!(AssetManager::free_balance(Asset::Ztg, &ALICE), alice_ztg_before);
     });
 }
@@ -1739,24 +1736,13 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Resolved);
 
-        // check to make sure all but the winning share was deleted
-        let share_a = Asset::CategoricalOutcome(0, 0);
-        let share_a_total = Tokens::total_issuance(share_a);
-        assert_eq!(share_a_total, 0);
-        let share_a_bal = Tokens::free_balance(share_a, &CHARLIE);
-        assert_eq!(share_a_bal, 0);
-
+        // Check balance of winning outcome asset.
         let share_b = Asset::CategoricalOutcome(0, 1);
         let share_b_total = Tokens::total_issuance(share_b);
         assert_eq!(share_b_total, CENT);
         let share_b_bal = Tokens::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, CENT);
 
-        let share_c = Asset::CategoricalOutcome(0, 2);
-        let share_c_total = Tokens::total_issuance(share_c);
-        assert_eq!(share_c_total, 0);
-        let share_c_bal = Tokens::free_balance(share_c, &CHARLIE);
-        assert_eq!(share_c_bal, 0);
     });
 }
 
