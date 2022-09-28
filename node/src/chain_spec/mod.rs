@@ -185,11 +185,12 @@ pub(crate) use generate_generic_genesis_function;
 #[cfg(feature = "with-battery-station-runtime")]
 type AccountPublic = <Signature as Verify>::Signer;
 #[cfg(feature = "with-battery-station-runtime")]
+#[inline]
 fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account_truncating()
 }
 
 #[cfg(feature = "with-battery-station-runtime")]

@@ -146,7 +146,7 @@ macro_rules! decl_common_types {
                 }
 
                 for pallet_id in pallets {
-                    let pallet_acc: AccountId = pallet_id.into_account();
+                    let pallet_acc: AccountId = pallet_id.into_account_truncating();
 
                     if pallet_acc == *ai {
                         return true;

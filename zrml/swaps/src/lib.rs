@@ -1207,8 +1207,9 @@ mod pallet {
             }
         }
 
+        #[inline]
         pub fn pool_account_id(pool_id: PoolId) -> T::AccountId {
-            T::PalletId::get().into_sub_account(pool_id.saturated_into::<u128>())
+            T::PalletId::get().into_sub_account_truncating(pool_id.saturated_into::<u128>())
         }
 
         // The minimum allowed balance in a liquidity pool.

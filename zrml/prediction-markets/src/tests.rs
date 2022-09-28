@@ -1399,7 +1399,7 @@ fn it_allows_to_deploy_a_pool() {
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
-            <Runtime as crate::Config>::PalletId::get().into_account(),
+            <Runtime as crate::Config>::PalletId::get().into_account_truncating(),
             100 * BASE
         ));
 
@@ -3063,7 +3063,7 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
-        <Runtime as crate::Config>::PalletId::get().into_account(),
+        <Runtime as crate::Config>::PalletId::get().into_account_truncating(),
         100 * BASE
     ));
     let outcome_assets_len = PredictionMarkets::outcome_assets(market_id, &market).len();

@@ -134,7 +134,7 @@ parameter_types! {
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
 
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
