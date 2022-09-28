@@ -870,9 +870,15 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
                 - <Runtime as Config>::AdvisoryBond::get()
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
+        let slash_amount_advisory_bond = <Runtime as Config>::AdvisoryBondSlashPercentage::get()
+            .mul_floor(<Runtime as Config>::AdvisoryBond::get());
+        let advisory_bond_remains =
+            <Runtime as Config>::AdvisoryBond::get() - slash_amount_advisory_bond;
         assert_eq!(
             balance_free_after_alice,
-            balance_free_before_alice + <Runtime as Config>::OracleBond::get()
+            balance_free_before_alice
+                + <Runtime as Config>::OracleBond::get()
+                + advisory_bond_remains
         );
     });
 }
