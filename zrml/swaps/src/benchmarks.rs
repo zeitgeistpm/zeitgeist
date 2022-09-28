@@ -120,7 +120,7 @@ fn bench_create_pool<T: Config>(
     };
     let base_asset = *assets.last().unwrap();
 
-    let _ = Pallet::<T>::create_pool(
+    let pool_id = Pallet::<T>::create_pool(
         caller.clone(),
         assets.clone(),
         base_asset,
@@ -131,7 +131,6 @@ fn bench_create_pool<T: Config>(
         if scoring_rule == ScoringRule::CPMM { some_weights } else { None },
     )
     .unwrap();
-    let pool_id = <NextPoolId<T>>::get() - 1;
 
     if scoring_rule == ScoringRule::CPMM {
         let _ = Pallet::<T>::open_pool(pool_id);
