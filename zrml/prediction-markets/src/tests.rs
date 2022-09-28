@@ -1742,7 +1742,6 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         assert_eq!(share_b_total, CENT);
         let share_b_bal = Tokens::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, CENT);
-
     });
 }
 
