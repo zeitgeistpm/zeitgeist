@@ -28,13 +28,13 @@ use crate::Pallet as PredictionMarket;
 use alloc::vec::Vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
-    log,
     dispatch::UnfilteredDispatchable,
+    log,
+    pallet_prelude::DispatchResult,
     storage::{with_transaction, TransactionOutcome},
     traits::{EnsureOrigin, Get, Hooks},
     BoundedVec,
 };
-use frame_support::pallet_prelude::DispatchResult;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
