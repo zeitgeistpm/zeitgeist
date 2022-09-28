@@ -111,6 +111,12 @@ mod pallet {
     impl<T: Config> Pallet<T> {
         /// Clean up the pool of a resolved market.
         ///
+        /// # Arguments
+        ///
+        /// - `origin`: The root origin.
+        /// - `market_id`: The id of the market that the pool belongs to.
+        /// - `outcome_report`: The report that resolved the market.
+        ///
         /// # Weight
         ///
         /// Complexity: `O(1)` if the market is scalar, `O(n)` where `n` is the number of
