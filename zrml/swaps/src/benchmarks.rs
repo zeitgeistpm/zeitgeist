@@ -152,7 +152,7 @@ fn bench_create_pool<T: Config>(
 benchmarks! {
     admin_clean_up_pool_cpmm_categorical {
         // We're excluding the case of two assets, which would leave us with only one outcome
-        // token, which makes no sense in the context of prediction markets.
+        // token and cause `create_market` to error.
         let a in 3..T::MaxAssets::get().into();
         let category_count = (a - 1) as u16;
         let caller: T::AccountId = whitelisted_caller();
