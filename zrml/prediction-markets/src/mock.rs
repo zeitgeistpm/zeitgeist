@@ -22,12 +22,14 @@
 #![cfg(feature = "mock")]
 
 use crate as prediction_markets;
+use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, OnFinalize, OnInitialize},
+    traits::{Everything, OnFinalize, OnInitialize, OnUnbalanced},
     PalletId,
 };
 use frame_system::EnsureSignedBy;
+use prediction_markets::NegativeImbalanceOf;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -96,6 +98,14 @@ construct_runtime!(
     }
 );
 
+pub struct Slash<Runtime>(PhantomData<Runtime>);
+impl<Runtime> OnUnbalanced<NegativeImbalanceOf<Runtime>> for Slash<Runtime>
+where
+    Runtime: crate::Config,
+{
+    fn on_unbalanced(_: NegativeImbalanceOf<Runtime>) {}
+}
+
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
@@ -125,6 +135,7 @@ impl crate::Config for Runtime {
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
+    type Slash = Slash<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
