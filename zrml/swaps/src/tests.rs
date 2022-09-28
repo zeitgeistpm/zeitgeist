@@ -181,7 +181,7 @@ fn allows_the_full_user_lifecycle() {
         let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B).unwrap();
         assert_eq!(spot_price, _1);
 
-        let pool_account = Swaps::pool_account_id(0);
+        let pool_account = Swaps::pool_account_id(&0);
 
         let in_balance = Currencies::free_balance(ASSET_A, &pool_account);
         assert_eq!(in_balance, _105);
@@ -335,7 +335,7 @@ fn create_pool_generates_a_new_pool_with_correct_parameters_for_cpmm() {
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_C).unwrap(), _2);
         assert_eq!(*pool.weights.as_ref().unwrap().get(&ASSET_D).unwrap(), _1);
 
-        let pool_account = Swaps::pool_account_id(0);
+        let pool_account = Swaps::pool_account_id(&0);
         System::assert_last_event(
             Event::PoolCreate(
                 CommonPoolEventParams { pool_id: next_pool_before, who: BOB },
@@ -516,7 +516,7 @@ fn end_subsidy_phase_distributes_shares_and_outcome_assets() {
         assert_eq!(Currencies::total_balance(pool_shares_id, &ALICE), subsidy_alice);
         assert_eq!(Currencies::total_balance(pool_shares_id, &BOB), subsidy_bob);
 
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
         let total_subsidy = Currencies::total_balance(ASSET_D, &pool_account_id);
         let total_subsidy_expected = subsidy_alice + subsidy_bob;
         assert_eq!(total_subsidy, total_subsidy_expected);
@@ -718,7 +718,7 @@ fn get_spot_price_returns_correct_results_cpmm(
             Some(vec!(weight_in, weight_out, _2, _3))
         ));
         let pool_id = 0;
-        let pool_account = Swaps::pool_account_id(pool_id);
+        let pool_account = Swaps::pool_account_id(&pool_id);
 
         // Modify pool balances according to test data.
         assert_ok!(Currencies::deposit(ASSET_A, &pool_account, balance_in - amount_in_pool));
@@ -1056,7 +1056,7 @@ fn pool_exit_decreases_correct_pool_parameters_with_exit_fee() {
 
         assert_ok!(Swaps::pool_exit(Origin::signed(BOB), 0, _10, vec!(_1, _1, _1, _1),));
 
-        let pool_account = Swaps::pool_account_id(0);
+        let pool_account = Swaps::pool_account_id(&0);
         let pool_shares_id = Swaps::pool_shares_id(0);
         assert_eq!(Currencies::free_balance(ASSET_A, &BOB), _9);
         assert_eq!(Currencies::free_balance(ASSET_B, &BOB), _9);
@@ -2267,7 +2267,7 @@ fn join_pool_exit_pool_does_not_create_extra_tokens() {
 
         // Check that the pool retains more tokens than before, and that Charlie loses some tokens
         // due to fees.
-        let pool_account_id = Swaps::pool_account_id(0);
+        let pool_account_id = Swaps::pool_account_id(&0);
         assert_ge!(Currencies::free_balance(ASSET_A, &pool_account_id), _100);
         assert_ge!(Currencies::free_balance(ASSET_B, &pool_account_id), _100);
         assert_ge!(Currencies::free_balance(ASSET_C, &pool_account_id), _100);
@@ -2392,7 +2392,7 @@ fn create_pool_transfers_the_correct_amount_of_tokens() {
         assert_eq!(Currencies::free_balance(ASSET_C, &BOB), _10000 - _1234);
         assert_eq!(Currencies::free_balance(ASSET_D, &BOB), _10000 - _1234);
 
-        let pool_account_id = Swaps::pool_account_id(0);
+        let pool_account_id = Swaps::pool_account_id(&0);
         assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), _1234);
         assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), _1234);
         assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), _1234);
@@ -2707,7 +2707,7 @@ fn pool_join_with_uneven_balances() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
         assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _50));
         assert_ok!(Swaps::pool_join(Origin::signed(ALICE), pool_id, _10, vec![_100; 4]));
         assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), _165);
@@ -2725,7 +2725,7 @@ fn pool_exit_fails_if_balances_drop_too_low() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
 
         assert_ok!(Currencies::withdraw(
             ASSET_A,
@@ -2764,7 +2764,7 @@ fn pool_exit_fails_if_liquidity_drops_too_low() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
 
         // There's 1000 left of each asset.
         assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _900));
@@ -2791,7 +2791,7 @@ fn swap_exact_amount_in_fails_if_balances_drop_too_low() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
 
         // There's only very little left of all assets!
         assert_ok!(Currencies::withdraw(
@@ -2836,7 +2836,7 @@ fn swap_exact_amount_out_fails_if_balances_drop_too_low() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
 
         // There's only very little left of all assets!
         assert_ok!(Currencies::withdraw(
@@ -2881,7 +2881,7 @@ fn pool_exit_with_exact_pool_amount_fails_if_balances_drop_too_low() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
 
         // There's only very little left of all assets!
         assert_ok!(Currencies::withdraw(
@@ -2918,7 +2918,7 @@ fn pool_exit_with_exact_pool_amount_fails_if_liquidity_drops_too_low() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
 
         assert_ok!(Currencies::deposit(ASSET_A, &pool_account_id, _10000));
         assert_ok!(Currencies::deposit(ASSET_B, &pool_account_id, _10000));
@@ -2950,7 +2950,7 @@ fn pool_exit_with_exact_asset_amount_fails_if_balances_drop_too_low() {
         <Runtime as Config>::ExitFee::set(&0u128);
         create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
         let pool_id = 0;
-        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let pool_account_id = Swaps::pool_account_id(&pool_id);
 
         // There's only very little left of all assets!
         assert_ok!(Currencies::withdraw(
@@ -3066,7 +3066,7 @@ fn assert_all_parameters(
     pool_assets: [u128; 4],
     total_issuance: u128,
 ) {
-    let pai = Swaps::pool_account_id(0);
+    let pai = Swaps::pool_account_id(&0);
     let psi = Swaps::pool_shares_id(0);
 
     assert_eq!(Currencies::free_balance(ASSET_A, &ALICE), alice_assets[0]);

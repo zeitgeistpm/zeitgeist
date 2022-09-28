@@ -512,7 +512,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, BASE));
         let market_id = 0;
         let pool_id = 0;
-        let pool_account = Swaps::pool_account_id(pool_id);
+        let pool_account = Swaps::pool_account_id(&pool_id);
         let market_account = PredictionMarkets::market_account(market_id);
         let alice_ztg_before = AssetManager::free_balance(Asset::Ztg, &ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -2044,7 +2044,7 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         ));
         let market_id = 0;
 
-        let pool_account = Swaps::pool_account_id(pool_id);
+        let pool_account = Swaps::pool_account_id(&pool_id);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);

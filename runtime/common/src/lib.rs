@@ -1275,14 +1275,14 @@ macro_rules! create_runtime_api {
             for Runtime
             {
                 fn get_spot_price(
-                    pool_id: PoolId,
-                    asset_in: Asset<MarketId>,
-                    asset_out: Asset<MarketId>,
+                    pool_id: &PoolId,
+                    asset_in: &Asset<MarketId>,
+                    asset_out: &Asset<MarketId>,
                 ) -> SerdeWrapper<Balance> {
                     SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
                 }
 
-                fn pool_account_id(pool_id: PoolId) -> AccountId {
+                fn pool_account_id(pool_id: &PoolId) -> AccountId {
                     Swaps::pool_account_id(pool_id)
                 }
 

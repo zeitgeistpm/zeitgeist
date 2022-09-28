@@ -1799,7 +1799,7 @@ name = "cumulus-pallet-parachain-system-proc-macro"
 version = "0.1.0"
 source = "git+https://github.com/purestake/cumulus?branch=moonbeam-polkadot-v0.9.23#a8637639267afc5bacf0288c038bc6d28acd73aa"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -1810,7 +1810,7 @@ name = "cumulus-pallet-parachain-system-proc-macro"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.23#9c1470893c6bd5f33ad8eb104d159177c6847df5"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -2540,7 +2540,7 @@ checksum = "f5aa1e3ae159e592ad222dc90c5acbad632b527779ba88486abe92782ab268bd"
 dependencies = [
  "expander 0.0.4",
  "indexmap",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -2721,7 +2721,7 @@ name = "frame-election-provider-solution-type"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#76522d7937ba94ff1becef4e4e3ca78e3e1de341"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -2819,7 +2819,7 @@ version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#76522d7937ba94ff1becef4e4e3ca78e3e1de341"
 dependencies = [
  "frame-support-procedural-tools-derive",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -3587,18 +3587,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jsonrpc-derive"
-version = "18.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b939a78fa820cdfcb7ee7484466746a7377760970f6f9c6fe19f9edcc8a38d2"
-dependencies = [
- "proc-macro-crate 0.1.5",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "jsonrpsee"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3686,7 +3674,7 @@ version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b8d7f449cab3b747f12c3efc27f5cad537f3b597c6a3838b0fac628f4bf730a"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -4848,7 +4836,7 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc076939022111618a5026d3be019fd8b366e76314538ff9a1b59ffbcbf98bcd"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro-error",
  "proc-macro2",
  "quote",
@@ -5234,7 +5222,7 @@ source = "git+https://github.com/purestake/polkadot?branch=moonbeam-polkadot-v0.
 dependencies = [
  "expander 0.0.6",
  "petgraph",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -5247,7 +5235,7 @@ source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.23#a7e1
 dependencies = [
  "expander 0.0.6",
  "petgraph",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -6189,7 +6177,7 @@ name = "pallet-staking-reward-curve"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#76522d7937ba94ff1becef4e4e3ca78e3e1de341"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -6450,7 +6438,7 @@ version = "3.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9299338969a3d2f491d65f140b00ddec470858402f888af98e8642fb5e8965cd"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -9090,15 +9078,6 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-crate"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d6ea3c4595b96363c13943497db34af4460fb474a95c43f4446ad341b8c9785"
-dependencies = [
- "toml",
-]
-
-[[package]]
-name = "proc-macro-crate"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eda0fc3b0fb7c975631757e14d9049da17374063edb6ebbcbc54d880d4fe94e9"
@@ -9951,7 +9930,7 @@ name = "sc-chain-spec-derive"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#76522d7937ba94ff1becef4e4e3ca78e3e1de341"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -10838,7 +10817,7 @@ name = "sc-tracing-proc-macro"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#76522d7937ba94ff1becef4e4e3ca78e3e1de341"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -10917,7 +10896,7 @@ version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "53f56acbd0743d29ffa08f911ab5397def774ad01bab3786804cf6ee057fb5e1"
 dependencies = [
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -11381,7 +11360,7 @@ version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#76522d7937ba94ff1becef4e4e3ca78e3e1de341"
 dependencies = [
  "blake2",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -11856,7 +11835,7 @@ version = "5.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#76522d7937ba94ff1becef4e4e3ca78e3e1de341"
 dependencies = [
  "Inflector",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -12704,7 +12683,7 @@ version = "0.9.23"
 source = "git+https://github.com/purestake/polkadot?branch=moonbeam-polkadot-v0.9.23#2fd38f09064ce74532cfd61295f2b6f8fdd1e31d"
 dependencies = [
  "expander 0.0.6",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -12716,7 +12695,7 @@ version = "0.9.23"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.23#a7e188cd9665c735f4b9d5a58cdbc4dd1850eae0"
 dependencies = [
  "expander 0.0.6",
- "proc-macro-crate 1.2.1",
+ "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
@@ -14292,7 +14271,6 @@ dependencies = [
 name = "zrml-swaps-rpc"
 version = "0.3.5"
 dependencies = [
- "jsonrpc-derive",
  "jsonrpsee",
  "parity-scale-codec",
  "sp-api",

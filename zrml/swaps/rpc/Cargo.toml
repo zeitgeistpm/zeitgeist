@@ -1,7 +1,6 @@
 [dependencies]
-jsonrpsee = { version = "0.13.0", features = ["server"] }
-jsonrpc-derive = { default-features = false, version = "18.0.0" }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+jsonrpsee = { version = "0.13.0", features = ["server", "macros"] }
+parity-scale-codec = { default-features = false, version = "3.0.0" }
 sp-api = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-blockchain = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 sp-runtime = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
