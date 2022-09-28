@@ -122,9 +122,8 @@ mod pallet {
         /// Complexity: `O(1)` if the market is scalar, `O(n)` where `n` is the number of
         /// assets in the pool if the market is categorical.
         #[pallet::weight(
-            T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32).max(
-                 T::WeightInfo::admin_clean_up_pool_cpmm_scalar()
-             )
+            T::WeightInfo::admin_clean_up_pool_cpmm_categorical(T::MaxAssets::get() as u32)
+                .max(T::WeightInfo::admin_clean_up_pool_cpmm_scalar())
         )]
         #[transactional]
         pub fn admin_clean_up_pool(
