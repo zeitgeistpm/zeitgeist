@@ -156,7 +156,7 @@ benchmarks! {
         let a in 3..T::MaxAssets::get().into();
         let category_count = (a - 1) as u16;
         let caller: T::AccountId = whitelisted_caller();
-        T::MarketCommons::push_market(
+        let market_id = T::MarketCommons::push_market(
             Market {
                 creation: MarketCreation::Permissionless,
                 creator_fee: 0,
@@ -172,7 +172,6 @@ benchmarks! {
                 status: MarketStatus::Active,
             }
         )?;
-        let market_id = T::MarketCommons::latest_market_id()?;
         let pool_id: PoolId = 0;
         let _ = T::MarketCommons::insert_market_pool(market_id, pool_id);
         let _ = bench_create_pool::<T>(
