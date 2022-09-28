@@ -262,7 +262,7 @@ macro_rules! create_runtime_with_additional_pallets {
             ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
 
             // Consensus
-            ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
+            ParachainStaking: pallet_parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
             AuthorFilter: pallet_author_slot_filter::{Call, Config, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
@@ -441,7 +441,7 @@ macro_rules! impl_config_traits {
         }
 
         #[cfg(feature = "parachain")]
-        impl parachain_staking::Config for Runtime {
+        impl pallet_parachain_staking::Config for Runtime {
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
             type DefaultBlocksPerRound = DefaultBlocksPerRound;
@@ -463,7 +463,7 @@ macro_rules! impl_config_traits {
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
-            type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
+            type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
         impl orml_currencies::Config for Runtime {
@@ -989,7 +989,7 @@ macro_rules! create_runtime_api {
                     // Because the staking solution calculates the next staking set at the beginning
                     // of the first block in the new round, the only way to accurately predict the
                     // authors is to compute the selection during prediction.
-                    if parachain_staking::Pallet::<Self>::round().should_update(block_number) {
+                    if pallet_parachain_staking::Pallet::<Self>::round().should_update(block_number) {
                         // get author account id
                         use nimbus_primitives::AccountLookup;
                         let author_account_id = if let Some(account) =
@@ -1002,7 +1002,7 @@ macro_rules! create_runtime_api {
                         // predict eligibility post-selection by computing selection results now
                         let (eligible, _) =
                             pallet_author_slot_filter::compute_pseudo_random_subset::<Self>(
-                                parachain_staking::Pallet::<Self>::compute_top_candidates(),
+                                pallet_parachain_staking::Pallet::<Self>::compute_top_candidates(),
                                 &slot
                             );
                         eligible.contains(&author_account_id)
@@ -1054,7 +1054,7 @@ macro_rules! create_runtime_api {
                             list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
-                            list_benchmark!(list, extra, parachain_staking, ParachainStaking);
+                            list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
                             list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
@@ -1129,7 +1129,7 @@ macro_rules! create_runtime_api {
                             add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
-                            add_benchmark!(params, batches, parachain_staking, ParachainStaking);
+                            add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
                             add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
                         } else {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);

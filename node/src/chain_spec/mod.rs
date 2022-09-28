@@ -52,7 +52,7 @@ use {
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         // Common
-        pub(crate) const DEFAULT_COLLATOR_INFLATION_INFO: parachain_staking::InflationInfo<Balance> = {
+        pub(crate) const DEFAULT_COLLATOR_INFLATION_INFO: pallet_parachain_staking::InflationInfo<Balance> = {
             let hours_per_year = 8766;
             let millisecs_per_year = hours_per_year * 60 * 60 * 1000;
             let round_millisecs = DefaultBlocksPerRound::get() as u64 * MILLISECS_PER_BLOCK as u64;
@@ -63,18 +63,18 @@ cfg_if::cfg_if! {
             let round_inflation_parts = annual_inflation.deconstruct() as u64 / rounds_per_year;
             let round_inflation = Perbill::from_parts(round_inflation_parts as _);
 
-            parachain_staking::InflationInfo {
-                annual: parachain_staking::Range {
+            pallet_parachain_staking::InflationInfo {
+                annual: pallet_parachain_staking::Range {
                     ideal: annual_inflation,
                     max: annual_inflation,
                     min: annual_inflation,
                 },
-                expect: parachain_staking::Range {
+                expect: pallet_parachain_staking::Range {
                     ideal: expected_annual_amount,
                     max: expected_annual_amount,
                     min: expected_annual_amount,
                 },
-                round: parachain_staking::Range {
+                round: pallet_parachain_staking::Range {
                     ideal: round_inflation,
                     min: round_inflation,
                     max: round_inflation,
@@ -147,7 +147,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 parachain_info: $runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
                 #[cfg(feature = "parachain")]
-                parachain_staking: $runtime::ParachainStakingConfig {
+                pallet_parachain_staking: $runtime::ParachainStakingConfig {
                     candidates: acs
                         .candidates
                         .iter()
