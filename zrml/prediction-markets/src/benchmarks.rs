@@ -527,6 +527,108 @@ benchmarks! {
             Ok(())
         })?;
     }: { Pallet::<T>::start_subsidy(&market_clone.unwrap(), market_id)? }
+
+    on_initialize_top_overhead {
+        let now = 2u32;
+    }: {
+        if now <= 1u32 {}
+        let current_time_frame = Pallet::<T>::calculate_time_frame_of_moment(
+            T::MarketCommons::now()
+        ).saturating_add(1);
+        let last_time_frame =
+                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
+    }
+
+    market_status_manager {
+        let b in 0..63;
+        let f in 0..63;
+        // let t in 0..10;
+
+        // ensure markets exist
+        for _ in 0..=(b.max(f)) {
+            let _ = create_market_common::<T>(
+                MarketCreation::Permissionless,
+                MarketType::Categorical(T::MaxCategories::get()),
+                ScoringRule::CPMM
+            )?;
+        }
+
+        let block_number: T::BlockNumber = Zero::zero();
+        let last_time_frame: TimeFrame = Zero::zero();
+        for i in 0..=b {
+            <MarketIdsPerOpenBlock<T>>::try_mutate(block_number, |ids| {
+                ids.try_push(i.into())
+            }).unwrap();
+        }
+
+        let last_offset: TimeFrame = last_time_frame + 1.saturated_into::<u64>();
+        //* quadratic complexity should not be allowed in substrate blockchains
+        //* assume at first that the last time frame is one block before the current time frame
+        let t = 0;
+        let current_time_frame: TimeFrame = last_offset + t.saturated_into::<u64>();
+        // for current_time_frame in last_offset..=(last_offset + t.saturated_into::<u64>()) {
+        for i in 0..=f {
+            <MarketIdsPerOpenTimeFrame<T>>::try_mutate(current_time_frame, |ids| {
+                ids.try_push(i.into())
+            }).unwrap();
+        }
+        // }
+    }: {
+        Pallet::<T>::market_status_manager::<_, MarketIdsPerOpenBlock<T>, MarketIdsPerOpenTimeFrame<T>>(
+            block_number,
+            last_time_frame,
+            current_time_frame,
+            |market_id, market| {
+                // noop, because weight is already measured somewhere else
+                Ok(())
+            },
+        ).unwrap();
+    }
+
+    market_resolution_manager {
+        let r in 0..63;
+        let d in 0..63;
+
+        // ensure markets exist
+        for _ in 0..=(d.max(r)) {
+            let (caller, market_id) = create_market_common::<T>(
+                MarketCreation::Permissionless,
+                MarketType::Categorical(T::MaxCategories::get()),
+                ScoringRule::CPMM
+            )?;
+            // ensure market is reported
+            let outcome = OutcomeReport::Categorical(0);
+            let close_origin = T::CloseOrigin::successful_origin();
+            let _ = Call::<T>::admin_move_market_to_closed { market_id }
+                .dispatch_bypass_filter(close_origin).unwrap();
+            <Pallet<T>>::report(RawOrigin::Signed(caller).into(), market_id, outcome).unwrap();
+        }
+
+        let block_number = 1u64.saturated_into::<T::BlockNumber>();
+
+        for i in 0..=r {
+            <MarketIdsPerReportBlock<T>>::try_mutate(block_number, |ids| {
+                ids.try_push(i.into())
+            }).unwrap();
+        }
+
+        for i in 0..=d {
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(block_number, |ids| {
+                ids.try_push(i.into())
+            }).unwrap();
+        }
+
+        // TODO(#730) this will get outdated with the merged PR
+        let now: T::BlockNumber = T::DisputePeriod::get() + block_number;
+    }: {
+        Pallet::<T>::resolution_manager(
+            now,
+            |market_id, market| {
+                // noop, because weight is already measured somewhere else
+                Ok(())
+            },
+        ).unwrap();
+    }
 }
 
 impl_benchmark_test_suite!(

@@ -68,6 +68,9 @@ pub trait WeightInfoZeitgeist {
     fn report() -> Weight;
     fn sell_complete_set(a: u32) -> Weight;
     fn start_subsidy(a: u32) -> Weight;
+    fn on_initialize_top_overhead() -> Weight;
+    fn market_status_manager(b: u32, f: u32) -> Weight;
+    fn market_resolution_manager(d: u32, r: u32) -> Weight;
 }
 
 /// Weight functions for zrml_prediction_markets (automatically generated)
@@ -332,5 +335,34 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add((989_000 as Weight).saturating_mul(a as Weight))
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
+    }
+    // Storage: Timestamp Now (r:1 w:0)
+    // Storage: PredictionMarkets LastTimeFrame (r:1 w:0)
+    fn on_initialize_top_overhead() -> Weight {
+        (4_000_000 as Weight).saturating_add(T::DbWeight::get().reads(2 as Weight))
+    }
+    // Storage: PredictionMarkets MarketIdsPerOpenBlock (r:1 w:1)
+    // Storage: MarketCommons Markets (r:64 w:0)
+    // Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
+    fn market_status_manager(b: u32, f: u32) -> Weight {
+        (203_858_000 as Weight)
+            // Standard Error: 1_000
+            .saturating_add((1_340_000 as Weight).saturating_mul(b as Weight))
+            // Standard Error: 1_000
+            .saturating_add((1_316_000 as Weight).saturating_mul(f as Weight))
+            .saturating_add(T::DbWeight::get().reads(66 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
+    // Storage: MarketCommons Markets (r:64 w:0)
+    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
+    fn market_resolution_manager(d: u32, r: u32) -> Weight {
+        (207_346_000 as Weight)
+            // Standard Error: 1_000
+            .saturating_add((1_330_000 as Weight).saturating_mul(d as Weight))
+            // Standard Error: 1_000
+            .saturating_add((1_274_000 as Weight).saturating_mul(r as Weight))
+            .saturating_add(T::DbWeight::get().reads(66 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
 }

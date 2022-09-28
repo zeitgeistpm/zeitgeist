@@ -1189,6 +1189,9 @@ mod pallet {
             let mut total_weight: Weight =
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
 
+            //* ON_INITIALIZE_TOP_OVERHEAD benchmark START
+            //* Whenever you change something inside here, you need to update the benchmark!
+
             // If we are at genesis or the first block the timestamp is be undefined. No
             // market needs to be opened or closed on blocks #0 or #1, so we skip the
             // evaluation. Without this check, new chains starting from genesis will hang up,
@@ -1209,6 +1212,9 @@ mod pallet {
             let last_time_frame =
                 LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
 
+            total_weight = total_weight.saturating_add(T::WeightInfo::on_initialize_top_overhead());
+            //* ON_INITIALIZE_TOP_OVERHEAD benchmark END
+
             let _ = with_transaction(|| {
                 let open = Self::market_status_manager::<
                     _,
@@ -1224,6 +1230,15 @@ mod pallet {
                         Ok(())
                     },
                 );
+                
+                if let Ok(weight) = open {
+                    total_weight = total_weight.saturating_add(weight);
+                } else {
+                    // charge weight for the worst case
+                    total_weight = total_weight.saturating_add(
+                        T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get()),
+                    );
+                }
 
                 let close = Self::market_status_manager::<
                     _,
@@ -1240,13 +1255,34 @@ mod pallet {
                     },
                 );
 
+                if let Ok(weight) = close {
+                    total_weight = total_weight.saturating_add(weight);
+                } else {
+                    // charge weight for the worst case
+                    total_weight = total_weight.saturating_add(
+                        T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get()),
+                    );
+                }
+
                 let resolve = Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
                     total_weight = total_weight.saturating_add(weight);
                     Ok(())
                 });
 
+                if let Ok(weight) = resolve {
+                    total_weight = total_weight.saturating_add(weight);
+                } else {
+                    // charge weight for the worst case
+                    total_weight =
+                        total_weight.saturating_add(T::WeightInfo::market_resolution_manager(
+                            CacheSize::get(),
+                            CacheSize::get(),
+                        ));
+                }
+
                 LastTimeFrame::<T>::set(Some(current_time_frame));
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
                 match open.and(close).and(resolve) {
                     Err(err) => {
@@ -2128,7 +2164,7 @@ mod pallet {
             last_time_frame: TimeFrame,
             current_time_frame: TimeFrame,
             mut mutation: F,
-        ) -> DispatchResult
+        ) -> Result<Weight, DispatchError>
         where
             F: FnMut(
                 &MarketIdOf<T>,
@@ -2145,24 +2181,36 @@ mod pallet {
                 Query = BoundedVec<MarketIdOf<T>, CacheSize>,
             >,
         {
-            for market_id in MarketIdsPerBlock::get(block_number).iter() {
+            let market_ids_per_block = MarketIdsPerBlock::get(block_number);
+            let market_ids_per_block_len = market_ids_per_block.len() as u32;
+            for market_id in market_ids_per_block.iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
             MarketIdsPerBlock::remove(block_number);
 
+            let mut market_ids_per_time_frame_len = 0u32;
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerTimeFrame::get(time_frame).iter() {
+                let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
+                market_ids_per_time_frame_len = market_ids_per_time_frame_len
+                    .saturating_add(market_ids_per_time_frame.len() as u32);
+                for market_id in market_ids_per_time_frame.iter() {
                     let market = T::MarketCommons::market(market_id)?;
                     mutation(market_id, market)?;
                 }
                 MarketIdsPerTimeFrame::remove(time_frame);
             }
 
-            Ok(())
+            Ok(T::WeightInfo::market_status_manager(
+                market_ids_per_block_len,
+                market_ids_per_time_frame_len,
+            ))
         }
 
-        fn resolution_manager<F>(now: T::BlockNumber, mut cb: F) -> DispatchResult
+        pub(crate) fn resolution_manager<F>(
+            now: T::BlockNumber,
+            mut cb: F,
+        ) -> Result<Weight, DispatchError>
         where
             F: FnMut(
                 &MarketIdOf<T>,
@@ -2171,13 +2219,15 @@ mod pallet {
         {
             let dispute_period = T::DisputePeriod::get();
             if now <= dispute_period {
-                return Ok(());
+                return Ok(0u64.into());
             }
 
             let block = now.saturating_sub(dispute_period);
 
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(block).iter() {
+            let market_ids_per_report_block = MarketIdsPerReportBlock::<T>::get(block);
+            let market_ids_per_report_block_len = market_ids_per_report_block.len() as u32;
+            for id in market_ids_per_report_block.iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
@@ -2186,13 +2236,18 @@ mod pallet {
             MarketIdsPerReportBlock::<T>::remove(block);
 
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(block).iter() {
+            let market_ids_per_dispute_block = MarketIdsPerDisputeBlock::<T>::get(block);
+            let market_ids_per_dispute_block_len = market_ids_per_dispute_block.len() as u32;
+            for id in market_ids_per_dispute_block.iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
             MarketIdsPerDisputeBlock::<T>::remove(block);
 
-            Ok(())
+            Ok(T::WeightInfo::market_resolution_manager(
+                market_ids_per_report_block_len,
+                market_ids_per_dispute_block_len,
+            ))
         }
 
         // If the market is already disputed, does nothing.
