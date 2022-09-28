@@ -468,6 +468,22 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
+            ensure!(
+                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
+                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
+            );
+            ensure!(
+                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
+                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
+            );
+            ensure!(
+                deadlines.grace_period <= T::MaxGracePeriod::get(),
+                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
+            );
+            ensure!(
+                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
+                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
+            );
 
             match market_type {
                 MarketType::Categorical(categories) => {
@@ -518,22 +534,6 @@ mod pallet {
                     MarketStatus::Proposed
                 }
             };
-            ensure!(
-                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
-                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
-            );
-            ensure!(
-                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
-                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
-            );
-            ensure!(
-                deadlines.grace_period <= T::MaxGracePeriod::get(),
-                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
-            );
-            ensure!(
-                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
-                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
-            );
 
             let market = Market {
                 creation,

@@ -226,8 +226,13 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
+        log::info!("Started post_upgrade of MigrateMarketIdsPerBlockStorage");
         for (key, market_ids) in MarketIdsPerDisputeBlock::<T>::iter() {
             for market_id in market_ids {
+                log::info!(
+                    "PostUpgrade check for MarketIdsPerDisputeBlock on market_id: {:?}",
+                    market_id
+                );
                 let market =
                     T::MarketCommons::market(&market_id).map_err(|_| "invalid market_id")?;
                 let disputes = Disputes::<T>::get(market_id);
@@ -242,6 +247,10 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
         }
         for (key, market_ids) in MarketIdsPerReportBlock::<T>::iter() {
             for market_id in market_ids {
+                log::info!(
+                    "PostUpgrade check for MarketIdsPerReportBlock on market_id: {:?}",
+                    market_id
+                );
                 let market =
                     T::MarketCommons::market(&market_id).map_err(|_| "invalid market_id")?;
                 let report = market.report.ok_or("No report found")?;
@@ -252,6 +261,7 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
                 );
             }
         }
+        log::info!("Completed post_upgrade of MigrateMarketIdsPerBlockStorage");
         Ok(())
     }
 }
