@@ -186,13 +186,7 @@ benchmarks! {
             Ok(())
         });
 
-        let call = Call::<T>::admin_clean_up_pool {
-            market_id,
-            outcome_report: OutcomeReport::Categorical(0),
-        };
-    }: {
-        call.dispatch_bypass_filter(RawOrigin::Root.into())?;
-    }
+}: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Categorical(0))
 
     admin_clean_up_pool_cpmm_scalar {
         let caller: T::AccountId = whitelisted_caller();
@@ -229,13 +223,7 @@ benchmarks! {
             Ok(())
         });
 
-        let call = Call::<T>::admin_clean_up_pool {
-            market_id,
-            outcome_report: OutcomeReport::Scalar(33),
-        };
-    }: {
-        call.dispatch_bypass_filter(RawOrigin::Root.into())?;
-    }
+    }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Scalar(33))
 
     end_subsidy_phase {
         // Total assets
