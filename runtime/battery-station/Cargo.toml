@@ -87,7 +87,7 @@ sp-finality-grandpa = { branch = "polkadot-v0.9.23", default-features = false, g
 # Utility
 cfg-if = { version = "1.0.0" }
 hex-literal = { default-features = false, optional = true, version = "0.3.4" }
-log = { version = "0.4.8", default-features = false, optional = true }
+log = { version = "0.4.17", default-features = false, optional = true }
 
 # Zeitgeist
 
