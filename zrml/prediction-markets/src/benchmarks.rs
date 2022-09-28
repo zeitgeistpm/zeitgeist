@@ -418,7 +418,9 @@ benchmarks! {
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(
+            total_accounts, asset_accounts
+        )?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(market_id);
@@ -430,7 +432,9 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(
+            total_accounts, asset_accounts
+        )?;
 
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(market_id);
@@ -568,15 +572,20 @@ benchmarks! {
         }
         // }
     }: {
-        Pallet::<T>::market_status_manager::<_, MarketIdsPerOpenBlock<T>, MarketIdsPerOpenTimeFrame<T>>(
-            block_number,
-            last_time_frame,
-            current_time_frame,
-            |market_id, market| {
-                // noop, because weight is already measured somewhere else
-                Ok(())
-            },
-        ).unwrap();
+        Pallet::<T>::market_status_manager::<
+            _,
+            MarketIdsPerOpenBlock<T>,
+            MarketIdsPerOpenTimeFrame<T>
+            >(
+                block_number,
+                last_time_frame,
+                current_time_frame,
+                |market_id, market| {
+                    // noop, because weight is already measured somewhere else
+                    Ok(())
+                },
+            )
+            .unwrap();
     }
 
     market_resolution_manager {
@@ -640,12 +649,12 @@ benchmarks! {
 
         let _ = with_transaction(|| {
             let open: DispatchResult = Ok(());
-            if let Ok(_) = open {}
+            if open.is_ok() {}
             let close: DispatchResult = Ok(());
-            if let Ok(_) = close {}
+            if close.is_ok() {}
             // get the worst case with error
             let resolve: DispatchResult = Err(Error::<T>::InvalidMarketStatus.into());
-            if let Ok(_) = resolve {} else {}
+            if resolve.is_ok() {} else {}
             match open.and(close).and(resolve) {
                 Err(err) => {
                     Pallet::<T>::deposit_event(Event::BadOnInitialize);

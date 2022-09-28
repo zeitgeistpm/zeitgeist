@@ -1189,7 +1189,9 @@ mod pallet {
             let mut total_weight: Weight = 0u64;
 
             // TODO(#808): Uncomment this line, when rikiddo is ready!
-            // total_weight = total_weight.saturating_add(Self::process_subsidy_collecting_markets(now, T::MarketCommons::now()));
+            // total_weight = total_weight.saturating_add(
+            // Self::process_subsidy_collecting_markets(now, T::MarketCommons::now())
+            // );
 
             //* ON_INITIALIZE_TOP_OVERHEAD benchmark START
             //* Whenever you change something inside here, you need to update the benchmark!
