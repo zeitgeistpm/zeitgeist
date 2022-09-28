@@ -25,12 +25,16 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
+use alloc::vec::Vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
+    log,
     dispatch::UnfilteredDispatchable,
+    storage::{with_transaction, TransactionOutcome},
     traits::{EnsureOrigin, Get, Hooks},
     BoundedVec,
 };
+use frame_support::pallet_prelude::DispatchResult;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
@@ -528,24 +532,13 @@ benchmarks! {
         })?;
     }: { Pallet::<T>::start_subsidy(&market_clone.unwrap(), market_id)? }
 
-    on_initialize_top_overhead {
-        let now = 2u32;
-    }: {
-        if now <= 1u32 {}
-        let current_time_frame = Pallet::<T>::calculate_time_frame_of_moment(
-            T::MarketCommons::now()
-        ).saturating_add(1);
-        let last_time_frame =
-                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
-    }
-
     market_status_manager {
-        let b in 0..63;
-        let f in 0..63;
+        let b in 1..31;
+        let f in 1..31;
         // let t in 0..10;
 
         // ensure markets exist
-        for _ in 0..=(b.max(f)) {
+        for _ in 0..64 {
             let _ = create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
@@ -555,7 +548,7 @@ benchmarks! {
 
         let block_number: T::BlockNumber = Zero::zero();
         let last_time_frame: TimeFrame = Zero::zero();
-        for i in 0..=b {
+        for i in 1..=b {
             <MarketIdsPerOpenBlock<T>>::try_mutate(block_number, |ids| {
                 ids.try_push(i.into())
             }).unwrap();
@@ -567,9 +560,10 @@ benchmarks! {
         let t = 0;
         let current_time_frame: TimeFrame = last_offset + t.saturated_into::<u64>();
         // for current_time_frame in last_offset..=(last_offset + t.saturated_into::<u64>()) {
-        for i in 0..=f {
+        for i in 1..=f {
             <MarketIdsPerOpenTimeFrame<T>>::try_mutate(current_time_frame, |ids| {
-                ids.try_push(i.into())
+                // + 31 to not conflict with the markets of MarketIdsPerOpenBlock
+                ids.try_push((i + 31).into())
             }).unwrap();
         }
         // }
@@ -586,37 +580,41 @@ benchmarks! {
     }
 
     market_resolution_manager {
-        let r in 0..63;
-        let d in 0..63;
+        let r in 1..31;
+        let d in 1..31;
 
         // ensure markets exist
-        for _ in 0..=(d.max(r)) {
-            let (caller, market_id) = create_market_common::<T>(
+        for _ in 0..64 {
+            let (_, market_id) = create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
                 ScoringRule::CPMM
             )?;
             // ensure market is reported
-            let outcome = OutcomeReport::Categorical(0);
-            let close_origin = T::CloseOrigin::successful_origin();
-            let _ = Call::<T>::admin_move_market_to_closed { market_id }
-                .dispatch_bypass_filter(close_origin).unwrap();
-            <Pallet<T>>::report(RawOrigin::Signed(caller).into(), market_id, outcome).unwrap();
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                market.status = MarketStatus::Reported;
+                Ok(())
+            })?;
         }
 
         let block_number = 1u64.saturated_into::<T::BlockNumber>();
 
-        for i in 0..=r {
-            <MarketIdsPerReportBlock<T>>::try_mutate(block_number, |ids| {
-                ids.try_push(i.into())
-            }).unwrap();
+        let mut r_ids_vec = Vec::new();
+        for i in 1..=r {
+           r_ids_vec.push(i.into());
         }
+        MarketIdsPerReportBlock::<T>::mutate(block_number, |ids| {
+            *ids = BoundedVec::try_from(r_ids_vec).unwrap();
+        });
 
-        for i in 0..=d {
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(block_number, |ids| {
-                ids.try_push(i.into())
-            }).unwrap();
+        let mut d_ids_vec = Vec::new();
+        for i in 1..=d {
+            // + 31 to not conflict with the markets of MarketIdsPerReportBlock
+            d_ids_vec.push((i + 31).into());
         }
+        MarketIdsPerDisputeBlock::<T>::mutate(block_number, |ids| {
+            *ids = BoundedVec::try_from(d_ids_vec).unwrap();
+        });
 
         // TODO(#730) this will get outdated with the merged PR
         let now: T::BlockNumber = T::DisputePeriod::get() + block_number;
@@ -628,6 +626,35 @@ benchmarks! {
                 Ok(())
             },
         ).unwrap();
+    }
+
+    on_initialize_top_overhead {
+        let now = 2u32;
+    }: {
+        if now <= 1u32 {}
+        let current_time_frame = Pallet::<T>::calculate_time_frame_of_moment(
+            T::MarketCommons::now()
+        ).saturating_add(1);
+        let last_time_frame =
+                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
+
+        let _ = with_transaction(|| {
+            let open: DispatchResult = Ok(());
+            if let Ok(_) = open {}
+            let close: DispatchResult = Ok(());
+            if let Ok(_) = close {}
+            // get the worst case with error
+            let resolve: DispatchResult = Err(Error::<T>::InvalidMarketStatus.into());
+            if let Ok(_) = resolve {} else {}
+            match open.and(close).and(resolve) {
+                Err(err) => {
+                    Pallet::<T>::deposit_event(Event::BadOnInitialize);
+                    log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
+                    TransactionOutcome::Rollback(err.into())
+                }
+                Ok(_) => TransactionOutcome::Commit(Ok(())),
+            }
+        });
     }
 }
 

@@ -1136,7 +1136,7 @@ mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::generate_deposit(fn deposit_event)]
+    #[pallet::generate_deposit(pub(crate) fn deposit_event)]
     pub enum Event<T>
     where
         T: Config,
@@ -1212,8 +1212,8 @@ mod pallet {
             let last_time_frame =
                 LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
 
+            // this weight includes with_transaction overhead
             total_weight = total_weight.saturating_add(T::WeightInfo::on_initialize_top_overhead());
-            //* ON_INITIALIZE_TOP_OVERHEAD benchmark END
 
             let _ = with_transaction(|| {
                 let open = Self::market_status_manager::<
@@ -1230,7 +1230,7 @@ mod pallet {
                         Ok(())
                     },
                 );
-                
+
                 if let Ok(weight) = open {
                     total_weight = total_weight.saturating_add(weight);
                 } else {
@@ -1284,6 +1284,7 @@ mod pallet {
                 LastTimeFrame::<T>::set(Some(current_time_frame));
                 total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
+                // hopefully the weight of the following is insignificant
                 match open.and(close).and(resolve) {
                     Err(err) => {
                         Self::deposit_event(Event::BadOnInitialize);
@@ -1293,6 +1294,8 @@ mod pallet {
                     Ok(_) => TransactionOutcome::Commit(Ok(())),
                 }
             });
+
+            //* ON_INITIALIZE_TOP_OVERHEAD benchmark END
 
             total_weight
         }
@@ -2219,7 +2222,7 @@ mod pallet {
         {
             let dispute_period = T::DisputePeriod::get();
             if now <= dispute_period {
-                return Ok(0u64.into());
+                return Ok(0u64);
             }
 
             let block = now.saturating_sub(dispute_period);
