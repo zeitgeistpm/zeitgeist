@@ -1188,10 +1188,10 @@ mod pallet {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight = 0u64;
 
-            total_weight = total_weight.saturating_add(Self::process_subsidy_collecting_markets(
-                now,
-                T::MarketCommons::now(),
-            ));
+            // TODO(#808): Use weight when Rikiddo is ready
+            let _ = Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+            total_weight = total_weight
+                .saturating_add(T::WeightInfo::process_subsidy_collecting_markets_dummy());
 
             //* ON_INITIALIZE_TOP_OVERHEAD benchmark START
             //* Whenever you change something inside here, you need to update the benchmark!

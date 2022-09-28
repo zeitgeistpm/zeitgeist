@@ -654,7 +654,7 @@ benchmarks! {
             if close.is_ok() {}
             // get the worst case with error
             let resolve: DispatchResult = Err(Error::<T>::InvalidMarketStatus.into());
-            if resolve.is_ok() {} else {}
+            if resolve.is_ok() {}
             match open.and(close).and(resolve) {
                 Err(err) => {
                     Pallet::<T>::deposit_event(Event::BadOnInitialize);
@@ -664,6 +664,15 @@ benchmarks! {
                 Ok(_) => TransactionOutcome::Commit(Ok(())),
             }
         });
+    }
+
+    process_subsidy_collecting_markets_dummy {
+        let current_block: T::BlockNumber = 0u64.saturated_into::<T::BlockNumber>();
+        let current_time: MomentOf<T> = 0u64.saturated_into::<MomentOf<T>>();
+        let markets = BoundedVec::try_from(Vec::new()).unwrap();
+        <MarketsCollectingSubsidy<T>>::put(markets);
+    }: {
+        let _ = <Pallet<T>>::process_subsidy_collecting_markets(current_block, current_time);
     }
 }
 
