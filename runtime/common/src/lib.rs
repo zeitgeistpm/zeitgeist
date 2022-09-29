@@ -173,6 +173,7 @@ macro_rules! decl_common_types {
             impl_opaque_keys! {
                 pub struct SessionKeys {
                     pub nimbus: crate::AuthorInherent,
+                    pub vrf: session_keys_primitives::VrfSessionKey,
                 }
             }
 
@@ -386,6 +387,7 @@ macro_rules! impl_config_traits {
             type DepositAmount = CollatorDeposit;
             type DepositCurrency = Balances;
             type Event = Event;
+            type Keys = session_keys_primitives::VrfId;
             type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
         }
 
@@ -462,6 +464,8 @@ macro_rules! impl_config_traits {
             type MinDelegatorStk = MinDelegatorStk;
             type MinSelectedCandidates = MinSelectedCandidates;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
+            type OnCollatorPayout = ();
+            type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
             type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
@@ -1166,6 +1170,18 @@ macro_rules! create_runtime_api {
                 }
             }
 
+            impl session_keys_primitives::VrfApi<Block> for Runtime {
+                fn get_last_vrf_output() -> Option<<Block as BlockT>::Hash> {
+                    None
+                }
+                fn vrf_key_lookup(
+                    nimbus_id: nimbus_primitives::NimbusId
+                ) -> Option<session_keys_primitives::VrfId> {
+                    use session_keys_primitives::KeysLookup;
+                    AuthorMapping::lookup_keys(&nimbus_id)
+                }
+            }
+
             impl sp_api::Core<Block> for Runtime {
                 fn execute_block(block: Block) {
                     Executive::execute_block(block)
@@ -1268,6 +1284,12 @@ macro_rules! create_runtime_api {
                     tx: <Block as BlockT>::Extrinsic,
                     block_hash: <Block as BlockT>::Hash,
                 ) -> TransactionValidity {
+                // Filtered calls should not enter the tx pool as they'll fail if inserted.
+                // If this call is not allowed, we return early.
+                if !<Runtime as frame_system::Config>::BaseCallFilter::contains(&tx.function) {
+                    return frame_support::pallet_prelude::InvalidTransaction::Call.into();
+                }
+
                     Executive::validate_transaction(source, tx, block_hash)
                 }
             }

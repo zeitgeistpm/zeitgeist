@@ -5,6 +5,7 @@ frame-support = { branch = "polkadot-v0.9.23", default-features = false, git = "
 frame-system = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-currencies = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-tokens = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
+pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-mapping = { tag = "v0.25.0", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -32,6 +33,7 @@ cfg-if = { version = "1.0.0" }
 default = ["std"]
 parachain = [
     "cumulus-pallet-xcmp-queue",
+    "pallet-author-inherent",
     "pallet-author-mapping",
     "pallet-author-slot-filter",
     "pallet-parachain-staking",
@@ -42,6 +44,7 @@ std = [
     "frame-support/std",
     "orml-currencies/std",
     "orml-tokens/std",
+    "pallet-author-inherent?/std",
     "pallet-author-mapping?/std",
     "pallet-author-slot-filter?/std",
     "pallet-balances/std",
