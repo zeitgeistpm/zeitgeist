@@ -876,6 +876,7 @@ macro_rules! impl_config_traits {
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             type SimpleDisputes = SimpleDisputes;
+            type Slash = Treasury;
             type Swaps = Swaps;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
