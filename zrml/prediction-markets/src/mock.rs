@@ -22,14 +22,11 @@
 #![cfg(feature = "mock")]
 
 use crate as prediction_markets;
-use core::marker::PhantomData;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, OnFinalize, OnInitialize, OnUnbalanced},
-    PalletId,
+    traits::{Everything, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
-use prediction_markets::NegativeImbalanceOf;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -37,13 +34,14 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
+        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, Burn, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
+        MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, ProposalBond, ProposalBondMaximum,
+        ProposalBondMinimum, SimpleDisputesPalletId, SpendPeriod, StakeWeight, SwapsPalletId,
+        TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -59,6 +57,7 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
+pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
@@ -66,7 +65,6 @@ ord_parameter_types! {
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const ReportingPeriod: u32 = 11;
-    pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
     pub const OracleBond: Balance = 25 * CENT;
@@ -95,16 +93,9 @@ construct_runtime!(
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
-
-pub struct Slash<Runtime>(PhantomData<Runtime>);
-impl<Runtime> OnUnbalanced<NegativeImbalanceOf<Runtime>> for Slash<Runtime>
-where
-    Runtime: crate::Config,
-{
-    fn on_unbalanced(_: NegativeImbalanceOf<Runtime>) {}
-}
 
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
@@ -132,10 +123,10 @@ impl crate::Config for Runtime {
     type ReportingPeriod = ReportingPeriod;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
+    type Slash = Treasury;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
-    type Slash = Slash<Runtime>;
 }
 
 impl frame_system::Config for Runtime {
@@ -287,6 +278,24 @@ impl zrml_swaps::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Burn = Burn;
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ProposalBondMaximum;
+    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type SpendFunds = ();
+    type SpendPeriod = SpendPeriod;
+    type WeightInfo = ();
+}
+
 pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
@@ -295,13 +304,14 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             balances: vec![
-                (ALICE, 1_000 * BASE),
-                (BOB, 1_000 * BASE),
-                (CHARLIE, 1_000 * BASE),
-                (DAVE, 1_000 * BASE),
-                (EVE, 1_000 * BASE),
-                (FRED, 1_000 * BASE),
-                (SUDO, 1_000 * BASE),
+                (ALICE, INITIAL_BALANCE),
+                (BOB, INITIAL_BALANCE),
+                (CHARLIE, INITIAL_BALANCE),
+                (DAVE, INITIAL_BALANCE),
+                (EVE, INITIAL_BALANCE),
+                (FRED, INITIAL_BALANCE),
+                (SUDO, INITIAL_BALANCE),
+                (Treasury::account_id(), INITIAL_BALANCE),
             ],
         }
     }

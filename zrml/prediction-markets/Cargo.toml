@@ -21,6 +21,7 @@ orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistp
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+pallet-treasury = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
@@ -41,6 +42,7 @@ mock = [
     "pallet-balances",
     "pallet-randomness-collective-flip",
     "pallet-timestamp",
+    "pallet-treasury",
     "sp-api",
     "sp-io",
     "substrate-fixed",

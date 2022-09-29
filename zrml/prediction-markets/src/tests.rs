@@ -852,10 +852,11 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             &ALICE,
             SENTINEL_AMOUNT
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
 
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_reserved_before_alice =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
+        let balance_treasury_before = Balances::free_balance(Treasury::account_id());
 
         assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
 
@@ -873,6 +874,13 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         assert_eq!(
             balance_free_after_alice,
             balance_free_before_alice + <Runtime as Config>::OracleBond::get()
+        );
+
+        // AdvisoryBond is transferred to the treasury
+        let balance_treasury_after = Balances::free_balance(Treasury::account_id());
+        assert_eq!(
+            balance_treasury_after,
+            balance_treasury_before + <Runtime as Config>::AdvisoryBond::get()
         );
     });
 }
