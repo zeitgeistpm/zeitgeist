@@ -68,4 +68,21 @@ impl<T: frame_system::Config> pallet_author_mapping::weights::WeightInfo for Wei
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
+    // Storage: AuthorMapping NimbusLookup (r:1 w:1)
+	// Storage: AuthorMapping MappingWithDeposit (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	#[rustfmt::skip]
+	fn remove_keys() -> Weight {
+		(41_773_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
+	// Storage: AuthorMapping NimbusLookup (r:1 w:1)
+	// Storage: AuthorMapping MappingWithDeposit (r:2 w:2)
+	#[rustfmt::skip]
+	fn set_keys() -> Weight {
+		(32_010_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+	}
 }

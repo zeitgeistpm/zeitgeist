@@ -48,23 +48,6 @@ use frame_support::{
 /// Weight functions for pallet_parachain_staking (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_parachain_staking::weights::WeightInfo for WeightInfo<T> {
-    // Storage: ParachainStaking DelegatorState (r:1 w:1)
-    fn hotfix_remove_delegation_requests(x: u32) -> Weight {
-        (0 as Weight)
-            // Standard Error: 75_000
-            .saturating_add((14_571_000 as Weight).saturating_mul(x as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(x as Weight)))
-            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(x as Weight)))
-    }
-    // Storage: ParachainStaking CandidateInfo (r:4 w:0)
-    // Storage: ParachainStaking CandidatePool (r:1 w:1)
-    fn hotfix_update_candidate_pool_value(x: u32) -> Weight {
-        (0 as Weight)
-            // Standard Error: 216_000
-            .saturating_add((29_503_000 as Weight).saturating_mul(x as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(x as Weight)))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
     // Storage: ParachainStaking InflationConfig (r:1 w:1)
     fn set_staking_expectations() -> Weight {
         (38_730_000 as Weight)

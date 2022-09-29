@@ -378,6 +378,7 @@ macro_rules! impl_config_traits {
             type CanAuthor = AuthorFilter;
             type EventHandler = ParachainStaking;
             type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
+            type WeightInfo = weights::pallet_author_inherent::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -1050,6 +1051,7 @@ macro_rules! create_runtime_api {
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
                             list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            list_benchmark!(list, extra, pallet_author_inherent, AuthorInherent);
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
                             list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
@@ -1125,6 +1127,7 @@ macro_rules! create_runtime_api {
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
                             add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            add_benchmark!(params, batches, pallet_author_inherent, AuthorInherent);
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
                             add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
