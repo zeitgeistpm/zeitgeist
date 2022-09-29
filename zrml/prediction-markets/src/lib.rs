@@ -119,12 +119,12 @@ mod pallet {
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
             let slash_market_creator = |amount: BalanceOf<T>| {
-                let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
+                T::AssetManager::slash_reserved_named(
                     &Self::reserve_id(),
+                    Asset::Ztg,
                     &market.creator,
                     amount.saturated_into::<u128>().saturated_into(),
                 );
-                T::Slash::on_unbalanced(imbalance);
             };
             if market_status == MarketStatus::Proposed {
                 slash_market_creator(T::AdvisoryBond::get());

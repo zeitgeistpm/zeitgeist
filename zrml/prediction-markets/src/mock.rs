@@ -57,6 +57,7 @@ pub const DAVE: AccountIdTest = 3;
 pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
+
 pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
 
 ord_parameter_types! {
@@ -311,7 +312,6 @@ impl Default for ExtBuilder {
                 (EVE, INITIAL_BALANCE),
                 (FRED, INITIAL_BALANCE),
                 (SUDO, INITIAL_BALANCE),
-                (Treasury::account_id(), INITIAL_BALANCE),
             ],
         }
     }
