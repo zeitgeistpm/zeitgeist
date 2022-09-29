@@ -1742,6 +1742,19 @@ fn it_correctly_resolves_a_market_that_was_reported_on() {
         assert_eq!(share_b_total, CENT);
         let share_b_bal = Tokens::free_balance(share_b, &CHARLIE);
         assert_eq!(share_b_bal, CENT);
+
+        // TODO(#792): Remove other assets.
+        let share_a = Asset::CategoricalOutcome(0, 0);
+        let share_a_total = Tokens::total_issuance(share_a);
+        assert_eq!(share_a_total, CENT);
+        let share_a_bal = Tokens::free_balance(share_a, &CHARLIE);
+        assert_eq!(share_a_bal, CENT);
+
+        let share_c = Asset::CategoricalOutcome(0, 2);
+        let share_c_total = Tokens::total_issuance(share_c);
+        assert_eq!(share_c_total, 0);
+        let share_c_bal = Tokens::free_balance(share_c, &CHARLIE);
+        assert_eq!(share_c_bal, 0);
     });
 }
 
