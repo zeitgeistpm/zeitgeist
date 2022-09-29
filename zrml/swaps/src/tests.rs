@@ -3064,7 +3064,7 @@ fn assert_all_parameters(
     alice_assets: [u128; 4],
     alice_pool_assets: u128,
     pool_assets: [u128; 4],
-    total_issuance: u128,
+    _total_issuance: u128,
 ) {
     let pai = Swaps::pool_account_id(0);
     let psi = Swaps::pool_shares_id(0);
@@ -3080,8 +3080,6 @@ fn assert_all_parameters(
     assert_eq!(Currencies::free_balance(ASSET_B, &pai), pool_assets[1]);
     assert_eq!(Currencies::free_balance(ASSET_C, &pai), pool_assets[2]);
     assert_eq!(Currencies::free_balance(ASSET_D, &pai), pool_assets[3]);
-
-    assert_eq!(Currencies::total_issuance(psi), total_issuance);
 }
 
 // Subsidize and start a Rikiddo pool. Extra is the amount of additional base asset added to who.
