@@ -146,19 +146,6 @@ fn setup_resolve_common_categorical<T: Config>(
     Ok((caller, market_id))
 }
 
-// Setup a disputed categorical market and create accounts with outcome assets.
-fn setup_resolve_common_categorical_after_dispute<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-    categories: u16,
-) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) =
-        setup_resolve_common_categorical::<T>(acc_total, acc_asset, categories)?;
-    let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Categorical(0) }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    Ok((caller, market_id))
-}
-
 // Setup a categorical market for fn `internal_resolve`
 fn setup_redeem_shares_common<T: Config>(
     market_type: MarketType,
@@ -209,17 +196,6 @@ fn setup_resolve_common_scalar<T: Config>(
         acc_asset,
         Asset::ScalarOutcome(market_id, ScalarPosition::Long),
     )?;
-    Ok((caller, market_id))
-}
-
-// Setup a disputed scalar market and create accounts with outcome assets.
-fn setup_resolve_common_scalar_after_dispute<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) = setup_resolve_common_scalar::<T>(acc_total, acc_asset)?;
-    let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Scalar(1u128) }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
 }
 
@@ -379,11 +355,14 @@ benchmarks! {
         let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
 
         let c_u16 = c.saturated_into();
-        let (_, market_id) = setup_resolve_common_categorical_after_dispute::<T>(a, b, c_u16)?;
+        let (caller, market_id) =
+            setup_resolve_common_categorical::<T>(a, b, c_u16)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     internal_resolve_categorical_disputed {
@@ -397,28 +376,36 @@ benchmarks! {
         let d in 0..T::MaxDisputes::get();
 
         let c_u16 = c.saturated_into();
-        let (caller, market_id) = setup_resolve_common_categorical_after_dispute::<T>(a, b, c_u16)?;
+        let (caller, market_id) =
+            setup_resolve_common_categorical::<T>(a, b, c_u16)?;
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            let admin = account("admin", 0, 0);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            Ok(())
+        })?;
 
         for i in 0..c.min(d) {
             let origin = caller.clone();
-            let disputes = crate::Disputes::<T>::get(market_id);
-            let market = T::MarketCommons::market(&Default::default()).unwrap();
-            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            Pallet::<T>::dispute(RawOrigin::Signed(origin).into(), market_id, OutcomeReport::Categorical(i.saturated_into::<u16>()))?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+    let (caller, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     internal_resolve_scalar_disputed {
@@ -426,18 +413,22 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        let (caller, market_id) = setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
-
+        let (caller, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            let admin = account("admin", 0, 0);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            Ok(())
+        })?;
         for i in 0..d {
-            let disputes = crate::Disputes::<T>::get(market_id);
             let origin = caller.clone();
-            let market = T::MarketCommons::market(&Default::default()).unwrap();
-            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            Pallet::<T>::dispute(RawOrigin::Signed(origin).into(), market_id, OutcomeReport::Scalar(i.into()))?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
