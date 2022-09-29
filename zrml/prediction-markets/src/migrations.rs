@@ -178,16 +178,17 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
             market_ids_per_dispute_iterator.collect();
         total_weight = total_weight
             .saturating_add(T::DbWeight::get().reads(market_ids_per_dispute.len() as u64));
-        for (dispute_start_block, market_ids) in &market_ids_per_dispute {
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        let mut updated_data = Vec::new();
+        for (dispute_start_block, market_ids) in market_ids_per_dispute {
             let dispute_duration = T::DisputePeriod::get();
-
             let new_dispute_start_block = dispute_start_block.saturating_add(dispute_duration);
-            MarketIdsPerDisputeBlock::<T>::insert(new_dispute_start_block, market_ids);
-        }
-        for (dispute_start_block, _market_ids) in market_ids_per_dispute {
+            updated_data.push((new_dispute_start_block, market_ids));
             MarketIdsPerDisputeBlock::<T>::remove(dispute_start_block);
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        }
+        for (new_dispute_start_block, market_ids) in updated_data {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            MarketIdsPerDisputeBlock::<T>::insert(new_dispute_start_block, market_ids);
         }
 
         let market_ids_per_report_iterator: IterType<T> =
@@ -200,16 +201,17 @@ impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
             market_ids_per_report_iterator.collect();
         total_weight = total_weight
             .saturating_add(T::DbWeight::get().reads(market_ids_per_report.len() as u64));
-        for (dispute_start_block, market_ids) in &market_ids_per_report {
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        let mut updated_data = Vec::new();
+        for (dispute_start_block, market_ids) in market_ids_per_report {
             let dispute_duration = T::DisputePeriod::get();
-
             let new_dispute_start_block = dispute_start_block.saturating_add(dispute_duration);
-            MarketIdsPerReportBlock::<T>::insert(new_dispute_start_block, market_ids);
-        }
-        for (dispute_start_block, _market_ids) in market_ids_per_report {
+            updated_data.push((new_dispute_start_block, market_ids));
             MarketIdsPerReportBlock::<T>::remove(dispute_start_block);
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        }
+        for (new_dispute_start_block, market_ids) in updated_data {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            MarketIdsPerReportBlock::<T>::insert(new_dispute_start_block, market_ids);
         }
         StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE)
             .put::<Pallet<T>>();
