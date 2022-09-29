@@ -83,7 +83,7 @@ mod pallet {
         /// exception. Can currently only be used for destroying CPMM markets.
         #[pallet::weight((
             T::WeightInfo::admin_destroy_reported_market(
-                CacheSize::get(), 
+                CacheSize::get(),
                 CacheSize::get(),
                 CacheSize::get())
             .max(T::WeightInfo::admin_destroy_disputed_market(
