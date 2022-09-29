@@ -225,7 +225,7 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
 
 benchmarks! {
     admin_destroy_disputed_market{
-        let d in 0..T::MaxDisputes::get();
+        let d in 1..T::MaxDisputes::get();
         let o in 0..63;
         let c in 0..63;
         let r in 0..63;
@@ -239,10 +239,12 @@ benchmarks! {
             OutcomeReport::Categorical(categories.saturating_sub(1)),
         )?;
 
-        for i in 0..d {
+        for i in 1..=d {
             let outcome = OutcomeReport::Categorical(i.saturated_into());
             let disputor = account("disputor", i, 0);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into()).unwrap();
+            let dispute_bond = T::DisputeBond::get() +
+                (T::DisputeFactor::get() * i.saturated_into::<u32>().into());
+            T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond).unwrap();
             Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
         }
 
@@ -269,14 +271,13 @@ benchmarks! {
 
         let disputes = Disputes::<T>::get(market_id);
         // TODO(#730): MarketIdsPerDisputeBlock will store the future block number.
-        if let Some(last_dispute) = disputes.last() {
-            let dispute_at = last_dispute.at;
-            for i in 0..r {
-                MarketIdsPerDisputeBlock::<T>::try_mutate(
-                    dispute_at,
-                    |ids| ids.try_push(i.into()),
-                ).unwrap();
-            }
+        let last_dispute = disputes.last().unwrap();
+        let dispute_at = last_dispute.at;
+        for i in 0..r {
+            MarketIdsPerDisputeBlock::<T>::try_mutate(
+                dispute_at,
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
         }
 
         let destroy_origin = T::DestroyOrigin::successful_origin();
@@ -317,6 +318,7 @@ benchmarks! {
             ).unwrap();
         }
 
+        // TODO(#730): MarketIdsPerReportBlock will store the future block number.
         let report_at = market.report.unwrap().at;
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
@@ -343,8 +345,64 @@ benchmarks! {
     // and assumes a scalar market is used. The default cost for this function
     // is the resulting weight from this benchmark minus the weight for
     // fn `internal_resolve` of a reported and non-disputed scalar market.
-    admin_move_market_to_resolved_overhead {
-        let (_, market_id) = setup_resolve_common_scalar::<T>(0, 0)?;
+    admin_move_market_to_resolved_overhead_reported {
+        let r in 0..63;
+
+        let (_, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        ).unwrap();
+
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+
+        let report_at = market.report.unwrap().at;
+        for i in 0..r {
+            MarketIdsPerReportBlock::<T>::try_mutate(
+                report_at,
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let close_origin = T::CloseOrigin::successful_origin();
+        let call = Call::<T>::admin_move_market_to_resolved { market_id };
+    }: { call.dispatch_bypass_filter(close_origin)? }
+
+    admin_move_market_to_resolved_overhead_disputed {
+        let r in 0..63;
+        let d in 1..T::MaxDisputes::get();
+
+        let (_, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        ).unwrap();
+
+        for i in 1..=d {
+            let outcome = OutcomeReport::Scalar(i.saturated_into());
+            let disputor = account("disputor", i, 0);
+            let dispute_bond = T::DisputeBond::get() +
+                (T::DisputeFactor::get() * i.saturated_into::<u32>().into());
+            T::AssetManager::deposit(
+                Asset::Ztg,
+                &disputor,
+                dispute_bond,
+            )
+            .unwrap();
+            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
+        }
+        let disputes = Disputes::<T>::get(market_id);
+
+        // TODO(#730): MarketIdsPerDisputeBlock will store the future block number.
+        let last_dispute = disputes.last().unwrap();
+        let dispute_at = last_dispute.at;
+        for i in 0..r {
+            MarketIdsPerDisputeBlock::<T>::try_mutate(
+                dispute_at,
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: { call.dispatch_bypass_filter(close_origin)? }

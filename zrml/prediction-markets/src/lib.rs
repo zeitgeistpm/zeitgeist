@@ -82,8 +82,16 @@ mod pallet {
         /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
         /// exception. Can currently only be used for destroying CPMM markets.
         #[pallet::weight((
-            T::WeightInfo::admin_destroy_reported_market()
-            .max(T::WeightInfo::admin_destroy_disputed_market()),
+            T::WeightInfo::admin_destroy_reported_market(
+                CacheSize::get(), 
+                CacheSize::get(),
+                CacheSize::get())
+            .max(T::WeightInfo::admin_destroy_disputed_market(
+                T::MaxDisputes::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+            )),
         Pays::No))]
         #[transactional]
         pub fn admin_destroy_market(
@@ -133,9 +141,9 @@ mod pallet {
                 T::MarketCommons::remove_market_pool(&market_id)?;
             }
 
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
-            Self::clear_auto_resolve(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
             Disputes::<T>::remove(market_id);
 
@@ -144,9 +152,26 @@ mod pallet {
             // Weight correction
             // The DestroyOrigin should not pay fees for providing this service
             if market_status == MarketStatus::Reported {
-                Ok((Some(T::WeightInfo::admin_destroy_reported_market()), Pays::No).into())
+                Ok((
+                    Some(T::WeightInfo::admin_destroy_reported_market(
+                        open_ids_len,
+                        close_ids_len,
+                        ids_len,
+                    )),
+                    Pays::No,
+                )
+                    .into())
             } else if market_status == MarketStatus::Disputed {
-                Ok((Some(T::WeightInfo::admin_destroy_disputed_market()), Pays::No).into())
+                Ok((
+                    Some(T::WeightInfo::admin_destroy_disputed_market(
+                        disputes_len,
+                        open_ids_len,
+                        close_ids_len,
+                        ids_len,
+                    )),
+                    Pays::No,
+                )
+                    .into())
             } else {
                 Ok((None, Pays::No).into())
             }
@@ -177,11 +202,28 @@ mod pallet {
 
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
-        ////
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_resolved_overhead()
-            .saturating_add(T::WeightInfo::internal_resolve_categorical_reported()
-            .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
-        ), Pays::No))]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`,
+        ///
+        // NOTE: Substracted by internal_resolve_scalar_...,
+        // because weight of `on_resolution` is already included and the benchmark of
+        // `admin_move_market_to_resolved_overhead_...` was initialised with a scalar market.
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_resolved_overhead_disputed(
+                    CacheSize::get(),
+                    T::MaxDisputes::get(),
+            ).saturating_sub(T::WeightInfo::internal_resolve_scalar_disputed(T::MaxDisputes::get()))
+                .max(
+                T::WeightInfo::admin_move_market_to_resolved_overhead_reported(
+                    CacheSize::get()
+                ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported()))
+            .saturating_add(
+                T::WeightInfo::internal_resolve_scalar_reported()
+                    .max(T::WeightInfo::internal_resolve_categorical_reported())
+            ), Pays::No
+        ))]
         #[transactional]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
@@ -194,10 +236,28 @@ mod pallet {
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            Self::clear_auto_resolve(&market_id)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
-            let weight = Self::on_resolution(&market_id, &market)?;
-            Ok((Some(weight), Pays::No).into())
+            let weight_on_resolution = Self::on_resolution(&market_id, &market)?;
+            // Substracted by internal_resolve_scalar_...,
+            // because it's returned in `on_resolution` and the benchmark of
+            // `admin_move_market_to_resolved_overhead_...` was initialised with a scalar market
+            let weight_overhead = match market.status {
+                MarketStatus::Reported => {
+                    T::WeightInfo::admin_move_market_to_resolved_overhead_reported(ids_len)
+                        .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
+                }
+                MarketStatus::Disputed => {
+                    T::WeightInfo::admin_move_market_to_resolved_overhead_disputed(
+                        ids_len,
+                        disputes_len,
+                    )
+                    .saturating_sub(T::WeightInfo::internal_resolve_scalar_disputed(disputes_len))
+                }
+                _ => return Err(Error::<T>::InvalidMarketStatus.into()),
+            };
+            let total_weight = weight_on_resolution.saturating_add(weight_overhead);
+            Ok((Some(total_weight), Pays::No).into())
         }
 
         /// Approves a market that is waiting for approval from the
@@ -1333,79 +1393,98 @@ mod pallet {
         }
 
         // Manually remove market from cache for auto close.
-        fn clear_auto_close(market_id: &MarketIdOf<T>) -> DispatchResult {
+        fn clear_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
 
             // No-op if market isn't cached for auto close according to its state.
             match market.status {
                 MarketStatus::Active | MarketStatus::Proposed => (),
-                _ => return Ok(()),
+                _ => return Ok(0u32),
             };
 
-            match market.period {
+            let close_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerCloseBlock::<T>::mutate(range.end, |ids| {
+                    MarketIdsPerCloseBlock::<T>::mutate(range.end, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.end);
-                    MarketIdsPerCloseTimeFrame::<T>::mutate(time_frame, |ids| {
+                    MarketIdsPerCloseTimeFrame::<T>::mutate(time_frame, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
             };
-            Ok(())
+            Ok(close_ids_len)
         }
 
         // Manually remove market from cache for auto open.
-        fn clear_auto_open(market_id: &MarketIdOf<T>) -> DispatchResult {
+        fn clear_auto_open(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
 
             // No-op if market isn't cached for auto open according to its state.
             match market.status {
                 MarketStatus::Active | MarketStatus::Proposed => (),
-                _ => return Ok(()),
+                _ => return Ok(0u32),
             };
 
-            match market.period {
+            let open_ids_len = match market.period {
                 MarketPeriod::Block(range) => {
-                    MarketIdsPerOpenBlock::<T>::mutate(range.start, |ids| {
+                    MarketIdsPerOpenBlock::<T>::mutate(range.start, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
                 MarketPeriod::Timestamp(range) => {
                     let time_frame = Self::calculate_time_frame_of_moment(range.start);
-                    MarketIdsPerOpenTimeFrame::<T>::mutate(time_frame, |ids| {
+                    MarketIdsPerOpenTimeFrame::<T>::mutate(time_frame, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
             };
-            Ok(())
+            Ok(open_ids_len)
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> DispatchResult {
+        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
-            if market.status == MarketStatus::Reported {
-                let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                MarketIdsPerReportBlock::<T>::mutate(report.at, |ids| {
-                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                });
-            }
-            if market.status == MarketStatus::Disputed {
-                let disputes = Disputes::<T>::get(market_id);
-                if let Some(last_dispute) = disputes.last() {
-                    let at = last_dispute.at;
-                    let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(at);
-                    remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
-                    MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| {
+            let mut disputes_len = 0u32;
+            let ids_len = match market.status {
+                MarketStatus::Reported => {
+                    let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
+                    MarketIdsPerReportBlock::<T>::mutate(report.at, |ids| -> u32 {
+                        let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                        ids_len
+                    })
                 }
-            }
+                MarketStatus::Disputed => {
+                    let disputes = Disputes::<T>::get(market_id);
+                    disputes_len = disputes.len() as u32;
+                    if let Some(last_dispute) = disputes.last() {
+                        let at = last_dispute.at;
+                        let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(at);
+                        remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
+                        MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| -> u32 {
+                            let ids_len = ids.len() as u32;
+                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                            ids_len
+                        })
+                    } else {
+                        0u32
+                    }
+                }
+                _ => 0u32,
+            };
 
-            Ok(())
+            Ok((ids_len, disputes_len))
         }
 
         pub(crate) fn do_buy_complete_set(
