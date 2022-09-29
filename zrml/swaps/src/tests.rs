@@ -152,7 +152,9 @@ fn destroy_pool_correctly_cleans_up_pool() {
         assert_ok!(Swaps::destroy_pool(pool_id));
         assert_err!(Swaps::pool(pool_id), crate::Error::<Runtime>::PoolDoesNotExist);
         // Ensure that funds _outside_ of the pool are not impacted!
-        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
+        // TODO(#792): Remove pool shares.
+        let total_pool_shares = Currencies::total_issuance(Swaps::pool_shares_id(0));
+        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], total_pool_shares);
     });
 }
 
@@ -3064,7 +3066,7 @@ fn assert_all_parameters(
     alice_assets: [u128; 4],
     alice_pool_assets: u128,
     pool_assets: [u128; 4],
-    _total_issuance: u128,
+    total_issuance: u128,
 ) {
     let pai = Swaps::pool_account_id(0);
     let psi = Swaps::pool_shares_id(0);
@@ -3080,6 +3082,7 @@ fn assert_all_parameters(
     assert_eq!(Currencies::free_balance(ASSET_B, &pai), pool_assets[1]);
     assert_eq!(Currencies::free_balance(ASSET_C, &pai), pool_assets[2]);
     assert_eq!(Currencies::free_balance(ASSET_D, &pai), pool_assets[3]);
+    assert_eq!(Currencies::total_issuance(psi), total_issuance);
 }
 
 // Subsidize and start a Rikiddo pool. Extra is the amount of additional base asset added to who.
