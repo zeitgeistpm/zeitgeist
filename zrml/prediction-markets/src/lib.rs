@@ -122,6 +122,7 @@ mod pallet {
             }
 
             //NOTE: Currently we don't clean up outcome assets.
+            //TODO: Above needs more work on https://github.com/zeitgeistpm/zeitgeist/issues/101
             // Clear market and delete pool if necessary.
             T::AssetManager::slash(
                 Asset::Ztg,
@@ -1803,6 +1804,7 @@ mod pallet {
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             //NOTE: Currently we don't clean up outcome assets.
+            //TODO: Above needs more work on https://github.com/zeitgeistpm/zeitgeist/issues/101
             T::MarketCommons::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome.clone());
