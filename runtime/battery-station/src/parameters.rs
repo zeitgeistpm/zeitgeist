@@ -33,7 +33,9 @@ use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
-use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
+use sp_runtime::{
+    traits::AccountIdConversion, FixedPointNumber, Perbill, Percent, Permill, Perquintill,
+};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
@@ -138,6 +140,7 @@ parameter_types! {
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 25 * CENT;
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.
