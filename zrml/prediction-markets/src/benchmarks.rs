@@ -225,17 +225,58 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
 
 benchmarks! {
     admin_destroy_disputed_market{
-        let total_accounts = 1000;
-        let accounts_with_assets = 750;
-        let categories = T::MaxCategories::get();
-        let (caller, market_id) = setup_resolve_common_categorical::<T>(total_accounts, accounts_with_assets, categories)?;
+        let d in 0..T::MaxDisputes::get();
+        let o in 0..63;
+        let c in 0..63;
+        let r in 0..63;
 
-        let categories : u32 = categories.saturated_into();
-        for i in 0..categories.min(T::MaxDisputes::get()) {
-            let origin = caller.clone();
-            let disputes = crate::Disputes::<T>::get(market_id);
-            let market = T::MarketCommons::market(&Default::default()).unwrap();
-            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+        // TODO: for market pool use MaxAssets (destroy_pool)
+        let categories = T::MaxCategories::get();
+        let categories: u16 = T::MaxCategories::get().saturated_into();
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(categories),
+            OutcomeReport::Categorical(categories.saturating_sub(1)),
+        )?;
+
+        for i in 0..d {
+            let outcome = OutcomeReport::Categorical(i.saturated_into());
+            let disputor = account("disputor", i, 0);
+            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into()).unwrap();
+            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
+        }
+
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+
+        let (range_start, range_end) = match market.period {
+            MarketPeriod::Timestamp(range) => (range.start, range.end),
+            _ => panic!("admin_destroy_reported_market: Unsupported market period"),
+        };
+
+        for i in 0..o {
+            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_start),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        for i in 0..c {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let disputes = Disputes::<T>::get(market_id);
+        // TODO(#730): MarketIdsPerDisputeBlock will store the future block number.
+        if let Some(last_dispute) = disputes.last() {
+            let dispute_at = last_dispute.at;
+            for i in 0..r {
+                MarketIdsPerDisputeBlock::<T>::try_mutate(
+                    dispute_at,
+                    |ids| ids.try_push(i.into()),
+                ).unwrap();
+            }
         }
 
         let destroy_origin = T::DestroyOrigin::successful_origin();
@@ -243,10 +284,47 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(destroy_origin)? }
 
     admin_destroy_reported_market{
-        let total_accounts = 1000;
-        let accounts_with_assets = 750;
-        let categories :u16 = T::MaxCategories::get().saturated_into();
-        let (caller, market_id) = setup_resolve_common_categorical::<T>(total_accounts, accounts_with_assets, categories)?;
+        let o in 0..63;
+        let c in 0..63;
+        let r in 0..63;
+
+        // TODO: for market pool use MaxAssets (destroy_pool)
+        let categories: u16 = T::MaxCategories::get().saturated_into();
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Categorical(categories),
+            OutcomeReport::Categorical(categories.saturating_sub(1)),
+        )?;
+
+        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+
+        let (range_start, range_end) = match market.period {
+            MarketPeriod::Timestamp(range) => (range.start, range.end),
+            _ => panic!("admin_destroy_reported_market: Unsupported market period"),
+        };
+
+        for i in 0..o {
+            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_start),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        for i in 0..c {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
+        let report_at = market.report.unwrap().at;
+        for i in 0..r {
+            MarketIdsPerReportBlock::<T>::try_mutate(
+                report_at,
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+
         let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
     }: { call.dispatch_bypass_filter(destroy_origin)? }
