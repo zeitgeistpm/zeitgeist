@@ -7,7 +7,6 @@ use crate::{
 };
 use frame_support::{parameter_types, PalletId};
 use orml_traits::parameter_type_with_key;
-use sp_runtime::Permill;
 
 // Authorized
 parameter_types! {
@@ -79,12 +78,7 @@ parameter_types! {
 
 // Treasury
 parameter_types! {
-    pub const Burn: Permill = Permill::from_percent(50);
-    pub const MaxApprovals: u32 = 100;
-    pub const ProposalBond: Permill = Permill::from_percent(5);
-    pub const ProposalBondMinimum: Balance = 10 * BASE;
-    pub const ProposalBondMaximum: Balance = 500 * BASE;
-    pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
+    pub const MaxApprovals: u32 = 1;
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
 }
 

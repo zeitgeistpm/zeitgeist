@@ -34,14 +34,13 @@ use sp_runtime::{
 use substrate_fixed::{types::extra::U33, FixedI128, FixedU128};
 use zeitgeist_primitives::{
     constants::mock::{
-        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, Burn, CourtCaseDuration,
+        AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
         MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod,
         MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, ProposalBond, ProposalBondMaximum,
-        ProposalBondMinimum, SimpleDisputesPalletId, SpendPeriod, StakeWeight, SwapsPalletId,
-        TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+        StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -281,19 +280,19 @@ impl zrml_swaps::Config for Runtime {
 
 impl pallet_treasury::Config for Runtime {
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type Burn = Burn;
+    type Burn = ();
     type BurnDestination = ();
     type Currency = Balances;
     type Event = Event;
     type MaxApprovals = MaxApprovals;
     type OnSlash = ();
     type PalletId = TreasuryPalletId;
-    type ProposalBond = ProposalBond;
-    type ProposalBondMinimum = ProposalBondMinimum;
-    type ProposalBondMaximum = ProposalBondMaximum;
+    type ProposalBond = ();
+    type ProposalBondMinimum = ();
+    type ProposalBondMaximum = ();
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type SpendFunds = ();
-    type SpendPeriod = SpendPeriod;
+    type SpendPeriod = ();
     type WeightInfo = ();
 }
 
