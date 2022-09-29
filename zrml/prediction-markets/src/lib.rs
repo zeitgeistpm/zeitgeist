@@ -39,7 +39,10 @@ mod pallet {
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{OnUnbalanced, Currency, EnsureOrigin, Get, Hooks, IsType, StorageVersion},
+        traits::{
+            Currency, EnsureOrigin, Get, Hooks, IsType, NamedReservableCurrency, OnUnbalanced,
+            StorageVersion,
+        },
         transactional,
         weights::Pays,
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
@@ -115,13 +118,13 @@ mod pallet {
             // Slash outstanding bonds; see
             // https://github.com/zeitgeistpm/runtime-audit-1/issues/34#issuecomment-1120187097 for
             // details.
-            let slash_market_creator = |amount| {
-                T::AssetManager::slash_reserved_named(
+            let slash_market_creator = |amount: BalanceOf<T>| {
+                let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                     &Self::reserve_id(),
-                    Asset::Ztg,
                     &market.creator,
-                    amount,
+                    amount.saturated_into::<u128>().saturated_into(),
                 );
+                T::Slash::on_unbalanced(imbalance);
             };
             if market_status == MarketStatus::Proposed {
                 slash_market_creator(T::AdvisoryBond::get());
