@@ -121,9 +121,8 @@ mod pallet {
                 slash_market_creator(T::OracleBond::get());
             }
 
-            //NOTE: Currently we don't clean up outcome assets.
-            //TODO: Above needs more work on https://github.com/zeitgeistpm/zeitgeist/issues/101
-            // Clear market and delete pool if necessary.
+            // NOTE: Currently we don't clean up outcome assets.
+            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             T::AssetManager::slash(
                 Asset::Ztg,
                 &market_account,
@@ -1141,6 +1140,7 @@ mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight =
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
@@ -1803,8 +1803,8 @@ mod pallet {
             total_weight = total_weight.saturating_add(clean_up_weight);
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
-            //NOTE: Currently we don't clean up outcome assets.
-            //TODO: Above needs more work on https://github.com/zeitgeistpm/zeitgeist/issues/101
+            // NOTE: Currently we don't clean up outcome assets.
+            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             T::MarketCommons::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome.clone());

@@ -344,9 +344,7 @@ benchmarks! {
     // is the resulting weight from this benchmark minus the weight for
     // fn `internal_resolve` of a reported and non-disputed scalar market.
     admin_move_market_to_resolved_overhead {
-        let total_accounts = 10u32;
-        let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
+        let (_, market_id) = setup_resolve_common_scalar::<T>(0, 0)?;
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: { call.dispatch_bypass_filter(close_origin)? }
@@ -430,15 +428,9 @@ benchmarks! {
     }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
 
     internal_resolve_categorical_reported {
-        let total_accounts = 1000;
-        let accounts_with_assets = 750;
         let categories : u16 = T::MaxCategories::get().saturated_into();
         let (_, market_id) =
-            setup_resolve_common_categorical_after_dispute::<T>(
-                total_accounts,
-                accounts_with_assets,
-                categories
-            )?;
+            setup_resolve_common_categorical_after_dispute::<T>(0, 0, categories)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(market_id);
@@ -449,15 +441,9 @@ benchmarks! {
         // d = num. disputes
         let d in 0..T::MaxDisputes::get();
 
-        let total_accounts = 1000;
-        let accounts_with_assets = 750;
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
-            setup_resolve_common_categorical_after_dispute::<T>(
-                total_accounts,
-                accounts_with_assets,
-                categories,
-            )?;
+            setup_resolve_common_categorical_after_dispute::<T>(0, 0, categories)?;
 
         let categories : u32 = categories.saturated_into();
         for i in 0..categories.min(d) {
