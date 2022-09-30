@@ -1809,7 +1809,8 @@ mod pallet {
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(clean_up_weight);
-            //TODO: following call should return weight consumed by it.
+            // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
+            // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             // NOTE: Currently we don't clean up outcome assets.

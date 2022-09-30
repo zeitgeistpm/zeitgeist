@@ -323,8 +323,7 @@ benchmarks! {
 
     internal_resolve_categorical_reported {
         let categories : u16 = T::MaxCategories::get().saturated_into();
-        let (_, market_id) =
-            setup_resolve_common_categorical::<T>(0, 0, categories)?;
+        let (_, market_id) = setup_resolve_common_categorical::<T>(0, 0, categories)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         Pallet::<T>::on_resolution(&market_id, &market)?;
@@ -348,7 +347,11 @@ benchmarks! {
         let categories : u32 = categories.saturated_into();
         for i in 0..categories.min(d) {
             let origin = caller.clone();
-            Pallet::<T>::dispute(RawOrigin::Signed(origin).into(), market_id, OutcomeReport::Categorical(i.saturated_into::<u16>()))?;
+            Pallet::<T>::dispute(
+                RawOrigin::Signed(origin).into(),
+                market_id,
+                OutcomeReport::Categorical(i.saturated_into::<u16>()),
+            )?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
@@ -361,7 +364,7 @@ benchmarks! {
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-    let (caller, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
+        let (caller, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         Pallet::<T>::on_resolution(&market_id, &market)?;
@@ -381,9 +384,14 @@ benchmarks! {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
             Ok(())
         })?;
+        let market = T::MarketCommons::market(&market_id);
         for i in 0..d {
             let origin = caller.clone();
-            Pallet::<T>::dispute(RawOrigin::Signed(origin).into(), market_id, OutcomeReport::Scalar(i.into()))?;
+            Pallet::<T>::dispute(
+                RawOrigin::Signed(origin).into(),
+                market_id,
+                OutcomeReport::Scalar(i.into())
+            )?;
         }
     }: {
         let market = T::MarketCommons::market(&market_id)?;
