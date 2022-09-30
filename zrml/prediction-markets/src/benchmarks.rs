@@ -353,8 +353,8 @@ benchmarks! {
                 OutcomeReport::Categorical(i.saturated_into::<u16>()),
             )?;
         }
-    }: {
         let market = T::MarketCommons::market(&market_id)?;
+    }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
     } verify {
         let market = T::MarketCommons::market(&market_id)?;
