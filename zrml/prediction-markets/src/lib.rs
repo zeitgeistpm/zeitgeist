@@ -46,7 +46,7 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
-    use sp_arithmetic::per_things::Perbill;
+    use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
@@ -962,6 +962,10 @@ mod pallet {
         #[pallet::constant]
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
+        /// The percentage of the advisory bond that gets slashed when a market is rejected.
+        #[pallet::constant]
+        type AdvisoryBondSlashPercentage: Get<Percent>;
+
         /// The origin that is allowed to approve / reject pending advised markets.
         type ApproveOrigin: EnsureOrigin<Self::Origin>;
 
@@ -1523,17 +1527,21 @@ mod pallet {
         ) -> Result<Weight, DispatchError> {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
+            let advisory_bond_slash_amount =
+                T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
+            let advisory_bond_unreserve_amount =
+                T::AdvisoryBond::get().saturating_sub(advisory_bond_slash_amount);
             T::AssetManager::slash_reserved_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
-                T::AdvisoryBond::get(),
+                advisory_bond_slash_amount,
             );
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
-                T::OracleBond::get(),
+                T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
             );
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketRejected(*market_id));
