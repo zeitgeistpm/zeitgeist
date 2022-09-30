@@ -1870,7 +1870,6 @@ mod pallet {
                     Ok(pool.assets.len() as u32)
                 })?;
             Self::deposit_event(Event::PoolActive(pool_id));
-            // TODO(#603): Fix weight calculation!
             Ok(T::WeightInfo::open_pool(asset_len))
         }
 
