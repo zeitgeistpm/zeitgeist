@@ -55,7 +55,8 @@ fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
 ) -> Result<(T::AccountId, T::AccountId, MultiHash, MarketCreation), &'static str> {
     let caller: T::AccountId = whitelisted_caller();
-    T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into()).unwrap();
+    T::AssetManager::deposit(Asset::Ztg, &caller, (100 * MinLiquidity::get()).saturated_into())
+        .unwrap();
     let oracle = caller.clone();
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
