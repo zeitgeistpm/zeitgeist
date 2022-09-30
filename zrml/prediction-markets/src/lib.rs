@@ -183,12 +183,23 @@ mod pallet {
         }
 
         /// Allows the `CloseOrigin` to immediately move an open market to closed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of market ids,
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
         //
         // ***** IMPORTANT *****
         //
         // Within the same block, operations that interact with the activeness of the same
         // market will behave differently before and after this call.
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_closed(), Pays::No))]
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_closed(
+                CacheSize::get(), CacheSize::get()), Pays::No
+            )
+        )]
         #[transactional]
         pub fn admin_move_market_to_closed(
             origin: OriginFor<T>,
@@ -198,11 +209,15 @@ mod pallet {
             T::CloseOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             Self::ensure_market_is_active(&market)?;
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
             Self::close_market(&market_id)?;
             // The CloseOrigin should not pay fees for providing this service
-            Ok((None, Pays::No).into())
+            Ok((
+                Some(T::WeightInfo::admin_move_market_to_closed(open_ids_len, close_ids_len)),
+                Pays::No,
+            )
+                .into())
         }
 
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
@@ -273,12 +288,16 @@ mod pallet {
         ///
         /// NOTE: Can only be called by the `ApproveOrigin`.
         ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight((T::WeightInfo::approve_market(), Pays::No))]
         #[transactional]
         pub fn approve_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
             T::ApproveOrigin::ensure_origin(origin)?;
             let mut extra_weight = 0;
             let mut status = MarketStatus::Active;
@@ -320,13 +339,16 @@ mod pallet {
         /// the five outcome tokens.
         ///
         /// NOTE: This is the only way to create new shares of outcome tokens.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of outcome assets in the market.
         // Note: `buy_complete_set` weight consumption is dependent on how many assets exists.
         // Unfortunately this information can only be retrieved with a storage call, therefore
-        // The worst-case scenario is assumed and the correct weight is calculated at the end of this function.
+        // The worst-case scenario is assumed
+        // and the correct weight is calculated at the end of this function.
         // This also occurs in numerous other functions.
-        #[pallet::weight(
-            T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-        )]
+        #[pallet::weight(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))]
         #[transactional]
         pub fn buy_complete_set(
             origin: OriginFor<T>,
@@ -337,7 +359,15 @@ mod pallet {
             Self::do_buy_complete_set(sender, market_id, amount)
         }
 
-        #[pallet::weight(T::WeightInfo::dispute(T::MaxDisputes::get()))]
+        /// Dispute on a market that has been reported or already disputed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
+        #[pallet::weight(T::WeightInfo::dispute_authorized(
+            T::MaxDisputes::get(),
+            CacheSize::get()
+        ))]
         #[transactional]
         pub fn dispute(
             origin: OriginFor<T>,
@@ -385,11 +415,8 @@ mod pallet {
                 MarketStatus::Disputed,
                 market_dispute,
             ));
-            Self::calculate_actual_weight(
-                T::WeightInfo::dispute,
-                num_disputes,
-                T::MaxDisputes::get(),
-            )
+            // TODO(#782): add court benchmark
+            Ok((Some(T::WeightInfo::dispute_authorized(num_disputes, CacheSize::get()))).into())
         }
 
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
@@ -405,17 +432,29 @@ mod pallet {
         /// * `swap_fee`: The swap fee, specified as fixed-point ratio (0.1 equals 10% fee)
         /// * `amount`: The amount of each token to add to the pool.
         /// * `weights`: The relative denormalized weight of each asset price.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// - create_market: `O(n)`, where `n` is the number of market ids,
+        /// which close at the same time as the specified market.
+        /// - buy_complete_set: `O(n)`, where `n` is the number of outcome assets
+        /// for the categorical market.
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`,
+        /// where n is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
+        /// where `n` is the number of outcome assets for the categorical market
+        /// and `m` is the number of market ids,
+        /// which open at the same time as the specified market.
         #[pallet::weight(
-            T::WeightInfo::create_market()
+            T::WeightInfo::create_market(CacheSize::get())
             .saturating_add(T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()))
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                T::MaxCategories::get().into(),
+            .saturating_add(
+                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+                .max(T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                )
             ))
-            // Overly generous estimation, since we have no access to Swaps WeightInfo
-            // (it is loosely coupled to this pallet using a trait). Contains weight for
-            // create_pool() and swap_exact_amount_in().
-            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
         )]
         #[transactional]
         pub fn create_cpmm_market_and_deploy_assets(
@@ -442,13 +481,9 @@ mod pallet {
                 ScoringRule::CPMM,
             )?
             .actual_weight
-            .unwrap_or_else(T::WeightInfo::create_market);
+            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
 
             // Deploy the swap pool and populate it.
-            let asset_count = match market_type {
-                MarketType::Categorical(value) => value,
-                MarketType::Scalar(_) => 2,
-            };
             let market_id = T::MarketCommons::latest_market_id()?;
             let deploy_and_populate_weight = Self::deploy_swap_pool_and_additional_liquidity(
                 origin,
@@ -458,17 +493,18 @@ mod pallet {
                 weights.clone(),
             )?
             .actual_weight
-            .unwrap_or_else(|| {
-                T::WeightInfo::buy_complete_set(asset_count.into())
-                    .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(asset_count.into()))
-                    .saturating_add(5_000_000_000.saturating_mul(asset_count.into()))
-                    .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            });
+            .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
 
             Ok(Some(create_market_weight.saturating_add(deploy_and_populate_weight)).into())
         }
 
-        #[pallet::weight(T::WeightInfo::create_market())]
+        /// Creates a market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of market ids,
+        /// which close at the same time as the specified market.
+        #[pallet::weight(T::WeightInfo::create_market(CacheSize::get()))]
         #[transactional]
         pub fn create_market(
             origin: OriginFor<T>,
@@ -480,6 +516,7 @@ mod pallet {
             dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
 
@@ -555,23 +592,26 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            match period {
-                MarketPeriod::Block(range) => {
-                    MarketIdsPerCloseBlock::<T>::try_mutate(range.end, |ids| {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                    })?;
-                }
-                MarketPeriod::Timestamp(range) => {
-                    MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                        Self::calculate_time_frame_of_moment(range.end),
-                        |ids| ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow),
-                    )?;
-                }
-            }
+            let ids_amount: u32 = match period {
+                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
+                    range.end,
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                )?,
+                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    Self::calculate_time_frame_of_moment(range.end),
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                )?,
+            };
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
-            Ok(Some(T::WeightInfo::create_market().saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
         }
 
         /// Buy complete sets and deploy a pool with specified liquidity for a market.
@@ -584,16 +624,27 @@ mod pallet {
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
         ///     swaps pallet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// - buy_complete_set: `O(n)`,
+        /// where `n` is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`,
+        /// where `n` is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
+        /// where `n` is the number of outcome assets for the categorical market,
+        /// and `m` is the number of market ids,
+        /// which open at the same time as the specified market.
         #[pallet::weight(
             T::WeightInfo::buy_complete_set(T::MaxCategories::get().into())
-            .saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                T::MaxCategories::get().into(),
-            ))
-            // Overly generous estimation, since we have no access to Swaps WeightInfo
-            // (it is loosely coupled to this pallet using a trait). Contains weight for
-            // create_pool() and swap_exact_amount_in()
-            .saturating_add(5_000_000_000.saturating_mul(T::MaxCategories::get().into()))
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(
+                T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+            .max(
+                T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                ))
+            )
         )]
         #[transactional]
         pub fn deploy_swap_pool_and_additional_liquidity(
@@ -606,13 +657,12 @@ mod pallet {
             ensure_signed(origin.clone())?;
             let weight_bcs = Self::buy_complete_set(origin.clone(), market_id, amount)?
                 .actual_weight
-                .unwrap_or_else(|| T::WeightInfo::buy_complete_set(T::MaxCategories::get().into()));
-            let weights_len = weights.len();
-            Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?;
-            Ok(Some(weight_bcs.saturating_add(T::WeightInfo::deploy_swap_pool_for_market(
-                weights_len.saturated_into(),
-            )))
-            .into())
+                .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
+            let weight_deploy =
+                Self::deploy_swap_pool_for_market(origin, market_id, swap_fee, amount, weights)?
+                    .actual_weight
+                    .ok_or(Error::<T>::UnexpectedNoneInPostInfo)?;
+            Ok(Some(weight_bcs.saturating_add(weight_deploy)).into())
         }
 
         /// Deploy a pool with specified liquidity for a market.
@@ -627,8 +677,23 @@ mod pallet {
         /// * `weights`: The relative denormalized weight of each outcome asset. The sum of the
         ///     weights must be less or equal to _half_ of the `MaxTotalWeight` constant of the
         ///     swaps pallet.
+        ///
+        /// # Weight
+        ///
+        /// Complexity:
+        /// - deploy_swap_pool_for_market_open_pool: `O(n)`,
+        /// where `n` is the number of outcome assets for the categorical market.
+        /// - deploy_swap_pool_for_market_future_pool: `O(n + m)`,
+        /// where `n` is the number of outcome assets for the categorical market,
+        /// and `m` is the number of market ids,
+        /// which open at the same time as the specified market.
         #[pallet::weight(
-            T::WeightInfo::deploy_swap_pool_for_market(weights.len() as u32)
+            T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights.len() as u32)
+            .max(
+                T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                    weights.len() as u32, CacheSize::get()
+                )
+            )
         )]
         #[transactional]
         pub fn deploy_swap_pool_for_market(
@@ -637,7 +702,7 @@ mod pallet {
             #[pallet::compact] swap_fee: BalanceOf<T>,
             #[pallet::compact] amount: BalanceOf<T>,
             mut weights: Vec<u128>,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
             let market = T::MarketCommons::market(&market_id)?;
@@ -645,8 +710,15 @@ mod pallet {
             Self::ensure_market_is_active(&market)?;
 
             let mut assets = Self::outcome_assets(market_id, &market);
+            let weights_len = weights.len() as u32;
+            // although this extrinsic is transactional and this check is inside Swaps::create_pool
+            // the iteration over weights happens still before the check in Swaps::create_pool
+            // this could stall the chain, because a malicious user puts a large vector in
+            ensure!(weights.len() == assets.len(), Error::<T>::WeightsLenMustEqualAssetsLen);
+
             let base_asset = Asset::Ztg;
             assets.push(base_asset);
+
             let base_asset_weight = weights.iter().fold(0u128, |acc, val| acc.saturating_add(*val));
             weights.push(base_asset_weight);
 
@@ -662,16 +734,22 @@ mod pallet {
             )?;
 
             // Open the pool now or cache it for later
-            match market.period {
+            let ids_len: Option<u32> = match market.period {
                 MarketPeriod::Block(ref range) => {
                     let current_block = <frame_system::Pallet<T>>::block_number();
                     let open_block = range.start;
                     if current_block < open_block {
-                        MarketIdsPerOpenBlock::<T>::try_mutate(open_block, |ids| {
-                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                        })?;
+                        let ids_len = MarketIdsPerOpenBlock::<T>::try_mutate(
+                            open_block,
+                            |ids| -> Result<u32, DispatchError> {
+                                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                                Ok(ids.len() as u32)
+                            },
+                        )?;
+                        Some(ids_len)
                     } else {
                         T::Swaps::open_pool(pool_id)?;
+                        None
                     }
                 }
                 MarketPeriod::Timestamp(ref range) => {
@@ -679,22 +757,43 @@ mod pallet {
                         Self::calculate_time_frame_of_moment(T::MarketCommons::now());
                     let open_time_frame = Self::calculate_time_frame_of_moment(range.start);
                     if current_time_frame < open_time_frame {
-                        MarketIdsPerOpenTimeFrame::<T>::try_mutate(open_time_frame, |ids| {
-                            ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-                        })?;
+                        let ids_len = MarketIdsPerOpenTimeFrame::<T>::try_mutate(
+                            open_time_frame,
+                            |ids| -> Result<u32, DispatchError> {
+                                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                                Ok(ids.len() as u32)
+                            },
+                        )?;
+                        Some(ids_len)
                     } else {
                         T::Swaps::open_pool(pool_id)?;
+                        None
                     }
                 }
             };
 
             // This errors if a pool already exists!
             T::MarketCommons::insert_market_pool(market_id, pool_id)?;
-            Ok(())
+            match ids_len {
+                Some(market_ids_len) => {
+                    Ok(Some(T::WeightInfo::deploy_swap_pool_for_market_future_pool(
+                        weights_len,
+                        market_ids_len,
+                    ))
+                    .into())
+                }
+                None => {
+                    Ok(Some(T::WeightInfo::deploy_swap_pool_for_market_open_pool(weights_len))
+                        .into())
+                }
+            }
         }
 
         /// Redeems the winning shares of a prediction market.
         ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::redeem_shares_categorical()
             .max(T::WeightInfo::redeem_shares_scalar())
         )]
@@ -824,7 +923,18 @@ mod pallet {
         }
 
         /// Rejects a market that is waiting for approval from the advisory committee.
-        #[pallet::weight((T::WeightInfo::reject_market(), Pays::No))]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`,
+        /// where `n` is the number of market ids,
+        /// which open at the same time as the specified market,
+        /// and `m` is the number of market ids,
+        /// which close at the same time as the specified market.
+        #[pallet::weight((
+            T::WeightInfo::reject_market(CacheSize::get(), CacheSize::get()),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn reject_market(
             origin: OriginFor<T>,
@@ -832,22 +942,26 @@ mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::RejectOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
             Self::do_reject_market(&market_id, market)?;
             // The RejectOrigin should not pay fees for providing this service
-            Ok((None, Pays::No).into())
+            Ok((Some(T::WeightInfo::reject_market(close_ids_len, open_ids_len)), Pays::No).into())
         }
 
         /// Reports the outcome of a market.
         ///
-        #[pallet::weight(T::WeightInfo::report())]
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of market ids,
+        /// which reported at the same time as the specified market.
+        #[pallet::weight(T::WeightInfo::report(CacheSize::get()))]
         #[transactional]
         pub fn report(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
-        ) -> DispatchResult {
+        ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin.clone())?;
 
             let current_block = <frame_system::Pallet<T>>::block_number();
@@ -897,21 +1011,29 @@ mod pallet {
                 Ok(())
             })?;
 
-            MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
-                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
+            let ids_len = MarketIdsPerReportBlock::<T>::try_mutate(
+                current_block,
+                |ids| -> Result<u32, DispatchError> {
+                    ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                    Ok(ids.len() as u32)
+                },
+            )?;
 
             Self::deposit_event(Event::MarketReported(
                 market_id,
                 MarketStatus::Reported,
                 market_report,
             ));
-            Ok(())
+            Ok(Some(T::WeightInfo::report(ids_len)).into())
         }
 
         /// Sells a complete set of outcomes shares for a market.
         ///
         /// Each complete set is sold for one unit of the market's base asset.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of assets for a categorical market.
         #[pallet::weight(
             T::WeightInfo::sell_complete_set(T::MaxCategories::get().into())
         )]
@@ -955,8 +1077,7 @@ mod pallet {
 
             Self::deposit_event(Event::SoldCompleteSet(market_id, amount, sender));
             let assets_len: u32 = assets.len().saturated_into();
-            let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(T::WeightInfo::sell_complete_set, assets_len, max_cats)
+            Ok(Some(T::WeightInfo::sell_complete_set(assets_len)).into())
         }
     }
 
@@ -1149,14 +1270,18 @@ mod pallet {
         StorageOverflow,
         /// Too many categories for a categorical market.
         TooManyCategories,
-        /// Catch-all error for invalid market status
+        /// Catch-all error for invalid market status.
         InvalidMarketStatus,
+        /// The post dispatch should never be None.
+        UnexpectedNoneInPostInfo,
         /// An amount was illegally specified as zero.
         ZeroAmount,
         /// Market period is faulty (too short, outside of limits)
         InvalidMarketPeriod,
         /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
+        /// The weights length has to be equal to the assets length.
+        WeightsLenMustEqualAssetsLen,
     }
 
     #[pallet::event]
@@ -1181,7 +1306,8 @@ mod pallet {
         MarketDestroyed(MarketIdOf<T>),
         /// A market was started after gathering enough subsidy. \[market_id, new_market_status\]
         MarketStartedWithSubsidy(MarketIdOf<T>, MarketStatus),
-        /// A market was discarded after failing to gather enough subsidy. \[market_id, new_market_status\]
+        /// A market was discarded after failing to gather enough subsidy.
+        /// \[market_id, new_market_status\]
         MarketInsufficientSubsidy(MarketIdOf<T>, MarketStatus),
         /// A market has been closed \[market_id\]
         MarketClosed(MarketIdOf<T>),
@@ -1197,7 +1323,8 @@ mod pallet {
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
-        /// An amount of winning outcomes have been redeemed \[market_id, currency_id, amount_redeemed, payout, who\]
+        /// An amount of winning outcomes have been redeemed
+        /// \[market_id, currency_id, amount_redeemed, payout, who\]
         TokensRedeemed(
             MarketIdOf<T>,
             Asset<MarketIdOf<T>>,
@@ -1522,14 +1649,13 @@ mod pallet {
             Self::deposit_event(Event::BoughtCompleteSet(market_id, amount, who));
 
             let assets_len: u32 = assets.len().saturated_into();
-            let max_cats: u32 = T::MaxCategories::get().into();
-            Self::calculate_actual_weight(T::WeightInfo::buy_complete_set, assets_len, max_cats)
+            Ok(Some(T::WeightInfo::buy_complete_set(assets_len)).into())
         }
 
         pub(crate) fn do_reject_market(
             market_id: &MarketIdOf<T>,
             market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-        ) -> Result<Weight, DispatchError> {
+        ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
             let advisory_bond_slash_amount =
@@ -1551,7 +1677,7 @@ mod pallet {
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketRejected(*market_id));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
-            Ok(T::WeightInfo::do_reject_market())
+            Ok(())
         }
 
         pub(crate) fn handle_expired_advised_market(
@@ -1579,21 +1705,6 @@ mod pallet {
 
         pub(crate) fn calculate_time_frame_of_moment(time: MomentOf<T>) -> TimeFrame {
             time.saturated_into::<TimeFrame>().saturating_div(MILLISECS_PER_BLOCK.into())
-        }
-
-        fn calculate_actual_weight<F>(
-            func: F,
-            weight_parameter: u32,
-            max_weight_parameter: u32,
-        ) -> DispatchResultWithPostInfo
-        where
-            F: Fn(u32) -> Weight,
-        {
-            if weight_parameter == max_weight_parameter {
-                Ok(None.into())
-            } else {
-                Ok(Some(func(weight_parameter)).into())
-            }
         }
 
         fn calculate_internal_resolve_weight(
@@ -1872,7 +1983,8 @@ mod pallet {
                         overall_imbalance.checked_div(&correct_reporters.len().saturated_into())
                     {
                         for correct_reporter in &correct_reporters {
-                            let reward = overall_imbalance.min(reward_per_each); // *Should* always be equal to `reward_per_each`
+                            // *Should* always be equal to `reward_per_each`
+                            let reward = overall_imbalance.min(reward_per_each);
                             overall_imbalance = overall_imbalance.saturating_sub(reward);
 
                             if let Err(err) =
