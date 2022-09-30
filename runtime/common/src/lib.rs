@@ -1731,7 +1731,8 @@ macro_rules! create_common_tests {
                         DealWithFees::on_unbalanceds(vec![fee, tip].into_iter());
                         assert_eq!(
                             Balances::free_balance(Treasury::account_id()),
-                            2 * ExistentialDeposit::get(),
+                            ((FEES_AND_TIPS_TREASURY_PERCENTAGE / 10) as u128)
+                                * ExistentialDeposit::get(),
                         );
                     });
                 }
