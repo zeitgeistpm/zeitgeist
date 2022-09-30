@@ -188,7 +188,10 @@ macro_rules! decl_common_types {
                     if let Some(tips) = fees_then_tips.next() {
                         tips.merge_into(&mut fees);
                     }
-                    let mut split = fees.ration(20, 80); // 20% treasury, 80% burn.
+                    let mut split = fees.ration(
+                        FEES_AND_TIPS_TREASURY_PERCENTAGE,
+                        FEES_AND_TIPS_BURN_PERCENTAGE,
+                    );
                     Treasury::on_unbalanced(split.0);
                 }
             }

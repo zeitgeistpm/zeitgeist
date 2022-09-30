@@ -42,6 +42,8 @@ use zeitgeist_primitives::{constants::*, types::*};
 pub(crate) const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 pub(crate) const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
 pub(crate) const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
+pub(crate) const FEES_AND_TIPS_TREASURY_PERCENTAGE: u32 = 20;
+pub(crate) const FEES_AND_TIPS_BURN_PERCENTAGE: u32 = 80;
 
 parameter_types! {
     // Authorized
