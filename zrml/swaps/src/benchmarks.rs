@@ -113,7 +113,7 @@ fn initialize_pool<T: Config>(
     };
 
     let market_id = T::MarketId::from(0u8);
-    let assets = generate_assets::<T>(&caller, asset_count_unwrapped, asset_amount);
+    let assets = generate_assets::<T>(caller, asset_count_unwrapped, asset_amount);
     let some_weights = if weights.is_some() {
         weights
     } else {
