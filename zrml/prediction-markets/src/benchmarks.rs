@@ -44,6 +44,10 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 
+fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+    frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+}
+
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
 fn create_market_common_parameters<T: Config>(
@@ -223,23 +227,53 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
     Ok((caller, market_id))
 }
 
+fn create_reported_market_with_pool<T: Config>(
+    categories: u32,
+) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    let (caller, market_id) = create_market_common::<T>(
+        MarketCreation::Permissionless,
+        MarketType::Categorical(categories.saturated_into()),
+        ScoringRule::CPMM,
+    )?;
+
+    let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
+    let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
+    let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    let weight_len: usize = MaxRuntimeUsize::from(categories).into();
+    let weights = vec![MinWeight::get(); weight_len];
+    Pallet::<T>::deploy_swap_pool_for_market(
+        RawOrigin::Signed(caller.clone()).into(),
+        market_id,
+        max_swap_fee,
+        min_liquidity,
+        weights,
+    )
+    .unwrap();
+
+    let _ = Call::<T>::admin_move_market_to_closed { market_id }
+        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
+    let outcome = OutcomeReport::Categorical(0u16);
+    let _ = Call::<T>::report { market_id, outcome }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+
+    Ok((caller, market_id))
+}
+
 benchmarks! {
     admin_destroy_disputed_market{
+        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let d in 1..T::MaxDisputes::get();
         let o in 0..63;
         let c in 0..63;
         let r in 0..63;
 
-        // TODO: for market pool use MaxAssets (destroy_pool)
-        let categories = T::MaxCategories::get();
-        let categories: u16 = T::MaxCategories::get().saturated_into();
-        let (caller, market_id) = create_close_and_report_market::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Categorical(categories),
-            OutcomeReport::Categorical(categories.saturating_sub(1)),
-        )?;
+        let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
 
-        for i in 1..=d {
+        let pool_id = T::MarketCommons::market_pool(&market_id).unwrap();
+
+        // minimum of number of disputes and (categories - 1) because of `matches_outcome_report`
+        for i in 1..=(a - 1).min(d) {
             let outcome = OutcomeReport::Categorical(i.saturated_into());
             let disputor = account("disputor", i, 0);
             let dispute_bond = T::DisputeBond::get() +
@@ -282,20 +316,23 @@ benchmarks! {
 
         let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(destroy_origin)? }
+    }: {
+        call.dispatch_bypass_filter(destroy_origin)?
+    } verify {
+        assert_last_event::<T>(Event::MarketDestroyed::<T>(
+            market_id,
+        ).into());
+    }
 
-    admin_destroy_reported_market{
+    admin_destroy_reported_market {
+        let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let o in 0..63;
         let c in 0..63;
         let r in 0..63;
 
-        // TODO: for market pool use MaxAssets (destroy_pool)
-        let categories: u16 = T::MaxCategories::get().saturated_into();
-        let (caller, market_id) = create_close_and_report_market::<T>(
-            MarketCreation::Permissionless,
-            MarketType::Categorical(categories),
-            OutcomeReport::Categorical(categories.saturating_sub(1)),
-        )?;
+        let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
+
+        let pool_id = T::MarketCommons::market_pool(&market_id).unwrap();
 
         let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
 
@@ -329,7 +366,13 @@ benchmarks! {
 
         let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
-    }: { call.dispatch_bypass_filter(destroy_origin)? }
+    }: {
+        call.dispatch_bypass_filter(destroy_origin)?
+    } verify {
+        assert_last_event::<T>(Event::MarketDestroyed::<T>(
+            market_id,
+        ).into());
+    }
 
     admin_move_market_to_closed {
         let (caller, market_id) = create_market_common::<T>(
@@ -366,7 +409,15 @@ benchmarks! {
 
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
-    }: { call.dispatch_bypass_filter(close_origin)? }
+    }: {
+        call.dispatch_bypass_filter(close_origin)?
+    } verify {
+        assert_last_event::<T>(Event::MarketResolved::<T>(
+            market_id,
+            MarketStatus::Resolved,
+            OutcomeReport::Scalar(u128::MAX),
+        ).into());
+    }
 
     admin_move_market_to_resolved_overhead_disputed {
         let r in 0..63;
@@ -405,7 +456,15 @@ benchmarks! {
 
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
-    }: { call.dispatch_bypass_filter(close_origin)? }
+    }: {
+        call.dispatch_bypass_filter(close_origin)?
+    } verify {
+        assert_last_event::<T>(Event::MarketResolved::<T>(
+            market_id,
+            MarketStatus::Resolved,
+            OutcomeReport::Scalar(d.into()),
+        ).into());
+    }
 
     approve_market {
         let (_, market_id) = create_market_common::<T>(

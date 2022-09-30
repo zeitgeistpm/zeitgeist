@@ -83,10 +83,12 @@ mod pallet {
         /// exception. Can currently only be used for destroying CPMM markets.
         #[pallet::weight((
             T::WeightInfo::admin_destroy_reported_market(
+                T::MaxCategories::get().into(),
                 CacheSize::get(),
                 CacheSize::get(),
                 CacheSize::get())
             .max(T::WeightInfo::admin_destroy_disputed_market(
+                T::MaxCategories::get().into(),
                 T::MaxDisputes::get(),
                 CacheSize::get(),
                 CacheSize::get(),
@@ -136,8 +138,9 @@ mod pallet {
                 &market_account,
                 T::AssetManager::free_balance(Asset::Ztg, &market_account),
             );
+            let mut category_count = 0u32;
             if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
-                T::Swaps::destroy_pool(pool_id)?;
+                (_, category_count) = T::Swaps::destroy_pool(pool_id)?;
                 T::MarketCommons::remove_market_pool(&market_id)?;
             }
 
@@ -154,6 +157,7 @@ mod pallet {
             if market_status == MarketStatus::Reported {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_reported_market(
+                        category_count,
                         open_ids_len,
                         close_ids_len,
                         ids_len,
@@ -164,6 +168,7 @@ mod pallet {
             } else if market_status == MarketStatus::Disputed {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_disputed_market(
+                        category_count,
                         disputes_len,
                         open_ids_len,
                         close_ids_len,
