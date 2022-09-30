@@ -27,6 +27,7 @@ use frame_support::{
     traits::{Everything, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
+use sp_arithmetic::per_things::Percent;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -67,6 +68,7 @@ parameter_types! {
     pub const ReportingPeriod: u32 = 11;
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
     pub const OracleBond: Balance = 25 * CENT;
     pub const ValidityBond: Balance = 53 * CENT;
     pub const DisputeBond: Balance = 109 * CENT;
@@ -99,6 +101,7 @@ construct_runtime!(
 
 impl crate::Config for Runtime {
     type AdvisoryBond = AdvisoryBond;
+    type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
     type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type Authorized = Authorized;
     type CloseOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
