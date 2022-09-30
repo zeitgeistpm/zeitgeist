@@ -278,7 +278,7 @@ parameter_types! {
 
     // Treasury
     /// Percentage of spare funds (if any) that are burnt per spend period.
-    pub const Burn: Permill = Permill::from_percent(50);
+    pub const Burn: Permill = Permill::from_percent(10);
     /// The maximum number of approvals that can wait in the spending queue.
     pub const MaxApprovals: u32 = 100;
     /// Fraction of a proposal's value that should be bonded in order to place the proposal.
