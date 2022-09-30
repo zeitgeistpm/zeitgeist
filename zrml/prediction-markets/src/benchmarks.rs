@@ -691,12 +691,15 @@ benchmarks! {
         let f in 1..31;
         // let t in 0..10;
 
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         // ensure markets exist
         for _ in 0..64 {
             let _ = create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::CPMM
+                ScoringRule::CPMM,
+                Some(MarketPeriod::Timestamp(range_start..range_end)),
             )?;
         }
 
@@ -742,12 +745,15 @@ benchmarks! {
         let r in 1..31;
         let d in 1..31;
 
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         // ensure markets exist
         for _ in 0..64 {
             let (_, market_id) = create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::CPMM
+                ScoringRule::CPMM,
+                Some(MarketPeriod::Timestamp(range_start..range_end)),
             )?;
             // ensure market is reported
             T::MarketCommons::mutate_market(&market_id, |market| {
