@@ -786,7 +786,8 @@ macro_rules! impl_config_traits {
         impl pallet_transaction_payment::Config for Runtime {
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-            type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
+            type OnChargeTransaction =
+                pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
