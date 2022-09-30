@@ -434,6 +434,67 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_dispute_blocks_with_gap_of_dispute_duration() {
+        ExtBuilder::default().build().execute_with(|| {
+            setup_chain();
+
+            System::set_block_number(1);
+            let market_ids_reported_0 =
+                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0])
+                    .expect("boundedvec creation failed");
+            let market_ids_disputed_0 =
+                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![1])
+                    .expect("boundedvec creation failed");
+            System::set_block_number(4);
+            let dispute_block = System::current_block_number().saturating_sub(1_u32.into());
+            MarketIdsPerDisputeBlock::<Runtime>::insert(
+                dispute_block,
+                market_ids_disputed_0.clone(),
+            );
+            MarketIdsPerReportBlock::<Runtime>::insert(
+                dispute_block,
+                market_ids_reported_0.clone(),
+            );
+            let dispute_duration = <Runtime as Config>::DisputePeriod::get();
+            let next_dispute_block = dispute_block + dispute_duration;
+            let market_ids_reported_1 =
+                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![2])
+                    .expect("boundedvec creation failed");
+            let market_ids_disputed_1 =
+                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![3])
+                    .expect("boundedvec creation failed");
+            MarketIdsPerDisputeBlock::<Runtime>::insert(
+                next_dispute_block,
+                market_ids_disputed_1.clone(),
+            );
+            MarketIdsPerReportBlock::<Runtime>::insert(
+                next_dispute_block,
+                market_ids_reported_1.clone(),
+            );
+            MigrateMarketIdsPerBlockStorage::<Runtime>::on_runtime_upgrade();
+            // after migration dispute_block's data is stored against next_dispute_block
+            assert_eq!(
+                MarketIdsPerDisputeBlock::<Runtime>::get(next_dispute_block),
+                market_ids_disputed_0
+            );
+            assert_eq!(
+                MarketIdsPerReportBlock::<Runtime>::get(next_dispute_block),
+                market_ids_reported_0
+            );
+            // after migration next_dispute_block's data is stored against
+            // next_dispute_block + dispute_duration
+            assert_eq!(
+                MarketIdsPerDisputeBlock::<Runtime>::get(next_dispute_block + dispute_duration),
+                market_ids_disputed_1
+            );
+            assert_eq!(
+                MarketIdsPerReportBlock::<Runtime>::get(next_dispute_block + dispute_duration),
+                market_ids_reported_1
+            );
+        });
+    }
+
     fn setup_chain() {
         StorageVersion::new(
             PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE,
