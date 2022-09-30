@@ -225,26 +225,11 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
 
 benchmarks! {
     admin_destroy_disputed_market{
-        // a = total accounts
-        // An higher number increases the benchmark runtime significantly, while increasing the
-        // error due to a lower number of repetitions (the data points that are used to approximate
-        // the weight function weight(a) are less precise).
-        // The required weight per account is a linear function of degree 1, i.e.
-        // fn(a) = ba^1 + ca^0. The first few data points of the curve are already approximating
-        // the function and its constant gradient fairly well, provided that these few data points
-        // are very precise (many repetitions). If the gradient is well estimated, any value can be
-        // derived, up to infinity, assuming that at no point the function fn(a) is non-linear.
-        let a in 0..10;
-        // b = num. accounts with assets
-        // Unfortunately frame-benchmarking does not allow to b = b.min(a) here
-        let b in 0..10;
-        // c = num. asset types
-        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-        // Complexity: c*a + c*b ∈ O(a)
-        let c_u16 = c.saturated_into();
-        let (caller, market_id) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
+        let categories = T::MaxCategories::get();
+        let (caller, market_id) = setup_resolve_common_categorical::<T>(0, 0, categories)?;
 
-        for i in 0..c.min(T::MaxDisputes::get()) {
+        let categories : u32 = categories.saturated_into();
+        for i in 0..categories.min(T::MaxDisputes::get()) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
@@ -256,16 +241,8 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(destroy_origin)? }
 
     admin_destroy_reported_market{
-        // a = total accounts
-        let a in 0..10;
-        // b = num. accounts with assets
-        let b in 0..10;
-        // c = num. asset types
-        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-        // Complexity: c*a + c*b ∈ O(a)
-
-        let c_u16 = c.saturated_into();
-        let (caller, market_id) = setup_resolve_common_categorical::<T>(a, b, c_u16)?;
+        let categories :u16 = T::MaxCategories::get().saturated_into();
+        let (caller, market_id) = setup_resolve_common_categorical::<T>(0, 0, categories)?;
         let destroy_origin = T::DestroyOrigin::successful_origin();
         let call = Call::<T>::admin_destroy_market { market_id };
     }: { call.dispatch_bypass_filter(destroy_origin)? }
@@ -285,9 +262,7 @@ benchmarks! {
     // is the resulting weight from this benchmark minus the weight for
     // fn `internal_resolve` of a reported and non-disputed scalar market.
     admin_move_market_to_resolved_overhead {
-        let total_accounts = 10u32;
-        let asset_accounts = 10u32;
-        let (_, market_id) = setup_resolve_common_scalar::<T>(total_accounts, asset_accounts)?;
+        let (_, market_id) = setup_resolve_common_scalar::<T>(0, 0)?;
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: { call.dispatch_bypass_filter(close_origin)? }
@@ -371,15 +346,9 @@ benchmarks! {
     }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
 
     internal_resolve_categorical_reported {
-        // a = total accounts
-        let a in 0..10;
-        // b = num. accounts with assets
-        let b in 0..10;
-        // c = num. asset types
-        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-
-        let c_u16 = c.saturated_into();
-        let (_, market_id) = setup_resolve_common_categorical_after_dispute::<T>(a, b, c_u16)?;
+        let categories : u16 = T::MaxCategories::get().saturated_into();
+        let (_, market_id) =
+            setup_resolve_common_categorical_after_dispute::<T>(0, 0, categories)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(market_id);
@@ -387,19 +356,15 @@ benchmarks! {
     }
 
     internal_resolve_categorical_disputed {
-        // a = total accounts
-        let a in 0..10;
-        // b = num. accounts with assets
-        let b in 0..10;
-        // c = num. asset types
-        let c in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         // d = num. disputes
         let d in 0..T::MaxDisputes::get();
 
-        let c_u16 = c.saturated_into();
-        let (caller, market_id) = setup_resolve_common_categorical_after_dispute::<T>(a, b, c_u16)?;
+        let categories = T::MaxCategories::get();
+        let (caller, market_id) =
+            setup_resolve_common_categorical_after_dispute::<T>(0, 0, categories)?;
 
-        for i in 0..c.min(d) {
+        let categories : u32 = categories.saturated_into();
+        for i in 0..categories.min(d) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(market_id);
             let market = T::MarketCommons::market(&Default::default()).unwrap();
