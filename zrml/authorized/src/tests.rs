@@ -22,7 +22,7 @@ use crate::{
     mock::{Authorized, AuthorizedDisputeResolutionUser, ExtBuilder, Origin, Runtime, BOB},
     AuthorizedOutcomeReports, Error,
 };
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use zeitgeist_primitives::{
     traits::DisputeApi,
     types::{MarketDisputeMechanism, MarketStatus, OutcomeReport},
@@ -111,7 +111,7 @@ fn authorize_market_outcome_fails_on_unauthorized_account() {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         assert_noop!(
             Authorized::authorize_market_outcome(Origin::signed(BOB), 0, OutcomeReport::Scalar(1)),
-            Error::<Runtime>::NotAuthorizedForDisputeResolution,
+            DispatchError::BadOrigin,
         );
     });
 }

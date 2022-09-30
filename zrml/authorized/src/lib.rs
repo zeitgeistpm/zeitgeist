@@ -71,8 +71,7 @@ mod pallet {
             market_id: MarketIdOf<T>,
             outcome: OutcomeReport,
         ) -> DispatchResult {
-            T::AuthorizedDisputeResolutionOrigin::ensure_origin(origin)
-                .map_err(|_| Error::<T>::NotAuthorizedForDisputeResolution)?;
+            T::AuthorizedDisputeResolutionOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Disputed, Error::<T>::MarketIsNotDisputed);
             ensure!(market.matches_outcome_report(&outcome), Error::<T>::OutcomeMismatch);
@@ -110,8 +109,6 @@ mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// An unauthorized account attempts to submit a report.
-        NotAuthorizedForDisputeResolution,
         /// The market unexpectedly has the incorrect dispute mechanism.
         MarketDoesNotHaveDisputeMechanismAuthorized,
         /// An account attempts to submit a report to an undisputed market.
