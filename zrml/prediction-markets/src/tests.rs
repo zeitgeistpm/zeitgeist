@@ -883,7 +883,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
 
         // AdvisoryBond is transferred to the treasury
         let balance_treasury_after = Balances::free_balance(Treasury::account_id());
-        assert_eq!(balance_treasury_after, <Runtime as Config>::AdvisoryBond::get(),);
+        assert_eq!(balance_treasury_after, slash_amount_advisory_bond);
     });
 }
 
