@@ -33,7 +33,9 @@ use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::parameter_type_with_key;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
-use sp_runtime::{traits::AccountIdConversion, FixedPointNumber, Perbill, Permill, Perquintill};
+use sp_runtime::{
+    traits::AccountIdConversion, FixedPointNumber, Perbill, Percent, Permill, Perquintill,
+};
 use sp_version::RuntimeVersion;
 use zeitgeist_primitives::{constants::*, types::*};
 
@@ -138,6 +140,7 @@ parameter_types! {
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 200 * BASE;
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.
@@ -212,7 +215,7 @@ parameter_types! {
     /// The maximum fee that is charged for swaps and single asset LP operations.
     pub const MaxSwapFee: Balance = BASE / 10; // 10%
     /// The sum of all weights of the assets within the pool is limited by `MaxTotalWeight`.
-    pub const MaxTotalWeight: Balance = 128 * BASE;
+    pub const MaxTotalWeight: Balance = MaxWeight::get() * 2;
     /// The maximum weight a single asset can have.
     pub const MaxWeight: Balance = 64 * BASE;
     /// Minimum amount of liquidity required to launch a CPMM pool.

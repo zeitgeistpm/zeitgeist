@@ -46,7 +46,7 @@ mod pallet {
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use orml_traits::{MultiCurrency, NamedMultiReservableCurrency};
-    use sp_arithmetic::per_things::Perbill;
+    use sp_arithmetic::per_things::{Perbill, Percent};
     use sp_runtime::{
         traits::{AccountIdConversion, CheckedDiv, Saturating, Zero},
         DispatchError, DispatchResult, SaturatedConversion,
@@ -82,15 +82,9 @@ mod pallet {
         /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
         /// exception. Can currently only be used for destroying CPMM markets.
         #[pallet::weight((
-            T::WeightInfo::admin_destroy_reported_market(
-                900,
-                900,
-                T::MaxCategories::get().into()
-            ).max(T::WeightInfo::admin_destroy_disputed_market(
-                900,
-                900,
-                T::MaxCategories::get().into()
-            )), Pays::No))]
+            T::WeightInfo::admin_destroy_reported_market()
+            .max(T::WeightInfo::admin_destroy_disputed_market()),
+        Pays::No))]
         #[transactional]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
@@ -99,13 +93,9 @@ mod pallet {
             // TODO(#618): Not implemented for Rikiddo!
             T::DestroyOrigin::ensure_origin(origin)?;
 
-            let mut total_accounts = 0usize;
-            let mut share_accounts = 0usize;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
             let market_status = market.status;
-            let outcome_assets = Self::outcome_assets(market_id, &market);
-            let outcome_assets_amount = outcome_assets.len();
             let market_account = Self::market_account(market_id);
 
             // Slash outstanding bonds; see
@@ -131,24 +121,8 @@ mod pallet {
                 slash_market_creator(T::OracleBond::get());
             }
 
-            // Delete market's outcome assets, clear market and delete pool if necessary.
-            let mut destroy_asset = |asset: Asset<_>| -> Option<usize> {
-                if let Ok((total_accounts, accounts)) =
-                    T::AssetManager::accounts_by_currency_id(asset)
-                {
-                    share_accounts = share_accounts.saturating_add(accounts.len());
-                    let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
-                    Some(total_accounts)
-                } else {
-                    // native currency case
-                    None
-                }
-            };
-            for asset in outcome_assets.into_iter() {
-                if let Some(total) = destroy_asset(asset) {
-                    total_accounts = total;
-                }
-            }
+            // NOTE: Currently we don't clean up outcome assets.
+            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             T::AssetManager::slash(
                 Asset::Ztg,
                 &market_account,
@@ -170,25 +144,9 @@ mod pallet {
             // Weight correction
             // The DestroyOrigin should not pay fees for providing this service
             if market_status == MarketStatus::Reported {
-                Ok((
-                    Some(T::WeightInfo::admin_destroy_reported_market(
-                        total_accounts.saturated_into(),
-                        share_accounts.saturated_into(),
-                        outcome_assets_amount.saturated_into(),
-                    )),
-                    Pays::No,
-                )
-                    .into())
+                Ok((Some(T::WeightInfo::admin_destroy_reported_market()), Pays::No).into())
             } else if market_status == MarketStatus::Disputed {
-                Ok((
-                    Some(T::WeightInfo::admin_destroy_disputed_market(
-                        total_accounts.saturated_into(),
-                        share_accounts.saturated_into(),
-                        outcome_assets_amount.saturated_into(),
-                    )),
-                    Pays::No,
-                )
-                    .into())
+                Ok((Some(T::WeightInfo::admin_destroy_disputed_market()), Pays::No).into())
             } else {
                 Ok((None, Pays::No).into())
             }
@@ -235,11 +193,8 @@ mod pallet {
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
         #[pallet::weight((T::WeightInfo::admin_move_market_to_resolved_overhead()
-            .saturating_add(T::WeightInfo::internal_resolve_categorical_reported(
-                4_200,
-                4_200,
-                T::MaxCategories::get().into()
-            ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
+            .saturating_add(T::WeightInfo::internal_resolve_categorical_reported()
+            .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
         ), Pays::No))]
         #[transactional]
         pub fn admin_move_market_to_resolved(
@@ -1067,6 +1022,10 @@ mod pallet {
         #[pallet::constant]
         type AdvisoryBond: Get<BalanceOf<Self>>;
 
+        /// The percentage of the advisory bond that gets slashed when a market is rejected.
+        #[pallet::constant]
+        type AdvisoryBondSlashPercentage: Get<Percent>;
+
         /// The origin that is allowed to approve / reject pending advised markets.
         type ApproveOrigin: EnsureOrigin<Self::Origin>;
 
@@ -1311,6 +1270,7 @@ mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
         fn on_initialize(now: T::BlockNumber) -> Weight {
             let mut total_weight: Weight =
                 Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
@@ -1621,17 +1581,21 @@ mod pallet {
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
+            let advisory_bond_slash_amount =
+                T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
+            let advisory_bond_unreserve_amount =
+                T::AdvisoryBond::get().saturating_sub(advisory_bond_slash_amount);
             T::AssetManager::slash_reserved_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
-                T::AdvisoryBond::get(),
+                advisory_bond_slash_amount,
             );
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
                 creator,
-                T::OracleBond::get(),
+                T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
             );
             T::MarketCommons::remove_market(market_id)?;
             Self::deposit_event(Event::MarketRejected(*market_id));
@@ -1668,25 +1632,13 @@ mod pallet {
 
         fn calculate_internal_resolve_weight(
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            total_accounts: u32,
-            total_asset_accounts: u32,
-            total_categories: u32,
             total_disputes: u32,
         ) -> Weight {
             if let MarketType::Categorical(_) = market.market_type {
                 if let MarketStatus::Reported = market.status {
-                    T::WeightInfo::internal_resolve_categorical_reported(
-                        total_accounts,
-                        total_asset_accounts,
-                        total_categories,
-                    )
+                    T::WeightInfo::internal_resolve_categorical_reported()
                 } else {
-                    T::WeightInfo::internal_resolve_categorical_disputed(
-                        total_accounts,
-                        total_asset_accounts,
-                        total_categories,
-                        total_disputes,
-                    )
+                    T::WeightInfo::internal_resolve_categorical_disputed(total_disputes)
                 }
             } else if let MarketStatus::Reported = market.status {
                 T::WeightInfo::internal_resolve_scalar_reported()
@@ -1787,52 +1739,6 @@ mod pallet {
                 <Error<T>>::MarketStartTooLate
             );
             Ok(())
-        }
-
-        // If a market is categorical, destroys all non-winning assets.
-        fn manage_resolved_categorical_market(
-            market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            market_id: &MarketIdOf<T>,
-            outcome_report: &OutcomeReport,
-        ) -> Result<[usize; 3], DispatchError> {
-            let mut total_accounts: usize = 0;
-            let mut total_asset_accounts: usize = 0;
-            let mut total_categories: usize = 0;
-
-            if let MarketType::Categorical(_) = market.market_type {
-                if let OutcomeReport::Categorical(winning_asset_idx) = *outcome_report {
-                    let assets = Self::outcome_assets(*market_id, market);
-                    total_categories = assets.len().saturated_into();
-
-                    let mut assets_iter = assets.iter().cloned();
-                    let mut manage_asset = |asset: Asset<_>, winning_asset_idx| {
-                        if let Asset::CategoricalOutcome(_, idx) = asset {
-                            if idx == winning_asset_idx {
-                                return 0;
-                            }
-                            let (total_accounts, accounts) =
-                                T::AssetManager::accounts_by_currency_id(asset)
-                                    .unwrap_or((0usize, vec![]));
-                            total_asset_accounts =
-                                total_asset_accounts.saturating_add(accounts.len());
-
-                            let _ = T::AssetManager::destroy_all(asset, accounts.iter().cloned());
-                            total_accounts
-                        } else {
-                            0
-                        }
-                    };
-
-                    if let Some(first_asset) = assets_iter.next() {
-                        total_accounts = manage_asset(first_asset, winning_asset_idx);
-                    }
-                    for asset in assets_iter {
-                        let _ = manage_asset(asset, winning_asset_idx);
-                    }
-                }
-            }
-
-            Ok([total_accounts, total_asset_accounts, total_categories])
         }
 
         pub(crate) fn open_market(market_id: &MarketIdOf<T>) -> Result<Weight, DispatchError> {
@@ -2024,18 +1930,8 @@ mod pallet {
             total_weight = total_weight.saturating_add(clean_up_weight);
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
-            let mut total_accounts = 0u32;
-            let mut total_asset_accounts = 0u32;
-            let mut total_categories = 0u32;
-
-            if let Ok([local_total_accounts, local_total_asset_accounts, local_total_categories]) =
-                Self::manage_resolved_categorical_market(market, market_id, &resolved_outcome)
-            {
-                total_accounts = local_total_accounts.saturated_into();
-                total_asset_accounts = local_total_asset_accounts.saturated_into();
-                total_categories = local_total_categories.saturated_into();
-            }
-
+            // NOTE: Currently we don't clean up outcome assets.
+            // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
             T::MarketCommons::mutate_market(market_id, |m| {
                 m.status = MarketStatus::Resolved;
                 m.resolved_outcome = Some(resolved_outcome.clone());
@@ -2049,9 +1945,6 @@ mod pallet {
             ));
             Ok(total_weight.saturating_add(Self::calculate_internal_resolve_weight(
                 market,
-                total_accounts,
-                total_asset_accounts,
-                total_categories,
                 disputes.len().saturated_into(),
             )))
         }

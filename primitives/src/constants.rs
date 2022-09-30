@@ -73,7 +73,7 @@ pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 
 // Prediction Markets
 /// Max. categories in a prediction market.
-pub const MAX_CATEGORIES: u16 = 10;
+pub const MAX_CATEGORIES: u16 = 64;
 /// Pallet identifier, mainly used for named balance reserves.
 pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");
 
