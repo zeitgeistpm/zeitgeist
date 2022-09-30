@@ -237,10 +237,13 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
 fn create_reported_market_with_pool<T: Config>(
     categories: u32,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
+    let range_start: MomentOf<T> = 100_000u64.saturated_into();
+    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
     let (caller, market_id) = create_market_common::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories.saturated_into()),
         ScoringRule::CPMM,
+        Some(MarketPeriod::Timestamp(range_start..range_end)),
     )?;
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
