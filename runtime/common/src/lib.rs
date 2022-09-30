@@ -1711,6 +1711,27 @@ macro_rules! create_common_tests {
                     })
                 }
             }
+
+            mod deal_with_fees {
+                use crate::*;
+
+                #[test]
+                fn treasury_receives_correct_amount_of_fees_and_tips() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let fee = Balances::issue(3 * ExistentialDeposit::get());
+                        let tip = Balances::issue(7 * ExistentialDeposit::get());
+                        assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
+                        DealWithFees::on_unbalanceds(vec![fee, tip].into_iter());
+                        assert_eq!(
+                            Balances::free_balance(Treasury::account_id()),
+                            2 * ExistentialDeposit::get()
+                        );
+                    });
+                }
+            }
         }
+
     }
 }
