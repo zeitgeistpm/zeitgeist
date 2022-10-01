@@ -71,7 +71,7 @@ fn create_market_common<T: Config>(
     let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
     let (caller, oracle, metadata, creation) = create_market_common_parameters::<T>(permission)?;
-    let _ = Call::<T>::create_market {
+    Call::<T>::create_market {
         oracle,
         period,
         metadata,
@@ -95,9 +95,9 @@ fn create_close_and_report_market<T: Config>(
     let period = MarketPeriod::Timestamp(range_start..range_end);
     let (caller, market_id) =
         create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
-    let _ = Call::<T>::admin_move_market_to_closed { market_id }
+    Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
-    let _ = Call::<T>::report { market_id, outcome }
+    Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
 }
@@ -164,18 +164,17 @@ fn setup_redeem_shares_common<T: Config>(
         panic!("setup_redeem_shares_common: Unsupported market type: {:?}", market_type);
     }
 
-    let _ = Pallet::<T>::do_buy_complete_set(
+    Pallet::<T>::do_buy_complete_set(
         caller.clone(),
         market_id,
         MinLiquidity::get().saturated_into(),
     )?;
     let close_origin = T::CloseOrigin::successful_origin();
     let resolve_origin = T::ResolveOrigin::successful_origin();
-    let _ = Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(close_origin)?;
-    let _ = Call::<T>::report { market_id, outcome }
+    Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
+    Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    let _ = Call::<T>::admin_move_market_to_resolved { market_id }
+    Call::<T>::admin_move_market_to_resolved { market_id }
         .dispatch_bypass_filter(resolve_origin)?;
     Ok((caller, market_id))
 }
@@ -210,7 +209,7 @@ fn setup_reported_categorical_market_with_pool<T: Config>(
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
     let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
+    Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let weight_len: usize = MaxRuntimeUsize::from(categories).into();
     let weights = vec![MinWeight::get(); weight_len];
@@ -223,10 +222,10 @@ fn setup_reported_categorical_market_with_pool<T: Config>(
     )
     .unwrap();
 
-    let _ = Call::<T>::admin_move_market_to_closed { market_id }
+    Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
     let outcome = OutcomeReport::Categorical(1u16);
-    let _ = Call::<T>::report { market_id, outcome }
+    lCall::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
     Ok((caller, market_id))
@@ -243,7 +242,7 @@ fn setup_reported_scalar_market_with_pool<T: Config>()
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
     let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
+    Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let market = T::MarketCommons::market(&market_id)?;
     let outcome_assets = Pallet::<T>::outcome_assets(market_id, &market);
@@ -258,10 +257,10 @@ fn setup_reported_scalar_market_with_pool<T: Config>()
     )
     .unwrap();
 
-    let _ = Call::<T>::admin_move_market_to_closed { market_id }
+    Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
     let outcome = OutcomeReport::Scalar(u128::MAX);
-    let _ = Call::<T>::report { market_id, outcome }
+    Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
     Ok((caller, market_id))
@@ -543,7 +542,8 @@ benchmarks! {
         let d in 0..T::MaxDisputes::get();
 
         let categories = T::MaxCategories::get();
-        let (caller, market_id) = setup_reported_categorical_market_with_pool::<T>(categories.into())?;
+        let (caller, market_id) =
+            setup_reported_categorical_market_with_pool::<T>(categories.into())?;
         T::MarketCommons::mutate_market(&market_id, |market| {
             let admin = account("admin", 0, 0);
             market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
@@ -571,13 +571,8 @@ benchmarks! {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
         let (caller, market_id) = setup_reported_scalar_market_with_pool::<T>()?;
-        generate_accounts_with_assets::<T>(
-            total_accounts,
-            asset_accounts,
-            Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-        )?;
-    }: {
         let market = T::MarketCommons::market(&market_id)?;
+    }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
     } verify {
         let market = T::MarketCommons::market(&market_id)?;
@@ -595,11 +590,6 @@ benchmarks! {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
             Ok(())
         })?;
-        generate_accounts_with_assets::<T>(
-            total_accounts,
-            asset_accounts,
-            Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-        )?;
         let market = T::MarketCommons::market(&market_id);
         for i in 0..d {
             let origin = caller.clone();
@@ -609,8 +599,8 @@ benchmarks! {
                 OutcomeReport::Scalar(i.into())
             )?;
         }
-    }: {
         let market = T::MarketCommons::market(&market_id)?;
+    }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
     } verify {
         let market = T::MarketCommons::market(&market_id)?;
