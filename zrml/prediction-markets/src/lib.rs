@@ -2201,17 +2201,16 @@ mod pallet {
             >,
         {
             let market_ids_per_block = MarketIdsPerBlock::get(block_number);
-            let market_ids_per_block_len = market_ids_per_block.len() as u32;
             for market_id in market_ids_per_block.iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
             MarketIdsPerBlock::remove(block_number);
 
-            let mut market_ids_per_time_frame_len = 0u32;
+            let mut time_frame_ids_len = 0u32;
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
                 let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
-                market_ids_per_time_frame_len = market_ids_per_time_frame_len
+                time_frame_ids_len = time_frame_ids_len
                     .saturating_add(market_ids_per_time_frame.len() as u32);
                 for market_id in market_ids_per_time_frame.iter() {
                     let market = T::MarketCommons::market(market_id)?;
@@ -2221,8 +2220,8 @@ mod pallet {
             }
 
             Ok(T::WeightInfo::market_status_manager(
-                market_ids_per_block_len,
-                market_ids_per_time_frame_len,
+                market_ids_per_block.len() as u32,
+                time_frame_ids_len,
             ))
         }
 
@@ -2245,7 +2244,6 @@ mod pallet {
 
             // Resolve all regularly reported markets.
             let market_ids_per_report_block = MarketIdsPerReportBlock::<T>::get(block);
-            let market_ids_per_report_block_len = market_ids_per_report_block.len() as u32;
             for id in market_ids_per_report_block.iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
@@ -2256,7 +2254,6 @@ mod pallet {
 
             // Resolve any disputed markets.
             let market_ids_per_dispute_block = MarketIdsPerDisputeBlock::<T>::get(block);
-            let market_ids_per_dispute_block_len = market_ids_per_dispute_block.len() as u32;
             for id in market_ids_per_dispute_block.iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
@@ -2264,8 +2261,8 @@ mod pallet {
             MarketIdsPerDisputeBlock::<T>::remove(block);
 
             Ok(T::WeightInfo::market_resolution_manager(
-                market_ids_per_report_block_len,
-                market_ids_per_dispute_block_len,
+                market_ids_per_report_block.len() as u32,
+                market_ids_per_dispute_block.len() as u32,
             ))
         }
 
