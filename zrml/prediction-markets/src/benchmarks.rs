@@ -528,7 +528,8 @@ benchmarks! {
     internal_resolve_scalar_reported {
         let total_accounts = 10u32;
         let asset_accounts = 10u32;
-        setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (_, market_id) =
+            setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
     }: {
         let market = T::MarketCommons::market(&market_id)?;
         let disputes = crate::Disputes::<T>::get(market_id);
@@ -540,7 +541,8 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
+        let (caller, market_id) =
+            setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
 
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(market_id);
