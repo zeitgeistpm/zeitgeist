@@ -28,7 +28,7 @@ pub use additional_chain_spec::AdditionalChainSpec;
 pub use battery_station::battery_station_staging_config;
 #[cfg(feature = "with-battery-station-runtime")]
 pub use dev::dev_config;
-use jsonrpc_core::serde_json::{Map, Value};
+use sc_service::Properties;
 use sc_telemetry::TelemetryEndpoints;
 #[cfg(feature = "with-battery-station-runtime")]
 use sp_core::{Pair, Public};
@@ -190,7 +190,7 @@ fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
     AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account_truncating()
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
 #[cfg(feature = "with-battery-station-runtime")]
@@ -227,8 +227,8 @@ impl Extensions {
     }
 }
 
-fn token_properties(token_symbol: &str, ss58_prefix: u8) -> Map<String, Value> {
-    let mut properties = Map::new();
+fn token_properties(token_symbol: &str, ss58_prefix: u8) -> Properties {
+    let mut properties = Properties::new();
     properties.insert("ss58Format".into(), ss58_prefix.into());
     properties.insert("tokenSymbol".into(), token_symbol.into());
     properties.insert("tokenDecimals".into(), BalanceFractionalDecimals::get().into());
