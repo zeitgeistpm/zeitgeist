@@ -701,7 +701,7 @@ benchmarks! {
                 MarketType::Categorical(T::MaxCategories::get()),
                 ScoringRule::CPMM,
                 Some(MarketPeriod::Timestamp(range_start..range_end)),
-            )?;
+            ).unwrap();
         }
 
         let block_number: T::BlockNumber = Zero::zero();
