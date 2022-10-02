@@ -147,7 +147,7 @@ macro_rules! generate_generic_genesis_function {
                 #[cfg(feature = "parachain")]
                 parachain_info: $runtime::ParachainInfoConfig { parachain_id: acs.parachain_id },
                 #[cfg(feature = "parachain")]
-                pallet_parachain_staking: $runtime::ParachainStakingConfig {
+                parachain_staking: $runtime::ParachainStakingConfig {
                     candidates: acs
                         .candidates
                         .iter()
