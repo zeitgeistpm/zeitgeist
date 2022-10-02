@@ -17,6 +17,7 @@ sc-executor = { branch = "polkadot-v0.9.23", features = ["wasmtime"], git = "htt
 sc-keystore = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
 sc-rpc = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
 sc-rpc-api = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
+sc-sysinfo = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
 sc-service = { branch = "polkadot-v0.9.23", features = ["wasmtime"], git = "https://github.com/paritytech/substrate" }
 sc-telemetry = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
 sc-transaction-pool = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }

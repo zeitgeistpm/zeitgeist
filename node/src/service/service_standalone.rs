@@ -40,6 +40,7 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 /// Builds a new service for a full client.
 pub fn new_full<RuntimeApi, Executor>(
     mut config: Configuration,
+    disable_hardware_benchmarks: bool,
 ) -> Result<TaskManager, ServiceError>
 where
     RuntimeApi:
@@ -50,6 +51,15 @@ where
         >,
     Executor: NativeExecutionDispatch + 'static,
 {
+    let hwbench = if !disable_hardware_benchmarks {
+		config.database.path().map(|database_path| {
+			let _ = std::fs::create_dir_all(&database_path);
+			sc_sysinfo::gather_hwbench(Some(database_path))
+		})
+	} else {
+		None
+	};
+
     let sc_service::PartialComponents {
         client,
         backend,
@@ -112,7 +122,7 @@ where
     let enable_grandpa = !config.disable_grandpa;
     let prometheus_registry = config.prometheus_registry().cloned();
 
-    let rpc_extensions_builder = {
+    let rpc_builder = {
         let client = client.clone();
         let pool = transaction_pool.clone();
 
@@ -130,12 +140,25 @@ where
         keystore: keystore_container.sync_keystore(),
         task_manager: &mut task_manager,
         transaction_pool: transaction_pool.clone(),
-        rpc_builder: rpc_extensions_builder,
+        rpc_builder: rpc_builder,
         backend,
         system_rpc_tx,
         config,
         telemetry: telemetry.as_mut(),
     })?;
+
+    if let Some(hwbench) = hwbench {
+		sc_sysinfo::print_hwbench(&hwbench);
+
+		if let Some(ref mut telemetry) = telemetry {
+			let telemetry_handle = telemetry.handle();
+			task_manager.spawn_handle().spawn(
+				"telemetry_hwbench",
+				None,
+				sc_sysinfo::initialize_hwbench_telemetry(telemetry_handle, hwbench),
+			);
+		}
+	}
 
     if role.is_authority() {
         let proposer_factory = sc_basic_authorship::ProposerFactory::new(
