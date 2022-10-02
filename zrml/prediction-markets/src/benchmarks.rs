@@ -693,15 +693,27 @@ benchmarks! {
         let b in 1..31;
         let f in 1..31;
 
+        // ensure markets exist
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
-        // ensure markets exist
-        for _ in 0..64 {
+   
+        for _ in 0..31 {
             let _ = create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
                 ScoringRule::CPMM,
                 Some(MarketPeriod::Timestamp(range_start..range_end)),
+            ).unwrap();
+        }
+
+        let start_block: T::BlockNumber = 100_000u64.saturated_into();
+        let end_block: T::BlockNumber = 1_000_000u64.saturated_into();
+        for _ in 31..64 {
+            let _ = create_market_common::<T>(
+                MarketCreation::Permissionless,
+                MarketType::Categorical(T::MaxCategories::get()),
+                ScoringRule::CPMM,
+                Some(MarketPeriod::Block(start_block..end_block)),
             ).unwrap();
         }
 
