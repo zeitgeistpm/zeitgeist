@@ -44,3 +44,10 @@ members = [
     "zrml/styx",
 ]
 resolver = "2"
+
+[patch."https://github.com/purestake/crowdloan-rewards"]
+# This patch does ensure that crowdloan-rewards only uses partiytech dependencies.
+# If it is not used, the Zeitgeist runtimes will contain duplicate crates from
+# different repositories which results in bigger WASM-blobs, binary and the inability
+# to compile with the "runtime-benchmarks" feature.
+pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "use-cumulus-from-parity" }

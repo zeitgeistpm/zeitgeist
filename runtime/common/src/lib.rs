@@ -1170,6 +1170,7 @@ macro_rules! create_runtime_api {
                 }
             }
 
+            #[cfg(feature = "parachain")]
             impl session_keys_primitives::VrfApi<Block> for Runtime {
                 fn get_last_vrf_output() -> Option<<Block as BlockT>::Hash> {
                     None

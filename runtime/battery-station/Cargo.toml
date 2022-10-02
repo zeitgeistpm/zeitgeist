@@ -174,6 +174,7 @@ runtime-benchmarks = [
     "pallet-vesting/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
     "pallet-parachain-staking/runtime-benchmarks",
+    "nimbus-primitives/runtime-benchmarks",
     "sp-runtime/runtime-benchmarks",
     "xcm-builder/runtime-benchmarks",
     "zrml-authorized/runtime-benchmarks",
