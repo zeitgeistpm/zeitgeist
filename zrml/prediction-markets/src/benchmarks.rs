@@ -690,7 +690,6 @@ benchmarks! {
     market_status_manager {
         let b in 1..31;
         let f in 1..31;
-        // let t in 0..10;
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
@@ -717,14 +716,12 @@ benchmarks! {
         //* assume at first that the last time frame is one block before the current time frame
         let t = 0;
         let current_time_frame: TimeFrame = last_offset + t.saturated_into::<u64>();
-        // for current_time_frame in last_offset..=(last_offset + t.saturated_into::<u64>()) {
         for i in 1..=f {
             <MarketIdsPerOpenTimeFrame<T>>::try_mutate(current_time_frame, |ids| {
                 // + 31 to not conflict with the markets of MarketIdsPerOpenBlock
                 ids.try_push((i + 31).into())
             }).unwrap();
         }
-        // }
     }: {
         Pallet::<T>::market_status_manager::<
             _,
