@@ -1595,33 +1595,31 @@ mod pallet {
         /// Clears this market from being stored for automatic resolution.
         fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
-            let mut disputes_len = 0u32;
-            let ids_len = match market.status {
+            let (ids_len, disputes_len) = match market.status {
                 MarketStatus::Reported => {
                     let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                    MarketIdsPerReportBlock::<T>::mutate(report.at, |ids| -> u32 {
+                    MarketIdsPerReportBlock::<T>::mutate(report.at, |ids| -> (u32, u32) {
                         let ids_len = ids.len() as u32;
                         remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                        ids_len
+                        (ids_len, 0u32)
                     })
                 }
                 MarketStatus::Disputed => {
                     let disputes = Disputes::<T>::get(market_id);
-                    disputes_len = disputes.len() as u32;
                     if let Some(last_dispute) = disputes.last() {
                         let at = last_dispute.at;
                         let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(at);
                         remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
-                        MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| -> u32 {
+                        MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| -> (u32, u32) {
                             let ids_len = ids.len() as u32;
                             remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                            ids_len
+                            (ids_len, disputes.len() as u32)
                         })
                     } else {
-                        0u32
+                        (0u32, disputes.len() as u32)
                     }
                 }
-                _ => 0u32,
+                _ => (0u32, 0u32),
             };
 
             Ok((ids_len, disputes_len))
