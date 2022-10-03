@@ -246,7 +246,8 @@ mod pallet {
             .saturating_add(
                 T::WeightInfo::internal_resolve_scalar_reported()
                     .max(T::WeightInfo::internal_resolve_categorical_reported())
-            ), Pays::No
+            ),
+            Pays::No,
         ))]
         #[transactional]
         pub fn admin_move_market_to_resolved(
