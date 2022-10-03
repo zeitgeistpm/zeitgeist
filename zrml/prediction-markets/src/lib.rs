@@ -2373,7 +2373,7 @@ mod pallet {
     }
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
+    pub(crate) fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {

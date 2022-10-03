@@ -291,8 +291,7 @@ benchmarks! {
         for i in 1..=(a - 1).min(d) {
             let outcome = OutcomeReport::Categorical(i.saturated_into());
             let disputor = account("disputor", i, 0);
-            let dispute_bond = T::DisputeBond::get() +
-                (T::DisputeFactor::get() * i.saturated_into::<u32>().into());
+            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
             let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond)?;
             let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
@@ -472,8 +471,7 @@ benchmarks! {
         for i in 1..=d {
             let outcome = OutcomeReport::Scalar(i.saturated_into());
             let disputor = account("disputor", i, 0);
-            let dispute_bond = T::DisputeBond::get() +
-                (T::DisputeFactor::get() * i.saturated_into::<u32>().into());
+            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
             let _ = T::AssetManager::deposit(
                 Asset::Ztg,
                 &disputor,
