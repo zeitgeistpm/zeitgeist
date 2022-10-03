@@ -55,7 +55,7 @@ fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
 ) -> Result<(T::AccountId, T::AccountId, MultiHash, MarketCreation), &'static str> {
     let caller: T::AccountId = whitelisted_caller();
-    T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into()).unwrap();
+    let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into())?;
     let oracle = caller.clone();
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
@@ -119,10 +119,10 @@ fn generate_accounts_with_assets<T: Config>(
     for i in 0..acc_total {
         let acc = account("AssetHolder", i, 0);
         if mut_acc_asset > 0 {
-            T::AssetManager::deposit(asset, &acc, min_liquidity).unwrap();
+            let _ = T::AssetManager::deposit(asset, &acc, min_liquidity)?;
             mut_acc_asset -= 1;
         } else {
-            T::AssetManager::deposit(fake_asset, &acc, min_liquidity).unwrap();
+            let _ = T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
         }
     }
 
@@ -156,12 +156,11 @@ fn setup_resolve_common_categorical_after_dispute<T: Config>(
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) =
         setup_resolve_common_categorical::<T>(acc_total, acc_asset, categories)?;
-    Pallet::<T>::dispute(
+    let _ = Pallet::<T>::dispute(
         RawOrigin::Signed(caller.clone()).into(),
         market_id,
         OutcomeReport::Categorical(0),
-    )
-    .unwrap();
+    )?;
     Ok((caller, market_id))
 }
 
@@ -225,12 +224,11 @@ fn setup_resolve_common_scalar_after_dispute<T: Config>(
     acc_asset: u32,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = setup_resolve_common_scalar::<T>(acc_total, acc_asset)?;
-    Pallet::<T>::dispute(
+    let _ = Pallet::<T>::dispute(
         RawOrigin::Signed(caller.clone()).into(),
         market_id,
         OutcomeReport::Scalar(1u128),
-    )
-    .unwrap();
+    )?;
     Ok((caller, market_id))
 }
 
@@ -248,22 +246,20 @@ fn create_reported_market_with_pool<T: Config>(
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
     let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    Pallet::<T>::buy_complete_set(
+    let _ = Pallet::<T>::buy_complete_set(
         RawOrigin::Signed(caller.clone()).into(),
         market_id,
         min_liquidity,
-    )
-    .unwrap();
+    )?;
     let weight_len: usize = MaxRuntimeUsize::from(categories).into();
     let weights = vec![MinWeight::get(); weight_len];
-    Pallet::<T>::deploy_swap_pool_for_market(
+    let _ = Pallet::<T>::deploy_swap_pool_for_market(
         RawOrigin::Signed(caller.clone()).into(),
         market_id,
         max_swap_fee,
         min_liquidity,
         weights,
-    )
-    .unwrap();
+    )?;
 
     let _ = Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
@@ -284,7 +280,7 @@ benchmarks! {
 
         let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
 
-        let pool_id = T::MarketCommons::market_pool(&market_id).unwrap();
+        let pool_id = T::MarketCommons::market_pool(&market_id)?;
 
         // minimum of number of disputes and (categories - 1) because of `matches_outcome_report`
         for i in 1..=(a - 1).min(d) {
@@ -292,11 +288,11 @@ benchmarks! {
             let disputor = account("disputor", i, 0);
             let dispute_bond = T::DisputeBond::get() +
                 (T::DisputeFactor::get() * i.saturated_into::<u32>().into());
-            T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond).unwrap();
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
+            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond)?;
+            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
-        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+        let market = T::MarketCommons::market(&market_id.saturated_into())?;
 
         let (range_start, range_end) = match market.period {
             MarketPeriod::Timestamp(range) => (range.start, range.end),
@@ -346,9 +342,9 @@ benchmarks! {
 
         let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
 
-        let pool_id = T::MarketCommons::market_pool(&market_id).unwrap();
+        let pool_id = T::MarketCommons::market_pool(&market_id)?;
 
-        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+        let market = T::MarketCommons::market(&market_id.saturated_into())?;
 
         let (range_start, range_end) = match market.period {
             MarketPeriod::Timestamp(range) => (range.start, range.end),
@@ -430,9 +426,9 @@ benchmarks! {
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
             OutcomeReport::Scalar(u128::MAX),
-        ).unwrap();
+        )?;
 
-        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+        let market = T::MarketCommons::market(&market_id.saturated_into())?;
 
         let report_at = market.report.unwrap().at;
         for i in 0..r {
@@ -462,20 +458,19 @@ benchmarks! {
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
             OutcomeReport::Scalar(u128::MAX),
-        ).unwrap();
+        )?;
 
         for i in 1..=d {
             let outcome = OutcomeReport::Scalar(i.saturated_into());
             let disputor = account("disputor", i, 0);
             let dispute_bond = T::DisputeBond::get() +
                 (T::DisputeFactor::get() * i.saturated_into::<u32>().into());
-            T::AssetManager::deposit(
+            let _ = T::AssetManager::deposit(
                 Asset::Ztg,
                 &disputor,
                 dispute_bond,
-            )
-            .unwrap();
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
+            )?;
+            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
 
@@ -579,8 +574,7 @@ benchmarks! {
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
             min_liquidity,
-        )
-        .unwrap();
+        )?;
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
@@ -615,7 +609,7 @@ benchmarks! {
             Some(MarketPeriod::Timestamp(range_start..range_end)),
         )?;
 
-        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+        let market = T::MarketCommons::market(&market_id.saturated_into())?;
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
@@ -623,8 +617,7 @@ benchmarks! {
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
             min_liquidity,
-        )
-        .unwrap();
+        )?;
 
         let weight_len: usize = MaxRuntimeUsize::from(a).into();
         let weights = vec![MinWeight::get(); weight_len];
@@ -638,8 +631,8 @@ benchmarks! {
     }: {
         call.dispatch_bypass_filter(RawOrigin::Signed(caller).into())?;
     } verify {
-        let market_pool_id = T::MarketCommons::market_pool(&market_id.saturated_into()).unwrap();
-        let pool = T::Swaps::pool(market_pool_id).unwrap();
+        let market_pool_id = T::MarketCommons::market_pool(&market_id.saturated_into())?;
+        let pool = T::Swaps::pool(market_pool_id)?;
         assert_eq!(pool.pool_status, PoolStatus::Active);
     }
 
@@ -663,8 +656,8 @@ benchmarks! {
         for i in 0..d {
             let outcome = OutcomeReport::Scalar(i.into());
             let disputor = account("disputor", i, 0);
-            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into()).unwrap();
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome).unwrap();
+            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
+            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
         let now = frame_system::Pallet::<T>::block_number();
@@ -688,7 +681,7 @@ benchmarks! {
             ScoringRule::CPMM,
             Some(MarketPeriod::Timestamp(T::MinSubsidyPeriod::get()..T::MaxSubsidyPeriod::get())),
         )?;
-        let market = T::MarketCommons::market(&market_id.saturated_into()).unwrap();
+        let market = T::MarketCommons::market(&market_id.saturated_into())?;
     }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
 
     internal_resolve_categorical_reported {
@@ -713,7 +706,7 @@ benchmarks! {
         for i in 0..categories.min(d) {
             let origin = caller.clone();
             let disputes = crate::Disputes::<T>::get(market_id);
-            let market = T::MarketCommons::market(&Default::default()).unwrap();
+            let market = T::MarketCommons::market(&Default::default())?;
             T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
@@ -744,7 +737,7 @@ benchmarks! {
         for i in 0..d {
             let disputes = crate::Disputes::<T>::get(market_id);
             let origin = caller.clone();
-            let market = T::MarketCommons::market(&Default::default()).unwrap();
+            let market = T::MarketCommons::market(&Default::default())?;
             T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
         }
     }: {
@@ -771,10 +764,10 @@ benchmarks! {
         let markets = BoundedVec::try_from(vec![market_info; a as usize]).unwrap();
         <MarketsCollectingSubsidy<T>>::put(markets);
     }: {
-        Pallet::<T>::process_subsidy_collecting_markets(
+        let _ = Pallet::<T>::process_subsidy_collecting_markets(
             T::BlockNumber::zero(),
             MomentOf::<T>::zero()
-        )
+        );
     }
 
     redeem_shares_categorical {
@@ -841,7 +834,7 @@ benchmarks! {
 
         let outcome = OutcomeReport::Categorical(0);
         let close_origin = T::CloseOrigin::successful_origin();
-        let _ = Pallet::<T>::admin_move_market_to_closed(close_origin, market_id).unwrap();
+        let _ = Pallet::<T>::admin_move_market_to_closed(close_origin, market_id)?;
         let current_block = frame_system::Pallet::<T>::block_number();
         for i in 0..m {
             MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
@@ -863,8 +856,7 @@ benchmarks! {
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
             amount,
-        )
-        .unwrap();
+        )?;
     }: _(RawOrigin::Signed(caller), market_id, amount)
 
     start_subsidy {
