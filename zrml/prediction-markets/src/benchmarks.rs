@@ -55,11 +55,7 @@ fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
 ) -> Result<(T::AccountId, T::AccountId, MultiHash, MarketCreation), &'static str> {
     let caller: T::AccountId = whitelisted_caller();
-        T::AssetManager::deposit(
-            Asset::Ztg,
-            &caller,
-            (100 * MinLiquidity::get()).saturated_into(),
-        )
+    T::AssetManager::deposit(Asset::Ztg, &caller, (100 * MinLiquidity::get()).saturated_into())
         .unwrap();
     let oracle = caller.clone();
     let mut metadata = [0u8; 50];
@@ -694,26 +690,25 @@ benchmarks! {
         let f in 1..31;
 
         // ensure markets exist
-        let range_start: MomentOf<T> = 100_000u64.saturated_into();
-        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
-   
-        for _ in 0..31 {
-            let _ = create_market_common::<T>(
-                MarketCreation::Permissionless,
-                MarketType::Categorical(T::MaxCategories::get()),
-                ScoringRule::CPMM,
-                Some(MarketPeriod::Timestamp(range_start..range_end)),
-            ).unwrap();
-        }
-
         let start_block: T::BlockNumber = 100_000u64.saturated_into();
         let end_block: T::BlockNumber = 1_000_000u64.saturated_into();
-        for _ in 31..64 {
-            let _ = create_market_common::<T>(
+        for _ in 0..31 {
+            create_market_common::<T>(
                 MarketCreation::Permissionless,
                 MarketType::Categorical(T::MaxCategories::get()),
                 ScoringRule::CPMM,
                 Some(MarketPeriod::Block(start_block..end_block)),
+            ).unwrap();
+        }
+
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        for _ in 31..64 {
+            create_market_common::<T>(
+                MarketCreation::Permissionless,
+                MarketType::Categorical(T::MaxCategories::get()),
+                ScoringRule::CPMM,
+                Some(MarketPeriod::Timestamp(range_start..range_end)),
             ).unwrap();
         }
 

@@ -2210,8 +2210,8 @@ mod pallet {
             let mut time_frame_ids_len = 0u32;
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
                 let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
-                time_frame_ids_len = time_frame_ids_len
-                    .saturating_add(market_ids_per_time_frame.len() as u32);
+                time_frame_ids_len =
+                    time_frame_ids_len.saturating_add(market_ids_per_time_frame.len() as u32);
                 for market_id in market_ids_per_time_frame.iter() {
                     let market = T::MarketCommons::market(market_id)?;
                     mutation(market_id, market)?;
