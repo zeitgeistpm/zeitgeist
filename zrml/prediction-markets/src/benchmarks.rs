@@ -248,8 +248,12 @@ fn create_reported_market_with_pool<T: Config>(
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
     let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    let _ = Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+    Pallet::<T>::buy_complete_set(
+        RawOrigin::Signed(caller.clone()).into(),
+        market_id,
+        min_liquidity,
+    )
+    .unwrap();
     let weight_len: usize = MaxRuntimeUsize::from(categories).into();
     let weights = vec![MinWeight::get(); weight_len];
     Pallet::<T>::deploy_swap_pool_for_market(
