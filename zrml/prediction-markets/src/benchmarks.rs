@@ -369,9 +369,17 @@ benchmarks! {
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
-    }: _(RawOrigin::Signed(caller), oracle, period, deadlines, metadata, creation,
+    }: _(
+            RawOrigin::Signed(caller),
+            oracle,
+            period,
+            deadlines,
+            metadata,
+            creation,
             MarketType::Categorical(T::MaxCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        )
 
     deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -681,7 +689,7 @@ benchmarks! {
                         ));
             },
         };
-        let grace_period : u32 =
+        let grace_period: u32 =
             (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
         pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
         let current_block = frame_system::Pallet::<T>::block_number();
