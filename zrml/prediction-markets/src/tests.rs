@@ -1647,10 +1647,11 @@ fn it_allows_only_oracle_to_report_the_outcome_of_a_market_during_oracle_duratio
         // set the timestamp
         let market = MarketCommons::market(&0).unwrap();
         // set the timestamp
+
         set_timestamp_for_on_initialize(100_000_000);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2.
         let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
-        set_timestamp_for_on_initialize(100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64);
+        Timestamp::set_timestamp(100_000_000 + grace_period);
 
         assert_noop!(
             PredictionMarkets::report(Origin::signed(EVE), 0, OutcomeReport::Categorical(1)),
@@ -2294,9 +2295,7 @@ fn the_entire_market_lifecycle_works_with_timestamps() {
         set_timestamp_for_on_initialize(100_000_000);
         run_to_block(2); // Trigger `on_initialize`; must be at least block #2.
         let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
-        set_timestamp_for_on_initialize(
-            100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64 + MILLISECS_PER_BLOCK as u64,
-        );
+        Timestamp::set_timestamp(100_000_000 + grace_period);
 
         assert_noop!(
             PredictionMarkets::buy_complete_set(Origin::signed(BOB), 0, CENT),
@@ -2341,9 +2340,7 @@ fn full_scalar_market_lifecycle() {
         let report_at = 2;
         run_to_block(report_at); // Trigger `on_initialize`; must be at least block #2.
         let grace_period: u64 = market.deadlines.grace_period * MILLISECS_PER_BLOCK as u64;
-        set_timestamp_for_on_initialize(
-            100_000_000 + grace_period + MILLISECS_PER_BLOCK as u64 + MILLISECS_PER_BLOCK as u64,
-        );
+        Timestamp::set_timestamp(100_000_000 + grace_period);
 
         // report
         assert_ok!(PredictionMarkets::report(Origin::signed(BOB), 0, OutcomeReport::Scalar(100)));
