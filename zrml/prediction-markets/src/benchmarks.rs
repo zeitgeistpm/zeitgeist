@@ -272,10 +272,15 @@ fn create_reported_market_with_pool<T: Config>(
 
 benchmarks! {
     admin_destroy_disputed_market{
+        // The number of assets.
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
+        // The number of disputes.
         let d in 1..T::MaxDisputes::get();
+        // The number of market ids per open time frame.
         let o in 0..63;
+        // The number of market ids per close time frame.
         let c in 0..63;
+        // The number of market ids per dispute block.
         let r in 0..63;
 
         let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
@@ -335,9 +340,13 @@ benchmarks! {
     }
 
     admin_destroy_reported_market {
+        // The number of assets.
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
+        // The number of market ids per open time frame.
         let o in 0..63;
+        // The number of market ids per close time frame.
         let c in 0..63;
+        // The number of market ids per dispute block.
         let r in 0..63;
 
         let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
