@@ -95,7 +95,8 @@ mod pallet {
                 CacheSize::get(),
                 CacheSize::get(),
             )),
-        Pays::No))]
+            Pays::No,
+        ))]
         #[transactional]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
