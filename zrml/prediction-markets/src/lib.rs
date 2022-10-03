@@ -86,7 +86,8 @@ mod pallet {
                 T::MaxCategories::get().into(),
                 CacheSize::get(),
                 CacheSize::get(),
-                CacheSize::get())
+                CacheSize::get(),
+            )
             .max(T::WeightInfo::admin_destroy_disputed_market(
                 T::MaxCategories::get().into(),
                 T::MaxDisputes::get(),
