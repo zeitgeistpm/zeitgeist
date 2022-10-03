@@ -333,9 +333,7 @@ benchmarks! {
     }: {
         call.dispatch_bypass_filter(destroy_origin)?
     } verify {
-        assert_last_event::<T>(Event::MarketDestroyed::<T>(
-            market_id,
-        ).into());
+        assert_last_event::<T>(Event::MarketDestroyed::<T>(market_id).into());
     }
 
     admin_destroy_reported_market {
