@@ -57,6 +57,7 @@ pub async fn new_full<RuntimeApi, Executor>(
     parachain_config: Configuration,
     parachain_id: ParaId,
     polkadot_config: Configuration,
+    hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -89,7 +90,7 @@ where
             );
             proposer_factory.set_soft_deadline(SOFT_DEADLINE_PERCENT);
 
-            let provider = move |_, (relay_parent, validation_data, author_id)| {
+            let provider = move |_, (relay_parent, validation_data, _author_id)| {
                 let relay_chain_interface = relay_chain_interface.clone();
                 async move {
                     let parachain_inherent =
@@ -109,11 +110,24 @@ where
                         )
                     })?;
 
-                    let author = nimbus_primitives::InherentDataProvider::<NimbusId>(author_id);
+					let author = nimbus_primitives::InherentDataProvider;
+					let randomness = session_keys_primitives::InherentDataProvider;
 
-                    Ok((time, parachain_inherent, author))
+					Ok((time, parachain_inherent, author, randomness))
                 }
             };
+
+			let client_clone = client.clone();
+			let keystore_clone = keystore.clone();
+			let maybe_provide_vrf_digest = move |nimbus_id: NimbusId, parent: Hash|
+				-> Option<sp_runtime::generic::DigestItem> {
+				moonbeam_vrf::vrf_pre_digest::<Block, FullClient<RuntimeApi, Executor>>(
+					&client_clone,
+					&keystore_clone,
+					nimbus_id,
+					parent,
+				)
+			};
 
             Ok(NimbusConsensus::build(BuildNimbusConsensusParams {
                 para_id: parachain_id,
@@ -123,8 +137,10 @@ where
                 keystore,
                 skip_prediction: force_authoring,
                 create_inherent_data_providers: provider,
+                //additional_digests_provider: maybe_provide_vrf_digest,
             }))
         },
+        hwbench,
     )
     .await
 }
@@ -221,6 +237,7 @@ async fn do_new_full<RuntimeApi, Executor, BIC>(
     polkadot_config: Configuration,
     id: polkadot_primitives::v2::Id,
     build_consensus: BIC,
+    hwbench: Option<sc_sysinfo::HwBench>,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
     RuntimeApi:
@@ -260,6 +277,7 @@ where
         &parachain_config,
         telemetry_worker_handle,
         &mut task_manager,
+        hwbench.clone(),
     )
     .map_err(|e| match e {
         RelayChainError::ServiceError(polkadot_service::Error::Sub(x)) => x,
@@ -286,7 +304,7 @@ where
             warp_sync: None,
         })?;
 
-    let rpc_extensions_builder = {
+    let rpc_builder = {
         let client = client.clone();
         let pool = transaction_pool.clone();
 
@@ -294,7 +312,7 @@ where
             let deps =
                 crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
 
-            Ok(crate::rpc::create_full(deps))
+            crate::rpc::create_full(deps).map_err(Into::into)
         })
     };
 
@@ -304,12 +322,25 @@ where
         config: parachain_config,
         keystore: params.keystore_container.sync_keystore(),
         network: network.clone(),
-        rpc_extensions_builder,
+        rpc_builder,
         system_rpc_tx,
         task_manager: &mut task_manager,
         telemetry: telemetry.as_mut(),
         transaction_pool: transaction_pool.clone(),
     })?;
+
+    if let Some(hwbench) = hwbench {
+		sc_sysinfo::print_hwbench(&hwbench);
+
+		if let Some(ref mut telemetry) = telemetry {
+			let telemetry_handle = telemetry.handle();
+			task_manager.spawn_handle().spawn(
+				"telemetry_hwbench",
+				None,
+				sc_sysinfo::initialize_hwbench_telemetry(telemetry_handle, hwbench),
+			);
+		}
+	}
 
     let announce_block = {
         let network = network.clone();

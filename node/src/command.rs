@@ -33,7 +33,7 @@ use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as Zeitgei
 #[cfg(feature = "parachain")]
 use {
     sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
-    sp_runtime::traits::Block as BlockT, std::io::Write,
+    sp_runtime::traits::{AccountIdConversion, Block as BlockT}, std::io::Write,
 };
 
 pub fn run() -> sc_cli::Result<()> {
@@ -431,9 +431,9 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             cli.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
         );
 
-        let parachain_account = polkadot_parachain::primitives::AccountIdConversion::<
+        let parachain_account = AccountIdConversion::<
             polkadot_primitives::v2::AccountId,
-        >::into_account(&parachain_id);
+        >::into_account_truncating(&parachain_id);
 
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
@@ -450,12 +450,22 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
         log::info!("Parachain Account: {}", parachain_account);
         log::info!("Parachain genesis state: {}", genesis_state);
 
+        let hwbench = if !cli.no_hardware_benchmarks {
+            parachain_config.database.path().map(|database_path| {
+                let _ = std::fs::create_dir_all(&database_path);
+                sc_sysinfo::gather_hwbench(Some(database_path))
+            })
+        } else {
+            None
+        };
+
         match &parachain_config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
             spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
                 parachain_config,
                 parachain_id,
                 polkadot_config,
+                hwbench
             )
             .await
             .map(|r| r.0)
@@ -465,6 +475,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 parachain_config,
                 parachain_id,
                 polkadot_config,
+                hwbench
             )
             .await
             .map(|r| r.0)
