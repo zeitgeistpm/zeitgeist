@@ -1279,9 +1279,6 @@ mod pallet {
             total_weight = total_weight
                 .saturating_add(T::WeightInfo::process_subsidy_collecting_markets_dummy());
 
-            //* ON_INITIALIZE_TOP_OVERHEAD benchmark START
-            //* Whenever you change something inside here, you need to update the benchmark!
-
             // If we are at genesis or the first block the timestamp is be undefined. No
             // market needs to be opened or closed on blocks #0 or #1, so we skip the
             // evaluation. Without this check, new chains starting from genesis will hang up,
@@ -1301,9 +1298,6 @@ mod pallet {
             // check all time frames since epoch.
             let last_time_frame =
                 LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
-
-            // this weight includes with_transaction overhead
-            total_weight = total_weight.saturating_add(T::WeightInfo::on_initialize_top_overhead());
 
             let _ = with_transaction(|| {
                 let open = Self::market_status_manager::<
@@ -1385,9 +1379,7 @@ mod pallet {
                 }
             });
 
-            //* ON_INITIALIZE_TOP_OVERHEAD benchmark END
-
-            total_weight
+            total_weight.saturating_add(T::WeightInfo::on_initialize_resolve_overhead())
         }
     }
 

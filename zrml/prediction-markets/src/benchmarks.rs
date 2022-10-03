@@ -29,9 +29,6 @@ use alloc::vec::Vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
-    log,
-    pallet_prelude::DispatchResult,
-    storage::{with_transaction, TransactionOutcome},
     traits::{EnsureOrigin, Get, Hooks},
     BoundedVec,
 };
@@ -554,8 +551,8 @@ benchmarks! {
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + T::DisputePeriod::get();
-    }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
+        let now = T::DisputePeriod::get() + 1u64.saturated_into::<T::BlockNumber>();
+    }: { Pallet::<T>::on_initialize(now) }
 
     // Benchmark iteration and market validity check without ending subsidy / discarding market.
     process_subsidy_collecting_markets_raw {
@@ -798,35 +795,6 @@ benchmarks! {
                 Ok(())
             },
         ).unwrap();
-    }
-
-    on_initialize_top_overhead {
-        let now = 2u32;
-    }: {
-        if now <= 1u32 {}
-        let current_time_frame = Pallet::<T>::calculate_time_frame_of_moment(
-            T::MarketCommons::now()
-        ).saturating_add(1);
-        let last_time_frame =
-                LastTimeFrame::<T>::get().unwrap_or_else(|| current_time_frame.saturating_sub(1));
-
-        let _ = with_transaction(|| {
-            let open: DispatchResult = Ok(());
-            if open.is_ok() {}
-            let close: DispatchResult = Ok(());
-            if close.is_ok() {}
-            // get the worst case with error
-            let resolve: DispatchResult = Err(Error::<T>::InvalidMarketStatus.into());
-            if resolve.is_ok() {}
-            match open.and(close).and(resolve) {
-                Err(err) => {
-                    Pallet::<T>::deposit_event(Event::BadOnInitialize);
-                    log::error!("Block {:?} was not initialized. Error: {:?}", now, err);
-                    TransactionOutcome::Rollback(err.into())
-                }
-                Ok(_) => TransactionOutcome::Commit(Ok(())),
-            }
-        });
     }
 
     process_subsidy_collecting_markets_dummy {
