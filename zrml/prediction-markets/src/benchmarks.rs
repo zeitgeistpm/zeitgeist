@@ -230,40 +230,6 @@ fn setup_reported_categorical_market_with_pool<T: Config>(
     Ok((caller, market_id))
 }
 
-fn setup_reported_scalar_market_with_pool<T: Config>()
--> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) = create_market_common::<T>(
-        MarketCreation::Permissionless,
-        MarketType::Scalar(0u128..=u128::MAX),
-        ScoringRule::CPMM,
-        None,
-    )?;
-
-    let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
-    let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    let market = T::MarketCommons::market(&market_id)?;
-    let outcome_assets = Pallet::<T>::outcome_assets(market_id, &market);
-    let weight_len: usize = MaxRuntimeUsize::from(outcome_assets.len()).into();
-    let weights = vec![MinWeight::get(); weight_len];
-    Pallet::<T>::deploy_swap_pool_for_market(
-        RawOrigin::Signed(caller.clone()).into(),
-        market_id,
-        max_swap_fee,
-        min_liquidity,
-        weights,
-    )?;
-
-    Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
-    let outcome = OutcomeReport::Scalar(u128::MAX);
-    Call::<T>::report { market_id, outcome }
-        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-
-    Ok((caller, market_id))
-}
-
 benchmarks! {
     admin_destroy_disputed_market{
         let categories = T::MaxCategories::get();
@@ -490,7 +456,7 @@ benchmarks! {
         if let MarketType::Scalar(range) = market.market_type {
             assert!((d as u128) < *range.end());
         } else {
-            panic!("setup_reported_scalar_market_with_pool must create scalar market");
+            panic!("Must create scalar market");
         }
         for i in 0..d {
             let outcome = OutcomeReport::Scalar(i.into());
@@ -570,9 +536,11 @@ benchmarks! {
     }
 
     internal_resolve_scalar_reported {
-        let total_accounts = 10u32;
-        let asset_accounts = 10u32;
-        let (caller, market_id) = setup_reported_scalar_market_with_pool::<T>()?;
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        )?;
         let market = T::MarketCommons::market(&market_id)?;
     }: {
         Pallet::<T>::on_resolution(&market_id, &market)?;
@@ -586,7 +554,11 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        let (caller, market_id) = setup_reported_scalar_market_with_pool::<T>()?;
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        )?;
         T::MarketCommons::mutate_market(&market_id, |market| {
             let admin = account("admin", 0, 0);
             market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
@@ -596,7 +568,7 @@ benchmarks! {
         if let MarketType::Scalar(range) = market.market_type {
             assert!((d as u128) < *range.end());
         } else {
-            panic!("setup_reported_scalar_market_with_pool must create scalar market");
+            panic!("Must create scalar market");
         }
         for i in 0..d {
             let origin = caller.clone();
