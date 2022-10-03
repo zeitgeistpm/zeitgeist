@@ -55,7 +55,7 @@ fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
 ) -> Result<(T::AccountId, T::AccountId, MultiHash, MarketCreation), &'static str> {
     let caller: T::AccountId = whitelisted_caller();
-    let _ = T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into())?;
+    T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into())?;
     let oracle = caller.clone();
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
@@ -119,10 +119,10 @@ fn generate_accounts_with_assets<T: Config>(
     for i in 0..acc_total {
         let acc = account("AssetHolder", i, 0);
         if mut_acc_asset > 0 {
-            let _ = T::AssetManager::deposit(asset, &acc, min_liquidity)?;
+            T::AssetManager::deposit(asset, &acc, min_liquidity)?;
             mut_acc_asset -= 1;
         } else {
-            let _ = T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
+            T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
         }
     }
 
@@ -292,7 +292,7 @@ benchmarks! {
             let outcome = OutcomeReport::Categorical(i.saturated_into());
             let disputor = account("disputor", i, 0);
             let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond)?;
+            T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond)?;
             let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
@@ -470,7 +470,7 @@ benchmarks! {
             let outcome = OutcomeReport::Scalar(i.saturated_into());
             let disputor = account("disputor", i, 0);
             let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            let _ = T::AssetManager::deposit(
+            T::AssetManager::deposit(
                 Asset::Ztg,
                 &disputor,
                 dispute_bond,
@@ -661,7 +661,7 @@ benchmarks! {
         for i in 0..d {
             let outcome = OutcomeReport::Scalar(i.into());
             let disputor = account("disputor", i, 0);
-            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
+            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
             let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
