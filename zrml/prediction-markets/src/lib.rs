@@ -142,7 +142,9 @@ mod pallet {
             );
             let mut category_count = 0u32;
             if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
-                (_, category_count) = T::Swaps::destroy_pool(pool_id)?;
+                let pool = T::Swaps::pool(pool_id)?;
+                category_count = pool.assets.len().saturated_into();
+                let _ = T::Swaps::destroy_pool(pool_id)?;
                 T::MarketCommons::remove_market_pool(&market_id)?;
             }
 

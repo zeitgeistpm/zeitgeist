@@ -1653,10 +1653,9 @@ mod pallet {
             Ok(T::DbWeight::get().reads_writes(1, 1))
         }
 
-        fn destroy_pool(pool_id: PoolId) -> Result<(Weight, u32), DispatchError> {
+        fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
-            let category_count = pool.assets.len() as u32;
             for asset in pool.assets.into_iter() {
                 let amount = T::AssetManager::free_balance(asset, &pool_account);
                 T::AssetManager::slash(asset, &pool_account, amount);
@@ -1666,7 +1665,7 @@ mod pallet {
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
             // TODO(#603): Fix weight calculation.
-            Ok((50_000_000_000, category_count))
+            Ok(50_000_000_000)
         }
 
         /// All supporters will receive their reserved funds back and the pool is destroyed.

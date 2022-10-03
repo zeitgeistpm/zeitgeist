@@ -56,7 +56,7 @@ pub trait Swaps<AccountId> {
     fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
     /// Destroy CPMM pool, slash pool account assets and destroy pool shares of the liquidity providers.
-    fn destroy_pool(pool_id: PoolId) -> Result<(Weight, u32), DispatchError>;
+    fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError>;
 
     /// Pool will be marked as `PoolStatus::Active`, if the market is currently in subsidy
     /// state and all other conditions are met. Returns the result of the operation and
