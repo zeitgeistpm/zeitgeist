@@ -32,10 +32,13 @@ use crate::{fixed::bmul, Config};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
-use frame_support::{dispatch::UnfilteredDispatchable, traits::Get};
+use frame_support::{dispatch::UnfilteredDispatchable, traits::Get, weights::Weight};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{SaturatedConversion, Zero};
+use sp_runtime::{
+    traits::{SaturatedConversion, Zero},
+    DispatchError,
+};
 use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
@@ -592,6 +595,17 @@ benchmarks! {
         let max_price = Some((BASE * 1024).saturated_into());
     }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, *assets.last().unwrap(), max_asset_amount_in,
            assets[0], asset_amount_out, max_price)
+
+    apply_to_cached_pools_noop {
+        let a in 0..63; // The number of cached pools.
+        for i in 0..a {
+            let pool_id: PoolId = i.into();
+            PoolsCachedForArbitrage::<T>::insert(pool_id, ());
+        }
+        let noop = |_: PoolId| -> Result<Weight, DispatchError> { Ok(0) };
+    }: {
+        Pallet::<T>::apply_to_cached_pools(a, noop)
+    }
 }
 
 impl_benchmark_test_suite!(Swaps, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);

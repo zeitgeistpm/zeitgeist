@@ -30,6 +30,7 @@ extern crate alloc;
 #[macro_use]
 mod utils;
 
+// mod arbitrage;
 mod benchmarks;
 mod check_arithm_rslt;
 mod consts;
@@ -38,6 +39,7 @@ mod fixed;
 mod math;
 pub mod migrations;
 pub mod mock;
+// mod root;
 mod tests;
 pub mod weights;
 
@@ -63,7 +65,7 @@ mod pallet {
         ensure, log,
         pallet_prelude::{StorageDoubleMap, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{Get, IsType, StorageVersion},
+        traits::{Get, Hooks, IsType, StorageVersion},
         transactional, Blake2_128Concat, PalletId, Twox64Concat,
     };
     use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
@@ -85,8 +87,8 @@ mod pallet {
         constants::{BASE, CENT},
         traits::{MarketId, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus, ResultWithWeightInfo,
-            ScoringRule, SerdeWrapper,
+            Asset, MarketType, OutcomeReport, Pool, PoolId, PoolStatus,
+            ResultWithWeightInfo, ScoringRule, SerdeWrapper,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
@@ -105,7 +107,11 @@ mod pallet {
     >>::Balance;
     type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
+    const ARBITRAGE_THRESHOLD: u128 = CENT;
     const MIN_BALANCE: u128 = CENT;
+    const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000_000;
+    const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
+    const ARBITRAGE_MIN_WEIGHT: Weight = ON_IDLE_MIN_WEIGHT / (ARBITRAGE_WEIGHT_RATIO as u64);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -954,6 +960,12 @@ mod pallet {
     where
         T: Config,
     {
+        /// Buy-burn arbitrage was executed on a CPMM pool. \[pool_id, amount\]
+        ArbitrageBuyBurn(PoolId, BalanceOf<T>),
+        /// Mint-sell arbitrage was executed on a CPMM pool. \[pool_id, amount\]
+        ArbitrageMintSell(PoolId, BalanceOf<T>),
+        /// Arbitrage was skipped on a CPMM pool. \[pool_id\]
+        ArbitrageSkipped(PoolId),
         /// Share holder rewards were distributed. \[pool_id, num_accounts_rewarded, amount\]
         DistributeShareHolderRewards(PoolId, u64, BalanceOf<T>),
         /// A new pool has been created. \[CommonPoolEventParams, pool, pool_amount, pool_account\]
@@ -1069,6 +1081,11 @@ mod pallet {
     >;
 
     #[pallet::storage]
+    #[pallet::getter(fn pools_cached_for_arbitrage)]
+    pub type PoolsCachedForArbitrage<T: Config> =
+        StorageMap<_, Blake2_128Concat, PoolId, (), ValueQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn subsidy_providers)]
     pub type SubsidyProviders<T: Config> =
         StorageDoubleMap<_, Twox64Concat, PoolId, Twox64Concat, T::AccountId, BalanceOf<T>>;
@@ -1076,6 +1093,17 @@ mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn next_pool_id)]
     pub type NextPoolId<T> = StorageValue<_, PoolId, ValueQuery>;
+
+    #[pallet::hooks]
+    impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+        fn on_idle(_: T::BlockNumber, remaining_weight: Weight) -> Weight {
+            if remaining_weight < ON_IDLE_MIN_WEIGHT {
+                return 0;
+            }
+            // Self::execute_arbitrage_all(remaining_weight / 2)
+            0
+        }
+    }
 
     impl<T: Config> Pallet<T> {
         pub(crate) fn distribute_pool_share_rewards(
@@ -1207,6 +1235,85 @@ mod pallet {
                 share_accounts_num.saturated_into(),
             )
         }
+
+        // fn execute_arbitrage_all(weight: Weight) -> Weight {
+        //     // TODO Rethink this!
+        //     if weight < ARBITRAGE_MIN_WEIGHT {
+        //         return weight;
+        //     }
+        //     // Do a pessimistic estimate to determine the number of pools to arbitrage.
+        //     let weight_for_mutations = weight.saturating_sub(T::DbWeight::get().reads(1));
+        //     if weight_for_mutations == 0 {
+        //         // Don't even have time to do the estimate, so just assume we burned what little
+        //         // weight we had.
+        //         return weight;
+        //     }
+        //     // TODO Still a problem: How do we get a good idea of how many pools to do? Next step:
+        //     // Benchmark `apply_...` and see how it changes with the size of the map! Keep doubling
+        //     // until the `PoolCache::count` and see if it fits?
+        //     let count = Self::PoolCache::count();
+        //     let weight_for_mutations =
+        //         weight.saturating_sub(WeightInfo::apply_to_cached_pools_noop());
+        //     let pool_count = weight_for_mutations / WeightInfo::execute_arbitrage();
+        //     if pool_count < 1 {
+        //         return 0;
+        //     }
+        //     let result =
+        //         apply_to_cached_pools(pool_count, |pool_id| Self::execute_arbitrage(pool_id));
+        //     // `apply_to_cached_pools` should never fail, so if it does, we just assume we consumed
+        //     // all the weight.
+        //     result.map_err(weight)
+        // }
+
+        pub(crate) fn apply_to_cached_pools<F>(
+            mut pool_count: u32,
+            mutation: F,
+        ) -> Result<Weight, DispatchError>
+        where
+            F: Fn(PoolId) -> Result<Weight, DispatchError>,
+        {
+            let mut total_weight = 0; //0; //  WeightInfo::apply_to_cached_pools_noop(pool_count);
+            // TODO: Check/write a test that this doesn't drain the whole map!
+            for (pool_id, _) in PoolsCachedForArbitrage::<T>::drain() {
+                let weight = mutation(pool_id)?;
+                total_weight = total_weight.saturating_add(weight);
+                pool_count = pool_count.saturating_sub(1);
+                if pool_count == 0 {
+                    break;
+                }
+            }
+            Ok(total_weight)
+        }
+
+        // // Execute arbitrage on a single pool.
+        // fn execute_arbitrage(pool_id: PoolId) -> Result<Weight, DispatchError> {
+        //     let pool = Self::pool_by_id(pool_id)?;
+        //     let pool_account = Self::pool_account_id(pool_id);
+        //     let balances = pool
+        //         .assets
+        //         .map(|a| (a, T::AssetManager::free_balance(a, &pool_account)))
+        //         .collect::<HashMap<_, _>>();
+        //     let tokens = pool.assets.filter(|a| a != pool.base_asset);
+        //     let total_spot_price = pool.calc_total_spot_price(balances);
+        //     if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
+        //         let amount = pool.calc_arbitrage_amount_mint_sell(balances);
+        //         T::AssetManager::withdraw(Asset::Ztg, &pool_account, amount);
+        //         for t in tokens {
+        //             T::AssetManager::deposit(t, &pool_account, amount);
+        //         }
+        //         Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
+        //     } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
+        //         let amount = pool.calc_arbitrage_amount_buy_burn(balances);
+        //         T::AssetManager::deposit(Asset::Ztg, &pool_account, amount);
+        //         for t in tokens {
+        //             T::AssetManager::withdraw(t, &pool_account, amount);
+        //         }
+        //         Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
+        //     } else {
+        //         Self::deposit_event(Event::ArbitrageSkipped(pool_id));
+        //     }
+        //     Ok(WeightInfo::execute_arbitrage())
+        // }
 
         pub fn get_spot_price(
             pool_id: PoolId,
