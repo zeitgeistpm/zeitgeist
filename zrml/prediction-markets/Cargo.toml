@@ -20,7 +20,7 @@ orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitge
 orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
 sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
@@ -40,7 +40,6 @@ mock = [
     "orml-tokens",
     "pallet-balances",
     "pallet-randomness-collective-flip",
-    "pallet-timestamp",
     "sp-api",
     "sp-io",
     "substrate-fixed",
@@ -48,11 +47,13 @@ mock = [
     "zrml-prediction-markets-runtime-api",
     "zrml-rikiddo",
     "zrml-swaps",
+    "pallet-timestamp/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
+    "pallet-timestamp/runtime-benchmarks",
     "zeitgeist-primitives/mock",
 ]
 std = [
