@@ -1855,7 +1855,7 @@ mod pallet {
             }
         }
 
-        fn on_resolution(
+        pub fn on_resolution(
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
@@ -2003,6 +2003,8 @@ mod pallet {
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(clean_up_weight);
+            // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
+            // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             // NOTE: Currently we don't clean up outcome assets.
