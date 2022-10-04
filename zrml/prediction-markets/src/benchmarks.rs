@@ -35,12 +35,12 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{One, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE},
-    traits::{DisputeApi, Swaps},
+    constants::mock::{MaxSwapFee, MinLiquidity, MinWeight, BASE, MILLISECS_PER_BLOCK},
+    traits::Swaps,
     types::{
-        Asset, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus, MarketType,
-        MaxRuntimeUsize, MultiHash, OutcomeReport, PoolStatus, ScalarPosition, ScoringRule,
-        SubsidyUntil,
+        Asset, Deadlines, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
+        MarketType, MaxRuntimeUsize, MultiHash, OutcomeReport, PoolStatus,
+        ScoringRule, SubsidyUntil,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -53,15 +53,23 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 // amount of native currency
 fn create_market_common_parameters<T: Config>(
     permission: MarketCreation,
-) -> Result<(T::AccountId, T::AccountId, MultiHash, MarketCreation), &'static str> {
+) -> Result<
+    (T::AccountId, T::AccountId, Deadlines<T::BlockNumber>, MultiHash, MarketCreation),
+    &'static str,
+> {
     let caller: T::AccountId = whitelisted_caller();
     T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into())?;
     let oracle = caller.clone();
+    let deadlines = Deadlines::<T::BlockNumber> {
+        grace_period: 1_u32.into(),
+        oracle_duration: 1_u32.into(),
+        dispute_duration: T::MinDisputeDuration::get(),
+    };
     let mut metadata = [0u8; 50];
     metadata[0] = 0x15;
     metadata[1] = 0x30;
     let creation = permission;
-    Ok((caller, oracle, MultiHash::Sha3_384(metadata), creation))
+    Ok((caller, oracle, deadlines, MultiHash::Sha3_384(metadata), creation))
 }
 
 // Create a market based on common parameters
@@ -74,10 +82,12 @@ fn create_market_common<T: Config>(
     let range_start: MomentOf<T> = 100_000u64.saturated_into();
     let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
     let period = period.unwrap_or(MarketPeriod::Timestamp(range_start..range_end));
-    let (caller, oracle, metadata, creation) = create_market_common_parameters::<T>(permission)?;
-    let _ = Call::<T>::create_market {
+    let (caller, oracle, deadlines, metadata, creation) =
+        create_market_common_parameters::<T>(permission)?;
+    Call::<T>::create_market {
         oracle,
         period,
+        deadlines,
         metadata,
         creation,
         market_type: options,
@@ -89,7 +99,7 @@ fn create_market_common<T: Config>(
     Ok((caller, market_id))
 }
 
-fn create_close_and_report_market<T: Config>(
+fn create_close_and_report_market<T: Config + pallet_timestamp::Config>(
     permission: MarketCreation,
     options: MarketType,
     outcome: OutcomeReport,
@@ -99,73 +109,25 @@ fn create_close_and_report_market<T: Config>(
     let period = MarketPeriod::Timestamp(range_start..range_end);
     let (caller, market_id) =
         create_market_common::<T>(permission, options, ScoringRule::CPMM, Some(period))?;
-    let _ = Call::<T>::admin_move_market_to_closed { market_id }
+    Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
-    let _ = Call::<T>::report { market_id, outcome }
+    let market = T::MarketCommons::market(&market_id)?;
+    let end: u32 = match market.period {
+        MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
+        _ => {
+            return Err("MarketPeriod is block_number based");
+        }
+    };
+    let grace_period: u32 =
+        (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
+    Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     Ok((caller, market_id))
 }
 
-// Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
-fn generate_accounts_with_assets<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-    asset: Asset<MarketIdOf<T>>,
-) -> Result<(), &'static str> {
-    let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    let fake_asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(u128::MAX.saturated_into(), 0);
-    let mut mut_acc_asset = acc_asset;
-
-    for i in 0..acc_total {
-        let acc = account("AssetHolder", i, 0);
-        if mut_acc_asset > 0 {
-            T::AssetManager::deposit(asset, &acc, min_liquidity)?;
-            mut_acc_asset -= 1;
-        } else {
-            T::AssetManager::deposit(fake_asset, &acc, min_liquidity)?;
-        }
-    }
-
-    Ok(())
-}
-
-// Setup a reported categorical market and create accounts with outcome assets.
-fn setup_resolve_common_categorical<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-    categories: u16,
-) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) = create_close_and_report_market::<T>(
-        MarketCreation::Permissionless,
-        MarketType::Categorical(categories),
-        OutcomeReport::Categorical(categories.saturating_sub(1)),
-    )?;
-    generate_accounts_with_assets::<T>(
-        acc_total,
-        acc_asset,
-        Asset::CategoricalOutcome(market_id, categories.saturating_sub(1)),
-    )?;
-    Ok((caller, market_id))
-}
-
-// Setup a disputed categorical market and create accounts with outcome assets.
-fn setup_resolve_common_categorical_after_dispute<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-    categories: u16,
-) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) =
-        setup_resolve_common_categorical::<T>(acc_total, acc_asset, categories)?;
-    let _ = Pallet::<T>::dispute(
-        RawOrigin::Signed(caller.clone()).into(),
-        market_id,
-        OutcomeReport::Categorical(0),
-    )?;
-    Ok((caller, market_id))
-}
-
 // Setup a categorical market for fn `internal_resolve`
-fn setup_redeem_shares_common<T: Config>(
+fn setup_redeem_shares_common<T: Config + pallet_timestamp::Config>(
     market_type: MarketType,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
     let (caller, market_id) = create_market_common::<T>(
@@ -184,76 +146,49 @@ fn setup_redeem_shares_common<T: Config>(
         panic!("setup_redeem_shares_common: Unsupported market type: {:?}", market_type);
     }
 
-    let _ = Pallet::<T>::do_buy_complete_set(
+    Pallet::<T>::do_buy_complete_set(
         caller.clone(),
         market_id,
         MinLiquidity::get().saturated_into(),
     )?;
     let close_origin = T::CloseOrigin::successful_origin();
     let resolve_origin = T::ResolveOrigin::successful_origin();
-    let _ = Call::<T>::admin_move_market_to_closed { market_id }
-        .dispatch_bypass_filter(close_origin)?;
-    let _ = Call::<T>::report { market_id, outcome }
+    Call::<T>::admin_move_market_to_closed { market_id }.dispatch_bypass_filter(close_origin)?;
+    let market = T::MarketCommons::market(&market_id)?;
+    let end: u32 = match market.period {
+        MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
+        _ => {
+            return Err("MarketPeriod is block_number based");
+        }
+    };
+    let grace_period: u32 =
+        (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
+    Call::<T>::report { market_id, outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    let _ = Call::<T>::admin_move_market_to_resolved { market_id }
+    Call::<T>::admin_move_market_to_resolved { market_id }
         .dispatch_bypass_filter(resolve_origin)?;
     Ok((caller, market_id))
 }
 
-// Setup a reported scalar market and create accounts with outcome assets.
-fn setup_resolve_common_scalar<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) = create_close_and_report_market::<T>(
-        MarketCreation::Permissionless,
-        MarketType::Scalar(0u128..=u128::MAX),
-        OutcomeReport::Scalar(u128::MAX),
-    )?;
-    generate_accounts_with_assets::<T>(
-        acc_total,
-        acc_asset,
-        Asset::ScalarOutcome(market_id, ScalarPosition::Long),
-    )?;
-    Ok((caller, market_id))
-}
-
-// Setup a disputed scalar market and create accounts with outcome assets.
-fn setup_resolve_common_scalar_after_dispute<T: Config>(
-    acc_total: u32,
-    acc_asset: u32,
-) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let (caller, market_id) = setup_resolve_common_scalar::<T>(acc_total, acc_asset)?;
-    let _ = Pallet::<T>::dispute(
-        RawOrigin::Signed(caller.clone()).into(),
-        market_id,
-        OutcomeReport::Scalar(1u128),
-    )?;
-    Ok((caller, market_id))
-}
-
-fn create_reported_market_with_pool<T: Config>(
+fn setup_reported_categorical_market_with_pool<T: Config + pallet_timestamp::Config>(
     categories: u32,
+    report_outcome: OutcomeReport,
 ) -> Result<(T::AccountId, MarketIdOf<T>), &'static str> {
-    let range_start: MomentOf<T> = 100_000u64.saturated_into();
-    let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
     let (caller, market_id) = create_market_common::<T>(
         MarketCreation::Permissionless,
         MarketType::Categorical(categories.saturated_into()),
         ScoringRule::CPMM,
-        Some(MarketPeriod::Timestamp(range_start..range_end)),
+        None,
     )?;
 
     let max_swap_fee: BalanceOf<T> = MaxSwapFee::get().saturated_into();
     let min_liquidity: BalanceOf<T> = MinLiquidity::get().saturated_into();
-    let _ = Pallet::<T>::buy_complete_set(
-        RawOrigin::Signed(caller.clone()).into(),
-        market_id,
-        min_liquidity,
-    )?;
+    Call::<T>::buy_complete_set { market_id, amount: min_liquidity }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     let weight_len: usize = MaxRuntimeUsize::from(categories).into();
     let weights = vec![MinWeight::get(); weight_len];
-    let _ = Pallet::<T>::deploy_swap_pool_for_market(
+    Pallet::<T>::deploy_swap_pool_for_market(
         RawOrigin::Signed(caller.clone()).into(),
         market_id,
         max_swap_fee,
@@ -261,16 +196,29 @@ fn create_reported_market_with_pool<T: Config>(
         weights,
     )?;
 
-    let _ = Call::<T>::admin_move_market_to_closed { market_id }
+    Call::<T>::admin_move_market_to_closed { market_id }
         .dispatch_bypass_filter(T::CloseOrigin::successful_origin())?;
-    let outcome = OutcomeReport::Categorical(0u16);
-    let _ = Call::<T>::report { market_id, outcome }
+    let market = T::MarketCommons::market(&market_id)?;
+    let end: u32 = match market.period {
+        MarketPeriod::Timestamp(range) => range.end.saturated_into::<u32>(),
+        _ => {
+            return Err("MarketPeriod is block_number based");
+        }
+    };
+    let grace_period: u32 =
+        (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+    pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
+    Call::<T>::report { market_id, outcome: report_outcome }
         .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
 
     Ok((caller, market_id))
 }
 
 benchmarks! {
+    where_clause {
+        where T : pallet_timestamp::Config,
+    }
+
     admin_destroy_disputed_market{
         // The number of assets.
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -283,7 +231,10 @@ benchmarks! {
         // The number of market ids per dispute block.
         let r in 0..63;
 
-        let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
+        let (caller, market_id) = setup_reported_categorical_market_with_pool::<T>(
+            a, 
+            OutcomeReport::Categorical(0u16),
+        )?;
 
         let pool_id = T::MarketCommons::market_pool(&market_id)?;
 
@@ -346,7 +297,10 @@ benchmarks! {
         // The number of market ids per dispute block.
         let r in 0..63;
 
-        let (caller, market_id) = create_reported_market_with_pool::<T>(a)?;
+        let (caller, market_id) = setup_reported_categorical_market_with_pool::<T>(
+            a, 
+            OutcomeReport::Categorical(0u16),
+        )?;
 
         let pool_id = T::MarketCommons::market_pool(&market_id)?;
 
@@ -529,7 +483,7 @@ benchmarks! {
     create_market {
         let m in 0..63;
 
-        let (caller, oracle, metadata, creation) =
+        let (caller, oracle, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Permissionless)?;
 
         let range_end = T::MaxSubsidyPeriod::get();
@@ -541,9 +495,17 @@ benchmarks! {
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
-    }: _(RawOrigin::Signed(caller), oracle, period, metadata, creation,
+    }: _(
+            RawOrigin::Signed(caller),
+            oracle,
+            period,
+            deadlines,
+            metadata,
+            creation,
             MarketType::Categorical(T::MaxCategories::get()),
-            MarketDisputeMechanism::SimpleDisputes, ScoringRule::CPMM)
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        )
 
     deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
@@ -575,7 +537,7 @@ benchmarks! {
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
-        let _ = Pallet::<T>::buy_complete_set(
+        Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
             min_liquidity,
@@ -618,7 +580,7 @@ benchmarks! {
 
         let max_swap_fee: BalanceOf::<T> = MaxSwapFee::get().saturated_into();
         let min_liquidity: BalanceOf::<T> = MinLiquidity::get().saturated_into();
-        let _ = Pallet::<T>::buy_complete_set(
+        Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
             min_liquidity,
@@ -658,11 +620,17 @@ benchmarks! {
             Ok(())
         })?;
 
+        let market = T::MarketCommons::market(&market_id)?;
+        if let MarketType::Scalar(range) = market.market_type {
+            assert!((d as u128) < *range.end());
+        } else {
+            panic!("Must create scalar market");
+        }
         for i in 0..d {
             let outcome = OutcomeReport::Scalar(i.into());
             let disputor = account("disputor", i, 0);
             T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
-            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
         let now = frame_system::Pallet::<T>::block_number();
@@ -690,13 +658,22 @@ benchmarks! {
     }: { Pallet::<T>::handle_expired_advised_market(&market_id, market)? }
 
     internal_resolve_categorical_reported {
-        let categories : u16 = T::MaxCategories::get().saturated_into();
-        let (_, market_id) =
-            setup_resolve_common_categorical_after_dispute::<T>(0, 0, categories)?;
-    }: {
+        let categories = T::MaxCategories::get();
+        let (_, market_id) = setup_reported_categorical_market_with_pool::<T>(
+            categories.into(),
+            OutcomeReport::Categorical(1u16),
+        )?;
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            let admin = account("admin", 0, 0);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            Ok(())
+        })?;
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+    }: {
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     internal_resolve_categorical_disputed {
@@ -705,30 +682,45 @@ benchmarks! {
 
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
-            setup_resolve_common_categorical_after_dispute::<T>(0, 0, categories)?;
+            setup_reported_categorical_market_with_pool::<T>(
+                categories.into(), 
+                OutcomeReport::Categorical(1u16)
+            )?;
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            let admin = account("admin", 0, 0);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            Ok(())
+        })?;
 
         let categories : u32 = categories.saturated_into();
-        for i in 0..categories.min(d) {
+        for i in 0..d {
             let origin = caller.clone();
-            let disputes = crate::Disputes::<T>::get(market_id);
-            let market = T::MarketCommons::market(&Default::default())?;
-            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
+            Pallet::<T>::dispute(
+                RawOrigin::Signed(origin).into(),
+                market_id,
+                OutcomeReport::Categorical((i % 2).saturated_into::<u16>()),
+            )?;
         }
-    }: {
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+    }: {
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     internal_resolve_scalar_reported {
-        let total_accounts = 10u32;
-        let asset_accounts = 10u32;
-        let (_, market_id) =
-            setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
-    }: {
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        )?;
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+    }: {
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     internal_resolve_scalar_disputed {
@@ -736,24 +728,41 @@ benchmarks! {
         let asset_accounts = 10u32;
         let d in 0..T::MaxDisputes::get();
 
-        let (caller, market_id) =
-            setup_resolve_common_scalar_after_dispute::<T>(total_accounts, asset_accounts)?;
-
-        for i in 0..d {
-            let disputes = crate::Disputes::<T>::get(market_id);
-            let origin = caller.clone();
-            let market = T::MarketCommons::market(&Default::default())?;
-            T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?;
-        }
-    }: {
+        let (caller, market_id) = create_close_and_report_market::<T>(
+            MarketCreation::Permissionless,
+            MarketType::Scalar(0u128..=u128::MAX),
+            OutcomeReport::Scalar(u128::MAX),
+        )?;
+        T::MarketCommons::mutate_market(&market_id, |market| {
+            let admin = account("admin", 0, 0);
+            market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
+            Ok(())
+        })?;
         let market = T::MarketCommons::market(&market_id)?;
-        let disputes = crate::Disputes::<T>::get(market_id);
-        T::SimpleDisputes::on_resolution(&disputes, &market_id, &market)?
+        if let MarketType::Scalar(range) = market.market_type {
+            assert!((d as u128) < *range.end());
+        } else {
+            panic!("Must create scalar market");
+        }
+        for i in 0..d {
+            let origin = caller.clone();
+            Pallet::<T>::dispute(
+                RawOrigin::Signed(origin).into(),
+                market_id,
+                OutcomeReport::Scalar(i.into())
+            )?;
+        }
+        let market = T::MarketCommons::market(&market_id)?;
+    }: {
+        Pallet::<T>::on_resolution(&market_id, &market)?;
+    } verify {
+        let market = T::MarketCommons::market(&market_id)?;
+        assert_eq!(market.status, MarketStatus::Resolved);
     }
 
     // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + T::DisputePeriod::get();
+        let starting_block = frame_system::Pallet::<T>::block_number() + 2_u32.into();
     }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
 
     // Benchmark iteration and market validity check without ending subsidy / discarding market.
@@ -839,7 +848,21 @@ benchmarks! {
 
         let outcome = OutcomeReport::Categorical(0);
         let close_origin = T::CloseOrigin::successful_origin();
-        let _ = Pallet::<T>::admin_move_market_to_closed(close_origin, market_id)?;
+        Pallet::<T>::admin_move_market_to_closed(close_origin, market_id)?;
+        let market = T::MarketCommons::market(&market_id)?;
+        let end : u32 = match market.period {
+            MarketPeriod::Timestamp(range) => {
+                range.end.saturated_into::<u32>()
+            },
+            _ => {
+                return Err(frame_benchmarking::BenchmarkError::Stop(
+                          "MarketPeriod is block_number based"
+                        ));
+            },
+        };
+        let grace_period: u32 =
+            (market.deadlines.grace_period.saturated_into::<u32>() + 1) * MILLISECS_PER_BLOCK;
+        pallet_timestamp::Pallet::<T>::set_timestamp((end + grace_period).into());
         let current_block = frame_system::Pallet::<T>::block_number();
         for i in 0..m {
             MarketIdsPerReportBlock::<T>::try_mutate(current_block, |ids| {
@@ -857,7 +880,7 @@ benchmarks! {
             None,
         )?;
         let amount: BalanceOf<T> = MinLiquidity::get().saturated_into();
-        let _ = Pallet::<T>::buy_complete_set(
+        Pallet::<T>::buy_complete_set(
             RawOrigin::Signed(caller.clone()).into(),
             market_id,
             amount,

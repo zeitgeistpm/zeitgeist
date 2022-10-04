@@ -38,11 +38,12 @@ use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputes,
-        MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee,
-        MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
-        MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputeDuration,
+        MaxDisputes, MaxGracePeriod, MaxInRatio, MaxMarketPeriod, MaxOracleDuration, MaxOutRatio,
+        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
+        MinCategories, MinDisputeDuration, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
+        MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, BASE, CENT,
+        MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -64,7 +65,7 @@ ord_parameter_types! {
 }
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
-    pub const ReportingPeriod: u32 = 11;
+    pub const ReportingPeriod: BlockNumber = 11;
     pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
@@ -114,6 +115,10 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
+    type MinDisputeDuration = MinDisputeDuration;
+    type MaxDisputeDuration = MaxDisputeDuration;
+    type MaxGracePeriod = MaxGracePeriod;
+    type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
@@ -121,8 +126,8 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
+    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type Swaps = Swaps;

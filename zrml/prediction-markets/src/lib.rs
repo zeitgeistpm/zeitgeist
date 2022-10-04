@@ -55,16 +55,16 @@ mod pallet {
         constants::MILLISECS_PER_BLOCK,
         traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
         types::{
-            Asset, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketPeriod,
-            MarketStatus, MarketType, MultiHash, OutcomeReport, Report, ScalarPosition,
-            ScoringRule, SubsidyUntil,
+            Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
+            MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
+            ScalarPosition, ScoringRule, SubsidyUntil,
         },
     };
     use zrml_liquidity_mining::LiquidityMiningPalletApi;
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(5);
 
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
@@ -412,7 +412,10 @@ mod pallet {
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(curr_block_num, |ids| {
+            // each dispute resets dispute_duration
+            let dispute_duration_ends_at_block =
+                curr_block_num.saturating_add(market.deadlines.dispute_duration);
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(dispute_duration_ends_at_block, |ids| {
                 ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
             Self::deposit_event(Event::MarketDisputed(
@@ -466,6 +469,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
             dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
@@ -479,6 +483,7 @@ mod pallet {
                 origin.clone(),
                 oracle,
                 period,
+                deadlines,
                 metadata,
                 MarketCreation::Permissionless,
                 market_type.clone(),
@@ -515,6 +520,7 @@ mod pallet {
             origin: OriginFor<T>,
             oracle: T::AccountId,
             period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
@@ -524,6 +530,22 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
+            ensure!(
+                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
+                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
+            );
+            ensure!(
+                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
+                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
+            );
+            ensure!(
+                deadlines.grace_period <= T::MaxGracePeriod::get(),
+                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
+            );
+            ensure!(
+                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
+                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
+            );
 
             match market_type {
                 MarketType::Categorical(categories) => {
@@ -584,6 +606,7 @@ mod pallet {
                 metadata: Vec::from(multihash),
                 oracle,
                 period: period.clone(),
+                deadlines,
                 report: None,
                 resolved_outcome: None,
                 status,
@@ -981,21 +1004,37 @@ mod pallet {
                 );
 
                 let mut should_check_origin = false;
+                //NOTE: Saturating operation in following block may saturate to u32::MAX value
+                //      but that will be the case after thousands of years time. So it is fine.
                 match market.period {
                     MarketPeriod::Block(ref range) => {
-                        if current_block
-                            <= range.end.saturating_add(T::ReportingPeriod::get().into())
-                        {
+                        let grace_period_end =
+                            range.end.saturating_add(market.deadlines.grace_period);
+                        ensure!(
+                            grace_period_end <= current_block,
+                            Error::<T>::NotAllowedToReportYet
+                        );
+                        let oracle_duration_end =
+                            grace_period_end.saturating_add(market.deadlines.oracle_duration);
+                        if current_block <= oracle_duration_end {
                             should_check_origin = true;
                         }
                     }
                     MarketPeriod::Timestamp(ref range) => {
-                        let rp_moment: MomentOf<T> = T::ReportingPeriod::get().into();
-                        let reporting_period_in_ms =
-                            rp_moment.saturating_mul(MILLISECS_PER_BLOCK.into());
-                        if T::MarketCommons::now()
-                            <= range.end.saturating_add(reporting_period_in_ms)
-                        {
+                        let grace_period_in_moments: MomentOf<T> =
+                            market.deadlines.grace_period.saturated_into::<u32>().into();
+                        let grace_period_in_ms =
+                            grace_period_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let grace_period_end = range.end.saturating_add(grace_period_in_ms);
+                        let now = T::MarketCommons::now();
+                        ensure!(grace_period_end <= now, Error::<T>::NotAllowedToReportYet);
+                        let oracle_duration_in_moments: MomentOf<T> =
+                            market.deadlines.oracle_duration.saturated_into::<u32>().into();
+                        let oracle_duration_in_ms =
+                            oracle_duration_in_moments.saturating_mul(MILLISECS_PER_BLOCK.into());
+                        let oracle_duration_end =
+                            grace_period_end.saturating_add(oracle_duration_in_ms);
+                        if now <= oracle_duration_end {
                             should_check_origin = true;
                         }
                     }
@@ -1016,8 +1055,11 @@ mod pallet {
                 Ok(())
             })?;
 
+            let market = T::MarketCommons::market(&market_id)?;
+            let block_after_dispute_duration =
+                current_block.saturating_add(market.deadlines.dispute_duration);
             let ids_len = MarketIdsPerReportBlock::<T>::try_mutate(
-                current_block,
+                block_after_dispute_duration,
                 |ids| -> Result<u32, DispatchError> {
                     ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
                     Ok(ids.len() as u32)
@@ -1142,10 +1184,6 @@ mod pallet {
         #[pallet::constant]
         type DisputeFactor: Get<BalanceOf<Self>>;
 
-        /// The number of blocks the dispute period remains open.
-        #[pallet::constant]
-        type DisputePeriod: Get<Self::BlockNumber>;
-
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -1182,6 +1220,31 @@ mod pallet {
         #[pallet::constant]
         type MaxDisputes: Get<u32>;
 
+        /// The minimum number of blocks allowed to be specified as dispute_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MinDisputeDuration: Get<Self::BlockNumber>;
+
+        /// The maximum number of blocks allowed to be specified as grace_period
+        /// in create_market.
+        #[pallet::constant]
+        type MaxGracePeriod: Get<Self::BlockNumber>;
+
+        /// The maximum number of blocks allowed to be specified as oracle_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MaxOracleDuration: Get<Self::BlockNumber>;
+
+        /// The maximum number of blocks allowed to be specified as dispute_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MaxDisputeDuration: Get<Self::BlockNumber>;
+
+        //NOTE: DisputePeriod will be removed once relevant migrations are executed.
+        /// The number of blocks the dispute period remains open.
+        #[pallet::constant]
+        type DisputePeriod: Get<Self::BlockNumber>;
+
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
@@ -1197,9 +1260,10 @@ mod pallet {
         #[pallet::constant]
         type OracleBond: Get<BalanceOf<Self>>;
 
+        //NOTE: ReportingPeriod will be removed once relevant migrations are executed.
         /// The number of blocks the reporting period remains open.
         #[pallet::constant]
-        type ReportingPeriod: Get<u32>;
+        type ReportingPeriod: Get<Self::BlockNumber>;
 
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
@@ -1285,6 +1349,16 @@ mod pallet {
         InvalidMarketPeriod,
         /// The outcome range of the scalar market is invalid.
         InvalidOutcomeRange,
+        /// Can not report before market.deadlines.grace_period is ended.
+        NotAllowedToReportYet,
+        /// Specified dispute_duration is smaller than MinDisputeDuration.
+        DisputeDurationSmallerThanMinDisputeDuration,
+        /// Specified dispute_duration is greater than MaxDisputeDuration.
+        DisputeDurationGreaterThanMaxDisputeDuration,
+        /// Specified grace_period is greater than MaxGracePeriod.
+        GracePeriodGreaterThanMaxGracePeriod,
+        /// Specified oracle_duration is greater than MaxOracleDuration.
+        OracleDurationGreaterThanMaxOracleDuration,
         /// The weights length has to be equal to the assets length.
         WeightsLenMustEqualAssetsLen,
     }
@@ -1599,23 +1673,30 @@ mod pallet {
             let (ids_len, disputes_len) = match market.status {
                 MarketStatus::Reported => {
                     let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                    MarketIdsPerReportBlock::<T>::mutate(report.at, |ids| -> (u32, u32) {
-                        let ids_len = ids.len() as u32;
-                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                        (ids_len, 0u32)
-                    })
+                    let dispute_duration_ends_at_block =
+                        report.at.saturating_add(market.deadlines.dispute_duration);
+                    MarketIdsPerReportBlock::<T>::mutate(
+                        dispute_duration_ends_at_block,
+                        |ids| -> (u32, u32) {
+                            let ids_len = ids.len() as u32;
+                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                            (ids_len, 0u32)
+                        },
+                    )
                 }
                 MarketStatus::Disputed => {
                     let disputes = Disputes::<T>::get(market_id);
                     if let Some(last_dispute) = disputes.last() {
-                        let at = last_dispute.at;
-                        let mut old_disputes_per_block = MarketIdsPerDisputeBlock::<T>::get(at);
-                        remove_item::<MarketIdOf<T>, _>(&mut old_disputes_per_block, market_id);
-                        MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| -> (u32, u32) {
-                            let ids_len = ids.len() as u32;
-                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                            (ids_len, disputes.len() as u32)
-                        })
+                        let dispute_duration_ends_at_block =
+                            last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+                        MarketIdsPerDisputeBlock::<T>::mutate(
+                            dispute_duration_ends_at_block,
+                            |ids| -> (u32, u32) {
+                                let ids_len = ids.len() as u32;
+                                remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                                (ids_len, disputes.len() as u32)
+                            },
+                        )
                     } else {
                         (0u32, disputes.len() as u32)
                     }
@@ -1860,7 +1941,7 @@ mod pallet {
             }
         }
 
-        fn on_resolution(
+        pub fn on_resolution(
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
@@ -2008,6 +2089,8 @@ mod pallet {
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(clean_up_weight);
+            // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
+            // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             // NOTE: Currently we don't clean up outcome assets.
@@ -2201,8 +2284,10 @@ mod pallet {
             market_id: &MarketIdOf<T>,
         ) -> DispatchResult {
             if let Some(last_dispute) = disputes.last() {
-                let at = last_dispute.at;
-                MarketIdsPerDisputeBlock::<T>::mutate(at, |ids| {
+                let market = T::MarketCommons::market(market_id)?;
+                let dispute_duration_ends_at_block =
+                    last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+                MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
                     remove_item::<MarketIdOf<T>, _>(ids, market_id);
                 });
             }
@@ -2261,28 +2346,21 @@ mod pallet {
                 &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
             ) -> DispatchResult,
         {
-            let dispute_period = T::DisputePeriod::get();
-            if now <= dispute_period {
-                return Ok(());
-            }
-
-            let block = now.saturating_sub(dispute_period);
-
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(block).iter() {
+            for id in MarketIdsPerReportBlock::<T>::get(now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
                 }
             }
-            MarketIdsPerReportBlock::<T>::remove(block);
+            MarketIdsPerReportBlock::<T>::remove(now);
 
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(block).iter() {
+            for id in MarketIdsPerDisputeBlock::<T>::get(now).iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
-            MarketIdsPerDisputeBlock::<T>::remove(block);
+            MarketIdsPerDisputeBlock::<T>::remove(now);
 
             Ok(())
         }
