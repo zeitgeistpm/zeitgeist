@@ -15,12 +15,12 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "try-runtime")]
+use crate::Disputes;
 use crate::{
     CacheSize, Config, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, MomentOf,
     Pallet,
 };
-#[cfg(feature = "try-runtime")]
-use crate::Disputes;
 use frame_support::{
     dispatch::Weight,
     log,
