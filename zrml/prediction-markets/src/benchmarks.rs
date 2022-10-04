@@ -269,7 +269,6 @@ benchmarks! {
         }
 
         let disputes = Disputes::<T>::get(market_id);
-        // TODO(#730): MarketIdsPerDisputeBlock will store the future block number.
         let last_dispute = disputes.last().unwrap();
         let dispute_at = last_dispute.at;
         for i in 0..r {
@@ -325,7 +324,6 @@ benchmarks! {
             ).unwrap();
         }
 
-        // TODO(#730): MarketIdsPerReportBlock will store the future block number.
         let report_at = market.report.unwrap().at;
         for i in 0..r {
             MarketIdsPerReportBlock::<T>::try_mutate(
@@ -478,7 +476,6 @@ benchmarks! {
         }
         let disputes = Disputes::<T>::get(market_id);
 
-        // TODO(#730): MarketIdsPerDisputeBlock will store the future block number.
         let last_dispute = disputes.last().unwrap();
         let dispute_at = last_dispute.at;
         for i in 0..r {
@@ -530,7 +527,6 @@ benchmarks! {
         }
         let disputes = Disputes::<T>::get(market_id);
 
-        // TODO(#730): MarketIdsPerDisputeBlock will store the future block number.
         let last_dispute = disputes.last().unwrap();
         let dispute_at = last_dispute.at;
         for i in 0..r {
