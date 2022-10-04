@@ -113,7 +113,7 @@ mod pallet {
                     &Self::reserve_id(),
                     Asset::Ztg,
                     &market.creator,
-                    amount.saturated_into::<u128>().saturated_into(),
+                    amount,
                 );
             };
             if market_status == MarketStatus::Proposed {

@@ -1726,14 +1726,15 @@ macro_rules! create_common_tests {
                     let mut t: sp_io::TestExternalities =
                         frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
                     t.execute_with(|| {
-                        let fee = Balances::issue(3 * ExistentialDeposit::get());
-                        let tip = Balances::issue(7 * ExistentialDeposit::get());
+                        let fee_balance = 3 * ExistentialDeposit::get();
+                        let fee_imbalance = Balances::issue(fee_balance);
+                        let tip_balance = 7 * ExistentialDeposit::get();
+                        let tip_imbalance = Balances::issue(tip_balance);
                         assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
-                        DealWithFees::on_unbalanceds(vec![fee, tip].into_iter());
+                        DealWithFees::on_unbalanceds(vec![fee_imbalance, tip_imbalance].into_iter());
                         assert_eq!(
                             Balances::free_balance(Treasury::account_id()),
-                            ((FEES_AND_TIPS_TREASURY_PERCENTAGE / 10) as u128)
-                                * ExistentialDeposit::get(),
+                            fee_balance + tip_balance,
                         );
                     });
                 }
