@@ -31,7 +31,7 @@ use frame_support::{
 use test_case::test_case;
 
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
@@ -2552,6 +2552,7 @@ fn authorized_correctly_resolves_disputed_market() {
 #[test]
 fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
     ExtBuilder::default().build().execute_with(|| {
+        assert!(Balances::free_balance(Treasury::account_id()).is_zero());
         let end = 2;
         let market_id = 0;
         assert_ok!(PredictionMarkets::create_market(
