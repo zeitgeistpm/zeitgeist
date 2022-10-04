@@ -229,23 +229,22 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n + m)`,
-        ///
-        // NOTE: Substracted by internal_resolve_scalar_...,
-        // because weight of `on_resolution` is already included and the benchmark of
-        // `admin_move_market_to_resolved_overhead_...` was initialised with a scalar market.
+        /// Complexity: `O(n + m)`, where `n` is the number of market ids
+        /// per dispute / report block, m is the number of disputes.
         #[pallet::weight((
-            T::WeightInfo::admin_move_market_to_resolved_overhead_disputed(
+            T::WeightInfo::admin_move_market_to_resolved_scalar_reported(CacheSize::get())
+            .max(
+                T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
+            ).max(
+                T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
                     CacheSize::get(),
-                    T::MaxDisputes::get(),
-            ).saturating_sub(T::WeightInfo::internal_resolve_scalar_disputed(T::MaxDisputes::get()))
-                .max(
-                T::WeightInfo::admin_move_market_to_resolved_overhead_reported(
-                    CacheSize::get()
-                ).saturating_sub(T::WeightInfo::internal_resolve_scalar_reported()))
-            .saturating_add(
-                T::WeightInfo::internal_resolve_scalar_reported()
-                    .max(T::WeightInfo::internal_resolve_categorical_reported())
+                    T::MaxDisputes::get()
+                )
+            ).max(
+                T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
+                    CacheSize::get(),
+                    T::MaxDisputes::get()
+                )
             ),
             Pays::No,
         ))]
@@ -263,26 +262,27 @@ mod pallet {
             );
             let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
-            let weight_on_resolution = Self::on_resolution(&market_id, &market)?;
-            // Substracted by internal_resolve_scalar_...,
-            // because it's returned in `on_resolution` and the benchmark of
-            // `admin_move_market_to_resolved_overhead_...` was initialised with a scalar market
-            let weight_overhead = match market.status {
-                MarketStatus::Reported => {
-                    T::WeightInfo::admin_move_market_to_resolved_overhead_reported(ids_len)
-                        .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
-                }
-                MarketStatus::Disputed => {
-                    T::WeightInfo::admin_move_market_to_resolved_overhead_disputed(
+            let _ = Self::on_resolution(&market_id, &market)?;
+            let weight;
+            if let MarketType::Categorical(_) = market.market_type {
+                if let MarketStatus::Reported = market.status {
+                    weight =
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len);
+                } else {
+                    weight = T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
                         ids_len,
                         disputes_len,
-                    )
-                    .saturating_sub(T::WeightInfo::internal_resolve_scalar_disputed(disputes_len))
+                    );
                 }
-                _ => return Err(Error::<T>::InvalidMarketStatus.into()),
-            };
-            let total_weight = weight_on_resolution.saturating_add(weight_overhead);
-            Ok((Some(total_weight), Pays::No).into())
+            } else if let MarketStatus::Reported = market.status {
+                weight = T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len);
+            } else {
+                weight = T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
+                    ids_len,
+                    disputes_len,
+                );
+            }
+            Ok((Some(weight), Pays::No).into())
         }
 
         /// Approves a market that is waiting for approval from the

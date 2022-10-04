@@ -48,8 +48,10 @@ pub trait WeightInfoZeitgeist {
     fn admin_destroy_disputed_market(a: u32, d: u32, o: u32, c: u32, r: u32) -> Weight;
     fn admin_destroy_reported_market(a: u32, o: u32, c: u32, r: u32) -> Weight;
     fn admin_move_market_to_closed(o: u32, c: u32) -> Weight;
-    fn admin_move_market_to_resolved_overhead_reported(r: u32) -> Weight;
-    fn admin_move_market_to_resolved_overhead_disputed(r: u32, d: u32) -> Weight;
+    fn admin_move_market_to_resolved_scalar_reported(r: u32) -> Weight;
+    fn admin_move_market_to_resolved_categorical_reported(r: u32) -> Weight;
+    fn admin_move_market_to_resolved_scalar_disputed(r: u32, d: u32) -> Weight;
+    fn admin_move_market_to_resolved_categorical_disputed(r: u32, d: u32) -> Weight;
     fn approve_market() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
     fn create_market(m: u32) -> Weight;
@@ -142,29 +144,60 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets Disputes (r:1 w:1)
     // Storage: MarketCommons MarketPool (r:1 w:0)
-    fn admin_move_market_to_resolved_overhead_reported(r: u32) -> Weight {
-        (67_351_000 as Weight)
-            // Standard Error: 1_000
-            .saturating_add((86_000 as Weight).saturating_mul(r as Weight))
+    fn admin_move_market_to_resolved_scalar_reported(r: u32) -> Weight {
+        (60_876_000 as Weight)
+            // Standard Error: 0
+            .saturating_add((24_000 as Weight).saturating_mul(r as Weight))
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
+    // Storage: Balances Reserves (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    // Storage: Swaps Pools (r:1 w:1)
+    fn admin_move_market_to_resolved_categorical_reported(_r: u32) -> Weight {
+        (89_856_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(7 as Weight))
+            .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: PredictionMarkets Disputes (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
     // Storage: Balances Reserves (r:7 w:7)
+    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
     // Storage: System Account (r:6 w:6)
     // Storage: MarketCommons MarketPool (r:1 w:0)
-    fn admin_move_market_to_resolved_overhead_disputed(r: u32, d: u32) -> Weight {
-        (75_655_000 as Weight)
-            // Standard Error: 1_000
-            .saturating_add((45_000 as Weight).saturating_mul(r as Weight))
-            // Standard Error: 18_000
-            .saturating_add((22_062_000 as Weight).saturating_mul(d as Weight))
-            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+    fn admin_move_market_to_resolved_scalar_disputed(_r: u32, d: u32) -> Weight {
+        (74_775_000 as Weight)
+            // Standard Error: 19_000
+            .saturating_add((21_503_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(7 as Weight))
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
+    // Storage: Balances Reserves (r:7 w:7)
+    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
+    // Storage: System Account (r:6 w:6)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    // Storage: Swaps Pools (r:1 w:1)
+    fn admin_move_market_to_resolved_categorical_disputed(r: u32, d: u32) -> Weight {
+        (93_717_000 as Weight)
+            // Standard Error: 1_000
+            .saturating_add((46_000 as Weight).saturating_mul(r as Weight))
+            // Standard Error: 18_000
+            .saturating_add((23_705_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(8 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
+            .saturating_add(T::DbWeight::get().writes(6 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
