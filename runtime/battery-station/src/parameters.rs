@@ -213,7 +213,7 @@ parameter_types! {
     // Swaps parameters
     /// A precentage from the withdrawal amount a liquidity provider wants to withdraw
     /// from a pool before the pool is closed.
-    pub const ExitFee: Balance = 3 * BASE / 1000; // 0.3%
+    pub const ExitFee: Balance = BASE / 10_000; // 0.01%
     /// Minimum number of assets.
     pub const MinAssets: u16 = 2;
     /// Maximum number of assets. `MaxCategories` plus one base asset.
