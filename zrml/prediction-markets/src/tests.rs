@@ -849,6 +849,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             &ALICE,
             SENTINEL_AMOUNT,
         ));
+        assert!(Balances::free_balance(Treasury::account_id()).is_zero());
 
         let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_reserved_before_alice =
