@@ -38,8 +38,9 @@ use zeitgeist_primitives::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
-        MaxDisputes, MaxInRatio, MaxMarketPeriod, MaxOutRatio, MaxReserves, MaxSubsidyPeriod,
-        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinLiquidity, MinSubsidy,
+        MaxDisputeDuration, MaxDisputes, MaxGracePeriod, MaxInRatio, MaxMarketPeriod,
+        MaxOracleDuration, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight,
+        MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinLiquidity, MinSubsidy,
         MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
         StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
@@ -65,7 +66,7 @@ ord_parameter_types! {
 }
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
-    pub const ReportingPeriod: u32 = 11;
+    pub const ReportingPeriod: BlockNumber = 11;
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
@@ -115,6 +116,10 @@ impl crate::Config for Runtime {
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
+    type MinDisputeDuration = MinDisputeDuration;
+    type MaxDisputeDuration = MaxDisputeDuration;
+    type MaxGracePeriod = MaxGracePeriod;
+    type MaxOracleDuration = MaxOracleDuration;
     type MaxSubsidyPeriod = MaxSubsidyPeriod;
     type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
@@ -122,8 +127,8 @@ impl crate::Config for Runtime {
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
-    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
+    type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
     type Slash = Treasury;

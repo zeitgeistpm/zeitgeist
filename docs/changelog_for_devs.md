@@ -1,5 +1,9 @@
 # v0.3.6
 
+- Added new field `deadlines` in Market structure, which has `grace_period`,
+  `oracle_duration` and `dispute_duration` fields, all represents duration in
+  number of blocks. `create_market` extrinsic has new parameter to specify these
+  deadlines.
 - Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
   to 10% by introducing a new on-chain variable `AdvisoryBondSlashPercentage`.
 

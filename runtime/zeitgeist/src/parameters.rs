@@ -164,7 +164,17 @@ parameter_types! {
     // 2_678_400_000 = 31 days.
     /// Maximum number of milliseconds a Rikiddo market can be in subsidy gathering phase.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
+    /// The dispute_duration is time where users can dispute the outcome.
+    /// Minimum block period for a dispute.
+    pub const MinDisputeDuration: BlockNumber = MIN_DISPUTE_DURATION;
+    /// Maximum block period for a dispute.
+    pub const MaxDisputeDuration: BlockNumber = MAX_DISPUTE_DURATION;
+    /// Maximum block period for a grace_period.
+    /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
+    pub const MaxGracePeriod: BlockNumber = MAX_GRACE_PERIOD;
+    /// Maximum block period for a oracle_duration.
+    /// The oracle_duration is a duration where the oracle has to submit its report.
+    pub const MaxOracleDuration: BlockNumber = MAX_ORACLE_DURATION;
     /// The maximum market period.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     /// (Slashable) The orcale bond. Slashed in case the final outcome does not match the
@@ -173,7 +183,7 @@ parameter_types! {
     /// Pallet identifier, mainly used for named balance reserves. DO NOT CHANGE.
     pub const PmPalletId: PalletId = PM_PALLET_ID;
     /// Timeframe during which the oracle can report the final outcome after the market closed.
-    pub const ReportingPeriod: u32 = 4 * BLOCKS_PER_DAY as u32;
+    pub const ReportingPeriod: BlockNumber = 4 * BLOCKS_PER_DAY;
     /// (Slashable) A bond for creation markets that do not require approval. Slashed in case
     /// the market is forcefully destroyed.
     pub const ValidityBond: Balance = 1_000 * BASE;
