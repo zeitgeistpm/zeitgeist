@@ -37,10 +37,10 @@ Active --> Closed: Market period ends
 Closed --> Reported : Outcome reported by oracle or after timeout by anybody
 
 'Dispute or resolve directly
-Reported --> Disputed : Dispute started within DisputePeriod
-Reported --> Resolved : No dispute started within DisputePeriod
+Reported --> Disputed : Dispute started within DisputeDuration
+Reported --> Resolved : No dispute started within DisputeDuration
 
 'Disputed market resolves
-Disputed --> Resolved : DisputePeriod passed after first dispute
+Disputed --> Resolved : DisputeDuration passed after first dispute
 
 @enduml
