@@ -880,11 +880,8 @@ benchmarks! {
             *ids = BoundedVec::try_from(r_ids_vec).unwrap();
         });
 
-        let mut d_ids_vec = Vec::new();
-        for i in 1..=d {
-            // + 31 to not conflict with the markets of MarketIdsPerReportBlock
-            d_ids_vec.push((i + 31).into());
-        }
+        // + 31 to not conflict with the markets of MarketIdsPerReportBlock
+        let d_ids_vec = (1..=d).map(|i| (i + 31).into()).collect::<Vec<_>>();
         MarketIdsPerDisputeBlock::<T>::mutate(block_number, |ids| {
             *ids = BoundedVec::try_from(d_ids_vec).unwrap();
         });
