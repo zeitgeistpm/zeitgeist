@@ -523,7 +523,7 @@ Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
                 &disputor,
                 dispute_bond,
             )?;
-            let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
 
