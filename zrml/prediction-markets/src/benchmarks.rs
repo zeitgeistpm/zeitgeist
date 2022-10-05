@@ -247,7 +247,7 @@ benchmarks! {
             let _ = Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
 
-        let market = T::MarketCommons::market(&market_id.saturated_into())?;
+        let market = T::MarketCommons::market(&market_id)?;
 
         let (range_start, range_end) = match market.period {
             MarketPeriod::Timestamp(range) => (range.start, range.end),
