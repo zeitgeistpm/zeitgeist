@@ -836,17 +836,17 @@ benchmarks! {
         Pallet::<T>::market_status_manager::<
             _,
             MarketIdsPerOpenBlock<T>,
-            MarketIdsPerOpenTimeFrame<T>
-            >(
-                block_number,
-                last_time_frame,
-                current_time_frame,
-                |market_id, market| {
-                    // noop, because weight is already measured somewhere else
-                    Ok(())
-                },
-            )
-            .unwrap();
+            MarketIdsPerOpenTimeFrame<T>,
+        >(
+            block_number,
+            last_time_frame,
+            current_time_frame,
+            |market_id, market| {
+                // noop, because weight is already measured somewhere else
+                Ok(())
+            },
+        )
+        .unwrap();
     }
 
     market_resolution_manager {
