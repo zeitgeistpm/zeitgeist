@@ -197,18 +197,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes(7 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
     }
-    // Storage: MarketCommons Markets (r:1 w:0)
-    // Storage: PredictionMarkets Disputes (r:1 w:0)
-    // Storage: GlobalDisputes Winners (r:1 w:1)
-    // Storage: GlobalDisputes Outcomes (r:7 w:7)
-    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:2 w:2)
-    fn start_global_dispute(m: u32) -> Weight {
-        (89_164_000 as Weight)
-            // Standard Error: 0
-            .saturating_add((21_000 as Weight).saturating_mul(m as Weight))
-            .saturating_add(T::DbWeight::get().reads(13 as Weight))
-            .saturating_add(T::DbWeight::get().writes(11 as Weight))
-    }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: PredictionMarkets Disputes (r:1 w:0)

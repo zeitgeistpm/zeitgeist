@@ -46,7 +46,6 @@ use zrml_market_commons::MarketCommonsPalletApi;
 
 use frame_support::{traits::Hooks, BoundedVec};
 use sp_runtime::traits::{One, Zero};
-use zeitgeist_primitives::types::{MarketStatus, SubsidyUntil};
 
 // Get default values for market creation. Also spawns an account with maximum
 // amount of native currency
