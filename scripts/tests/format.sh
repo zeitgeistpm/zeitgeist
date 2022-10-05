@@ -63,13 +63,14 @@ taplo_fmt() {
 }
 
 # install taplo if it isn't already
-has_taplo=$(whereis taplo)
-if [[ ${has_taplo} = "taplo: " ]]; then
-    cargo install taplo-cli 2>/dev/null
+has_taplo=$(which taplo)
+if [ $? -eq 1 ]; then
+    echo "Installing taplo ..."
+    cargo install taplo-cli
 fi
 # install rustfmt if it isn't already
-has_rustfmt=$(whereis rustfmt)
-if [[ ${has_rustfmt} = "rustfmt: " ]]; then
+has_rustfmt=$(which rustfmt)
+if [ $? -eq 1 ]; then
     rustup component add rustfmt
 fi
 

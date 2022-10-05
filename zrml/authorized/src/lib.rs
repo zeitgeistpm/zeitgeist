@@ -15,8 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Authorized
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -193,6 +192,11 @@ where
         metadata: Default::default(),
         oracle: T::PalletId::get().into_account(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
+        deadlines: zeitgeist_primitives::types::Deadlines {
+            grace_period: 1_u32.into(),
+            oracle_duration: 1_u32.into(),
+            dispute_duration: 1_u32.into(),
+        },
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,
