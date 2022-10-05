@@ -45,7 +45,7 @@ parameter_types! {
     pub const MinOracleDuration: BlockNumber = 2;
     pub const MaxDisputeDuration: BlockNumber = 5;
     pub const MaxGracePeriod: BlockNumber = 2;
-    pub const MaxOracleDuration: BlockNumber = 2;
+    pub const MaxOracleDuration: BlockNumber = 3;
 }
 
 // Simple disputes parameters
