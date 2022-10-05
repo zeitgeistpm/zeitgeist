@@ -1437,7 +1437,6 @@ mod pallet {
                 LastTimeFrame::<T>::set(Some(current_time_frame));
                 total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
-                // hopefully the weight of the following is insignificant
                 match open.and(close).and(resolve) {
                     Err(err) => {
                         Self::deposit_event(Event::BadOnInitialize);
