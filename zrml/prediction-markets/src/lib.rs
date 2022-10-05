@@ -1389,7 +1389,7 @@ mod pallet {
                     },
                 );
 
-                total_weight = total_weight.saturating_add(open.unwrap_or_else(|| {
+                total_weight = total_weight.saturating_add(open.unwrap_or_else(|_| {
                     T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get())
                 }));
 

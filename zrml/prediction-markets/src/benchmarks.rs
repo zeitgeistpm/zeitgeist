@@ -870,7 +870,7 @@ benchmarks! {
             })?;
         }
 
-        let block_number = 1u64.saturated_into::<T::BlockNumber>();
+        let block_number: T::BlockNumber = Zero::zero();
 
         let mut r_ids_vec = Vec::new();
         for i in 1..=r {
@@ -885,12 +885,9 @@ benchmarks! {
         MarketIdsPerDisputeBlock::<T>::mutate(block_number, |ids| {
             *ids = BoundedVec::try_from(d_ids_vec).unwrap();
         });
-
-        // TODO(#730) this will get outdated with the merged PR
-        let now: T::BlockNumber = T::DisputePeriod::get() + block_number;
     }: {
         Pallet::<T>::resolution_manager(
-            now,
+            block_number,
             |market_id, market| {
                 // noop, because weight is already measured somewhere else
                 Ok(())
