@@ -42,6 +42,7 @@ parameter_types! {
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
     pub const ValidityBond: Balance = 50 * CENT;
     pub const MinDisputeDuration: BlockNumber = 2;
+    pub const MinOracleDuration: BlockNumber = 2;
     pub const MaxDisputeDuration: BlockNumber = 5;
     pub const MaxGracePeriod: BlockNumber = 2;
     pub const MaxOracleDuration: BlockNumber = 2;

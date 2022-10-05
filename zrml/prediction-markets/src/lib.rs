@@ -460,6 +460,10 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
             ensure!(
+                deadlines.oracle_duration >= T::MinOracleDuration::get(),
+                Error::<T>::OracleDurationSmallerThanMinOracleDuration
+            );
+            ensure!(
                 deadlines.dispute_duration >= T::MinDisputeDuration::get(),
                 Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
             );
@@ -1154,6 +1158,11 @@ mod pallet {
         #[pallet::constant]
         type MinDisputeDuration: Get<Self::BlockNumber>;
 
+        /// The minimum number of blocks allowed to be specified as oracle_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MinOracleDuration: Get<Self::BlockNumber>;
+
         /// The maximum number of blocks allowed to be specified as grace_period
         /// in create_market.
         #[pallet::constant]
@@ -1282,6 +1291,8 @@ mod pallet {
         NotAllowedToReportYet,
         /// Specified dispute_duration is smaller than MinDisputeDuration.
         DisputeDurationSmallerThanMinDisputeDuration,
+        /// Specified oracle_duration is smaller than MinOracleDuration.
+        OracleDurationSmallerThanMinOracleDuration,
         /// Specified dispute_duration is greater than MaxDisputeDuration.
         DisputeDurationGreaterThanMaxDisputeDuration,
         /// Specified grace_period is greater than MaxGracePeriod.
