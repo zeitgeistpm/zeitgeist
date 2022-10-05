@@ -1389,14 +1389,9 @@ mod pallet {
                     },
                 );
 
-                if let Ok(weight) = open {
-                    total_weight = total_weight.saturating_add(weight);
-                } else {
-                    // charge weight for the worst case
-                    total_weight = total_weight.saturating_add(
-                        T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get()),
-                    );
-                }
+                total_weight = total_weight.saturating_add(open.unwrap_or_else(|| {
+                    T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get())
+                }));
 
                 let close = Self::market_status_manager::<
                     _,
