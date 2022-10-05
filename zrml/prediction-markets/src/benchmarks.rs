@@ -58,7 +58,7 @@ fn create_market_common_parameters<T: Config>(
     let oracle = caller.clone();
     let deadlines = Deadlines::<T::BlockNumber> {
         grace_period: 1_u32.into(),
-        oracle_duration: 1_u32.into(),
+        oracle_duration: T::MinOracleDuration::get(),
         dispute_duration: T::MinDisputeDuration::get(),
     };
     let mut metadata = [0u8; 50];
