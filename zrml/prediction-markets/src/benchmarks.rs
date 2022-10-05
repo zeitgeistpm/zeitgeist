@@ -868,7 +868,7 @@ benchmarks! {
         let markets = BoundedVec::try_from(vec![market_info; a as usize]).unwrap();
         <MarketsCollectingSubsidy<T>>::put(markets);
     }: {
-        let _ = Pallet::<T>::process_subsidy_collecting_markets(
+        Pallet::<T>::process_subsidy_collecting_markets(
             T::BlockNumber::zero(),
             MomentOf::<T>::zero()
         );
