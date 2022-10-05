@@ -3,7 +3,7 @@
 pub use super::*;
 use crate::{
     asset::Asset,
-    types::{Balance, BlockNumber, CurrencyId, Moment},
+    types::{Balance, CurrencyId, Moment},
 };
 use frame_support::{parameter_types, traits::LockIdentifier, PalletId};
 use orml_traits::parameter_type_with_key;
@@ -41,7 +41,6 @@ parameter_types! {
     pub const AdvisoryBond: Balance = 25 * CENT;
     pub const DisputeBond: Balance = 5 * BASE;
     pub const DisputeFactor: Balance = 2 * BASE;
-    pub const DisputePeriod: BlockNumber = BLOCKS_PER_DAY;
     pub const MaxCategories: u16 = 10;
     pub const MaxDisputes: u16 = 6;
     pub const MinCategories: u16 = 2;
@@ -49,12 +48,14 @@ parameter_types! {
     pub const MinSubsidyPeriod: Moment = 60_000;
     // 2_678_400_000 = 31 days.
     pub const MaxSubsidyPeriod: Moment = 2_678_400_000;
-    // Requirements: MaxPeriod + ReportingPeriod + MaxDisputes * DisputePeriod < u64::MAX.
     pub const MaxMarketPeriod: Moment = u64::MAX / 2;
     pub const OracleBond: Balance = 50 * CENT;
     pub const PmPalletId: PalletId = PalletId(*b"zge/pred");
-    pub const ReportingPeriod: u32 = BLOCKS_PER_DAY as _;
     pub const ValidityBond: Balance = 50 * CENT;
+    pub const MinDisputeDuration: BlockNumber = 2;
+    pub const MaxDisputeDuration: BlockNumber = 5;
+    pub const MaxGracePeriod: BlockNumber = 2;
+    pub const MaxOracleDuration: BlockNumber = 2;
 }
 
 #[cfg(feature = "with-global-disputes")]

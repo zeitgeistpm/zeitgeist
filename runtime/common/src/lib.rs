@@ -36,6 +36,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
+            (
+                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
+                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>
+            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -849,6 +853,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
+            type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
             type ApproveOrigin = EnsureOneOf<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
@@ -868,6 +873,10 @@ macro_rules! impl_config_traits {
             type MarketCommons = MarketCommons;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
+            type MinDisputeDuration = MinDisputeDuration;
+            type MaxDisputeDuration = MaxDisputeDuration;
+            type MaxGracePeriod = MaxGracePeriod;
+            type MaxOracleDuration = MaxOracleDuration;
             type MaxSubsidyPeriod = MaxSubsidyPeriod;
             type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;

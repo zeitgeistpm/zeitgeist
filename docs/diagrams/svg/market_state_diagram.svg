@@ -11,9 +11,9 @@ link enough_subsidy to Active--><g id="link_enough_subsidy_Active"><path d="M668
 link enough_subsidy to InsufficientSubsidy--><g id="link_enough_subsidy_InsufficientSubsidy"><path d="M680.35,801.1708 C680.35,820.7792 680.35,861.5875 680.35,894.5406 " fill="none" id="enough_subsidy-to-InsufficientSubsidy" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="680.35,899.7573,684.5167,890.3823,680.35,894.549,676.1833,890.3823,680.35,899.7573" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="148.9583" x="691.8083" y="855.3528">[subsidy &lt; MinSubsidy]</text></g><!--MD5=[b768e549d97c6d09413d52451a882c13]
 link Active to Closed--><g id="link_Active_Closed"><path d="M394.9333,990.0219 C394.9333,1018.0031 394.9333,1054.224 394.9333,1083.1146 " fill="none" id="Active-to-Closed" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="394.9333,1088.4208,399.1,1079.0458,394.9333,1083.2125,390.7667,1079.0458,394.9333,1088.4208" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="123.9583" x="406.3917" y="1043.8944">Market period ends</text></g><!--MD5=[aa8b0d087a7ef2a5baaaadceadce49f9]
 link Closed to Reported--><g id="link_Closed_Reported"><path d="M394.9333,1178.5635 C394.9333,1206.5448 394.9333,1242.7656 394.9333,1271.6563 " fill="none" id="Closed-to-Reported" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="394.9333,1276.9625,399.1,1267.5875,394.9333,1271.7542,390.7667,1267.5875,394.9333,1276.9625" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="361.4583" x="406.3917" y="1232.4361">Outcome reported by oracle or after timeout by anybody</text></g><!--MD5=[014c23bfd69a9e46379179b2d9f143a4]
-link Reported to Disputed--><g id="link_Reported_Disputed"><path d="M291.7823,1359.6812 C275.2917,1369.7417 260.074,1382.3135 249.1,1397.9167 C236.525,1415.7958 232.1625,1439.3667 231.2323,1460.226 " fill="none" id="Reported-to-Disputed" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="231.0677,1465.4656,235.5269,1456.2262,231.2314,1460.2599,227.1977,1455.9643,231.0677,1465.4656" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="228.125" x="260.5583" y="1420.9778">Dispute started within DisputePeriod</text></g><!--MD5=[cd0d785d00fb30cfb7b9f32466ea54f1]
-link Reported to Resolved--><g id="link_Reported_Resolved"><path d="M478.575,1366.6792 C488.9104,1375.6135 498.0302,1386 504.3083,1397.9167 C550.9167,1486.3906 553.7375,1535.9865 504.3083,1622.9167 C492.549,1643.5983 472.5833,1659.1739 451.9687,1670.6156 " fill="none" id="Reported-to-Resolved" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="447.2833,1673.1411,457.5128,1672.3598,451.8678,1670.6695,453.5581,1665.0246,447.2833,1673.1411" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="247.9167" x="552.225" y="1515.2486">No dispute started within DisputePeriod</text></g><!--MD5=[b052f21181e20ee087efaf73dcf65008]
-link Disputed to Resolved--><g id="link_Disputed_Resolved"><path d="M219.6062,1555.3917 C214.9583,1577.2021 213.8354,1603.0604 226.1833,1622.9167 C243.524,1650.8034 274.6281,1668.6276 304.2083,1679.8636 " fill="none" id="Disputed-to-Resolved" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="309.324,1681.7482,301.9674,1674.5975,304.4367,1679.9477,299.0866,1682.417,309.324,1681.7482" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="251.0417" x="237.6417" y="1609.5194">DisputePeriod passed after first dispute</text></g><!--MD5=[1dd4b60283bfac687c6103bbffa9b0d4]
+link Reported to Disputed--><g id="link_Reported_Disputed"><path d="M291.7823,1359.6812 C275.2917,1369.7417 260.074,1382.3135 249.1,1397.9167 C236.525,1415.7958 232.1625,1439.3667 231.2323,1460.226 " fill="none" id="Reported-to-Disputed" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="231.0677,1465.4656,235.5269,1456.2262,231.2314,1460.2599,227.1977,1455.9643,231.0677,1465.4656" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="228.125" x="260.5583" y="1420.9778">Dispute started within DisputeDuration</text></g><!--MD5=[cd0d785d00fb30cfb7b9f32466ea54f1]
+link Reported to Resolved--><g id="link_Reported_Resolved"><path d="M478.575,1366.6792 C488.9104,1375.6135 498.0302,1386 504.3083,1397.9167 C550.9167,1486.3906 553.7375,1535.9865 504.3083,1622.9167 C492.549,1643.5983 472.5833,1659.1739 451.9687,1670.6156 " fill="none" id="Reported-to-Resolved" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="447.2833,1673.1411,457.5128,1672.3598,451.8678,1670.6695,453.5581,1665.0246,447.2833,1673.1411" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="247.9167" x="552.225" y="1515.2486">No dispute started within DisputeDuration</text></g><!--MD5=[b052f21181e20ee087efaf73dcf65008]
+link Disputed to Resolved--><g id="link_Disputed_Resolved"><path d="M219.6062,1555.3917 C214.9583,1577.2021 213.8354,1603.0604 226.1833,1622.9167 C243.524,1650.8034 274.6281,1668.6276 304.2083,1679.8636 " fill="none" id="Disputed-to-Resolved" style="stroke:#2196F3;stroke-width:3.125;"/><polygon fill="#2196F3" points="309.324,1681.7482,301.9674,1674.5975,304.4367,1679.9477,299.0866,1682.417,309.324,1681.7482" style="stroke:#2196F3;stroke-width:3.125;"/><text fill="#222222" font-family="&quot;Verdana&quot;" font-size="12.5" lengthAdjust="spacing" textLength="251.0417" x="237.6417" y="1609.5194">DisputeDuration passed after first dispute</text></g><!--MD5=[1dd4b60283bfac687c6103bbffa9b0d4]
 @startuml
 !theme materia
 
@@ -53,11 +53,11 @@ Active - -> Closed: Market period ends
 Closed - -> Reported : Outcome reported by oracle or after timeout by anybody
 
 'Dispute or resolve directly
-Reported - -> Disputed : Dispute started within DisputePeriod
-Reported - -> Resolved : No dispute started within DisputePeriod
+Reported - -> Disputed : Dispute started within DisputeDuration
+Reported - -> Resolved : No dispute started within DisputeDuration
 
 'Disputed market resolves
-Disputed - -> Resolved : DisputePeriod passed after first dispute
+Disputed - -> Resolved : DisputeDuration passed after first dispute
 @enduml
 
 @startuml
@@ -528,10 +528,10 @@ enough_subsidy - -> InsufficientSubsidy : [subsidy < MinSubsidy]
 Active - -> Closed: Market period ends
 Closed - -> Reported : Outcome reported by oracle or after timeout by anybody
 
-Reported - -> Disputed : Dispute started within DisputePeriod
-Reported - -> Resolved : No dispute started within DisputePeriod
+Reported - -> Disputed : Dispute started within DisputeDuration
+Reported - -> Resolved : No dispute started within DisputeDuration
 
-Disputed - -> Resolved : DisputePeriod passed after first dispute
+Disputed - -> Resolved : DisputeDuration passed after first dispute
 @enduml
 
 PlantUML version 1.2022.6beta5(Unknown compile time)

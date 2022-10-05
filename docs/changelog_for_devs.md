@@ -1,4 +1,4 @@
-# v0.3.6
+# v0.3.7
 
 - Added new pallet: GlobalDisputes. 
   Dispatchable calls are:
@@ -22,6 +22,15 @@
   - `OutcomesFullyCleaned` (outcomes storage item fully cleaned)
   - `VotedOnOutcome` (user voted on outcome)
 
+# v0.3.6
+
+- Added new field `deadlines` in Market structure, which has `grace_period`,
+  `oracle_duration` and `dispute_duration` fields, all represents duration in
+  number of blocks. `create_market` extrinsic has new parameter to specify these
+  deadlines.
+- Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
+  to 10% by introducing a new on-chain variable `AdvisoryBondSlashPercentage`.
+
 # v0.3.5
 
 - Added `Initialized` status for pools. A pool now starts in `Initialized`
@@ -42,11 +51,12 @@
 
   Furthermore, there's a maximum swap fee, specified by the `swaps` pallet's
   on-chain constant `MaxSwapFee`.
+
 - Added new pallet: Styx. Dispatchable calls are:
   - `cross` - Burns native chain tokens to cross. In the case of Zeitgeist, this
-            is granting the ability to claim your zeitgeist avatar.
-  - `set_burn_amount(amount)` - Sets the new burn price for the cross.
-                              Intended to be called by governance.
+    is granting the ability to claim your zeitgeist avatar.
+  - `set_burn_amount(amount)` - Sets the new burn price for the cross. Intended
+    to be called by governance.
 
 # v0.3.4
 

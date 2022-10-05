@@ -44,6 +44,8 @@ pub struct Market<AI, BN, M> {
     pub market_type: MarketType,
     /// Market start and end
     pub period: MarketPeriod<BN, M>,
+    /// Market deadlines.
+    pub deadlines: Deadlines<BN>,
     /// The scoring rule used for the market.
     pub scoring_rule: ScoringRule,
     /// The current status of the market.
@@ -97,6 +99,7 @@ where
             .saturating_add(u8::max_encoded_len().saturating_mul(68))
             .saturating_add(MarketType::max_encoded_len())
             .saturating_add(<MarketPeriod<BN, M>>::max_encoded_len())
+            .saturating_add(Deadlines::<BN>::max_encoded_len())
             .saturating_add(ScoringRule::max_encoded_len())
             .saturating_add(MarketStatus::max_encoded_len())
             .saturating_add(<Option<Report<AI, BN>>>::max_encoded_len())
@@ -154,6 +157,14 @@ impl<BN: MaxEncodedLen, M: MaxEncodedLen> MaxEncodedLen for MarketPeriod<BN, M> 
         // Since it is an enum, the biggest element is the only one of interest here.
         BN::max_encoded_len().max(M::max_encoded_len()).saturating_mul(2).saturating_add(1)
     }
+}
+
+/// Defines deadlines for market.
+#[derive(Clone, Copy, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
+pub struct Deadlines<BN> {
+    pub grace_period: BN,
+    pub oracle_duration: BN,
+    pub dispute_duration: BN,
 }
 
 /// Defines the state of the market.
@@ -284,6 +295,11 @@ mod tests {
             metadata: vec![4u8; 5],
             market_type, // : MarketType::Categorical(6),
             period: MarketPeriod::Block(7..8),
+            deadlines: Deadlines {
+                grace_period: 1_u32,
+                oracle_duration: 1_u32,
+                dispute_duration: 1_u32,
+            },
             scoring_rule: ScoringRule::CPMM,
             status: MarketStatus::Active,
             report: None,
