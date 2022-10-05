@@ -77,6 +77,8 @@ pub const MAX_CATEGORIES: u16 = 64;
 /// The dispute_duration is time where users can dispute the outcome.
 /// Minimum block period for a dispute.
 pub const MIN_DISPUTE_DURATION: BlockNumber = 6 * BLOCKS_PER_HOUR;
+/// Minimum block period for oracle_duration.
+pub const MIN_ORACLE_DURATION: BlockNumber = BLOCKS_PER_HOUR;
 /// Maximum block period for a dispute.
 pub const MAX_DISPUTE_DURATION: BlockNumber = BLOCKS_PER_DAY;
 /// Maximum block period for an grace_period.

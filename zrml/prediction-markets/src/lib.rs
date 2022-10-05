@@ -467,6 +467,10 @@ mod pallet {
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
             ensure!(
+                deadlines.oracle_duration >= T::MinOracleDuration::get(),
+                Error::<T>::OracleDurationSmallerThanMinOracleDuration
+            );
+            ensure!(
                 deadlines.dispute_duration >= T::MinDisputeDuration::get(),
                 Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
             );
@@ -1161,6 +1165,11 @@ mod pallet {
         #[pallet::constant]
         type MinDisputeDuration: Get<Self::BlockNumber>;
 
+        /// The minimum number of blocks allowed to be specified as oracle_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MinOracleDuration: Get<Self::BlockNumber>;
+
         /// The maximum number of blocks allowed to be specified as grace_period
         /// in create_market.
         #[pallet::constant]
@@ -1292,6 +1301,8 @@ mod pallet {
         NotAllowedToReportYet,
         /// Specified dispute_duration is smaller than MinDisputeDuration.
         DisputeDurationSmallerThanMinDisputeDuration,
+        /// Specified oracle_duration is smaller than MinOracleDuration.
+        OracleDurationSmallerThanMinOracleDuration,
         /// Specified dispute_duration is greater than MaxDisputeDuration.
         DisputeDurationGreaterThanMaxDisputeDuration,
         /// Specified grace_period is greater than MaxGracePeriod.
@@ -1865,7 +1876,7 @@ mod pallet {
             }
         }
 
-        fn on_resolution(
+        pub fn on_resolution(
             market_id: &MarketIdOf<T>,
             market: &Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
         ) -> Result<u64, DispatchError> {
@@ -1996,6 +2007,8 @@ mod pallet {
             };
             let clean_up_weight = Self::clean_up_pool(market, market_id, &resolved_outcome)?;
             total_weight = total_weight.saturating_add(clean_up_weight);
+            // TODO: https://github.com/zeitgeistpm/zeitgeist/issues/815
+            // Following call should return weight consumed by it.
             T::LiquidityMining::distribute_market_incentives(market_id)?;
 
             // NOTE: Currently we don't clean up outcome assets.

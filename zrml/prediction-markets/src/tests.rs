@@ -49,7 +49,7 @@ const SENTINEL_AMOUNT: u128 = BASE;
 fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
     Deadlines {
         grace_period: 1_u32.into(),
-        oracle_duration: 1_u32.into(),
+        oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
         dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
     }
 }
@@ -236,6 +236,31 @@ fn create_market_fails_on_min_dispute_period() {
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
+        );
+    });
+}
+
+#[test]
+fn create_market_fails_on_min_oracle_duration() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() - 1,
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+        };
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                deadlines,
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
         );
     });
 }
