@@ -290,12 +290,12 @@ parameter_types! {
 
     // Bounties
     /// The amount held on deposit for placing a bounty proposal.
-    pub const BountyDepositBase : Balance = 10 * BASE;
-    /// The delay period for which a bounty beneficiary need to wait before claim the payout.
+    pub const BountyDepositBase : Balance = 100 * BASE;
+    /// The delay period that a bounty beneficiary needs to wait before being able to claim the payout.
     pub const BountyDepositPayoutDelay : BlockNumber = 3 * BLOCKS_PER_DAY;
 
     /// Bounty duration in blocks.
-    pub const BountyUpdatePeriod : BlockNumber = 14 * BLOCKS_PER_DAY;
+    pub const BountyUpdatePeriod : BlockNumber = 35 * BLOCKS_PER_DAY;
 
     /// The curator deposit is calculated as a percentage of the curator fee.
     ///
@@ -304,18 +304,18 @@ parameter_types! {
     pub const CuratorDepositMultiplier : Permill = Permill::from_percent(50);
 
     /// Maximum amount of funds that should be placed in a deposit for making a proposal.
-    pub const CuratorDepositMax : Balance = 200 * BASE;
+    pub const CuratorDepositMax : Balance = 500 * BASE;
     /// Minimum amount of funds that should be placed in a deposit for making a proposal.
     pub const CuratorDepositMin : Balance = 10 * BASE;
     /// Minimum value for a bounty.
-    pub const BountyValueMinimum: Balance = BASE;
+    pub const BountyValueMinimum: Balance = 50 * BASE;
 
     /// The amount held on deposit per byte within the tip report reason or bounty description.
     pub DataDepositPerByte : Balance = BASE;
     /// Maximum acceptable reason length.
     ///
     /// Benchmarks depend on this value, be sure to update weights file when changing this value
-    pub MaximumReasonLength : u32 = 256;
+    pub MaximumReasonLength : u32 = 8192;
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();

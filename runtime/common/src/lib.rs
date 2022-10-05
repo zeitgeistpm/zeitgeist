@@ -212,11 +212,11 @@ macro_rules! create_runtime {
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  11,
-                TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 12,
-                Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 13,
-                Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 14,
-                MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 15,
+                TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 11,
+                Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
+                Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
+                MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
+                Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
