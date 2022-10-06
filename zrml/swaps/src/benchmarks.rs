@@ -386,9 +386,9 @@ benchmarks! {
             false,
             None,
         );
-        let asset_amount: BalanceOf<T> = CENT.saturated_into();
-        let pool_amount = 0u32.into();
-    }: _(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount, pool_amount)
+        let min_asset_amount = 0u32.into();
+        let pool_amount: BalanceOf<T> = CENT.saturated_into();
+    }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, min_asset_amount)
 
     pool_join {
         let a in 2 .. T::MaxAssets::get().into();
