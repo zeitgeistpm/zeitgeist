@@ -778,15 +778,15 @@ macro_rules! impl_config_traits {
             type BountyDepositBase = BountyDepositBase;
             type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
             type BountyUpdatePeriod = BountyUpdatePeriod;
-            type CuratorDepositMultiplier = CuratorDepositMultiplier;
+            type BountyValueMinimum = BountyValueMinimum;
+            type ChildBountyManager = ();
             type CuratorDepositMax = CuratorDepositMax;
             type CuratorDepositMin = CuratorDepositMin;
-            type BountyValueMinimum = BountyValueMinimum;
+            type CuratorDepositMultiplier = CuratorDepositMultiplier;
             type DataDepositPerByte = DataDepositPerByte;
             type Event = Event;
             type MaximumReasonLength = MaximumReasonLength;
             type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
-            type ChildBountyManager = ();
         }
 
         impl pallet_utility::Config for Runtime {
