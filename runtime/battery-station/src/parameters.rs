@@ -143,7 +143,7 @@ parameter_types! {
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 25 * CENT;
-    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.
