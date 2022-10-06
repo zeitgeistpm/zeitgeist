@@ -1243,17 +1243,18 @@ mod pallet {
             // The time complexity of `apply_cached_pools` is O(pool_count); we calculate the
             // minimum number of pools we can handle.
             // TODO Replace noop with execute pool!
-            let overhead = WeightInfo::apply_to_cached_pools_noop(0);
-            let extra_weight_per_pool = WeightInfo::apply_to_cached_pools_noop(1) - overhead;
+            let overhead = T::WeightInfo::apply_to_cached_pools_noop(0);
+            let extra_weight_per_pool = T::WeightInfo::apply_to_cached_pools_noop(1) - overhead;
             let pool_count = weight.saturating_sub(overhead) / extra_weight_per_pool;
             if pool_count == 0 {
                 return weight;
             }
-            let result =
-                Self::apply_to_cached_pools(pool_count, |pool_id| Self::execute_arbitrage(pool_id));
+            let result = Self::apply_to_cached_pools(pool_count as u32, |pool_id| {
+                Self::execute_arbitrage(pool_id)
+            });
             // `apply_to_cached_pools` should never fail, but if it does, we just assume we
             // consumed all the weight.
-            result.map_err(weight)
+            result.unwrap_or(weight)
         }
 
         pub(crate) fn apply_to_cached_pools<F>(
@@ -1263,7 +1264,7 @@ mod pallet {
         where
             F: Fn(PoolId) -> Result<Weight, DispatchError>,
         {
-            let mut total_weight = WeightInfo::apply_to_cached_pools_noop(pool_count);
+            let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
             // TODO: Check/write a test that this doesn't drain the whole map!
             // TODO: Write pool_id, pool to cache, saves one read!
             for (pool_id, _) in PoolsCachedForArbitrage::<T>::drain() {
