@@ -34,13 +34,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
 
       - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          target: wasm32-unknown-unknown
-          default: true
-          override: true
-          profile: minimal
-          components: rustfmt, clippy
+        run: rustup show
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v1
