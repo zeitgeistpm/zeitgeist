@@ -20,7 +20,6 @@ jobs:
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
           target: wasm32-unknown-unknown
           default: true
           override: true
@@ -52,7 +51,6 @@ jobs:
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
           target: wasm32-unknown-unknown
           default: true
           override: true
@@ -75,7 +73,6 @@ jobs:
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
           target: wasm32-unknown-unknown
           default: true
           override: true
