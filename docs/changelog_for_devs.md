@@ -1,6 +1,8 @@
 # v0.3.6
 
 - Authorized pallet now has `AuthorizedDisputeResolutionOrigin` hence `MarketDisputeMechanism::Authorized` does not nead account_id.
+  To create market with Authorized MDM specifying account_id for Authorized MDM is not required, any user satisfying `AuthorizedDisputeResolutionOrigin`
+  can use Authorized MDM for resolving market.
 
 # v0.3.5
 
