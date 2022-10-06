@@ -60,7 +60,8 @@ parameter_types! {
     // Collective
     // Note: MaxMembers does not influence the pallet logic, but the worst-case weight estimation.
     pub const AdvisoryCommitteeMaxMembers: u32 = 100;
-    pub const AdvisoryCommitteeMaxProposals: u32 = 300;
+    // The maximum of proposals is currently u8::MAX otherwise the pallet_collective benchmark fails
+    pub const AdvisoryCommitteeMaxProposals: u32 = 255;
     pub const AdvisoryCommitteeMotionDuration: BlockNumber = 3 * BLOCKS_PER_DAY;
     pub const CouncilMaxMembers: u32 = 100;
     pub const CouncilMaxProposals: u32 = 100;
