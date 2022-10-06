@@ -38,4 +38,8 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(origin)? }
 }
 
-impl_benchmark_test_suite!(Authorized, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
+impl_benchmark_test_suite!(
+    Authorized,
+    crate::mock::ExtBuilder::default().build(),
+    crate::mock::Runtime
+);

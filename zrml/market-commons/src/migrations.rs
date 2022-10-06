@@ -17,6 +17,7 @@
 
 use frame_support::{log, traits::OnRuntimeUpgrade};
 use parity_scale_codec::{Decode, Encode};
+use zeitgeist_primitives::types::MarketDisputeMechanism;
 
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
@@ -34,7 +35,14 @@ pub struct LegacyMarket<AI, BN, M> {
     pub status: MarketStatus,
     pub report: Option<Report<AI, BN>>,
     pub resolved_outcome: Option<OutcomeReport>,
-    pub dispute_mechanism: MarketDisputeMechanism<AI>,
+    pub dispute_mechanism: LegacyMarketDisputeMechanism<AI>,
+}
+
+#[derive(Clone, Decode, Encode)]
+pub enum LegacyMarketDisputeMechanism<AI> {
+    Authorized(AI),
+    Court,
+    SimpleDisputes,
 }
 
 type LegacyMarketOf<T> = LegacyMarket<
@@ -52,8 +60,8 @@ pub struct UpdateMarketsForAuthorizedMDM<T>(PhantomData<T>);
 
 impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
     fn on_runtime_upgrade() -> frame_support::weights::Weight
-        where
-            T: Config,
+    where
+        T: Config,
     {
         let mut total_weight = T::DbWeight::get().reads(1);
         let storage_version = utility::get_on_chain_storage_version_of_market_commons_pallet();
@@ -61,8 +69,15 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
             log::info!("Skipping updates of markets; prediction-markets already up to date");
             return total_weight;
         }
-            let mut new_markets_data: Vec<(Vec<u8>, MarketOf<T>)> = Vec::new();
+        let mut new_markets_data: Vec<(Vec<u8>, MarketOf<T>)> = Vec::new();
         for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
+            let dispute_mechanism = match legacy_market.dispute_mechanism {
+                LegacyMarketDisputeMechanism::Authorized(_) => MarketDisputeMechanism::Authorized,
+                LegacyMarketDisputeMechanism::Court => MarketDisputeMechanism::Court,
+                LegacyMarketDisputeMechanism::SimpleDisputes => {
+                    MarketDisputeMechanism::SimpleDisputes
+                }
+            };
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             let new_market = Market {
                 creator: legacy_market.creator,
@@ -76,11 +91,11 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
                 status: legacy_market.status,
                 report: legacy_market.report,
                 resolved_outcome: legacy_market.resolved_outcome,
-                dispute_mechanism: legacy_market.dispute_mechanism,
+                dispute_mechanism,
             };
-            new_markets_data.push((key, new_market));   
-    }
-         for (key, new_market) in new_markets_data {
+            new_markets_data.push((key, new_market));
+        }
+        for (key, new_market) in new_markets_data {
             put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
@@ -89,7 +104,7 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         total_weight
     }
-       #[cfg(feature = "try-runtime")]
+    #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
         Ok(())
     }
@@ -98,5 +113,130 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
     fn post_upgrade() -> Result<(), &'static str> {
         Ok(())
     }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mock::*;
+    use alloc::{vec, vec::Vec};
+    use core::fmt::Debug;
+    use frame_support::{assert_ok, storage::unhashed, Blake2_128Concat, StorageHasher};
+    use parity_scale_codec::Encode;
+    use sp_runtime::traits::BlockNumberProvider;
+    use zeitgeist_primitives::types::{
+        Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketId,
+        MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report,
+    };
 
+    #[test]
+    fn test_on_runtime_upgrade() {
+        ExtBuilder::default().build().execute_with(|| {
+            utility::put_storage_version_of_market_commons_pallet(
+                MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
+            );
+            let (legacy_markets, expected_markets) = create_test_data_for_market_update();
+            populate_test_data::<Blake2_128Concat, MarketId, LegacyMarketOf<Runtime>>(
+                MARKET_COMMONS,
+                MARKETS,
+                legacy_markets,
+            );
+            UpdateMarketsForAuthorizedMDM::<Runtime>::on_runtime_upgrade();
+            assert_eq!(
+                utility::get_on_chain_storage_version_of_market_commons_pallet(),
+                MARKET_COMMONS_NEXT_STORAGE_VERSION
+            );
+            for (market_id, market_expected) in expected_markets.iter().enumerate() {
+                let market_actual = MarketCommons::market(&(market_id as u128)).unwrap();
+                assert_eq!(market_actual, *market_expected);
+            }
+        });
+    }
+
+    fn create_test_data_for_market_update() -> (Vec<LegacyMarketOf<Runtime>>, Vec<MarketOf<Runtime>>)
+    {
+        let deadlines = Deadlines {
+            grace_period: 2_u32.into(),
+            oracle_duration: 2_u32.into(),
+            dispute_duration: 2_u32.into(),
+        };
+        let old_markets: Vec<LegacyMarketOf<Runtime>> = vec![
+            LegacyMarket {
+                creator: 1_u128,
+                creation: MarketCreation::Permissionless,
+                creator_fee: 100_u8,
+                oracle: 2_u128,
+                metadata: vec![],
+                market_type: MarketType::Categorical(2),
+                period: MarketPeriod::Block(1..10),
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Proposed,
+                report: None,
+                resolved_outcome: None,
+                dispute_mechanism: LegacyMarketDisputeMechanism::Authorized(2_u128),
+                deadlines,
+            },
+            LegacyMarket {
+                creator: 1_u128,
+                creation: MarketCreation::Advised,
+                creator_fee: 100_u8,
+                oracle: 2_u128,
+                metadata: vec![],
+                market_type: MarketType::Scalar(1_u128..=5_u128),
+                period: MarketPeriod::Timestamp(1..10),
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Active,
+                report: None,
+                resolved_outcome: None,
+                dispute_mechanism: LegacyMarketDisputeMechanism::Authorized(3_u128),
+                deadlines,
+            },
+        ];
+        let expected_markets: Vec<MarketOf<Runtime>> = vec![
+            Market {
+                creator: 1_u128,
+                creation: MarketCreation::Permissionless,
+                creator_fee: 100_u8,
+                oracle: 2_u128,
+                metadata: vec![],
+                market_type: MarketType::Categorical(2),
+                period: MarketPeriod::Block(1..10),
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Proposed,
+                report: None,
+                resolved_outcome: None,
+                dispute_mechanism: MarketDisputeMechanism::Authorized,
+                deadlines,
+            },
+            Market {
+                creator: 1_u128,
+                creation: MarketCreation::Advised,
+                creator_fee: 100_u8,
+                oracle: 2_u128,
+                metadata: vec![],
+                market_type: MarketType::Scalar(1_u128..=5_u128),
+                period: MarketPeriod::Timestamp(1..10),
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Active,
+                report: None,
+                resolved_outcome: None,
+                dispute_mechanism: MarketDisputeMechanism::Authorized,
+                deadlines,
+            },
+        ];
+        (old_markets, expected_markets)
+    }
+    fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
+    where
+        H: StorageHasher,
+        K: TryFrom<usize> + Encode,
+        V: Encode + Clone,
+        <K as TryFrom<usize>>::Error: Debug,
+    {
+        for (key, value) in data.iter().enumerate() {
+            let storage_hash = utility::key_to_hash::<H, K>(
+                K::try_from(key).expect("usize to K conversion failed"),
+            );
+            put_storage_value::<V>(pallet, prefix, &storage_hash, (*value).clone());
+        }
+    }
 }
