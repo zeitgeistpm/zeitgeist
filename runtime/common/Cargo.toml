@@ -5,9 +5,9 @@ frame-support = { branch = "polkadot-v0.9.23", default-features = false, git = "
 frame-system = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 orml-currencies = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-tokens = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+pallet-author-inherent = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-author-mapping = { tag = "v0.25.0", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
-pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+pallet-author-slot-filter = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-democracy = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }

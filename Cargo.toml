@@ -51,3 +51,9 @@ resolver = "2"
 # different repositories which results in bigger WASM-blobs, binary and the inability
 # to compile with the "runtime-benchmarks" feature.
 pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "use-cumulus-from-parity" }
+
+[patch."https://github.com/purestake/moonbeam"]
+moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
+pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
+pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
+session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }

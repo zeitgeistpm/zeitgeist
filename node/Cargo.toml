@@ -65,8 +65,8 @@ cumulus-relay-chain-rpc-interface = { branch = "polkadot-v0.9.23", git = "https:
 
 moonbeam-vrf = { tag = "v0.25.0", git = "https://github.com/purestake/moonbeam", optional = true }
 nimbus-consensus = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-nimbus-primitives = { branch = "moonbeam-polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
-pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+nimbus-primitives = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
+pallet-author-inherent = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-parachain-staking = { tag = "v0.25.0", git = "https://github.com/purestake/moonbeam", optional = true }
 parity-scale-codec = { optional = true, version = "3.0.0" }
 session-keys-primitives = { tag = "v0.25.0", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
