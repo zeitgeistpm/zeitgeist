@@ -37,7 +37,7 @@ use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use sp_runtime::traits::{SaturatedConversion, Zero};
 use zeitgeist_primitives::{
-    constants::BASE,
+    constants::{BASE, CENT},
     traits::Swaps as _,
     types::{
         Asset, Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod,
@@ -190,8 +190,7 @@ benchmarks! {
             pool.pool_status = PoolStatus::Closed;
             Ok(())
         });
-
-}: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Categorical(0))
+    }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Categorical(0))
 
     admin_clean_up_pool_cpmm_scalar {
         let caller: T::AccountId = whitelisted_caller();
@@ -231,7 +230,6 @@ benchmarks! {
             pool.pool_status = PoolStatus::Closed;
             Ok(())
         });
-
     }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Scalar(33))
 
     end_subsidy_phase {
@@ -253,11 +251,7 @@ benchmarks! {
         let amount = T::MinSubsidy::get();
 
         // Create b accounts, add MinSubsidy base assets and join subsidy
-        let accounts = generate_accounts_with_assets::<T>(
-            b,
-            a.saturated_into(),
-            amount,
-        ).unwrap();
+        let accounts = generate_accounts_with_assets::<T>(b, a.saturated_into(), amount).unwrap();
 
         // Join subsidy with each account
         for account in accounts {
@@ -284,11 +278,8 @@ benchmarks! {
         let amount = T::MinSubsidy::get();
 
         // Create a accounts, add MinSubsidy base assets and join subsidy
-        let accounts = generate_accounts_with_assets::<T>(
-            a,
-            min_assets_plus_base_asset,
-            amount,
-        ).unwrap();
+        let accounts =
+            generate_accounts_with_assets::<T>(a, min_assets_plus_base_asset, amount).unwrap();
 
         // Join subsidy with each account
         for account in accounts {
@@ -307,11 +298,8 @@ benchmarks! {
         let amount = T::MinSubsidy::get();
 
         // Create a accounts, add MinSubsidy base assets
-        let accounts = generate_accounts_with_assets::<T>(
-            a,
-            min_assets_plus_base_asset,
-            amount,
-        ).unwrap();
+        let accounts =
+            generate_accounts_with_assets::<T>(a, min_assets_plus_base_asset, amount).unwrap();
 
         let (pool_id, _, _) = bench_create_pool::<T>(
             accounts[0].clone(),
@@ -365,8 +353,11 @@ benchmarks! {
             false,
             None,
         );
-        let _ = Call::<T>::pool_join_subsidy { pool_id, amount: T::MinSubsidy::get() }
-            .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let _ = Call::<T>::pool_join_subsidy {
+            pool_id,
+            amount: T::MinSubsidy::get(),
+        }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
     }: _(RawOrigin::Signed(caller), pool_id, T::MinSubsidy::get())
 
     pool_exit_with_exact_asset_amount {
@@ -395,9 +386,9 @@ benchmarks! {
             false,
             None,
         );
-        let asset_amount: BalanceOf<T> = BASE.saturated_into();
-        let pool_amount = 0u32.into();
-    }: _(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount, pool_amount)
+        let min_asset_amount = 0u32.into();
+        let pool_amount: BalanceOf<T> = CENT.saturated_into();
+    }: _(RawOrigin::Signed(caller), pool_id, assets[0], pool_amount, min_asset_amount)
 
     pool_join {
         let a in 2 .. T::MaxAssets::get().into();
@@ -541,8 +532,15 @@ benchmarks! {
         let asset_amount_in: BalanceOf<T> = BASE.saturated_into();
         let min_asset_amount_out: Option<BalanceOf<T>> = Some(0u32.into());
         let max_price = Some((BASE * 1024).saturated_into());
-    }: swap_exact_amount_in(RawOrigin::Signed(caller), pool_id, assets[0], asset_amount_in,
-            *assets.last().unwrap(), min_asset_amount_out, max_price)
+    }: swap_exact_amount_in(
+        RawOrigin::Signed(caller),
+        pool_id,
+        assets[0],
+        asset_amount_in,
+        *assets.last().unwrap(),
+        min_asset_amount_out,
+        max_price
+    )
 
     swap_exact_amount_out_cpmm {
         // We're trying to get as many iterations in `bpow_approx` as possible. Experiments have
@@ -560,8 +558,8 @@ benchmarks! {
         .saturated_into();
         let weight_out = T::MinWeight::get();
         let weight_in = 4 * weight_out;
-        let mut weights = vec![weight_in; asset_count as usize];
-        weights[asset_count as usize - 1] = weight_out;
+        let mut weights = vec![weight_out; asset_count as usize];
+        weights[0] = weight_in;
         let caller: T::AccountId = whitelisted_caller();
         let (pool_id, assets, ..) = bench_create_pool::<T>(
             caller.clone(),
@@ -600,8 +598,15 @@ benchmarks! {
         let max_asset_amount_in: Option<BalanceOf<T>> = Some((BASE * 1024).saturated_into());
         let asset_amount_out: BalanceOf<T> = BASE.saturated_into();
         let max_price = Some((BASE * 1024).saturated_into());
-    }: swap_exact_amount_out(RawOrigin::Signed(caller), pool_id, *assets.last().unwrap(), max_asset_amount_in,
-           assets[0], asset_amount_out, max_price)
+    }: swap_exact_amount_out(
+        RawOrigin::Signed(caller),
+        pool_id,
+        *assets.last().unwrap(),
+        max_asset_amount_in,
+        assets[0],
+        asset_amount_out,
+        max_price
+    )
 }
 
 impl_benchmark_test_suite!(Swaps, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
