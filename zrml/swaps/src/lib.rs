@@ -1258,7 +1258,7 @@ mod pallet {
         }
 
         pub(crate) fn apply_to_cached_pools<F>(
-            mut pool_count: u32,
+            pool_count: u32,
             mutation: F,
         ) -> Result<Weight, DispatchError>
         where
@@ -1267,13 +1267,12 @@ mod pallet {
             let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
             // TODO: Check/write a test that this doesn't drain the whole map!
             // TODO: Write pool_id, pool to cache, saves one read!
-            for (pool_id, _) in PoolsCachedForArbitrage::<T>::drain() {
-                let weight = mutation(pool_id)?;
-                total_weight = total_weight.saturating_add(weight);
-                pool_count = pool_count.saturating_sub(1);
-                if pool_count == 0 {
+            for (index, (pool_id, _)) in PoolsCachedForArbitrage::<T>::drain().enumerate() {
+                if index == (pool_count as usize) {
                     break;
                 }
+                let weight = mutation(pool_id)?;
+                total_weight = total_weight.saturating_add(weight);
             }
             Ok(total_weight)
         }
