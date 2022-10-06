@@ -78,6 +78,12 @@ parameter_types! {
     pub const MaxReserves: u32 = 50;
 }
 
+// Treasury
+parameter_types! {
+    pub const MaxApprovals: u32 = 1;
+    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+}
+
 // ORML
 parameter_types! {
     // ORML

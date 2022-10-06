@@ -39,7 +39,10 @@ mod pallet {
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
+        traits::{
+            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
+            OnUnbalanced, StorageVersion,
+        },
         transactional,
         weights::Pays,
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
@@ -69,6 +72,10 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+    pub(crate) type CurrencyOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type TimeFrame = u64;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
@@ -1216,6 +1223,9 @@ mod pallet {
             Origin = Self::Origin,
         >;
 
+        /// Handler for slashed funds.
+        type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
         /// Swaps pallet API
         type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
 
@@ -1671,12 +1681,12 @@ mod pallet {
                 T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
             let advisory_bond_unreserve_amount =
                 T::AdvisoryBond::get().saturating_sub(advisory_bond_slash_amount);
-            T::AssetManager::slash_reserved_named(
+            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
                 creator,
-                advisory_bond_slash_amount,
+                advisory_bond_slash_amount.saturated_into::<u128>().saturated_into(),
             );
+            T::Slash::on_unbalanced(imbalance);
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
@@ -1935,10 +1945,9 @@ mod pallet {
 
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
-                    let mut overall_imbalance = BalanceOf::<T>::zero();
-
                     // If the oracle reported right, return the OracleBond, otherwise slash it to
                     // pay the correct reporters.
+                    let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
                     if report.outcome == resolved_outcome {
                         T::AssetManager::unreserve_named(
                             &Self::reserve_id(),
@@ -1947,16 +1956,12 @@ mod pallet {
                             T::OracleBond::get(),
                         );
                     } else {
-                        let excess = T::AssetManager::slash_reserved_named(
+                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                             &Self::reserve_id(),
-                            Asset::Ztg,
                             &market.creator,
-                            T::OracleBond::get(),
+                            T::OracleBond::get().saturated_into::<u128>().saturated_into(),
                         );
-
-                        // negative_imbalance is the actual slash value (excess should be zero)
-                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
-                        overall_imbalance = overall_imbalance.saturating_add(negative_imbalance);
+                        overall_imbalance.subsume(imbalance);
                     }
 
                     for (i, dispute) in disputes.iter().enumerate() {
@@ -1971,42 +1976,30 @@ mod pallet {
 
                             correct_reporters.push(dispute.by.clone());
                         } else {
-                            let excess = T::AssetManager::slash_reserved_named(
+                            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                                 &Self::reserve_id(),
-                                Asset::Ztg,
                                 &dispute.by,
-                                actual_bond,
+                                actual_bond.saturated_into::<u128>().saturated_into(),
                             );
-
-                            // negative_imbalance is the actual slash value (excess should be zero)
-                            let negative_imbalance = actual_bond.saturating_sub(excess);
-                            overall_imbalance =
-                                overall_imbalance.saturating_add(negative_imbalance);
+                            overall_imbalance.subsume(imbalance);
                         }
                     }
 
                     // Fold all the imbalances into one and reward the correct reporters. The
                     // number of correct reporters might be zero if the market defaults to the
                     // report after abandoned dispute. In that case, the rewards remain slashed.
-                    if let Some(reward_per_each) =
-                        overall_imbalance.checked_div(&correct_reporters.len().saturated_into())
+                    if let Some(reward_per_each) = overall_imbalance
+                        .peek()
+                        .checked_div(&correct_reporters.len().saturated_into())
                     {
                         for correct_reporter in &correct_reporters {
-                            // *Should* always be equal to `reward_per_each`
-                            let reward = overall_imbalance.min(reward_per_each);
-                            overall_imbalance = overall_imbalance.saturating_sub(reward);
-
-                            if let Err(err) =
-                                T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
-                            {
-                                log::warn!(
-                                    "[PredictionMarkets] Cannot deposit to the correct reporter. \
-                                     error: {:?}",
-                                    err
-                                );
-                            }
+                            let (actual_reward, leftover) =
+                                overall_imbalance.split(reward_per_each);
+                            overall_imbalance = leftover;
+                            CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
                         }
                     }
+                    T::Slash::on_unbalanced(overall_imbalance);
 
                     resolved_outcome
                 }
