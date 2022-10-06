@@ -64,7 +64,23 @@ jobs:
 
       - name: Tests
         run: ./scripts/tests/${{ matrix.scripts }}.sh
+  benchmark:
+    name: Quick check benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          default: true
+          override: true
+          profile: minimal
+
+      - run: ./scripts/benchmarks/quick_check.sh
   fuzz:
     name: Fuzz
     runs-on: ubuntu-latest
