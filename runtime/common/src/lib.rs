@@ -260,6 +260,7 @@ macro_rules! create_runtime {
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
+                Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -809,9 +810,24 @@ macro_rules! impl_config_traits {
             type ProposalBondMinimum = ProposalBondMinimum;
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
-            type SpendFunds = ();
+            type SpendFunds = Bounties;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+        }
+
+        impl pallet_bounties::Config for Runtime {
+            type BountyDepositBase = BountyDepositBase;
+            type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
+            type BountyUpdatePeriod = BountyUpdatePeriod;
+            type BountyValueMinimum = BountyValueMinimum;
+            type ChildBountyManager = ();
+            type CuratorDepositMax = CuratorDepositMax;
+            type CuratorDepositMin = CuratorDepositMin;
+            type CuratorDepositMultiplier = CuratorDepositMultiplier;
+            type DataDepositPerByte = DataDepositPerByte;
+            type Event = Event;
+            type MaximumReasonLength = MaximumReasonLength;
+            type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
         }
 
         impl pallet_utility::Config for Runtime {
@@ -1081,6 +1097,7 @@ macro_rules! create_runtime_api {
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
                     list_benchmark!(list, extra, pallet_balances, Balances);
+                    list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
@@ -1155,6 +1172,7 @@ macro_rules! create_runtime_api {
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
                     add_benchmark!(params, batches, pallet_balances, Balances);
+                    add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
