@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! RPC interface for the Swaps pallet.
+#![doc = include_str!("../README.md")]
 
 use core::{fmt::Display, str::FromStr};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};

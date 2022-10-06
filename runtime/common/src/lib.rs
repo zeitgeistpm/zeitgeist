@@ -1,4 +1,5 @@
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,6 +15,25 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//     Copyright (C) 2020-2022 Acala Foundation.
+//     SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+//
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU General Public License as published by
+//     the Free Software Foundation, either version 3 of the License, or
+//     (at your option) any later version.
+//
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+//     GNU General Public License for more details.
+//
+//     You should have received a copy of the GNU General Public License
+//     along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
@@ -25,6 +45,7 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
+        use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -36,6 +57,10 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
+            (
+                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
+                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>
+            ),
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -154,6 +179,25 @@ macro_rules! decl_common_types {
                 }
 
                 false
+            }
+        }
+
+        pub struct DealWithFees;
+
+        type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+        impl OnUnbalanced<NegativeImbalance> for DealWithFees
+        {
+            fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
+                if let Some(mut fees) = fees_then_tips.next() {
+                    if let Some(tips) = fees_then_tips.next() {
+                        tips.merge_into(&mut fees);
+                    }
+                    let mut split = fees.ration(
+                        FEES_AND_TIPS_TREASURY_PERCENTAGE,
+                        FEES_AND_TIPS_BURN_PERCENTAGE,
+                    );
+                    Treasury::on_unbalanced(split.0);
+                }
             }
         }
 
@@ -746,7 +790,8 @@ macro_rules! impl_config_traits {
         impl pallet_transaction_payment::Config for Runtime {
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-            type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+            type OnChargeTransaction =
+                pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
@@ -847,6 +892,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
+            type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
             type ApproveOrigin = EnsureOneOf<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
@@ -866,6 +912,11 @@ macro_rules! impl_config_traits {
             type MarketCommons = MarketCommons;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
+            type MinDisputeDuration = MinDisputeDuration;
+            type MaxDisputeDuration = MaxDisputeDuration;
+            type MaxGracePeriod = MaxGracePeriod;
+            type MaxOracleDuration = MaxOracleDuration;
+            type MinOracleDuration = MinOracleDuration;
             type MaxSubsidyPeriod = MaxSubsidyPeriod;
             type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;
@@ -877,6 +928,7 @@ macro_rules! impl_config_traits {
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             type SimpleDisputes = SimpleDisputes;
+            type Slash = Treasury;
             type Swaps = Swaps;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
@@ -1675,6 +1727,29 @@ macro_rules! create_common_tests {
                     })
                 }
             }
+
+            mod deal_with_fees {
+                use crate::*;
+
+                #[test]
+                fn treasury_receives_correct_amount_of_fees_and_tips() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let fee_balance = 3 * ExistentialDeposit::get();
+                        let fee_imbalance = Balances::issue(fee_balance);
+                        let tip_balance = 7 * ExistentialDeposit::get();
+                        let tip_imbalance = Balances::issue(tip_balance);
+                        assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
+                        DealWithFees::on_unbalanceds(vec![fee_imbalance, tip_imbalance].into_iter());
+                        assert_eq!(
+                            Balances::free_balance(Treasury::account_id()),
+                            fee_balance + tip_balance,
+                        );
+                    });
+                }
+            }
         }
+
     }
 }

@@ -38,9 +38,9 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism,
-        MarketId, MarketPeriod, MarketStatus, MarketType, Moment, OutcomeReport, PoolId,
-        PoolStatus, ScoringRule,
+        AccountIdTest, Asset, BlockNumber, Deadlines, Market, MarketCreation,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
+        OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -152,7 +152,9 @@ fn destroy_pool_correctly_cleans_up_pool() {
         assert_ok!(Swaps::destroy_pool(pool_id));
         assert_err!(Swaps::pool(pool_id), crate::Error::<Runtime>::PoolDoesNotExist);
         // Ensure that funds _outside_ of the pool are not impacted!
-        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
+        // TODO(#792): Remove pool shares.
+        let total_pool_shares = Currencies::total_issuance(Swaps::pool_shares_id(0));
+        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], total_pool_shares);
     });
 }
 
@@ -1133,7 +1135,7 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         // Add some subsidy
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _25));
         let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, ALICE).unwrap();
         let mut total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, _25);
         assert_eq!(reserved, noted);
@@ -1142,7 +1144,7 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         // Exit 5 subsidy and see if the storage is consistent
         assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _5));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        noted = <SubsidyProviders<Runtime>>::get(pool_id, ALICE).unwrap();
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, noted);
         assert_eq!(reserved, total_subsidy);
@@ -1155,7 +1157,7 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         // see if the storage is consistent
         assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _25));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        assert!(<SubsidyProviders<Runtime>>::get(pool_id, &ALICE).is_none());
+        assert!(<SubsidyProviders<Runtime>>::get(pool_id, ALICE).is_none());
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert_eq!(reserved, total_subsidy);
@@ -1175,7 +1177,7 @@ fn pool_exit_subsidy_unreserves_correct_values() {
         assert_eq!(Currencies::unreserve(ASSET_D, &ALICE, _20), 0);
         assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, _20));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        assert!(<SubsidyProviders<Runtime>>::get(pool_id, &ALICE).is_none());
+        assert!(<SubsidyProviders<Runtime>>::get(pool_id, ALICE).is_none());
         total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert_eq!(reserved, total_subsidy);
@@ -1420,7 +1422,7 @@ fn pool_join_subsidy_reserves_correct_values() {
         let pool_id = 0;
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _20));
         let mut reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        let mut noted = <SubsidyProviders<Runtime>>::get(pool_id, ALICE).unwrap();
         assert_eq!(reserved, _20);
         assert_eq!(reserved, noted);
         assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
@@ -1431,7 +1433,7 @@ fn pool_join_subsidy_reserves_correct_values() {
 
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, _5));
         reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        noted = <SubsidyProviders<Runtime>>::get(pool_id, ALICE).unwrap();
         assert_eq!(reserved, _25);
         assert_eq!(reserved, noted);
         assert_eq!(reserved, Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap());
@@ -1513,7 +1515,7 @@ fn pool_join_subsidy_with_small_amount_is_ok_if_account_is_already_a_provider() 
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, small_amount));
         let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE).unwrap();
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, ALICE).unwrap();
         let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, total_amount);
         assert_eq!(noted, total_amount);
@@ -1536,7 +1538,7 @@ fn pool_exit_subsidy_unreserves_remaining_subsidy_if_below_min_per_account() {
         assert_ok!(Swaps::pool_join_subsidy(alice_signed(), pool_id, large_amount));
         assert_ok!(Swaps::pool_exit_subsidy(alice_signed(), pool_id, small_amount));
         let reserved = Currencies::reserved_balance(ASSET_D, &ALICE);
-        let noted = <SubsidyProviders<Runtime>>::get(pool_id, &ALICE);
+        let noted = <SubsidyProviders<Runtime>>::get(pool_id, ALICE);
         let total_subsidy = Swaps::pool_by_id(pool_id).unwrap().total_subsidy.unwrap();
         assert_eq!(reserved, 0);
         assert!(noted.is_none());
@@ -3080,7 +3082,6 @@ fn assert_all_parameters(
     assert_eq!(Currencies::free_balance(ASSET_B, &pai), pool_assets[1]);
     assert_eq!(Currencies::free_balance(ASSET_C, &pai), pool_assets[2]);
     assert_eq!(Currencies::free_balance(ASSET_D, &pai), pool_assets[3]);
-
     assert_eq!(Currencies::total_issuance(psi), total_issuance);
 }
 
@@ -3106,6 +3107,7 @@ fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
         metadata: vec![0; 50],
         oracle: ALICE,
         period: MarketPeriod::Block(0..1),
+        deadlines: Deadlines { grace_period: 1, oracle_duration: 1, dispute_duration: 1 },
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,

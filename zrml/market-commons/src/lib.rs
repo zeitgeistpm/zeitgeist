@@ -15,11 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-//! # Common market parameters used by `Simple disputes` and `Prediction markets` pallets.
-//!
-//! As stated by the contract of `MarketCommonsPalletApi::now`, the caller must ensure that the
-//! time implementation returns milliseconds.
-
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -52,9 +48,9 @@ mod pallet {
     use zeitgeist_primitives::types::{Market, PoolId};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
-    type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
