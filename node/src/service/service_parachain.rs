@@ -137,7 +137,7 @@ where
                 keystore,
                 skip_prediction: force_authoring,
                 create_inherent_data_providers: provider,
-                //additional_digests_provider: maybe_provide_vrf_digest,
+                additional_digests_provider: maybe_provide_vrf_digest,
             }))
         },
         hwbench,

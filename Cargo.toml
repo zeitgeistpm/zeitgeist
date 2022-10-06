@@ -53,7 +53,17 @@ resolver = "2"
 pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "use-cumulus-from-parity" }
 
 [patch."https://github.com/purestake/moonbeam"]
-moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
-pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
-pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
-session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
+moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
+session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
+
+[patch."https://github.com/purestake/nimbus"]
+nimbus-consensus = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+pallet-author-inherent = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+pallet-author-slot-filter = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
+
+#[patch."https://github.com/purestake/moonbeam"]
+#moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
+#pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
+#pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
+
