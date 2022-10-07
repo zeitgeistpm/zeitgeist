@@ -16,7 +16,7 @@ source ./scripts/benchmarks/configuration.sh
 
 # Standalone benchmarks
 
-cargo build --release --features=runtime-benchmarks --bin=zeitgeist
+cargo build --release --features=parachain,runtime-benchmarks --bin=zeitgeist
 
 for pallet in ${FRAME_PALLETS[@]}; do
     ./target/release/zeitgeist benchmark pallet --chain=dev --steps=$FRAME_PALLETS_STEPS --repeat=$FRAME_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$FRAME_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH
@@ -33,8 +33,6 @@ for pallet in ${ZEITGEIST_PALLETS[@]}; do
 done
 
 # Parachain benchmarks
-
-cargo build --release --features=parachain,runtime-benchmarks --bin=zeitgeist
 
 for pallet in ${FRAME_PALLETS_PARACHAIN[@]}; do
     ./target/release/zeitgeist benchmark pallet --chain=dev --steps=$FRAME_PALLETS_PARACHAIN_STEPS --repeat=$FRAME_PALLETS_PARACHAIN_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$FRAME_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH

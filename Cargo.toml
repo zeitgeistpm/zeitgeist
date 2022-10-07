@@ -62,8 +62,3 @@ nimbus-primitives = { git = "https://github.com/zeitgeistpm/nimbus", branch = "u
 pallet-author-inherent = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
 pallet-author-slot-filter = { git = "https://github.com/zeitgeistpm/nimbus", branch = "use-paritytech-dependencies" }
 
-#[patch."https://github.com/purestake/moonbeam"]
-#moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
-#pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
-#pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "use-paritytech-dependencies" }
-
