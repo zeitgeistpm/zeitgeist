@@ -30,7 +30,7 @@ extern crate alloc;
 #[macro_use]
 mod utils;
 
-// mod arbitrage;
+mod arbitrage;
 mod benchmarks;
 mod check_arithm_rslt;
 mod consts;
@@ -39,7 +39,7 @@ mod fixed;
 mod math;
 pub mod migrations;
 pub mod mock;
-// mod root;
+mod root;
 mod tests;
 pub mod weights;
 
