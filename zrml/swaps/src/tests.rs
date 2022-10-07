@@ -178,7 +178,7 @@ fn allows_the_full_user_lifecycle() {
         let asset_b_bal = Currencies::free_balance(ASSET_B, &ALICE);
 
         // swap_exact_amount_in
-        let spot_price = Swaps::get_spot_price(0, ASSET_A, ASSET_B).unwrap();
+        let spot_price = Swaps::get_spot_price(&0, &ASSET_A, &ASSET_B).unwrap();
         assert_eq!(spot_price, _1);
 
         let pool_account = Swaps::pool_account_id(&0);
@@ -726,7 +726,7 @@ fn get_spot_price_returns_correct_results_cpmm(
 
         let abs_tol = 100;
         assert_approx!(
-            Swaps::get_spot_price(pool_id, ASSET_A, ASSET_B).unwrap(),
+            Swaps::get_spot_price(&pool_id, &ASSET_A, &ASSET_B).unwrap(),
             expected_spot_price,
             abs_tol,
         );
@@ -739,23 +739,23 @@ fn get_spot_price_returns_correct_results_rikiddo() {
         create_initial_pool(ScoringRule::RikiddoSigmoidFeeMarketEma, None, false);
         let pool_id = 0;
         assert_noop!(
-            Swaps::get_spot_price(pool_id, ASSETS[0], ASSETS[0]),
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[0]),
             crate::Error::<Runtime>::PoolIsNotActive
         );
         subsidize_and_start_rikiddo_pool(pool_id, &ALICE, 0);
 
         // Asset out, base currency in. Should receive about 1/3 -> price about 3
         let price_base_in =
-            Swaps::get_spot_price(pool_id, ASSETS[0], *ASSETS.last().unwrap()).unwrap();
+            Swaps::get_spot_price(&pool_id, &ASSETS[0], ASSETS.last().unwrap()).unwrap();
         // Between 0.3 and 0.4
         assert!(price_base_in > 28 * BASE / 10 && price_base_in < 31 * BASE / 10);
         // Base currency in, asset out. Price about 3.
         let price_base_out =
-            Swaps::get_spot_price(pool_id, *ASSETS.last().unwrap(), ASSETS[0]).unwrap();
+            Swaps::get_spot_price(&pool_id, ASSETS.last().unwrap(), &ASSETS[0]).unwrap();
         // Between 2.9 and 3.1
         assert!(price_base_out > 3 * BASE / 10 && price_base_out < 4 * BASE / 10);
         // Asset in, asset out. Price about 1.
-        let price_asset_in_out = Swaps::get_spot_price(pool_id, ASSETS[0], ASSETS[1]).unwrap();
+        let price_asset_in_out = Swaps::get_spot_price(&pool_id, &ASSETS[0], &ASSETS[1]).unwrap();
         // Between 0.9 and 1.1
         assert!(price_asset_in_out > 9 * BASE / 10 && price_asset_in_out < 11 * BASE / 10);
     });
