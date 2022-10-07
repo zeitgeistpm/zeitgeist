@@ -16,44 +16,51 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{math::calc_spot_price, root::calc_preimage};
+use alloc::collections::btree_map::BTreeMap;
 use parity_scale_codec::MaxEncodedLen;
 use sp_runtime::traits::AtLeast32BitUnsigned;
-use std::collections::HashMap;
 use zeitgeist_primitives::{
     constants::BASE,
     types::{Asset, Pool, PoolId, PoolStatus, ScoringRule},
 };
 
-trait Arbitrage<Balance, MarketId>
+pub trait Arbitrage<Balance, MarketId>
 where
-    Balance: AtLeast32BitUnsigned,
+    Balance: From<u8>,
+    // Balance: AtLeast32BitUnsigned,
     MarketId: MaxEncodedLen,
 {
     fn calc_total_spot_price(
-        self,
-        balances: HashMap<Asset<MarketId>, Balance>,
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str>;
 
-    fn calc_total_spot_price_after_buy_burn(
-        self,
-        balances: HashMap<Asset<MarketId>, Balance>,
-        amount: Balance,
+    // fn calc_total_spot_price_after_buy_burn(
+    //     self,
+    //     balances: BTreeMap<Asset<MarketId>, Balance>,
+    //     amount: Balance,
+    // ) -> Result<Balance, &'static str>;
+
+    fn calc_arbitrage_amount_mint_sell(
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str>;
 
-    fn calc_arbitrage_amount(
-        self,
-        balances: HashMap<Asset<MarketId>, Balance>,
+    fn calc_arbitrage_amount_buy_burn(
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str>;
 }
 
 impl<Balance, MarketId> Arbitrage<Balance, MarketId> for Pool<Balance, MarketId>
 where
-    Balance: AtLeast32BitUnsigned,
+    Balance: From<u8>,
+    // Balance: AtLeast32BitUnsigned,
     MarketId: MaxEncodedLen,
 {
     fn calc_total_spot_price(
-        self,
-        balances: HashMap<Asset<MarketId>, Balance>,
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str> {
         Ok(0u8.into())
         // // TODO Add a shift direction for other type of arbitrage.
@@ -72,20 +79,31 @@ where
         //     .fold(|acc, val| acc + val)
     }
 
-    fn calc_total_spot_price_after_buy_burn(
-        self,
-        balances: HashMap<Asset<MarketId>, Balance>,
-        amount: Balance,
-    ) -> Result<Balance, &'static str> {
-        Ok(0u8.into())
-        // TODO Check how to best do this: Copy the HashMap or edit it?
-        // balances = balances.map(
-    }
+    // fn calc_total_spot_price_after_buy_burn(
+    //     self,
+    //     balances: BTreeMap<Asset<MarketId>, Balance>,
+    //     amount: Balance,
+    // ) -> Result<Balance, &'static str> {
+    //     Ok(0u8.into())
+    //     // TODO Check how to best do this: Copy the BTreeMap or edit it?
+    //     // balances = balances.map(
+    // }
 
     // Calling with a non-CPMM pool results in undefined behavior.
-    fn calc_arbitrage_amount(
-        self,
-        balances: HashMap<Asset<MarketId>, Balance>,
+    fn calc_arbitrage_amount_mint_sell(
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
+    ) -> Result<Balance, &'static str> {
+        Ok(0u8.into())
+        // let total_spot_price = self.calc_total_spot_price_after_shift(balances, 0);
+        // if total_spot_price > BASE {
+        // } else {
+        // }
+    }
+
+    fn calc_arbitrage_amount_buy_burn(
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str> {
         Ok(0u8.into())
         // let total_spot_price = self.calc_total_spot_price_after_shift(balances, 0);

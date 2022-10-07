@@ -53,6 +53,7 @@ pub trait WeightInfoZeitgeist {
     fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight;
     fn pool_exit(a: u32) -> Weight;
     fn pool_exit_subsidy() -> Weight;
+    fn execute_arbitrage() -> Weight;
     fn pool_exit_with_exact_asset_amount() -> Weight;
     fn pool_exit_with_exact_pool_amount() -> Weight;
     fn pool_join(a: u32) -> Weight;
@@ -69,8 +70,11 @@ pub trait WeightInfoZeitgeist {
 /// Weight functions for zrml_swaps (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
+    fn execute_arbitrage() -> Weight {
+        0 as Weight
+    }
     // Storage: Swaps PoolsCachedForArbitrage (r:1 w:0)
-    fn apply_to_cached_pools_noop(a: u32, ) -> Weight {
+    fn apply_to_cached_pools_noop(a: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 144_000
             .saturating_add((11_670_000 as Weight).saturating_mul(a as Weight))
