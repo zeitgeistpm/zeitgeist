@@ -1,4 +1,5 @@
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,6 +15,25 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//     Copyright (C) 2020-2022 Acala Foundation.
+//     SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+//
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU General Public License as published by
+//     the Free Software Foundation, either version 3 of the License, or
+//     (at your option) any later version.
+//
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+//     GNU General Public License for more details.
+//
+//     You should have received a copy of the GNU General Public License
+//     along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
@@ -25,11 +45,13 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
+        use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
+        #[cfg(feature = "parachain")]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
@@ -40,6 +62,21 @@ macro_rules! decl_common_types {
                 pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
                 pallet_author_mapping::migrations::AddAccountIdToNimbusLookup<Runtime>,
                 pallet_parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
+                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
+            )
+        >;
+
+        #[cfg(not(feature = "parachain"))]
+        pub type Executive = frame_executive::Executive<
+            Runtime,
+            Block,
+            frame_system::ChainContext<Runtime>,
+            Runtime,
+            AllPalletsWithSystem,
+            (
+                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
+                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
             )
         >;
 
@@ -162,6 +199,25 @@ macro_rules! decl_common_types {
             }
         }
 
+        pub struct DealWithFees;
+
+        type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+        impl OnUnbalanced<NegativeImbalance> for DealWithFees
+        {
+            fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
+                if let Some(mut fees) = fees_then_tips.next() {
+                    if let Some(tips) = fees_then_tips.next() {
+                        tips.merge_into(&mut fees);
+                    }
+                    let mut split = fees.ration(
+                        FEES_AND_TIPS_TREASURY_PERCENTAGE,
+                        FEES_AND_TIPS_BURN_PERCENTAGE,
+                    );
+                    Treasury::on_unbalanced(split.0);
+                }
+            }
+        }
+
         pub mod opaque {
             //! Opaque types. These are used by the CLI to instantiate machinery that don't need to know
             //! the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -222,6 +278,7 @@ macro_rules! create_runtime {
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
+                Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -754,7 +811,8 @@ macro_rules! impl_config_traits {
         impl pallet_transaction_payment::Config for Runtime {
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-            type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+            type OnChargeTransaction =
+                pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
@@ -772,9 +830,24 @@ macro_rules! impl_config_traits {
             type ProposalBondMinimum = ProposalBondMinimum;
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
-            type SpendFunds = ();
+            type SpendFunds = Bounties;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+        }
+
+        impl pallet_bounties::Config for Runtime {
+            type BountyDepositBase = BountyDepositBase;
+            type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
+            type BountyUpdatePeriod = BountyUpdatePeriod;
+            type BountyValueMinimum = BountyValueMinimum;
+            type ChildBountyManager = ();
+            type CuratorDepositMax = CuratorDepositMax;
+            type CuratorDepositMin = CuratorDepositMin;
+            type CuratorDepositMultiplier = CuratorDepositMultiplier;
+            type DataDepositPerByte = DataDepositPerByte;
+            type Event = Event;
+            type MaximumReasonLength = MaximumReasonLength;
+            type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
         }
 
         impl pallet_utility::Config for Runtime {
@@ -874,6 +947,11 @@ macro_rules! impl_config_traits {
             type MarketCommons = MarketCommons;
             type MaxCategories = MaxCategories;
             type MaxDisputes = MaxDisputes;
+            type MinDisputeDuration = MinDisputeDuration;
+            type MaxDisputeDuration = MaxDisputeDuration;
+            type MaxGracePeriod = MaxGracePeriod;
+            type MaxOracleDuration = MaxOracleDuration;
+            type MinOracleDuration = MinOracleDuration;
             type MaxSubsidyPeriod = MaxSubsidyPeriod;
             type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;
@@ -885,6 +963,7 @@ macro_rules! impl_config_traits {
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             type SimpleDisputes = SimpleDisputes;
+            type Slash = Treasury;
             type Swaps = Swaps;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
@@ -1038,6 +1117,7 @@ macro_rules! create_runtime_api {
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
                     list_benchmark!(list, extra, pallet_balances, Balances);
+                    list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
@@ -1113,6 +1193,7 @@ macro_rules! create_runtime_api {
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
                     add_benchmark!(params, batches, pallet_balances, Balances);
+                    add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
@@ -1704,6 +1785,29 @@ macro_rules! create_common_tests {
                     })
                 }
             }
+
+            mod deal_with_fees {
+                use crate::*;
+
+                #[test]
+                fn treasury_receives_correct_amount_of_fees_and_tips() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let fee_balance = 3 * ExistentialDeposit::get();
+                        let fee_imbalance = Balances::issue(fee_balance);
+                        let tip_balance = 7 * ExistentialDeposit::get();
+                        let tip_imbalance = Balances::issue(tip_balance);
+                        assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
+                        DealWithFees::on_unbalanceds(vec![fee_imbalance, tip_imbalance].into_iter());
+                        assert_eq!(
+                            Balances::free_balance(Treasury::account_id()),
+                            fee_balance + tip_balance,
+                        );
+                    });
+                }
+            }
         }
+
     }
 }

@@ -3,7 +3,7 @@
 EXTERNAL_WEIGHTS_PATH="./runtime/common/src/weights/"
 
 # This script contains the configuration for other benchmarking scripts.
-export FRAME_PALLETS=( frame_system pallet_balances pallet_democracy \
+export FRAME_PALLETS=( frame_system pallet_balances pallet_bounties pallet_democracy \
                 pallet_identity pallet_membership  pallet_multisig pallet_preimage \
                 pallet_proxy pallet_scheduler pallet_timestamp pallet_treasury \
                 pallet_utility pallet_vesting \

@@ -38,9 +38,9 @@ use zeitgeist_primitives::{
     constants::BASE,
     traits::Swaps as _,
     types::{
-        AccountIdTest, Asset, BlockNumber, Market, MarketCreation, MarketDisputeMechanism,
-        MarketId, MarketPeriod, MarketStatus, MarketType, Moment, OutcomeReport, PoolId,
-        PoolStatus, ScoringRule,
+        AccountIdTest, Asset, BlockNumber, Deadlines, Market, MarketCreation,
+        MarketDisputeMechanism, MarketId, MarketPeriod, MarketStatus, MarketType, Moment,
+        OutcomeReport, PoolId, PoolStatus, ScoringRule,
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
@@ -152,7 +152,9 @@ fn destroy_pool_correctly_cleans_up_pool() {
         assert_ok!(Swaps::destroy_pool(pool_id));
         assert_err!(Swaps::pool(pool_id), crate::Error::<Runtime>::PoolDoesNotExist);
         // Ensure that funds _outside_ of the pool are not impacted!
-        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], 0);
+        // TODO(#792): Remove pool shares.
+        let total_pool_shares = Currencies::total_issuance(Swaps::pool_shares_id(0));
+        assert_all_parameters(alice_balance_before, 0, [0, 0, 0, 0], total_pool_shares);
     });
 }
 
@@ -3080,7 +3082,6 @@ fn assert_all_parameters(
     assert_eq!(Currencies::free_balance(ASSET_B, &pai), pool_assets[1]);
     assert_eq!(Currencies::free_balance(ASSET_C, &pai), pool_assets[2]);
     assert_eq!(Currencies::free_balance(ASSET_D, &pai), pool_assets[3]);
-
     assert_eq!(Currencies::total_issuance(psi), total_issuance);
 }
 
@@ -3106,6 +3107,7 @@ fn mock_market(categories: u16) -> Market<AccountIdTest, BlockNumber, Moment> {
         metadata: vec![0; 50],
         oracle: ALICE,
         period: MarketPeriod::Block(0..1),
+        deadlines: Deadlines { grace_period: 1, oracle_duration: 1, dispute_duration: 1 },
         report: None,
         resolved_outcome: None,
         scoring_rule: ScoringRule::CPMM,

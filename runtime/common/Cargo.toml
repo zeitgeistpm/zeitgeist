@@ -9,6 +9,7 @@ pallet-author-inherent = { branch = "moonbeam-polkadot-v0.9.23", default-feature
 pallet-author-mapping = { tag = "v0.25.0", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 pallet-author-slot-filter = { branch = "moonbeam-polkadot-v0.9.23", default-features = false, git = "https://github.com/purestake/nimbus", optional = true }
 pallet-balances = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-bounties = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-democracy = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-identity = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -70,7 +71,7 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "common-runtime"
-version = "0.3.5"
+version = "0.3.6"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

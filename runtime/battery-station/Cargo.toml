@@ -11,6 +11,7 @@ orml-currencies = { branch = "polkadot-v0.9.23", default-features = false, git =
 orml-tokens = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 orml-traits = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 pallet-balances = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-bounties = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-democracy = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-identity = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -158,6 +159,7 @@ runtime-benchmarks = [
     "pallet-author-mapping?/runtime-benchmarks",
     "pallet-author-slot-filter?/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
+    "pallet-bounties/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "pallet-crowdloan-rewards?/runtime-benchmarks",
     "pallet-democracy/runtime-benchmarks",
@@ -197,6 +199,7 @@ std = [
     "orml-tokens/std",
     "orml-traits/std",
     "pallet-balances/std",
+    "pallet-bounties/std",
     "pallet-collective/std",
     "pallet-democracy/std",
     "pallet-identity/std",
@@ -299,6 +302,7 @@ try-runtime = [
 
     # Money runtime pallets
     "pallet-balances/try-runtime",
+    "pallet-bounties/try-runtime",
     "pallet-transaction-payment/try-runtime",
     "pallet-treasury/try-runtime",
     "pallet-vesting/try-runtime",
@@ -338,7 +342,7 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "battery-station-runtime"
-version = "0.3.5"
+version = "0.3.6"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
