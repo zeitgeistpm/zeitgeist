@@ -36,6 +36,11 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
+            (
+                pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
+                pallet_author_mapping::migrations::AddAccountIdToNimbusLookup<Runtime>,
+                pallet_parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
+            )
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
