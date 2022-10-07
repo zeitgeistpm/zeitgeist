@@ -1292,16 +1292,16 @@ mod pallet {
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD).saturated_into() {
                 let amount = pool.calc_arbitrage_amount_mint_sell(&balances)?;
-                T::AssetManager::withdraw(Asset::Ztg, &pool_account, amount);
+                T::AssetManager::withdraw(Asset::Ztg, &pool_account, amount)?;
                 for t in tokens {
                     T::AssetManager::deposit(*t, &pool_account, amount)?;
                 }
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD).saturated_into() {
                 let amount = pool.calc_arbitrage_amount_buy_burn(&balances)?;
-                T::AssetManager::deposit(Asset::Ztg, &pool_account, amount);
+                T::AssetManager::deposit(Asset::Ztg, &pool_account, amount)?;
                 for t in tokens {
-                    T::AssetManager::withdraw(*t, &pool_account, amount);
+                    T::AssetManager::withdraw(*t, &pool_account, amount)?;
                 }
                 Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
             } else {

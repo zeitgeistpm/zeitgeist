@@ -38,12 +38,6 @@ where
         balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str>;
 
-    // fn calc_total_spot_price_after_buy_burn(
-    //     self,
-    //     balances: BTreeMap<Asset<MarketId>, Balance>,
-    //     amount: Balance,
-    // ) -> Result<Balance, &'static str>;
-
     fn calc_arbitrage_amount_mint_sell(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
@@ -60,6 +54,7 @@ where
     Balance: AtLeast32BitUnsigned + Copy,
     MarketId: MaxEncodedLen + AtLeast32Bit,
 {
+    // TODO Use dependency injection to add a shift?
     fn calc_total_spot_price(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
@@ -95,16 +90,6 @@ where
         }
         Ok(result.saturated_into())
     }
-
-    // fn calc_total_spot_price_after_buy_burn(
-    //     self,
-    //     balances: BTreeMap<Asset<MarketId>, Balance>,
-    //     amount: Balance,
-    // ) -> Result<Balance, &'static str> {
-    //     Ok(0u8.into())
-    //     // TODO Check how to best do this: Copy the BTreeMap or edit it?
-    //     // balances = balances.map(
-    // }
 
     // Calling with a non-CPMM pool results in undefined behavior.
     fn calc_arbitrage_amount_mint_sell(
