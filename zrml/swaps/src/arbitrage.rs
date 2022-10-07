@@ -22,12 +22,18 @@ use sp_runtime::{
     traits::{AtLeast32Bit, AtLeast32BitUnsigned},
     SaturatedConversion,
 };
-use std::ops::Deref;
 use zeitgeist_primitives::{
     constants::BASE,
     types::{Asset, Pool, PoolId, PoolStatus, ScoringRule},
 };
 
+// TODO Make this a generic parameter of `Arbitrage`
+type Fixed = u128;
+
+const MAX_ITERATIONS: usize = 30;
+const TOLERANCE: Fixed = BASE / 1_000; // 0.001
+
+// TODO Rename to `ArbitrageForCpmm`.
 pub trait Arbitrage<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
@@ -67,10 +73,10 @@ where
             .saturated_into();
         let weight_in =
             weights.get(&self.base_asset).cloned().ok_or("Base asset weight missing")?;
-        let mut result: u128 = 0;
+        let mut result: Fixed = 0;
         for asset in self.assets.iter().filter(|a| **a != self.base_asset) {
             // TODO Need better error message here!
-            let balance_out: u128 = balances
+            let balance_out: Fixed = balances
                 .get(asset)
                 .cloned()
                 .ok_or("Asset balance missing")
@@ -96,11 +102,14 @@ where
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str> {
-        Ok(0u8.into())
-        // let total_spot_price = self.calc_total_spot_price_after_shift(balances, 0);
-        // if total_spot_price > BASE {
-        // } else {
-        // }
+        let f = |_| BASE;
+        // The `unwrap_or` below should never occur
+        let smallest_balance: Fixed =
+            balances.values().min().cloned().unwrap_or(0u8.into()).saturated_into();
+        let (result, iterations) =
+            calc_preimage::<Fixed, _>(f, BASE, 0, smallest_balance / 4, MAX_ITERATIONS, TOLERANCE)?;
+        // TODO How to handle too many iterations?
+        Ok(result.saturated_into())
     }
 
     fn calc_arbitrage_amount_buy_burn(

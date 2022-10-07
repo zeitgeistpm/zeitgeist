@@ -81,16 +81,17 @@ where
     // `max_iterations`.
     let mut mid = T::zero();
     let mut iterations = 0;
-    for i in 1..=max_iterations {
+    for i in 0..max_iterations {
         mid = (max + min) / 2u8.into();
-        iterations = i;
         let size = max.checked_sub(&min).ok_or("Unexpected arithmetic error")?;
         if size < tol {
+            iterations = i;
             break;
         }
 
         let fmid = f(mid);
         if fmid == value {
+            iterations = i;
             break;
         }
         // Proceed with [min, mid] if mid and max are located on the same side of value; [mid, max]
