@@ -18,7 +18,11 @@
 use crate::{math::calc_spot_price, root::calc_preimage};
 use alloc::collections::btree_map::BTreeMap;
 use parity_scale_codec::MaxEncodedLen;
-use sp_runtime::traits::AtLeast32BitUnsigned;
+use sp_runtime::{
+    traits::{AtLeast32Bit, AtLeast32BitUnsigned},
+    SaturatedConversion,
+};
+use std::ops::Deref;
 use zeitgeist_primitives::{
     constants::BASE,
     types::{Asset, Pool, PoolId, PoolStatus, ScoringRule},
@@ -26,9 +30,8 @@ use zeitgeist_primitives::{
 
 pub trait Arbitrage<Balance, MarketId>
 where
-    Balance: From<u8>,
-    // Balance: AtLeast32BitUnsigned,
-    MarketId: MaxEncodedLen,
+    Balance: AtLeast32BitUnsigned + Copy,
+    MarketId: MaxEncodedLen + AtLeast32Bit,
 {
     fn calc_total_spot_price(
         &self,
@@ -54,29 +57,43 @@ where
 
 impl<Balance, MarketId> Arbitrage<Balance, MarketId> for Pool<Balance, MarketId>
 where
-    Balance: From<u8>,
-    // Balance: AtLeast32BitUnsigned,
-    MarketId: MaxEncodedLen,
+    Balance: AtLeast32BitUnsigned + Copy,
+    MarketId: MaxEncodedLen + AtLeast32Bit,
 {
     fn calc_total_spot_price(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str> {
-        Ok(0u8.into())
-        // // TODO Add a shift direction for other type of arbitrage.
-        // self.assets
-        //     .filter(|a, _| a != self.base_asset)
-        //     .map(|a| {
-        //         // We're deliberately _not_ using the pool's swap fee!
-        //         calc_spot_price(
-        //             balances[a],
-        //             self.weights[a],
-        //             balances[self.base_asset],
-        //             weights[self.base_asset],
-        //             0,
-        //         )
-        //     })
-        //     .fold(|acc, val| acc + val)
+        let weights = self.weights.as_ref().ok_or("Unexpectedly found no weights in pool.")?;
+        let balance_in = balances
+            .get(&self.base_asset)
+            .cloned()
+            .ok_or("Base asset balance missing")?
+            .saturated_into();
+        let weight_in =
+            weights.get(&self.base_asset).cloned().ok_or("Base asset weight missing")?;
+        let mut result: u128 = 0;
+        for asset in self.assets.iter().filter(|a| **a != self.base_asset) {
+            // TODO Need better error message here!
+            let balance_out: u128 = balances
+                .get(asset)
+                .cloned()
+                .ok_or("Asset balance missing")
+                .unwrap() // TODO: Unwrap
+                .saturated_into();
+            // TODO Individualize error message!
+            let weight_out =
+                weights.get(asset).cloned().ok_or("Unexpected found no weight for asset.").unwrap();
+            // We're deliberately _not_ using the pool's swap fee!
+            result = result.saturating_add(calc_spot_price(
+                balance_in,
+                weight_in,
+                balance_out,
+                weight_out,
+                0,
+            )?);
+        }
+        Ok(result.saturated_into())
     }
 
     // fn calc_total_spot_price_after_buy_burn(
