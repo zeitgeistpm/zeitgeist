@@ -68,7 +68,7 @@ std = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "common-runtime"
-version = "0.3.5"
+version = "0.3.6"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
