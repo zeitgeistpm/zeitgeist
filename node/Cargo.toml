@@ -89,6 +89,8 @@ polkadot-test-service = { branch = "release-v0.9.23", git = "https://github.com/
 
 sc-consensus-aura = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
 sc-finality-grandpa = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
+sp-consensus-aura = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
+sp-finality-grandpa = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate" }
 
 # Utility
 cfg-if = { version = "1.0.0" }
