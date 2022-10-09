@@ -24,7 +24,7 @@ use sp_runtime::{
 };
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{Asset, Pool, PoolId, PoolStatus, ScoringRule},
+    types::{Asset, Pool},
 };
 
 // TODO Research: Why do we need the `Fixed`/`u128` type to begin with? Can't we just use a generic `Balance` for all Balancer math functions?
@@ -35,7 +35,6 @@ type Fixed = u128;
 const MAX_ITERATIONS: usize = 30;
 const TOLERANCE: Fixed = BASE / 1_000; // 0.001
 
-// TODO Some of these trait bounds may be removable (only required in impl)
 // TODO Rename to `ArbitrageForCpmm`.
 pub trait Arbitrage<Balance, MarketId>
 where
@@ -116,7 +115,6 @@ where
     }
 }
 
-// TODO Some of these trait bounds may be removable (only required in impl)
 trait ArbitrageHelper<Balance, MarketId>
 where
     MarketId: MaxEncodedLen,
@@ -146,8 +144,7 @@ where
         // The `unwrap_or` below should never occur
         let smallest_balance: Fixed = balances
             .iter()
-            .filter(|(a, b)| cond(a))
-            .map(|(_, b)| b)
+            .filter_map(|(a, b)| if cond(a) { Some(b) } else { None })
             .min()
             .cloned()
             .ok_or("")?

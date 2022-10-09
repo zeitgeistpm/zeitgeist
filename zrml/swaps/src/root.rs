@@ -61,7 +61,7 @@ where
     if !(min < max) {
         return Err("Sanity check failed");
     }
-    let mut fmin = f(min)?;
+    let fmin = f(min)?;
     let mut fmax = f(max)?;
     if fmin == value {
         return Ok((min, 0));
@@ -101,7 +101,8 @@ where
             fmax = fmid;
         } else {
             min = mid;
-            fmin = fmid;
+            // We (surprisingly) don't need this:
+            // fmin = fmid;
         }
     }
 

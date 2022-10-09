@@ -28,7 +28,9 @@ use crate::{
     mock::*,
     BalanceOf, Config, Event, SubsidyProviders,
 };
-use frame_support::{assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin};
+use frame_support::{
+    assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin, traits::Hooks,
+};
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_runtime::SaturatedConversion;
@@ -45,6 +47,7 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::traits::RikiddoMVPallet;
+use frame_support::weights::Weight;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
@@ -3012,6 +3015,32 @@ fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
             ),
             crate::Error::<Runtime>::PoolDrain,
         );
+    });
+}
+
+#[test]
+fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            let _ = Currencies::deposit(asset, &BOB, _10000);
+        });
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            ASSET_A,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(<Runtime as crate::Config>::MinLiquidity::get()),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+        // Force the pool into the cache.
+        crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        Swaps::on_idle(System::block_number(), Weight::max_value());
+        System::assert_has_event(Event::ArbitrageSkipped(pool_id).into());
     });
 }
 

@@ -110,7 +110,7 @@ mod pallet {
 
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const MIN_BALANCE: u128 = CENT;
-    const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000_000;
+    const ON_IDLE_MIN_WEIGHT: Weight = 0; // TODO 1_000_000_000;
     const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
     const ARBITRAGE_MIN_WEIGHT: Weight = ON_IDLE_MIN_WEIGHT / (ARBITRAGE_WEIGHT_RATIO as u64);
 
@@ -1098,11 +1098,12 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, remaining_weight: Weight) -> Weight {
+            println!("on_idle");
             if remaining_weight < ON_IDLE_MIN_WEIGHT {
+                println!("on_idle - not enough weight");
                 return 0;
             }
-            // Self::execute_arbitrage_all(remaining_weight / 2)
-            0
+            Self::execute_arbitrage_all(remaining_weight / 2)
         }
     }
 
@@ -1238,6 +1239,7 @@ mod pallet {
         }
 
         fn execute_arbitrage_all(weight: Weight) -> Weight {
+            println!("execute_arbitrage_all");
             if weight < ARBITRAGE_MIN_WEIGHT {
                 return weight;
             }
@@ -1250,9 +1252,11 @@ mod pallet {
             if pool_count == 0 {
                 return weight;
             }
-            let result = Self::apply_to_cached_pools(pool_count as u32, |pool_id| {
-                Self::execute_arbitrage(pool_id)
-            });
+            let result = Self::apply_to_cached_pools(
+                pool_count as u32,
+                |pool_id| Self::execute_arbitrage(pool_id),
+                extra_weight_per_pool,
+            );
             // `apply_to_cached_pools` should never fail, but if it does, we just assume we
             // consumed all the weight.
             result.unwrap_or(weight)
@@ -1261,10 +1265,12 @@ mod pallet {
         pub(crate) fn apply_to_cached_pools<F>(
             pool_count: u32,
             mutation: F,
+            max_weight_per_pool: Weight,
         ) -> Result<Weight, DispatchError>
         where
             F: Fn(PoolId) -> Result<Weight, DispatchError>,
         {
+            println!("apply_to_cached_pools");
             let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
             // TODO: Check/write a test that this doesn't drain the whole map!
             // TODO: Write pool_id, pool to cache, saves one read!
@@ -1272,7 +1278,10 @@ mod pallet {
                 if index == (pool_count as usize) {
                     break;
                 }
-                let weight = mutation(pool_id)?;
+                let weight = mutation(pool_id).unwrap_or_else(|_| {
+                    log::warn!("Arbitrage failed on pool: {:?}", pool_id);
+                    max_weight_per_pool
+                });
                 total_weight = total_weight.saturating_add(weight);
             }
             Ok(total_weight)
@@ -1280,6 +1289,8 @@ mod pallet {
 
         // Execute arbitrage on a single pool.
         fn execute_arbitrage(pool_id: PoolId) -> Result<Weight, DispatchError> {
+            println!("execute_arbitrage");
+            // TODO Don't forget to push pool_ids into cache after trades!
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
             let balances = pool
@@ -1288,8 +1299,11 @@ mod pallet {
                 .map(|a| (*a, T::AssetManager::free_balance(*a, &pool_account)))
                 .collect::<BTreeMap<_, _>>();
             let tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
+            println!("before");
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
+            println!("afterPoolsCachedForArbitrage");
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
+                println!("mint-sell");
                 let amount = pool.calc_arbitrage_amount_mint_sell(&balances)?;
                 T::AssetManager::withdraw(Asset::Ztg, &pool_account, amount)?;
                 for t in tokens {
@@ -1297,6 +1311,7 @@ mod pallet {
                 }
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
+                println!("buy-burn");
                 let amount = pool.calc_arbitrage_amount_buy_burn(&balances)?;
                 T::AssetManager::deposit(Asset::Ztg, &pool_account, amount)?;
                 for t in tokens {
@@ -1304,6 +1319,7 @@ mod pallet {
                 }
                 Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
             } else {
+                println!("else");
                 Self::deposit_event(Event::ArbitrageSkipped(pool_id));
             }
             Ok(T::WeightInfo::execute_arbitrage())
