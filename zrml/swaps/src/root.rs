@@ -56,13 +56,13 @@ pub(crate) fn calc_preimage<T, F>(
 ) -> Result<(T, usize), &'static str>
 where
     T: AtLeast32BitUnsigned + Copy,
-    F: Fn(T) -> T,
+    F: Fn(T) -> Result<T, &'static str>,
 {
     if !(min < max) {
         return Err("Sanity check failed");
     }
-    let mut fmin = f(min);
-    let mut fmax = f(max);
+    let mut fmin = f(min)?;
+    let mut fmax = f(max)?;
     if fmin == value {
         return Ok((min, 0));
     } else if fmax == value {
@@ -89,7 +89,7 @@ where
             break;
         }
 
-        let fmid = f(mid);
+        let fmid = f(mid)?;
         if fmid == value {
             iterations = i;
             break;

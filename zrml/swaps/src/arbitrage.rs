@@ -27,6 +27,8 @@ use zeitgeist_primitives::{
     types::{Asset, Pool, PoolId, PoolStatus, ScoringRule},
 };
 
+// TODO Research: Why do we need the `Fixed`/`u128` type to begin with? Can't we just use a generic `Balance` for all Balancer math functions?
+
 // TODO Make this a generic parameter of `Arbitrage`
 type Fixed = u128;
 
@@ -37,12 +39,12 @@ const TOLERANCE: Fixed = BASE / 1_000; // 0.001
 pub trait Arbitrage<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + AtLeast32Bit,
+    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
 {
     fn calc_total_spot_price(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
-    ) -> Result<Balance, &'static str>;
+    ) -> Result<Fixed, &'static str>;
 
     fn calc_arbitrage_amount_mint_sell(
         &self,
@@ -58,13 +60,13 @@ where
 impl<Balance, MarketId> Arbitrage<Balance, MarketId> for Pool<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + AtLeast32Bit,
+    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
 {
     // TODO Use dependency injection to add a shift?
     fn calc_total_spot_price(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
-    ) -> Result<Balance, &'static str> {
+    ) -> Result<Fixed, &'static str> {
         let weights = self.weights.as_ref().ok_or("Unexpectedly found no weights in pool.")?;
         let balance_in = balances
             .get(&self.base_asset)
@@ -94,7 +96,7 @@ where
                 0,
             )?);
         }
-        Ok(result.saturated_into())
+        Ok(result)
     }
 
     // Calling with a non-CPMM pool results in undefined behavior.
@@ -102,12 +104,29 @@ where
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str> {
-        let f = |_| BASE;
         // The `unwrap_or` below should never occur
-        let smallest_balance: Fixed =
-            balances.values().min().cloned().unwrap_or(0u8.into()).saturated_into();
-        let (result, iterations) =
-            calc_preimage::<Fixed, _>(f, BASE, 0, smallest_balance / 4, MAX_ITERATIONS, TOLERANCE)?;
+        let smallest_balance: Fixed = balances.values().min().cloned().ok_or("")?.saturated_into();
+        let calc_total_spot_price_after_arbitrage = |amount: Fixed| -> Result<Fixed, &'static str> {
+            let shifted_balances = balances
+                .iter()
+                .map(|(asset, bal)| {
+                    if *asset == self.base_asset {
+                        (*asset, bal.saturating_sub(amount.saturated_into()))
+                    } else {
+                        (*asset, bal.saturating_add(amount.saturated_into()))
+                    }
+                })
+                .collect::<BTreeMap<_, _>>();
+            self.calc_total_spot_price(&shifted_balances)
+        };
+        let (result, iterations) = calc_preimage::<Fixed, _>(
+            calc_total_spot_price_after_arbitrage,
+            BASE,
+            0,
+            smallest_balance / 4,
+            MAX_ITERATIONS,
+            TOLERANCE,
+        )?;
         // TODO How to handle too many iterations?
         Ok(result.saturated_into())
     }
