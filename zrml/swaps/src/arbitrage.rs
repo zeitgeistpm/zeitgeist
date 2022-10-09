@@ -39,8 +39,7 @@ const TOLERANCE: Fixed = BASE / 1_000; // 0.001
 // TODO Rename to `ArbitrageForCpmm`.
 pub trait Arbitrage<Balance, MarketId>
 where
-    Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
+    MarketId: MaxEncodedLen,
 {
     fn calc_total_spot_price(
         &self,
@@ -120,8 +119,7 @@ where
 // TODO Some of these trait bounds may be removable (only required in impl)
 trait ArbitrageHelper<Balance, MarketId>
 where
-    Balance: AtLeast32BitUnsigned + Copy,
-    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
+    MarketId: MaxEncodedLen,
 {
     fn calc_arbitrage_amount_common<F>(
         &self,
