@@ -1252,21 +1252,18 @@ mod pallet {
             if pool_count == 0 {
                 return weight;
             }
-            let result = Self::apply_to_cached_pools(
+            Self::apply_to_cached_pools(
                 pool_count as u32,
                 |pool_id| Self::execute_arbitrage(pool_id),
                 extra_weight_per_pool,
-            );
-            // `apply_to_cached_pools` should never fail, but if it does, we just assume we
-            // consumed all the weight.
-            result.unwrap_or(weight)
+            )
         }
 
         pub(crate) fn apply_to_cached_pools<F>(
             pool_count: u32,
             mutation: F,
             max_weight_per_pool: Weight,
-        ) -> Result<Weight, DispatchError>
+        ) -> Weight
         where
             F: Fn(PoolId) -> Result<Weight, DispatchError>,
         {
@@ -1278,13 +1275,15 @@ mod pallet {
                 if index == (pool_count as usize) {
                     break;
                 }
+                // The mutation should never fail, but if it does, we just assume we
+                // consumed all the weight.
                 let weight = mutation(pool_id).unwrap_or_else(|_| {
                     log::warn!("Arbitrage failed on pool: {:?}", pool_id);
                     max_weight_per_pool
                 });
                 total_weight = total_weight.saturating_add(weight);
             }
-            Ok(total_weight)
+            total_weight
         }
 
         // Execute arbitrage on a single pool.
