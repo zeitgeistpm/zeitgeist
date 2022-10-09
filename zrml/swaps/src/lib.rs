@@ -108,11 +108,12 @@ mod pallet {
     >>::Balance;
     type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
+    const ARBITRAGE_MAX_ITERATIONS: usize = 30;
+    const ARBITRAGE_MIN_WEIGHT: Weight = ON_IDLE_MIN_WEIGHT / (ARBITRAGE_WEIGHT_RATIO as u64);
     const ARBITRAGE_THRESHOLD: u128 = CENT;
+    const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
     const MIN_BALANCE: u128 = CENT;
     const ON_IDLE_MIN_WEIGHT: Weight = 0; // TODO 1_000_000_000;
-    const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
-    const ARBITRAGE_MIN_WEIGHT: Weight = ON_IDLE_MIN_WEIGHT / (ARBITRAGE_WEIGHT_RATIO as u64);
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1259,6 +1260,8 @@ mod pallet {
             )
         }
 
+        // Apply a `mutation` to all pools cached for arbitrage (but at most `pool_count` many) and
+        // return the actual weight consumed.
         pub(crate) fn apply_to_cached_pools<F>(
             pool_count: u32,
             mutation: F,
@@ -1300,10 +1303,16 @@ mod pallet {
             let tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
             println!("before");
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
+            let max_iterations = ARBITRAGE_MAX_ITERATIONS;
             println!("afterPoolsCachedForArbitrage");
+            // TODO Perform a rollback if any of this fails!
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
                 println!("mint-sell");
-                let amount = pool.calc_arbitrage_amount_mint_sell(&balances)?;
+                let (amount, iteration_count) =
+                    pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
+                if iteration_count == max_iterations {
+                    log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
+                }
                 T::AssetManager::withdraw(Asset::Ztg, &pool_account, amount)?;
                 for t in tokens {
                     T::AssetManager::deposit(*t, &pool_account, amount)?;
@@ -1311,7 +1320,11 @@ mod pallet {
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
                 println!("buy-burn");
-                let amount = pool.calc_arbitrage_amount_buy_burn(&balances)?;
+                let (amount, iteration_count) =
+                    pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
+                if iteration_count == max_iterations {
+                    log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
+                }
                 T::AssetManager::deposit(Asset::Ztg, &pool_account, amount)?;
                 for t in tokens {
                     T::AssetManager::withdraw(*t, &pool_account, amount)?;

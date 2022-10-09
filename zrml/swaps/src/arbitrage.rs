@@ -32,7 +32,6 @@ use zeitgeist_primitives::{
 // TODO Make this a generic parameter of `Arbitrage`
 type Fixed = u128;
 
-const MAX_ITERATIONS: usize = 30;
 const TOLERANCE: Fixed = BASE / 1_000; // 0.001
 
 // TODO Rename to `ArbitrageForCpmm`.
@@ -48,12 +47,14 @@ where
     fn calc_arbitrage_amount_mint_sell(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
-    ) -> Result<Balance, &'static str>;
+        max_iterations: usize,
+    ) -> Result<(Balance, usize), &'static str>;
 
     fn calc_arbitrage_amount_buy_burn(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
-    ) -> Result<Balance, &'static str>;
+        max_iterations: usize,
+    ) -> Result<(Balance, usize), &'static str>;
 }
 
 impl<Balance, MarketId> Arbitrage<Balance, MarketId> for Pool<Balance, MarketId>
@@ -103,15 +104,17 @@ where
     fn calc_arbitrage_amount_mint_sell(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
-    ) -> Result<Balance, &'static str> {
-        self.calc_arbitrage_amount_common(balances, |a| *a == self.base_asset)
+        max_iterations: usize,
+    ) -> Result<(Balance, usize), &'static str> {
+        self.calc_arbitrage_amount_common(balances, |a| *a == self.base_asset, max_iterations)
     }
 
     fn calc_arbitrage_amount_buy_burn(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
-    ) -> Result<Balance, &'static str> {
-        self.calc_arbitrage_amount_common(balances, |a| *a != self.base_asset)
+        max_iterations: usize,
+    ) -> Result<(Balance, usize), &'static str> {
+        self.calc_arbitrage_amount_common(balances, |a| *a != self.base_asset, max_iterations)
     }
 }
 
@@ -123,7 +126,8 @@ where
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
         cond: F,
-    ) -> Result<Balance, &'static str>
+        max_iterations: usize,
+    ) -> Result<(Balance, usize), &'static str>
     where
         F: Fn(&Asset<MarketId>) -> bool;
 }
@@ -137,7 +141,8 @@ where
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
         cond: F,
-    ) -> Result<Balance, &'static str>
+        max_iterations: usize,
+    ) -> Result<(Balance, usize), &'static str>
     where
         F: Fn(&Asset<MarketId>) -> bool,
     {
@@ -162,15 +167,15 @@ where
                 .collect::<BTreeMap<_, _>>();
             self.calc_total_spot_price(&shifted_balances)
         };
-        let (result, iterations) = calc_preimage::<Fixed, _>(
+        let (preimage, iterations) = calc_preimage::<Fixed, _>(
             calc_total_spot_price_after_arbitrage,
             BASE,
             0,
             smallest_balance / 2,
-            MAX_ITERATIONS,
+            max_iterations,
             TOLERANCE,
         )?;
         // TODO How to handle too many iterations?
-        Ok(result.saturated_into())
+        Ok((preimage.saturated_into(), iterations))
     }
 }
