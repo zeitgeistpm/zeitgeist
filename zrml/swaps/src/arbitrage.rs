@@ -35,6 +35,7 @@ type Fixed = u128;
 const MAX_ITERATIONS: usize = 30;
 const TOLERANCE: Fixed = BASE / 1_000; // 0.001
 
+// TODO Some of these trait bounds may be removable (only required in impl)
 // TODO Rename to `ArbitrageForCpmm`.
 pub trait Arbitrage<Balance, MarketId>
 where
@@ -61,6 +62,7 @@ impl<Balance, MarketId> Arbitrage<Balance, MarketId> for Pool<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
     MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
+    Pool<Balance, MarketId>: ArbitrageHelper<Balance, MarketId>,
 {
     // TODO Use dependency injection to add a shift?
     fn calc_total_spot_price(
@@ -104,13 +106,59 @@ where
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
     ) -> Result<Balance, &'static str> {
+        self.calc_arbitrage_amount_common(balances, |a| *a == self.base_asset)
+    }
+
+    fn calc_arbitrage_amount_buy_burn(
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
+    ) -> Result<Balance, &'static str> {
+        self.calc_arbitrage_amount_common(balances, |a| *a != self.base_asset)
+    }
+}
+
+// TODO Some of these trait bounds may be removable (only required in impl)
+trait ArbitrageHelper<Balance, MarketId>
+where
+    Balance: AtLeast32BitUnsigned + Copy,
+    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
+{
+    fn calc_arbitrage_amount_common<F>(
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
+        cond: F,
+    ) -> Result<Balance, &'static str>
+    where
+        F: Fn(&Asset<MarketId>) -> bool;
+}
+
+impl<Balance, MarketId> ArbitrageHelper<Balance, MarketId> for Pool<Balance, MarketId>
+where
+    Balance: AtLeast32BitUnsigned + Copy,
+    MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
+{
+    fn calc_arbitrage_amount_common<F>(
+        &self,
+        balances: &BTreeMap<Asset<MarketId>, Balance>,
+        cond: F,
+    ) -> Result<Balance, &'static str>
+    where
+        F: Fn(&Asset<MarketId>) -> bool,
+    {
         // The `unwrap_or` below should never occur
-        let smallest_balance: Fixed = balances.values().min().cloned().ok_or("")?.saturated_into();
+        let smallest_balance: Fixed = balances
+            .iter()
+            .filter(|(a, b)| cond(a))
+            .map(|(_, b)| b)
+            .min()
+            .cloned()
+            .ok_or("")?
+            .saturated_into();
         let calc_total_spot_price_after_arbitrage = |amount: Fixed| -> Result<Fixed, &'static str> {
             let shifted_balances = balances
                 .iter()
                 .map(|(asset, bal)| {
-                    if *asset == self.base_asset {
+                    if cond(asset) {
                         (*asset, bal.saturating_sub(amount.saturated_into()))
                     } else {
                         (*asset, bal.saturating_add(amount.saturated_into()))
@@ -123,22 +171,11 @@ where
             calc_total_spot_price_after_arbitrage,
             BASE,
             0,
-            smallest_balance / 4,
+            smallest_balance / 2,
             MAX_ITERATIONS,
             TOLERANCE,
         )?;
         // TODO How to handle too many iterations?
         Ok(result.saturated_into())
-    }
-
-    fn calc_arbitrage_amount_buy_burn(
-        &self,
-        balances: &BTreeMap<Asset<MarketId>, Balance>,
-    ) -> Result<Balance, &'static str> {
-        Ok(0u8.into())
-        // let total_spot_price = self.calc_total_spot_price_after_shift(balances, 0);
-        // if total_spot_price > BASE {
-        // } else {
-        // }
     }
 }
