@@ -52,7 +52,7 @@ where
     F: Fn(T) -> Result<T, &'static str>,
 {
     if !(min < max) {
-        return Err("Sanity check failed");
+        return Err("Domain has no volume");
     }
     let fmin = f(min)?;
     let mut fmax = f(max)?;
@@ -141,6 +141,9 @@ mod tests {
     const _8: u128 = 8 * BASE;
     const _9: u128 = 9 * BASE;
     const _10: u128 = 10 * BASE;
+    const _43: u128 = 43 * BASE;
+    const _333: u128 = 333 * BASE;
+    const _631: u128 = 631 * BASE;
     const _1_2: u128 = 1 * BASE / 2;
     const _3_4: u128 = 3 * BASE / 4;
     const _1_1000: u128 = BASE / 1_000;
@@ -164,18 +167,61 @@ mod tests {
         };
     }
 
-    #[test_case(_1, _3)]
+    #[test_case(0, _3)]
+    #[test_case(_43, _3)]
+    #[test_case(_631, _7)]
+    #[test_case(u128::MAX, _7)]
+    #[test_case(_333, 56_989_260_529)]
+    #[test_case(1_421_346_322_776, 43_478_934_937)]
     fn calc_preimage_works_with_increasing_polynomial(value: u128, expected: u128) {
         // f(x) = 2x^3 - x^2 - x + 1 is positive and increasing on [1, \infty].
         let f = |x: u128| {
             let third_order = bmul(_2, bpowi(x, 3)?)?;
             let second_order = bpowi(x, 2)?;
             // Add positive terms first to prevent underflow.
-            let result = third_order.checked_add(_1).ok_or("1")?;
-            result.checked_sub(second_order.checked_add(x).ok_or("2")?).ok_or("3")
+            Ok(third_order + _1 - second_order - x)
         };
         let tolerance = _1_1000;
         let (preimage, _) = calc_preimage(f, value, _3, _7, usize::MAX, _1_1000).unwrap();
+        assert_approx!(preimage, expected, tolerance);
+    }
+
+    #[test_case(_7, _1)]
+    #[test_case(u128::MAX, _1)]
+    #[test_case(_2 + _1_2, _2)]
+    #[test_case(0, _2)]
+    #[test_case(_3, _2)]
+    #[test_case(56_476_573_221, 15_574_893_554)]
+    fn calc_preimage_works_with_decreasing_polynomial(value: u128, expected: u128) {
+        // f(x) = -x^3 + x^2 + 7 is positive and decreasing on [1, 2].
+        let f = |x: u128| Ok(_7 + bpowi(x, 2)? - bpowi(x, 3)?);
+        let tolerance = _1_1000;
+        let (preimage, _) = calc_preimage(f, value, _1, _2, usize::MAX, _1_1000).unwrap();
+        assert_approx!(preimage, expected, tolerance);
+    }
+
+    // Step functions don't play well with bisection as they are not continuous. The results are
+    // nevertheless meaningfull.
+    #[test_case(0, _1_2)]
+    #[test_case(_2, _1_2)]
+    #[test_case(_2 + 3, _1)]
+    #[test_case(_5, _1 + _3_4)] // Immediately break after first iteration!
+    #[test_case(_7 - 1, _2)]
+    #[test_case(_7, _3)]
+    #[test_case(_7 + 2, _3)]
+    #[test_case(u128::MAX, _3)]
+    fn calc_preimage_works_with_step_function_sort_of(value: u128, expected: u128) {
+        let f = |x: u128| {
+            Ok(if x <= _1 {
+                _2
+            } else if x <= _2 {
+                _5
+            } else {
+                _7
+            })
+        };
+        let tolerance = _1_1000;
+        let (preimage, _) = calc_preimage(f, value, _1_2, _3, usize::MAX, _1_1000).unwrap();
         assert_approx!(preimage, expected, tolerance);
     }
 
@@ -183,7 +229,8 @@ mod tests {
     fn calc_preimage_breaks_after_max_iterations() {
         let f = |x: u128| Ok(x);
         let max_iterations = 1;
-        let (preimage, iteration_count) = calc_preimage(f, _7, _5, _10, max_iterations, _1_1000).unwrap();
+        let (preimage, iteration_count) =
+            calc_preimage(f, _7, _5, _10, max_iterations, _1_1000).unwrap();
         assert_eq!(preimage, _7 + _1_2);
         assert_eq!(iteration_count, max_iterations);
     }
