@@ -63,7 +63,7 @@ where
     }
 
     if is_outside_of(value, fmin, fmax) {
-        if dist(fmax, value) > dist(fmin, value) {
+        if dist(fmax, value) < dist(fmin, value) {
             return Ok((max, 0));
         } else {
             return Ok((min, 0));
@@ -127,6 +127,7 @@ fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixed::{bmul, bpowi};
     use test_case::test_case;
     use zeitgeist_primitives::constants::BASE;
 
@@ -144,25 +145,38 @@ mod tests {
     const _3_4: u128 = 3 * BASE / 4;
     const _1_1000: u128 = BASE / 1_000;
 
-    #[test_case(2, 3, 1)]
-    #[test_case(4, 1, 3)]
-    #[test_case(5, 5, 0)]
-    fn test_dist(x: u32, y: u32, expected: u32) {
-        assert_eq!(dist(x, y), expected);
+    // Macro for comparing fixed point u128.
+    #[allow(unused_macros)]
+    macro_rules! assert_approx {
+        ($left:expr, $right:expr, $precision:expr $(,)?) => {
+            match (&$left, &$right, &$precision) {
+                (left_val, right_val, precision_val) => {
+                    let diff = if *left_val > *right_val {
+                        *left_val - *right_val
+                    } else {
+                        *right_val - *left_val
+                    };
+                    if diff > $precision {
+                        panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
+                    }
+                }
+            }
+        };
     }
 
-    #[test_case(1, 5, 9, true)]
-    #[test_case(5, 5, 9, false)]
-    #[test_case(7, 5, 9, false)]
-    #[test_case(9, 5, 9, false)]
-    #[test_case(u32::MAX, 5, 9, true)]
-    #[test_case(1, 9, 5, true)]
-    #[test_case(5, 9, 5, false)]
-    #[test_case(7, 9, 5, false)]
-    #[test_case(9, 9, 5, false)]
-    #[test_case(u32::MAX, 9, 5, true)]
-    fn test_is_outside_of(t: u32, x: u32, y: u32, expected: bool) {
-        assert_eq!(is_outside_of(t, x, y), expected);
+    #[test_case(_1, _3)]
+    fn calc_preimage_works_with_increasing_polynomial(value: u128, expected: u128) {
+        // f(x) = 2x^3 - x^2 - x + 1 is positive and increasing on [1, \infty].
+        let f = |x: u128| {
+            let third_order = bmul(_2, bpowi(x, 3)?)?;
+            let second_order = bpowi(x, 2)?;
+            // Add positive terms first to prevent underflow.
+            let result = third_order.checked_add(_1).ok_or("1")?;
+            result.checked_sub(second_order.checked_add(x).ok_or("2")?).ok_or("3")
+        };
+        let tolerance = _1_1000;
+        let (preimage, _) = calc_preimage(f, value, _3, _7, usize::MAX, _1_1000).unwrap();
+        assert_approx!(preimage, expected, tolerance);
     }
 
     #[test]
@@ -187,5 +201,26 @@ mod tests {
     fn calc_preimage_errors_if_range_has_no_volume(min: u128, max: u128) {
         let f = |x: u128| Ok(x);
         assert!(calc_preimage(f, _5 - 1, min, max, 10, _3_4).is_err());
+    }
+
+    #[test_case(2, 3, 1)]
+    #[test_case(4, 1, 3)]
+    #[test_case(5, 5, 0)]
+    fn test_dist(x: u32, y: u32, expected: u32) {
+        assert_eq!(dist(x, y), expected);
+    }
+
+    #[test_case(1, 5, 9, true)]
+    #[test_case(5, 5, 9, false)]
+    #[test_case(7, 5, 9, false)]
+    #[test_case(9, 5, 9, false)]
+    #[test_case(u32::MAX, 5, 9, true)]
+    #[test_case(1, 9, 5, true)]
+    #[test_case(5, 9, 5, false)]
+    #[test_case(7, 9, 5, false)]
+    #[test_case(9, 9, 5, false)]
+    #[test_case(u32::MAX, 9, 5, true)]
+    fn test_is_outside_of(t: u32, x: u32, y: u32, expected: bool) {
+        assert_eq!(is_outside_of(t, x, y), expected);
     }
 }
