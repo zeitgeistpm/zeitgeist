@@ -1248,13 +1248,24 @@ mod pallet {
             // minimum number of pools we can handle.
             // TODO Replace noop with execute pool!
             let overhead = T::WeightInfo::apply_to_cached_pools_noop(0);
-            let extra_weight_per_pool = T::WeightInfo::apply_to_cached_pools_noop(1) - overhead;
-            let pool_count = weight.saturating_sub(overhead) / extra_weight_per_pool;
+            let extra_weight_per_pool =
+                T::WeightInfo::apply_to_cached_pools_noop(1).saturating_sub(overhead);
+            // The division can fail if the benchmark of `apply_to_cached_pools` is not linear in
+            // the number of pools. This shouldn't ever happen, but if it does, we ensure that
+            // `pool_count` is zero (this isn't really a runtime error).
+            let pool_count: u32 = weight
+                .saturating_sub(overhead)
+                .checked_div(extra_weight_per_pool)
+                .unwrap_or_else(|| {
+                    log::warn!("Unexpected zero division when calculating arbitrage weight");
+                    Weight::zero()
+                })
+                .saturated_into(); // Saturates only if we have u32::MAX trades per block.
             if pool_count == 0 {
                 return weight;
             }
             Self::apply_to_cached_pools(
-                pool_count as u32,
+                pool_count,
                 |pool_id| Self::execute_arbitrage(pool_id),
                 extra_weight_per_pool,
             )
@@ -1281,7 +1292,7 @@ mod pallet {
                 // The mutation should never fail, but if it does, we just assume we
                 // consumed all the weight.
                 let weight = mutation(pool_id).unwrap_or_else(|_| {
-                    log::warn!("Arbitrage failed on pool: {:?}", pool_id);
+                    log::warn!("Arbitrage failed on pool {:?}", pool_id);
                     max_weight_per_pool
                 });
                 total_weight = total_weight.saturating_add(weight);
