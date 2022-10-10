@@ -63,7 +63,6 @@ where
     MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
     Pool<Balance, MarketId>: ArbitrageHelper<Balance, MarketId>,
 {
-    // TODO Use dependency injection to add a shift?
     fn calc_total_spot_price(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
@@ -74,20 +73,21 @@ where
             .cloned()
             .ok_or("Base asset balance missing")?
             .saturated_into();
-        let weight_in =
-            weights.get(&self.base_asset).cloned().ok_or("Base asset weight missing")?;
+        let weight_in = weights
+            .get(&self.base_asset)
+            .cloned()
+            .ok_or("Unexpectedly found no weight for base asset")?;
         let mut result: Fixed = 0;
         for asset in self.assets.iter().filter(|a| **a != self.base_asset) {
-            // TODO Need better error message here!
             let balance_out: Fixed = balances
                 .get(asset)
                 .cloned()
-                .ok_or("Asset balance missing")
-                .unwrap() // TODO: Unwrap
+                .ok_or("Asset balance missing from BTreeMap")?
                 .saturated_into();
-            // TODO Individualize error message!
-            let weight_out =
-                weights.get(asset).cloned().ok_or("Unexpected found no weight for asset.").unwrap();
+            let weight_out = weights
+                .get(asset)
+                .cloned()
+                .ok_or("Unexpectedly found no weight for outcome asset.")?;
             // We're deliberately _not_ using the pool's swap fee!
             result = result.saturating_add(calc_spot_price(
                 balance_in,
@@ -100,7 +100,6 @@ where
         Ok(result)
     }
 
-    // Calling with a non-CPMM pool results in undefined behavior.
     fn calc_arbitrage_amount_mint_sell(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
@@ -122,6 +121,17 @@ trait ArbitrageHelper<Balance, MarketId>
 where
     MarketId: MaxEncodedLen,
 {
+    /// Common code of `Arbitrage::calc_arbitrage_amount_*`.
+    ///
+    /// The only difference between the two `calc_arbitrage_amount_*` functions is that they
+    /// increase/decrease different assets. The `cond` parameter is `true` on assets that must be
+    /// decreased, `false` otherwise.
+    ///
+    /// # Arguments
+    ///
+    /// - `balances`: Maps assets to their balance in the pool.
+    /// - `cond`: Returns `true` if the asset's balance must be decreased, `false` otherwise.
+    /// - `max_iterations`: The maximum number of iterations to use in the bisection method.
     fn calc_arbitrage_amount_common<F>(
         &self,
         balances: &BTreeMap<Asset<MarketId>, Balance>,
@@ -146,13 +156,12 @@ where
     where
         F: Fn(&Asset<MarketId>) -> bool,
     {
-        // The `unwrap_or` below should never occur
         let smallest_balance: Fixed = balances
             .iter()
             .filter_map(|(a, b)| if cond(a) { Some(b) } else { None })
             .min()
             .cloned()
-            .ok_or("")?
+            .ok_or("calc_arbitrage_amount_common: Cannot find any matching assets")?
             .saturated_into();
         let calc_total_spot_price_after_arbitrage = |amount: Fixed| -> Result<Fixed, &'static str> {
             let shifted_balances = balances
@@ -175,7 +184,11 @@ where
             max_iterations,
             TOLERANCE,
         )?;
-        // TODO How to handle too many iterations?
         Ok((preimage.saturated_into(), iterations))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
 }
