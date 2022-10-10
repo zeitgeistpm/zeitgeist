@@ -26,10 +26,11 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    BalanceOf, Config, Event, SubsidyProviders,
+    BalanceOf, Config, Event, PoolsCachedForArbitrage, SubsidyProviders,
 };
 use frame_support::{
     assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin, traits::Hooks,
+    weights::Weight,
 };
 use more_asserts::{assert_ge, assert_le};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -47,7 +48,6 @@ use zeitgeist_primitives::{
 };
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_rikiddo::traits::RikiddoMVPallet;
-use frame_support::weights::Weight;
 
 pub const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 65);
 pub const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 66);
@@ -3041,6 +3041,27 @@ fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
         Swaps::on_idle(System::block_number(), Weight::max_value());
         System::assert_has_event(Event::ArbitrageSkipped(pool_id).into());
+    });
+}
+
+#[test]
+fn apply_to_cached_pools_only_drains_requested_pools() {
+    ExtBuilder::default().build().execute_with(|| {
+        let pool_count = 5;
+        for pool_id in 0..pool_count {
+            // Force the pool into the cache.
+            PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        }
+        let number_of_pools_to_retain: u32 = 3;
+        Swaps::apply_to_cached_pools(
+            pool_count.saturated_into::<u32>() - number_of_pools_to_retain,
+            |_| Ok(0),
+            Weight::max_value(),
+        );
+        assert_eq!(
+            PoolsCachedForArbitrage::<Runtime>::iter().count(),
+            number_of_pools_to_retain as usize
+        );
     });
 }
 

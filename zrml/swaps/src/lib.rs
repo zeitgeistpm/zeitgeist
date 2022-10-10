@@ -113,7 +113,7 @@ mod pallet {
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
     const MIN_BALANCE: u128 = CENT;
-    const ON_IDLE_MIN_WEIGHT: Weight = 0; // TODO 1_000_000_000;
+    const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000_000;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1283,12 +1283,8 @@ mod pallet {
         {
             println!("apply_to_cached_pools");
             let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
-            // TODO: Check/write a test that this doesn't drain the whole map!
-            // TODO: Write pool_id, pool to cache, saves one read!
+            // TODO: Write (pool_id, pool) to cache - saves one read!
             for (index, (pool_id, _)) in PoolsCachedForArbitrage::<T>::drain().enumerate() {
-                if index == (pool_count as usize) {
-                    break;
-                }
                 // The mutation should never fail, but if it does, we just assume we
                 // consumed all the weight.
                 let weight = mutation(pool_id).unwrap_or_else(|_| {
@@ -1296,6 +1292,9 @@ mod pallet {
                     max_weight_per_pool
                 });
                 total_weight = total_weight.saturating_add(weight);
+                if index.saturating_add(1) == (pool_count as usize) {
+                    break;
+                }
             }
             total_weight
         }
