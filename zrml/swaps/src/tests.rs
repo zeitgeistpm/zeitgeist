@@ -3060,7 +3060,7 @@ fn apply_to_cached_pools_only_drains_requested_pools() {
         );
         assert_eq!(
             PoolsCachedForArbitrage::<Runtime>::iter().count(),
-            number_of_pools_to_retain as usize
+            number_of_pools_to_retain as usize,
         );
     });
 }

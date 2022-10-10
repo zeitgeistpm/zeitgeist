@@ -426,6 +426,7 @@ mod pallet {
                     Ok(asset_amount)
                 },
                 bound: min_asset_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 ensure_balance: |_| Ok(()),
                 event: |evt| Self::deposit_event(Event::PoolExitWithExactPoolAmount(evt)),
                 who: who_clone,
@@ -433,7 +434,7 @@ mod pallet {
                 pool_id,
                 pool: pool_ref,
             };
-            pool_exit_with_exact_amount::<_, _, _, _, T>(params)
+            pool_exit_with_exact_amount::<_, _, _, _, _, T>(params)
         }
 
         /// Pool - Join
@@ -656,6 +657,7 @@ mod pallet {
                     Ok(asset_amount)
                 },
                 bound: max_asset_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 event: |evt| Self::deposit_event(Event::PoolJoinWithExactPoolAmount(evt)),
                 pool_account_id: &pool_account_id,
                 pool_amount: |_, _| Ok(pool_amount),
@@ -663,7 +665,7 @@ mod pallet {
                 pool: &pool,
                 who: who_clone,
             };
-            pool_join_with_exact_amount::<_, _, _, T>(params)
+            pool_join_with_exact_amount::<_, _, _, _, T>(params)
         }
 
         /// Swap - Exact amount in
@@ -2024,6 +2026,7 @@ mod pallet {
                 asset,
                 asset_amount: |_, _| Ok(asset_amount),
                 bound: max_pool_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 ensure_balance: |asset_balance: BalanceOf<T>| {
                     ensure!(
                         asset_amount
@@ -2062,7 +2065,7 @@ mod pallet {
                 pool: pool_ref,
             };
             let weight = T::WeightInfo::pool_exit_with_exact_asset_amount();
-            pool_exit_with_exact_amount::<_, _, _, _, T>(params).map(|_| weight)
+            pool_exit_with_exact_amount::<_, _, _, _, _, T>(params).map(|_| weight)
         }
 
         /// Pool - Join with exact asset amount
@@ -2096,6 +2099,7 @@ mod pallet {
                 asset: asset_in,
                 asset_amount: |_, _| Ok(asset_amount),
                 bound: min_pool_amount,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 pool_amount: move |asset_balance: BalanceOf<T>, total_supply: BalanceOf<T>| {
                     let mul: BalanceOf<T> = bmul(
                         asset_balance.saturated_into(),
@@ -2126,7 +2130,7 @@ mod pallet {
                 pool: pool_ref,
             };
             let weight = T::WeightInfo::pool_join_with_exact_asset_amount();
-            pool_join_with_exact_amount::<_, _, _, T>(params).map(|_| weight)
+            pool_join_with_exact_amount::<_, _, _, _, T>(params).map(|_| weight)
         }
 
         fn pool(pool_id: PoolId) -> Result<Pool<Self::Balance, Self::MarketId>, DispatchError> {
@@ -2277,6 +2281,7 @@ mod pallet {
                 asset_bound: min_asset_amount_out,
                 asset_in,
                 asset_out,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 event: |evt| Self::deposit_event(Event::SwapExactAmountIn(evt)),
                 max_price,
                 pool_account_id: &pool_account_id,
@@ -2284,7 +2289,7 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            swap_exact_amount::<_, _, T>(params)?;
+            swap_exact_amount::<_, _, _, T>(params)?;
 
             match pool.scoring_rule {
                 ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_in_cpmm()),
@@ -2374,6 +2379,7 @@ mod pallet {
                 asset_bound: max_asset_amount_in,
                 asset_in,
                 asset_out,
+                cache_for_arbitrage: || PoolsCachedForArbitrage::<T>::insert(pool_id, ()),
                 event: |evt| Self::deposit_event(Event::SwapExactAmountOut(evt)),
                 max_price,
                 pool_account_id: &pool_account_id,
@@ -2381,7 +2387,7 @@ mod pallet {
                 pool: &pool,
                 who,
             };
-            swap_exact_amount::<_, _, T>(params)?;
+            swap_exact_amount::<_, _, _, T>(params)?;
 
             match pool.scoring_rule {
                 ScoringRule::CPMM => Ok(T::WeightInfo::swap_exact_amount_out_cpmm()),
