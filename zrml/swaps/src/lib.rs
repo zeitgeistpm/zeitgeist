@@ -1292,7 +1292,7 @@ mod pallet {
                 // The mutation should never fail, but if it does, we just assume we
                 // consumed all the weight.
                 let weight = mutation(pool_id).unwrap_or_else(|_| {
-                    log::warn!("Arbitrage failed on pool {:?}", pool_id);
+                    log::warn!("Arbitrage unexpectedly failed on pool {:?}", pool_id);
                     max_weight_per_pool
                 });
                 total_weight = total_weight.saturating_add(weight);
@@ -1316,6 +1316,7 @@ mod pallet {
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
             let max_iterations = ARBITRAGE_MAX_ITERATIONS;
             println!("afterPoolsCachedForArbitrage");
+
             // TODO Perform a rollback if any of this fails!
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
                 println!("mint-sell");
@@ -1345,6 +1346,7 @@ mod pallet {
                 println!("else");
                 Self::deposit_event(Event::ArbitrageSkipped(pool_id));
             }
+
             Ok(T::WeightInfo::execute_arbitrage())
         }
 

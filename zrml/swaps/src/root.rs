@@ -62,7 +62,7 @@ where
         return Ok((max, 0));
     }
 
-    if is_bounded_by(value, fmin, fmax) {
+    if is_outside_of(value, fmin, fmax) {
         if dist(fmax, value) > dist(fmin, value) {
             return Ok((max, 0));
         } else {
@@ -75,17 +75,20 @@ where
     // `max_iterations`.
     let mut mid = T::zero();
     let mut iteration_count = 0;
-    for i in 0..max_iterations {
-        mid = max.checked_add(&min).ok_or("Unexpected arithmetic error")? / 2u8.into();
+    for i in 1..=max_iterations {
+        iteration_count = i;
+        let size = max.checked_sub(&min).ok_or("Unexpected arithmetic underflow")?;
+        if size < tol {
+            break;
+        }
+        mid = max.checked_add(&min).ok_or("Arithmetic overflow")? / 2u8.into();
         let fmid = f(mid)?;
-        let size = max.checked_sub(&min).ok_or("Unexpected arithmetic error")?;
-        if size < tol || fmid == value {
-            iteration_count = i;
+        if fmid == value {
             break;
         }
 
         // Check on which side of `value` the preimage is located.
-        if is_bounded_by(value, fmid, fmax) {
+        if is_outside_of(value, fmid, fmax) {
             max = mid;
             fmax = fmid;
         } else {
@@ -109,8 +112,8 @@ fn diff_sign<T: AtLeast32BitUnsigned>(x: T, y: T) -> i8 {
     }
 }
 
-// Check if `t` is contained in `[x, y]` if `x <= y` or `[y, x]` if `y > x`.
-fn is_bounded_by<T>(t: T, x: T, y: T) -> bool
+// Check if `t` lies outside of `[x, y]` if `x <= y` or `[y, x]` if `y > x`.
+fn is_outside_of<T>(t: T, x: T, y: T) -> bool
 where
     T: AtLeast32BitUnsigned + Copy,
 {
@@ -119,4 +122,70 @@ where
 
 fn dist<T: AtLeast32BitUnsigned>(x: T, y: T) -> T {
     if x > y { x - y } else { y - x }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+    use zeitgeist_primitives::constants::BASE;
+
+    const _1: u128 = BASE;
+    const _2: u128 = 2 * BASE;
+    const _3: u128 = 3 * BASE;
+    const _4: u128 = 4 * BASE;
+    const _5: u128 = 5 * BASE;
+    const _6: u128 = 6 * BASE;
+    const _7: u128 = 7 * BASE;
+    const _8: u128 = 8 * BASE;
+    const _9: u128 = 9 * BASE;
+    const _10: u128 = 10 * BASE;
+    const _1_2: u128 = 1 * BASE / 2;
+    const _3_4: u128 = 3 * BASE / 4;
+    const _1_1000: u128 = BASE / 1_000;
+
+    #[test_case(2, 3, 1)]
+    #[test_case(4, 1, 3)]
+    #[test_case(5, 5, 0)]
+    fn test_dist(x: u32, y: u32, expected: u32) {
+        assert_eq!(dist(x, y), expected);
+    }
+
+    #[test_case(1, 5, 9, true)]
+    #[test_case(5, 5, 9, false)]
+    #[test_case(7, 5, 9, false)]
+    #[test_case(9, 5, 9, false)]
+    #[test_case(u32::MAX, 5, 9, true)]
+    #[test_case(1, 9, 5, true)]
+    #[test_case(5, 9, 5, false)]
+    #[test_case(7, 9, 5, false)]
+    #[test_case(9, 9, 5, false)]
+    #[test_case(u32::MAX, 9, 5, true)]
+    fn test_is_outside_of(t: u32, x: u32, y: u32, expected: bool) {
+        assert_eq!(is_outside_of(t, x, y), expected);
+    }
+
+    #[test]
+    fn calc_preimage_breaks_after_max_iterations() {
+        let f = |x: u128| Ok(x);
+        let max_iterations = 1;
+        let (preimage, iteration_count) = calc_preimage(f, _7, _5, _10, max_iterations, _1_1000).unwrap();
+        assert_eq!(preimage, _7 + _1_2);
+        assert_eq!(iteration_count, max_iterations);
+    }
+
+    #[test]
+    fn calc_preimage_breaks_when_tolerance_is_violated() {
+        let f = |x: u128| Ok(x);
+        let (preimage, iteration_count) = calc_preimage(f, _9 - 1, _5, _9, 10, _3_4).unwrap();
+        assert_eq!(preimage, _8 + _1_2);
+        assert_eq!(iteration_count, 4);
+    }
+
+    #[test_case(_9, _9)]
+    #[test_case(_9, _8)]
+    fn calc_preimage_errors_if_range_has_no_volume(min: u128, max: u128) {
+        let f = |x: u128| Ok(x);
+        assert!(calc_preimage(f, _5 - 1, min, max, 10, _3_4).is_err());
+    }
 }
