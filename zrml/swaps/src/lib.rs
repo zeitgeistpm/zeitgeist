@@ -48,7 +48,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 mod pallet {
     use crate::{
-        arbitrage::Arbitrage,
+        arbitrage::ArbitrageForCpmm,
         check_arithm_rslt::CheckArithmRslt,
         events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
         fixed::{bdiv, bmul},

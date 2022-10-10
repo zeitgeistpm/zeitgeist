@@ -34,8 +34,10 @@ type Fixed = u128;
 
 const TOLERANCE: Fixed = BASE / 1_000; // 0.001
 
-// TODO Rename to `ArbitrageForCpmm`.
-pub trait Arbitrage<Balance, MarketId>
+/// This trait implements approximations for on-chain arbitrage of CPMM pools using bisection.
+///
+/// All calculations depend on on-chain, which are passed using the `balances` parameter.
+pub(crate) trait ArbitrageForCpmm<Balance, MarketId>
 where
     MarketId: MaxEncodedLen,
 {
@@ -57,13 +59,11 @@ where
     ) -> Result<(Balance, usize), &'static str>;
 }
 
-/// Calling any functions from this trait on a market that does not have `scoring_rule =
-/// ScoringRule::CPMM` is undefined behavior.
-impl<Balance, MarketId> Arbitrage<Balance, MarketId> for Pool<Balance, MarketId>
+impl<Balance, MarketId> ArbitrageForCpmm<Balance, MarketId> for Pool<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
     MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
-    Pool<Balance, MarketId>: ArbitrageHelper<Balance, MarketId>,
+    Pool<Balance, MarketId>: ArbitrageForCpmmHelper<Balance, MarketId>,
 {
     fn calc_total_spot_price(
         &self,
@@ -119,7 +119,7 @@ where
     }
 }
 
-trait ArbitrageHelper<Balance, MarketId>
+trait ArbitrageForCpmmHelper<Balance, MarketId>
 where
     MarketId: MaxEncodedLen,
 {
@@ -144,7 +144,7 @@ where
         F: Fn(&Asset<MarketId>) -> bool;
 }
 
-impl<Balance, MarketId> ArbitrageHelper<Balance, MarketId> for Pool<Balance, MarketId>
+impl<Balance, MarketId> ArbitrageForCpmmHelper<Balance, MarketId> for Pool<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
     MarketId: MaxEncodedLen + AtLeast32Bit + Copy,
