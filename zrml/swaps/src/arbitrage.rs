@@ -57,6 +57,8 @@ where
     ) -> Result<(Balance, usize), &'static str>;
 }
 
+/// Calling any functions from this trait on a market that does not have `scoring_rule =
+/// ScoringRule::CPMM` is undefined behavior.
 impl<Balance, MarketId> Arbitrage<Balance, MarketId> for Pool<Balance, MarketId>
 where
     Balance: AtLeast32BitUnsigned + Copy,
@@ -192,15 +194,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zeitgeist_primitives::constants::CENT;
     use test_case::test_case;
     use zeitgeist_primitives::types::{Asset, PoolStatus, ScoringRule};
 
     type MarketId = u128;
-    const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 0);
-    const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 1);
-    const ASSET_C: Asset<MarketId> = Asset::CategoricalOutcome(0, 2);
-    const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 3);
-    const DEFAULT_ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
     const _1: u128 = BASE;
     const _2: u128 = 2 * BASE;
@@ -217,43 +215,25 @@ mod tests {
     const _150: u128 = 150 * BASE;
     const _1_4: u128 = BASE / 4;
     const _1_10: u128 = BASE / 10;
+    const _1_1000: u128 = BASE / 1_000;
 
-    fn construct_pool<Balance>(
-        swap_fee: Option<Balance>,
-        weights: Vec<u128>,
-    ) -> Pool<Balance, MarketId> {
-        let fake_market_id = 0;
-        let assets = (0..weights.len())
-            .map(|i| Asset::CategoricalOutcome(fake_market_id, i as u16))
-            .collect::<Vec<_>>();
-        let total_weight = weights.iter().fold(0, |acc, val| acc + val);
-        let weights =
-            assets.clone().into_iter().zip(weights.into_iter()).collect::<BTreeMap<_, _>>();
-        Pool {
-            assets: assets.clone(),
-            base_asset: assets[0],
-            market_id: 0u8.into(),
-            pool_status: PoolStatus::Active, // Doesn't play any role.
-            scoring_rule: ScoringRule::CPMM,
-            swap_fee,
-            total_subsidy: None,
-            total_weight: Some(total_weight),
-            weights: Some(weights),
-        }
-    }
-
-    fn collect_balances_into_map<Balance>(
-        assets: Vec<Asset<MarketId>>,
-        balances: Vec<Balance>,
-    ) -> BTreeMap<Asset<MarketId>, Balance> {
-        assets.into_iter().zip(balances.into_iter()).collect::<BTreeMap<_, _>>()
-    }
-
-    #[test]
-    fn calc_total_spot_price_errors_if_asset_balance_is_missing() {
-        let pool = construct_pool(None, vec![_3, _1, _1, _1]);
-        let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
-        assert!(pool.calc_total_spot_price(&balances).is_err());
+    // Macro for comparing fixed point u128.
+    #[allow(unused_macros)]
+    macro_rules! assert_approx {
+        ($left:expr, $right:expr, $precision:expr $(,)?) => {
+            match (&$left, &$right, &$precision) {
+                (left_val, right_val, precision_val) => {
+                    let diff = if *left_val > *right_val {
+                        *left_val - *right_val
+                    } else {
+                        *right_val - *left_val
+                    };
+                    if diff > $precision {
+                        panic!("{} is not {}-close to {}", *left_val, *precision_val, *right_val);
+                    }
+                }
+            }
+        };
     }
 
     // Some of these tests are taken from our Python Balancer playground, some as snapshots from
@@ -296,5 +276,147 @@ mod tests {
         // Test that swap fees make no difference!
         let pool = construct_pool(Some(_1_10), weights);
         assert_eq!(pool.calc_total_spot_price(&balances).unwrap(), expected);
+    }
+
+    #[test]
+    fn calc_total_spot_price_errors_if_asset_balance_is_missing() {
+        let pool = construct_pool(None, vec![_3, _1, _1, _1]);
+        let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
+        assert!(pool.calc_total_spot_price(&balances).is_err());
+    }
+
+    // The first case shouldn't be validated, as it is an example where the algorithm overshoots the
+    // target:
+    // #[test_case(vec![_3, _1, _1, _1], vec![_1, _1, _1, _1], 0)]
+    #[test_case(vec![_6, _3, _3], vec![_100, _100, _100], 0)]
+    #[test_case(vec![_6, _3, _3], vec![_100, _100, _150], 97_877_502_440)]
+    #[test_case(vec![_7, _3, _4], vec![_100, _100, _150], 115_013_122_558)]
+    #[test_case(vec![_9, _3, _6], vec![_100, _125, _150], 202_188_491_820)]
+    #[test_case(vec![_9, _3, _6], vec![_100, _125, _100], 35_530_090_331)]
+    #[test_case(vec![_9, _3, _6], vec![_125, _125, _150], 77_810_287_474)]
+    fn calc_arbitrage_amount_buy_burn_calculates_correct_results(
+        weights: Vec<u128>,
+        balances: Vec<u128>,
+        expected: u128,
+    ) {
+        let pool = construct_pool(None, weights.clone());
+        let balances = collect_balances_into_map(pool.assets.clone(), balances);
+        let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, 30).unwrap();
+        assert_eq!(amount, expected);
+    }
+
+    #[test_case(vec![_3, _1, _1, _1], vec![_1, _1, _1, _1])]
+    #[test_case(vec![_6, _3, _3], vec![_100, _100, _100])]
+    #[test_case(vec![_6, _3, _3], vec![_100, _100, _150])]
+    #[test_case(vec![_7, _3, _4], vec![_100, _100, _150])]
+    #[test_case(vec![_9, _3, _6], vec![_100, _125, _150])]
+    #[test_case(vec![_9, _3, _6], vec![_100, _125, _100])]
+    #[test_case(vec![_9, _3, _6], vec![_125, _125, _150])]
+    fn calc_arbitrage_amount_buy_burn_reconfigures_pool_correctly(
+        weights: Vec<u128>,
+        balances: Vec<u128>,
+    ) {
+        let pool = construct_pool(None, weights.clone());
+        let mut balances = collect_balances_into_map(pool.assets.clone(), balances);
+        let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, 30).unwrap();
+        *balances.get_mut(&pool.assets[0]).unwrap() += amount;
+        for asset in &pool.assets[1..] {
+            *balances.get_mut(asset).unwrap() -= amount;
+        }
+        // It's an iffy question what to use as `precision` parameter here. The precision depends
+        // on the derivative of the total spot price function `f` in ZIP-1 on the interval `[0,
+        // amount]`.
+        assert_approx!(pool.calc_total_spot_price(&balances).unwrap(), _1, CENT);
+    }
+
+    #[test]
+    fn calc_arbitrage_amount_buy_burn_errors_if_asset_balance_is_missing() {
+        let pool = construct_pool(None, vec![_3, _1, _1, _1]);
+        let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
+        assert!(pool.calc_arbitrage_amount_buy_burn(&balances, usize::MAX).is_err());
+    }
+
+    #[test_case(vec![_6, _3, _3], vec![_125, _100, _100], 124_998_092_650)]
+    #[test_case(vec![_6, _3, _3], vec![_125, _100, _150], 24_518_966_674)]
+    #[test_case(vec![_7, _3, _4], vec![_125, _100, _150], 7_200_241_088)]
+    #[test_case(vec![_9, _3, _6], vec![_125, _125, _100], 88_872_909_544)]
+    #[test_case(vec![_6, _3, _3], vec![_150, _100, _100], 250_001_907_347)]
+    #[test_case(vec![_6, _3, _3], vec![_150, _100, _150], 147_359_848_021)]
+    #[test_case(vec![_7, _3, _4], vec![_150, _100, _150], 129_919_052_122)]
+    #[test_case(vec![_9, _3, _6], vec![_150, _125, _150], 46_697_616_576)]
+    #[test_case(vec![_9, _3, _6], vec![_150, _125, _100], 213_369_369_505)]
+    fn calc_arbitrage_amount_mint_sell_calculates_correct_results(
+        weights: Vec<u128>,
+        balances: Vec<u128>,
+        expected: u128,
+    ) {
+        let pool = construct_pool(None, weights.clone());
+        let balances = collect_balances_into_map(pool.assets.clone(), balances);
+        let (amount, _) = pool.calc_arbitrage_amount_mint_sell(&balances, 30).unwrap();
+        assert_eq!(amount, expected);
+    }
+
+    #[test_case(vec![_6, _3, _3], vec![_125, _100, _100])]
+    #[test_case(vec![_6, _3, _3], vec![_125, _100, _150])]
+    #[test_case(vec![_7, _3, _4], vec![_125, _100, _150])]
+    #[test_case(vec![_9, _3, _6], vec![_125, _125, _100])]
+    #[test_case(vec![_6, _3, _3], vec![_150, _100, _100])]
+    #[test_case(vec![_6, _3, _3], vec![_150, _100, _150])]
+    #[test_case(vec![_7, _3, _4], vec![_150, _100, _150])]
+    #[test_case(vec![_9, _3, _6], vec![_150, _125, _150])]
+    #[test_case(vec![_9, _3, _6], vec![_150, _125, _100])]
+    fn calc_arbitrage_amount_mint_sell_reconfigures_pool_correctly(
+        weights: Vec<u128>,
+        balances: Vec<u128>,
+    ) {
+        let pool = construct_pool(None, weights.clone());
+        let mut balances = collect_balances_into_map(pool.assets.clone(), balances);
+        let (amount, _) = pool.calc_arbitrage_amount_mint_sell(&balances, 30).unwrap();
+        *balances.get_mut(&pool.assets[0]).unwrap() -= amount;
+        for asset in &pool.assets[1..] {
+            *balances.get_mut(asset).unwrap() += amount;
+        }
+        // It's an iffy question what to use as `precision` parameter here. The precision depends
+        // on the derivative of the total spot price function `f` in ZIP-1 on the interval `[0,
+        // amount]`.
+        assert_approx!(pool.calc_total_spot_price(&balances).unwrap(), _1, CENT);
+    }
+
+    #[test]
+    fn calc_arbitrage_amount_mint_sell_errors_if_asset_balance_is_missing() {
+        let pool = construct_pool(None, vec![_3, _1, _1, _1]);
+        let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
+        assert!(pool.calc_arbitrage_amount_mint_sell(&balances, usize::MAX).is_err());
+    }
+
+    fn construct_pool<Balance>(
+        swap_fee: Option<Balance>,
+        weights: Vec<u128>,
+    ) -> Pool<Balance, MarketId> {
+        let fake_market_id = 0;
+        let assets = (0..weights.len())
+            .map(|i| Asset::CategoricalOutcome(fake_market_id, i as u16))
+            .collect::<Vec<_>>();
+        let total_weight = weights.iter().fold(0, |acc, val| acc + val);
+        let weights =
+            assets.clone().into_iter().zip(weights.into_iter()).collect::<BTreeMap<_, _>>();
+        Pool {
+            assets: assets.clone(),
+            base_asset: assets[0],
+            market_id: 0u8.into(),
+            pool_status: PoolStatus::Active, // Doesn't play any role.
+            scoring_rule: ScoringRule::CPMM,
+            swap_fee,
+            total_subsidy: None,
+            total_weight: Some(total_weight),
+            weights: Some(weights),
+        }
+    }
+
+    fn collect_balances_into_map<Balance>(
+        assets: Vec<Asset<MarketId>>,
+        balances: Vec<Balance>,
+    ) -> BTreeMap<Asset<MarketId>, Balance> {
+        assets.into_iter().zip(balances.into_iter()).collect::<BTreeMap<_, _>>()
     }
 }
