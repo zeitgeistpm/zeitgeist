@@ -176,6 +176,7 @@ where
                 .collect::<BTreeMap<_, _>>();
             self.calc_total_spot_price(&shifted_balances)
         };
+        // We use `smallest_balance / 2` so we never reduce a balance to zero.
         let (preimage, iterations) = calc_preimage::<Fixed, _>(
             calc_total_spot_price_after_arbitrage,
             BASE,
@@ -191,4 +192,109 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
+    use zeitgeist_primitives::types::{Asset, PoolStatus, ScoringRule};
+
+    type MarketId = u128;
+    const ASSET_A: Asset<MarketId> = Asset::CategoricalOutcome(0, 0);
+    const ASSET_B: Asset<MarketId> = Asset::CategoricalOutcome(0, 1);
+    const ASSET_C: Asset<MarketId> = Asset::CategoricalOutcome(0, 2);
+    const ASSET_D: Asset<MarketId> = Asset::CategoricalOutcome(0, 3);
+    const DEFAULT_ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
+
+    const _1: u128 = BASE;
+    const _2: u128 = 2 * BASE;
+    const _3: u128 = 3 * BASE;
+    const _4: u128 = 4 * BASE;
+    const _5: u128 = 5 * BASE;
+    const _6: u128 = 6 * BASE;
+    const _7: u128 = 7 * BASE;
+    const _8: u128 = 8 * BASE;
+    const _9: u128 = 9 * BASE;
+    const _10: u128 = 10 * BASE;
+    const _100: u128 = 100 * BASE;
+    const _125: u128 = 125 * BASE;
+    const _150: u128 = 150 * BASE;
+    const _1_4: u128 = BASE / 4;
+    const _1_10: u128 = BASE / 10;
+
+    fn construct_pool<Balance>(
+        swap_fee: Option<Balance>,
+        weights: Vec<u128>,
+    ) -> Pool<Balance, MarketId> {
+        let fake_market_id = 0;
+        let assets = (0..weights.len())
+            .map(|i| Asset::CategoricalOutcome(fake_market_id, i as u16))
+            .collect::<Vec<_>>();
+        let total_weight = weights.iter().fold(0, |acc, val| acc + val);
+        let weights =
+            assets.clone().into_iter().zip(weights.into_iter()).collect::<BTreeMap<_, _>>();
+        Pool {
+            assets: assets.clone(),
+            base_asset: assets[0],
+            market_id: 0u8.into(),
+            pool_status: PoolStatus::Active, // Doesn't play any role.
+            scoring_rule: ScoringRule::CPMM,
+            swap_fee,
+            total_subsidy: None,
+            total_weight: Some(total_weight),
+            weights: Some(weights),
+        }
+    }
+
+    fn collect_balances_into_map<Balance>(
+        assets: Vec<Asset<MarketId>>,
+        balances: Vec<Balance>,
+    ) -> BTreeMap<Asset<MarketId>, Balance> {
+        assets.into_iter().zip(balances.into_iter()).collect::<BTreeMap<_, _>>()
+    }
+
+    #[test]
+    fn calc_total_spot_price_errors_if_asset_balance_is_missing() {
+        let pool = construct_pool(None, vec![_3, _1, _1, _1]);
+        let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
+        assert!(pool.calc_total_spot_price(&balances).is_err());
+    }
+
+    // Some of these tests are taken from our Python Balancer playground, some as snapshots from
+    // the Zeitgeist chain.
+    #[test_case(vec![_3, _1, _1, _1], vec![_1, _1, _1, _1], _1 - 1)]
+    #[test_case(vec![_6, _3, _3], vec![_100, _100, _100], _1)]
+    #[test_case(vec![_6, _3, _3], vec![_100, _100, _150], 8_333_333_333)]
+    #[test_case(vec![_7, _3, _4], vec![_100, _100, _150], 8_095_238_096)]
+    #[test_case(vec![_9, _3, _6], vec![_100, _125, _150], 7_111_111_111)]
+    #[test_case(vec![_9, _3, _6], vec![_100, _125, _100], 9_333_333_334)]
+    #[test_case(vec![_6, _3, _3], vec![_125, _100, _100], 12_500_000_000)]
+    #[test_case(vec![_6, _3, _3], vec![_125, _100, _150], 10_416_666_667)]
+    #[test_case(vec![_7, _3, _4], vec![_125, _100, _150], 10_119_047_619)]
+    #[test_case(vec![_9, _3, _6], vec![_125, _125, _150], 8_888_888_889)]
+    #[test_case(vec![_9, _3, _6], vec![_125, _125, _100], 11_666_666_666)]
+    #[test_case(vec![_6, _3, _3], vec![_150, _100, _100], 15_000_000_000)]
+    #[test_case(vec![_6, _3, _3], vec![_150, _100, _150], 12_500_000_000)]
+    #[test_case(vec![_7, _3, _4], vec![_150, _100, _150], 12_142_857_143)]
+    #[test_case(vec![_9, _3, _6], vec![_150, _125, _150], 10_666_666_667)]
+    #[test_case(vec![_9, _3, _6], vec![_150, _125, _100], 14_000_000_000)]
+    #[test_case(
+        vec![_4, _1, _1, _1, _1],
+        vec![
+            5_371_011_843_167,
+            1_697_583_448_000,
+            5_399_900_980_000,
+            7_370_000_000_000,
+            7_367_296_940_400
+        ],
+        14_040_918_578
+    )]
+    fn calc_total_spot_price_calculates_correct_values(
+        weights: Vec<u128>,
+        balances: Vec<u128>,
+        expected: u128,
+    ) {
+        let pool = construct_pool(None, weights.clone());
+        let balances = collect_balances_into_map(pool.assets.clone(), balances);
+        assert_eq!(pool.calc_total_spot_price(&balances).unwrap(), expected);
+        // Test that swap fees make no difference!
+        let pool = construct_pool(Some(_1_10), weights);
+        assert_eq!(pool.calc_total_spot_price(&balances).unwrap(), expected);
+    }
 }
