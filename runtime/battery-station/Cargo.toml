@@ -86,6 +86,7 @@ log = { version = "0.4.8", default-features = false, optional = true }
 orml-asset-registry = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-xcm-support = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-unknown-tokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
+orml-xtokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 pallet-xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
 xcm-builder = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
@@ -138,6 +139,7 @@ parachain = [
     "orml-asset-registry",
     "orml-unknown-tokens",
     "orml-xcm-support",
+    "orml-xtokens",
     "pallet-xcm",
     "xcm-builder",
     "xcm-executor",
@@ -157,6 +159,7 @@ runtime-benchmarks = [
     "hex-literal",
     "orml-tokens/runtime-benchmarks",
     "orml-benchmarking",
+    "orml-xtokens?/runtime-benchmarks",
     "pallet-author-mapping/runtime-benchmarks",
     "pallet-author-slot-filter/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
@@ -268,6 +271,7 @@ std = [
     "orml-asset-registry?/std",
     "orml-unknown-tokens?/std",
     "orml-xcm-support?/std",
+    "orml-xtokens?/std",
     "pallet-xcm?/std",
     "xcm-builder?/std",
     "xcm-executor?/std",
@@ -321,6 +325,7 @@ try-runtime = [
     "orml-currencies/try-runtime",
     "orml-tokens/try-runtime",
     "orml-unknown-tokens?/try-runtime",
+    "orml-xtokens?/try-runtime",
 
     # Zeitgeist runtime pallets
     "zrml-authorized/try-runtime",

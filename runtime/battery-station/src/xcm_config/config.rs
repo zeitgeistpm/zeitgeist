@@ -17,7 +17,7 @@
 
 use super::{
     fees::{native_per_second, FixedConversionRateProvider},
-    parachains::zeitgeist::ZTG_KEY,
+    parachains::zeitgeist::{ID as ZTG_PARAID, ZTG_KEY},
 };
 use crate::{
     AccountId, Ancestry, AssetManager, AssetRegistry, Balance, Call, CurrencyId, MaxInstructions,
@@ -37,7 +37,7 @@ use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::Convert;
 use xcm::{
     latest::{
-        prelude::{AssetId, Concrete, GeneralKey, MultiAsset, X1},
+        prelude::{AccountId32, AssetId, Concrete, GeneralKey, MultiAsset, NetworkId, X1, X2},
         BodyId, Junction, Junctions, MultiLocation,
     },
     opaque::latest::Fungibility::Fungible,
@@ -69,7 +69,7 @@ impl Config for XcmConfig {
     type Barrier = Barrier;
     /// The outer call dispatch type.
     type Call = Call;
-    /// Combinations of (Location, Asset) pairs which we trust as reserves.
+    /// Combinations of (Location, Asset) pairs which are trusted as reserves.
     // Trust the parent chain, sibling parachains and children chains of this chain.
     type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
     /// Combinations of (Location, Asset) pairs which we trust as teleporters.
@@ -183,7 +183,13 @@ pub struct AssetConvert;
 impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
     fn convert(id: CurrencyId) -> Option<MultiLocation> {
         match id {
-            Asset::Ztg => Some(MultiLocation::new(0, X1(general_key(ZTG_KEY))).into()),
+            Asset::Ztg => Some(MultiLocation::new(
+				1,
+				X2(
+					Junction::Parachain(ZTG_PARAID),
+					general_key(ZTG_KEY),
+				),
+			)),
             Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
             _ => None,
         }
@@ -198,8 +204,18 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
         match location.clone() {
             MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
                 ZTG_KEY => Ok(CurrencyId::Ztg),
-                _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
+                _ => Err(location),
             },
+            MultiLocation {
+				parents: 1,
+				interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
+			} => match para_id {
+				ZTG_PARAID => match &key[..] {
+					ZTG_KEY => Ok(CurrencyId::Ztg),
+					_ => Err(location),
+				},
+                _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
+			},
             _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
         }
     }
@@ -219,6 +235,18 @@ impl Convert<MultiLocation, Option<CurrencyId>> for AssetConvert {
     fn convert(location: MultiLocation) -> Option<CurrencyId> {
         <AssetConvert as xcm_executor::traits::Convert<_, _>>::convert(location).ok()
     }
+}
+
+pub struct AccountIdToMultiLocation;
+
+impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
+	fn convert(account: AccountId) -> MultiLocation {
+		X1(AccountId32 {
+			network: NetworkId::Any,
+			id: account.into(),
+		})
+		.into()
+	}
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -270,7 +298,7 @@ match_types! {
     pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
         MultiLocation { parents: 1, interior: Junctions::Here } |
         // Potentially change "Unit" to "Executive" for mainnet once we have separate runtimes
-        MultiLocation { parents: 1, interior: Junctions::X1(Junction::Plurality { id: BodyId::Unit, .. }) }
+        MultiLocation { parents: 1, interior: X1(Junction::Plurality { id: BodyId::Unit, .. }) }
     };
 }
 

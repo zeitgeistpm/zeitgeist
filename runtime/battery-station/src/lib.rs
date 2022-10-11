@@ -143,6 +143,7 @@ create_runtime_with_additional_pallets!(
     Sudo: pallet_sudo::{Call, Config<T>, Event<T>, Pallet, Storage} = 150,
     AssetRegistry: orml_asset_registry::{Call, Config<T>, Event<T>, Pallet, Storage} = 151,
     UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 152,
+    XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 153,
 );
 
 impl pallet_sudo::Config for Runtime {
@@ -165,6 +166,29 @@ impl orml_asset_registry::Config for Runtime {
 impl orml_unknown_tokens::Config for Runtime {
     type Event = Event;
 }
+
+#[cfg(feature = "parachain")]
+use xcm_config::config::*;
+
+
+#[cfg(feature = "parachain")]
+impl orml_xtokens::Config for Runtime {
+	type AccountIdToMultiLocation = AccountIdToMultiLocation;
+	type Balance = Balance;
+	type BaseXcmWeight = BaseXcmWeight;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = AssetConvert;
+	type Event = Event;
+	type LocationInverter = LocationInverter<Ancestry>;
+	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+	type MinXcmFee = ParachainMinFee;
+	type MultiLocationsFilter = Everything;
+	type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
+	type SelfLocation = SelfLocation;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+	type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
+}
+
 
 impl_config_traits!();
 create_runtime_api!();

@@ -471,6 +471,7 @@ dependencies = [
  "orml-traits",
  "orml-unknown-tokens",
  "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-author-inherent",
  "pallet-author-mapping",
@@ -5372,6 +5373,27 @@ dependencies = [
  "frame-support",
  "orml-traits",
  "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
+name = "orml-xtokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/zeitgeistpm/open-runtime-module-library?branch=7e1123e-v0.9.19#8bd7166da7797bef16f90993d5872c7c0a280a55"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "orml-xcm-support",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
  "sp-runtime",
  "sp-std",
  "xcm",
@@ -11702,7 +11724,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.3",
  "rand 0.8.5",
  "static_assertions",
