@@ -638,7 +638,12 @@ benchmarks! {
             )
             .unwrap();
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-            T::AssetManager::withdraw(*assets.last().unwrap(), &pool_account_id, balance / 9u8.saturated_into()).unwrap();
+            T::AssetManager::withdraw(
+                *assets.last().unwrap(),
+                &pool_account_id,
+                balance / 9u8.saturated_into()
+            )
+            .unwrap();
             PoolsCachedForArbitrage::<T>::insert(pool_id, ());
         }
         let mutation = |pool_id: PoolId| Pallet::<T>::execute_arbitrage(pool_id);
