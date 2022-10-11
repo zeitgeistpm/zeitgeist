@@ -1281,7 +1281,6 @@ mod pallet {
             F: Fn(PoolId) -> Result<Weight, DispatchError>,
         {
             let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
-            // TODO: Write (pool_id, pool) to cache - saves one read!
             for (index, (pool_id, _)) in PoolsCachedForArbitrage::<T>::drain().enumerate() {
                 // The mutation should never fail, but if it does, we just assume we
                 // consumed all the weight.
@@ -1299,7 +1298,6 @@ mod pallet {
 
         // Execute arbitrage on a single pool.
         pub(crate) fn execute_arbitrage(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            // TODO Don't forget to push pool_ids into cache after trades!
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
             let balances = pool
