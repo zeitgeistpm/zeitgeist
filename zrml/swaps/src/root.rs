@@ -75,7 +75,7 @@ pub(crate) fn calc_preimage<T, F>(
     tol: T,
 ) -> Result<(T, usize), &'static str>
 where
-    T: AtLeast32BitUnsigned + Copy,
+    T: AtLeast32BitUnsigned + Copy + std::fmt::Debug,
     F: Fn(T) -> Result<T, &'static str>,
 {
     if !(min < max) {
@@ -103,13 +103,17 @@ where
     let mut mid = T::zero();
     let mut iteration_count = 0;
     for i in 1..=max_iterations {
+        println!("iteration ------------------");
         iteration_count = i;
         let size = max.checked_sub(&min).ok_or("Unexpected arithmetic underflow")?;
         if size < tol {
+            println!("tolerance violated");
             break;
         }
         mid = max.checked_add(&min).ok_or("Arithmetic overflow")? / 2u8.into();
         let fmid = f(mid)?;
+        println!("mid: {:?}", mid);
+        println!("fmid: {:?}", fmid);
         if fmid == value {
             break;
         }

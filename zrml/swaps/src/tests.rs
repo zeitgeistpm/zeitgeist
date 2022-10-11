@@ -3019,12 +3019,84 @@ fn pool_exit_with_exact_asset_amount_fails_if_liquidity_drops_too_low() {
 }
 
 #[test]
+fn trading_functions_cache_pool_ids() {
+    ExtBuilder::default().build().execute_with(|| {
+        create_initial_pool_with_funds_for_alice(ScoringRule::CPMM, Some(1), true);
+        let pool_id = 0;
+
+        assert_ok!(Swaps::pool_join_with_exact_pool_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _2,
+            u128::MAX,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::pool_join_with_exact_asset_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _2,
+            0,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::pool_exit_with_exact_asset_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _1,
+            u128::MAX,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _1,
+            0,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::swap_exact_amount_in(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            _1,
+            ASSET_B,
+            Some(0),
+            None,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+
+        assert_ok!(Swaps::swap_exact_amount_out(
+            Origin::signed(ALICE),
+            pool_id,
+            ASSET_A,
+            Some(u128::MAX),
+            ASSET_B,
+            _1,
+            None,
+        ));
+        assert!(PoolsCachedForArbitrage::<Runtime>::contains_key(pool_id));
+        PoolsCachedForArbitrage::<Runtime>::remove(pool_id);
+    });
+}
+
+#[test]
 fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         let assets = ASSETS;
         assets.iter().cloned().for_each(|asset| {
-            let _ = Currencies::deposit(asset, &BOB, _10000);
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
         });
         assert_ok!(Swaps::create_pool(
             BOB,
@@ -3041,6 +3113,94 @@ fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
         Swaps::on_idle(System::block_number(), Weight::max_value());
         System::assert_has_event(Event::ArbitrageSkipped(pool_id).into());
+    });
+}
+
+#[test]
+fn on_idle_arbitrages_pools_with_mint_sell() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            ASSET_A,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw a certain amount of outcome tokens to push the total spot price above 1
+        // (ASSET_A is the base asset, all other assets are considered outcomes).
+        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let amount_removed = _25;
+        assert_ok!(Currencies::withdraw(ASSET_B, &pool_account_id, amount_removed));
+
+        // Force arbitrage hook.
+        crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        Swaps::on_idle(System::block_number(), Weight::max_value());
+        // assert_ok!(Swaps::execute_arbitrage(pool_id));
+
+        let arbitrage_amount = 49_537_658_690;
+        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance + arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance + arbitrage_amount);
+        assert_eq!(
+            Currencies::free_balance(ASSET_B, &pool_account_id),
+            balance + arbitrage_amount - amount_removed,
+        );
+        System::assert_has_event(Event::ArbitrageMintSell(pool_id, arbitrage_amount).into());
+    });
+}
+
+#[test]
+fn on_idle_arbitrages_pools_with_buy_burn() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        let assets = ASSETS;
+        assets.iter().cloned().for_each(|asset| {
+            assert_ok!(Currencies::deposit(asset, &BOB, _10000));
+        });
+        let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        assert_ok!(Swaps::create_pool(
+            BOB,
+            assets.into(),
+            ASSET_A,
+            0,
+            ScoringRule::CPMM,
+            Some(0),
+            Some(balance),
+            Some(vec![_3, _1, _1, _1]),
+        ));
+        let pool_id = 0;
+
+        // Withdraw a certain amount of base tokens to push the total spot price below 1 (ASSET_A
+        // is the base asset, all other assets are considered outcomes).
+        let pool_account_id = Swaps::pool_account_id(pool_id);
+        let amount_removed = _25;
+        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, amount_removed));
+
+        // Force arbitrage hook.
+        crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+        Swaps::on_idle(System::block_number(), Weight::max_value());
+        // assert_ok!(Swaps::execute_arbitrage(pool_id));
+
+        let arbitrage_amount = 125_007_629_394; // "Should" be 125_000_000_000.
+        assert_eq!(
+            Currencies::free_balance(ASSET_A, &pool_account_id),
+            balance + arbitrage_amount - amount_removed,
+        );
+        assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance - arbitrage_amount);
+        System::assert_has_event(Event::ArbitrageBuyBurn(pool_id, arbitrage_amount).into());
     });
 }
 
