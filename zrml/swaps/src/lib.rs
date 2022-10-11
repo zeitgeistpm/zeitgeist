@@ -1101,7 +1101,6 @@ mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         fn on_idle(_: T::BlockNumber, remaining_weight: Weight) -> Weight {
-            println!("on_idle");
             if remaining_weight < ON_IDLE_MIN_WEIGHT {
                 return 0;
             }
@@ -1241,7 +1240,6 @@ mod pallet {
         }
 
         fn execute_arbitrage_all(weight: Weight) -> Weight {
-            println!("execute_arbitrage_all");
             if weight < ARBITRAGE_MIN_WEIGHT {
                 return weight;
             }
@@ -1282,7 +1280,6 @@ mod pallet {
         where
             F: Fn(PoolId) -> Result<Weight, DispatchError>,
         {
-            println!("apply_to_cached_pool");
             let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
             // TODO: Write (pool_id, pool) to cache - saves one read!
             for (index, (pool_id, _)) in PoolsCachedForArbitrage::<T>::drain().enumerate() {
@@ -1302,7 +1299,6 @@ mod pallet {
 
         // Execute arbitrage on a single pool.
         pub(crate) fn execute_arbitrage(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            println!("execute_arbitrage");
             // TODO Don't forget to push pool_ids into cache after trades!
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
@@ -1317,34 +1313,19 @@ mod pallet {
 
             // TODO Perform a rollback if any of this fails!
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
-                println!("mint sell");
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
-                println!("after calculation: {:?}", amount);
-                println!("iteration_count: {:?}", iteration_count);
                 if iteration_count == max_iterations {
                     log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
                 }
-                println!("after iteration check");
                 T::AssetManager::withdraw(pool.base_asset, &pool_account, amount)?;
-                println!("after withdraw");
                 for t in outcome_tokens {
                     T::AssetManager::deposit(*t, &pool_account, amount)?;
                 }
-                println!("after deposit");
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
-                println!("after event");
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
-                println!("buy burn");
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
-                println!("");
-                println!("");
-                println!("");
-                println!("iteration_count: {:?}", iteration_count);
-                println!("");
-                println!("");
-                println!("");
                 if iteration_count == max_iterations {
                     log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
                 }
@@ -1354,7 +1335,6 @@ mod pallet {
                 }
                 Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
             } else {
-                println!("skip");
                 Self::deposit_event(Event::ArbitrageSkipped(pool_id));
             }
 
