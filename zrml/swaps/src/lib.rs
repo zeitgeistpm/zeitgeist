@@ -1311,7 +1311,7 @@ mod pallet {
                 .iter()
                 .map(|a| (*a, T::AssetManager::free_balance(*a, &pool_account)))
                 .collect::<BTreeMap<_, _>>();
-            let tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
+            let outcome_tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
             let max_iterations = ARBITRAGE_MAX_ITERATIONS;
 
@@ -1321,13 +1321,14 @@ mod pallet {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
                 println!("after calculation: {:?}", amount);
+                println!("iteration_count: {:?}", iteration_count);
                 if iteration_count == max_iterations {
                     log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
                 }
                 println!("after iteration check");
                 T::AssetManager::withdraw(pool.base_asset, &pool_account, amount)?;
                 println!("after withdraw");
-                for t in tokens {
+                for t in outcome_tokens {
                     T::AssetManager::deposit(*t, &pool_account, amount)?;
                 }
                 println!("after deposit");
@@ -1337,11 +1338,18 @@ mod pallet {
                 println!("buy burn");
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
+                println!("");
+                println!("");
+                println!("");
+                println!("iteration_count: {:?}", iteration_count);
+                println!("");
+                println!("");
+                println!("");
                 if iteration_count == max_iterations {
                     log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
                 }
                 T::AssetManager::deposit(pool.base_asset, &pool_account, amount)?;
-                for t in tokens {
+                for t in outcome_tokens {
                     T::AssetManager::withdraw(*t, &pool_account, amount)?;
                 }
                 Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
