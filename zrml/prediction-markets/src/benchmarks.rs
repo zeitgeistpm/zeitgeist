@@ -240,9 +240,8 @@ benchmarks! {
 
         let pool_id = T::MarketCommons::market_pool(&market_id)?;
 
-        // minimum of number of disputes and (categories - 1) because of `matches_outcome_report`
-        for i in 1..=(a - 1).min(d) {
-            let outcome = OutcomeReport::Categorical(i.saturated_into());
+        for i in 1..=d {
+            let outcome = OutcomeReport::Categorical((i % a).saturated_into());
             let disputor = account("disputor", i, 0);
             let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
             T::AssetManager::deposit(Asset::Ztg, &disputor, dispute_bond)?;
