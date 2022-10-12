@@ -1780,22 +1780,28 @@ mod pallet {
         }
 
         fn close_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            Self::mutate_pool(pool_id, |pool| {
-                ensure!(
-                    matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
-                    Error::<T>::InvalidStateTransition,
-                );
-                pool.pool_status = PoolStatus::Closed;
-                Ok(())
-            })?;
+            let asset_len =
+                <Pools<T>>::try_mutate(pool_id, |pool| -> Result<u32, DispatchError> {
+                    let pool = if let Some(el) = pool {
+                        el
+                    } else {
+                        return Err(Error::<T>::PoolDoesNotExist.into());
+                    };
+                    ensure!(
+                        matches!(pool.pool_status, PoolStatus::Initialized | PoolStatus::Active),
+                        Error::<T>::InvalidStateTransition,
+                    );
+                    pool.pool_status = PoolStatus::Closed;
+                    Ok(pool.assets.len() as u32)
+                })?;
             Self::deposit_event(Event::PoolClosed(pool_id));
-            // TODO(#603): Fix weight calculation!
-            Ok(T::DbWeight::get().reads_writes(1, 1))
+            Ok(T::WeightInfo::close_pool(asset_len))
         }
 
         fn destroy_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
+            let asset_len = pool.assets.len() as u32;
             for asset in pool.assets.into_iter() {
                 let amount = T::AssetManager::free_balance(asset, &pool_account);
                 T::AssetManager::slash(asset, &pool_account, amount);
@@ -1804,8 +1810,7 @@ mod pallet {
             // TODO(#792): Remove pool_share_id asset for accounts! It may require storage migration.
             Pools::<T>::remove(pool_id);
             Self::deposit_event(Event::PoolDestroyed(pool_id));
-            // TODO(#603): Fix weight calculation.
-            Ok(50_000_000_000)
+            Ok(T::WeightInfo::destroy_pool(asset_len))
         }
 
         /// All supporters will receive their reserved funds back and the pool is destroyed.
@@ -1990,7 +1995,7 @@ mod pallet {
         }
 
         fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            Self::mutate_pool(pool_id, |pool| {
+            Self::mutate_pool(pool_id, |pool| -> DispatchResult {
                 ensure!(
                     pool.pool_status == PoolStatus::Initialized,
                     Error::<T>::InvalidStateTransition
@@ -1998,9 +2003,10 @@ mod pallet {
                 pool.pool_status = PoolStatus::Active;
                 Ok(())
             })?;
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
+            let asset_len = pool.assets.len() as u32;
             Self::deposit_event(Event::PoolActive(pool_id));
-            // TODO(#603): Fix weight calculation!
-            Ok(T::DbWeight::get().reads_writes(1, 1))
+            Ok(T::WeightInfo::open_pool(asset_len))
         }
 
         /// Pool - Exit with exact pool amount

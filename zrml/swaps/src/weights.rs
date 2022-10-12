@@ -69,6 +69,9 @@ pub trait WeightInfoZeitgeist {
     fn swap_exact_amount_in_rikiddo(a: u32, ) -> Weight;
     fn swap_exact_amount_out_cpmm() -> Weight;
     fn swap_exact_amount_out_rikiddo(a: u32, ) -> Weight;
+    fn close_pool(a: u32) -> Weight;
+    fn open_pool(a: u32) -> Weight;
+    fn destroy_pool(a: u32) -> Weight;
 }
 
 /// Weight functions for zrml_swaps (automatically generated)
@@ -342,5 +345,33 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(7 as Weight))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
+    }
+    // Storage: Swaps Pools (r:1 w:1)
+    fn close_pool(a: u32) -> Weight {
+        (16_087_000 as Weight)
+            // Standard Error: 0
+            .saturating_add((94_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    // Storage: Swaps Pools (r:1 w:1)
+    fn open_pool(a: u32) -> Weight {
+        (15_852_000 as Weight)
+            // Standard Error: 0
+            .saturating_add((99_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    // Storage: Swaps Pools (r:1 w:1)
+    // Storage: Tokens Accounts (r:2 w:2)
+    // Storage: Tokens TotalIssuance (r:2 w:2)
+    fn destroy_pool(a: u32) -> Weight {
+        (11_767_000 as Weight)
+            // Standard Error: 2_000
+            .saturating_add((21_216_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
     }
 }

@@ -50,7 +50,7 @@ use zeitgeist_primitives::{
 use zrml_market_commons::MarketCommonsPalletApi;
 
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
-     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+    frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
 // Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
@@ -101,16 +101,13 @@ fn generate_assets<T: Config>(
     assets
 }
 
-// Creates a pool containing `asset_count` (default: max assets) assets.
-// Returns `PoolId`, `Vec<Asset<...>>`, ``MarketId`
-fn bench_create_pool<T: Config>(
-    caller: T::AccountId,
+fn initialize_pool<T: Config>(
+    caller: &T::AccountId,
     asset_count: Option<usize>,
     asset_amount: Option<BalanceOf<T>>,
     scoring_rule: ScoringRule,
-    subsidize: bool,
     weights: Option<Vec<u128>>,
-) -> (u128, Vec<Asset<T::MarketId>>, T::MarketId) {
+) -> (PoolId, Asset<T::MarketId>, Vec<Asset<T::MarketId>>, T::MarketId) {
     let asset_count_unwrapped: usize = {
         match asset_count {
             Some(ac) => ac,
@@ -119,7 +116,7 @@ fn bench_create_pool<T: Config>(
     };
 
     let market_id = T::MarketId::from(0u8);
-    let assets = generate_assets::<T>(&caller, asset_count_unwrapped, asset_amount);
+    let assets = generate_assets::<T>(caller, asset_count_unwrapped, asset_amount);
     let some_weights = if weights.is_some() {
         weights
     } else {
@@ -138,6 +135,21 @@ fn bench_create_pool<T: Config>(
         if scoring_rule == ScoringRule::CPMM { some_weights } else { None },
     )
     .unwrap();
+
+    (pool_id, base_asset, assets, market_id)
+}
+// Creates a pool containing `asset_count` (default: max assets) assets.
+// Returns `PoolId`, `Vec<Asset<...>>`, ``MarketId`
+fn bench_create_pool<T: Config>(
+    caller: T::AccountId,
+    asset_count: Option<usize>,
+    asset_amount: Option<BalanceOf<T>>,
+    scoring_rule: ScoringRule,
+    subsidize: bool,
+    weights: Option<Vec<u128>>,
+) -> (u128, Vec<Asset<T::MarketId>>, T::MarketId) {
+    let (pool_id, base_asset, assets, market_id) =
+        initialize_pool::<T>(&caller, asset_count, asset_amount, scoring_rule, weights);
 
     if scoring_rule == ScoringRule::CPMM {
         let _ = Pallet::<T>::open_pool(pool_id);
@@ -811,6 +823,69 @@ benchmarks! {
         asset_amount_out,
         max_price
     )
+
+    open_pool {
+        let a in 2..T::MaxAssets::get().into();
+
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, ..) = initialize_pool::<T>(
+            &caller,
+            Some(a as usize),
+            None,
+            ScoringRule::CPMM,
+            None,
+        );
+        let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
+        assert_eq!(pool.pool_status, PoolStatus::Initialized);
+    }: {
+        Pallet::<T>::open_pool(pool_id).unwrap();
+    } verify {
+        let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
+        assert_eq!(pool.pool_status, PoolStatus::Active);
+    }
+
+    close_pool {
+        let a in 2..T::MaxAssets::get().into();
+
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, ..) = bench_create_pool::<T>(
+            caller,
+            Some(a as usize),
+            None,
+            ScoringRule::CPMM,
+            false,
+            None,
+        );
+        let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
+        assert_eq!(pool.pool_status, PoolStatus::Active);
+    }: {
+        Pallet::<T>::close_pool(pool_id).unwrap();
+    } verify {
+        let pool = Pallet::<T>::pool_by_id(pool_id).unwrap();
+        assert_eq!(pool.pool_status, PoolStatus::Closed);
+    }
+
+    destroy_pool {
+        let a in 2..T::MaxAssets::get().into();
+
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, ..) = bench_create_pool::<T>(
+            caller,
+            Some(a as usize),
+            None,
+            ScoringRule::CPMM,
+            false,
+            None,
+        );
+        assert!(Pallet::<T>::pool_by_id(pool_id).is_ok());
+    }: {
+        Pallet::<T>::destroy_pool(pool_id).unwrap();
+    } verify {
+        assert!(Pallet::<T>::pool_by_id(pool_id).is_err());
+        assert_last_event::<T>(Event::PoolDestroyed::<T>(
+            pool_id,
+        ).into());
+    }
 }
 
 impl_benchmark_test_suite!(Swaps, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
