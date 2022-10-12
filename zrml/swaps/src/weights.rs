@@ -45,15 +45,16 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_swaps (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn apply_to_cached_pools_noop(a: u32) -> Weight;
     fn admin_clean_up_pool_cpmm_categorical(a: u32) -> Weight;
     fn admin_clean_up_pool_cpmm_scalar() -> Weight;
+    fn apply_to_cached_pools_execute_arbitrage(a: u32) -> Weight;
+    fn apply_to_cached_pools_noop(a: u32) -> Weight;
     fn end_subsidy_phase(a: u32, b: u32) -> Weight;
     fn destroy_pool_in_subsidy_phase(a: u32) -> Weight;
     fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight;
+    fn execute_arbitrage() -> Weight;
     fn pool_exit(a: u32) -> Weight;
     fn pool_exit_subsidy() -> Weight;
-    fn execute_arbitrage() -> Weight;
     fn pool_exit_with_exact_asset_amount() -> Weight;
     fn pool_exit_with_exact_pool_amount() -> Weight;
     fn pool_join(a: u32) -> Weight;
@@ -70,19 +71,6 @@ pub trait WeightInfoZeitgeist {
 /// Weight functions for zrml_swaps (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
-    fn execute_arbitrage() -> Weight {
-        0 as Weight
-    }
-    // Storage: Swaps PoolsCachedForArbitrage (r:1 w:0)
-    fn apply_to_cached_pools_noop(a: u32) -> Weight {
-        (0 as Weight)
-            // Standard Error: 144_000
-            .saturating_add((11_670_000 as Weight).saturating_mul(a as Weight))
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
-            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
-    }
-
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: MarketCommons MarketPool (r:1 w:0)
@@ -100,6 +88,28 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
         (87_620_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    // Storage: Swaps PoolsCachedForArbitrage (r:1 w:0)
+    // Storage: Swaps Pools (r:6 w:0)
+    // Storage: Tokens Accounts (r:390 w:390)
+    // Storage: Tokens TotalIssuance (r:65 w:65)
+    fn apply_to_cached_pools_execute_arbitrage(a: u32, ) -> Weight {
+        (0 as Weight)
+            // Standard Error: 139_803_000
+            .saturating_add((3_843_818_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(45 as Weight))
+            .saturating_add(T::DbWeight::get().reads((67 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(44 as Weight))
+            .saturating_add(T::DbWeight::get().writes((66 as Weight).saturating_mul(a as Weight)))
+    }
+    // Storage: Swaps PoolsCachedForArbitrage (r:1 w:0)
+    fn apply_to_cached_pools_noop(a: u32, ) -> Weight {
+        (0 as Weight)
+            // Standard Error: 421_000
+            .saturating_add((11_861_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: Swaps Pools (r:1 w:1)
@@ -119,6 +129,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes((5 as Weight).saturating_mul(b as Weight)))
     }
+    fn execute_arbitrage() -> Weight { 0 as Weight }
     // Storage: Swaps Pools (r:1 w:1)
     // Storage: Swaps SubsidyProviders (r:1 w:0)
     // Storage: RikiddoSigmoidFeeMarketEma RikiddoPerPool (r:1 w:1)

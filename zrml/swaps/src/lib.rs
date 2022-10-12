@@ -1246,9 +1246,9 @@ mod pallet {
             // The time complexity of `apply_cached_pools` is O(pool_count); we calculate the
             // minimum number of pools we can handle.
             // TODO Replace noop with execute pool!
-            let overhead = T::WeightInfo::apply_to_cached_pools_noop(0);
+            let overhead = T::WeightInfo::apply_to_cached_pools_execute_arbitrage(0);
             let extra_weight_per_pool =
-                T::WeightInfo::apply_to_cached_pools_noop(1).saturating_sub(overhead);
+                T::WeightInfo::apply_to_cached_pools_execute_arbitrage(1).saturating_sub(overhead);
             // The division can fail if the benchmark of `apply_to_cached_pools` is not linear in
             // the number of pools. This shouldn't ever happen, but if it does, we ensure that
             // `pool_count` is zero (this isn't really a runtime error).

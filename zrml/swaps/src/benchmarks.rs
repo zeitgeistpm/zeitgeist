@@ -235,6 +235,64 @@ benchmarks! {
         });
     }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Scalar(33))
 
+    apply_to_cached_pools_execute_arbitrage {
+        let a in 0..63; // The number of cached pools.
+
+        let caller: T::AccountId = whitelisted_caller();
+        let asset_count = T::MaxAssets::get();
+        let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
+        let total_amount_required = balance * a.saturated_into();
+        let assets = generate_assets::<T>(&caller, asset_count.into(), Some(total_amount_required));
+        let base_asset = *assets.last().unwrap();
+
+        // Set weights to [1, 1, ..., 1, 64].
+        let outcome_count = asset_count - 1;
+        let outcome_weight = T::MinWeight::get();
+        let mut weights = vec![outcome_weight; (asset_count - 1) as usize];
+        weights.push(outcome_count as u128 * outcome_weight);
+
+        // Create `a` pools with huge balances and only a relatively small difference between them
+        // to cause maximum iterations.
+        for i in 0..a {
+            let pool_id = Pallet::<T>::create_pool(
+                caller.clone(),
+                assets.clone(),
+                base_asset,
+                i.into(),
+                ScoringRule::CPMM,
+                Some(Zero::zero()),
+                Some(balance),
+                Some(weights.clone()),
+            )
+            .unwrap();
+            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            T::AssetManager::withdraw(
+                *assets.last().unwrap(),
+                &pool_account_id,
+                balance / 9u8.saturated_into()
+            )
+            .unwrap();
+            PoolsCachedForArbitrage::<T>::insert(pool_id, ());
+        }
+        let mutation = |pool_id: PoolId| Pallet::<T>::execute_arbitrage(pool_id);
+    }: {
+        Pallet::<T>::apply_to_cached_pools(a, mutation, Weight::MAX)
+    } verify {
+        // Ensure that all pools have been arbitraged.
+        assert_eq!(PoolsCachedForArbitrage::<T>::iter().count(), 0);
+    }
+
+    apply_to_cached_pools_noop {
+        let a in 0..63; // The number of cached pools.
+        for i in 0..a {
+            let pool_id: PoolId = i.into();
+            PoolsCachedForArbitrage::<T>::insert(pool_id, ());
+        }
+        let noop = |_: PoolId| -> Result<Weight, DispatchError> { Ok(0) };
+    }: {
+        Pallet::<T>::apply_to_cached_pools(a, noop, Weight::MAX)
+    }
+
     end_subsidy_phase {
         // Total assets
         let a in (T::MinAssets::get().into())..T::MaxAssets::get().into();
@@ -610,64 +668,6 @@ benchmarks! {
         asset_amount_out,
         max_price
     )
-
-    apply_to_cached_pools_noop {
-        let a in 0..63; // The number of cached pools.
-        for i in 0..a {
-            let pool_id: PoolId = i.into();
-            PoolsCachedForArbitrage::<T>::insert(pool_id, ());
-        }
-        let noop = |_: PoolId| -> Result<Weight, DispatchError> { Ok(0) };
-    }: {
-        Pallet::<T>::apply_to_cached_pools(a, noop, Weight::MAX)
-    }
-
-    apply_to_cached_pools_execute_arbitrage {
-        let a in 0..63; // The number of cached pools.
-
-        let caller: T::AccountId = whitelisted_caller();
-        let asset_count = T::MaxAssets::get();
-        let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
-        let total_amount_required = balance * a.saturated_into();
-        let assets = generate_assets::<T>(&caller, asset_count.into(), Some(total_amount_required));
-        let base_asset = *assets.last().unwrap();
-
-        // Set weights to [1, 1, ..., 1, 64].
-        let outcome_count = asset_count - 1;
-        let outcome_weight = T::MinWeight::get();
-        let mut weights = vec![outcome_weight; (asset_count - 1) as usize];
-        weights.push(outcome_count as u128 * outcome_weight);
-
-        // Create `a` pools with huge balances and only a relatively small difference between them
-        // to cause maximum iterations.
-        for i in 0..a {
-            let pool_id = Pallet::<T>::create_pool(
-                caller.clone(),
-                assets.clone(),
-                base_asset,
-                i.into(),
-                ScoringRule::CPMM,
-                Some(Zero::zero()),
-                Some(balance),
-                Some(weights.clone()),
-            )
-            .unwrap();
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-            T::AssetManager::withdraw(
-                *assets.last().unwrap(),
-                &pool_account_id,
-                balance / 9u8.saturated_into()
-            )
-            .unwrap();
-            PoolsCachedForArbitrage::<T>::insert(pool_id, ());
-        }
-        let mutation = |pool_id: PoolId| Pallet::<T>::execute_arbitrage(pool_id);
-    }: {
-        Pallet::<T>::apply_to_cached_pools(a, mutation, Weight::MAX)
-    } verify {
-        // Ensure that all pools have been arbitraged.
-        assert_eq!(PoolsCachedForArbitrage::<T>::iter().count(), 0);
-    }
 }
 
 impl_benchmark_test_suite!(Swaps, crate::mock::ExtBuilder::default().build(), crate::mock::Runtime);
