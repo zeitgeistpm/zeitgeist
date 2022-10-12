@@ -1284,21 +1284,19 @@ mod pallet {
             for (index, (pool_id, _)) in PoolsCachedForArbitrage::<T>::drain().enumerate() {
                 // The mutation should never fail, but if it does, we just assume we
                 // consumed all the weight and rollback the pool.
-                let _ = with_transaction(|| {
-                    match mutation(pool_id) {
-                        Err(err) => {
-                            log::warn!(
-                                "Arbitrage unexpectedly failed on pool {:?} with error: {:?}",
-                                pool_id,
-                                err,
-                            );
-                            total_weight = total_weight.saturating_add(max_weight_per_pool);
-                            TransactionOutcome::Rollback(err.into())
-                        }
-                        Ok(weight) => {
-                            total_weight = total_weight.saturating_add(weight);
-                            TransactionOutcome::Commit(Ok(()))
-                        }
+                let _ = with_transaction(|| match mutation(pool_id) {
+                    Err(err) => {
+                        log::warn!(
+                            "Arbitrage unexpectedly failed on pool {:?} with error: {:?}",
+                            pool_id,
+                            err,
+                        );
+                        total_weight = total_weight.saturating_add(max_weight_per_pool);
+                        TransactionOutcome::Rollback(err.into())
+                    }
+                    Ok(weight) => {
+                        total_weight = total_weight.saturating_add(weight);
+                        TransactionOutcome::Commit(Ok(()))
                     }
                 });
                 if index.saturating_add(1) == (pool_count as usize) {

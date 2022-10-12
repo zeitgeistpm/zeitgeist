@@ -28,7 +28,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{Event, fixed::bmul, Config, pallet::ARBITRAGE_MAX_ITERATIONS};
+use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };

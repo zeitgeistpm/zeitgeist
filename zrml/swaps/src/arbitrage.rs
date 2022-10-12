@@ -193,9 +193,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use zeitgeist_primitives::constants::CENT;
     use test_case::test_case;
-    use zeitgeist_primitives::types::{Asset, PoolStatus, ScoringRule};
+    use zeitgeist_primitives::{
+        constants::CENT,
+        types::{Asset, PoolStatus, ScoringRule},
+    };
 
     type MarketId = u128;
 
