@@ -1855,20 +1855,16 @@ mod pallet {
         }
 
         fn open_pool(pool_id: PoolId) -> Result<Weight, DispatchError> {
-            let asset_len =
-                <Pools<T>>::try_mutate(pool_id, |pool| -> Result<u32, DispatchError> {
-                    let pool = if let Some(el) = pool {
-                        el
-                    } else {
-                        return Err(Error::<T>::PoolDoesNotExist.into());
-                    };
-                    ensure!(
-                        pool.pool_status == PoolStatus::Initialized,
-                        Error::<T>::InvalidStateTransition
-                    );
-                    pool.pool_status = PoolStatus::Active;
-                    Ok(pool.assets.len() as u32)
-                })?;
+            Self::mutate_pool(pool_id, |pool| -> DispatchResult {
+                ensure!(
+                    pool.pool_status == PoolStatus::Initialized,
+                    Error::<T>::InvalidStateTransition
+                );
+                pool.pool_status = PoolStatus::Active;
+                Ok(())
+            })?;
+            let pool = Pools::<T>::get(pool_id).ok_or(Error::<T>::PoolDoesNotExist)?;
+            let asset_len = pool.assets.len() as u32;
             Self::deposit_event(Event::PoolActive(pool_id));
             Ok(T::WeightInfo::open_pool(asset_len))
         }
