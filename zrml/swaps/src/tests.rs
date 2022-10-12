@@ -2675,7 +2675,6 @@ fn single_asset_operations_are_equivalent_to_swaps() {
             0,
         ));
         let pool_amount = Currencies::free_balance(Swaps::pool_shares_id(pool_id), &ALICE);
-        println!("{}", pool_amount);
         assert_ok!(Swaps::pool_exit_with_exact_pool_amount(
             Origin::signed(ALICE),
             pool_id,
