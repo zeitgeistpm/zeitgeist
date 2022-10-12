@@ -113,7 +113,7 @@ mod pallet {
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
     const MIN_BALANCE: u128 = CENT;
-    const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000_000;
+    const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1283,12 +1283,24 @@ mod pallet {
             let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
             for (index, (pool_id, _)) in PoolsCachedForArbitrage::<T>::drain().enumerate() {
                 // The mutation should never fail, but if it does, we just assume we
-                // consumed all the weight.
-                let weight = mutation(pool_id).unwrap_or_else(|_| {
-                    log::warn!("Arbitrage unexpectedly failed on pool {:?}", pool_id);
-                    max_weight_per_pool
+                // consumed all the weight and rollback the pool.
+                let _ = with_transaction(|| {
+                    match mutation(pool_id) {
+                        Err(err) => {
+                            log::warn!(
+                                "Arbitrage unexpectedly failed on pool {:?} with error: {:?}",
+                                pool_id,
+                                err,
+                            );
+                            total_weight = total_weight.saturating_add(max_weight_per_pool);
+                            TransactionOutcome::Rollback(err.into())
+                        }
+                        Ok(weight) => {
+                            total_weight = total_weight.saturating_add(weight);
+                            TransactionOutcome::Commit(Ok(()))
+                        }
+                    }
                 });
-                total_weight = total_weight.saturating_add(weight);
                 if index.saturating_add(1) == (pool_count as usize) {
                     break;
                 }
@@ -1312,7 +1324,6 @@ mod pallet {
             let outcome_tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
 
-            // TODO Perform a rollback if any of this fails!
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
