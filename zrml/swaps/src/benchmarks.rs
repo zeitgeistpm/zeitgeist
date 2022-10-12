@@ -28,7 +28,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{fixed::bmul, Config};
+use crate::{fixed::bmul, Config, pallet::ARBITRAGE_MAX_ITERATIONS};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -274,7 +274,9 @@ benchmarks! {
             .unwrap();
             PoolsCachedForArbitrage::<T>::insert(pool_id, ());
         }
-        let mutation = |pool_id: PoolId| Pallet::<T>::execute_arbitrage(pool_id);
+        let mutation =
+            |pool_id: PoolId| Pallet::<T>::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS);
+
     }: {
         Pallet::<T>::apply_to_cached_pools(a, mutation, Weight::MAX)
     } verify {

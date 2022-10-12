@@ -108,7 +108,7 @@ mod pallet {
     >>::Balance;
     type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
-    const ARBITRAGE_MAX_ITERATIONS: usize = 30;
+    pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
     const ARBITRAGE_MIN_WEIGHT: Weight = ON_IDLE_MIN_WEIGHT / (ARBITRAGE_WEIGHT_RATIO as u64);
     const ARBITRAGE_THRESHOLD: u128 = CENT;
     const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
@@ -1265,7 +1265,7 @@ mod pallet {
             }
             Self::apply_to_cached_pools(
                 pool_count,
-                |pool_id| Self::execute_arbitrage(pool_id),
+                |pool_id| Self::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS),
                 extra_weight_per_pool,
             )
         }
@@ -1297,7 +1297,7 @@ mod pallet {
         }
 
         // Execute arbitrage on a single pool.
-        pub(crate) fn execute_arbitrage(pool_id: PoolId) -> Result<Weight, DispatchError> {
+        pub(crate) fn execute_arbitrage(pool_id: PoolId, max_iterations: usize) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
             let balances = pool
@@ -1307,12 +1307,12 @@ mod pallet {
                 .collect::<BTreeMap<_, _>>();
             let outcome_tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
-            let max_iterations = ARBITRAGE_MAX_ITERATIONS;
 
             // TODO Perform a rollback if any of this fails!
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
+                println!("iteration_count: {:?}", iteration_count);
                 if iteration_count == max_iterations {
                     log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
                 }
@@ -1324,6 +1324,7 @@ mod pallet {
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
+                println!("iteration_count: {:?}", iteration_count);
                 if iteration_count == max_iterations {
                     log::warn!("max_iterations reached during arbitrage of pool {:?}", pool_id);
                 }

@@ -3224,55 +3224,55 @@ fn apply_to_cached_pools_only_drains_requested_pools() {
     });
 }
 
-fn my_benchmark() {
-    ExtBuilder::default().build().execute_with(|| {
-        let a = 63u32; // The number of cached pools.
-        let asset_count = <Runtime as Config>::MaxAssets::get();
-        let balance = 10_000_000_000 * BASE;
-        let total_amount_required = balance * a as u128;
-        let mut assets: Vec<Asset<MarketId>> = Vec::new();
-        for i in 0..asset_count {
-            let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
-            assets.push(asset);
-
-            Currencies::deposit(asset, &BOB, total_amount_required).unwrap();
-        }
-        let base_asset = *assets.last().unwrap();
-
-        // Set weights to [1, 1, ..., 1, 64].
-        let outcome_count = asset_count - 1;
-        let outcome_weight = <Runtime as Config>::MinWeight::get();
-        let mut weights = vec![outcome_weight; (asset_count - 1) as usize];
-        weights.push(outcome_count as u128 * outcome_weight);
-
-        // Create `a` pools with huge balances and only a relatively small difference between them
-        // to cause maximum iterations.
-        for i in 0..a {
-            let pool_id = Swaps::create_pool(
-                BOB,
-                assets.clone(),
-                base_asset,
-                i.into(),
-                ScoringRule::CPMM,
-                Some(0),
-                Some(balance),
-                Some(weights.clone()),
-            )
-            .unwrap();
-            let pool_account_id = Swaps::pool_account_id(pool_id);
-            Currencies::withdraw(
-                *assets.last().unwrap(),
-                &pool_account_id,
-                balance / 9u128,
-            )
-            .unwrap();
-            PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
-        }
-        let mutation = |pool_id: PoolId| Swaps::execute_arbitrage(pool_id);
-        Swaps::apply_to_cached_pools(a, mutation, Weight::MAX);
-        assert!(false);
-    });
-}
+// fn my_benchmark() {
+//     ExtBuilder::default().build().execute_with(|| {
+//         let a = u32; // The number of cached pools.
+//         let asset_count = <Runtime as Config>::MaxAssets::get();
+//         let balance = 100 * BASE;
+//         let total_amount_required = balance * a as u128;
+//         let mut assets: Vec<Asset<MarketId>> = Vec::new();
+//         for i in 0..asset_count {
+//             let asset = Asset::CategoricalOutcome(0u32.into(), i.saturated_into());
+//             assets.push(asset);
+// 
+//             Currencies::deposit(asset, &BOB, total_amount_required).unwrap();
+//         }
+//         let base_asset = *assets.last().unwrap();
+// 
+//         // Set weights to [1, 1, ..., 1, 64].
+//         let outcome_count = asset_count - 1;
+//         let outcome_weight = <Runtime as Config>::MinWeight::get();
+//         let mut weights = vec![outcome_weight; (asset_count - 1) as usize];
+//         weights.push(outcome_count as u128 * outcome_weight);
+// 
+//         // Create `a` pools with huge balances and only a relatively small difference between them
+//         // to cause maximum iterations.
+//         for i in 0..a {
+//             let pool_id = Swaps::create_pool(
+//                 BOB,
+//                 assets.clone(),
+//                 base_asset,
+//                 i.into(),
+//                 ScoringRule::CPMM,
+//                 Some(0),
+//                 Some(balance),
+//                 Some(weights.clone()),
+//             )
+//             .unwrap();
+//             let pool_account_id = Swaps::pool_account_id(pool_id);
+//             Currencies::withdraw(
+//                 *assets.last().unwrap(),
+//                 &pool_account_id,
+//                 balance - (BASE * i as u128),
+//             )
+//             .unwrap();
+//             PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
+//         }
+//         let mutation = |pool_id: PoolId| Swaps::execute_arbitrage(pool_id);
+//         Swaps::apply_to_cached_pools(a, mutation, Weight::MAX);
+//         assert!(false);
+//     });
+// }
 
 fn alice_signed() -> Origin {
     Origin::signed(ALICE)
