@@ -270,25 +270,32 @@ mod pallet {
             let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
             let _ = Self::on_resolution(&market_id, &market)?;
-            let weight;
-            if let MarketType::Categorical(_) = market.market_type {
-                if let MarketStatus::Reported = market.status {
-                    weight =
-                        T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len);
-                } else {
-                    weight = T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
-                        ids_len,
-                        disputes_len,
-                    );
-                }
-            } else if let MarketStatus::Reported = market.status {
-                weight = T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len);
-            } else {
-                weight = T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
-                    ids_len,
-                    disputes_len,
-                );
-            }
+            let weight = match market.market_type {
+                MarketType::Scalar(_) => match market.status {
+                    MarketStatus::Reported => {
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len)
+                    }
+                    MarketStatus::Disputed => {
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
+                            ids_len,
+                            disputes_len,
+                        )
+                    }
+                    _ => return Err(Error::<T>::InvalidMarketStatus.into()),
+                },
+                MarketType::Categorical(_) => match market.status {
+                    MarketStatus::Reported => {
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len)
+                    }
+                    MarketStatus::Disputed => {
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
+                            ids_len,
+                            disputes_len,
+                        )
+                    }
+                    _ => return Err(Error::<T>::InvalidMarketStatus.into()),
+                },
+            };
             Ok((Some(weight), Pays::No).into())
         }
 
