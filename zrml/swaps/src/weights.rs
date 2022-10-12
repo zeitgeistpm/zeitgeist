@@ -111,25 +111,6 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
     }
-    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
-    // Storage: Swaps Pools (r:1 w:1)
-    // Storage: Swaps SubsidyProviders (r:11 w:10)
-    // Storage: Tokens Accounts (r:22 w:22)
-    // Storage: System Account (r:11 w:11)
-    // Storage: Tokens TotalIssuance (r:2 w:2)
-    // Storage: RikiddoSigmoidFeeMarketEma RikiddoPerPool (r:1 w:0)
-    fn end_subsidy_phase(a: u32, b: u32) -> Weight {
-        (0 as Weight)
-            // Standard Error: 531_000
-            .saturating_add((56_147_000 as Weight).saturating_mul(a as Weight))
-            // Standard Error: 469_000
-            .saturating_add((149_671_000 as Weight).saturating_mul(b as Weight))
-            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
-            .saturating_add(T::DbWeight::get().reads((5 as Weight).saturating_mul(b as Weight)))
-            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
-            .saturating_add(T::DbWeight::get().writes((5 as Weight).saturating_mul(b as Weight)))
-    }
-    fn execute_arbitrage() -> Weight { 0 as Weight }
     // Storage: Swaps Pools (r:1 w:1)
     // Storage: Swaps SubsidyProviders (r:1 w:0)
     // Storage: RikiddoSigmoidFeeMarketEma RikiddoPerPool (r:1 w:1)
@@ -156,6 +137,38 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads((3 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(b as Weight)))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(b as Weight)))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: Swaps Pools (r:1 w:1)
+    // Storage: Swaps SubsidyProviders (r:11 w:10)
+    // Storage: Tokens Accounts (r:22 w:22)
+    // Storage: System Account (r:11 w:11)
+    // Storage: Tokens TotalIssuance (r:2 w:2)
+    // Storage: RikiddoSigmoidFeeMarketEma RikiddoPerPool (r:1 w:0)
+    fn end_subsidy_phase(a: u32, b: u32) -> Weight {
+        (0 as Weight)
+            // Standard Error: 531_000
+            .saturating_add((56_147_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 469_000
+            .saturating_add((149_671_000 as Weight).saturating_mul(b as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().reads((5 as Weight).saturating_mul(b as Weight)))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes((5 as Weight).saturating_mul(b as Weight)))
+    }
+    // Storage: Swaps Pools (r:1 w:0)
+    // Storage: Tokens Accounts (r:2 w:2)
+    // Storage: Tokens TotalIssuance (r:2 w:2)
+    fn execute_arbitrage(a: u32, b: u32, ) -> Weight {
+        (0 as Weight)
+            // Standard Error: 4_352_000
+            .saturating_add((57_104_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 9_199_000
+            .saturating_add((57_878_000 as Weight).saturating_mul(b as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(b as Weight)))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(b as Weight)))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)

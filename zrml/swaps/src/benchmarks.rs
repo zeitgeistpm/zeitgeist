@@ -235,6 +235,7 @@ benchmarks! {
         });
     }: admin_clean_up_pool(RawOrigin::Root, market_id, OutcomeReport::Scalar(33))
 
+    // This is a worst-case benchmark for arbitraging a number of pools.
     apply_to_cached_pools_execute_arbitrage {
         let a in 0..63; // The number of cached pools.
 
@@ -294,34 +295,6 @@ benchmarks! {
     }: {
         Pallet::<T>::apply_to_cached_pools(a, noop, Weight::MAX)
     }
-
-    end_subsidy_phase {
-        // Total assets
-        let a in (T::MinAssets::get().into())..T::MaxAssets::get().into();
-        // Total subsidy providers
-        let b in 0..10;
-
-        // Create pool with a assets
-        let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, _, _) = bench_create_pool::<T>(
-            caller,
-            Some(a.saturated_into()),
-            None,
-            ScoringRule::RikiddoSigmoidFeeMarketEma,
-            false,
-            None,
-        );
-        let amount = T::MinSubsidy::get();
-
-        // Create b accounts, add MinSubsidy base assets and join subsidy
-        let accounts = generate_accounts_with_assets::<T>(b, a.saturated_into(), amount).unwrap();
-
-        // Join subsidy with each account
-        for account in accounts {
-            let _ = Call::<T>::pool_join_subsidy { pool_id, amount }
-                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
-        }
-    }: { Pallet::<T>::end_subsidy_phase(pool_id)? }
 
     destroy_pool_in_subsidy_phase {
         // Total subsidy providers
@@ -389,6 +362,76 @@ benchmarks! {
             Asset::CategoricalOutcome(1337u16.saturated_into(), 1337u16.saturated_into()),
             &account("ScrapCollector", 0, 0)
         );
+    }
+
+    end_subsidy_phase {
+        // Total assets
+        let a in (T::MinAssets::get().into())..T::MaxAssets::get().into();
+        // Total subsidy providers
+        let b in 0..10;
+
+        // Create pool with a assets
+        let caller: T::AccountId = whitelisted_caller();
+        let (pool_id, _, _) = bench_create_pool::<T>(
+            caller,
+            Some(a.saturated_into()),
+            None,
+            ScoringRule::RikiddoSigmoidFeeMarketEma,
+            false,
+            None,
+        );
+        let amount = T::MinSubsidy::get();
+
+        // Create b accounts, add MinSubsidy base assets and join subsidy
+        let accounts = generate_accounts_with_assets::<T>(b, a.saturated_into(), amount).unwrap();
+
+        // Join subsidy with each account
+        for account in accounts {
+            let _ = Call::<T>::pool_join_subsidy { pool_id, amount }
+                .dispatch_bypass_filter(RawOrigin::Signed(account).into())?;
+        }
+    }: { Pallet::<T>::end_subsidy_phase(pool_id)? }
+
+    execute_arbitrage {
+        let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
+        let b in 0..ARBITRAGE_MAX_ITERATIONS.try_into().unwrap(); // The number of iterations.
+        let asset_count = a as usize;
+        let iteration_count = b as usize;
+
+        let caller: T::AccountId = whitelisted_caller();
+        let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
+        let assets = generate_assets::<T>(&caller, asset_count, Some(balance));
+        let base_asset = *assets.last().unwrap();
+
+        // Set weights to [1, 1, ..., 1, a].
+        let outcome_count = asset_count - 1;
+        let outcome_weight = T::MinWeight::get();
+        let mut weights = vec![outcome_weight; outcome_count];
+        weights.push(outcome_count as u128 * outcome_weight);
+
+        // Create a pool with huge balances and only a relatively small difference between them to
+        // cause at least 30 iterations.
+        let pool_id = Pallet::<T>::create_pool(
+            caller.clone(),
+            assets.clone(),
+            base_asset,
+            0u8.into(),
+            ScoringRule::CPMM,
+            Some(Zero::zero()),
+            Some(balance),
+            Some(weights.clone()),
+        )
+        .unwrap();
+        let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+        T::AssetManager::withdraw(
+            *assets.last().unwrap(),
+            &pool_account_id,
+            balance / 9u8.saturated_into()
+        )
+        .unwrap();
+    }: {
+        // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
+        Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
     }
 
     pool_exit {
