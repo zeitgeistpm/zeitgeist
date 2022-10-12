@@ -474,7 +474,7 @@ benchmarks! {
                 &disputor,
                 dispute_bond,
             )?;
-Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
+            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         }
         let disputes = Disputes::<T>::get(market_id);
 
