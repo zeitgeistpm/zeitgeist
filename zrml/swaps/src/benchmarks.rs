@@ -648,7 +648,7 @@ benchmarks! {
         let a in 2..T::MaxAssets::get().into();
 
         let caller: T::AccountId = whitelisted_caller();
-        let (pool_id, assets, ..) = bench_create_pool::<T>(
+        let (pool_id, ..) = bench_create_pool::<T>(
             caller,
             Some(a as usize),
             None,
