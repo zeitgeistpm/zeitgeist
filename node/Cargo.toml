@@ -10,14 +10,20 @@ pallet-transaction-payment = { branch = "moonbeam-polkadot-v0.9.19", git = "http
 pallet-transaction-payment-rpc = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 pallet-transaction-payment-rpc-runtime-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-basic-authorship = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
-sc-cli = { branch = "moonbeam-polkadot-v0.9.19", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
+sc-cli = { branch = "moonbeam-polkadot-v0.9.19", features = [
+    "wasmtime",
+], git = "https://github.com/purestake/substrate" }
 sc-client-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-consensus = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
-sc-executor = { branch = "moonbeam-polkadot-v0.9.19", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
+sc-executor = { branch = "moonbeam-polkadot-v0.9.19", features = [
+    "wasmtime",
+], git = "https://github.com/purestake/substrate" }
 sc-keystore = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-rpc = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-rpc-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
-sc-service = { branch = "moonbeam-polkadot-v0.9.19", features = ["wasmtime"], git = "https://github.com/purestake/substrate" }
+sc-service = { branch = "moonbeam-polkadot-v0.9.19", features = [
+    "wasmtime",
+], git = "https://github.com/purestake/substrate" }
 sc-telemetry = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-transaction-pool = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }
 sc-transaction-pool-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate" }

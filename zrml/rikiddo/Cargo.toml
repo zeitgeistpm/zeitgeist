@@ -6,12 +6,17 @@ frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false,
 hashbrown = { default-features = true, version = "0.11" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
+parity-scale-codec = { default-features = false, features = [
+    "derive",
+    "max-encoded-len",
+], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 sp-core = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
 sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-substrate-fixed = { default-features = false, features = ["serde"], git = "https://github.com/encointer/substrate-fixed" }
+substrate-fixed = { default-features = false, features = [
+    "serde",
+], git = "https://github.com/encointer/substrate-fixed" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 
 [dev-dependencies]
