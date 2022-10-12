@@ -490,7 +490,7 @@ benchmarks! {
     }
 
     dispute_authorized {
-        let d in 0..(T::MaxDisputes::get() - 1) as u32;
+        let d in 0..(T::MaxDisputes::get() - 1);
         let b in 0..63;
 
         let report_outcome = OutcomeReport::Scalar(u128::MAX);
