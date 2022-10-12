@@ -28,7 +28,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{fixed::bmul, Config, pallet::ARBITRAGE_MAX_ITERATIONS};
+use crate::{Event, fixed::bmul, Config, pallet::ARBITRAGE_MAX_ITERATIONS};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -48,6 +48,10 @@ use zeitgeist_primitives::{
     },
 };
 use zrml_market_commons::MarketCommonsPalletApi;
+
+fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
+     frame_system::Pallet::<T>::assert_last_event(generic_event.into());
+}
 
 // Generates `acc_total` accounts, of which `acc_asset` account do own `asset`
 fn generate_accounts_with_assets<T: Config>(
@@ -423,15 +427,23 @@ benchmarks! {
         )
         .unwrap();
         let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+        let asset = *assets.last().unwrap();
         T::AssetManager::withdraw(
-            *assets.last().unwrap(),
+            asset,
             &pool_account_id,
             balance / 9u8.saturated_into()
         )
         .unwrap();
+        let balance_before = T::AssetManager::free_balance(asset, &pool_account_id);
     }: {
         // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
         Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
+    } verify {
+        // We don't care about the exact arbitrage amount and just want to verify that the correct
+        // event was emitted.
+        let arbitrage_amount =
+            T::AssetManager::free_balance(asset, &pool_account_id) - balance_before;
+        assert_last_event::<T>(Event::ArbitrageBuyBurn::<T>(pool_id, arbitrage_amount).into());
     }
 
     execute_arbitrage_mint_sell {
@@ -465,15 +477,59 @@ benchmarks! {
         )
         .unwrap();
         let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
-        T::AssetManager::withdraw(
-            assets[0],
-            &pool_account_id,
-            balance / 9u8.saturated_into()
+        for asset in assets.iter().filter(|a| **a != base_asset) {
+            T::AssetManager::withdraw(
+                *asset,
+                &pool_account_id,
+                balance / 9u8.saturated_into()
+            )
+            .unwrap();
+        }
+        let asset = assets[0];
+        let balance_before = T::AssetManager::free_balance(asset, &pool_account_id);
+    }: {
+        // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
+        Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
+    } verify {
+        // We don't care about the exact arbitrage amount and just want to verify that the correct
+        // event was emitted.
+        let arbitrage_amount =
+            T::AssetManager::free_balance(asset, &pool_account_id) - balance_before;
+        assert_last_event::<T>(Event::ArbitrageMintSell::<T>(pool_id, arbitrage_amount).into());
+    }
+
+    execute_arbitrage_skipped {
+        let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
+        let asset_count = a as usize;
+
+        let caller: T::AccountId = whitelisted_caller();
+        let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
+        let assets = generate_assets::<T>(&caller, asset_count, Some(balance));
+        let base_asset = *assets.last().unwrap();
+
+        // Set weights to [1, 1, ..., 1, a].
+        let outcome_count = asset_count - 1;
+        let outcome_weight = T::MinWeight::get();
+        let mut weights = vec![outcome_weight; outcome_count];
+        weights.push(outcome_count as u128 * outcome_weight);
+
+        // Create a pool with equal balances to ensure that the total spot price is equal to 1.
+        let pool_id = Pallet::<T>::create_pool(
+            caller.clone(),
+            assets.clone(),
+            base_asset,
+            0u8.into(),
+            ScoringRule::CPMM,
+            Some(Zero::zero()),
+            Some(balance),
+            Some(weights.clone()),
         )
         .unwrap();
     }: {
         // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
-        Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
+        Pallet::<T>::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS)?
+    } verify {
+        assert_last_event::<T>(Event::ArbitrageSkipped::<T>(pool_id).into());
     }
 
     pool_exit {
