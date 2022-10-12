@@ -4,7 +4,7 @@
   `oracle_duration` and `dispute_duration` fields, all of which represent
   durations in number of blocks. The `create_market` extrinsic has a new
   parameter to specify these deadlines.
-- Added `pallet-balances` to the Zeitgeist runtime to facilitate community
+- Added `pallet-bounties` to the Zeitgeist runtime to facilitate community
   projects.
 - Changed `MaxCategories` to `64`, as originally intended
 - Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
