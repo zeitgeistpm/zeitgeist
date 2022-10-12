@@ -39,7 +39,10 @@ mod pallet {
         ensure, log,
         pallet_prelude::{ConstU32, StorageMap, StorageValue, ValueQuery},
         storage::{with_transaction, TransactionOutcome},
-        traits::{EnsureOrigin, Get, Hooks, IsType, StorageVersion},
+        traits::{
+            Currency, EnsureOrigin, Get, Hooks, Imbalance, IsType, NamedReservableCurrency,
+            OnUnbalanced, StorageVersion,
+        },
         transactional,
         weights::Pays,
         Blake2_128Concat, BoundedVec, PalletId, Twox64Concat,
@@ -69,6 +72,10 @@ mod pallet {
     pub(crate) type BalanceOf<T> = <<T as Config>::AssetManager as MultiCurrency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+    pub(crate) type CurrencyOf<T> =
+        <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Currency;
+    pub(crate) type NegativeImbalanceOf<T> =
+        <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
     pub(crate) type TimeFrame = u64;
     pub(crate) type MarketIdOf<T> =
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
@@ -530,6 +537,10 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
+            ensure!(
+                deadlines.oracle_duration >= T::MinOracleDuration::get(),
+                Error::<T>::OracleDurationSmallerThanMinOracleDuration
+            );
             ensure!(
                 deadlines.dispute_duration >= T::MinDisputeDuration::get(),
                 Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
@@ -1225,6 +1236,11 @@ mod pallet {
         #[pallet::constant]
         type MinDisputeDuration: Get<Self::BlockNumber>;
 
+        /// The minimum number of blocks allowed to be specified as oracle_duration
+        /// in create_market.
+        #[pallet::constant]
+        type MinOracleDuration: Get<Self::BlockNumber>;
+
         /// The maximum number of blocks allowed to be specified as grace_period
         /// in create_market.
         #[pallet::constant]
@@ -1277,6 +1293,9 @@ mod pallet {
             Moment = MomentOf<Self>,
             Origin = Self::Origin,
         >;
+
+        /// Handler for slashed funds.
+        type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
         /// Swaps pallet API
         type Swaps: Swaps<Self::AccountId, Balance = BalanceOf<Self>, MarketId = MarketIdOf<Self>>;
@@ -1353,6 +1372,8 @@ mod pallet {
         NotAllowedToReportYet,
         /// Specified dispute_duration is smaller than MinDisputeDuration.
         DisputeDurationSmallerThanMinDisputeDuration,
+        /// Specified oracle_duration is smaller than MinOracleDuration.
+        OracleDurationSmallerThanMinOracleDuration,
         /// Specified dispute_duration is greater than MaxDisputeDuration.
         DisputeDurationGreaterThanMaxDisputeDuration,
         /// Specified grace_period is greater than MaxGracePeriod.
@@ -1417,8 +1438,12 @@ mod pallet {
     impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
         // TODO(#792): Remove outcome assets for accounts! Delete "resolved" assets of `orml_tokens` with storage migration.
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            let mut total_weight: Weight =
-                Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+            let mut total_weight: Weight = 0u64;
+
+            // TODO(#808): Use weight when Rikiddo is ready
+            let _ = Self::process_subsidy_collecting_markets(now, T::MarketCommons::now());
+            total_weight = total_weight
+                .saturating_add(T::WeightInfo::process_subsidy_collecting_markets_dummy());
 
             // If we are at genesis or the first block the timestamp is be undefined. No
             // market needs to be opened or closed on blocks #0 or #1, so we skip the
@@ -1456,6 +1481,10 @@ mod pallet {
                     },
                 );
 
+                total_weight = total_weight.saturating_add(open.unwrap_or_else(|_| {
+                    T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get())
+                }));
+
                 let close = Self::market_status_manager::<
                     _,
                     MarketIdsPerCloseBlock<T>,
@@ -1471,13 +1500,34 @@ mod pallet {
                     },
                 );
 
+                if let Ok(weight) = close {
+                    total_weight = total_weight.saturating_add(weight);
+                } else {
+                    // charge weight for the worst case
+                    total_weight = total_weight.saturating_add(
+                        T::WeightInfo::market_status_manager(CacheSize::get(), CacheSize::get()),
+                    );
+                }
+
                 let resolve = Self::resolution_manager(now, |market_id, market| {
                     let weight = Self::on_resolution(market_id, market)?;
                     total_weight = total_weight.saturating_add(weight);
                     Ok(())
                 });
 
+                if let Ok(weight) = resolve {
+                    total_weight = total_weight.saturating_add(weight);
+                } else {
+                    // charge weight for the worst case
+                    total_weight =
+                        total_weight.saturating_add(T::WeightInfo::market_resolution_manager(
+                            CacheSize::get(),
+                            CacheSize::get(),
+                        ));
+                }
+
                 LastTimeFrame::<T>::set(Some(current_time_frame));
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
 
                 match open.and(close).and(resolve) {
                     Err(err) => {
@@ -1489,7 +1539,7 @@ mod pallet {
                 }
             });
 
-            total_weight
+            total_weight.saturating_add(T::WeightInfo::on_initialize_resolve_overhead())
         }
     }
 
@@ -1746,12 +1796,12 @@ mod pallet {
                 T::AdvisoryBondSlashPercentage::get().mul_floor(T::AdvisoryBond::get());
             let advisory_bond_unreserve_amount =
                 T::AdvisoryBond::get().saturating_sub(advisory_bond_slash_amount);
-            T::AssetManager::slash_reserved_named(
+            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                 &Self::reserve_id(),
-                Asset::Ztg,
                 creator,
-                advisory_bond_slash_amount,
+                advisory_bond_slash_amount.saturated_into::<u128>().saturated_into(),
             );
+            T::Slash::on_unbalanced(imbalance);
             T::AssetManager::unreserve_named(
                 &Self::reserve_id(),
                 Asset::Ztg,
@@ -2010,10 +2060,9 @@ mod pallet {
 
                     let mut correct_reporters: Vec<T::AccountId> = Vec::new();
 
-                    let mut overall_imbalance = BalanceOf::<T>::zero();
-
                     // If the oracle reported right, return the OracleBond, otherwise slash it to
                     // pay the correct reporters.
+                    let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
                     if report.outcome == resolved_outcome {
                         T::AssetManager::unreserve_named(
                             &Self::reserve_id(),
@@ -2022,16 +2071,12 @@ mod pallet {
                             T::OracleBond::get(),
                         );
                     } else {
-                        let excess = T::AssetManager::slash_reserved_named(
+                        let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                             &Self::reserve_id(),
-                            Asset::Ztg,
                             &market.creator,
-                            T::OracleBond::get(),
+                            T::OracleBond::get().saturated_into::<u128>().saturated_into(),
                         );
-
-                        // negative_imbalance is the actual slash value (excess should be zero)
-                        let negative_imbalance = T::OracleBond::get().saturating_sub(excess);
-                        overall_imbalance = overall_imbalance.saturating_add(negative_imbalance);
+                        overall_imbalance.subsume(imbalance);
                     }
 
                     for (i, dispute) in disputes.iter().enumerate() {
@@ -2046,42 +2091,30 @@ mod pallet {
 
                             correct_reporters.push(dispute.by.clone());
                         } else {
-                            let excess = T::AssetManager::slash_reserved_named(
+                            let (imbalance, _) = CurrencyOf::<T>::slash_reserved_named(
                                 &Self::reserve_id(),
-                                Asset::Ztg,
                                 &dispute.by,
-                                actual_bond,
+                                actual_bond.saturated_into::<u128>().saturated_into(),
                             );
-
-                            // negative_imbalance is the actual slash value (excess should be zero)
-                            let negative_imbalance = actual_bond.saturating_sub(excess);
-                            overall_imbalance =
-                                overall_imbalance.saturating_add(negative_imbalance);
+                            overall_imbalance.subsume(imbalance);
                         }
                     }
 
                     // Fold all the imbalances into one and reward the correct reporters. The
                     // number of correct reporters might be zero if the market defaults to the
                     // report after abandoned dispute. In that case, the rewards remain slashed.
-                    if let Some(reward_per_each) =
-                        overall_imbalance.checked_div(&correct_reporters.len().saturated_into())
+                    if let Some(reward_per_each) = overall_imbalance
+                        .peek()
+                        .checked_div(&correct_reporters.len().saturated_into())
                     {
                         for correct_reporter in &correct_reporters {
-                            // *Should* always be equal to `reward_per_each`
-                            let reward = overall_imbalance.min(reward_per_each);
-                            overall_imbalance = overall_imbalance.saturating_sub(reward);
-
-                            if let Err(err) =
-                                T::AssetManager::deposit(Asset::Ztg, correct_reporter, reward)
-                            {
-                                log::warn!(
-                                    "[PredictionMarkets] Cannot deposit to the correct reporter. \
-                                     error: {:?}",
-                                    err
-                                );
-                            }
+                            let (actual_reward, leftover) =
+                                overall_imbalance.split(reward_per_each);
+                            overall_imbalance = leftover;
+                            CurrencyOf::<T>::resolve_creating(correct_reporter, actual_reward);
                         }
                     }
+                    T::Slash::on_unbalanced(overall_imbalance);
 
                     resolved_outcome
                 }
@@ -2305,7 +2338,7 @@ mod pallet {
             last_time_frame: TimeFrame,
             current_time_frame: TimeFrame,
             mut mutation: F,
-        ) -> DispatchResult
+        ) -> Result<Weight, DispatchError>
         where
             F: FnMut(
                 &MarketIdOf<T>,
@@ -2322,24 +2355,35 @@ mod pallet {
                 Query = BoundedVec<MarketIdOf<T>, CacheSize>,
             >,
         {
-            for market_id in MarketIdsPerBlock::get(block_number).iter() {
+            let market_ids_per_block = MarketIdsPerBlock::get(block_number);
+            for market_id in market_ids_per_block.iter() {
                 let market = T::MarketCommons::market(market_id)?;
                 mutation(market_id, market)?;
             }
             MarketIdsPerBlock::remove(block_number);
 
+            let mut time_frame_ids_len = 0u32;
             for time_frame in last_time_frame.saturating_add(1)..=current_time_frame {
-                for market_id in MarketIdsPerTimeFrame::get(time_frame).iter() {
+                let market_ids_per_time_frame = MarketIdsPerTimeFrame::get(time_frame);
+                time_frame_ids_len =
+                    time_frame_ids_len.saturating_add(market_ids_per_time_frame.len() as u32);
+                for market_id in market_ids_per_time_frame.iter() {
                     let market = T::MarketCommons::market(market_id)?;
                     mutation(market_id, market)?;
                 }
                 MarketIdsPerTimeFrame::remove(time_frame);
             }
 
-            Ok(())
+            Ok(T::WeightInfo::market_status_manager(
+                market_ids_per_block.len() as u32,
+                time_frame_ids_len,
+            ))
         }
 
-        fn resolution_manager<F>(now: T::BlockNumber, mut cb: F) -> DispatchResult
+        pub(crate) fn resolution_manager<F>(
+            now: T::BlockNumber,
+            mut cb: F,
+        ) -> Result<Weight, DispatchError>
         where
             F: FnMut(
                 &MarketIdOf<T>,
@@ -2347,7 +2391,8 @@ mod pallet {
             ) -> DispatchResult,
         {
             // Resolve all regularly reported markets.
-            for id in MarketIdsPerReportBlock::<T>::get(now).iter() {
+            let market_ids_per_report_block = MarketIdsPerReportBlock::<T>::get(now);
+            for id in market_ids_per_report_block.iter() {
                 let market = T::MarketCommons::market(id)?;
                 if let MarketStatus::Reported = market.status {
                     cb(id, &market)?;
@@ -2356,13 +2401,17 @@ mod pallet {
             MarketIdsPerReportBlock::<T>::remove(now);
 
             // Resolve any disputed markets.
-            for id in MarketIdsPerDisputeBlock::<T>::get(now).iter() {
+            let market_ids_per_dispute_block = MarketIdsPerDisputeBlock::<T>::get(now);
+            for id in market_ids_per_dispute_block.iter() {
                 let market = T::MarketCommons::market(id)?;
                 cb(id, &market)?;
             }
             MarketIdsPerDisputeBlock::<T>::remove(now);
 
-            Ok(())
+            Ok(T::WeightInfo::market_resolution_manager(
+                market_ids_per_report_block.len() as u32,
+                market_ids_per_dispute_block.len() as u32,
+            ))
         }
 
         // If the market is already disputed, does nothing.

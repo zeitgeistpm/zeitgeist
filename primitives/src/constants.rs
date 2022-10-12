@@ -76,15 +76,17 @@ pub const LM_PALLET_ID: PalletId = PalletId(*b"zge/lymg");
 pub const MAX_CATEGORIES: u16 = 64;
 /// The dispute_duration is time where users can dispute the outcome.
 /// Minimum block period for a dispute.
-pub const MIN_DISPUTE_DURATION: BlockNumber = 6 * BLOCKS_PER_HOUR;
+pub const MIN_DISPUTE_DURATION: BlockNumber = 12 * BLOCKS_PER_HOUR;
+/// Minimum block period for oracle_duration.
+pub const MIN_ORACLE_DURATION: BlockNumber = BLOCKS_PER_HOUR;
 /// Maximum block period for a dispute.
-pub const MAX_DISPUTE_DURATION: BlockNumber = BLOCKS_PER_DAY;
+pub const MAX_DISPUTE_DURATION: BlockNumber = 30 * BLOCKS_PER_DAY;
 /// Maximum block period for an grace_period.
 /// The grace_period is a delay between the point where the market closes and the point where the oracle may report.
-pub const MAX_GRACE_PERIOD: BlockNumber = BLOCKS_PER_DAY;
+pub const MAX_GRACE_PERIOD: BlockNumber = 365 * BLOCKS_PER_DAY;
 /// Maximum block period for an oracle_duration.
 /// The oracle_duration is a duration where the oracle has to submit its report.
-pub const MAX_ORACLE_DURATION: BlockNumber = BLOCKS_PER_DAY;
+pub const MAX_ORACLE_DURATION: BlockNumber = 14 * BLOCKS_PER_DAY;
 
 /// Pallet identifier, mainly used for named balance reserves.
 pub const PM_PALLET_ID: PalletId = PalletId(*b"zge/pred");

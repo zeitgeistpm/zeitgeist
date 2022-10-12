@@ -31,7 +31,7 @@ use frame_support::{
 use test_case::test_case;
 
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
@@ -49,7 +49,7 @@ const SENTINEL_AMOUNT: u128 = BASE;
 fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
     Deadlines {
         grace_period: 1_u32.into(),
-        oracle_duration: 1_u32.into(),
+        oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
         dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
     }
 }
@@ -236,6 +236,31 @@ fn create_market_fails_on_min_dispute_period() {
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
+        );
+    });
+}
+
+#[test]
+fn create_market_fails_on_min_oracle_duration() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() - 1,
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+        };
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                deadlines,
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
         );
     });
 }
@@ -898,10 +923,11 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         assert_ok!(Balances::reserve_named(
             &PredictionMarkets::reserve_id(),
             &ALICE,
-            SENTINEL_AMOUNT
+            SENTINEL_AMOUNT,
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert!(Balances::free_balance(Treasury::account_id()).is_zero());
 
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_reserved_before_alice =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
@@ -915,7 +941,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             balance_reserved_after_alice,
             balance_reserved_before_alice
                 - <Runtime as Config>::OracleBond::get()
-                - <Runtime as Config>::AdvisoryBond::get()
+                - <Runtime as Config>::AdvisoryBond::get(),
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let slash_amount_advisory_bond = <Runtime as Config>::AdvisoryBondSlashPercentage::get()
@@ -926,8 +952,12 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             balance_free_after_alice,
             balance_free_before_alice
                 + <Runtime as Config>::OracleBond::get()
-                + advisory_bond_remains
+                + advisory_bond_remains,
         );
+
+        // AdvisoryBond is transferred to the treasury
+        let balance_treasury_after = Balances::free_balance(Treasury::account_id());
+        assert_eq!(balance_treasury_after, slash_amount_advisory_bond);
     });
 }
 
@@ -2639,6 +2669,7 @@ fn authorized_correctly_resolves_disputed_market() {
 #[test]
 fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
     ExtBuilder::default().build().execute_with(|| {
+        assert!(Balances::free_balance(Treasury::account_id()).is_zero());
         let end = 2;
         let market_id = 0;
         assert_ok!(PredictionMarkets::create_market(
@@ -2683,13 +2714,15 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         // Make sure rewards are right:
         //
         // - Bob reported "correctly" and in time, so Alice and Bob don't get slashed
-        // - Charlie started a dispute which was abandoned, hence he's slashed
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - charlie_reserved);
+        // - Charlie started a dispute which was abandoned, hence he's slashed and his rewards are
+        // moved to the treasury
         let alice_balance = Balances::free_balance(&ALICE);
         assert_eq!(alice_balance, 1_000 * BASE);
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - charlie_reserved);
+        assert_eq!(Balances::free_balance(Treasury::account_id()), charlie_reserved);
     });
 }
 

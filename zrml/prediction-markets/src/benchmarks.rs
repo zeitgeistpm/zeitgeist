@@ -25,6 +25,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as PredictionMarket;
+use alloc::vec::Vec;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller};
 use frame_support::{
     dispatch::UnfilteredDispatchable,
@@ -58,11 +59,12 @@ fn create_market_common_parameters<T: Config>(
     &'static str,
 > {
     let caller: T::AccountId = whitelisted_caller();
-    T::AssetManager::deposit(Asset::Ztg, &caller, (u128::MAX).saturated_into())?;
+    T::AssetManager::deposit(Asset::Ztg, &caller, (100 * MinLiquidity::get()).saturated_into())
+        .unwrap();
     let oracle = caller.clone();
     let deadlines = Deadlines::<T::BlockNumber> {
         grace_period: 1_u32.into(),
-        oracle_duration: 1_u32.into(),
+        oracle_duration: T::MinOracleDuration::get(),
         dispute_duration: T::MinDisputeDuration::get(),
     };
     let mut metadata = [0u8; 50];
@@ -850,10 +852,10 @@ Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
         assert_eq!(market.status, MarketStatus::Resolved);
     }
 
-    // This benchmark measures the cost of fn `on_initialize` minus the resolution.
     on_initialize_resolve_overhead {
-        let starting_block = frame_system::Pallet::<T>::block_number() + 2_u32.into();
-    }: { Pallet::<T>::on_initialize(starting_block * 2u32.into()) }
+        // wait for timestamp to get initialized (that's why block 2)
+        let now = 2u64.saturated_into::<T::BlockNumber>();
+    }: { Pallet::<T>::on_initialize(now) }
 
     // Benchmark iteration and market validity check without ending subsidy / discarding market.
     process_subsidy_collecting_markets_raw {
@@ -995,6 +997,124 @@ Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
             Ok(())
         })?;
     }: { Pallet::<T>::start_subsidy(&market_clone.unwrap(), market_id)? }
+
+    market_status_manager {
+        let b in 1..31;
+        let f in 1..31;
+
+        // ensure markets exist
+        let start_block: T::BlockNumber = 100_000u64.saturated_into();
+        let end_block: T::BlockNumber = 1_000_000u64.saturated_into();
+        for _ in 0..31 {
+            create_market_common::<T>(
+                MarketCreation::Permissionless,
+                MarketType::Categorical(T::MaxCategories::get()),
+                ScoringRule::CPMM,
+                Some(MarketPeriod::Block(start_block..end_block)),
+            ).unwrap();
+        }
+
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        for _ in 31..64 {
+            create_market_common::<T>(
+                MarketCreation::Permissionless,
+                MarketType::Categorical(T::MaxCategories::get()),
+                ScoringRule::CPMM,
+                Some(MarketPeriod::Timestamp(range_start..range_end)),
+            ).unwrap();
+        }
+
+        let block_number: T::BlockNumber = Zero::zero();
+        let last_time_frame: TimeFrame = Zero::zero();
+        for i in 1..=b {
+            <MarketIdsPerOpenBlock<T>>::try_mutate(block_number, |ids| {
+                ids.try_push(i.into())
+            }).unwrap();
+        }
+
+        let last_offset: TimeFrame = last_time_frame + 1.saturated_into::<u64>();
+        //* quadratic complexity should not be allowed in substrate blockchains
+        //* assume at first that the last time frame is one block before the current time frame
+        let t = 0;
+        let current_time_frame: TimeFrame = last_offset + t.saturated_into::<u64>();
+        for i in 1..=f {
+            <MarketIdsPerOpenTimeFrame<T>>::try_mutate(current_time_frame, |ids| {
+                // + 31 to not conflict with the markets of MarketIdsPerOpenBlock
+                ids.try_push((i + 31).into())
+            }).unwrap();
+        }
+    }: {
+        Pallet::<T>::market_status_manager::<
+            _,
+            MarketIdsPerOpenBlock<T>,
+            MarketIdsPerOpenTimeFrame<T>,
+        >(
+            block_number,
+            last_time_frame,
+            current_time_frame,
+            |market_id, market| {
+                // noop, because weight is already measured somewhere else
+                Ok(())
+            },
+        )
+        .unwrap();
+    }
+
+    market_resolution_manager {
+        let r in 1..31;
+        let d in 1..31;
+
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        // ensure markets exist
+        for _ in 0..64 {
+            let (_, market_id) = create_market_common::<T>(
+                MarketCreation::Permissionless,
+                MarketType::Categorical(T::MaxCategories::get()),
+                ScoringRule::CPMM,
+                Some(MarketPeriod::Timestamp(range_start..range_end)),
+            )?;
+            // ensure market is reported
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                market.status = MarketStatus::Reported;
+                Ok(())
+            })?;
+        }
+
+        let block_number: T::BlockNumber = Zero::zero();
+
+        let mut r_ids_vec = Vec::new();
+        for i in 1..=r {
+           r_ids_vec.push(i.into());
+        }
+        MarketIdsPerReportBlock::<T>::mutate(block_number, |ids| {
+            *ids = BoundedVec::try_from(r_ids_vec).unwrap();
+        });
+
+        // + 31 to not conflict with the markets of MarketIdsPerReportBlock
+        let d_ids_vec = (1..=d).map(|i| (i + 31).into()).collect::<Vec<_>>();
+        MarketIdsPerDisputeBlock::<T>::mutate(block_number, |ids| {
+            *ids = BoundedVec::try_from(d_ids_vec).unwrap();
+        });
+    }: {
+        Pallet::<T>::resolution_manager(
+            block_number,
+            |market_id, market| {
+                // noop, because weight is already measured somewhere else
+                Ok(())
+            },
+        ).unwrap();
+    }
+
+    process_subsidy_collecting_markets_dummy {
+        let current_block: T::BlockNumber = 0u64.saturated_into::<T::BlockNumber>();
+        let current_time: MomentOf<T> = 0u64.saturated_into::<MomentOf<T>>();
+        let markets = BoundedVec::try_from(Vec::new()).unwrap();
+        <MarketsCollectingSubsidy<T>>::put(markets);
+    }: {
+        let _ = <Pallet<T>>::process_subsidy_collecting_markets(current_block, current_time);
+    }
 }
 
 impl_benchmark_test_suite!(
