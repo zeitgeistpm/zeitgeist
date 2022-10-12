@@ -52,7 +52,7 @@ pub trait WeightInfoZeitgeist {
     fn end_subsidy_phase(a: u32, b: u32) -> Weight;
     fn destroy_pool_in_subsidy_phase(a: u32) -> Weight;
     fn distribute_pool_share_rewards(a: u32, b: u32) -> Weight;
-    fn execute_arbitrage() -> Weight;
+    fn execute_arbitrage(a: u32, b: u32) -> Weight;
     fn pool_exit(a: u32) -> Weight;
     fn pool_exit_subsidy() -> Weight;
     fn pool_exit_with_exact_asset_amount() -> Weight;

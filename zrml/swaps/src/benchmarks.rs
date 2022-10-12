@@ -392,7 +392,7 @@ benchmarks! {
         }
     }: { Pallet::<T>::end_subsidy_phase(pool_id)? }
 
-    execute_arbitrage {
+    execute_arbitrage_buy_burn {
         let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
         let b in 0..ARBITRAGE_MAX_ITERATIONS.try_into().unwrap(); // The number of iterations.
         let asset_count = a as usize;
@@ -425,6 +425,48 @@ benchmarks! {
         let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
         T::AssetManager::withdraw(
             *assets.last().unwrap(),
+            &pool_account_id,
+            balance / 9u8.saturated_into()
+        )
+        .unwrap();
+    }: {
+        // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
+        Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
+    }
+
+    execute_arbitrage_mint_sell {
+        let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
+        let b in 0..ARBITRAGE_MAX_ITERATIONS.try_into().unwrap(); // The number of iterations.
+        let asset_count = a as usize;
+        let iteration_count = b as usize;
+
+        let caller: T::AccountId = whitelisted_caller();
+        let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
+        let assets = generate_assets::<T>(&caller, asset_count, Some(balance));
+        let base_asset = *assets.last().unwrap();
+
+        // Set weights to [1, 1, ..., 1, a].
+        let outcome_count = asset_count - 1;
+        let outcome_weight = T::MinWeight::get();
+        let mut weights = vec![outcome_weight; outcome_count];
+        weights.push(outcome_count as u128 * outcome_weight);
+
+        // Create a pool with huge balances and only a relatively small difference between them to
+        // cause at least 30 iterations.
+        let pool_id = Pallet::<T>::create_pool(
+            caller.clone(),
+            assets.clone(),
+            base_asset,
+            0u8.into(),
+            ScoringRule::CPMM,
+            Some(Zero::zero()),
+            Some(balance),
+            Some(weights.clone()),
+        )
+        .unwrap();
+        let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+        T::AssetManager::withdraw(
+            assets[0],
             &pool_account_id,
             balance / 9u8.saturated_into()
         )

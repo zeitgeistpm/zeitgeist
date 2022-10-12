@@ -1297,7 +1297,10 @@ mod pallet {
         }
 
         // Execute arbitrage on a single pool.
-        pub(crate) fn execute_arbitrage(pool_id: PoolId, max_iterations: usize) -> Result<Weight, DispatchError> {
+        pub(crate) fn execute_arbitrage(
+            pool_id: PoolId,
+            max_iterations: usize,
+        ) -> Result<Weight, DispatchError> {
             let pool = Self::pool_by_id(pool_id)?;
             let pool_account = Self::pool_account_id(pool_id);
             let balances = pool
@@ -1305,6 +1308,7 @@ mod pallet {
                 .iter()
                 .map(|a| (*a, T::AssetManager::free_balance(*a, &pool_account)))
                 .collect::<BTreeMap<_, _>>();
+            let asset_count = pool.assets.len() as u32;
             let outcome_tokens = pool.assets.iter().filter(|a| **a != pool.base_asset);
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
 
@@ -1320,6 +1324,7 @@ mod pallet {
                     T::AssetManager::deposit(*t, &pool_account, amount)?;
                 }
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
+                Ok(T::WeightInfo::execute_arbitrage(asset_count, iteration_count as u32))
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
@@ -1331,11 +1336,11 @@ mod pallet {
                     T::AssetManager::withdraw(*t, &pool_account, amount)?;
                 }
                 Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
+                Ok(T::WeightInfo::execute_arbitrage(asset_count, iteration_count as u32))
             } else {
                 Self::deposit_event(Event::ArbitrageSkipped(pool_id));
+                Ok(T::WeightInfo::execute_arbitrage(0, 0))
             }
-
-            Ok(T::WeightInfo::execute_arbitrage())
         }
 
         pub fn get_spot_price(
