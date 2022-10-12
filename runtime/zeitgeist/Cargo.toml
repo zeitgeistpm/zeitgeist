@@ -11,6 +11,7 @@ orml-currencies = { branch = "2022-06-v0.9.19", default-features = false, git = 
 orml-tokens = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
 pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+pallet-bounties = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-collective = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-democracy = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
 pallet-identity = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
@@ -154,6 +155,7 @@ runtime-benchmarks = [
     "pallet-author-mapping/runtime-benchmarks",
     "pallet-author-slot-filter/runtime-benchmarks",
     "pallet-balances/runtime-benchmarks",
+    "pallet-bounties/runtime-benchmarks",
     "pallet-collective/runtime-benchmarks",
     "pallet-crowdloan-rewards/runtime-benchmarks",
     "pallet-democracy/runtime-benchmarks",
@@ -192,6 +194,7 @@ std = [
     "orml-tokens/std",
     "orml-traits/std",
     "pallet-balances/std",
+    "pallet-bounties/std",
     "pallet-collective/std",
     "pallet-democracy/std",
     "pallet-identity/std",
@@ -292,6 +295,7 @@ try-runtime = [
 
     # Money runtime pallets
     "pallet-balances/try-runtime",
+    "pallet-bounties/try-runtime",
     "pallet-transaction-payment/try-runtime",
     "pallet-treasury/try-runtime",
     "pallet-vesting/try-runtime",
@@ -331,7 +335,7 @@ try-runtime = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zeitgeist-runtime"
-version = "0.3.5"
+version = "0.3.6"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

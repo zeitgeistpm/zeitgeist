@@ -48,9 +48,9 @@ mod pallet {
     use zeitgeist_primitives::types::{Market, PoolId};
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
-    type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
+    pub type MomentOf<T> = <<T as Config>::Timestamp as frame_support::traits::Time>::Moment;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {}
