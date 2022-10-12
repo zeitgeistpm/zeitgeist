@@ -15,9 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "try-runtime")]
+use crate::Disputes;
 use crate::{
-    CacheSize, Config, Disputes, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock,
-    MomentOf, Pallet,
+    CacheSize, Config, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, MomentOf,
+    Pallet,
 };
 use frame_support::{
     dispatch::Weight,
@@ -36,6 +38,7 @@ use zeitgeist_primitives::types::{
     Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
     MarketType, OutcomeReport, Report, ScoringRule,
 };
+#[cfg(feature = "try-runtime")]
 use zrml_market_commons::MarketCommonsPalletApi;
 
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE: u16 = 4;
