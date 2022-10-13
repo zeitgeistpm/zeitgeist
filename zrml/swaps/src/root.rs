@@ -78,7 +78,7 @@ where
     T: AtLeast32BitUnsigned + Copy,
     F: Fn(T) -> Result<T, &'static str>,
 {
-    if !(min < max) {
+    if min >= max {
         return Err("Domain has no volume");
     }
     let fmin = f(min)?;
@@ -130,12 +130,14 @@ where
 
 // Return the sign of the (mathematical) difference x - y.
 fn diff_sign<T: AtLeast32BitUnsigned>(x: T, y: T) -> i8 {
-    if x < y {
-        -1
+    // Ignore clippy to prevent an sp-std dependency.
+    #[allow(clippy::comparison_chain)]
+    if x == y {
+        0
     } else if y < x {
         1
     } else {
-        0
+        -1
     }
 }
 

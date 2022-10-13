@@ -43,7 +43,7 @@ pub(crate) fn pool_exit_with_exact_amount<F1, F2, F3, F4, F5, T>(
 ) -> DispatchResult
 where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
-    F2: FnMut() -> (),
+    F2: FnMut(),
     F3: FnMut(BalanceOf<T>) -> DispatchResult,
     F4: FnMut(PoolAssetEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     F5: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
@@ -84,7 +84,7 @@ pub(crate) fn pool_join_with_exact_amount<F1, F2, F3, F4, T>(
 ) -> DispatchResult
 where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
-    F2: FnMut() -> (),
+    F2: FnMut(),
     F3: FnMut(PoolAssetEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
@@ -164,7 +164,7 @@ pub(crate) fn swap_exact_amount<F1, F2, F3, T>(
 ) -> DispatchResult
 where
     F1: FnMut() -> Result<[BalanceOf<T>; 2], DispatchError>,
-    F2: FnMut() -> (),
+    F2: FnMut(),
     F3: FnMut(SwapEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
     T: crate::Config,
 {

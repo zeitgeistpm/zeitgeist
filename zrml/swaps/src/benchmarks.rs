@@ -428,7 +428,7 @@ benchmarks! {
         // Create a pool with huge balances and only a relatively small difference between them to
         // cause at least 30 iterations.
         let pool_id = Pallet::<T>::create_pool(
-            caller.clone(),
+            caller,
             assets.clone(),
             base_asset,
             0u8.into(),
@@ -478,7 +478,7 @@ benchmarks! {
         // Create a pool with huge balances and only a relatively small difference between them to
         // cause at least 30 iterations.
         let pool_id = Pallet::<T>::create_pool(
-            caller.clone(),
+            caller,
             assets.clone(),
             base_asset,
             0u8.into(),
@@ -527,8 +527,8 @@ benchmarks! {
 
         // Create a pool with equal balances to ensure that the total spot price is equal to 1.
         let pool_id = Pallet::<T>::create_pool(
-            caller.clone(),
-            assets.clone(),
+            caller,
+            assets,
             base_asset,
             0u8.into(),
             ScoringRule::CPMM,
