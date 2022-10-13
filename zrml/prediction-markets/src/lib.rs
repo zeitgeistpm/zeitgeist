@@ -81,6 +81,8 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub type CacheSize = ConstU32<64>;
+    pub type EditReasonLength = ConstU32<1024>;
+    pub type EditReason = BoundedVec<u8, EditReasonLength>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -118,6 +120,8 @@ mod pallet {
             };
             if market_status == MarketStatus::Proposed {
                 slash_market_creator(T::AdvisoryBond::get());
+                // remove if there was a edit request
+                MarketIdsForEdit::<T>::remove(market_id);
             }
             if market_status != MarketStatus::Resolved
                 && market_status != MarketStatus::InsufficientSubsidy
@@ -245,6 +249,10 @@ mod pallet {
 
             T::MarketCommons::mutate_market(&market_id, |m| {
                 ensure!(m.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+                ensure!(
+                    !MarketIdsForEdit::<T>::contains_key(market_id),
+                    Error::<T>::MarketEditRequestAlreadyInProgress
+                );
 
                 match m.scoring_rule {
                     ScoringRule::CPMM => {
@@ -270,6 +278,30 @@ mod pallet {
             // The ApproveOrigin should not pay fees for providing this service
             Ok((Some(T::WeightInfo::approve_market().saturating_add(extra_weight)), Pays::No)
                 .into())
+        }
+
+        /// Edit requested to proposed market from advisory committee.
+        /// NOTE: Can only be called by the `ApproveOrigin`.
+        #[pallet::weight((T::WeightInfo::request_edit(), Pays::No))]
+        #[transactional]
+        pub fn request_edit(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+            edit_reason: EditReason,
+        ) -> DispatchResult {
+            T::ApproveOrigin::ensure_origin(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(market.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
+            MarketIdsForEdit::<T>::try_mutate(market_id, |reason| {
+                if reason.is_some() {
+                    Err(Error::<T>::MarketEditRequestAlreadyInProgress)
+                } else {
+                    *reason = Some(edit_reason);
+                    Ok(())
+                }
+            })?;
+            Self::deposit_event(Event::MarketRequestedEdit(market_id));
+            Ok(())
         }
 
         /// Buy a complete set of outcome shares of a market.
@@ -466,39 +498,9 @@ mod pallet {
             // TODO(#787): Handle Rikiddo benchmarks!
             let sender = ensure_signed(origin)?;
             Self::ensure_market_period_is_valid(&period)?;
-            ensure!(
-                deadlines.oracle_duration >= T::MinOracleDuration::get(),
-                Error::<T>::OracleDurationSmallerThanMinOracleDuration
-            );
-            ensure!(
-                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
-                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
-            );
-            ensure!(
-                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
-                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
-            );
-            ensure!(
-                deadlines.grace_period <= T::MaxGracePeriod::get(),
-                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
-            );
-            ensure!(
-                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
-                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
-            );
+            Self::ensure_market_deadlines_are_valid(&deadlines)?;
+            Self::ensure_market_type_is_valid(&market_type)?;
 
-            match market_type {
-                MarketType::Categorical(categories) => {
-                    ensure!(categories >= T::MinCategories::get(), <Error<T>>::NotEnoughCategories);
-                    ensure!(categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
-                }
-                MarketType::Scalar(ref outcome_range) => {
-                    ensure!(
-                        outcome_range.start() < outcome_range.end(),
-                        <Error<T>>::InvalidOutcomeRange
-                    );
-                }
-            }
             if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
@@ -578,6 +580,83 @@ mod pallet {
             };
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
+
+            Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
+        }
+
+        #[pallet::weight(T::WeightInfo::edit_market(CacheSize::get()))]
+        #[transactional]
+        pub fn edit_market(
+            origin: OriginFor<T>,
+            market_id: MarketIdOf<T>,
+            oracle: T::AccountId,
+            period: MarketPeriod<T::BlockNumber, MomentOf<T>>,
+            deadlines: Deadlines<T::BlockNumber>,
+            metadata: MultiHash,
+            market_type: MarketType,
+            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            scoring_rule: ScoringRule,
+        ) -> DispatchResultWithPostInfo {
+            // TODO(#787): Handle Rikiddo benchmarks!
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                MarketIdsForEdit::<T>::contains_key(market_id),
+                Error::<T>::MarketEditNotRequested
+            );
+            let old_market = T::MarketCommons::market(&market_id)?;
+            ensure!(old_market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
+            Self::ensure_market_period_is_valid(&period)?;
+            Self::ensure_market_deadlines_are_valid(&deadlines)?;
+            Self::ensure_market_type_is_valid(&market_type)?;
+
+            if scoring_rule == ScoringRule::RikiddoSigmoidFeeMarketEma {
+                Self::ensure_market_start_is_in_time(&period)?;
+            }
+
+            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
+            // for a compiler error. Link an issue for this!
+            #[allow(irrefutable_let_patterns)]
+            let multihash =
+                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
+            ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
+
+            Self::clear_auto_open(&market_id)?;
+            Self::clear_auto_close(&market_id)?;
+            let edited_market = Market {
+                market_type,
+                dispute_mechanism,
+                metadata: Vec::from(multihash),
+                oracle,
+                period: period.clone(),
+                deadlines,
+                scoring_rule,
+                ..old_market
+            };
+            T::MarketCommons::mutate_market(&market_id, |market| {
+                *market = edited_market;
+                Ok(())
+            })?;
+            let extra_weight = 0;
+
+            let ids_amount: u32 = match period {
+                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
+                    range.end,
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                )?,
+                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    Self::calculate_time_frame_of_moment(range.end),
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                )?,
+            };
+
+            MarketIdsForEdit::<T>::remove(market_id);
+            Self::deposit_event(Event::MarketEdited(market_id, sender));
 
             Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
         }
@@ -1257,6 +1336,10 @@ mod pallet {
         NotEnoughBalance,
         /// Market is already reported on.
         MarketAlreadyReported,
+        /// Market edit request is already in progress.
+        MarketEditRequestAlreadyInProgress,
+        /// Market is not requested for edit.
+        MarketEditNotRequested,
         /// Market was expected to be active.
         MarketIsNotActive,
         /// Market was expected to be closed.
@@ -1350,6 +1433,10 @@ mod pallet {
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
+        /// A proposed market has been requested edit by advisor. \[market_id]
+        MarketRequestedEdit(MarketIdOf<T>),
+        /// A proposed market has been edited by a user. \[market_id, editor\]
+        MarketEdited(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// An amount of winning outcomes have been redeemed
@@ -1531,6 +1618,11 @@ mod pallet {
         ValueQuery,
     >;
 
+    /// Contains market_ids for which advisor has requested edit.
+    /// Value for given market_id represents the reason for the edit.
+    #[pallet::storage]
+    pub type MarketIdsForEdit<T: Config> = StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason>;
+
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(
             market_id: MarketIdOf<T>,
@@ -1694,6 +1786,8 @@ mod pallet {
                 T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
             );
             T::MarketCommons::remove_market(market_id)?;
+            // remove if there was a edit request
+            MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketRejected(*market_id));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
             Ok(())
@@ -1718,6 +1812,8 @@ mod pallet {
                 T::OracleBond::get(),
             );
             T::MarketCommons::remove_market(market_id)?;
+            // remove if there was a edit request
+            MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketExpired(*market_id));
             Ok(T::WeightInfo::handle_expired_advised_market())
         }
@@ -1799,6 +1895,51 @@ mod pallet {
                     );
                 }
             };
+            Ok(())
+        }
+
+        fn ensure_market_deadlines_are_valid(
+            deadlines: &Deadlines<T::BlockNumber>,
+        ) -> DispatchResult {
+            ensure!(
+                deadlines.oracle_duration >= T::MinOracleDuration::get(),
+                Error::<T>::OracleDurationSmallerThanMinOracleDuration
+            );
+            ensure!(
+                deadlines.dispute_duration >= T::MinDisputeDuration::get(),
+                Error::<T>::DisputeDurationSmallerThanMinDisputeDuration
+            );
+            ensure!(
+                deadlines.dispute_duration <= T::MaxDisputeDuration::get(),
+                Error::<T>::DisputeDurationGreaterThanMaxDisputeDuration
+            );
+            ensure!(
+                deadlines.grace_period <= T::MaxGracePeriod::get(),
+                Error::<T>::GracePeriodGreaterThanMaxGracePeriod
+            );
+            ensure!(
+                deadlines.oracle_duration <= T::MaxOracleDuration::get(),
+                Error::<T>::OracleDurationGreaterThanMaxOracleDuration
+            );
+            Ok(())
+        }
+
+        fn ensure_market_type_is_valid(market_type: &MarketType) -> DispatchResult {
+            match market_type {
+                MarketType::Categorical(categories) => {
+                    ensure!(
+                        *categories >= T::MinCategories::get(),
+                        <Error<T>>::NotEnoughCategories
+                    );
+                    ensure!(*categories <= T::MaxCategories::get(), <Error<T>>::TooManyCategories);
+                }
+                MarketType::Scalar(ref outcome_range) => {
+                    ensure!(
+                        outcome_range.start() < outcome_range.end(),
+                        <Error<T>>::InvalidOutcomeRange
+                    );
+                }
+            }
             Ok(())
         }
 

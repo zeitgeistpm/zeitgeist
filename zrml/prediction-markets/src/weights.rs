@@ -50,8 +50,10 @@ pub trait WeightInfoZeitgeist {
     fn admin_move_market_to_closed(o: u32, c: u32) -> Weight;
     fn admin_move_market_to_resolved_overhead() -> Weight;
     fn approve_market() -> Weight;
+    fn request_edit() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
     fn create_market(m: u32) -> Weight;
+    fn edit_market(m: u32) -> Weight;
     fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32) -> Weight;
     fn deploy_swap_pool_for_market_open_pool(a: u32) -> Weight;
     fn dispute_authorized(d: u32, b: u32) -> Weight;
@@ -130,6 +132,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
+
+    fn request_edit() -> Weight {
+        (43_342_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(3 as Weight))
+            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+    }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: System Account (r:1 w:1)
@@ -157,6 +165,15 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
+
+    fn edit_market(m: u32) -> Weight {
+        (41_434_000 as Weight)
+            // Standard Error: 0
+            .saturating_add((49_000 as Weight).saturating_mul(m as Weight))
+            .saturating_add(T::DbWeight::get().reads(5 as Weight))
+            .saturating_add(T::DbWeight::get().writes(5 as Weight))
+    }
+
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:0)
     // Storage: Swaps NextPoolId (r:1 w:1)

@@ -19,8 +19,9 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
-    MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
+    mock::*, Config, EditReason, Error, Event, LastTimeFrame, MarketIdsForEdit,
+    MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
+    MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -481,6 +482,39 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed() {
 }
 
 #[test]
+fn admin_destroy_market_correctly_slashes_advised_market_proposed_with_edit_request() {
+    ExtBuilder::default().build().execute_with(|| {
+        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason: EditReason = "Please Change Oracle"
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("Vec to BoundedVec conversion failed");
+
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+        assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            SENTINEL_AMOUNT
+        );
+        let balance_free_after_alice = Balances::free_balance(&ALICE);
+        assert_eq!(balance_free_before_alice, balance_free_after_alice);
+        assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
+    });
+}
+
+#[test]
 fn admin_destroy_market_correctly_slashes_advised_market_active() {
     ExtBuilder::default().build().execute_with(|| {
         simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
@@ -893,6 +927,60 @@ fn it_allows_advisory_origin_to_approve_markets() {
 }
 
 #[test]
+fn it_allows_advisory_origin_to_request_edits_for_markets() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason: EditReason = "Please Change Oracle"
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("Vec to BoundedVec conversion failed");
+        // Make sure it fails from the random joe
+        assert_noop!(
+            PredictionMarkets::request_edit(Origin::signed(BOB), 0, edit_reason.clone()),
+            DispatchError::BadOrigin
+        );
+
+        // Now it should work from SUDO
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+    });
+}
+
+#[test]
+fn market_with_edit_request_cannot_be_approved() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason: EditReason = "Please Change Oracle"
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("Vec to BoundedVec conversion failed");
+
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+        assert_noop!(
+            PredictionMarkets::approve_market(Origin::signed(SUDO), 0),
+            Error::<Runtime>::MarketEditRequestAlreadyInProgress
+        );
+    });
+}
+
+#[test]
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
@@ -904,6 +992,34 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+
+        assert_noop!(
+            MarketCommons::market(&0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason: EditReason = "Please Change Oracle"
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("Vec to BoundedVec conversion failed");
+
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
 
         assert_noop!(
             MarketCommons::market(&0),
@@ -997,6 +1113,53 @@ fn on_market_close_auto_rejects_expired_advised_market() {
         let market_id = 0;
 
         run_to_block(end);
+
+        assert_eq!(
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
+            balance_reserved_before_alice
+        );
+        assert_eq!(Balances::free_balance(&ALICE), balance_free_before_alice);
+        assert_noop!(
+            MarketCommons::market(&market_id),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist,
+        );
+        System::assert_has_event(Event::MarketExpired(market_id).into());
+    });
+}
+
+#[test]
+fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Give ALICE `SENTINEL_AMOUNT` free and reserved ZTG; we record the free balance to check
+        // that the AdvisoryBond and the OracleBond gets unreserved, when the advised market expires.
+        assert_ok!(AssetManager::deposit(Asset::Ztg, &ALICE, 2 * SENTINEL_AMOUNT));
+        assert_ok!(Balances::reserve_named(
+            &PredictionMarkets::reserve_id(),
+            &ALICE,
+            SENTINEL_AMOUNT
+        ));
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        let balance_reserved_before_alice =
+            Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
+
+        let end = 33;
+        simple_create_categorical_market(MarketCreation::Advised, 0..end, ScoringRule::CPMM);
+        run_to_block(2);
+        let market_id = 0;
+        let market = MarketCommons::market(&market_id);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason: EditReason = "Please Change Oracle"
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("Vec to BoundedVec conversion failed");
+
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), market_id, edit_reason));
+
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+        run_blocks(end);
+        assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
 
         assert_eq!(
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE),
@@ -2298,6 +2461,45 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
         }
 
         assert!(inserted);
+    });
+}
+
+#[test]
+fn edit_cycle_for_proposed_markets() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason: EditReason = "Please Change Oracle"
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("Vec to BoundedVec conversion failed");
+
+        // Now it should work from SUDO
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+
+        assert_ok!(PredictionMarkets::edit_market(
+            Origin::signed(ALICE),
+            0,
+            CHARLIE,
+            MarketPeriod::Block(0..1),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+            MarketDisputeMechanism::SimpleDisputes,
+            ScoringRule::CPMM
+        ));
+        assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
+        // verify oracle is CHARLIE
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().oracle, CHARLIE);
     });
 }
 
