@@ -1345,6 +1345,8 @@ mod pallet {
         MarketIsNotProposed,
         /// A reported market was expected.
         MarketIsNotReported,
+        /// A disputed market was expected.
+        MarketIsNotDisputed,
         /// A resolved market was expected.
         MarketIsNotResolved,
         /// The point in time when the market becomes active is too soon.
@@ -1743,20 +1745,17 @@ mod pallet {
                 }
                 MarketStatus::Disputed => {
                     let disputes = Disputes::<T>::get(market_id);
-                    if let Some(last_dispute) = disputes.last() {
-                        let dispute_duration_ends_at_block =
-                            last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                        MarketIdsPerDisputeBlock::<T>::mutate(
-                            dispute_duration_ends_at_block,
-                            |ids| -> (u32, u32) {
-                                let ids_len = ids.len() as u32;
-                                remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                                (ids_len, disputes.len() as u32)
-                            },
-                        )
-                    } else {
-                        (0u32, disputes.len() as u32)
-                    }
+                    let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
+                    let dispute_duration_ends_at_block =
+                        last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+                    MarketIdsPerDisputeBlock::<T>::mutate(
+                        dispute_duration_ends_at_block,
+                        |ids| -> (u32, u32) {
+                            let ids_len = ids.len() as u32;
+                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                            (ids_len, disputes.len() as u32)
+                        },
+                    )
                 }
                 _ => (0u32, 0u32),
             };
