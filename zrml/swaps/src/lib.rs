@@ -1086,7 +1086,7 @@ mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn pools_cached_for_arbitrage)]
-    pub type PoolsCachedForArbitrage<T: Config> = StorageMap<_, Blake2_128Concat, PoolId, ()>;
+    pub type PoolsCachedForArbitrage<T: Config> = StorageMap<_, Twox64Concat, PoolId, ()>;
 
     #[pallet::storage]
     #[pallet::getter(fn subsidy_providers)]
