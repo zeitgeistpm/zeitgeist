@@ -81,6 +81,8 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub type CacheSize = ConstU32<64>;
+    pub type RejectReasonLength = ConstU32<1024>;
+    pub type RejectReason = BoundedVec<u8, RejectReasonLength>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -907,12 +909,13 @@ mod pallet {
         pub fn reject_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
+            reject_reason: RejectReason,
         ) -> DispatchResultWithPostInfo {
             T::RejectOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
-            Self::do_reject_market(&market_id, market)?;
+            Self::do_reject_market(&market_id, market, reject_reason)?;
             // The RejectOrigin should not pay fees for providing this service
             Ok((Some(T::WeightInfo::reject_market(close_ids_len, open_ids_len)), Pays::No).into())
         }
@@ -1345,7 +1348,7 @@ mod pallet {
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
         /// A pending market has been rejected as invalid. \[market_id\]
-        MarketRejected(MarketIdOf<T>),
+        MarketRejected(MarketIdOf<T>, RejectReason),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
@@ -1703,6 +1706,7 @@ mod pallet {
         pub(crate) fn do_reject_market(
             market_id: &MarketIdOf<T>,
             market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
+            reject_reason: RejectReason,
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;
@@ -1723,7 +1727,7 @@ mod pallet {
                 T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
             );
             T::MarketCommons::remove_market(market_id)?;
-            Self::deposit_event(Event::MarketRejected(*market_id));
+            Self::deposit_event(Event::MarketRejected(*market_id, reject_reason));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
             Ok(())
         }

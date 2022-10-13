@@ -20,7 +20,7 @@
 
 use crate::{
     mock::*, Config, Error, Event, LastTimeFrame, MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock,
-    MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
+    MarketIdsPerOpenBlock, MarketIdsPerReportBlock, RejectReason,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -902,8 +902,10 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
+        let reject_reason: RejectReason =
+            vec![0; 1024].try_into().expect("BoundedVec conversion failed");
         // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason));
 
         assert_noop!(
             MarketCommons::market(&0),
@@ -931,7 +933,9 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         let balance_reserved_before_alice =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
-        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        let reject_reason: RejectReason =
+            vec![0; 1024].try_into().expect("BoundedVec conversion failed");
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason));
 
         // AdvisoryBond gets slashed after reject_market
         // OracleBond gets unreserved after reject_market
@@ -969,7 +973,9 @@ fn reject_market_clears_auto_close_blocks() {
         simple_create_categorical_market(MarketCreation::Advised, 33..66, ScoringRule::CPMM);
         simple_create_categorical_market(MarketCreation::Advised, 22..66, ScoringRule::CPMM);
         simple_create_categorical_market(MarketCreation::Advised, 22..33, ScoringRule::CPMM);
-        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        let reject_reason: RejectReason =
+            vec![0; 1024].try_into().expect("BoundedVec conversion failed");
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason));
 
         let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
         assert_eq!(auto_close.len(), 1);
@@ -2478,8 +2484,10 @@ fn reject_market_fails_on_permissionless_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        let reject_reason: RejectReason =
+            vec![0; 1024].try_into().expect("BoundedVec conversion failed");
         assert_noop!(
-            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason),
             Error::<Runtime>::InvalidMarketStatus
         );
     });
@@ -2491,8 +2499,10 @@ fn reject_market_fails_on_approved_market() {
         // Creates an advised market.
         simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        let reject_reason: RejectReason =
+            vec![0; 1024].try_into().expect("BoundedVec conversion failed");
         assert_noop!(
-            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason),
             Error::<Runtime>::InvalidMarketStatus
         );
     });
