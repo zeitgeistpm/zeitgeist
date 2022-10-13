@@ -300,7 +300,7 @@ mod tests {
         balances: Vec<u128>,
         expected: u128,
     ) {
-        let pool = construct_pool(None, weights.clone());
+        let pool = construct_pool(None, weights);
         let balances = collect_balances_into_map(pool.assets.clone(), balances);
         let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, 30).unwrap();
         assert_eq!(amount, expected);
@@ -317,7 +317,7 @@ mod tests {
         weights: Vec<u128>,
         balances: Vec<u128>,
     ) {
-        let pool = construct_pool(None, weights.clone());
+        let pool = construct_pool(None, weights);
         let mut balances = collect_balances_into_map(pool.assets.clone(), balances);
         let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, 30).unwrap();
         *balances.get_mut(&pool.assets[0]).unwrap() += amount;
@@ -351,7 +351,7 @@ mod tests {
         balances: Vec<u128>,
         expected: u128,
     ) {
-        let pool = construct_pool(None, weights.clone());
+        let pool = construct_pool(None, weights);
         let balances = collect_balances_into_map(pool.assets.clone(), balances);
         let (amount, _) = pool.calc_arbitrage_amount_mint_sell(&balances, 30).unwrap();
         assert_eq!(amount, expected);
@@ -370,7 +370,7 @@ mod tests {
         weights: Vec<u128>,
         balances: Vec<u128>,
     ) {
-        let pool = construct_pool(None, weights.clone());
+        let pool = construct_pool(None, weights);
         let mut balances = collect_balances_into_map(pool.assets.clone(), balances);
         let (amount, _) = pool.calc_arbitrage_amount_mint_sell(&balances, 30).unwrap();
         *balances.get_mut(&pool.assets[0]).unwrap() -= amount;
@@ -398,7 +398,7 @@ mod tests {
         let assets = (0..weights.len())
             .map(|i| Asset::CategoricalOutcome(fake_market_id, i as u16))
             .collect::<Vec<_>>();
-        let total_weight = weights.iter().fold(0, |acc, val| acc + val);
+        let total_weight = weights.iter().sum();
         let weights =
             assets.clone().into_iter().zip(weights.into_iter()).collect::<BTreeMap<_, _>>();
         Pool {

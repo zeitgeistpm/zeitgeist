@@ -173,7 +173,7 @@ mod tests {
     const _43: u128 = 43 * BASE;
     const _333: u128 = 333 * BASE;
     const _631: u128 = 631 * BASE;
-    const _1_2: u128 = 1 * BASE / 2;
+    const _1_2: u128 = BASE / 2;
     const _3_4: u128 = 3 * BASE / 4;
     const _1_1000: u128 = BASE / 1_000;
 
@@ -256,6 +256,7 @@ mod tests {
 
     #[test]
     fn calc_preimage_breaks_after_max_iterations() {
+        #[allow(clippy::redundant_closure)]
         let f = |x: u128| Ok(x);
         let max_iterations = 1;
         let (preimage, iteration_count) =
@@ -266,6 +267,7 @@ mod tests {
 
     #[test]
     fn calc_preimage_breaks_when_tolerance_is_violated() {
+        #[allow(clippy::redundant_closure)]
         let f = |x: u128| Ok(x);
         let (preimage, iteration_count) = calc_preimage(f, _9 - 1, _5, _9, 10, _3_4).unwrap();
         assert_eq!(preimage, _8 + _1_2);
@@ -275,6 +277,7 @@ mod tests {
     #[test_case(_9, _9)]
     #[test_case(_9, _8)]
     fn calc_preimage_errors_if_range_has_no_volume(min: u128, max: u128) {
+        #[allow(clippy::redundant_closure)]
         let f = |x: u128| Ok(x);
         assert!(calc_preimage(f, _5 - 1, min, max, 10, _3_4).is_err());
     }
