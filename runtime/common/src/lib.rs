@@ -881,6 +881,7 @@ macro_rules! impl_config_traits {
         impl zrml_market_commons::Config for Runtime {
             type Currency = Balances;
             type MarketId = MarketId;
+            type PredictionMarketsPalletId = PmPalletId;
             type Timestamp = Timestamp;
         }
 
@@ -980,7 +981,6 @@ macro_rules! impl_config_traits {
             type LiquidityMining = NoopLiquidityMining;
             // type LiquidityMining = LiquidityMining;
             type MarketCommons = MarketCommons;
-            type MarketId = MarketId;
             type MinAssets = MinAssets;
             type MaxAssets = MaxAssets;
             type MaxInRatio = MaxInRatio;
@@ -993,7 +993,6 @@ macro_rules! impl_config_traits {
             type MinSubsidyPerAccount = MinSubsidyPerAccount;
             type MinWeight = MinWeight;
             type PalletId = SwapsPalletId;
-            type PredictionMarketsPalletId = PmPalletId;
             type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
             type AssetManager = AssetManager;
             type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;

@@ -26,7 +26,7 @@
 use crate::{
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     mock::*,
-    BalanceOf, Config, Event, PoolsCachedForArbitrage, SubsidyProviders,
+    BalanceOf, Config, Event, MarketIdOf, PoolsCachedForArbitrage, SubsidyProviders,
 };
 use frame_support::{
     assert_err, assert_noop, assert_ok, assert_storage_noop, error::BadOrigin, traits::Hooks,
@@ -113,7 +113,7 @@ macro_rules! assert_approx {
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_A]; "start and end")]
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_D, ASSET_E, ASSET_E]; "successive at end")]
 #[test_case(vec![ASSET_A, ASSET_B, ASSET_C, ASSET_A, ASSET_E, ASSET_D]; "start and middle")]
-fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<<Runtime as Config>::MarketId>>) {
+fn create_pool_fails_with_duplicate_assets(assets: Vec<Asset<MarketIdOf<Runtime>>>) {
     ExtBuilder::default().build().execute_with(|| {
         assets.iter().cloned().for_each(|asset| {
             let _ = Currencies::deposit(asset, &BOB, _10000);
@@ -3157,7 +3157,7 @@ fn on_idle_arbitrages_pools_with_mint_sell() {
             balance + arbitrage_amount - amount_removed,
         );
         let market_id = 0;
-        let market_account_id = &Swaps::market_account_id(market_id);
+        let market_account_id = MarketCommons::market_account(market_id);
         assert_eq!(Currencies::free_balance(ASSET_A, &market_account_id), arbitrage_amount);
         System::assert_has_event(Event::ArbitrageMintSell(pool_id, arbitrage_amount).into());
     });
@@ -3192,11 +3192,11 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
 
         // Deposit funds into the prize pool to ensure that the transfers don't fail.
         let market_id = 0;
-        let market_account_id = &Swaps::market_account_id(market_id);
+        let market_account_id = MarketCommons::market_account(market_id);
         let arbitrage_amount = 125_007_629_394; // "Should" be 125_000_000_000.
         assert_ok!(Currencies::deposit(
             ASSET_A,
-            market_account_id,
+            &market_account_id,
             arbitrage_amount + SENTINEL_AMOUNT,
         ));
 

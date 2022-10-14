@@ -24,7 +24,9 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 use zeitgeist_primitives::{
-    constants::mock::{BlockHashCount, MaxReserves, MinimumPeriod, SimpleDisputesPalletId},
+    constants::mock::{
+        BlockHashCount, MaxReserves, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
+    },
     types::{
         AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
         UncheckedExtrinsicTest,
@@ -94,6 +96,7 @@ impl pallet_balances::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

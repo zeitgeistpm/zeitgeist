@@ -90,7 +90,6 @@ impl crate::Config for Runtime {
     type FixedTypeS = <Runtime as zrml_rikiddo::Config>::FixedTypeS;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
-    type MarketId = MarketId;
     type MaxAssets = MaxAssets;
     type MaxInRatio = MaxInRatio;
     type MaxOutRatio = MaxOutRatio;
@@ -103,7 +102,6 @@ impl crate::Config for Runtime {
     type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
-    type PredictionMarketsPalletId = PmPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
@@ -182,6 +180,7 @@ impl zrml_liquidity_mining::Config for Runtime {
 impl zrml_market_commons::Config for Runtime {
     type Currency = Balances;
     type MarketId = MarketId;
+    type PredictionMarketsPalletId = PmPalletId;
     type Timestamp = Timestamp;
 }
 

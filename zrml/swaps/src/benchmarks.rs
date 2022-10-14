@@ -28,7 +28,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event};
+use crate::{MarketIdOf, fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -65,7 +65,7 @@ fn generate_accounts_with_assets<T: Config>(
         let acc = account("AssetHolder", i, 0);
 
         for j in 0..acc_asset {
-            let asset = Asset::CategoricalOutcome::<T::MarketId>(0u32.into(), j);
+            let asset = Asset::CategoricalOutcome::<MarketIdOf::<T>>(0u32.into(), j);
             T::AssetManager::deposit(asset, &acc, acc_amount)?;
         }
 
@@ -80,8 +80,8 @@ fn generate_assets<T: Config>(
     owner: &T::AccountId,
     asset_count: usize,
     asset_amount: Option<BalanceOf<T>>,
-) -> Vec<Asset<T::MarketId>> {
-    let mut assets: Vec<Asset<T::MarketId>> = Vec::new();
+) -> Vec<Asset<MarketIdOf::<T>>> {
+    let mut assets: Vec<Asset<MarketIdOf::<T>>> = Vec::new();
 
     let asset_amount_unwrapped: BalanceOf<T> = {
         match asset_amount {
@@ -107,7 +107,7 @@ fn initialize_pool<T: Config>(
     asset_amount: Option<BalanceOf<T>>,
     scoring_rule: ScoringRule,
     weights: Option<Vec<u128>>,
-) -> (PoolId, Asset<T::MarketId>, Vec<Asset<T::MarketId>>, T::MarketId) {
+) -> (PoolId, Asset<MarketIdOf::<T>>, Vec<Asset<MarketIdOf::<T>>>, MarketIdOf::<T>) {
     let asset_count_unwrapped: usize = {
         match asset_count {
             Some(ac) => ac,
@@ -115,7 +115,7 @@ fn initialize_pool<T: Config>(
         }
     };
 
-    let market_id = T::MarketId::from(0u8);
+    let market_id = MarketIdOf::<T>::from(0u8);
     let assets = generate_assets::<T>(caller, asset_count_unwrapped, asset_amount);
     let some_weights = if weights.is_some() {
         weights
@@ -147,7 +147,7 @@ fn bench_create_pool<T: Config>(
     scoring_rule: ScoringRule,
     subsidize: bool,
     weights: Option<Vec<u128>>,
-) -> (u128, Vec<Asset<T::MarketId>>, T::MarketId) {
+) -> (u128, Vec<Asset<MarketIdOf::<T>>>, MarketIdOf::<T>) {
     let (pool_id, base_asset, assets, market_id) =
         initialize_pool::<T>(&caller, asset_count, asset_amount, scoring_rule, weights);
 

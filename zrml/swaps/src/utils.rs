@@ -25,7 +25,7 @@ use crate::{
     check_arithm_rslt::CheckArithmRslt,
     events::{CommonPoolEventParams, PoolAssetEvent, PoolAssetsEvent, SwapEvent},
     fixed::{bdiv, bmul},
-    BalanceOf, Config, Error, Pallet,
+    BalanceOf, Config, Error, MarketIdOf, Pallet,
 };
 use alloc::vec::Vec;
 use frame_support::{dispatch::DispatchResult, ensure};
@@ -45,7 +45,7 @@ where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     F2: FnMut(),
     F3: FnMut(BalanceOf<T>) -> DispatchResult,
-    F4: FnMut(PoolAssetEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
+    F4: FnMut(PoolAssetEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
     F5: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
@@ -85,7 +85,7 @@ pub(crate) fn pool_join_with_exact_amount<F1, F2, F3, F4, T>(
 where
     F1: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     F2: FnMut(),
-    F3: FnMut(PoolAssetEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
+    F3: FnMut(PoolAssetEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
     F4: FnMut(BalanceOf<T>, BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
 {
@@ -119,8 +119,8 @@ where
 // Common code for `pool_join` and `pool_exit` methods.
 pub(crate) fn pool<F1, F2, F3, F4, T>(mut p: PoolParams<'_, F1, F2, F3, F4, T>) -> DispatchResult
 where
-    F1: FnMut(PoolAssetsEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
-    F2: FnMut(BalanceOf<T>, BalanceOf<T>, Asset<T::MarketId>) -> DispatchResult,
+    F1: FnMut(PoolAssetsEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
+    F2: FnMut(BalanceOf<T>, BalanceOf<T>, Asset<MarketIdOf<T>>) -> DispatchResult,
     F3: FnMut() -> DispatchResult,
     F4: FnMut(BalanceOf<T>) -> Result<BalanceOf<T>, DispatchError>,
     T: Config,
@@ -165,7 +165,7 @@ pub(crate) fn swap_exact_amount<F1, F2, F3, T>(
 where
     F1: FnMut() -> Result<[BalanceOf<T>; 2], DispatchError>,
     F2: FnMut(),
-    F3: FnMut(SwapEvent<T::AccountId, Asset<T::MarketId>, BalanceOf<T>>),
+    F3: FnMut(SwapEvent<T::AccountId, Asset<MarketIdOf<T>>, BalanceOf<T>>),
     T: crate::Config,
 {
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
@@ -263,7 +263,7 @@ where
     T: Config,
 {
     pub(crate) asset_amount: F1,
-    pub(crate) asset: Asset<T::MarketId>,
+    pub(crate) asset: Asset<MarketIdOf<T>>,
     pub(crate) bound: BalanceOf<T>,
     pub(crate) cache_for_arbitrage: F2,
     pub(crate) ensure_balance: F3,
@@ -271,14 +271,14 @@ where
     pub(crate) who: T::AccountId,
     pub(crate) pool_amount: F5,
     pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
+    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
 }
 
 pub(crate) struct PoolJoinWithExactAmountParams<'a, F1, F2, F3, F4, T>
 where
     T: Config,
 {
-    pub(crate) asset: Asset<T::MarketId>,
+    pub(crate) asset: Asset<MarketIdOf<T>>,
     pub(crate) asset_amount: F1,
     pub(crate) bound: BalanceOf<T>,
     pub(crate) cache_for_arbitrage: F2,
@@ -287,7 +287,7 @@ where
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_amount: F4,
     pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
+    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
 }
 
 pub(crate) struct PoolParams<'a, F1, F2, F3, F4, T>
@@ -299,7 +299,7 @@ where
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_amount: BalanceOf<T>,
     pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
+    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
     pub(crate) transfer_asset: F2,
     pub(crate) transfer_pool: F3,
     pub(crate) fee: F4,
@@ -312,13 +312,13 @@ where
 {
     pub(crate) asset_amounts: F1,
     pub(crate) asset_bound: Option<BalanceOf<T>>,
-    pub(crate) asset_in: Asset<T::MarketId>,
-    pub(crate) asset_out: Asset<T::MarketId>,
+    pub(crate) asset_in: Asset<MarketIdOf<T>>,
+    pub(crate) asset_out: Asset<MarketIdOf<T>>,
     pub(crate) cache_for_arbitrage: F2,
     pub(crate) event: F3,
     pub(crate) max_price: Option<BalanceOf<T>>,
     pub(crate) pool_account_id: &'a T::AccountId,
     pub(crate) pool_id: PoolId,
-    pub(crate) pool: &'a Pool<BalanceOf<T>, T::MarketId>,
+    pub(crate) pool: &'a Pool<BalanceOf<T>, MarketIdOf<T>>,
     pub(crate) who: T::AccountId,
 }
