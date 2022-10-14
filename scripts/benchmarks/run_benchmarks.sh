@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+PROFILE=production
+
 # This script benchmarks every pallet that is used within Zeitgeist.
 # Execute from the root of the project.
 
@@ -16,28 +18,28 @@ source ./scripts/benchmarks/configuration.sh
 
 # Standalone benchmarks
 
-cargo build --profile=production --features=runtime-benchmarks --bin=zeitgeist
+cargo build --profile=$PROFILE --features=runtime-benchmarks --bin=zeitgeist
 
 for pallet in ${FRAME_PALLETS[@]}; do
-    ./target/production/zeitgeist benchmark pallet --chain=dev --steps=$FRAME_PALLETS_STEPS --repeat=$FRAME_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$FRAME_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH
+    ./target/$PROFILE/zeitgeist benchmark pallet --chain=dev --steps=$FRAME_PALLETS_STEPS --repeat=$FRAME_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$FRAME_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH
 done
 
 for pallet in ${ORML_PALLETS[@]}; do
-    ./target/production/zeitgeist benchmark pallet --chain=dev --steps=$ORML_PALLETS_STEPS --repeat=$ORML_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$ORML_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH
+    ./target/$PROFILE/zeitgeist benchmark pallet --chain=dev --steps=$ORML_PALLETS_STEPS --repeat=$ORML_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$ORML_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH
 done
 
 for pallet in ${ZEITGEIST_PALLETS[@]}; do
     pallet_folder_name=${pallet//zrml_/}
     pallet_folder_name=${pallet_folder_name//_/-}
-    ./target/production/zeitgeist benchmark pallet --chain=dev --steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$ZEITGEIST_WEIGHT_TEMPLATE --output=./zrml/$pallet_folder_name/src/weights.rs
+    ./target/$PROFILE/zeitgeist benchmark pallet --chain=dev --steps=$ZEITGEIST_PALLETS_STEPS --repeat=$ZEITGEIST_PALLETS_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$ZEITGEIST_WEIGHT_TEMPLATE --output=./zrml/$pallet_folder_name/src/weights.rs
 done
 
 # Parachain benchmarks
 
-cargo build --profile=production --features=parachain,runtime-benchmarks --bin=zeitgeist
+cargo build --profile=$PROFILE --features=parachain,runtime-benchmarks --bin=zeitgeist
 
 for pallet in ${FRAME_PALLETS_PARACHAIN[@]}; do
-    ./target/production/zeitgeist benchmark pallet --chain=dev --steps=$FRAME_PALLETS_PARACHAIN_STEPS --repeat=$FRAME_PALLETS_PARACHAIN_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$FRAME_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH
+    ./target/$PROFILE/zeitgeist benchmark pallet --chain=dev --steps=$FRAME_PALLETS_PARACHAIN_STEPS --repeat=$FRAME_PALLETS_PARACHAIN_RUNS --pallet=$pallet --extrinsic='*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --template=$FRAME_WEIGHT_TEMPLATE --output=$EXTERNAL_WEIGHTS_PATH
 done
 
 cargo fmt
