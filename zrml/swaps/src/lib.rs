@@ -1244,7 +1244,6 @@ mod pallet {
             }
             // The time complexity of `apply_cached_pools` is O(pool_count); we calculate the
             // minimum number of pools we can handle.
-            // TODO Replace noop with execute pool!
             let overhead = T::WeightInfo::apply_to_cached_pools_execute_arbitrage(0);
             let extra_weight_per_pool =
                 T::WeightInfo::apply_to_cached_pools_execute_arbitrage(1).saturating_sub(overhead);
