@@ -271,17 +271,19 @@ benchmarks! {
         // Create `a` pools with huge balances and only a relatively small difference between them
         // to cause maximum iterations.
         for i in 0..a {
+            let market_id = i.into();
             let pool_id = Pallet::<T>::create_pool(
                 caller.clone(),
                 assets.clone(),
                 base_asset,
-                i.into(),
+                market_id,
                 ScoringRule::CPMM,
                 Some(Zero::zero()),
                 Some(balance),
                 Some(weights.clone()),
             )
             .unwrap();
+
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             T::AssetManager::withdraw(
                 *assets.last().unwrap(),
@@ -289,11 +291,19 @@ benchmarks! {
                 balance / 9u8.saturated_into()
             )
             .unwrap();
+
+            // Add enough funds for arbitrage to the prize pool.
+            T::AssetManager::deposit(
+                base_asset,
+                &T::MarketCommons::market_account(market_id),
+                balance,
+            )
+            .unwrap();
+
             PoolsCachedForArbitrage::<T>::insert(pool_id, ());
         }
         let mutation =
             |pool_id: PoolId| Pallet::<T>::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS);
-
     }: {
         Pallet::<T>::apply_to_cached_pools(a, mutation, Weight::MAX)
     } verify {
@@ -444,16 +454,16 @@ benchmarks! {
         T::AssetManager::withdraw(
             asset,
             &pool_account_id,
-            balance / 9u8.saturated_into()
+            balance / 9u8.saturated_into(),
         )
         .unwrap();
         let balance_before = T::AssetManager::free_balance(asset, &pool_account_id);
 
-        // Add enough funds to the prize pool.
+        // Add enough funds for arbitrage to the prize pool.
         T::AssetManager::deposit(
             base_asset,
             &T::MarketCommons::market_account(market_id),
-            (u128::MAX / 2).saturated_into()
+            (u128::MAX / 2).saturated_into(),
         )
         .unwrap();
     }: {
@@ -502,7 +512,7 @@ benchmarks! {
             T::AssetManager::withdraw(
                 *asset,
                 &pool_account_id,
-                balance / 9u8.saturated_into()
+                balance / 9u8.saturated_into(),
             )
             .unwrap();
         }
