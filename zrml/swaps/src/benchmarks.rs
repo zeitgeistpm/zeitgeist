@@ -28,7 +28,7 @@
 use super::*;
 #[cfg(test)]
 use crate::Pallet as Swaps;
-use crate::{MarketIdOf, fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event};
+use crate::{fixed::bmul, pallet::ARBITRAGE_MAX_ITERATIONS, Config, Event, MarketIdOf};
 use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, vec, whitelisted_caller, Vec,
 };
@@ -65,7 +65,7 @@ fn generate_accounts_with_assets<T: Config>(
         let acc = account("AssetHolder", i, 0);
 
         for j in 0..acc_asset {
-            let asset = Asset::CategoricalOutcome::<MarketIdOf::<T>>(0u32.into(), j);
+            let asset = Asset::CategoricalOutcome::<MarketIdOf<T>>(0u32.into(), j);
             T::AssetManager::deposit(asset, &acc, acc_amount)?;
         }
 
@@ -80,8 +80,8 @@ fn generate_assets<T: Config>(
     owner: &T::AccountId,
     asset_count: usize,
     asset_amount: Option<BalanceOf<T>>,
-) -> Vec<Asset<MarketIdOf::<T>>> {
-    let mut assets: Vec<Asset<MarketIdOf::<T>>> = Vec::new();
+) -> Vec<Asset<MarketIdOf<T>>> {
+    let mut assets: Vec<Asset<MarketIdOf<T>>> = Vec::new();
 
     let asset_amount_unwrapped: BalanceOf<T> = {
         match asset_amount {
@@ -107,7 +107,7 @@ fn initialize_pool<T: Config>(
     asset_amount: Option<BalanceOf<T>>,
     scoring_rule: ScoringRule,
     weights: Option<Vec<u128>>,
-) -> (PoolId, Asset<MarketIdOf::<T>>, Vec<Asset<MarketIdOf::<T>>>, MarketIdOf::<T>) {
+) -> (PoolId, Asset<MarketIdOf<T>>, Vec<Asset<MarketIdOf<T>>>, MarketIdOf<T>) {
     let asset_count_unwrapped: usize = {
         match asset_count {
             Some(ac) => ac,
@@ -147,7 +147,7 @@ fn bench_create_pool<T: Config>(
     scoring_rule: ScoringRule,
     subsidize: bool,
     weights: Option<Vec<u128>>,
-) -> (u128, Vec<Asset<MarketIdOf::<T>>>, MarketIdOf::<T>) {
+) -> (u128, Vec<Asset<MarketIdOf<T>>>, MarketIdOf<T>) {
     let (pool_id, base_asset, assets, market_id) =
         initialize_pool::<T>(&caller, asset_count, asset_amount, scoring_rule, weights);
 
@@ -427,11 +427,12 @@ benchmarks! {
 
         // Create a pool with huge balances and only a relatively small difference between them to
         // cause at least 30 iterations.
+        let market_id = 0u8.into();
         let pool_id = Pallet::<T>::create_pool(
             caller,
             assets.clone(),
             base_asset,
-            0u8.into(),
+            market_id,
             ScoringRule::CPMM,
             Some(Zero::zero()),
             Some(balance),
@@ -447,6 +448,14 @@ benchmarks! {
         )
         .unwrap();
         let balance_before = T::AssetManager::free_balance(asset, &pool_account_id);
+
+        // Add enough funds to the prize pool.
+        T::AssetManager::deposit(
+            base_asset,
+            &T::MarketCommons::market_account(market_id),
+            (u128::MAX / 2).saturated_into()
+        )
+        .unwrap();
     }: {
         // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
         Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
