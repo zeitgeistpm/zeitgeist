@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-PROFILE=production
-
 # This script benchmarks every pallet that is used within Zeitgeist.
 # Execute from the root of the project.
 
 set -eou pipefail
+
+PROFILE="${PROFILE:-production}"
 
 # Configuration
 
