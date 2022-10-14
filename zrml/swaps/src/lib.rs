@@ -109,9 +109,7 @@ mod pallet {
     type MarketIdOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
 
     pub(crate) const ARBITRAGE_MAX_ITERATIONS: usize = 30;
-    const ARBITRAGE_MIN_WEIGHT: Weight = ON_IDLE_MIN_WEIGHT / (ARBITRAGE_WEIGHT_RATIO as u64);
     const ARBITRAGE_THRESHOLD: u128 = CENT;
-    const ARBITRAGE_WEIGHT_RATIO: u32 = 2;
     const MIN_BALANCE: u128 = CENT;
     const ON_IDLE_MIN_WEIGHT: Weight = 1_000_000;
 
@@ -1239,9 +1237,6 @@ mod pallet {
         }
 
         fn execute_arbitrage_all(weight: Weight) -> Weight {
-            if weight < ARBITRAGE_MIN_WEIGHT {
-                return weight;
-            }
             // The time complexity of `apply_cached_pools` is O(pool_count); we calculate the
             // minimum number of pools we can handle.
             let overhead = T::WeightInfo::apply_to_cached_pools_execute_arbitrage(0);
