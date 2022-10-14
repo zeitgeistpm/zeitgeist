@@ -2465,6 +2465,44 @@ fn start_subsidy_creates_pool_and_starts_subsidy() {
 }
 
 #[test]
+fn only_creator_can_edit_market() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason: EditReason = "Please Change Oracle"
+            .as_bytes()
+            .to_vec()
+            .try_into()
+            .expect("Vec to BoundedVec conversion failed");
+
+        // Now it should work from SUDO
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+
+        assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+
+        assert_noop!(
+            PredictionMarkets::edit_market(
+                Origin::signed(BOB),
+                0,
+                CHARLIE,
+                MarketPeriod::Block(0..1),
+                get_deadlines(),
+                gen_metadata(2),
+                MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM
+            ),
+            Error::<Runtime>::EditorNotCreator
+        );
+    });
+}
+
+#[test]
 fn edit_cycle_for_proposed_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.

@@ -562,22 +562,7 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            let ids_amount: u32 = match period {
-                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
-                    range.end,
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?,
-                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                    Self::calculate_time_frame_of_moment(range.end),
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?,
-            };
+            let ids_amount: u32 = Self::update_auto_close(&market_id)?;
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
@@ -604,6 +589,7 @@ mod pallet {
                 Error::<T>::MarketEditNotRequested
             );
             let old_market = T::MarketCommons::market(&market_id)?;
+            ensure!(old_market.creator == sender, Error::<T>::EditorNotCreator);
             ensure!(old_market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             Self::ensure_market_period_is_valid(&period)?;
             Self::ensure_market_deadlines_are_valid(&deadlines)?;
@@ -620,7 +606,6 @@ mod pallet {
                 if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
-            Self::clear_auto_open(&market_id)?;
             Self::clear_auto_close(&market_id)?;
             let edited_market = Market {
                 market_type,
@@ -638,27 +623,12 @@ mod pallet {
             })?;
             let extra_weight = 0;
 
-            let ids_amount: u32 = match period {
-                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
-                    range.end,
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?,
-                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
-                    Self::calculate_time_frame_of_moment(range.end),
-                    |ids| -> Result<u32, DispatchError> {
-                        ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
-                        Ok(ids.len() as u32)
-                    },
-                )?,
-            };
+            let ids_amount: u32 = Self::update_auto_close(&market_id)?;
 
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketEdited(market_id, sender));
 
-            Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::edit_market(ids_amount).saturating_add(extra_weight)).into())
         }
 
         /// Buy complete sets and deploy a pool with specified liquidity for a market.
@@ -1322,6 +1292,8 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
+        /// Only creator is able to edit the market.
+        EditorNotCreator,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
@@ -1647,6 +1619,27 @@ mod pallet {
 
         pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
             T::PalletId::get().into_sub_account(market_id.saturated_into::<u128>())
+        }
+
+        fn update_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
+            let market = T::MarketCommons::market(market_id)?;
+
+            match market.period {
+                MarketPeriod::Block(range) => MarketIdsPerCloseBlock::<T>::try_mutate(
+                    range.end,
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                ),
+                MarketPeriod::Timestamp(range) => MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                    Self::calculate_time_frame_of_moment(range.end),
+                    |ids| -> Result<u32, DispatchError> {
+                        ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)?;
+                        Ok(ids.len() as u32)
+                    },
+                ),
+            }
         }
 
         // Manually remove market from cache for auto close.

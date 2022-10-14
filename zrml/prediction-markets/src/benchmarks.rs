@@ -403,7 +403,7 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
-        )
+    )
 
     edit_market {
         let m in 0..63;
@@ -414,20 +414,20 @@ benchmarks! {
         let range_end = T::MaxSubsidyPeriod::get();
         let range_start = T::MinSubsidyPeriod::get();
         let period = MarketPeriod::Timestamp(range_start..range_end);
-    let (caller, oracle, deadlines, metadata, creation) =
-        create_market_common_parameters::<T>(MarketCreation::Advised)?;
-    Call::<T>::create_market {
-        oracle: oracle.clone(),
-        period: period.clone(),
-        deadlines,
-        metadata: metadata.clone(),
-        creation,
-        market_type: market_type.clone(),
-        dispute_mechanism: dispute_mechanism.clone(),
-        scoring_rule,
-    }
-    .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
-    let market_id = T::MarketCommons::latest_market_id()?;
+        let (caller, oracle, deadlines, metadata, creation) =
+            create_market_common_parameters::<T>(MarketCreation::Advised)?;
+        Call::<T>::create_market {
+            oracle: oracle.clone(),
+            period: period.clone(),
+            deadlines,
+            metadata: metadata.clone(),
+            creation,
+            market_type: market_type.clone(),
+            dispute_mechanism: dispute_mechanism.clone(),
+            scoring_rule,
+        }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let market_id = T::MarketCommons::latest_market_id()?;
 
         let approve_origin = T::ApproveOrigin::successful_origin();
         let edit_reason : EditReason = vec![0_u8; 1024].try_into()
@@ -447,11 +447,11 @@ benchmarks! {
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
-    let new_deadlines = Deadlines::<T::BlockNumber> {
-        grace_period: 2_u32.into(),
-        oracle_duration: T::MinOracleDuration::get(),
-        dispute_duration: T::MinDisputeDuration::get(),
-    };
+        let new_deadlines = Deadlines::<T::BlockNumber> {
+            grace_period: 2_u32.into(),
+            oracle_duration: T::MinOracleDuration::get(),
+            dispute_duration: T::MinDisputeDuration::get(),
+        };
     }: _(
             RawOrigin::Signed(caller),
             market_id,
@@ -462,7 +462,7 @@ benchmarks! {
             market_type,
             dispute_mechanism,
             scoring_rule
-        )
+    )
 
     deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
