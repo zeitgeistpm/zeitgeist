@@ -57,6 +57,8 @@ pub const ASSET_E: Asset<MarketId> = Asset::CategoricalOutcome(0, 69);
 
 pub const ASSETS: [Asset<MarketId>; 4] = [ASSET_A, ASSET_B, ASSET_C, ASSET_D];
 
+pub const SENTINEL_AMOUNT: u128 = 123456789;
+
 const _1_2: u128 = BASE / 2;
 const _1_10: u128 = BASE / 10;
 const _1_20: u128 = BASE / 20;
@@ -3154,6 +3156,9 @@ fn on_idle_arbitrages_pools_with_mint_sell() {
             Currencies::free_balance(ASSET_B, &pool_account_id),
             balance + arbitrage_amount - amount_removed,
         );
+        let market_id = 0;
+        let market_account_id = &Swaps::market_account_id(market_id);
+        assert_eq!(Currencies::free_balance(ASSET_A, &market_account_id), arbitrage_amount);
         System::assert_has_event(Event::ArbitrageMintSell(pool_id, arbitrage_amount).into());
     });
 }
@@ -3185,12 +3190,21 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
         let amount_removed = _25;
         assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, amount_removed));
 
+        // Deposit funds into the prize pool to ensure that the transfers don't fail.
+        let market_id = 0;
+        let market_account_id = &Swaps::market_account_id(market_id);
+        let arbitrage_amount = 125_007_629_394; // "Should" be 125_000_000_000.
+        assert_ok!(Currencies::deposit(
+            ASSET_A,
+            market_account_id,
+            arbitrage_amount + SENTINEL_AMOUNT,
+        ));
+
         // Force arbitrage hook.
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
         Swaps::on_idle(System::block_number(), Weight::max_value());
         // assert_ok!(Swaps::execute_arbitrage(pool_id));
 
-        let arbitrage_amount = 125_007_629_394; // "Should" be 125_000_000_000.
         assert_eq!(
             Currencies::free_balance(ASSET_A, &pool_account_id),
             balance + arbitrage_amount - amount_removed,
@@ -3198,6 +3212,7 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
         assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), balance - arbitrage_amount);
         assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance - arbitrage_amount);
         assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(Currencies::free_balance(ASSET_A, &market_account_id), SENTINEL_AMOUNT);
         System::assert_has_event(Event::ArbitrageBuyBurn(pool_id, arbitrage_amount).into());
     });
 }

@@ -993,6 +993,7 @@ macro_rules! impl_config_traits {
             type MinSubsidyPerAccount = MinSubsidyPerAccount;
             type MinWeight = MinWeight;
             type PalletId = SwapsPalletId;
+            type PredictionMarketsPalletId = PmPalletId;
             type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
             type AssetManager = AssetManager;
             type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;

@@ -39,7 +39,7 @@ use zeitgeist_primitives::{
         BalanceFractionalDecimals, BlockHashCount, ExistentialDeposit, ExistentialDeposits,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxInRatio, MaxLocks, MaxOutRatio,
         MaxReserves, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinLiquidity, MinSubsidy,
-        MinWeight, MinimumPeriod, SwapsPalletId, BASE,
+        MinWeight, MinimumPeriod, SwapsPalletId, BASE, PmPalletId,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -103,6 +103,7 @@ impl crate::Config for Runtime {
     type MinSubsidyPerAccount = MinSubsidyPerAccount;
     type MinWeight = MinWeight;
     type PalletId = SwapsPalletId;
+    type PredictionMarketsPalletId = PmPalletId;
     type RikiddoSigmoidFeeMarketEma = RikiddoSigmoidFeeMarketEma;
     type AssetManager = AssetManager;
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;

@@ -843,6 +843,11 @@ mod pallet {
         #[pallet::constant]
         type PalletId: Get<PalletId>;
 
+        // TODO(#837): Remove when on-chain arbitrage is removed!
+        /// The prefix used to calculate the prize pool accounts.
+        #[pallet::constant]
+        type PredictionMarketsPalletId: Get<PalletId>;
+
         /// The Rikiddo instance that uses a sigmoid fee and ema of market volume
         type RikiddoSigmoidFeeMarketEma: RikiddoMVPallet<
             Balance = BalanceOf<Self>,
@@ -1318,7 +1323,14 @@ mod pallet {
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
-                T::AssetManager::withdraw(pool.base_asset, &pool_account, amount)?;
+                // We're faking a `buy_complete_sets` operation by transfering to the market prize
+                // pool.
+                T::AssetManager::transfer(
+                    pool.base_asset,
+                    &pool_account,
+                    &Self::market_account_id(pool.market_id),
+                    amount,
+                )?;
                 for t in outcome_tokens {
                     T::AssetManager::deposit(*t, &pool_account, amount)?;
                 }
@@ -1327,7 +1339,12 @@ mod pallet {
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
-                T::AssetManager::deposit(pool.base_asset, &pool_account, amount)?;
+                T::AssetManager::transfer(
+                    pool.base_asset,
+                    &Self::market_account_id(pool.market_id),
+                    &pool_account,
+                    amount,
+                )?;
                 for t in outcome_tokens {
                     T::AssetManager::withdraw(*t, &pool_account, amount)?;
                 }
@@ -1337,6 +1354,11 @@ mod pallet {
                 Self::deposit_event(Event::ArbitrageSkipped(pool_id));
                 Ok(T::WeightInfo::execute_arbitrage_skipped(asset_count))
             }
+        }
+
+        // TODO(#837): Remove when on-chain arbitrage is removed!
+        pub(crate) fn market_account_id(market_id: T::MarketId) -> T::AccountId {
+            T::PredictionMarketsPalletId::get().into_sub_account(market_id.saturated_into::<u128>())
         }
 
         pub fn get_spot_price(
