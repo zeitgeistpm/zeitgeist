@@ -622,7 +622,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         let market_id = 0;
         let pool_id = 0;
         let pool_account = Swaps::pool_account_id(pool_id);
-        let market_account = PredictionMarkets::market_account(market_id);
+        let market_account = MarketCommons::market_account(market_id);
         let alice_ztg_before = AssetManager::free_balance(Asset::Ztg, &ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
         assert_eq!(AssetManager::free_balance(Asset::CategoricalOutcome(0, 0), &pool_account), 0);
@@ -795,7 +795,7 @@ fn create_categorical_market_deposits_the_correct_event() {
         simple_create_categorical_market(MarketCreation::Permissionless, 1..2, ScoringRule::CPMM);
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
-        let market_account = PredictionMarkets::market_account(market_id);
+        let market_account = MarketCommons::market_account(market_id);
         System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
     });
 }
@@ -807,7 +807,7 @@ fn create_scalar_market_deposits_the_correct_event() {
         simple_create_scalar_market(MarketCreation::Permissionless, 1..2, ScoringRule::CPMM);
         let market_id = 0;
         let market = MarketCommons::market(&market_id).unwrap();
-        let market_account = PredictionMarkets::market_account(market_id);
+        let market_account = MarketCommons::market_account(market_id);
         System::assert_last_event(Event::MarketCreated(0, market_account, market).into());
     });
 }
@@ -1308,7 +1308,7 @@ fn it_allows_to_buy_a_complete_set() {
         let bal = Balances::free_balance(&BOB);
         assert_eq!(bal, 1_000 * BASE - CENT);
 
-        let market_account = PredictionMarkets::market_account(0);
+        let market_account = MarketCommons::market_account(0);
         let market_bal = Balances::free_balance(market_account);
         assert_eq!(market_bal, CENT);
         System::assert_last_event(Event::BoughtCompleteSet(0, CENT, BOB).into());
