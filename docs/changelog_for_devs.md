@@ -7,7 +7,8 @@
   `ArbitrageSkipped(pool_id)`. The latter can be safely ignored by the indexer.
   The `amount` parameter signifies the amount of funds moved into or out of the
   prize pool (mint-sell/buy-burn resp.) and the amount of full sets
-  minted/burned.
+  minted/burned. Note that in addition to these events, the low-level
+  `tokens.Deposited` and `tokens.Transfer` events are also emitted.
 
 # v0.3.6
 
