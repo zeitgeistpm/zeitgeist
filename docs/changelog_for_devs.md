@@ -1,3 +1,14 @@
+# v0.3.7
+
+- Added on-chain arbitrage. See
+  [ZIP-1](https://hackmd.io/@1ypDLjlbQ_e2Gp_1EW7kkg/BksyTQc-o) for details. When
+  a pool is arbitraged, we emit one of the following events:
+  `ArbitrageMintSell(pool_id, amount)`, `ArbitrageBuyBurn(pool_id, amount)` or
+  `ArbitrageSkipped(pool_id)`. The latter can be safely ignored by the indexer.
+  The `amount` parameter signifies the amount of funds moved into or out of the
+  prize pool (mint-sell/buy-burn resp.) and the amount of full sets
+  minted/burned.
+
 # v0.3.6
 
 - Added new field `deadlines` in Market structure, which has `grace_period`,
