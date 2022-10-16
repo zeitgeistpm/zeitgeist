@@ -149,7 +149,6 @@ impl<T: Config> OnRuntimeUpgrade for TransformScalarMarketsToFixedPoint<T> {
     fn pre_upgrade() -> Result<(), &'static str> {
         // Check that no saturation occurs.
         for (market_id, market) in T::MarketCommons::market_iter().drain() {
-            log::info!("foo");
             if let MarketType::Scalar(range) = market.market_type {
                 assert!(
                     range.end().checked_mul(BASE).is_some(),
