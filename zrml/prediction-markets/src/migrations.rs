@@ -79,58 +79,54 @@ impl<T: Config> OnRuntimeUpgrade for TransformScalarMarketsToFixedPoint<T> {
         log::info!("TransformScalarMarketsToFixedPoint: Starting...");
 
         let mut new_scalar_markets: Vec<_> = vec![];
-        for (key, mut market) in storage_iter::<MarketOf<T>>(&MARKET_COMMONS, MARKETS) {
+        for (key, mut market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
-            match market.market_type {
-                MarketType::Scalar(range) => {
-                    let new_start = to_fixed_point(*range.start());
-                    let new_end = to_fixed_point(*range.end());
-                    market.market_type = MarketType::Scalar(new_start..=new_end);
+            if let MarketType::Scalar(range) = market.market_type {
+                let new_start = to_fixed_point(*range.start());
+                let new_end = to_fixed_point(*range.end());
+                market.market_type = MarketType::Scalar(new_start..=new_end);
 
-                    if let Some(mut report) = market.report {
-                        if let OutcomeReport::Scalar(value) = report.outcome {
-                            report.outcome = OutcomeReport::Scalar(to_fixed_point(value));
-                        }
-                        market.report = Some(report);
+                if let Some(mut report) = market.report {
+                    if let OutcomeReport::Scalar(value) = report.outcome {
+                        report.outcome = OutcomeReport::Scalar(to_fixed_point(value));
                     }
-
-                    if let Some(mut resolved_outcome) = market.resolved_outcome {
-                        if let OutcomeReport::Scalar(value) = resolved_outcome {
-                            resolved_outcome = OutcomeReport::Scalar(to_fixed_point(value));
-                        }
-                        market.resolved_outcome = Some(resolved_outcome);
-                    }
-
-                    // Transform disputes using the same key because both maps have the same key
-                    // type and hasher.
-                    let old_disputes =
-                        get_storage_value::<DisputesOf<T>>(&PREDICTION_MARKETS, DISPUTES, &key);
-                    let new_disputes = match old_disputes {
-                        Some(disputes_unwrapped) => BoundedVec::try_from(
-                            disputes_unwrapped
-                                .into_iter()
-                                .map(|mut dispute| {
-                                    if let OutcomeReport::Scalar(value) = dispute.outcome {
-                                        dispute.outcome =
-                                            OutcomeReport::Scalar(to_fixed_point(value));
-                                    };
-                                    dispute
-                                })
-                                .collect::<Vec<_>>(),
-                        )
-                        .ok(),
-                        None => None,
-                    };
-                    new_scalar_markets.push((key, market, new_disputes));
+                    market.report = Some(report);
                 }
-                _ => (),
-            };
+
+                if let Some(mut resolved_outcome) = market.resolved_outcome {
+                    if let OutcomeReport::Scalar(value) = resolved_outcome {
+                        resolved_outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                    }
+                    market.resolved_outcome = Some(resolved_outcome);
+                }
+
+                // Transform disputes using the same key because both maps have the same key
+                // type and hasher.
+                let old_disputes =
+                    get_storage_value::<DisputesOf<T>>(PREDICTION_MARKETS, DISPUTES, &key);
+                let new_disputes = match old_disputes {
+                    Some(disputes_unwrapped) => BoundedVec::try_from(
+                        disputes_unwrapped
+                            .into_iter()
+                            .map(|mut dispute| {
+                                if let OutcomeReport::Scalar(value) = dispute.outcome {
+                                    dispute.outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                                };
+                                dispute
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                    .ok(),
+                    None => None,
+                };
+                new_scalar_markets.push((key, market, new_disputes));
+            }
         }
 
         for (key, market, new_disputes) in new_scalar_markets {
             if let Some(disputes_unwrapped) = new_disputes {
                 put_storage_value::<DisputesOf<T>>(
-                    &PREDICTION_MARKETS,
+                    PREDICTION_MARKETS,
                     DISPUTES,
                     &key,
                     disputes_unwrapped,
