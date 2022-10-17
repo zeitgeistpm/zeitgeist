@@ -704,7 +704,7 @@ benchmarks! {
         }
 
         let reject_origin = T::RejectOrigin::successful_origin();
-        let reject_reason: RejectReason = vec![0; 1024].try_into().expect("BoundedVec conversion failed");
+        let reject_reason: Vec<u8> =vec![0; <T as Config>::MaxRejectReasonLen::get() as usize];
         let call = Call::<T>::reject_market { market_id, reject_reason };
     }: { call.dispatch_bypass_filter(reject_origin)? }
 

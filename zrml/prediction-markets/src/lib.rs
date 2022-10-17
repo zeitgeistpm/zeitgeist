@@ -81,8 +81,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub type CacheSize = ConstU32<64>;
-    pub type RejectReasonLength = ConstU32<1024>;
-    pub type RejectReason = BoundedVec<u8, RejectReasonLength>;
+    pub type RejectReason<T> = BoundedVec<u8, <T as Config>::MaxRejectReasonLen>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -909,12 +908,15 @@ mod pallet {
         pub fn reject_market(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            reject_reason: RejectReason,
+            reject_reason: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             T::RejectOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
+            let reject_reason = reject_reason
+                .try_into()
+                .map_err(|_| Error::<T>::RejectReasonLengthExceedsMaxRejectReasonLen)?;
             Self::do_reject_market(&market_id, market, reject_reason)?;
             // The RejectOrigin should not pay fees for providing this service
             Ok((Some(T::WeightInfo::reject_market(close_ids_len, open_ids_len)), Pays::No).into())
@@ -1188,6 +1190,10 @@ mod pallet {
         #[pallet::constant]
         type MaxDisputeDuration: Get<Self::BlockNumber>;
 
+        /// The maximum length of reject reason string.
+        #[pallet::constant]
+        type MaxRejectReasonLen: Get<u32>;
+
         //NOTE: DisputePeriod will be removed once relevant migrations are executed.
         /// The number of blocks the dispute period remains open.
         #[pallet::constant]
@@ -1284,6 +1290,8 @@ mod pallet {
         NoWinningBalance,
         /// Submitted outcome does not match market type.
         OutcomeMismatch,
+        /// RejectReason's length greater than MaxRejectReasonLen.
+        RejectReasonLengthExceedsMaxRejectReasonLen,
         /// The report is not coming from designated oracle.
         ReporterNotOracle,
         /// It was tried to append an item to storage beyond the boundaries.
@@ -1347,8 +1355,8 @@ mod pallet {
         MarketDisputed(MarketIdOf<T>, MarketStatus, MarketDispute<T::AccountId, T::BlockNumber>),
         /// An advised market has ended before it was approved or rejected. \[market_id\]
         MarketExpired(MarketIdOf<T>),
-        /// A pending market has been rejected as invalid. \[market_id\]
-        MarketRejected(MarketIdOf<T>, RejectReason),
+        /// A pending market has been rejected as invalid with a reason. \[market_id, reject_reason\]
+        MarketRejected(MarketIdOf<T>, RejectReason<T>),
         /// A market has been reported on \[market_id, new_market_status, reported_outcome\]
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
@@ -1706,7 +1714,7 @@ mod pallet {
         pub(crate) fn do_reject_market(
             market_id: &MarketIdOf<T>,
             market: Market<T::AccountId, T::BlockNumber, MomentOf<T>>,
-            reject_reason: RejectReason,
+            reject_reason: RejectReason<T>,
         ) -> DispatchResult {
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::InvalidMarketStatus);
             let creator = &market.creator;

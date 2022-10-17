@@ -39,10 +39,11 @@ use zeitgeist_primitives::{
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
         MaxDisputeDuration, MaxDisputes, MaxGracePeriod, MaxInRatio, MaxMarketPeriod,
-        MaxOracleDuration, MaxOutRatio, MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight,
-        MaxWeight, MinAssets, MinCategories, MinDisputeDuration, MinLiquidity, MinOracleDuration,
-        MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId,
-        StakeWeight, SwapsPalletId, TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
+        MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
+        MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, BASE,
+        CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -125,6 +126,7 @@ impl crate::Config for Runtime {
     type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
+    type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
