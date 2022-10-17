@@ -100,48 +100,6 @@ impl From<Error> for i32 {
     }
 }
 
-/*
-macro_rules! get_spot_price_rslt {
-    (
-        $api_ref:expr,
-        $asset_in:expr,
-        $asset_out:expr,
-        $at:expr,
-        $pool_id:expr
-    ) => {
-        let res = $api_ref.get_spot_price($at, $pool_id, $asset_in, $asset_out).map_err(|e| {
-            CallError::Custom(ErrorObject::owned(
-                Error::RuntimeError.into(),
-                "Unable to get spot price.",
-                Some(e.to_string()),
-            ))
-        })?;
-        Ok(res)
-    };
-}
-*/
-
-/*
-#[inline]
-fn get_spot_price_result<AccountId, Balance, Block, MarketId, PoolId>(api: &SwapsRuntimeApi<Block, PoolId, AccountId, Balance, MarketId>, pool_id: PoolId, asset_in: Asset<MarketId>, asset_out: Asset<MarketId>, at:<Block as BlockT>::Hash) -> RpcResult<SerdeWrapper<Balance>>
-where
-    AccountId: Clone + Display + Codec + Send + 'static,
-    Balance: Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
-    Block: BlockT,
-    MarketId: Clone + Codec + MaybeDisplay + MaybeFromStr + MaxEncodedLen + Send + 'static,
-    PoolId: Clone + Codec + MaybeDisplay + MaybeFromStr + Send + 'static, 
-{
-    let res = api.get_spot_price(at, pool_id, asset_in, asset_out).map_err(|e| {
-        CallError::Custom(ErrorObject::owned(
-            Error::RuntimeError.into(),
-            "Unable to get spot price.",
-            Some(e.to_string()),
-        ))
-    })?;
-    Ok(res)
-}
-*/
-
 #[async_trait]
 impl<C, Block, PoolId, AccountId, Balance, MarketId>
     SwapsApiServer<<Block as BlockT>::Hash, NumberFor<Block>, PoolId, AccountId, Balance, MarketId>
