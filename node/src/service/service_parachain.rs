@@ -110,24 +110,24 @@ where
                         )
                     })?;
 
-					let author = nimbus_primitives::InherentDataProvider;
-					let randomness = session_keys_primitives::InherentDataProvider;
+                    let author = nimbus_primitives::InherentDataProvider;
+                    let randomness = session_keys_primitives::InherentDataProvider;
 
-					Ok((time, parachain_inherent, author, randomness))
+                    Ok((time, parachain_inherent, author, randomness))
                 }
             };
 
-			let client_clone = client.clone();
-			let keystore_clone = keystore.clone();
-			let maybe_provide_vrf_digest = move |nimbus_id: NimbusId, parent: Hash|
-				-> Option<sp_runtime::generic::DigestItem> {
-				moonbeam_vrf::vrf_pre_digest::<Block, FullClient<RuntimeApi, Executor>>(
-					&client_clone,
-					&keystore_clone,
-					nimbus_id,
-					parent,
-				)
-			};
+            let client_clone = client.clone();
+            let keystore_clone = keystore.clone();
+            let maybe_provide_vrf_digest = move |nimbus_id: NimbusId, parent: Hash|
+                -> Option<sp_runtime::generic::DigestItem> {
+                moonbeam_vrf::vrf_pre_digest::<Block, FullClient<RuntimeApi, Executor>>(
+                    &client_clone,
+                    &keystore_clone,
+                    nimbus_id,
+                    parent,
+                )
+            };
 
             Ok(NimbusConsensus::build(BuildNimbusConsensusParams {
                 para_id: parachain_id,
@@ -330,17 +330,17 @@ where
     })?;
 
     if let Some(hwbench) = hwbench {
-		sc_sysinfo::print_hwbench(&hwbench);
+        sc_sysinfo::print_hwbench(&hwbench);
 
-		if let Some(ref mut telemetry) = telemetry {
-			let telemetry_handle = telemetry.handle();
-			task_manager.spawn_handle().spawn(
-				"telemetry_hwbench",
-				None,
-				sc_sysinfo::initialize_hwbench_telemetry(telemetry_handle, hwbench),
-			);
-		}
-	}
+        if let Some(ref mut telemetry) = telemetry {
+            let telemetry_handle = telemetry.handle();
+            task_manager.spawn_handle().spawn(
+                "telemetry_hwbench",
+                None,
+                sc_sysinfo::initialize_hwbench_telemetry(telemetry_handle, hwbench),
+            );
+        }
+    }
 
     let announce_block = {
         let network = network.clone();

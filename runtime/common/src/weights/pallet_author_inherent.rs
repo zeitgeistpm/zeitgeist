@@ -49,16 +49,16 @@ use frame_support::{
 /// Weight functions for pallet_author_mapping (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_author_inherent::weights::WeightInfo for WeightInfo<T> {
-	// Storage: ParachainSystem ValidationData (r:1 w:0)
-	// Storage: AuthorInherent HighestSlotSeen (r:1 w:1)
-	// Storage: AuthorInherent Author (r:1 w:0)
-	// Storage: ParachainStaking SelectedCandidates (r:1 w:0)
-	// Storage: AuthorFilter EligibleCount (r:1 w:0)
-	// Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
-	#[rustfmt::skip]
-	fn kick_off_authorship_validation() -> Weight {
-		(20_862_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(6 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
+    // Storage: ParachainSystem ValidationData (r:1 w:0)
+    // Storage: AuthorInherent HighestSlotSeen (r:1 w:1)
+    // Storage: AuthorInherent Author (r:1 w:0)
+    // Storage: ParachainStaking SelectedCandidates (r:1 w:0)
+    // Storage: AuthorFilter EligibleCount (r:1 w:0)
+    // Storage: RandomnessCollectiveFlip RandomMaterial (r:1 w:0)
+    #[rustfmt::skip]
+    fn kick_off_authorship_validation() -> Weight {
+        (20_862_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
 }

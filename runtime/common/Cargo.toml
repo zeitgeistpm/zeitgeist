@@ -49,6 +49,7 @@ std = [
     "pallet-author-mapping?/std",
     "pallet-author-slot-filter?/std",
     "pallet-balances/std",
+    "pallet-bounties/std",
     "pallet-collective/std",
     "pallet-democracy/std",
     "pallet-identity/std",

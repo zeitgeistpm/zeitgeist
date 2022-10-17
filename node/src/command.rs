@@ -187,7 +187,7 @@ pub fn run() -> sc_cli::Result<()> {
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
         }
         Some(Subcommand::ChainInfo(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
+            let runner = cli.create_runner(cmd)?;
             let chain_spec = &runner.config().chain_spec;
 
             match chain_spec {
@@ -197,7 +197,7 @@ pub fn run() -> sc_cli::Result<()> {
                 #[cfg(feature = "with-battery-station-runtime")]
                 _ => runner.sync_run(|config| cmd.run::<battery_station_runtime::Block>(&config))
             }
-		},
+        },
         Some(Subcommand::CheckBlock(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|mut config| {

@@ -56,15 +56,15 @@ where
     C::Api: BlockBuilder<Block>,
     P: TransactionPool + Sync + Send + 'static,
 {
-	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-	use substrate_frame_rpc_system::{System, SystemApiServer};
+    use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
+    use substrate_frame_rpc_system::{System, SystemApiServer};
     use zrml_swaps_rpc::{Swaps, SwapsApiServer};
 
     let mut io = RpcModule::new(());
     let FullDeps { client, pool, deny_unsafe } = deps;
 
     io.merge(System::new(Arc::clone(&client), Arc::clone(&pool), deny_unsafe).into_rpc())?;
-	io.merge(TransactionPayment::new(Arc::clone(&client)).into_rpc())?;
+    io.merge(TransactionPayment::new(Arc::clone(&client)).into_rpc())?;
     io.merge(Swaps::new(client).into_rpc())?;
 
     Ok(io)

@@ -22,9 +22,9 @@ extern crate alloc;
 use alloc::sync::Arc;
 use core::{fmt::Display, str::FromStr};
 use jsonrpsee::{
-	core::{async_trait, RpcResult},
-	proc_macros::rpc,
-	types::error::{CallError, ErrorObject},
+    core::{async_trait, RpcResult},
+    proc_macros::rpc,
+    types::error::{CallError, ErrorObject},
 };
 use parity_scale_codec::{Codec, MaxEncodedLen};
 use sp_api::ProvideRuntimeApi;
