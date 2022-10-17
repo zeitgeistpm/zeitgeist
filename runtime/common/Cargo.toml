@@ -15,6 +15,7 @@ pallet-democracy = { branch = "polkadot-v0.9.23", default-features = false, git 
 pallet-identity = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-membership = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-multisig = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-parachain-staking = { tag = "v0.25.0", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 pallet-preimage = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-proxy = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-randomness-collective-flip = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -25,7 +26,6 @@ pallet-transaction-payment-rpc-runtime-api = { branch = "polkadot-v0.9.23", defa
 pallet-treasury = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-utility = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-vesting = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-parachain-staking = { tag = "v0.25.0", default-features = false, git = "https://github.com/purestake/moonbeam", optional = true }
 
 # Utility
 cfg-if = { version = "1.0.0" }
