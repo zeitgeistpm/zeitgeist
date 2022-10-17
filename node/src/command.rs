@@ -32,8 +32,11 @@ use {
 use {super::service::ZeitgeistExecutor, zeitgeist_runtime::RuntimeApi as ZeitgeistRuntimeApi};
 #[cfg(feature = "parachain")]
 use {
-    sc_client_api::client::BlockBackend, sp_core::hexdisplay::HexDisplay, sp_core::Encode,
-    sp_runtime::traits::{AccountIdConversion, Block as BlockT}, std::io::Write,
+    sc_client_api::client::BlockBackend,
+    sp_core::hexdisplay::HexDisplay,
+    sp_core::Encode,
+    sp_runtime::traits::{AccountIdConversion, Block as BlockT},
+    std::io::Write,
 };
 
 pub fn run() -> sc_cli::Result<()> {
@@ -103,13 +106,9 @@ pub fn run() -> sc_cli::Result<()> {
                 // requirement for parachain builds. Since the parachain has to sync
                 // the relay chain and adhere to tight deadlines, it requires at least
                 // the hardware specs specified by the relay chain.
-                BenchmarkCmd::Machine(cmd) =>
-                    runner.sync_run(|config| {
-                        cmd.run(
-                            &config,
-                            SUBSTRATE_REFERENCE_HARDWARE.clone(),
-                        )
-                    }),
+                BenchmarkCmd::Machine(cmd) => {
+                    runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
+                }
                 BenchmarkCmd::Storage(cmd) => match chain_spec {
                     #[cfg(feature = "with-zeitgeist-runtime")]
                     spec if spec.is_zeitgeist() => runner.sync_run(|config| {
@@ -192,12 +191,13 @@ pub fn run() -> sc_cli::Result<()> {
 
             match chain_spec {
                 #[cfg(feature = "with-zeitgeist-runtime")]
-                spec if spec.is_zeitgeist() => 
-                    runner.sync_run(|config| cmd.run::<zeitgeist_runtime::Block>(&config)),
+                spec if spec.is_zeitgeist() => {
+                    runner.sync_run(|config| cmd.run::<zeitgeist_runtime::Block>(&config))
+                }
                 #[cfg(feature = "with-battery-station-runtime")]
-                _ => runner.sync_run(|config| cmd.run::<battery_station_runtime::Block>(&config))
+                _ => runner.sync_run(|config| cmd.run::<battery_station_runtime::Block>(&config)),
             }
-        },
+        }
         Some(Subcommand::CheckBlock(cmd)) => {
             let runner = cli.create_runner(cmd)?;
             runner.async_run(|mut config| {
@@ -431,9 +431,10 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
             cli.parachain_id.or(parachain_id_extension).unwrap_or(super::KUSAMA_PARACHAIN_ID),
         );
 
-        let parachain_account = AccountIdConversion::<
-            polkadot_primitives::v2::AccountId,
-        >::into_account_truncating(&parachain_id);
+        let parachain_account =
+            AccountIdConversion::<polkadot_primitives::v2::AccountId>::into_account_truncating(
+                &parachain_id,
+            );
 
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
@@ -465,7 +466,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 parachain_config,
                 parachain_id,
                 polkadot_config,
-                hwbench
+                hwbench,
             )
             .await
             .map(|r| r.0)
@@ -475,7 +476,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
                 parachain_config,
                 parachain_id,
                 polkadot_config,
-                hwbench
+                hwbench,
             )
             .await
             .map(|r| r.0)
@@ -496,32 +497,26 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 
         match &config.chain_spec {
             #[cfg(feature = "with-zeitgeist-runtime")]
-            spec if spec.is_zeitgeist() => {
-                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
-                    config,
-                    cli.no_hardware_benchmarks
-                )
-                .map_err(sc_cli::Error::Service)
-            }
+            spec if spec.is_zeitgeist() => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
+                config,
+                cli.no_hardware_benchmarks,
+            )
+            .map_err(sc_cli::Error::Service),
             #[cfg(feature = "with-battery-station-runtime")]
-            _ => {
-                new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
-                    config,
-                    cli.no_hardware_benchmarks
-                )
-                .map_err(sc_cli::Error::Service)
-            }
+            _ => new_full::<BatteryStationRuntimeApi, BatteryStationExecutor>(
+                config,
+                cli.no_hardware_benchmarks,
+            )
+            .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 feature = "with-zeitgeist-runtime"
             ))]
-            _ => { 
-                new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
-                    config,
-                    cli.no_hardware_benchmarks
-                )
-                .map_err(sc_cli::Error::Service)
-            }
+            _ => new_full::<ZeitgeistRuntimeApi, ZeitgeistExecutor>(
+                config,
+                cli.no_hardware_benchmarks,
+            )
+            .map_err(sc_cli::Error::Service),
             #[cfg(all(
                 not(feature = "with-battery-station-runtime"),
                 not(feature = "with-zeitgeist-runtime")

@@ -52,7 +52,8 @@ where
     ) -> RpcResult<Asset<SerdeWrapper<MarketId>>>;
 
     #[method(name = "swaps_poolAccountId", aliases = ["swaps_poolAccountIdAt"])]
-    async fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>) -> RpcResult<AccountId>;
+    async fn pool_account_id(&self, pool_id: PoolId, at: Option<BlockHash>)
+    -> RpcResult<AccountId>;
 
     #[method(name = "swaps_getSpotPrice", aliases = ["swaps_getSpotPriceAt"])]
     async fn get_spot_price(
@@ -121,8 +122,7 @@ where
         let api = self.client.runtime_api();
         let at = BlockId::hash(at.unwrap_or_else(||
             //if the block hash is not supplied assume the best block
-            self.client.info().best_hash
-        ));
+            self.client.info().best_hash));
 
         let res = api.pool_shares_id(&at, pool_id).map_err(|e| {
             CallError::Custom(ErrorObject::owned(
@@ -186,13 +186,14 @@ where
             .into_iter()
             .map(|block| {
                 let hash = BlockId::number(block);
-                let res = api.get_spot_price(&hash, &pool_id, &asset_in, &asset_out).map_err(|e| {
-                    CallError::Custom(ErrorObject::owned(
-                        Error::RuntimeError.into(),
-                        "Unable to get spot price.",
-                        Some(e.to_string()),
-                    ))
-                })?;
+                let res =
+                    api.get_spot_price(&hash, &pool_id, &asset_in, &asset_out).map_err(|e| {
+                        CallError::Custom(ErrorObject::owned(
+                            Error::RuntimeError.into(),
+                            "Unable to get spot price.",
+                            Some(e.to_string()),
+                        ))
+                    })?;
                 Ok(res)
             })
             .collect()

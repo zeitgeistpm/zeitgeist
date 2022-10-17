@@ -119,15 +119,17 @@ where
 
             let client_clone = client.clone();
             let keystore_clone = keystore.clone();
-            let maybe_provide_vrf_digest = move |nimbus_id: NimbusId, parent: Hash|
-                -> Option<sp_runtime::generic::DigestItem> {
-                moonbeam_vrf::vrf_pre_digest::<Block, FullClient<RuntimeApi, Executor>>(
-                    &client_clone,
-                    &keystore_clone,
-                    nimbus_id,
-                    parent,
-                )
-            };
+            let maybe_provide_vrf_digest =
+                move |nimbus_id: NimbusId,
+                      parent: Hash|
+                      -> Option<sp_runtime::generic::DigestItem> {
+                    moonbeam_vrf::vrf_pre_digest::<Block, FullClient<RuntimeApi, Executor>>(
+                        &client_clone,
+                        &keystore_clone,
+                        nimbus_id,
+                        parent,
+                    )
+                };
 
             Ok(NimbusConsensus::build(BuildNimbusConsensusParams {
                 para_id: parachain_id,

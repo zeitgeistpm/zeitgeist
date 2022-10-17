@@ -36,7 +36,6 @@
 // --template=./misc/frame_weight_template.hbs
 // --output=./runtime/common/src/weights/
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
