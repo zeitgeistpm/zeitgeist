@@ -33,10 +33,10 @@ jobs:
         uses: actions/checkout@v2
         if: github.event_name == 'workflow_dispatch'
 
-# TODO(#XXX): `rustup show` installs the rustc version specified in the `rust-toolchain` file
-# according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due to the
-# lack of support of `rust-toolchain` files with TOML syntax:
-# https://github.com/actions-rs/toolchain/issues/126.
+      # TODO(#839): `rustup show` installs the rustc version specified in the `rust-toolchain` file
+      # according to https://rust-lang.github.io/rustup/overrides.html. We don't use actions-rs due
+      # to the lack of support of `rust-toolchain` files with TOML syntax:
+      # https://github.com/actions-rs/toolchain/issues/126.
       - name: Install rust toolchain
         run: rustup show
 
