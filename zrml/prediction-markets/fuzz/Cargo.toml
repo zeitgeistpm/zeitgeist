@@ -8,7 +8,7 @@ test = false
 arbitrary = { features = ["derive"], version = "1.0" }
 frame-support = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 libfuzzer-sys = "0.4"
-zeitgeist-primitives = { features = [ "arbitrary", "mock"], default-features = false, path = "../../../primitives" }
+zeitgeist-primitives = { features = ["arbitrary", "mock"], default-features = false, path = "../../../primitives" }
 zrml-prediction-markets = { features = ["mock"], path = ".." }
 zrml-simple-disputes = { path = "../../simple-disputes" }
 
