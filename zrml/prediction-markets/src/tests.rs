@@ -911,7 +911,7 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
             0,
             reject_reason.clone()
         ));
-        let reject_reason = reject_reason.try_into().expect("BoundedVec conversation failed");
+        let reject_reason = reject_reason.try_into().expect("BoundedVec conversion failed");
         System::assert_has_event(Event::MarketRejected(0, reject_reason).into());
 
         assert_noop!(
@@ -922,7 +922,7 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
 }
 
 #[test]
-fn max_reject_reason_length_error() {
+fn reject_errors_if_reject_reason_is_too_long() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
