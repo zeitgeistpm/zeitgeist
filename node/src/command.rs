@@ -453,7 +453,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 
         let hwbench = if !cli.no_hardware_benchmarks {
             parachain_config.database.path().map(|database_path| {
-                let _ = std::fs::create_dir_all(&database_path);
+                let _ = std::fs::create_dir_all(database_path);
                 sc_sysinfo::gather_hwbench(Some(database_path))
             })
         } else {

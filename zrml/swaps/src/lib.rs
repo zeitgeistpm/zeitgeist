@@ -1214,15 +1214,15 @@ mod pallet {
             asset_out: &Asset<T::MarketId>,
         ) -> Result<BalanceOf<T>, DispatchError> {
             let pool = Self::pool_by_id(*pool_id)?;
-            ensure!(pool.assets.binary_search(&asset_in).is_ok(), Error::<T>::AssetNotInPool);
-            ensure!(pool.assets.binary_search(&asset_out).is_ok(), Error::<T>::AssetNotInPool);
-            let pool_account = Self::pool_account_id(&pool_id);
+            ensure!(pool.assets.binary_search(asset_in).is_ok(), Error::<T>::AssetNotInPool);
+            ensure!(pool.assets.binary_search(asset_out).is_ok(), Error::<T>::AssetNotInPool);
+            let pool_account = Self::pool_account_id(pool_id);
 
             if pool.scoring_rule == ScoringRule::CPMM {
-                let balance_in = T::AssetManager::free_balance(asset_in.clone(), &pool_account);
-                let balance_out = T::AssetManager::free_balance(asset_out.clone(), &pool_account);
-                let in_weight = Self::pool_weight_rslt(&pool, &asset_in)?;
-                let out_weight = Self::pool_weight_rslt(&pool, &asset_out)?;
+                let balance_in = T::AssetManager::free_balance(*asset_in, &pool_account);
+                let balance_out = T::AssetManager::free_balance(*asset_out, &pool_account);
+                let in_weight = Self::pool_weight_rslt(&pool, asset_in)?;
+                let out_weight = Self::pool_weight_rslt(&pool, asset_out)?;
                 let swap_fee = pool.swap_fee.ok_or(Error::<T>::SwapFeeMissing)?;
 
                 return Ok(crate::math::calc_spot_price(
