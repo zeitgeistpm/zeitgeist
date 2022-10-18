@@ -90,9 +90,21 @@ mod pallet {
         /// Must be called by `DestroyOrigin`. Bonds (unless already returned) are slashed without
         /// exception. Can currently only be used for destroying CPMM markets.
         #[pallet::weight((
-            T::WeightInfo::admin_destroy_reported_market()
-            .max(T::WeightInfo::admin_destroy_disputed_market()),
-        Pays::No))]
+            T::WeightInfo::admin_destroy_reported_market(
+                T::MaxCategories::get().into(),
+                CacheSize::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+            )
+            .max(T::WeightInfo::admin_destroy_disputed_market(
+                T::MaxCategories::get().into(),
+                T::MaxDisputes::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+                CacheSize::get(),
+            )),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn admin_destroy_market(
             origin: OriginFor<T>,
@@ -136,14 +148,17 @@ mod pallet {
                 &market_account,
                 T::AssetManager::free_balance(Asset::Ztg, &market_account),
             );
+            let mut category_count = 0u32;
             if let Ok(pool_id) = T::MarketCommons::market_pool(&market_id) {
-                T::Swaps::destroy_pool(pool_id)?;
+                let pool = T::Swaps::pool(pool_id)?;
+                category_count = pool.assets.len().saturated_into();
+                let _ = T::Swaps::destroy_pool(pool_id)?;
                 T::MarketCommons::remove_market_pool(&market_id)?;
             }
 
-            Self::clear_auto_open(&market_id)?;
-            Self::clear_auto_close(&market_id)?;
-            Self::clear_auto_resolve(&market_id)?;
+            let open_ids_len = Self::clear_auto_open(&market_id)?;
+            let close_ids_len = Self::clear_auto_close(&market_id)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
             Disputes::<T>::remove(market_id);
 
@@ -152,9 +167,28 @@ mod pallet {
             // Weight correction
             // The DestroyOrigin should not pay fees for providing this service
             if market_status == MarketStatus::Reported {
-                Ok((Some(T::WeightInfo::admin_destroy_reported_market()), Pays::No).into())
+                Ok((
+                    Some(T::WeightInfo::admin_destroy_reported_market(
+                        category_count,
+                        open_ids_len,
+                        close_ids_len,
+                        ids_len,
+                    )),
+                    Pays::No,
+                )
+                    .into())
             } else if market_status == MarketStatus::Disputed {
-                Ok((Some(T::WeightInfo::admin_destroy_disputed_market()), Pays::No).into())
+                Ok((
+                    Some(T::WeightInfo::admin_destroy_disputed_market(
+                        category_count,
+                        disputes_len,
+                        open_ids_len,
+                        close_ids_len,
+                        ids_len,
+                    )),
+                    Pays::No,
+                )
+                    .into())
             } else {
                 Ok((None, Pays::No).into())
             }
@@ -200,10 +234,28 @@ mod pallet {
 
         /// Allows the `ResolveOrigin` to immediately move a reported or disputed
         /// market to resolved.
-        #[pallet::weight((T::WeightInfo::admin_move_market_to_resolved_overhead()
-            .saturating_add(T::WeightInfo::internal_resolve_categorical_reported()
-            .saturating_sub(T::WeightInfo::internal_resolve_scalar_reported())
-        ), Pays::No))]
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n + m)`, where `n` is the number of market ids
+        /// per dispute / report block, m is the number of disputes.
+        #[pallet::weight((
+            T::WeightInfo::admin_move_market_to_resolved_scalar_reported(CacheSize::get())
+            .max(
+                T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
+            ).max(
+                T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
+                    CacheSize::get(),
+                    T::MaxDisputes::get()
+                )
+            ).max(
+                T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
+                    CacheSize::get(),
+                    T::MaxDisputes::get()
+                )
+            ),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn admin_move_market_to_resolved(
             origin: OriginFor<T>,
@@ -216,9 +268,35 @@ mod pallet {
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            Self::clear_auto_resolve(&market_id)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
-            let weight = Self::on_resolution(&market_id, &market)?;
+            let _ = Self::on_resolution(&market_id, &market)?;
+            let weight = match market.market_type {
+                MarketType::Scalar(_) => match market.status {
+                    MarketStatus::Reported => {
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len)
+                    }
+                    MarketStatus::Disputed => {
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
+                            ids_len,
+                            disputes_len,
+                        )
+                    }
+                    _ => return Err(Error::<T>::InvalidMarketStatus.into()),
+                },
+                MarketType::Categorical(_) => match market.status {
+                    MarketStatus::Reported => {
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len)
+                    }
+                    MarketStatus::Disputed => {
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
+                            ids_len,
+                            disputes_len,
+                        )
+                    }
+                    _ => return Err(Error::<T>::InvalidMarketStatus.into()),
+                },
+            };
             Ok((Some(weight), Pays::No).into())
         }
 
@@ -1289,6 +1367,8 @@ mod pallet {
         MarketIsNotProposed,
         /// A reported market was expected.
         MarketIsNotReported,
+        /// A disputed market was expected.
+        MarketIsNotDisputed,
         /// A resolved market was expected.
         MarketIsNotResolved,
         /// The point in time when the market becomes active is too soon.
@@ -1671,28 +1751,40 @@ mod pallet {
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> DispatchResult {
+        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
-            if market.status == MarketStatus::Reported {
-                let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
-                let dispute_duration_ends_at_block =
-                    report.at.saturating_add(market.deadlines.dispute_duration);
-                MarketIdsPerReportBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
-                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                });
-            }
-            if market.status == MarketStatus::Disputed {
-                let disputes = Disputes::<T>::get(market_id);
-                if let Some(last_dispute) = disputes.last() {
+            let (ids_len, disputes_len) = match market.status {
+                MarketStatus::Reported => {
+                    let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
+                    let dispute_duration_ends_at_block =
+                        report.at.saturating_add(market.deadlines.dispute_duration);
+                    MarketIdsPerReportBlock::<T>::mutate(
+                        dispute_duration_ends_at_block,
+                        |ids| -> (u32, u32) {
+                            let ids_len = ids.len() as u32;
+                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                            (ids_len, 0u32)
+                        },
+                    )
+                }
+                MarketStatus::Disputed => {
+                    let disputes = Disputes::<T>::get(market_id);
+                    let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
                     let dispute_duration_ends_at_block =
                         last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                    MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
-                        remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                    });
+                    MarketIdsPerDisputeBlock::<T>::mutate(
+                        dispute_duration_ends_at_block,
+                        |ids| -> (u32, u32) {
+                            let ids_len = ids.len() as u32;
+                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                            (ids_len, disputes.len() as u32)
+                        },
+                    )
                 }
-            }
+                _ => (0u32, 0u32),
+            };
 
-            Ok(())
+            Ok((ids_len, disputes_len))
         }
 
         pub(crate) fn do_buy_complete_set(
@@ -2442,7 +2534,7 @@ mod pallet {
     }
 
     // No-one can bound more than BalanceOf<T>, therefore, this functions saturates
-    pub fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
+    pub(crate) fn default_dispute_bond<T>(n: usize) -> BalanceOf<T>
     where
         T: Config,
     {

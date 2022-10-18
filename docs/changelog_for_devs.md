@@ -7,11 +7,16 @@
 # v0.3.6
 
 - Added new field `deadlines` in Market structure, which has `grace_period`,
-  `oracle_duration` and `dispute_duration` fields, all represents duration in
-  number of blocks. `create_market` extrinsic has new parameter to specify these
-  deadlines.
+  `oracle_duration` and `dispute_duration` fields, all of which represent
+  durations in number of blocks. The `create_market` extrinsic has a new
+  parameter to specify these deadlines.
+- Added `pallet-bounties` to the Zeitgeist runtime to facilitate community
+  projects.
+- Changed `MaxCategories` to `64`, as originally intended
 - Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
-  to 10% by introducing a new on-chain variable `AdvisoryBondSlashPercentage`.
+  to 0%; this value can be quickly adjusted in the future by using the new
+  on-chain variable `AdvisoryBondSlashPercentage`.
+- Temporarily disabled removal of losing assets when a market resolves.
 
 # v0.3.5
 

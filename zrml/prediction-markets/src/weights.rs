@@ -46,10 +46,13 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_prediction_markets (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_destroy_disputed_market() -> Weight;
-    fn admin_destroy_reported_market() -> Weight;
+    fn admin_destroy_disputed_market(a: u32, d: u32, o: u32, c: u32, r: u32, ) -> Weight;
+    fn admin_destroy_reported_market(a: u32, o: u32, c: u32, r: u32, ) -> Weight;
     fn admin_move_market_to_closed(o: u32, c: u32, ) -> Weight;
-    fn admin_move_market_to_resolved_overhead() -> Weight;
+    fn admin_move_market_to_resolved_scalar_reported(r: u32, ) -> Weight;
+    fn admin_move_market_to_resolved_categorical_reported(r: u32, ) -> Weight;
+    fn admin_move_market_to_resolved_scalar_disputed(r: u32, d: u32, ) -> Weight;
+    fn admin_move_market_to_resolved_categorical_disputed(r: u32, d: u32, ) -> Weight;
     fn approve_market() -> Weight;
     fn buy_complete_set(a: u32, ) -> Weight;
     fn create_market(m: u32, ) -> Weight;
@@ -80,26 +83,44 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
-    // Storage: System Account (r:1 w:0)
-    // Storage: MarketCommons MarketPool (r:1 w:0)
-    // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
-    // Storage: PredictionMarkets Disputes (r:0 w:1)
-    fn admin_destroy_disputed_market() -> Weight {
-        (114_051_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(6 as Weight))
-            .saturating_add(T::DbWeight::get().writes(5 as Weight))
+    // Storage: System Account (r:2 w:2)
+    // Storage: MarketCommons MarketPool (r:1 w:1)
+    // Storage: Swaps Pools (r:1 w:1)
+    // Storage: Tokens Accounts (r:2 w:2)
+    // Storage: Tokens TotalIssuance (r:2 w:2)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
+    fn admin_destroy_disputed_market(a: u32, _d: u32, o: u32, _c: u32, _r: u32, ) -> Weight {
+        (215_016_000 as Weight)
+            // Standard Error: 31_000
+            .saturating_add((27_159_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 31_000
+            .saturating_add((42_000 as Weight).saturating_mul(o as Weight))
+            .saturating_add(T::DbWeight::get().reads(9 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(9 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
-    // Storage: System Account (r:1 w:0)
-    // Storage: MarketCommons MarketPool (r:1 w:0)
+    // Storage: System Account (r:2 w:2)
+    // Storage: MarketCommons MarketPool (r:1 w:1)
+    // Storage: Swaps Pools (r:1 w:1)
+    // Storage: Tokens Accounts (r:2 w:2)
+    // Storage: Tokens TotalIssuance (r:2 w:2)
     // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
     // Storage: PredictionMarkets Disputes (r:0 w:1)
-    fn admin_destroy_reported_market() -> Weight {
-        (114_261_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(6 as Weight))
-            .saturating_add(T::DbWeight::get().writes(5 as Weight))
+    fn admin_destroy_reported_market(a: u32, _o: u32, c: u32, _r: u32, ) -> Weight {
+        (211_255_000 as Weight)
+            // Standard Error: 193_000
+            .saturating_add((26_964_000 as Weight).saturating_mul(a as Weight))
+            // Standard Error: 190_000
+            .saturating_add((180_000 as Weight).saturating_mul(c as Weight))
+            .saturating_add(T::DbWeight::get().reads(8 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
+            .saturating_add(T::DbWeight::get().writes(9 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
@@ -107,11 +128,11 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
     // Storage: MarketCommons MarketPool (r:1 w:0)
     fn admin_move_market_to_closed(o: u32, c: u32, ) -> Weight {
-        (54_861_000 as Weight)
-            // Standard Error: 52_000
-            .saturating_add((56_000 as Weight).saturating_mul(o as Weight))
-            // Standard Error: 52_000
-            .saturating_add((34_000 as Weight).saturating_mul(c as Weight))
+        (54_301_000 as Weight)
+            // Standard Error: 8_000
+            .saturating_add((40_000 as Weight).saturating_mul(o as Weight))
+            // Standard Error: 8_000
+            .saturating_add((15_000 as Weight).saturating_mul(c as Weight))
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
@@ -121,16 +142,65 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets Disputes (r:1 w:1)
     // Storage: MarketCommons MarketPool (r:1 w:0)
-    fn admin_move_market_to_resolved_overhead() -> Weight {
-        (111_118_000 as Weight)
+    fn admin_move_market_to_resolved_scalar_reported(_r: u32, ) -> Weight {
+        (92_050_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
+    // Storage: Balances Reserves (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    // Storage: Swaps Pools (r:1 w:1)
+    fn admin_move_market_to_resolved_categorical_reported(_r: u32, ) -> Weight {
+        (155_186_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(7 as Weight))
+            .saturating_add(T::DbWeight::get().writes(6 as Weight))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
+    // Storage: Balances Reserves (r:7 w:7)
+    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
+    // Storage: System Account (r:7 w:7)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    fn admin_move_market_to_resolved_scalar_disputed(_r: u32, d: u32, ) -> Weight {
+        (145_728_000 as Weight)
+            // Standard Error: 762_000
+            .saturating_add((24_298_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(8 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
+            .saturating_add(T::DbWeight::get().writes(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:1)
+    // Storage: PredictionMarkets Disputes (r:1 w:1)
+    // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
+    // Storage: Balances Reserves (r:7 w:7)
+    // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
+    // Storage: System Account (r:6 w:6)
+    // Storage: MarketCommons MarketPool (r:1 w:0)
+    // Storage: Swaps Pools (r:1 w:1)
+    fn admin_move_market_to_resolved_categorical_disputed(r: u32, d: u32, ) -> Weight {
+        (174_504_000 as Weight)
+            // Standard Error: 140_000
+            .saturating_add((116_000 as Weight).saturating_mul(r as Weight))
+            // Standard Error: 1_766_000
+            .saturating_add((23_843_000 as Weight).saturating_mul(d as Weight))
+            .saturating_add(T::DbWeight::get().reads(9 as Weight))
+            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
+            .saturating_add(T::DbWeight::get().writes(7 as Weight))
+            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
+    }
+    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
+    // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     fn approve_market() -> Weight {
-        (55_175_000 as Weight)
+        (59_225_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
@@ -140,7 +210,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Tokens Accounts (r:2 w:2)
     // Storage: Tokens TotalIssuance (r:2 w:2)
     fn buy_complete_set(_a: u32, ) -> Weight {
-        (1_502_286_000 as Weight)
+        (1_513_235_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(131 as Weight))
             .saturating_add(T::DbWeight::get().writes(130 as Weight))
     }
@@ -151,7 +221,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
     // Storage: MarketCommons Markets (r:0 w:1)
     fn create_market(_m: u32, ) -> Weight {
-        (74_591_000 as Weight)
+        (83_529_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
@@ -165,12 +235,10 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
     // Storage: MarketCommons MarketPool (r:1 w:1)
     // Storage: Swaps Pools (r:0 w:1)
-    fn deploy_swap_pool_for_market_future_pool(a: u32, o: u32, ) -> Weight {
-        (101_065_000 as Weight)
-            // Standard Error: 457_000
-            .saturating_add((34_412_000 as Weight).saturating_mul(a as Weight))
-            // Standard Error: 450_000
-            .saturating_add((558_000 as Weight).saturating_mul(o as Weight))
+    fn deploy_swap_pool_for_market_future_pool(a: u32, _o: u32, ) -> Weight {
+        (160_343_000 as Weight)
+            // Standard Error: 89_000
+            .saturating_add((33_878_000 as Weight).saturating_mul(a as Weight))
             .saturating_add(T::DbWeight::get().reads(9 as Weight))
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
             .saturating_add(T::DbWeight::get().writes(8 as Weight))
@@ -186,7 +254,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons MarketPool (r:1 w:1)
     // Storage: Swaps Pools (r:0 w:1)
     fn deploy_swap_pool_for_market_open_pool(_a: u32, ) -> Weight {
-        (2_354_211_000 as Weight)
+        (2_348_248_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(136 as Weight))
             .saturating_add(T::DbWeight::get().writes(135 as Weight))
     }
@@ -195,17 +263,19 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
-    fn dispute_authorized(d: u32, _b: u32, ) -> Weight {
-        (76_197_000 as Weight)
-            // Standard Error: 411_000
-            .saturating_add((42_000 as Weight).saturating_mul(d as Weight))
+    fn dispute_authorized(d: u32, b: u32, ) -> Weight {
+        (68_548_000 as Weight)
+            // Standard Error: 11_000
+            .saturating_add((803_000 as Weight).saturating_mul(d as Weight))
+            // Standard Error: 0
+            .saturating_add((35_000 as Weight).saturating_mul(b as Weight))
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     // Storage: Balances Reserves (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
     fn handle_expired_advised_market() -> Weight {
-        (59_575_000 as Weight)
+        (61_879_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
@@ -216,7 +286,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Swaps Pools (r:1 w:1)
     // Storage: MarketCommons Markets (r:1 w:1)
     fn internal_resolve_categorical_reported() -> Weight {
-        (133_047_000 as Weight)
+        (128_786_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
@@ -228,7 +298,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
     fn internal_resolve_categorical_disputed(_d: u32, ) -> Weight {
-        (253_803_000 as Weight)
+        (252_822_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(7 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
@@ -237,7 +307,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons MarketPool (r:1 w:0)
     // Storage: MarketCommons Markets (r:1 w:1)
     fn internal_resolve_scalar_reported() -> Weight {
-        (72_076_000 as Weight)
+        (71_656_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
@@ -248,7 +318,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
     // Storage: System Account (r:1 w:1)
     fn internal_resolve_scalar_disputed(_d: u32, ) -> Weight {
-        (198_698_000 as Weight)
+        (200_513_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
@@ -263,13 +333,13 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
     fn on_initialize_resolve_overhead() -> Weight {
-        (52_800_000 as Weight)
+        (54_895_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(10 as Weight))
             .saturating_add(T::DbWeight::get().writes(9 as Weight))
     }
     // Storage: PredictionMarkets MarketsCollectingSubsidy (r:1 w:1)
     fn process_subsidy_collecting_markets_raw(_a: u32, ) -> Weight {
-        (12_571_000 as Weight)
+        (11_523_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
@@ -279,7 +349,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: System Account (r:1 w:1)
     // Storage: Tokens TotalIssuance (r:1 w:1)
     fn redeem_shares_categorical() -> Weight {
-        (110_629_000 as Weight)
+        (109_231_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
@@ -289,7 +359,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: System Account (r:1 w:1)
     // Storage: Tokens TotalIssuance (r:2 w:2)
     fn redeem_shares_scalar() -> Weight {
-        (139_124_000 as Weight)
+        (130_741_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(7 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
@@ -299,13 +369,13 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketIdsPerCloseTimeFrame (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)
     fn reject_market(c: u32, o: u32, r: u32, ) -> Weight {
-        (76_243_000 as Weight)
-            // Standard Error: 32_000
-            .saturating_add((68_000 as Weight).saturating_mul(c as Weight))
-            // Standard Error: 32_000
-            .saturating_add((43_000 as Weight).saturating_mul(o as Weight))
-            // Standard Error: 1_000
-            .saturating_add((8_000 as Weight).saturating_mul(r as Weight))
+        (70_584_000 as Weight)
+            // Standard Error: 275_000
+            .saturating_add((93_000 as Weight).saturating_mul(c as Weight))
+            // Standard Error: 275_000
+            .saturating_add((118_000 as Weight).saturating_mul(o as Weight))
+            // Standard Error: 16_000
+            .saturating_add((12_000 as Weight).saturating_mul(r as Weight))
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
@@ -314,7 +384,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Timestamp Now (r:1 w:0)
     // Storage: PredictionMarkets MarketIdsPerReportBlock (r:1 w:1)
     fn report(_m: u32, ) -> Weight {
-        (47_422_000 as Weight)
+        (47_561_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
@@ -324,7 +394,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Tokens Accounts (r:2 w:2)
     // Storage: Tokens TotalIssuance (r:2 w:2)
     fn sell_complete_set(_a: u32, ) -> Weight {
-        (1_778_300_000 as Weight)
+        (1_756_070_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(131 as Weight))
             .saturating_add(T::DbWeight::get().writes(130 as Weight))
     }
@@ -336,7 +406,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: PredictionMarkets MarketsCollectingSubsidy (r:1 w:1)
     // Storage: Swaps Pools (r:0 w:1)
     fn start_subsidy(_a: u32, ) -> Weight {
-        (70_679_000 as Weight)
+        (92_050_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
     }
@@ -344,11 +414,11 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:32 w:0)
     // Storage: PredictionMarkets MarketIdsPerOpenTimeFrame (r:1 w:1)
     fn market_status_manager(b: u32, f: u32, ) -> Weight {
-        (44_637_000 as Weight)
-            // Standard Error: 46_000
-            .saturating_add((4_161_000 as Weight).saturating_mul(b as Weight))
-            // Standard Error: 46_000
-            .saturating_add((4_874_000 as Weight).saturating_mul(f as Weight))
+        (0 as Weight)
+            // Standard Error: 58_000
+            .saturating_add((5_714_000 as Weight).saturating_mul(b as Weight))
+            // Standard Error: 58_000
+            .saturating_add((5_633_000 as Weight).saturating_mul(f as Weight))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(b as Weight)))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(f as Weight)))
@@ -358,11 +428,11 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: MarketCommons Markets (r:32 w:0)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
     fn market_resolution_manager(r: u32, d: u32, ) -> Weight {
-        (1_569_000 as Weight)
-            // Standard Error: 524_000
-            .saturating_add((5_492_000 as Weight).saturating_mul(r as Weight))
-            // Standard Error: 524_000
-            .saturating_add((5_231_000 as Weight).saturating_mul(d as Weight))
+        (41_825_000 as Weight)
+            // Standard Error: 22_000
+            .saturating_add((4_210_000 as Weight).saturating_mul(r as Weight))
+            // Standard Error: 22_000
+            .saturating_add((4_983_000 as Weight).saturating_mul(d as Weight))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(r as Weight)))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(d as Weight)))
@@ -370,7 +440,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     }
     // Storage: PredictionMarkets MarketsCollectingSubsidy (r:1 w:1)
     fn process_subsidy_collecting_markets_dummy() -> Weight {
-        (9_498_000 as Weight)
+        (8_661_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
