@@ -982,7 +982,7 @@ mod pallet {
             T::WeightInfo::reject_market(
                 CacheSize::get(),
                 CacheSize::get(),
-                T::MaxRejectReasonLen::get()
+                reject_reason.len() as u32,
             ),
             Pays::No,
         ))]
@@ -1002,15 +1002,11 @@ mod pallet {
             let reject_reason_len = reject_reason.len() as u32;
             Self::do_reject_market(&market_id, market, reject_reason)?;
             // The RejectOrigin should not pay fees for providing this service
-            Ok((Some(T::WeightInfo::reject_market(
-                            close_ids_len,
-                            open_ids_len,
-                            reject_reason_len
-                        )
-                    ),
-                    Pays::No
-                ).into()
+            Ok((
+                Some(T::WeightInfo::reject_market(close_ids_len, open_ids_len, reject_reason_len)),
+                Pays::No,
             )
+                .into())
         }
 
         /// Reports the outcome of a market.

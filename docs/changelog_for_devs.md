@@ -1,8 +1,9 @@
 # v0.3.7
 
-- `reject_market` extrinsic now requires `reject_reason` parameter which is `Vec<u8>`.
-   The config constant `MaxRejectReasonLen` defines maximum length of above parameter.
-   `MarketRejected` event also contains `reject_reason` so that it can be cached for market creator.
+- `reject_market` extrinsic now requires `reject_reason` parameter which is
+  `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
+  above parameter. `MarketRejected` event also contains `reject_reason` so that
+  it can be cached for market creator.
 
 # v0.3.6
 
