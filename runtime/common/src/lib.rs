@@ -1371,11 +1371,11 @@ macro_rules! create_runtime_api {
                     tx: <Block as BlockT>::Extrinsic,
                     block_hash: <Block as BlockT>::Hash,
                 ) -> TransactionValidity {
-                // Filtered calls should not enter the tx pool as they'll fail if inserted.
-                // If this call is not allowed, we return early.
-                if !<Runtime as frame_system::Config>::BaseCallFilter::contains(&tx.function) {
-                    return frame_support::pallet_prelude::InvalidTransaction::Call.into();
-                }
+                    // Filtered calls should not enter the tx pool as they'll fail if inserted.
+                    // If this call is not allowed, we return early.
+                    if !<Runtime as frame_system::Config>::BaseCallFilter::contains(&tx.function) {
+                        return frame_support::pallet_prelude::InvalidTransaction::Call.into();
+                    }
 
                     Executive::validate_transaction(source, tx, block_hash)
                 }
