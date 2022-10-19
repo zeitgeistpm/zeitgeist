@@ -5856,7 +5856,7 @@ dependencies = [
 [[package]]
 name = "pallet-parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/purestake/moonbeam?tag=v0.25.0#4e2a5785424be6faa01cd14e90155d9d2ec734ee"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=v0.25.0-paritytech#42fdf1a90294c49ddbf8d0204ef002b2914a886f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
