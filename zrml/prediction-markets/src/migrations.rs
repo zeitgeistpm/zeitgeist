@@ -76,7 +76,7 @@ where
         {
             log::info!(
                 "TransformScalarMarketsToFixedPoint: authorized version is {:?}, require {:?}; \
-                 court version is {:?}, require {:?}, market-commons version is {:?}, require \
+                 court version is {:?}, require {:?}; market-commons version is {:?}, require \
                  {:?}; prediction-markets version is {:?}, require {:?}",
                 authorized_version,
                 AUTHORIZED_REQUIRED_STORAGE_VERSION,
