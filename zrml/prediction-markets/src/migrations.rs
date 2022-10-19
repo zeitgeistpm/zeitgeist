@@ -89,15 +89,15 @@ impl<T: Config> OnRuntimeUpgrade for TransformScalarMarketsToFixedPoint<T> {
                 if let Some(mut report) = market.report {
                     if let OutcomeReport::Scalar(value) = report.outcome {
                         report.outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                        market.report = Some(report);
                     }
-                    market.report = Some(report);
                 }
 
                 if let Some(mut resolved_outcome) = market.resolved_outcome {
                     if let OutcomeReport::Scalar(value) = resolved_outcome {
                         resolved_outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                        market.resolved_outcome = Some(resolved_outcome);
                     }
-                    market.resolved_outcome = Some(resolved_outcome);
                 }
 
                 // Transform disputes using the same key because both maps have the same key
