@@ -4645,7 +4645,7 @@ dependencies = [
 [[package]]
 name = "moonbeam-vrf"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=v0.25.0-paritytech#2555af5157ba5d4597b62619afea793e4bf2875e"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=v0.25.0-paritytech#42fdf1a90294c49ddbf8d0204ef002b2914a886f"
 dependencies = [
  "nimbus-primitives",
  "parity-scale-codec",
@@ -5240,7 +5240,7 @@ dependencies = [
 [[package]]
 name = "pallet-author-mapping"
 version = "2.0.5"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=v0.25.0-paritytech#2555af5157ba5d4597b62619afea793e4bf2875e"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=v0.25.0-paritytech#42fdf1a90294c49ddbf8d0204ef002b2914a886f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -9843,7 +9843,7 @@ dependencies = [
 [[package]]
 name = "session-keys-primitives"
 version = "0.1.0"
-source = "git+https://github.com/zeitgeistpm/moonbeam?branch=v0.25.0-paritytech#2555af5157ba5d4597b62619afea793e4bf2875e"
+source = "git+https://github.com/zeitgeistpm/moonbeam?branch=v0.25.0-paritytech#42fdf1a90294c49ddbf8d0204ef002b2914a886f"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -11579,7 +11579,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.5",
  "rand 0.8.5",
  "static_assertions",
