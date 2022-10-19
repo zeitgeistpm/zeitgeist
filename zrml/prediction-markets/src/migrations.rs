@@ -29,7 +29,7 @@ use zeitgeist_primitives::{
     constants::BASE,
     types::{MarketType, OutcomeReport},
 };
-use zrml_authorized::AuthorizedOutcomeReports;
+use zrml_authorized::{AuthorizedOutcomeReports, Pallet as AuthorizedPallet};
 use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
 
 const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
@@ -60,9 +60,8 @@ where
     {
         // TODO Use dependency pallets instead.
         let mut total_weight = T::DbWeight::get().reads(4);
-        let authorized_version = utility::get_on_chain_storage_version_of_authorized_pallet();
-        let market_commons_version =
-            utility::get_on_chain_storage_version_of_market_commons_pallet();
+        let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
+        let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         let prediction_markets_version = StorageVersion::get::<Pallet<T>>();
         if prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION
             || market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION
@@ -94,15 +93,15 @@ where
                 if let Some(mut report) = market.report {
                     if let OutcomeReport::Scalar(value) = report.outcome {
                         report.outcome = OutcomeReport::Scalar(to_fixed_point(value));
-                        market.report = Some(report);
                     }
+                    market.report = Some(report);
                 }
 
                 if let Some(mut resolved_outcome) = market.resolved_outcome {
                     if let OutcomeReport::Scalar(value) = resolved_outcome {
                         resolved_outcome = OutcomeReport::Scalar(to_fixed_point(value));
-                        market.resolved_outcome = Some(resolved_outcome);
                     }
+                    market.resolved_outcome = Some(resolved_outcome);
                 }
 
                 let old_disputes = Disputes::<T>::get(market_id);
@@ -154,9 +153,9 @@ where
             }
         }
 
+        StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<T>>();
+        StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
-        utility::put_storage_version_of_market_commons_pallet(MARKET_COMMONS_NEXT_STORAGE_VERSION);
-        utility::put_storage_version_of_authorized_pallet(AUTHORIZED_NEXT_STORAGE_VERSION);
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(4));
         log::info!("TransformScalarMarketsToFixedPoint: Done!");
         total_weight
@@ -227,18 +226,12 @@ mod tests {
         ExtBuilder::default().build().execute_with(|| {
             set_up_chain();
             TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
-            assert_eq!(
-                utility::get_on_chain_storage_version_of_authorized_pallet(),
-                AUTHORIZED_NEXT_STORAGE_VERSION,
-            );
-            assert_eq!(
-                utility::get_on_chain_storage_version_of_market_commons_pallet(),
-                MARKET_COMMONS_NEXT_STORAGE_VERSION,
-            );
-            assert_eq!(
-                StorageVersion::get::<Pallet<Runtime>>(),
-                PREDICTION_MARKETS_NEXT_STORAGE_VERSION,
-            );
+            let authorized_version = StorageVersion::get::<AuthorizedPallet<Runtime>>();
+            let market_commons_version = StorageVersion::get::<MarketCommonsPallet<Runtime>>();
+            let prediction_markets_version = StorageVersion::get::<Pallet<Runtime>>();
+            assert_eq!(authorized_version, AUTHORIZED_NEXT_STORAGE_VERSION);
+            assert_eq!(market_commons_version, MARKET_COMMONS_NEXT_STORAGE_VERSION);
+            assert_eq!(prediction_markets_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION);
         });
     }
 
@@ -368,10 +361,9 @@ mod tests {
     }
 
     fn set_up_chain() {
-        utility::put_storage_version_of_authorized_pallet(AUTHORIZED_REQUIRED_STORAGE_VERSION);
-        utility::put_storage_version_of_market_commons_pallet(
-            MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
-        );
+        StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
+        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION)
+            .put::<MarketCommonsPallet<Runtime>>();
         StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
     }
 }
@@ -391,40 +383,6 @@ mod utility {
     };
     use parity_scale_codec::Encode;
     use zeitgeist_primitives::types::{Pool, PoolId};
-
-    #[allow(unused)]
-    pub fn storage_prefix_of_market_commons_pallet() -> [u8; 32] {
-        storage_prefix(b"MarketCommons", b":__STORAGE_VERSION__:")
-    }
-
-    #[allow(unused)]
-    pub fn get_on_chain_storage_version_of_market_commons_pallet() -> StorageVersion {
-        let key = storage_prefix_of_market_commons_pallet();
-        unhashed::get_or_default(&key)
-    }
-
-    #[allow(unused)]
-    pub fn put_storage_version_of_market_commons_pallet(value: u16) {
-        let key = storage_prefix_of_market_commons_pallet();
-        unhashed::put(&key, &StorageVersion::new(value));
-    }
-
-    #[allow(unused)]
-    pub fn storage_prefix_of_authorized_pallet() -> [u8; 32] {
-        storage_prefix(b"Authorized", b":__STORAGE_VERSION__:")
-    }
-
-    #[allow(unused)]
-    pub fn get_on_chain_storage_version_of_authorized_pallet() -> StorageVersion {
-        let key = storage_prefix_of_authorized_pallet();
-        unhashed::get_or_default(&key)
-    }
-
-    #[allow(unused)]
-    pub fn put_storage_version_of_authorized_pallet(value: u16) {
-        let key = storage_prefix_of_authorized_pallet();
-        unhashed::put(&key, &StorageVersion::new(value));
-    }
 
     #[allow(unused)]
     const SWAPS: &[u8] = b"Swaps";
