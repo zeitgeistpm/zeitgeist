@@ -293,8 +293,10 @@ mod tests {
     }
 
     #[test]
-    fn on_runtime_ignored_scalar_markets_if_skipped() {
+    fn on_runtime_is_noop_if_versions_are_not_correct() {
         ExtBuilder::default().build().execute_with(|| {
+            // Don't set up chain to signal that storage is already up to date.
+
             let market_id: MarketId = 7;
             let market = Market {
                 creator: 1,
@@ -311,7 +313,7 @@ mod tests {
                 resolved_outcome: Some(OutcomeReport::Categorical(13)),
                 dispute_mechanism: MarketDisputeMechanism::Court,
             };
-            insert_market::<Blake2_128Concat>(market_id, market.clone());
+            Markets::<Runtime>::insert(market_id, market.clone());
 
             let dispute =
                 MarketDisputeOf::<Runtime> { at: 16, by: 17, outcome: OutcomeReport::Scalar(18) };
