@@ -19,7 +19,7 @@
 use {
     cumulus_primitives_core::ParaId,
     nimbus_primitives::NimbusId,
-    parachain_staking::InflationInfo,
+    pallet_parachain_staking::InflationInfo,
     zeitgeist_primitives::types::{AccountId, Balance},
 };
 
