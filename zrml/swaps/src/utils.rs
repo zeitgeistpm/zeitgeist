@@ -51,7 +51,7 @@ where
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
-    let pool_account = Pallet::<T>::pool_account_id(p.pool_id);
+    let pool_account = Pallet::<T>::pool_account_id(&p.pool_id);
 
     let asset_balance = T::AssetManager::free_balance(p.asset, &pool_account);
     (p.ensure_balance)(asset_balance)?;
@@ -89,7 +89,7 @@ where
     ensure!(p.pool.scoring_rule == ScoringRule::CPMM, Error::<T>::InvalidScoringRule);
     Pallet::<T>::check_if_pool_is_active(p.pool)?;
     let pool_shares_id = Pallet::<T>::pool_shares_id(p.pool_id);
-    let pool_account_id = Pallet::<T>::pool_account_id(p.pool_id);
+    let pool_account_id = Pallet::<T>::pool_account_id(&p.pool_id);
     let total_issuance = T::AssetManager::total_issuance(pool_shares_id);
 
     ensure!(p.pool.bound(&p.asset), Error::<T>::AssetNotBound);
@@ -172,7 +172,7 @@ where
         ensure!(p.pool.bound(&p.asset_out), Error::<T>::AssetNotBound);
     }
 
-    let spot_price_before = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
+    let spot_price_before = Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out)?;
     if let Some(max_price) = p.max_price {
         ensure!(spot_price_before <= max_price, Error::<T>::BadLimitPrice);
     }
@@ -206,7 +206,7 @@ where
         }
     }
 
-    let spot_price_after = Pallet::<T>::get_spot_price(p.pool_id, p.asset_in, p.asset_out)?;
+    let spot_price_after = Pallet::<T>::get_spot_price(&p.pool_id, &p.asset_in, &p.asset_out)?;
 
     // Allow little tolerance
     match p.pool.scoring_rule {

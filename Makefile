@@ -24,6 +24,9 @@ try-runtime-upgrade-zeitgeist:
 build:
 	SKIP_WASM_BUILD= cargo build
 
+build-production:
+	SKIP_WASM_BUILD= cargo build --profile=production
+
 purge:
 	target/debug/zeitgeist purge-chain --dev -y
 
