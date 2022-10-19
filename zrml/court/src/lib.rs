@@ -73,7 +73,7 @@ mod pallet {
     const INITIAL_JURORS_NUM: usize = 3;
     const MAX_RANDOM_JURORS: usize = 13;
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
     // Weight used to increase the number of jurors for subsequent disputes
     // of the same market
     const SUBSEQUENT_JURORS_FACTOR: usize = 2;

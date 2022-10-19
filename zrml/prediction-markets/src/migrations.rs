@@ -30,10 +30,13 @@ use zeitgeist_primitives::{
     types::{MarketType, OutcomeReport},
 };
 use zrml_authorized::{AuthorizedOutcomeReports, Pallet as AuthorizedPallet};
+use zrml_court::{Pallet as CourtPallet, Votes};
 use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
 
 const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
 const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
+const COURT_REQUIRED_STORAGE_VERSION: u16 = 1;
+const COURT_NEXT_STORAGE_VERSION: u16 = 2;
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2;
 const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3;
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
@@ -45,12 +48,14 @@ pub struct TransformScalarMarketsToFixedPoint<T>(PhantomData<T>);
 // number with ten digits after the decimal point. This update should only be executed if the
 // interpretation of metadata in changed in parallel. If that is the case, market description need
 // not be updated.
-impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade
-    for TransformScalarMarketsToFixedPoint<T>
+impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config + zrml_court::Config>
+    OnRuntimeUpgrade for TransformScalarMarketsToFixedPoint<T>
 where
     <T as zrml_market_commons::Config>::MarketId: EncodeLike<
         <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
     >,
+    <T as zrml_market_commons::Config>::MarketId:
+        EncodeLike<<<T as zrml_court::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
     <T as zrml_market_commons::Config>::MarketId:
         EncodeLike<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
 {
@@ -61,18 +66,22 @@ where
         // TODO Use dependency pallets instead.
         let mut total_weight = T::DbWeight::get().reads(4);
         let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
+        let court_version = StorageVersion::get::<CourtPallet<T>>();
         let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
         let prediction_markets_version = StorageVersion::get::<Pallet<T>>();
-        if prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION
+        if authorized_version != AUTHORIZED_REQUIRED_STORAGE_VERSION
+            || court_version != COURT_REQUIRED_STORAGE_VERSION
             || market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION
-            || authorized_version != AUTHORIZED_REQUIRED_STORAGE_VERSION
+            || prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION
         {
             log::info!(
-                "TransformScalarMarketsToFixedPoint: authorized version is {:?}, expected {:?}; \
-                 market-commons version is {:?}, expected {:?}; prediction-markets version is \
-                 {:?}, expected {:?}",
+                "TransformScalarMarketsToFixedPoint: authorized version is {:?}, require {:?}; \
+                 court version is {:?}, require {:?}, market-commons version is {:?}, require \
+                 {:?}; prediction-markets version is {:?}, require {:?}",
                 authorized_version,
                 AUTHORIZED_REQUIRED_STORAGE_VERSION,
+                court_version,
+                COURT_REQUIRED_STORAGE_VERSION,
                 market_commons_version,
                 MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
                 prediction_markets_version,
@@ -132,11 +141,27 @@ where
                     None => None,
                 };
 
-                new_scalar_markets.push((market_id, market, new_disputes, authorized_report));
+                let votes = Votes::<T>::iter_prefix(market_id)
+                    .filter_map(|(juror, (block_number, outcome_report))| match outcome_report {
+                        OutcomeReport::Scalar(value) => Some((
+                            juror,
+                            (block_number, OutcomeReport::Scalar(to_fixed_point(value))),
+                        )),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>();
+
+                new_scalar_markets.push((
+                    market_id,
+                    market,
+                    new_disputes,
+                    authorized_report,
+                    votes,
+                ));
             }
         }
 
-        for (market_id, market, disputes, authorized_report) in new_scalar_markets {
+        for (market_id, market, disputes, authorized_report, votes) in new_scalar_markets {
             let _ = MarketCommonsPallet::<T>::mutate_market(&market_id, |old_market| {
                 *old_market = market;
                 Ok(())
@@ -151,9 +176,14 @@ where
             if let Some(outcome_report) = authorized_report {
                 AuthorizedOutcomeReports::<T>::insert(market_id, outcome_report);
             }
+
+            for (juror, vote) in votes {
+                Votes::<T>::insert(market_id, juror, vote);
+            }
         }
 
         StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<T>>();
+        StorageVersion::new(COURT_NEXT_STORAGE_VERSION).put::<CourtPallet<T>>();
         StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
         StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(4));
@@ -227,9 +257,11 @@ mod tests {
             set_up_chain();
             TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
             let authorized_version = StorageVersion::get::<AuthorizedPallet<Runtime>>();
+            let court_version = StorageVersion::get::<CourtPallet<Runtime>>();
             let market_commons_version = StorageVersion::get::<MarketCommonsPallet<Runtime>>();
             let prediction_markets_version = StorageVersion::get::<Pallet<Runtime>>();
             assert_eq!(authorized_version, AUTHORIZED_NEXT_STORAGE_VERSION);
+            assert_eq!(court_version, COURT_NEXT_STORAGE_VERSION);
             assert_eq!(market_commons_version, MARKET_COMMONS_NEXT_STORAGE_VERSION);
             assert_eq!(prediction_markets_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION);
         });
@@ -294,6 +326,10 @@ mod tests {
 
             AuthorizedOutcomeReports::<Runtime>::insert(market_id, OutcomeReport::Scalar(19));
 
+            let juror = 20;
+            let block_number = 21;
+            Votes::<Runtime>::insert(market_id, juror, (block_number, OutcomeReport::Scalar(22)));
+
             TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
 
             let mut market_expected = market;
@@ -310,6 +346,9 @@ mod tests {
             let authorized_report_after =
                 AuthorizedOutcomeReports::<Runtime>::get(market_id).unwrap();
             assert_eq!(authorized_report_after, OutcomeReport::Scalar(190_000_000_000));
+
+            let vote_after = Votes::<Runtime>::get(market_id, juror).unwrap();
+            assert_eq!(vote_after, (block_number, OutcomeReport::Scalar(220_000_000_000)));
         });
     }
 
@@ -345,6 +384,10 @@ mod tests {
 
             AuthorizedOutcomeReports::<Runtime>::insert(market_id, OutcomeReport::Scalar(19));
 
+            let juror = 20;
+            let vote = (21, OutcomeReport::Scalar(22));
+            Votes::<Runtime>::insert(market_id, juror, vote.clone());
+
             TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
 
             let market_after = Markets::<Runtime>::get(market_id).unwrap();
@@ -357,11 +400,15 @@ mod tests {
             let authorized_report_after =
                 AuthorizedOutcomeReports::<Runtime>::get(market_id).unwrap();
             assert_eq!(authorized_report_after, OutcomeReport::Scalar(19));
+
+            let vote_after = Votes::<Runtime>::get(market_id, juror).unwrap();
+            assert_eq!(vote_after, vote);
         });
     }
 
     fn set_up_chain() {
         StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
+        StorageVersion::new(COURT_REQUIRED_STORAGE_VERSION).put::<CourtPallet<Runtime>>();
         StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION)
             .put::<MarketCommonsPallet<Runtime>>();
         StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
