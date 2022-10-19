@@ -924,8 +924,9 @@ fn it_allows_advisory_origin_to_approve_markets() {
 #[test]
 fn it_allows_advisory_origin_to_request_edits_for_markets() {
     ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        simple_create_categorical_market(MarketCreation::Advised, 2..4, ScoringRule::CPMM);
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -939,7 +940,7 @@ fn it_allows_advisory_origin_to_request_edits_for_markets() {
         );
 
         // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+        assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason.clone()));
         System::assert_last_event(
             Event::MarketRequestedEdit(
                 0,
