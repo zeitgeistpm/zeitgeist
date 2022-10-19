@@ -1,3 +1,9 @@
+# v0.3.7
+
+- Transformed integer scalar markets to fixed point with ten digits after the
+  decimal point. As soon as this update is deployed, the interpretation of the
+  scalar values must be changed.
+
 # v0.3.6
 
 - Added new field `deadlines` in Market structure, which has `grace_period`,
