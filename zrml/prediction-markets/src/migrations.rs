@@ -160,6 +160,22 @@ impl<T: Config> OnRuntimeUpgrade for TransformScalarMarketsToFixedPoint<T> {
         }
         Ok(())
     }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        for (market_id, market) in T::MarketCommons::market_iter().drain() {
+            if let MarketType::Scalar(range) = market.market_type {
+                assert_ne!(
+                    range.start(),
+                    range.end(),
+                    "TransformScalarMarketsToFixedPoint: Scalar range broken after transformation \
+                     of market {:?}",
+                    market_id,
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
 fn to_fixed_point(value: u128) -> u128 {
