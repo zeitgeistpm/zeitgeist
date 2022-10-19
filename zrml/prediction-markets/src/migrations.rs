@@ -39,18 +39,6 @@ const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3;
 const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
 const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
 
-// const MARKET_COMMONS: &[u8] = b"MarketCommons";
-// const MARKETS: &[u8] = b"Markets";
-// const PREDICTION_MARKETS: &[u8] = b"PredictionMarkets";
-// const DISPUTES: &[u8] = b"Disputes";
-
-// type DisputesOf<T> = BoundedVec<MarketDisputeOf<T>, <T as Config>::MaxDisputes>;
-// type MarketOf<T> = Market<
-//     <T as frame_system::Config>::AccountId,
-//     <T as frame_system::Config>::BlockNumber,
-//     MomentOf<T>,
-// >;
-
 pub struct TransformScalarMarketsToFixedPoint<T>(PhantomData<T>);
 
 // Transform all scalar intervals by BASE, thereby turning every scalar position into a fixed point
