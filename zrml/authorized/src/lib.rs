@@ -50,7 +50,7 @@ mod pallet {
     use zrml_market_commons::MarketCommonsPalletApi;
 
     /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     pub(crate) type BalanceOf<T> =
         <CurrencyOf<T> as Currency<<T as frame_system::Config>::AccountId>>::Balance;
