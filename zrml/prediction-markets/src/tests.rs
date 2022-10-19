@@ -19,9 +19,8 @@
 #![allow(clippy::reversed_empty_ranges)]
 
 use crate::{
-    mock::*, Config, EditReason, Error, Event, LastTimeFrame, MarketIdsForEdit,
-    MarketIdsPerCloseBlock, MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock,
-    MarketIdsPerReportBlock,
+    mock::*, Config, Error, Event, LastTimeFrame, MarketIdsForEdit, MarketIdsPerCloseBlock,
+    MarketIdsPerDisputeBlock, MarketIdsPerOpenBlock, MarketIdsPerReportBlock,
 };
 use core::ops::{Range, RangeInclusive};
 use frame_support::{
@@ -495,11 +494,7 @@ fn admin_destroy_market_correctly_slashes_advised_market_proposed_with_edit_requ
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        let edit_reason: EditReason = "Please Change Oracle"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("Vec to BoundedVec conversion failed");
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
@@ -936,11 +931,7 @@ fn it_allows_advisory_origin_to_request_edits_for_markets() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        let edit_reason: EditReason = "Please Change Oracle"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("Vec to BoundedVec conversion failed");
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
         // Make sure it fails from the random joe
         assert_noop!(
             PredictionMarkets::request_edit(Origin::signed(BOB), 0, edit_reason.clone()),
@@ -949,8 +940,34 @@ fn it_allows_advisory_origin_to_request_edits_for_markets() {
 
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
+        System::assert_last_event(
+            Event::MarketRequestedEdit(
+                0,
+                edit_reason.try_into().expect("Conversion to BoundedVec failed"),
+            )
+            .into(),
+        );
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+    });
+}
+
+#[test]
+fn edit_request_fails_if_edit_reason_is_too_long() {
+    ExtBuilder::default().build().execute_with(|| {
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize + 1];
+
+        assert_noop!(
+            PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason),
+            Error::<Runtime>::EditReasonLengthExceedsMaxEditReasonLen
+        );
     });
 }
 
@@ -964,11 +981,7 @@ fn market_with_edit_request_cannot_be_approved() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        let edit_reason: EditReason = "Please Change Oracle"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("Vec to BoundedVec conversion failed");
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
 
@@ -1010,11 +1023,7 @@ fn it_allows_the_advisory_origin_to_reject_markets_with_edit_request() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        let edit_reason: EditReason = "Please Change Oracle"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("Vec to BoundedVec conversion failed");
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
@@ -1149,11 +1158,7 @@ fn on_market_close_auto_rejects_expired_advised_market_with_edit_request() {
         let market = MarketCommons::market(&market_id);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        let edit_reason: EditReason = "Please Change Oracle"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("Vec to BoundedVec conversion failed");
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), market_id, edit_reason));
 
@@ -2474,11 +2479,7 @@ fn only_creator_can_edit_market() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        let edit_reason: EditReason = "Please Change Oracle"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("Vec to BoundedVec conversion failed");
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));
@@ -2512,11 +2513,7 @@ fn edit_cycle_for_proposed_markets() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        let edit_reason: EditReason = "Please Change Oracle"
-            .as_bytes()
-            .to_vec()
-            .try_into()
-            .expect("Vec to BoundedVec conversion failed");
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
 
         // Now it should work from SUDO
         assert_ok!(PredictionMarkets::request_edit(Origin::signed(SUDO), 0, edit_reason));

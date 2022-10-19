@@ -81,8 +81,7 @@ mod pallet {
         <<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId;
     pub(crate) type MomentOf<T> = <<T as Config>::MarketCommons as MarketCommonsPalletApi>::Moment;
     pub type CacheSize = ConstU32<64>;
-    pub type EditReasonLength = ConstU32<1024>;
-    pub type EditReason = BoundedVec<u8, EditReasonLength>;
+    pub type EditReason<T> = BoundedVec<u8, <T as Config>::MaxEditReasonLen>;
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -120,7 +119,6 @@ mod pallet {
             };
             if market_status == MarketStatus::Proposed {
                 slash_market_creator(T::AdvisoryBond::get());
-                // remove if there was a edit request
                 MarketIdsForEdit::<T>::remove(market_id);
             }
             if market_status != MarketStatus::Resolved
@@ -282,13 +280,23 @@ mod pallet {
 
         /// Edit requested to proposed market from advisory committee.
         /// NOTE: Can only be called by the `ApproveOrigin`.
-        #[pallet::weight((T::WeightInfo::request_edit(), Pays::No))]
+        #[pallet::weight(
+            (
+                T::WeightInfo::request_edit(
+                    edit_reason.len() as u32
+                ),
+                Pays::No
+            )
+        )]
         #[transactional]
         pub fn request_edit(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
-            edit_reason: EditReason,
+            edit_reason: Vec<u8>,
         ) -> DispatchResult {
+            let edit_reason: EditReason<T> = edit_reason
+                .try_into()
+                .map_err(|_| Error::<T>::EditReasonLengthExceedsMaxEditReasonLen)?;
             T::ApproveOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
@@ -296,11 +304,11 @@ mod pallet {
                 if reason.is_some() {
                     Err(Error::<T>::MarketEditRequestAlreadyInProgress)
                 } else {
-                    *reason = Some(edit_reason);
+                    *reason = Some(edit_reason.clone());
                     Ok(())
                 }
             })?;
-            Self::deposit_event(Event::MarketRequestedEdit(market_id));
+            Self::deposit_event(Event::MarketRequestedEdit(market_id, edit_reason));
             Ok(())
         }
 
@@ -599,11 +607,7 @@ mod pallet {
                 Self::ensure_market_start_is_in_time(&period)?;
             }
 
-            // Require sha3-384 as multihash. TODO(#608) The irrefutable `if let` is a workaround
-            // for a compiler error. Link an issue for this!
-            #[allow(irrefutable_let_patterns)]
-            let multihash =
-                if let MultiHash::Sha3_384(multihash) = metadata { multihash } else { [0u8; 50] };
+            let MultiHash::Sha3_384(multihash) = metadata;
             ensure!(multihash[0] == 0x15 && multihash[1] == 0x30, <Error<T>>::InvalidMultihash);
 
             Self::clear_auto_close(&market_id)?;
@@ -621,14 +625,13 @@ mod pallet {
                 *market = edited_market;
                 Ok(())
             })?;
-            let extra_weight = 0;
 
             let ids_amount: u32 = Self::update_auto_close(&market_id)?;
 
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketEdited(market_id, sender));
 
-            Ok(Some(T::WeightInfo::edit_market(ids_amount).saturating_add(extra_weight)).into())
+            Ok(Some(T::WeightInfo::edit_market(ids_amount)).into())
         }
 
         /// Buy complete sets and deploy a pool with specified liquidity for a market.
@@ -1242,6 +1245,10 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
+        /// The maximum length of string allowed as edit reason.
+        #[pallet::constant]
+        type MaxEditReasonLen: Get<u32>;
+
         /// The module identifier.
         #[pallet::constant]
         type PalletId: Get<PalletId>;
@@ -1294,6 +1301,8 @@ mod pallet {
         CannotDisputeSameOutcome,
         /// Only creator is able to edit the market.
         EditorNotCreator,
+        /// EditReason's length greater than MaxEditReasonLen.
+        EditReasonLengthExceedsMaxEditReasonLen,
         /// Market account does not have enough funds to pay out.
         InsufficientFundsInMarketAccount,
         /// Sender does not have enough share balance.
@@ -1405,8 +1414,8 @@ mod pallet {
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
-        /// A proposed market has been requested edit by advisor. \[market_id]
-        MarketRequestedEdit(MarketIdOf<T>),
+        /// A proposed market has been requested edit by advisor. \[market_id, edit_reason]
+        MarketRequestedEdit(MarketIdOf<T>, EditReason<T>),
         /// A proposed market has been edited by a user. \[market_id, editor\]
         MarketEdited(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
@@ -1593,7 +1602,8 @@ mod pallet {
     /// Contains market_ids for which advisor has requested edit.
     /// Value for given market_id represents the reason for the edit.
     #[pallet::storage]
-    pub type MarketIdsForEdit<T: Config> = StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason>;
+    pub type MarketIdsForEdit<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, EditReason<T>>;
 
     impl<T: Config> Pallet<T> {
         pub fn outcome_assets(

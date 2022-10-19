@@ -352,6 +352,7 @@ benchmarks! {
     }: { call.dispatch_bypass_filter(approve_origin)? }
 
     request_edit {
+        let r in 0..<T as Config>::MaxEditReasonLen::get();
         let (_, market_id) = create_market_common::<T>(
             MarketCreation::Advised,
             MarketType::Categorical(T::MaxCategories::get()),
@@ -360,8 +361,7 @@ benchmarks! {
         )?;
 
         let approve_origin = T::ApproveOrigin::successful_origin();
-        let edit_reason : EditReason = vec![0_u8; 1024].try_into()
-            .expect("Conversion to BoundedVec fails");
+        let edit_reason = vec![0_u8; r as usize];
         let call = Call::<T>::request_edit{ market_id, edit_reason };
     }: { call.dispatch_bypass_filter(approve_origin)? }
 
@@ -410,9 +410,11 @@ benchmarks! {
 
         let market_type = MarketType::Categorical(T::MaxCategories::get());
         let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
-        let scoring_rule =ScoringRule::CPMM;
-        let range_end = T::MaxSubsidyPeriod::get();
-        let range_start = T::MinSubsidyPeriod::get();
+        let scoring_rule = ScoringRule::CPMM;
+        // let range_end = T::MaxSubsidyPeriod::get();
+        // let range_start = T::MinSubsidyPeriod::get();
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let period = MarketPeriod::Timestamp(range_start..range_end);
         let (caller, oracle, deadlines, metadata, creation) =
             create_market_common_parameters::<T>(MarketCreation::Advised)?;
@@ -430,20 +432,13 @@ benchmarks! {
         let market_id = T::MarketCommons::latest_market_id()?;
 
         let approve_origin = T::ApproveOrigin::successful_origin();
-        let edit_reason : EditReason = vec![0_u8; 1024].try_into()
-            .expect("Conversion to BoundedVec fails");
+        let edit_reason = vec![0_u8; 1024];
         Call::<T>::request_edit{ market_id, edit_reason }
         .dispatch_bypass_filter(approve_origin)?;
 
         for i in 0..m {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_end),
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
-        for i in 0..m {
-            MarketIdsPerOpenTimeFrame::<T>::try_mutate(
-                Pallet::<T>::calculate_time_frame_of_moment(range_start),
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
