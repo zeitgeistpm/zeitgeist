@@ -73,6 +73,12 @@ impl<T: frame_system::Config> pallet_treasury::weights::WeightInfo for WeightInf
     // Storage: System Account (r:1 w:1)
     // Storage: Treasury Approvals (r:1 w:1)
     // Storage: Treasury Proposals (r:2 w:2)
+    // Storage: Treasury Approvals (r:1 w:1)
+    fn remove_approval() -> Weight {
+        (3_827_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
     fn on_initialize_proposals(p: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 499_000
