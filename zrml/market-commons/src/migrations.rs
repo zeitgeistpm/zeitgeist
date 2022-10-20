@@ -16,6 +16,7 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::Config;
+use alloc::vec::Vec;
 use frame_support::{
     log,
     migration::{put_storage_value, storage_iter},
@@ -27,7 +28,6 @@ use zeitgeist_primitives::types::{
     Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
     MarketType, OutcomeReport, Report, ScoringRule,
 };
-use alloc::vec::Vec;
 
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
@@ -81,7 +81,7 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
         let mut total_weight = T::DbWeight::get().reads(1);
         let storage_version = utility::get_on_chain_storage_version_of_market_commons_pallet();
         if storage_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
-            log::info!("Skipping updates of markets; markets already up to date");
+            log::info!("Skipping UpdateMarketsForAuthorizedMDM; markets already up to date");
             return total_weight;
         }
         let mut new_markets_data: Vec<(Vec<u8>, MarketOf<T>)> = Vec::new();

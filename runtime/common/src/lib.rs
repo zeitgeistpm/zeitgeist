@@ -59,11 +59,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
-                pallet_author_mapping::migrations::AddAccountIdToNimbusLookup<Runtime>,
-                pallet_parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
-                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
-                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
+                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
             )
         >;
 
@@ -75,8 +71,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
-                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
-                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
+                zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
             )
         >;
 

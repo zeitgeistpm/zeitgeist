@@ -1,10 +1,13 @@
-# v0.3.6
+# v0.3.7
 
 - Authorized pallet now has `AuthorizedDisputeResolutionOrigin`
   hence `MarketDisputeMechanism::Authorized` does not nead account_id.
   To create market with Authorized MDM specifying account_id for Authorized MDM
   is not required, any user satisfying `AuthorizedDisputeResolutionOrigin`
-  canuse Authorized MDM for resolving market.
+  can use Authorized MDM for resolving market.
+
+# v0.3.6
+
 - Added new field `deadlines` in Market structure, which has `grace_period`,
   `oracle_duration` and `dispute_duration` fields, all of which represent
   durations in number of blocks. The `create_market` extrinsic has a new
