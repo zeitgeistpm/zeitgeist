@@ -49,7 +49,7 @@ use frame_support::{
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T> {
     fn remark(_b: u32) -> Weight {
-        (0 as Weight)
+        (50_310_000 as Weight)
     }
     fn remark_with_event(b: u32) -> Weight {
         (0 as Weight)
