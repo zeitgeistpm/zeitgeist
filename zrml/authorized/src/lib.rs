@@ -184,11 +184,11 @@ where
     zeitgeist_primitives::types::Market {
         creation: zeitgeist_primitives::types::MarketCreation::Permissionless,
         creator_fee: 0,
-        creator: T::PalletId::get().into_account(),
+        creator: T::PalletId::get().into_account_truncating(),
         market_type: zeitgeist_primitives::types::MarketType::Scalar(0..=100),
         dispute_mechanism: zeitgeist_primitives::types::MarketDisputeMechanism::Authorized,
         metadata: Default::default(),
-        oracle: T::PalletId::get().into_account(),
+        oracle: T::PalletId::get().into_account_truncating(),
         period: zeitgeist_primitives::types::MarketPeriod::Block(Default::default()),
         deadlines: zeitgeist_primitives::types::Deadlines {
             grace_period: 1_u32.into(),

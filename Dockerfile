@@ -21,7 +21,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
     rustup toolchain install nightly-2022-04-13 && \
     rustup target add wasm32-unknown-unknown --toolchain nightly-2022-04-13 && \
     rustup default stable && \
-    cargo build "--$PROFILE" --features "$FEATURES"
+    cargo build --profile "$PROFILE" --features "$FEATURES"
 
 # ==== SECOND STAGE ====
 

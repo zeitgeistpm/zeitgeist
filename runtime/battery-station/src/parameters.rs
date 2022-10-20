@@ -137,13 +137,13 @@ parameter_types! {
 
     // ORML
     pub const GetNativeCurrencyId: CurrencyId = Asset::Ztg;
-    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+    pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account_truncating();
 
     // Prediction Market parameters
     /// (Slashable) Bond that is provided for creating an advised market that needs approval.
     /// Slashed in case the market is rejected.
     pub const AdvisoryBond: Balance = 25 * CENT;
-    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
+    pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(0);
     /// (Slashable) Bond that is provided for disputing the outcome.
     /// Slashed in case the final outcome does not match the dispute for which the `DisputeBond`
     /// was deposited.
@@ -305,6 +305,35 @@ parameter_types! {
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.
     pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+
+    // Bounties
+    /// The amount held on deposit for placing a bounty proposal.
+    pub const BountyDepositBase: Balance = 100 * BASE;
+    /// The delay period that a bounty beneficiary needs to wait before being able to claim the payout.
+    pub const BountyDepositPayoutDelay: BlockNumber = 3 * BLOCKS_PER_DAY;
+
+    /// Bounty duration in blocks.
+    pub const BountyUpdatePeriod: BlockNumber = 35 * BLOCKS_PER_DAY;
+
+    /// The curator deposit is calculated as a percentage of the curator fee.
+    ///
+    /// This deposit has optional upper and lower bounds with `CuratorDepositMax` and
+    /// `CuratorDepositMin`.
+    pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
+
+    /// Maximum amount of funds that should be placed in a deposit for making a proposal.
+    pub const CuratorDepositMax: Balance = 500 * BASE;
+    /// Minimum amount of funds that should be placed in a deposit for making a proposal.
+    pub const CuratorDepositMin: Balance = 10 * BASE;
+    /// Minimum value for a bounty.
+    pub const BountyValueMinimum: Balance = 50 * BASE;
+
+    /// The amount held on deposit per byte within the tip report reason or bounty description.
+    pub DataDepositPerByte: Balance = BASE;
+    /// Maximum acceptable reason length.
+    ///
+    /// Benchmarks depend on this value, be sure to update weights file when changing this value
+    pub MaximumReasonLength: u32 = 8192;
 
     // Vesting
     pub const MinVestedTransfer: Balance = ExistentialDeposit::get();

@@ -253,8 +253,9 @@ mod pallet {
             })
         }
 
+        #[inline]
         pub(crate) fn treasury_account_id() -> T::AccountId {
-            T::TreasuryPalletId::get().into_account()
+            T::TreasuryPalletId::get().into_account_truncating()
         }
 
         // No-one can stake more than BalanceOf::<T>::max(), therefore, this function saturates
