@@ -39,8 +39,11 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_bounties (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -48,7 +51,7 @@ impl<T: frame_system::Config> pallet_bounties::weights::WeightInfo for WeightInf
     // Storage: Bounties BountyCount (r:1 w:1)
     // Storage: Bounties BountyDescriptions (r:0 w:1)
     // Storage: Bounties Bounties (r:0 w:1)
-    fn propose_bounty(d: u32, ) -> Weight {
+    fn propose_bounty(d: u32) -> Weight {
         (36_538_000 as Weight)
             // Standard Error: 0
             .saturating_add((1_000 as Weight).saturating_mul(d as Weight))
@@ -120,7 +123,7 @@ impl<T: frame_system::Config> pallet_bounties::weights::WeightInfo for WeightInf
     // Storage: Bounties BountyApprovals (r:1 w:1)
     // Storage: Bounties Bounties (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn spend_funds(b: u32, ) -> Weight {
+    fn spend_funds(b: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 252_000
             .saturating_add((52_072_000 as Weight).saturating_mul(b as Weight))

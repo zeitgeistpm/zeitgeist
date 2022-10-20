@@ -39,15 +39,18 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_vesting (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo<T> {
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn vest_locked(l: u32, s: u32, ) -> Weight {
+    fn vest_locked(l: u32, s: u32) -> Weight {
         (43_102_000 as Weight)
             // Standard Error: 15_000
             .saturating_add((133_000 as Weight).saturating_mul(l as Weight))
@@ -58,7 +61,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     }
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn vest_unlocked(_l: u32, s: u32, ) -> Weight {
+    fn vest_unlocked(_l: u32, s: u32) -> Weight {
         (46_083_000 as Weight)
             // Standard Error: 45_000
             .saturating_add((53_000 as Weight).saturating_mul(s as Weight))
@@ -68,7 +71,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn vest_other_locked(l: u32, s: u32, ) -> Weight {
+    fn vest_other_locked(l: u32, s: u32) -> Weight {
         (44_604_000 as Weight)
             // Standard Error: 14_000
             .saturating_add((20_000 as Weight).saturating_mul(l as Weight))
@@ -80,7 +83,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:1)
-    fn vest_other_unlocked(l: u32, _s: u32, ) -> Weight {
+    fn vest_other_unlocked(l: u32, _s: u32) -> Weight {
         (53_868_000 as Weight)
             // Standard Error: 30_000
             .saturating_add((43_000 as Weight).saturating_mul(l as Weight))
@@ -90,7 +93,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: System Account (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn vested_transfer(_l: u32, _s: u32, ) -> Weight {
+    fn vested_transfer(_l: u32, _s: u32) -> Weight {
         (79_398_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
@@ -98,14 +101,14 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: System Account (r:2 w:2)
     // Storage: Balances Locks (r:1 w:1)
-    fn force_vested_transfer(_l: u32, _s: u32, ) -> Weight {
+    fn force_vested_transfer(_l: u32, _s: u32) -> Weight {
         (88_016_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn not_unlocking_merge_schedules(_l: u32, s: u32, ) -> Weight {
+    fn not_unlocking_merge_schedules(_l: u32, s: u32) -> Weight {
         (48_296_000 as Weight)
             // Standard Error: 36_000
             .saturating_add((126_000 as Weight).saturating_mul(s as Weight))
@@ -114,7 +117,7 @@ impl<T: frame_system::Config> pallet_vesting::weights::WeightInfo for WeightInfo
     }
     // Storage: Vesting Vesting (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
-    fn unlocking_merge_schedules(_l: u32, s: u32, ) -> Weight {
+    fn unlocking_merge_schedules(_l: u32, s: u32) -> Weight {
         (49_081_000 as Weight)
             // Standard Error: 29_000
             .saturating_add((53_000 as Weight).saturating_mul(s as Weight))

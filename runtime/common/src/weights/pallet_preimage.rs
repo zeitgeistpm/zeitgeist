@@ -39,15 +39,18 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_preimage (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_preimage::weights::WeightInfo for WeightInfo<T> {
     // Storage: Preimage PreimageFor (r:1 w:1)
     // Storage: Preimage StatusFor (r:1 w:1)
-    fn note_preimage(s: u32, ) -> Weight {
+    fn note_preimage(s: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 0
             .saturating_add((3_000 as Weight).saturating_mul(s as Weight))
@@ -56,7 +59,7 @@ impl<T: frame_system::Config> pallet_preimage::weights::WeightInfo for WeightInf
     }
     // Storage: Preimage PreimageFor (r:1 w:1)
     // Storage: Preimage StatusFor (r:1 w:0)
-    fn note_requested_preimage(s: u32, ) -> Weight {
+    fn note_requested_preimage(s: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 0
             .saturating_add((3_000 as Weight).saturating_mul(s as Weight))
@@ -65,7 +68,7 @@ impl<T: frame_system::Config> pallet_preimage::weights::WeightInfo for WeightInf
     }
     // Storage: Preimage PreimageFor (r:1 w:1)
     // Storage: Preimage StatusFor (r:1 w:0)
-    fn note_no_deposit_preimage(s: u32, ) -> Weight {
+    fn note_no_deposit_preimage(s: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 0
             .saturating_add((3_000 as Weight).saturating_mul(s as Weight))

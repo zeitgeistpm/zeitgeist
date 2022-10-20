@@ -39,16 +39,19 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for frame_system (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T> {
-    fn remark(_b: u32, ) -> Weight {
+    fn remark(_b: u32) -> Weight {
         (0 as Weight)
     }
-    fn remark_with_event(b: u32, ) -> Weight {
+    fn remark_with_event(b: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(b as Weight))
@@ -61,21 +64,21 @@ impl<T: frame_system::Config> frame_system::weights::WeightInfo for WeightInfo<T
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     // Storage: Skipped Metadata (r:0 w:0)
-    fn set_storage(i: u32, ) -> Weight {
+    fn set_storage(i: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 6_000
             .saturating_add((802_000 as Weight).saturating_mul(i as Weight))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(i as Weight)))
     }
     // Storage: Skipped Metadata (r:0 w:0)
-    fn kill_storage(i: u32, ) -> Weight {
+    fn kill_storage(i: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 5_000
             .saturating_add((644_000 as Weight).saturating_mul(i as Weight))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(i as Weight)))
     }
     // Storage: Skipped Metadata (r:0 w:0)
-    fn kill_prefix(p: u32, ) -> Weight {
+    fn kill_prefix(p: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 9_000
             .saturating_add((1_527_000 as Weight).saturating_mul(p as Weight))

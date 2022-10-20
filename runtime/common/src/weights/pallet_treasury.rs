@@ -39,8 +39,11 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_treasury (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -60,7 +63,7 @@ impl<T: frame_system::Config> pallet_treasury::weights::WeightInfo for WeightInf
     }
     // Storage: Treasury Proposals (r:1 w:0)
     // Storage: Treasury Approvals (r:1 w:1)
-    fn approve_proposal(p: u32, ) -> Weight {
+    fn approve_proposal(p: u32) -> Weight {
         (13_929_000 as Weight)
             // Standard Error: 2_000
             .saturating_add((154_000 as Weight).saturating_mul(p as Weight))
@@ -77,7 +80,7 @@ impl<T: frame_system::Config> pallet_treasury::weights::WeightInfo for WeightInf
     // Storage: Treasury Approvals (r:1 w:1)
     // Storage: Bounties BountyApprovals (r:1 w:1)
     // Storage: Treasury Proposals (r:2 w:2)
-    fn on_initialize_proposals(p: u32, ) -> Weight {
+    fn on_initialize_proposals(p: u32) -> Weight {
         (28_030_000 as Weight)
             // Standard Error: 378_000
             .saturating_add((51_076_000 as Weight).saturating_mul(p as Weight))

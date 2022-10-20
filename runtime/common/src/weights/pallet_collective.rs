@@ -39,8 +39,11 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_collective (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
@@ -49,7 +52,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Proposals (r:1 w:0)
     // Storage: AdvisoryCommittee Voting (r:255 w:255)
     // Storage: AdvisoryCommittee Prime (r:0 w:1)
-    fn set_members(m: u32, _n: u32, p: u32, ) -> Weight {
+    fn set_members(m: u32, _n: u32, p: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 222_000
             .saturating_add((50_992_000 as Weight).saturating_mul(m as Weight))
@@ -61,7 +64,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(p as Weight)))
     }
     // Storage: AdvisoryCommittee Members (r:1 w:0)
-    fn execute(b: u32, m: u32, ) -> Weight {
+    fn execute(b: u32, m: u32) -> Weight {
         (25_469_000 as Weight)
             // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(b as Weight))
@@ -71,7 +74,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     }
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee ProposalOf (r:1 w:0)
-    fn propose_execute(_b: u32, m: u32, ) -> Weight {
+    fn propose_execute(_b: u32, m: u32) -> Weight {
         (32_666_000 as Weight)
             // Standard Error: 3_000
             .saturating_add((89_000 as Weight).saturating_mul(m as Weight))
@@ -82,7 +85,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     // Storage: AdvisoryCommittee ProposalCount (r:1 w:1)
     // Storage: AdvisoryCommittee Voting (r:0 w:1)
-    fn propose_proposed(_b: u32, m: u32, p: u32, ) -> Weight {
+    fn propose_proposed(_b: u32, m: u32, p: u32) -> Weight {
         (65_105_000 as Weight)
             // Standard Error: 10_000
             .saturating_add((86_000 as Weight).saturating_mul(m as Weight))
@@ -93,7 +96,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     }
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee Voting (r:1 w:1)
-    fn vote(m: u32, ) -> Weight {
+    fn vote(m: u32) -> Weight {
         (50_287_000 as Weight)
             // Standard Error: 10_000
             .saturating_add((135_000 as Weight).saturating_mul(m as Weight))
@@ -104,7 +107,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     // Storage: AdvisoryCommittee ProposalOf (r:0 w:1)
-    fn close_early_disapproved(_m: u32, p: u32, ) -> Weight {
+    fn close_early_disapproved(_m: u32, p: u32) -> Weight {
         (71_278_000 as Weight)
             // Standard Error: 5_000
             .saturating_add((156_000 as Weight).saturating_mul(p as Weight))
@@ -115,7 +118,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Members (r:1 w:0)
     // Storage: AdvisoryCommittee ProposalOf (r:1 w:1)
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
-    fn close_early_approved(b: u32, m: u32, p: u32, ) -> Weight {
+    fn close_early_approved(b: u32, m: u32, p: u32) -> Weight {
         (58_716_000 as Weight)
             // Standard Error: 1_000
             .saturating_add((5_000 as Weight).saturating_mul(b as Weight))
@@ -131,7 +134,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Prime (r:1 w:0)
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     // Storage: AdvisoryCommittee ProposalOf (r:0 w:1)
-    fn close_disapproved(m: u32, p: u32, ) -> Weight {
+    fn close_disapproved(m: u32, p: u32) -> Weight {
         (66_989_000 as Weight)
             // Standard Error: 10_000
             .saturating_add((5_000 as Weight).saturating_mul(m as Weight))
@@ -145,7 +148,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Prime (r:1 w:0)
     // Storage: AdvisoryCommittee ProposalOf (r:1 w:1)
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
-    fn close_approved(b: u32, m: u32, p: u32, ) -> Weight {
+    fn close_approved(b: u32, m: u32, p: u32) -> Weight {
         (40_814_000 as Weight)
             // Standard Error: 1_000
             .saturating_add((15_000 as Weight).saturating_mul(b as Weight))
@@ -159,7 +162,7 @@ impl<T: frame_system::Config> pallet_collective::weights::WeightInfo for WeightI
     // Storage: AdvisoryCommittee Proposals (r:1 w:1)
     // Storage: AdvisoryCommittee Voting (r:0 w:1)
     // Storage: AdvisoryCommittee ProposalOf (r:0 w:1)
-    fn disapprove_proposal(p: u32, ) -> Weight {
+    fn disapprove_proposal(p: u32) -> Weight {
         (36_241_000 as Weight)
             // Standard Error: 5_000
             .saturating_add((178_000 as Weight).saturating_mul(p as Weight))

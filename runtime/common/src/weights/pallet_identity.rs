@@ -39,14 +39,17 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_identity (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInfo<T> {
     // Storage: Identity Registrars (r:1 w:1)
-    fn add_registrar(r: u32, ) -> Weight {
+    fn add_registrar(r: u32) -> Weight {
         (20_161_000 as Weight)
             // Standard Error: 66_000
             .saturating_add((439_000 as Weight).saturating_mul(r as Weight))
@@ -54,7 +57,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn set_identity(_r: u32, x: u32, ) -> Weight {
+    fn set_identity(_r: u32, x: u32) -> Weight {
         (53_093_000 as Weight)
             // Standard Error: 19_000
             .saturating_add((736_000 as Weight).saturating_mul(x as Weight))
@@ -64,7 +67,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SubsOf (r:1 w:1)
     // Storage: Identity SuperOf (r:1 w:1)
-    fn set_subs_new(s: u32, ) -> Weight {
+    fn set_subs_new(s: u32) -> Weight {
         (43_974_000 as Weight)
             // Standard Error: 41_000
             .saturating_add((5_696_000 as Weight).saturating_mul(s as Weight))
@@ -76,7 +79,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SubsOf (r:1 w:1)
     // Storage: Identity SuperOf (r:0 w:1)
-    fn set_subs_old(p: u32, ) -> Weight {
+    fn set_subs_old(p: u32) -> Weight {
         (42_466_000 as Weight)
             // Standard Error: 20_000
             .saturating_add((1_425_000 as Weight).saturating_mul(p as Weight))
@@ -87,7 +90,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity SubsOf (r:1 w:1)
     // Storage: Identity IdentityOf (r:1 w:1)
     // Storage: Identity SuperOf (r:0 w:64)
-    fn clear_identity(_r: u32, s: u32, x: u32, ) -> Weight {
+    fn clear_identity(_r: u32, s: u32, x: u32) -> Weight {
         (54_503_000 as Weight)
             // Standard Error: 32_000
             .saturating_add((1_464_000 as Weight).saturating_mul(s as Weight))
@@ -99,7 +102,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity Registrars (r:1 w:0)
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn request_judgement(r: u32, x: u32, ) -> Weight {
+    fn request_judgement(r: u32, x: u32) -> Weight {
         (41_292_000 as Weight)
             // Standard Error: 200_000
             .saturating_add((987_000 as Weight).saturating_mul(r as Weight))
@@ -109,7 +112,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn cancel_request(r: u32, x: u32, ) -> Weight {
+    fn cancel_request(r: u32, x: u32) -> Weight {
         (32_053_000 as Weight)
             // Standard Error: 337_000
             .saturating_add((2_829_000 as Weight).saturating_mul(r as Weight))
@@ -119,7 +122,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     // Storage: Identity Registrars (r:1 w:1)
-    fn set_fee(r: u32, ) -> Weight {
+    fn set_fee(r: u32) -> Weight {
         (8_819_000 as Weight)
             // Standard Error: 21_000
             .saturating_add((400_000 as Weight).saturating_mul(r as Weight))
@@ -127,7 +130,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     // Storage: Identity Registrars (r:1 w:1)
-    fn set_account_id(r: u32, ) -> Weight {
+    fn set_account_id(r: u32) -> Weight {
         (7_687_000 as Weight)
             // Standard Error: 47_000
             .saturating_add((504_000 as Weight).saturating_mul(r as Weight))
@@ -135,7 +138,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     // Storage: Identity Registrars (r:1 w:1)
-    fn set_fields(r: u32, ) -> Weight {
+    fn set_fields(r: u32) -> Weight {
         (9_073_000 as Weight)
             // Standard Error: 49_000
             .saturating_add((186_000 as Weight).saturating_mul(r as Weight))
@@ -144,7 +147,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity Registrars (r:1 w:0)
     // Storage: Identity IdentityOf (r:1 w:1)
-    fn provide_judgement(_r: u32, x: u32, ) -> Weight {
+    fn provide_judgement(_r: u32, x: u32) -> Weight {
         (41_154_000 as Weight)
             // Standard Error: 11_000
             .saturating_add((670_000 as Weight).saturating_mul(x as Weight))
@@ -155,7 +158,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:1)
     // Storage: System Account (r:2 w:2)
     // Storage: Identity SuperOf (r:0 w:64)
-    fn kill_identity(_r: u32, s: u32, _x: u32, ) -> Weight {
+    fn kill_identity(_r: u32, s: u32, _x: u32) -> Weight {
         (80_465_000 as Weight)
             // Standard Error: 32_000
             .saturating_add((1_386_000 as Weight).saturating_mul(s as Weight))
@@ -166,7 +169,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SuperOf (r:1 w:1)
     // Storage: Identity SubsOf (r:1 w:1)
-    fn add_sub(s: u32, ) -> Weight {
+    fn add_sub(s: u32) -> Weight {
         (55_008_000 as Weight)
             // Standard Error: 15_000
             .saturating_add((163_000 as Weight).saturating_mul(s as Weight))
@@ -175,7 +178,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SuperOf (r:1 w:1)
-    fn rename_sub(s: u32, ) -> Weight {
+    fn rename_sub(s: u32) -> Weight {
         (16_967_000 as Weight)
             // Standard Error: 3_000
             .saturating_add((75_000 as Weight).saturating_mul(s as Weight))
@@ -185,7 +188,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     // Storage: Identity IdentityOf (r:1 w:0)
     // Storage: Identity SuperOf (r:1 w:1)
     // Storage: Identity SubsOf (r:1 w:1)
-    fn remove_sub(s: u32, ) -> Weight {
+    fn remove_sub(s: u32) -> Weight {
         (58_373_000 as Weight)
             // Standard Error: 24_000
             .saturating_add((63_000 as Weight).saturating_mul(s as Weight))
@@ -194,7 +197,7 @@ impl<T: frame_system::Config> pallet_identity::weights::WeightInfo for WeightInf
     }
     // Storage: Identity SuperOf (r:1 w:1)
     // Storage: Identity SubsOf (r:1 w:1)
-    fn quit_sub(s: u32, ) -> Weight {
+    fn quit_sub(s: u32) -> Weight {
         (34_045_000 as Weight)
             // Standard Error: 6_000
             .saturating_add((184_000 as Weight).saturating_mul(s as Weight))

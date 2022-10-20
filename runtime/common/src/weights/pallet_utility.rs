@@ -39,13 +39,16 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
 use core::marker::PhantomData;
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 
 /// Weight functions for pallet_utility (automatically generated)
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo<T> {
-    fn batch(c: u32, ) -> Weight {
+    fn batch(c: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 24_000
             .saturating_add((4_529_000 as Weight).saturating_mul(c as Weight))
@@ -53,7 +56,7 @@ impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo
     fn as_derivative() -> Weight {
         (2_720_000 as Weight)
     }
-    fn batch_all(c: u32, ) -> Weight {
+    fn batch_all(c: u32) -> Weight {
         (202_638_000 as Weight)
             // Standard Error: 43_000
             .saturating_add((4_492_000 as Weight).saturating_mul(c as Weight))
@@ -61,7 +64,7 @@ impl<T: frame_system::Config> pallet_utility::weights::WeightInfo for WeightInfo
     fn dispatch_as() -> Weight {
         (12_980_000 as Weight)
     }
-    fn force_batch(c: u32, ) -> Weight {
+    fn force_batch(c: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 69_000
             .saturating_add((4_940_000 as Weight).saturating_mul(c as Weight))
