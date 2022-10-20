@@ -8,8 +8,8 @@ export FRAME_PALLETS=( frame_system pallet_balances pallet_bounties pallet_democ
                 pallet_proxy pallet_scheduler pallet_timestamp pallet_treasury \
                 pallet_utility pallet_vesting \
                 ) # pallet_collective pallet_grandpa )
-export FRAME_PALLETS_RUNS=20
-export FRAME_PALLETS_STEPS=50
+export FRAME_PALLETS_RUNS="${FRAME_PALLETS_RUNS:-20}"
+export FRAME_PALLETS_STEPS="${FRAME_PALLETS_STEPS:-50}"
 export FRAME_WEIGHT_TEMPLATE="./misc/frame_weight_template.hbs"
 
 # pallet_crowdloan_rewards benchmark lead to an error within the verify function (deprecated)
@@ -19,11 +19,11 @@ export FRAME_PALLETS_PARACHAIN_RUNS=$FRAME_PALLETS_RUNS
 export FRAME_PALLETS_PARACHAIN_STEPS=$FRAME_PALLETS_STEPS
 
 export ORML_PALLETS=( orml_currencies orml_tokens )
-export ORML_PALLETS_RUNS=20
-export ORML_PALLETS_STEPS=50
+export ORML_PALLETS_RUNS="${ORML_PALLETS_RUNS:-20}"
+export ORML_PALLETS_STEPS="${ORML_PALLETS_STEPS:-50}"
 export ORML_WEIGHT_TEMPLATE="./misc/orml_weight_template.hbs"
 
 export ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_liquidity_mining zrml_prediction_markets zrml_swaps zrml_styx )
-export ZEITGEIST_PALLETS_RUNS=1000
-export ZEITGEIST_PALLETS_STEPS=10
+export ZEITGEIST_PALLETS_RUNS="${ZEITGEIST_PALLETS_RUNS:-1000}"
+export ZEITGEIST_PALLETS_STEPS="${ZEITGEIST_PALLETS_STEPS:-10}"
 export ZEITGEIST_WEIGHT_TEMPLATE="./misc/weight_template.hbs"

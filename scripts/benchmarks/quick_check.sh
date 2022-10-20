@@ -12,6 +12,17 @@ if [ ! -d "./scripts/benchmarks" ]; then
     exit 1
 fi;
 
-cargo build --release --features=runtime-benchmarks
+export FRAME_PALLETS_RUNS=0
+export FRAME_PALLETS_STEPS=1
 
-./target/release/zeitgeist benchmark pallet --chain dev --execution=native --wasm-execution=compiled --heap-pages=4096 --pallet "*" --extrinsic "*" --steps 1 --repeat 0 --detailed-log-output
+export ORML_PALLETS_RUNS=0
+export ORML_PALLETS_STEPS=1
+
+export ZEITGEIST_PALLETS_RUNS=0
+export ZEITGEIST_PALLETS_STEPS=1
+
+export PROFILE=release
+export ADDITIONAL=--detailed-log-output
+export EXECUTION=native
+
+source ./scripts/benchmarks/run_benchmarks.sh
