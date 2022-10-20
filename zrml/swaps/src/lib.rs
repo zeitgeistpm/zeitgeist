@@ -1273,7 +1273,7 @@ mod pallet {
             F: Fn(PoolId) -> Result<Weight, DispatchError>,
         {
             let mut total_weight = T::WeightInfo::apply_to_cached_pools_noop(pool_count);
-            for (index, (pool_id, _)) in PoolsCachedForArbitrage::<T>::drain().enumerate() {
+            for (pool_id, _) in PoolsCachedForArbitrage::<T>::drain().take(pool_count as usize) {
                 // The mutation should never fail, but if it does, we just assume we
                 // consumed all the weight and rollback the pool.
                 let _ = with_transaction(|| match mutation(pool_id) {
@@ -1291,9 +1291,6 @@ mod pallet {
                         TransactionOutcome::Commit(Ok(()))
                     }
                 });
-                if index.saturating_add(1) == (pool_count as usize) {
-                    break;
-                }
             }
             total_weight
         }
