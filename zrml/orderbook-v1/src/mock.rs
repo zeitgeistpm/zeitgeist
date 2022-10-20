@@ -95,6 +95,8 @@ impl orml_tokens::Config for Runtime {
     type MaxLocks = ();
     type MaxReserves = MaxReserves;
     type OnDust = ();
+    type OnKilledTokenAccount = ();
+    type OnNewTokenAccount = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
