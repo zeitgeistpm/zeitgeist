@@ -92,7 +92,7 @@ where
 
         let mut new_scalar_markets: Vec<_> = vec![];
         for (market_id, mut market) in MarketCommonsPallet::<T>::market_iter() {
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             if let MarketType::Scalar(range) = market.market_type {
                 let new_start = to_fixed_point(*range.start());
                 let new_end = to_fixed_point(*range.end());
@@ -113,6 +113,7 @@ where
                 }
 
                 let old_disputes = Disputes::<T>::get(market_id);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
                 let new_disputes = if old_disputes.is_empty() {
                     None
                 } else {
@@ -139,6 +140,7 @@ where
                     }
                     None => None,
                 };
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
                 let votes = Votes::<T>::iter_prefix(market_id)
                     .filter_map(|(juror, (block_number, outcome_report))| match outcome_report {
@@ -149,6 +151,13 @@ where
                         _ => None,
                     })
                     .collect::<Vec<_>>();
+                // This is a terrible way of counting, but it actually doesn't increase the
+                // complexity of the storage migration. Also, it doesn't matter because we don't
+                // even have court enabled.
+                let vote_count = Votes::<T>::iter_keys().count() as u64;
+                // We add `2 * vote_count` reads - one for the `count()`, and one for the
+                // `iter_prefix` above.
+                total_weight = total_weight.saturating_add(vote_count.saturating_mul(2));
 
                 new_scalar_markets.push((
                     market_id,
@@ -174,10 +183,12 @@ where
 
             if let Some(outcome_report) = authorized_report {
                 AuthorizedOutcomeReports::<T>::insert(market_id, outcome_report);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             }
 
             for (juror, vote) in votes {
                 Votes::<T>::insert(market_id, juror, vote);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
             }
         }
 
