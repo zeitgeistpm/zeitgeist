@@ -284,7 +284,7 @@ benchmarks! {
             )
             .unwrap();
 
-            let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+            let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
             T::AssetManager::withdraw(
                 base_asset,
                 &pool_account_id,
@@ -449,7 +449,7 @@ benchmarks! {
             Some(weights.clone()),
         )
         .unwrap();
-        let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+        let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
         let asset = *assets.last().unwrap();
         T::AssetManager::withdraw(
             asset,
@@ -507,7 +507,7 @@ benchmarks! {
             Some(weights.clone()),
         )
         .unwrap();
-        let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
+        let pool_account_id = Pallet::<T>::pool_account_id(&pool_id);
         for asset in assets.iter().filter(|a| **a != base_asset) {
             T::AssetManager::withdraw(
                 *asset,
