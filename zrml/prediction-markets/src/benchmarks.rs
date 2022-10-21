@@ -958,6 +958,7 @@ benchmarks! {
     reject_market {
         let c in 0..63;
         let o in 0..63;
+        let r in 0..<T as Config>::MaxRejectReasonLen::get();
 
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
@@ -983,7 +984,8 @@ benchmarks! {
         }
 
         let reject_origin = T::RejectOrigin::successful_origin();
-        let call = Call::<T>::reject_market { market_id };
+        let reject_reason: Vec<u8> = vec![0; r as usize];
+        let call = Call::<T>::reject_market { market_id, reject_reason };
     }: { call.dispatch_bypass_filter(reject_origin)? }
 
     report {

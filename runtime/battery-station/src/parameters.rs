@@ -192,6 +192,8 @@ parameter_types! {
     pub const ValidityBond: Balance = 50 * CENT;
     /// Maximum string length for edit reason.
     pub const MaxEditReasonLen: u32 = 1024;
+    /// Maximum string length allowed for reject reason.
+    pub const MaxRejectReasonLen: u32 = 1024;
 
     // Preimage
     pub const PreimageMaxSize: u32 = 4096 * 1024;

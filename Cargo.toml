@@ -57,6 +57,9 @@ pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rew
 moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
 # Fix author-mapping migration
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
+# Fix benchmark verification logic
+# See https://github.com/zeitgeistpm/moonbeam/commit/42fdf1a90294c49ddbf8d0204ef002b2914a886f
+pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
 # Use dependencies from Paritytech
 session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "v0.25.0-paritytech" }
 
