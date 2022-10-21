@@ -1682,8 +1682,9 @@ mod pallet {
             }
         }
 
+        #[inline]
         pub(crate) fn market_account(market_id: MarketIdOf<T>) -> T::AccountId {
-            T::PalletId::get().into_sub_account(market_id.saturated_into::<u128>())
+            T::PalletId::get().into_sub_account_truncating(market_id.saturated_into::<u128>())
         }
 
         // Manually remove market from cache for auto close.
