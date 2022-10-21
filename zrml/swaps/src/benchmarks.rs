@@ -286,7 +286,7 @@ benchmarks! {
 
             let pool_account_id = Pallet::<T>::pool_account_id(pool_id);
             T::AssetManager::withdraw(
-                *assets.last().unwrap(),
+                base_asset,
                 &pool_account_id,
                 balance / 9u8.saturated_into()
             )
