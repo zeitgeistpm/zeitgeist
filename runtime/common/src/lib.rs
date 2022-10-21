@@ -957,6 +957,7 @@ macro_rules! impl_config_traits {
             type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;
             type MinSubsidyPeriod = MinSubsidyPeriod;
+            type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;

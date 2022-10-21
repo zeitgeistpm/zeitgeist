@@ -9,6 +9,10 @@
   prize pool (mint-sell/buy-burn resp.) and the amount of full sets
   minted/burned. Note that in addition to these events, the low-level
   `tokens.Deposited` and `tokens.Transfer` events are also emitted.
+- `reject_market` extrinsic now requires `reject_reason` parameter which is
+  `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
+  above parameter. `MarketRejected` event also contains `reject_reason` so that
+  it can be cached for market creator.
 
 # v0.3.6
 
