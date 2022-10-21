@@ -3,6 +3,10 @@
 - Transformed integer scalar markets to fixed point with ten digits after the
   decimal point. As soon as this update is deployed, the interpretation of the
   scalar values must be changed.
+- `reject_market` extrinsic now requires `reject_reason` parameter which is
+  `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
+  above parameter. `MarketRejected` event also contains `reject_reason` so that
+  it can be cached for market creator.
 
 # v0.3.6
 
