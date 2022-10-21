@@ -135,6 +135,7 @@ cfg_if::cfg_if! {
             + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
             + nimbus_primitives::NimbusApi<Block>
             + cumulus_primitives_core::CollectCollationInfo<Block>
+            + session_keys_primitives::VrfApi<Block>
         where
             <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {
@@ -145,7 +146,8 @@ cfg_if::cfg_if! {
             Api: sp_api::ApiExt<Block>
                 + nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
                 + nimbus_primitives::NimbusApi<Block>
-                + cumulus_primitives_core::CollectCollationInfo<Block>,
+                + cumulus_primitives_core::CollectCollationInfo<Block>
+                + session_keys_primitives::VrfApi<Block>,
             <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
         {
         }

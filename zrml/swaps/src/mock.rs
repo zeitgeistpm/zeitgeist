@@ -153,8 +153,6 @@ impl orml_tokens::Config for Runtime {
     type OnDust = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Runtime {
@@ -235,14 +233,14 @@ sp_api::mock_impl_runtime_apis! {
       for Runtime
     {
         fn get_spot_price(
-            pool_id: PoolId,
-            asset_in: Asset<MarketId>,
-            asset_out: Asset<MarketId>,
+            pool_id: &PoolId,
+            asset_in: &Asset<MarketId>,
+            asset_out: &Asset<MarketId>,
         ) -> SerdeWrapper<Balance> {
             SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
         }
 
-        fn pool_account_id(pool_id: PoolId) -> AccountIdTest {
+        fn pool_account_id(pool_id: &PoolId) -> AccountIdTest {
             Swaps::pool_account_id(pool_id)
         }
 

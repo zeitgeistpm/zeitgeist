@@ -191,8 +191,10 @@ mod pallet {
         }
 
         // TODO(#837): Remove when on-chain arbitrage is removed!
+        #[inline]
         fn market_account(market_id: Self::MarketId) -> Self::AccountId {
-            T::PredictionMarketsPalletId::get().into_sub_account(market_id.saturated_into::<u128>())
+            T::PredictionMarketsPalletId::get()
+                .into_sub_account_truncating(market_id.saturated_into::<u128>())
         }
 
         // MarketPool
