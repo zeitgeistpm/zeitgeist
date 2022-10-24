@@ -15,15 +15,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::Config;
+use crate::{Config, Pallet};
 use alloc::vec::Vec;
 use frame_support::{
     log,
     migration::{put_storage_value, storage_iter},
-    pallet_prelude::PhantomData,
+    pallet_prelude::{PhantomData, StorageVersion},
     traits::{Get, OnRuntimeUpgrade},
+    RuntimeDebug,
 };
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
 use zeitgeist_primitives::types::{
     Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
     MarketType, OutcomeReport, Report, ScoringRule,
@@ -34,7 +36,7 @@ const MARKETS: &[u8] = b"Markets";
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2_u16;
 const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3_u16;
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct LegacyMarket<AI, BN, M> {
     pub creator: AI,
     pub creation: MarketCreation,
@@ -43,15 +45,15 @@ pub struct LegacyMarket<AI, BN, M> {
     pub metadata: Vec<u8>,
     pub market_type: MarketType,
     pub period: MarketPeriod<BN, M>,
+    pub deadlines: Deadlines<BN>,
     pub scoring_rule: ScoringRule,
     pub status: MarketStatus,
     pub report: Option<Report<AI, BN>>,
     pub resolved_outcome: Option<OutcomeReport>,
     pub dispute_mechanism: LegacyMarketDisputeMechanism<AI>,
-    pub deadlines: Deadlines<BN>,
 }
 
-#[derive(Clone, Decode, Encode)]
+#[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub enum LegacyMarketDisputeMechanism<AI> {
     Authorized(AI),
     Court,
@@ -79,12 +81,12 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
         T: Config,
     {
         let mut total_weight = T::DbWeight::get().reads(1);
-        let storage_version = utility::get_on_chain_storage_version_of_market_commons_pallet();
+        let storage_version = StorageVersion::get::<Pallet<T>>();
         if storage_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
             log::info!("Skipping UpdateMarketsForAuthorizedMDM; markets already up to date");
             return total_weight;
         }
-        let mut new_markets_data: Vec<(Vec<u8>, MarketOf<T>)> = Vec::new();
+        let mut new_markets_data = Vec::new();
         for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
             let dispute_mechanism = match legacy_market.dispute_mechanism {
@@ -116,10 +118,11 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
         log::info!("Completed updates of markets");
-        utility::put_storage_version_of_market_commons_pallet(MARKET_COMMONS_NEXT_STORAGE_VERSION);
+        StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
         total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         total_weight
     }
+
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
         Ok(())
@@ -133,26 +136,8 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
 
 mod utility {
     use alloc::vec::Vec;
-    use frame_support::{
-        storage::{storage_prefix, unhashed},
-        traits::StorageVersion,
-        StorageHasher,
-    };
+    use frame_support::StorageHasher;
     use parity_scale_codec::Encode;
-
-    pub fn storage_prefix_of_market_common_pallet() -> [u8; 32] {
-        storage_prefix(b"MarketCommons", b":__STORAGE_VERSION__:")
-    }
-
-    pub fn get_on_chain_storage_version_of_market_commons_pallet() -> StorageVersion {
-        let key = storage_prefix_of_market_common_pallet();
-        unhashed::get_or_default(&key)
-    }
-
-    pub fn put_storage_version_of_market_commons_pallet(value: u16) {
-        let key = storage_prefix_of_market_common_pallet();
-        unhashed::put(&key, &StorageVersion::new(value));
-    }
 
     #[allow(unused)]
     pub fn key_to_hash<H, K>(key: K) -> Vec<u8>
@@ -180,9 +165,7 @@ mod tests {
     #[test]
     fn test_on_runtime_upgrade() {
         ExtBuilder::default().build().execute_with(|| {
-            utility::put_storage_version_of_market_commons_pallet(
-                MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
-            );
+            StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
             let (legacy_markets, expected_markets) = create_test_data_for_market_update();
             populate_test_data::<Blake2_128Concat, MarketId, LegacyMarketOf<Runtime>>(
                 MARKET_COMMONS,
@@ -191,7 +174,7 @@ mod tests {
             );
             UpdateMarketsForAuthorizedMDM::<Runtime>::on_runtime_upgrade();
             assert_eq!(
-                utility::get_on_chain_storage_version_of_market_commons_pallet(),
+                StorageVersion::get::<Pallet<Runtime>>(),
                 MARKET_COMMONS_NEXT_STORAGE_VERSION
             );
             for (market_id, market_expected) in expected_markets.iter().enumerate() {
@@ -277,6 +260,7 @@ mod tests {
         ];
         (old_markets, expected_markets)
     }
+
     fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
     where
         H: StorageHasher,

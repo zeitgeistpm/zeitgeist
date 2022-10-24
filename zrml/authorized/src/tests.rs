@@ -132,11 +132,6 @@ fn on_resolution_removes_stored_outcomes() {
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(AuthorizedDisputeResolutionUser::get()),
             0,
-            OutcomeReport::Scalar(1)
-        ));
-        assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(AuthorizedDisputeResolutionUser::get()),
-            0,
             OutcomeReport::Scalar(2)
         ));
         assert_ok!(Authorized::on_resolution(&[], &0, &market));
@@ -168,7 +163,7 @@ fn on_resolution_returns_the_reported_outcome() {
 }
 
 #[test]
-fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
+fn authorized_market_outcome_can_handle_multiple_markets() {
     ExtBuilder::default().build().execute_with(|| {
         Markets::<Runtime>::insert(0, market_mock::<Runtime>());
         Markets::<Runtime>::insert(1, market_mock::<Runtime>());
