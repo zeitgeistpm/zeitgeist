@@ -49,6 +49,13 @@ use frame_support::{
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_treasury::weights::WeightInfo for WeightInfo<T> {
     // Storage: Treasury ProposalCount (r:1 w:1)
+	// Storage: Treasury Proposals (r:0 w:1)
+	fn spend() -> Weight {
+		(22_063_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+    // Storage: Treasury ProposalCount (r:1 w:1)
     // Storage: Treasury Proposals (r:0 w:1)
     fn propose_spend() -> Weight {
         (64_350_000 as Weight)

@@ -50,7 +50,7 @@ resolver = "2"
 # If it is not used, the Zeitgeist runtimes will contain duplicate crates from
 # different repositories which results in bigger WASM-blobs, binary and the inability
 # to compile with the "runtime-benchmarks" feature.
-pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "use-cumulus-from-parity" }
+pallet-crowdloan-rewards = { git = "https://github.com/zeitgeistpm/crowdloan-rewards", branch = "main" }
 
 [patch."https://github.com/purestake/moonbeam"]
 # Use dependencies from Paritytech
