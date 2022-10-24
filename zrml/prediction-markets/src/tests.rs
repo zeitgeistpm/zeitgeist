@@ -2540,6 +2540,7 @@ fn only_creator_can_edit_market() {
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
 
+        // ALICE is market creator through simple_create_categorical_market
         assert_noop!(
             PredictionMarkets::edit_market(
                 Origin::signed(BOB),
@@ -2561,7 +2562,8 @@ fn only_creator_can_edit_market() {
 fn edit_cycle_for_proposed_markets() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
-        simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
+        run_to_block(1);
+        simple_create_categorical_market(MarketCreation::Advised, 2..4, ScoringRule::CPMM);
 
         // make sure it's in status proposed
         let market = MarketCommons::market(&0);
@@ -2574,17 +2576,20 @@ fn edit_cycle_for_proposed_markets() {
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
 
+        // BOB was the oracle before through simple_create_categorical_market
+        // After this edit its changed to ALICE
         assert_ok!(PredictionMarkets::edit_market(
             Origin::signed(ALICE),
             0,
             CHARLIE,
-            MarketPeriod::Block(0..1),
+            MarketPeriod::Block(2..4),
             get_deadlines(),
             gen_metadata(2),
             MarketType::Categorical(<Runtime as crate::Config>::MinCategories::get()),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
+        System::assert_last_event(Event::MarketEdited(0).into());
         assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
         // verify oracle is CHARLIE
         let market = MarketCommons::market(&0);

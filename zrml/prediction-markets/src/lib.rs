@@ -687,7 +687,7 @@ mod pallet {
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
             MarketIdsForEdit::<T>::remove(market_id);
-            Self::deposit_event(Event::MarketEdited(market_id, sender));
+            Self::deposit_event(Event::MarketEdited(market_id));
 
             Ok(Some(T::WeightInfo::edit_market(ids_amount)).into())
         }
@@ -1320,7 +1320,7 @@ mod pallet {
         /// The maximum allowed timepoint for the market period (timestamp or blocknumber).
         type MaxMarketPeriod: Get<u64>;
 
-        /// The maximum length of string allowed as edit reason.
+        /// The maximum number of bytes allowed as edit reason.
         #[pallet::constant]
         type MaxEditReasonLen: Get<u32>;
 
@@ -1471,7 +1471,7 @@ mod pallet {
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
-        /// A market has been created \[market_id, market_account, creator\]
+        /// A market has been created \[market_id, market_account, market\]
         MarketCreated(MarketIdOf<T>, T::AccountId, MarketOf<T>),
         /// A market has been destroyed. \[market_id\]
         MarketDestroyed(MarketIdOf<T>),
@@ -1492,10 +1492,10 @@ mod pallet {
         MarketReported(MarketIdOf<T>, MarketStatus, Report<T::AccountId, T::BlockNumber>),
         /// A market has been resolved \[market_id, new_market_status, real_outcome\]
         MarketResolved(MarketIdOf<T>, MarketStatus, OutcomeReport),
-        /// A proposed market has been requested edit by advisor. \[market_id, edit_reason]
+        /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
         MarketRequestedEdit(MarketIdOf<T>, EditReason<T>),
-        /// A proposed market has been edited by a user. \[market_id, editor\]
-        MarketEdited(MarketIdOf<T>, <T as frame_system::Config>::AccountId),
+        /// A proposed market has been edited by the market creator \[market_id\]
+        MarketEdited(MarketIdOf<T>),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// An amount of winning outcomes have been redeemed
@@ -1910,7 +1910,6 @@ mod pallet {
                 T::OracleBond::get().saturating_add(advisory_bond_unreserve_amount),
             );
             T::MarketCommons::remove_market(market_id)?;
-            // remove if there was a edit request
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketRejected(*market_id, reject_reason));
             Self::deposit_event(Event::MarketDestroyed(*market_id));
@@ -1936,7 +1935,6 @@ mod pallet {
                 T::OracleBond::get(),
             );
             T::MarketCommons::remove_market(market_id)?;
-            // remove if there was a edit request
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketExpired(*market_id));
             Ok(T::WeightInfo::handle_expired_advised_market())
