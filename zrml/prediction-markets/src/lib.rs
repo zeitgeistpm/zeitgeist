@@ -363,25 +363,25 @@ mod pallet {
         }
 
         /// Edit requested to proposed market from advisory committee.
+        /// It requires market_id and edit_reason (a `Vec<u8>`).
         /// NOTE: Can only be called by the `ApproveOrigin`.
-        #[pallet::weight(
-            (
-                T::WeightInfo::request_edit(
-                    edit_reason.len() as u32
-                ),
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
+        #[pallet::weight((
+                T::WeightInfo::request_edit(edit_reason.len() as u32),
                 Pays::No
-            )
-        )]
+            ))]
         #[transactional]
         pub fn request_edit(
             origin: OriginFor<T>,
             #[pallet::compact] market_id: MarketIdOf<T>,
             edit_reason: Vec<u8>,
         ) -> DispatchResult {
+            T::RequestEditOrigin::ensure_origin(origin)?;
             let edit_reason: EditReason<T> = edit_reason
                 .try_into()
                 .map_err(|_| Error::<T>::EditReasonLengthExceedsMaxEditReasonLen)?;
-            T::ApproveOrigin::ensure_origin(origin)?;
             let market = T::MarketCommons::market(&market_id)?;
             ensure!(market.status == MarketStatus::Proposed, Error::<T>::MarketIsNotProposed);
             MarketIdsForEdit::<T>::try_mutate(market_id, |reason| {
@@ -634,7 +634,7 @@ mod pallet {
                 extra_weight = Self::start_subsidy(&market, market_id)?;
             }
 
-            let ids_amount: u32 = Self::update_auto_close(&market_id)?;
+            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
             Self::deposit_event(Event::MarketCreated(market_id, market_account, market));
 
@@ -684,7 +684,7 @@ mod pallet {
                 Ok(())
             })?;
 
-            let ids_amount: u32 = Self::update_auto_close(&market_id)?;
+            let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
             MarketIdsForEdit::<T>::remove(market_id);
             Self::deposit_event(Event::MarketEdited(market_id, sender));
@@ -1341,6 +1341,9 @@ mod pallet {
         #[pallet::constant]
         type ReportingPeriod: Get<Self::BlockNumber>;
 
+        /// The origin that is allowed to request edits in pending advised markets.
+        type RequestEditOrigin: EnsureOrigin<Self::Origin>;
+
         /// The origin that is allowed to resolve markets.
         type ResolveOrigin: EnsureOrigin<Self::Origin>;
 
@@ -1736,7 +1739,7 @@ mod pallet {
             T::PalletId::get().into_sub_account_truncating(market_id.saturated_into::<u128>())
         }
 
-        fn update_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
+        fn insert_auto_close(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
 
             match market.period {

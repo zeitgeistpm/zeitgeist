@@ -922,7 +922,7 @@ fn it_allows_advisory_origin_to_approve_markets() {
 }
 
 #[test]
-fn it_allows_advisory_origin_to_request_edits_for_markets() {
+fn it_allows_request_edit_origin_to_request_edits_for_markets() {
     ExtBuilder::default().build().execute_with(|| {
         frame_system::Pallet::<Runtime>::set_block_number(1);
         // Creates an advised market.
@@ -950,6 +950,26 @@ fn it_allows_advisory_origin_to_request_edits_for_markets() {
         );
 
         assert!(MarketIdsForEdit::<Runtime>::contains_key(0));
+    });
+}
+
+#[test]
+fn request_edit_fails_on_bad_origin() {
+    ExtBuilder::default().build().execute_with(|| {
+        frame_system::Pallet::<Runtime>::set_block_number(1);
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 2..4, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let edit_reason = vec![0_u8; <Runtime as Config>::MaxEditReasonLen::get() as usize];
+        // Make sure it fails from the random joe
+        assert_noop!(
+            PredictionMarkets::request_edit(Origin::signed(BOB), 0, edit_reason),
+            DispatchError::BadOrigin
+        );
     });
 }
 

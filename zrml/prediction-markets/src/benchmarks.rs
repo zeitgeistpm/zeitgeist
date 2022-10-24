@@ -621,8 +621,6 @@ benchmarks! {
         let market_type = MarketType::Categorical(T::MaxCategories::get());
         let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
         let scoring_rule = ScoringRule::CPMM;
-        // let range_end = T::MaxSubsidyPeriod::get();
-        // let range_start = T::MinSubsidyPeriod::get();
         let range_start: MomentOf<T> = 100_000u64.saturated_into();
         let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
         let period = MarketPeriod::Timestamp(range_start..range_end);
