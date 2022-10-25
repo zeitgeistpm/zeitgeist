@@ -98,6 +98,7 @@ pub struct IsCallable;
 // dispute mechanism.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
+        #[cfg(feature = "parachain")]
         use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
             kill_prefix, kill_storage, set_code, set_code_without_checks, set_heap_pages,
@@ -153,6 +154,7 @@ impl Contains<Call> for IsCallable {
                 }
             }
             Call::Court(_) => false,
+            #[cfg(feature = "parachain")]
             Call::DmpQueue(inner_call) => {
                 match inner_call {
                     // Executing this call with a maliciously crafted XCM can halt the chain.
