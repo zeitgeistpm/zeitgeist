@@ -27,8 +27,6 @@ use zeitgeist_primitives::{
     types::{Asset, Pool},
 };
 
-// TODO  Why do we need the `Fixed`/`u128` type to begin with? Can't we just use a generic
-// `Balance` for all Balancer math functions?
 type Fixed = u128;
 
 const TOLERANCE: Fixed = BASE / 1_000; // 0.001
