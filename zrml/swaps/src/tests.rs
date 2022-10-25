@@ -3149,7 +3149,6 @@ fn on_idle_arbitrages_pools_with_mint_sell() {
         // Force arbitrage hook.
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
         Swaps::on_idle(System::block_number(), Weight::max_value());
-        // assert_ok!(Swaps::execute_arbitrage(pool_id));
 
         let arbitrage_amount = 49_537_658_690;
         assert_eq!(
@@ -3210,7 +3209,6 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
         // Force arbitrage hook.
         crate::PoolsCachedForArbitrage::<Runtime>::insert(pool_id, ());
         Swaps::on_idle(System::block_number(), Weight::max_value());
-        // assert_ok!(Swaps::execute_arbitrage(pool_id));
 
         assert_eq!(
             Currencies::free_balance(base_asset, &pool_account_id),

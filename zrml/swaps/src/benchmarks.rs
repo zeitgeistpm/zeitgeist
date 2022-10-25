@@ -420,9 +420,8 @@ benchmarks! {
 
     execute_arbitrage_buy_burn {
         let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
-        let b in 0..ARBITRAGE_MAX_ITERATIONS.try_into().unwrap(); // The number of iterations.
         let asset_count = a as usize;
-        let iteration_count = b as usize;
+        let iteration_count = ARBITRAGE_MAX_ITERATIONS as usize;
 
         let caller: T::AccountId = whitelisted_caller();
         let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
@@ -468,7 +467,7 @@ benchmarks! {
         .unwrap();
     }: {
         // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
-        Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
+        Pallet::<T>::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS)?
     } verify {
         // We don't care about the exact arbitrage amount and just want to verify that the correct
         // event was emitted.
@@ -479,9 +478,7 @@ benchmarks! {
 
     execute_arbitrage_mint_sell {
         let a in 2..T::MaxAssets::get().into(); // The number of assets in the pool.
-        let b in 0..ARBITRAGE_MAX_ITERATIONS.try_into().unwrap(); // The number of iterations.
         let asset_count = a as usize;
-        let iteration_count = b as usize;
 
         let caller: T::AccountId = whitelisted_caller();
         let balance: BalanceOf<T> = (10_000_000_000 * BASE).saturated_into();
@@ -520,7 +517,7 @@ benchmarks! {
         let balance_before = T::AssetManager::free_balance(asset, &pool_account_id);
     }: {
         // In order to cap the number of iterations, we just set the `max_iterations` to `b`.
-        Pallet::<T>::execute_arbitrage(pool_id, iteration_count)?
+        Pallet::<T>::execute_arbitrage(pool_id, ARBITRAGE_MAX_ITERATIONS)?
     } verify {
         // We don't care about the exact arbitrage amount and just want to verify that the correct
         // event was emitted.

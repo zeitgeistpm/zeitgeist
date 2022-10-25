@@ -68,8 +68,8 @@ pub trait WeightInfoZeitgeist {
     fn destroy_pool(a: u32) -> Weight;
     fn apply_to_cached_pools_execute_arbitrage(a: u32) -> Weight;
     fn apply_to_cached_pools_noop(a: u32) -> Weight;
-    fn execute_arbitrage_buy_burn(a: u32, b: u32) -> Weight;
-    fn execute_arbitrage_mint_sell(a: u32, b: u32) -> Weight;
+    fn execute_arbitrage_buy_burn(a: u32) -> Weight;
+    fn execute_arbitrage_mint_sell(a: u32) -> Weight;
     fn execute_arbitrage_skipped(a: u32) -> Weight;
 }
 
@@ -316,32 +316,29 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(a as Weight)))
     }
     // Storage: Swaps Pools (r:1 w:0)
-    // Storage: Tokens Accounts (r:2 w:2)
-    // Storage: Tokens TotalIssuance (r:2 w:2)
-    fn execute_arbitrage_buy_burn(a: u32, b: u32) -> Weight {
-        (0 as Weight)
-            // Standard Error: 4_202_000
-            .saturating_add((58_354_000 as Weight).saturating_mul(a as Weight))
-            // Standard Error: 8_882_000
-            .saturating_add((61_116_000 as Weight).saturating_mul(b as Weight))
+    // Storage: Tokens Accounts (r:3 w:3)
+    // Storage: System Account (r:1 w:0)
+    // Storage: Tokens TotalIssuance (r:1 w:1)
+    fn execute_arbitrage_buy_burn(a: u32, ) -> Weight {
+        (63_109_000 as Weight)
+            // Standard Error: 1_027_000
+            .saturating_add((51_014_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(b as Weight)))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
-            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(b as Weight)))
     }
     // Storage: Swaps Pools (r:1 w:0)
-    // Storage: Tokens Accounts (r:2 w:2)
-    // Storage: Tokens TotalIssuance (r:2 w:2)
-    fn execute_arbitrage_mint_sell(a: u32, b: u32) -> Weight {
-        (0 as Weight)
-            // Standard Error: 4_347_000
-            .saturating_add((53_096_000 as Weight).saturating_mul(a as Weight))
-            // Standard Error: 9_187_000
-            .saturating_add((55_033_000 as Weight).saturating_mul(b as Weight))
+    // Storage: Tokens Accounts (r:3 w:3)
+    // Storage: System Account (r:2 w:1)
+    // Storage: Tokens TotalIssuance (r:1 w:1)
+    fn execute_arbitrage_mint_sell(a: u32, ) -> Weight {
+        (71_394_000 as Weight)
+            // Standard Error: 736_000
+            .saturating_add((45_508_000 as Weight).saturating_mul(a as Weight))
+            .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(a as Weight)))
-            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(b as Weight)))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
             .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(a as Weight)))
-            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(b as Weight)))
     }
     // Storage: Swaps Pools (r:1 w:0)
     // Storage: Tokens Accounts (r:2 w:0)
