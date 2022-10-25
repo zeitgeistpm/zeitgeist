@@ -1326,7 +1326,7 @@ mod pallet {
                     T::AssetManager::deposit(*t, &pool_account, amount)?;
                 }
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
-                Ok(T::WeightInfo::execute_arbitrage_mint_sell(asset_count, iteration_count as u32))
+                Ok(T::WeightInfo::execute_arbitrage_mint_sell(asset_count))
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
                 let (amount, iteration_count) =
                     pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
@@ -1340,7 +1340,7 @@ mod pallet {
                     T::AssetManager::withdraw(*t, &pool_account, amount)?;
                 }
                 Self::deposit_event(Event::ArbitrageBuyBurn(pool_id, amount));
-                Ok(T::WeightInfo::execute_arbitrage_buy_burn(asset_count, iteration_count as u32))
+                Ok(T::WeightInfo::execute_arbitrage_buy_burn(asset_count))
             } else {
                 Self::deposit_event(Event::ArbitrageSkipped(pool_id));
                 Ok(T::WeightInfo::execute_arbitrage_skipped(asset_count))
