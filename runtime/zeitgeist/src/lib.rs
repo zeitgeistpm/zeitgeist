@@ -101,7 +101,7 @@ impl Contains<Call> for IsCallable {
         #[cfg(feature = "parachain")]
         use cumulus_pallet_dmp_queue::Call::service_overweight;
         use frame_system::Call::{
-            kill_prefix, kill_storage, set_code, set_code_without_checks, set_heap_pages,
+            kill_prefix, kill_storage, set_code, set_code_without_checks, 
             set_storage,
         };
         use orml_currencies::Call::update_balance;
