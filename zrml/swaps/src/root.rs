@@ -79,7 +79,7 @@ where
     F: Fn(T) -> Result<T, &'static str>,
 {
     if min >= max {
-        return Err("Domain has no volume");
+        return Err("calc_preimage: Function domain has no volume");
     }
     let fmin = f(min)?;
     let mut fmax = f(max)?;
@@ -279,7 +279,10 @@ mod tests {
     fn calc_preimage_errors_if_range_has_no_volume(min: u128, max: u128) {
         #[allow(clippy::redundant_closure)]
         let f = |x: u128| Ok(x);
-        assert!(calc_preimage(f, _5 - 1, min, max, 10, _3_4).is_err());
+        assert_eq!(
+            calc_preimage(f, _5 - 1, min, max, 10, _3_4),
+            Err("calc_preimage: Function domain has no volume"),
+        );
     }
 
     #[test_case(2, 3, 1)]
