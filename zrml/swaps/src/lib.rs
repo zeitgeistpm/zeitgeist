@@ -1312,7 +1312,7 @@ mod pallet {
             let total_spot_price = pool.calc_total_spot_price(&balances)?;
 
             if total_spot_price > BASE.saturating_add(ARBITRAGE_THRESHOLD) {
-                let (amount, iteration_count) =
+                let (amount, _) =
                     pool.calc_arbitrage_amount_mint_sell(&balances, max_iterations)?;
                 // We're faking a `buy_complete_sets` operation by transfering to the market prize
                 // pool.
@@ -1328,8 +1328,7 @@ mod pallet {
                 Self::deposit_event(Event::ArbitrageMintSell(pool_id, amount));
                 Ok(T::WeightInfo::execute_arbitrage_mint_sell(asset_count))
             } else if total_spot_price < BASE.saturating_sub(ARBITRAGE_THRESHOLD) {
-                let (amount, iteration_count) =
-                    pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
+                let (amount, _) = pool.calc_arbitrage_amount_buy_burn(&balances, max_iterations)?;
                 T::AssetManager::transfer(
                     pool.base_asset,
                     &T::MarketCommons::market_account(pool.market_id),
