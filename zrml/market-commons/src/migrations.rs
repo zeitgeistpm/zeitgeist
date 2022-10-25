@@ -130,7 +130,6 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
         for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
             Self::set_temp_storage(legacy_market, &format!("{:?}", key.as_slice()));
         }
-
         Ok(())
     }
 
