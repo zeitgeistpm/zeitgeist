@@ -36,6 +36,10 @@ export ZEITGEIST_WEIGHT_TEMPLATE="./misc/weight_template.hbs"
 
 export PROFILE="${PROFILE:-production}"
 # this is used, because of profile `dev` with folder `debug`
-export PROFILE_DIR="${PROFILE_DIR:-production}"
+if [ "$PROFILE" = "dev" ]; then
+    export PROFILE_DIR="debug"
+else
+    export PROFILE_DIR="$PROFILE"
+fi
 export EXECUTION="${EXECUTION:-wasm}"
 export ADDITIONAL="${ADDITIONAL:-}"
