@@ -98,6 +98,17 @@ pub struct IsCallable;
 // dispute mechanism.
 impl Contains<Call> for IsCallable {
     fn contains(call: &Call) -> bool {
+        use cumulus_pallet_dmp_queue::Call::service_overweight;
+        use frame_system::Call::{
+            kill_prefix, kill_storage, set_code, set_code_without_checks, set_heap_pages,
+            set_storage,
+        };
+        use orml_currencies::Call::update_balance;
+        use pallet_balances::Call::{force_transfer, set_balance};
+        use pallet_collective::Call::set_members;
+        use pallet_proxy::Call::{anonymous, kill_anonymous};
+        use pallet_vesting::Call::force_vested_transfer;
+
         use zeitgeist_primitives::types::{
             MarketDisputeMechanism::{Court, SimpleDisputes},
             ScoringRule::RikiddoSigmoidFeeMarketEma,
@@ -106,7 +117,49 @@ impl Contains<Call> for IsCallable {
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
+            Call::AdvisoryCommittee(inner_call) => {
+                match inner_call {
+                    // Membership is managed by the respective Membership instance
+                    set_members { .. } => false,
+                    _ => true,
+                }
+            }
+            Call::AssetManager(inner_call) => {
+                match inner_call {
+                    // See reason for "balances.set_balance"
+                    update_balance { .. } => false,
+                    _ => true,
+                }
+            }
+            Call::Balances(inner_call) => {
+                match inner_call {
+                    // Balances should not be set. All newly generated tokens be minted by well
+                    // known and approved processes, like staking. However, this could be used
+                    // in some cases to fund system accounts like the parachain sorveign account
+                    // in case something goes terribly wrong (like a hack that draws the funds
+                    // from such an account, see Maganta hack). Invoking this function one can
+                    // also easily mess up consistency in regards to reserved tokens and locks.
+                    set_balance { .. } => false,
+                    // There should be no reason to force an account to transfer funds.
+                    force_transfer { .. } => false,
+                    _ => true,
+                }
+            }
+            Call::Council(inner_call) => {
+                match inner_call {
+                    // Membership is managed by the respective Membership instance
+                    set_members { .. } => false,
+                    _ => true,
+                }
+            }
             Call::Court(_) => false,
+            Call::DmpQueue(inner_call) => {
+                match inner_call {
+                    // Executing this call with a maliciously crafted XCM can halt the chain.
+                    service_overweight { .. } => false,
+                    _ => true,
+                }
+            }
             Call::LiquidityMining(_) => false,
             Call::PredictionMarkets(inner_call) => {
                 match inner_call {
@@ -118,6 +171,52 @@ impl Contains<Call> for IsCallable {
                         dispute_mechanism: Court | SimpleDisputes,
                         ..
                     } => false,
+                    _ => true,
+                }
+            }
+            Call::Proxy(inner_call) => {
+                match inner_call {
+                    // Makes reserve inconsistent, see
+                    // https://github.com/paritytech/substrate/blob/37cca710eed3dadd4ed5364c7686608f5175cce1/frame/proxy/src/lib.rs#L270-L271
+                    anonymous { .. } => false,
+                    // See "anonymous"
+                    kill_anonymous { .. } => false,
+                    _ => true,
+                }
+            }
+            Call::System(inner_call) => {
+                match inner_call {
+                    // Some "waste" storage will never impact proper operation.
+                    // Cleaning up storage should be done by pallets or independent migrations.
+                    kill_prefix { .. } => false,
+                    // See "killPrefix"
+                    kill_storage { .. } => false,
+                    // A parachain uses ParachainSystem to enact and authorized a runtime upgrade.
+                    // This ensure proper synchronization with the relay chain.
+                    // Calling `setCode` will wreck the chain.
+                    set_code { .. } => false,
+                    // See "setCode"
+                    set_code_without_checks { .. } => false,
+                    // setHeapPages
+                    set_heap_pages { .. } => false,
+                    // Setting the storage directly is a dangerous operation that can lead to an
+                    // inconsistent state. There might be scenarios where this is helpful, however,
+                    // a well reviewed migration is better suited for that.
+                    set_storage { .. } => false,
+                    _ => true,
+                }
+            }
+            Call::TechnicalCommittee(inner_call) => {
+                // Membership is managed by the respective Membership instance
+                match inner_call {
+                    set_members { .. } => false,
+                    _ => true,
+                }
+            }
+            Call::Vesting(inner_call) => {
+                match inner_call {
+                    // There should be no reason to force vested transfer.
+                    force_vested_transfer { .. } => false,
                     _ => true,
                 }
             }
