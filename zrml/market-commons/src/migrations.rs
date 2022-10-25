@@ -25,12 +25,13 @@ use frame_support::{
     RuntimeDebug,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+#[cfg(feature = "try-runtime")]
+use scale_info::prelude::format;
 use scale_info::TypeInfo;
 use zeitgeist_primitives::types::{
     Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
     MarketType, OutcomeReport, Report, ScoringRule,
 };
-
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
 const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2_u16;
@@ -125,11 +126,34 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
+            Self::set_temp_storage(legacy_market, &format!("{:?}", key.as_slice()));
+        }
+
         Ok(())
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
+        use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        for (key, updated_market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
+            let legacy_market: LegacyMarketOf<T> =
+                Self::get_temp_storage(&format!("{:?}", key.as_slice()))
+                    .expect("legacy market not found");
+            assert_eq!(updated_market.creator, legacy_market.creator);
+            assert_eq!(updated_market.creation, legacy_market.creation);
+            assert_eq!(updated_market.creator_fee, legacy_market.creator_fee);
+            assert_eq!(updated_market.oracle, legacy_market.oracle);
+            assert_eq!(updated_market.metadata, legacy_market.metadata);
+            assert_eq!(updated_market.market_type, legacy_market.market_type);
+            assert_eq!(updated_market.period, legacy_market.period);
+            assert_eq!(updated_market.deadlines, legacy_market.deadlines);
+            assert_eq!(updated_market.scoring_rule, legacy_market.scoring_rule);
+            assert_eq!(updated_market.status, legacy_market.status);
+            assert_eq!(updated_market.report, legacy_market.report);
+            assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
+        }
         Ok(())
     }
 }
