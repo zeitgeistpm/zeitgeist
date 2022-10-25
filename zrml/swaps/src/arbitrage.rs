@@ -283,7 +283,10 @@ mod tests {
     fn calc_total_spot_price_errors_if_asset_balance_is_missing() {
         let pool = construct_pool(None, vec![_3, _1, _1, _1]);
         let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
-        assert!(pool.calc_total_spot_price(&balances).is_err());
+        assert_eq!(
+            pool.calc_total_spot_price(&balances),
+            Err("Asset balance missing from BTreeMap"),
+        );
     }
 
     // The first case shouldn't be validated, as it is an example where the algorithm overshoots the
@@ -334,7 +337,10 @@ mod tests {
     fn calc_arbitrage_amount_buy_burn_errors_if_asset_balance_is_missing() {
         let pool = construct_pool(None, vec![_3, _1, _1, _1]);
         let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
-        assert!(pool.calc_arbitrage_amount_buy_burn(&balances, usize::MAX).is_err());
+        assert_eq!(
+            pool.calc_arbitrage_amount_buy_burn(&balances, usize::MAX),
+            Err("Asset balance missing from BTreeMap"),
+        );
     }
 
     #[test_case(vec![_6, _3, _3], vec![_125, _100, _100], 124_998_092_650)]
@@ -387,7 +393,10 @@ mod tests {
     fn calc_arbitrage_amount_mint_sell_errors_if_asset_balance_is_missing() {
         let pool = construct_pool(None, vec![_3, _1, _1, _1]);
         let balances = collect_balances_into_map(pool.assets[..2].into(), vec![_1; 3]);
-        assert!(pool.calc_arbitrage_amount_mint_sell(&balances, usize::MAX).is_err());
+        assert_eq!(
+            pool.calc_arbitrage_amount_mint_sell(&balances, usize::MAX),
+            Err("Asset balance missing from BTreeMap"),
+        );
     }
 
     fn construct_pool<Balance>(
