@@ -3127,10 +3127,11 @@ fn on_idle_arbitrages_pools_with_mint_sell() {
             assert_ok!(Currencies::deposit(asset, &BOB, _10000));
         });
         let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
         assert_ok!(Swaps::create_pool(
             BOB,
             assets.into(),
-            ASSET_A,
+            base_asset,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -3151,7 +3152,10 @@ fn on_idle_arbitrages_pools_with_mint_sell() {
         // assert_ok!(Swaps::execute_arbitrage(pool_id));
 
         let arbitrage_amount = 49_537_658_690;
-        assert_eq!(Currencies::free_balance(ASSET_A, &pool_account_id), balance - arbitrage_amount);
+        assert_eq!(
+            Currencies::free_balance(base_asset, &pool_account_id),
+            balance - arbitrage_amount,
+        );
         assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance + arbitrage_amount);
         assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance + arbitrage_amount);
         assert_eq!(
@@ -3160,7 +3164,7 @@ fn on_idle_arbitrages_pools_with_mint_sell() {
         );
         let market_id = 0;
         let market_account_id = MarketCommons::market_account(market_id);
-        assert_eq!(Currencies::free_balance(ASSET_A, &market_account_id), arbitrage_amount);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), arbitrage_amount);
         System::assert_has_event(Event::ArbitrageMintSell(pool_id, arbitrage_amount).into());
     });
 }
@@ -3174,10 +3178,11 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
             assert_ok!(Currencies::deposit(asset, &BOB, _10000));
         });
         let balance = <Runtime as crate::Config>::MinLiquidity::get();
+        let base_asset = ASSET_A;
         assert_ok!(Swaps::create_pool(
             BOB,
             assets.into(),
-            ASSET_A,
+            base_asset,
             0,
             ScoringRule::CPMM,
             Some(0),
@@ -3190,14 +3195,14 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
         // is the base asset, all other assets are considered outcomes).
         let pool_account_id = Swaps::pool_account_id(&pool_id);
         let amount_removed = _25;
-        assert_ok!(Currencies::withdraw(ASSET_A, &pool_account_id, amount_removed));
+        assert_ok!(Currencies::withdraw(base_asset, &pool_account_id, amount_removed));
 
         // Deposit funds into the prize pool to ensure that the transfers don't fail.
         let market_id = 0;
         let market_account_id = MarketCommons::market_account(market_id);
         let arbitrage_amount = 125_007_629_394; // "Should" be 125_000_000_000.
         assert_ok!(Currencies::deposit(
-            ASSET_A,
+            base_asset,
             &market_account_id,
             arbitrage_amount + SENTINEL_AMOUNT,
         ));
@@ -3208,13 +3213,13 @@ fn on_idle_arbitrages_pools_with_buy_burn() {
         // assert_ok!(Swaps::execute_arbitrage(pool_id));
 
         assert_eq!(
-            Currencies::free_balance(ASSET_A, &pool_account_id),
+            Currencies::free_balance(base_asset, &pool_account_id),
             balance + arbitrage_amount - amount_removed,
         );
         assert_eq!(Currencies::free_balance(ASSET_B, &pool_account_id), balance - arbitrage_amount);
         assert_eq!(Currencies::free_balance(ASSET_C, &pool_account_id), balance - arbitrage_amount);
         assert_eq!(Currencies::free_balance(ASSET_D, &pool_account_id), balance - arbitrage_amount);
-        assert_eq!(Currencies::free_balance(ASSET_A, &market_account_id), SENTINEL_AMOUNT);
+        assert_eq!(Currencies::free_balance(base_asset, &market_account_id), SENTINEL_AMOUNT);
         System::assert_has_event(Event::ArbitrageBuyBurn(pool_id, arbitrage_amount).into());
     });
 }
