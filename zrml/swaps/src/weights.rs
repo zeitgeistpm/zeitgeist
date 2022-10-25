@@ -319,7 +319,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Tokens Accounts (r:3 w:3)
     // Storage: System Account (r:1 w:0)
     // Storage: Tokens TotalIssuance (r:1 w:1)
-    fn execute_arbitrage_buy_burn(a: u32, ) -> Weight {
+    fn execute_arbitrage_buy_burn(a: u32) -> Weight {
         (63_109_000 as Weight)
             // Standard Error: 1_027_000
             .saturating_add((51_014_000 as Weight).saturating_mul(a as Weight))
@@ -331,7 +331,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Tokens Accounts (r:3 w:3)
     // Storage: System Account (r:2 w:1)
     // Storage: Tokens TotalIssuance (r:1 w:1)
-    fn execute_arbitrage_mint_sell(a: u32, ) -> Weight {
+    fn execute_arbitrage_mint_sell(a: u32) -> Weight {
         (71_394_000 as Weight)
             // Standard Error: 736_000
             .saturating_add((45_508_000 as Weight).saturating_mul(a as Weight))
