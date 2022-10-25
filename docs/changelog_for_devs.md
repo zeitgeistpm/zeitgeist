@@ -5,6 +5,10 @@
   market with Authorized MDM specifying account_id for Authorized MDM is not
   required, any user satisfying `AuthorizedDisputeResolutionOrigin` can use
   Authorized MDM for resolving market.
+- `reject_market` extrinsic now requires `reject_reason` parameter which is
+  `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
+  above parameter. `MarketRejected` event also contains `reject_reason` so that
+  it can be cached for market creator.
 
 # v0.3.6
 
