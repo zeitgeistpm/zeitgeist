@@ -33,3 +33,9 @@ export ZEITGEIST_PALLETS=( zrml_authorized zrml_court zrml_liquidity_mining zrml
 export ZEITGEIST_PALLETS_RUNS="${ZEITGEIST_PALLETS_RUNS:-1000}"
 export ZEITGEIST_PALLETS_STEPS="${ZEITGEIST_PALLETS_STEPS:-10}"
 export ZEITGEIST_WEIGHT_TEMPLATE="./misc/weight_template.hbs"
+
+export PROFILE="${PROFILE:-production}"
+# this is used, because of profile `dev` with folder `debug`
+export PROFILE_DIR="${PROFILE_DIR:-production}"
+export EXECUTION="${EXECUTION:-wasm}"
+export ADDITIONAL="${ADDITIONAL:-}"

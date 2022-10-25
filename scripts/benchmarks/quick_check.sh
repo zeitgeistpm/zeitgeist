@@ -22,6 +22,7 @@ export ZEITGEIST_PALLETS_STEPS=1
 export ZEITGEIST_PALLETS_RUNS=0
 
 export PROFILE=release
+export PROFILE_DIR=release
 export ADDITIONAL=--detailed-log-output
 export EXECUTION=native
 
