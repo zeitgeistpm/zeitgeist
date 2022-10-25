@@ -3098,6 +3098,8 @@ fn on_idle_skips_arbitrage_if_price_does_not_exceed_threshold() {
         assets.iter().cloned().for_each(|asset| {
             assert_ok!(Currencies::deposit(asset, &BOB, _10000));
         });
+        // Outcome weights sum to the weight of the base asset, and we create no imbalances, so
+        // total spot price is equal to 1.
         assert_ok!(Swaps::create_pool(
             BOB,
             assets.into(),
