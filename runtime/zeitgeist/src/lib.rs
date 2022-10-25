@@ -118,20 +118,10 @@ impl Contains<Call> for IsCallable {
 
         #[allow(clippy::match_like_matches_macro)]
         match call {
-            Call::AdvisoryCommittee(inner_call) => {
-                match inner_call {
-                    // Membership is managed by the respective Membership instance
-                    set_members { .. } => false,
-                    _ => true,
-                }
-            }
-            Call::AssetManager(inner_call) => {
-                match inner_call {
-                    // See reason for "balances.set_balance"
-                    update_balance { .. } => false,
-                    _ => true,
-                }
-            }
+            // Membership is managed by the respective Membership instance
+            Call::AdvisoryCommittee(set_members { .. }) => false,
+            // See "balance.set_balance"
+            Call::AssetManager(update_balance { .. }) => false,
             Call::Balances(inner_call) => {
                 match inner_call {
                     // Balances should not be set. All newly generated tokens be minted by well
@@ -146,22 +136,11 @@ impl Contains<Call> for IsCallable {
                     _ => true,
                 }
             }
-            Call::Council(inner_call) => {
-                match inner_call {
-                    // Membership is managed by the respective Membership instance
-                    set_members { .. } => false,
-                    _ => true,
-                }
-            }
+            // Membership is managed by the respective Membership instance
+            Call::Council(set_members { .. }) => false,
             Call::Court(_) => false,
             #[cfg(feature = "parachain")]
-            Call::DmpQueue(inner_call) => {
-                match inner_call {
-                    // Executing this call with a maliciously crafted XCM can halt the chain.
-                    service_overweight { .. } => false,
-                    _ => true,
-                }
-            }
+            Call::DmpQueue(service_overweight { .. }) => false,
             Call::LiquidityMining(_) => false,
             Call::PredictionMarkets(inner_call) => {
                 match inner_call {
@@ -199,8 +178,6 @@ impl Contains<Call> for IsCallable {
                     set_code { .. } => false,
                     // See "setCode"
                     set_code_without_checks { .. } => false,
-                    // setHeapPages
-                    set_heap_pages { .. } => false,
                     // Setting the storage directly is a dangerous operation that can lead to an
                     // inconsistent state. There might be scenarios where this is helpful, however,
                     // a well reviewed migration is better suited for that.
@@ -208,20 +185,10 @@ impl Contains<Call> for IsCallable {
                     _ => true,
                 }
             }
-            Call::TechnicalCommittee(inner_call) => {
-                // Membership is managed by the respective Membership instance
-                match inner_call {
-                    set_members { .. } => false,
-                    _ => true,
-                }
-            }
-            Call::Vesting(inner_call) => {
-                match inner_call {
-                    // There should be no reason to force vested transfer.
-                    force_vested_transfer { .. } => false,
-                    _ => true,
-                }
-            }
+            // Membership is managed by the respective Membership instance
+            Call::TechnicalCommittee(set_members { .. }) => false,
+            // There should be no reason to force vested transfer.
+            Call::Vesting(force_vested_transfer { .. }) => false,
             _ => true,
         }
     }
