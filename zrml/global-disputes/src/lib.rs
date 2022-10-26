@@ -126,7 +126,7 @@ mod pallet {
     #[pallet::storage]
     pub type Outcomes<T: Config> = StorageDoubleMap<
         _,
-        Blake2_128Concat,
+        Twox64Concat,
         MarketIdOf<T>,
         Blake2_128Concat,
         OutcomeReport,
@@ -138,7 +138,7 @@ mod pallet {
     /// about the winner outcome and if the global dispute is finished.
     #[pallet::storage]
     pub type Winners<T: Config> =
-        StorageMap<_, Blake2_128Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, WinnerInfoOf<T>, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(fn deposit_event)]
