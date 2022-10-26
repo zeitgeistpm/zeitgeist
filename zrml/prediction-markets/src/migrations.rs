@@ -15,259 +15,431 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-#[cfg(feature = "try-runtime")]
-use crate::Disputes;
-use crate::{
-    CacheSize, Config, MarketIdOf, MarketIdsPerDisputeBlock, MarketIdsPerReportBlock, MomentOf,
-    Pallet,
-};
+use crate::{Config, Disputes, Pallet};
+use alloc::{vec, vec::Vec};
 use frame_support::{
     dispatch::Weight,
     log,
-    migration::{put_storage_value, storage_iter},
     pallet_prelude::PhantomData,
-    storage::PrefixIterator,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
-    BoundedVec, Twox64Concat,
+    BoundedVec,
 };
-use sp_runtime::traits::Saturating;
-extern crate alloc;
-use alloc::vec::Vec;
-use parity_scale_codec::{Decode, Encode};
-use zeitgeist_primitives::types::{
-    Deadlines, Market, MarketCreation, MarketDisputeMechanism, MarketPeriod, MarketStatus,
-    MarketType, OutcomeReport, Report, ScoringRule,
+use parity_scale_codec::EncodeLike;
+use zeitgeist_primitives::{
+    constants::BASE,
+    types::{MarketType, OutcomeReport},
 };
-#[cfg(feature = "try-runtime")]
-use zrml_market_commons::MarketCommonsPalletApi;
+use zrml_authorized::{AuthorizedOutcomeReports, Pallet as AuthorizedPallet};
+use zrml_court::{Pallet as CourtPallet, Votes};
+use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
 
-const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE: u16 = 4;
-const PREDICTION_MARKETS_NEXT_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE: u16 = 5;
+const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
+const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
+const COURT_REQUIRED_STORAGE_VERSION: u16 = 1;
+const COURT_NEXT_STORAGE_VERSION: u16 = 2;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3;
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
 
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 1;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 2;
+pub struct TransformScalarMarketsToFixedPoint<T>(PhantomData<T>);
 
-const MARKET_COMMONS: &[u8] = b"MarketCommons";
-const MARKETS: &[u8] = b"Markets";
-
-#[derive(Clone, Decode, Encode)]
-pub struct LegacyMarket<AI, BN, M> {
-    pub creator: AI,
-    pub creation: MarketCreation,
-    pub creator_fee: u8,
-    pub oracle: AI,
-    pub metadata: Vec<u8>,
-    pub market_type: MarketType,
-    pub period: MarketPeriod<BN, M>,
-    pub scoring_rule: ScoringRule,
-    pub status: MarketStatus,
-    pub report: Option<Report<AI, BN>>,
-    pub resolved_outcome: Option<OutcomeReport>,
-    pub dispute_mechanism: MarketDisputeMechanism<AI>,
-}
-
-type LegacyMarketOf<T> = LegacyMarket<
-    <T as frame_system::Config>::AccountId,
-    <T as frame_system::Config>::BlockNumber,
-    MomentOf<T>,
->;
-type MarketOf<T> = Market<
-    <T as frame_system::Config>::AccountId,
-    <T as frame_system::Config>::BlockNumber,
-    MomentOf<T>,
->;
-
-pub struct UpdateMarketsForDeadlines<T>(PhantomData<T>);
-
-pub struct MigrateMarketIdsPerBlockStorage<T>(PhantomData<T>);
-
-impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForDeadlines<T> {
-    fn on_runtime_upgrade() -> frame_support::weights::Weight
-    where
-        T: Config,
-    {
-        let mut total_weight = T::DbWeight::get().reads(1);
-        let storage_version = utility::get_on_chain_storage_version_of_market_commons_pallet();
-        if storage_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION {
-            log::info!("Skipping updates of markets; prediction-markets already up to date");
-            return total_weight;
-        }
-        log::info!("Starting updates of markets");
-        let dispute_duration = T::DisputePeriod::get();
-        let oracle_duration = T::ReportingPeriod::get();
-        let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
-        let mut new_markets_data: Vec<(Vec<u8>, MarketOf<T>)> = Vec::new();
-        for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
-            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
-            let new_market = Market {
-                creator: legacy_market.creator,
-                creation: legacy_market.creation,
-                creator_fee: legacy_market.creator_fee,
-                oracle: legacy_market.oracle,
-                metadata: legacy_market.metadata,
-                market_type: legacy_market.market_type,
-                period: legacy_market.period,
-                scoring_rule: legacy_market.scoring_rule,
-                status: legacy_market.status,
-                report: legacy_market.report,
-                resolved_outcome: legacy_market.resolved_outcome,
-                dispute_mechanism: legacy_market.dispute_mechanism,
-                deadlines,
-            };
-            new_markets_data.push((key, new_market));
-        }
-        for (key, new_market) in new_markets_data {
-            put_storage_value::<MarketOf<T>>(MARKET_COMMONS, MARKETS, &key, new_market);
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        }
-        log::info!("Completed updates of markets");
-        utility::put_storage_version_of_market_commons_pallet(MARKET_COMMONS_NEXT_STORAGE_VERSION);
-        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        total_weight
-    }
-
-    #[cfg(feature = "try-runtime")]
-    fn pre_upgrade() -> Result<(), &'static str> {
-        Ok(())
-    }
-
-    #[cfg(feature = "try-runtime")]
-    fn post_upgrade() -> Result<(), &'static str> {
-        let dispute_duration = T::DisputePeriod::get();
-        let oracle_duration = T::ReportingPeriod::get();
-        let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
-        for (market_id, market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
-            assert_eq!(
-                market.deadlines, deadlines,
-                "found unexpected deadlines in market. market_id: {:?}, deadlines: {:?}",
-                market_id, market.deadlines
-            );
-        }
-        Ok(())
-    }
-}
-
-impl<T: Config> OnRuntimeUpgrade for MigrateMarketIdsPerBlockStorage<T> {
+// Transform all scalar intervals by BASE, thereby turning every scalar position into a fixed point
+// number with ten digits after the decimal point. This update should only be executed if the
+// interpretation of metadata in changed in parallel. If that is the case, market description need
+// not be updated.
+impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config + zrml_court::Config>
+    OnRuntimeUpgrade for TransformScalarMarketsToFixedPoint<T>
+where
+    <T as zrml_market_commons::Config>::MarketId: EncodeLike<
+        <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+    >,
+    <T as zrml_market_commons::Config>::MarketId:
+        EncodeLike<<<T as zrml_court::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+    <T as zrml_market_commons::Config>::MarketId:
+        EncodeLike<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+{
     fn on_runtime_upgrade() -> Weight
     where
         T: Config,
     {
-        let mut total_weight = T::DbWeight::get().reads(2);
-
-        if StorageVersion::get::<Pallet<T>>()
-            != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE
-            || utility::get_on_chain_storage_version_of_market_commons_pallet()
-                != MARKET_COMMONS_NEXT_STORAGE_VERSION
+        let mut total_weight = T::DbWeight::get().reads(4);
+        let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
+        let court_version = StorageVersion::get::<CourtPallet<T>>();
+        let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
+        let prediction_markets_version = StorageVersion::get::<Pallet<T>>();
+        if authorized_version != AUTHORIZED_REQUIRED_STORAGE_VERSION
+            || court_version != COURT_REQUIRED_STORAGE_VERSION
+            || market_commons_version != MARKET_COMMONS_REQUIRED_STORAGE_VERSION
+            || prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION
         {
             log::info!(
-                "Skipping storage migration for MarketIds; prediction-markets already up to date"
+                "TransformScalarMarketsToFixedPoint: authorized version is {:?}, require {:?}; \
+                 court version is {:?}, require {:?}; market-commons version is {:?}, require \
+                 {:?}; prediction-markets version is {:?}, require {:?}",
+                authorized_version,
+                AUTHORIZED_REQUIRED_STORAGE_VERSION,
+                court_version,
+                COURT_REQUIRED_STORAGE_VERSION,
+                market_commons_version,
+                MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
+                prediction_markets_version,
+                PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
             );
             return total_weight;
         }
+        log::info!("TransformScalarMarketsToFixedPoint: Starting...");
 
-        log::info!("Starting storage cleanup of MigrateMarketIdsPerBlockStorage");
+        let mut new_scalar_markets: Vec<_> = vec![];
+        for (market_id, mut market) in MarketCommonsPallet::<T>::market_iter() {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+            if let MarketType::Scalar(range) = market.market_type {
+                let new_start = to_fixed_point(*range.start());
+                let new_end = to_fixed_point(*range.end());
+                market.market_type = MarketType::Scalar(new_start..=new_end);
 
-        type DisputeBlockToMarketIdsTuple<T> =
-            (<T as frame_system::Config>::BlockNumber, BoundedVec<MarketIdOf<T>, CacheSize>);
-        type IterType<T> = PrefixIterator<DisputeBlockToMarketIdsTuple<T>>;
+                if let Some(mut report) = market.report {
+                    if let OutcomeReport::Scalar(value) = report.outcome {
+                        report.outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                    }
+                    market.report = Some(report);
+                }
 
-        let market_ids_per_dispute_iterator: IterType<T> =
-            frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
-                b"PredictionMarkets",
-                b"MarketIdsPerDisputeBlock",
-            );
+                if let Some(mut resolved_outcome) = market.resolved_outcome {
+                    if let OutcomeReport::Scalar(value) = resolved_outcome {
+                        resolved_outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                    }
+                    market.resolved_outcome = Some(resolved_outcome);
+                }
 
-        let market_ids_per_dispute: Vec<DisputeBlockToMarketIdsTuple<T>> =
-            market_ids_per_dispute_iterator.collect();
-        total_weight = total_weight
-            .saturating_add(T::DbWeight::get().reads(market_ids_per_dispute.len() as u64));
-        let mut updated_data = Vec::new();
-        for (dispute_start_block, market_ids) in market_ids_per_dispute {
-            let dispute_duration = T::DisputePeriod::get();
-            let new_dispute_start_block = dispute_start_block.saturating_add(dispute_duration);
-            updated_data.push((new_dispute_start_block, market_ids));
-            MarketIdsPerDisputeBlock::<T>::remove(dispute_start_block);
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+                let old_disputes = Disputes::<T>::get(market_id);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+                let new_disputes = if old_disputes.is_empty() {
+                    None
+                } else {
+                    BoundedVec::try_from(
+                        old_disputes
+                            .into_iter()
+                            .map(|mut dispute| {
+                                if let OutcomeReport::Scalar(value) = dispute.outcome {
+                                    dispute.outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                                };
+                                dispute
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                    .ok()
+                };
+
+                let authorized_report = match AuthorizedOutcomeReports::<T>::get(market_id) {
+                    Some(mut outcome_report) => {
+                        if let OutcomeReport::Scalar(value) = outcome_report {
+                            outcome_report = OutcomeReport::Scalar(to_fixed_point(value));
+                        };
+                        Some(outcome_report)
+                    }
+                    None => None,
+                };
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+                let votes = Votes::<T>::iter_prefix(market_id)
+                    .filter_map(|(juror, (block_number, outcome_report))| {
+                        total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+                        match outcome_report {
+                            OutcomeReport::Scalar(value) => Some((
+                                juror,
+                                (block_number, OutcomeReport::Scalar(to_fixed_point(value))),
+                            )),
+                            _ => None,
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                new_scalar_markets.push((
+                    market_id,
+                    market,
+                    new_disputes,
+                    authorized_report,
+                    votes,
+                ));
+            }
         }
-        for (new_dispute_start_block, market_ids) in updated_data {
+
+        for (market_id, market, disputes, authorized_report, votes) in new_scalar_markets {
+            let _ = MarketCommonsPallet::<T>::mutate_market(&market_id, |old_market| {
+                *old_market = market;
+                Ok(())
+            });
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            MarketIdsPerDisputeBlock::<T>::insert(new_dispute_start_block, market_ids);
+
+            if let Some(disputes_unwrapped) = disputes {
+                Disputes::<T>::insert(market_id, disputes_unwrapped);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            }
+
+            if let Some(outcome_report) = authorized_report {
+                AuthorizedOutcomeReports::<T>::insert(market_id, outcome_report);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            }
+
+            for (juror, vote) in votes {
+                Votes::<T>::insert(market_id, juror, vote);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            }
         }
 
-        let market_ids_per_report_iterator: IterType<T> =
-            frame_support::migration::storage_key_iter::<_, _, Twox64Concat>(
-                b"PredictionMarkets",
-                b"MarketIdsPerReportBlock",
-            );
-
-        let market_ids_per_report: Vec<DisputeBlockToMarketIdsTuple<T>> =
-            market_ids_per_report_iterator.collect();
-        total_weight = total_weight
-            .saturating_add(T::DbWeight::get().reads(market_ids_per_report.len() as u64));
-        let mut updated_data = Vec::new();
-        for (dispute_start_block, market_ids) in market_ids_per_report {
-            let dispute_duration = T::DisputePeriod::get();
-            let new_dispute_start_block = dispute_start_block.saturating_add(dispute_duration);
-            updated_data.push((new_dispute_start_block, market_ids));
-            MarketIdsPerReportBlock::<T>::remove(dispute_start_block);
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-        }
-        for (new_dispute_start_block, market_ids) in updated_data {
-            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            MarketIdsPerReportBlock::<T>::insert(new_dispute_start_block, market_ids);
-        }
-        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE)
-            .put::<Pallet<T>>();
-        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-
-        log::info!("Completed storage migration of MigrateMarketIdsPerBlockStorage");
+        StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<T>>();
+        StorageVersion::new(COURT_NEXT_STORAGE_VERSION).put::<CourtPallet<T>>();
+        StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION).put::<MarketCommonsPallet<T>>();
+        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(4));
+        log::info!("TransformScalarMarketsToFixedPoint: Done!");
         total_weight
     }
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
+        // Check that no saturation occurs.
+        for (market_id, market) in MarketCommonsPallet::<T>::market_iter().drain() {
+            if let MarketType::Scalar(range) = market.market_type {
+                assert!(
+                    range.end().checked_mul(BASE).is_some(),
+                    "TransformScalarMarketsToFixedPoint: Arithmetic overflow when transforming \
+                     market {:?}",
+                    market_id,
+                );
+            }
+        }
         Ok(())
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        log::info!("Started post_upgrade of MigrateMarketIdsPerBlockStorage");
-        for (key, market_ids) in MarketIdsPerDisputeBlock::<T>::iter() {
-            for market_id in market_ids {
-                log::info!(
-                    "PostUpgrade check for MarketIdsPerDisputeBlock on market_id: {:?}",
-                    market_id
-                );
-                let market =
-                    T::MarketCommons::market(&market_id).map_err(|_| "invalid market_id")?;
-                let disputes = Disputes::<T>::get(market_id);
-                let dispute = disputes.last().ok_or("No dispute found")?;
-                assert_eq!(
-                    key,
-                    dispute.at + market.deadlines.dispute_duration,
-                    "key in MarketIdsPerDisputeBlock must be equal to dispute.at + \
-                     disputed_duration"
+        for (market_id, market) in MarketCommonsPallet::<T>::market_iter().drain() {
+            if let MarketType::Scalar(range) = market.market_type {
+                assert_ne!(
+                    range.start(),
+                    range.end(),
+                    "TransformScalarMarketsToFixedPoint: Scalar range broken after transformation \
+                     of market {:?}",
+                    market_id,
                 );
             }
         }
-        for (key, market_ids) in MarketIdsPerReportBlock::<T>::iter() {
-            for market_id in market_ids {
-                log::info!(
-                    "PostUpgrade check for MarketIdsPerReportBlock on market_id: {:?}",
-                    market_id
-                );
-                let market =
-                    T::MarketCommons::market(&market_id).map_err(|_| "invalid market_id")?;
-                let report = market.report.ok_or("No report found")?;
-                assert_eq!(
-                    key,
-                    report.at + market.deadlines.dispute_duration,
-                    "key in MarketIdsPerReportBlock must be equal to report.at + dispute_duration"
-                );
-            }
-        }
-        log::info!("Completed post_upgrade of MigrateMarketIdsPerBlockStorage");
+
+        let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
+        let court_version = StorageVersion::get::<CourtPallet<T>>();
+        let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
+        let prediction_markets_version = StorageVersion::get::<Pallet<T>>();
+        assert_eq!(
+            authorized_version, AUTHORIZED_NEXT_STORAGE_VERSION,
+            "TransformScalarMarketsToFixedPoint: authorized storage version mismatch",
+        );
+        assert_eq!(
+            court_version, COURT_NEXT_STORAGE_VERSION,
+            "TransformScalarMarketsToFixedPoint: court storage version mismatch",
+        );
+        assert_eq!(
+            market_commons_version, MARKET_COMMONS_NEXT_STORAGE_VERSION,
+            "TransformScalarMarketsToFixedPoint: market_commons storage version mismatch",
+        );
+        assert_eq!(
+            prediction_markets_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION,
+            "TransformScalarMarketsToFixedPoint: prediction_markets storage version mismatch",
+        );
+
         Ok(())
+    }
+}
+
+fn to_fixed_point(value: u128) -> u128 {
+    value.saturating_mul(BASE)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        mock::{ExtBuilder, Runtime},
+        Disputes, MomentOf,
+    };
+    use zeitgeist_primitives::types::{
+        Deadlines, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketId, MarketPeriod,
+        MarketStatus, OutcomeReport, Report, ScoringRule,
+    };
+    use zrml_market_commons::Markets;
+
+    type Market = zeitgeist_primitives::types::Market<
+        <Runtime as frame_system::Config>::AccountId,
+        <Runtime as frame_system::Config>::BlockNumber,
+        MomentOf<Runtime>,
+    >;
+    type MarketDisputeOf<T> = MarketDispute<
+        <T as frame_system::Config>::AccountId,
+        <T as frame_system::Config>::BlockNumber,
+    >;
+
+    #[test]
+    fn on_runtime_upgrade_increments_the_storage_versions() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+            TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
+            let authorized_version = StorageVersion::get::<AuthorizedPallet<Runtime>>();
+            let court_version = StorageVersion::get::<CourtPallet<Runtime>>();
+            let market_commons_version = StorageVersion::get::<MarketCommonsPallet<Runtime>>();
+            let prediction_markets_version = StorageVersion::get::<Pallet<Runtime>>();
+            assert_eq!(authorized_version, AUTHORIZED_NEXT_STORAGE_VERSION);
+            assert_eq!(court_version, COURT_NEXT_STORAGE_VERSION);
+            assert_eq!(market_commons_version, MARKET_COMMONS_NEXT_STORAGE_VERSION);
+            assert_eq!(prediction_markets_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION);
+        });
+    }
+
+    #[test]
+    fn on_runtime_upgrade_ignores_categorical_markets() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+            let market_id: MarketId = 7;
+            let market = Market {
+                creator: 1,
+                creation: MarketCreation::Permissionless,
+                creator_fee: 2,
+                oracle: 3,
+                metadata: vec![4, 5],
+                market_type: MarketType::Categorical(14),
+                period: MarketPeriod::Block(6..7),
+                deadlines: Deadlines { grace_period: 8, oracle_duration: 9, dispute_duration: 10 },
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Resolved,
+                report: Some(Report { at: 11, by: 12, outcome: OutcomeReport::Categorical(13) }),
+                resolved_outcome: Some(OutcomeReport::Categorical(13)),
+                dispute_mechanism: MarketDisputeMechanism::Court,
+            };
+            Markets::<Runtime>::insert(market_id, market.clone());
+            TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
+            let market_after = Markets::<Runtime>::get(market_id);
+            assert_eq!(market, market_after.unwrap());
+        });
+    }
+
+    #[test]
+    fn on_runtime_transforms_scalar_markets_and_their_disputes() {
+        ExtBuilder::default().build().execute_with(|| {
+            set_up_chain();
+
+            let market_id: MarketId = 7;
+            let market = Market {
+                creator: 1,
+                creation: MarketCreation::Permissionless,
+                creator_fee: 2,
+                oracle: 3,
+                metadata: vec![4, 5],
+                market_type: MarketType::Scalar(14..=15),
+                period: MarketPeriod::Block(6..7),
+                deadlines: Deadlines { grace_period: 8, oracle_duration: 9, dispute_duration: 10 },
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Resolved,
+                report: Some(Report { at: 11, by: 12, outcome: OutcomeReport::Categorical(13) }),
+                resolved_outcome: Some(OutcomeReport::Categorical(13)),
+                dispute_mechanism: MarketDisputeMechanism::Court,
+            };
+            Markets::<Runtime>::insert(market_id, market.clone());
+
+            let dispute =
+                MarketDisputeOf::<Runtime> { at: 16, by: 17, outcome: OutcomeReport::Scalar(18) };
+            Disputes::<Runtime>::insert(
+                market_id,
+                BoundedVec::try_from(vec![dispute.clone()]).unwrap(),
+            );
+
+            AuthorizedOutcomeReports::<Runtime>::insert(market_id, OutcomeReport::Scalar(19));
+
+            let juror = 20;
+            let block_number = 21;
+            Votes::<Runtime>::insert(market_id, juror, (block_number, OutcomeReport::Scalar(22)));
+
+            TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
+
+            let mut market_expected = market;
+            market_expected.market_type = MarketType::Scalar(140_000_000_000..=150_000_000_000);
+            let market_after = Markets::<Runtime>::get(market_id).unwrap();
+            assert_eq!(market_after, market_expected);
+
+            let mut dispute_expected = dispute;
+            dispute_expected.outcome = OutcomeReport::Scalar(180_000_000_000);
+            let disputes_after = Disputes::<Runtime>::get(market_id);
+            assert_eq!(disputes_after.len(), 1);
+            assert_eq!(disputes_after[0], dispute_expected);
+
+            let authorized_report_after =
+                AuthorizedOutcomeReports::<Runtime>::get(market_id).unwrap();
+            assert_eq!(authorized_report_after, OutcomeReport::Scalar(190_000_000_000));
+
+            let vote_after = Votes::<Runtime>::get(market_id, juror).unwrap();
+            assert_eq!(vote_after, (block_number, OutcomeReport::Scalar(220_000_000_000)));
+        });
+    }
+
+    #[test]
+    fn on_runtime_is_noop_if_versions_are_not_correct() {
+        ExtBuilder::default().build().execute_with(|| {
+            // Don't set up chain to signal that storage is already up to date.
+
+            let market_id: MarketId = 7;
+            let market = Market {
+                creator: 1,
+                creation: MarketCreation::Permissionless,
+                creator_fee: 2,
+                oracle: 3,
+                metadata: vec![4, 5],
+                market_type: MarketType::Scalar(14..=15),
+                period: MarketPeriod::Block(6..7),
+                deadlines: Deadlines { grace_period: 8, oracle_duration: 9, dispute_duration: 10 },
+                scoring_rule: ScoringRule::CPMM,
+                status: MarketStatus::Resolved,
+                report: Some(Report { at: 11, by: 12, outcome: OutcomeReport::Categorical(13) }),
+                resolved_outcome: Some(OutcomeReport::Categorical(13)),
+                dispute_mechanism: MarketDisputeMechanism::Court,
+            };
+            Markets::<Runtime>::insert(market_id, market.clone());
+
+            let dispute =
+                MarketDisputeOf::<Runtime> { at: 16, by: 17, outcome: OutcomeReport::Scalar(18) };
+            Disputes::<Runtime>::insert(
+                market_id,
+                BoundedVec::try_from(vec![dispute.clone()]).unwrap(),
+            );
+
+            AuthorizedOutcomeReports::<Runtime>::insert(market_id, OutcomeReport::Scalar(19));
+
+            let juror = 20;
+            let vote = (21, OutcomeReport::Scalar(22));
+            Votes::<Runtime>::insert(market_id, juror, vote.clone());
+
+            TransformScalarMarketsToFixedPoint::<Runtime>::on_runtime_upgrade();
+
+            let market_after = Markets::<Runtime>::get(market_id).unwrap();
+            assert_eq!(market_after, market);
+
+            let disputes_after = Disputes::<Runtime>::get(market_id);
+            assert_eq!(disputes_after.len(), 1);
+            assert_eq!(disputes_after[0], dispute);
+
+            let authorized_report_after =
+                AuthorizedOutcomeReports::<Runtime>::get(market_id).unwrap();
+            assert_eq!(authorized_report_after, OutcomeReport::Scalar(19));
+
+            let vote_after = Votes::<Runtime>::get(market_id, juror).unwrap();
+            assert_eq!(vote_after, vote);
+        });
+    }
+
+    fn set_up_chain() {
+        StorageVersion::new(AUTHORIZED_REQUIRED_STORAGE_VERSION).put::<AuthorizedPallet<Runtime>>();
+        StorageVersion::new(COURT_REQUIRED_STORAGE_VERSION).put::<CourtPallet<Runtime>>();
+        StorageVersion::new(MARKET_COMMONS_REQUIRED_STORAGE_VERSION)
+            .put::<MarketCommonsPallet<Runtime>>();
+        StorageVersion::new(PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION).put::<Pallet<Runtime>>();
     }
 }
 
@@ -286,20 +458,6 @@ mod utility {
     };
     use parity_scale_codec::Encode;
     use zeitgeist_primitives::types::{Pool, PoolId};
-
-    pub fn storage_prefix_of_market_common_pallet() -> [u8; 32] {
-        storage_prefix(b"MarketCommons", b":__STORAGE_VERSION__:")
-    }
-
-    pub fn get_on_chain_storage_version_of_market_commons_pallet() -> StorageVersion {
-        let key = storage_prefix_of_market_common_pallet();
-        unhashed::get_or_default(&key)
-    }
-
-    pub fn put_storage_version_of_market_commons_pallet(value: u16) {
-        let key = storage_prefix_of_market_common_pallet();
-        unhashed::put(&key, &StorageVersion::new(value));
-    }
 
     #[allow(unused)]
     const SWAPS: &[u8] = b"Swaps";
@@ -338,310 +496,5 @@ mod utility {
     pub fn set_pool<T: Config>(pool_id: PoolId, pool: Pool<BalanceOf<T>, MarketIdOf<T>>) {
         let hash = key_to_hash::<Blake2_128Concat, PoolId>(pool_id);
         put_storage_value(SWAPS, POOLS, &hash, Some(pool));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{mock::*, CacheSize, Disputes};
-    use alloc::{vec, vec::Vec};
-    use core::fmt::Debug;
-    use frame_support::{assert_ok, storage::unhashed, Blake2_128Concat, StorageHasher};
-    use parity_scale_codec::Encode;
-    use sp_runtime::traits::BlockNumberProvider;
-    use zeitgeist_primitives::types::{
-        Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism, MarketId,
-        MarketPeriod, MarketStatus, MarketType, OutcomeReport, Report,
-    };
-    use zrml_market_commons::MarketCommonsPalletApi;
-
-    #[test]
-    fn test_on_runtime_upgrade_on_untouched_chain() {
-        ExtBuilder::default().build().execute_with(|| {
-            setup_chain();
-            MigrateMarketIdsPerBlockStorage::<Runtime>::on_runtime_upgrade();
-        });
-    }
-
-    #[test]
-    fn on_runtime_upgrade_updates_storage_versions() {
-        ExtBuilder::default().build().execute_with(|| {
-            setup_chain();
-            MigrateMarketIdsPerBlockStorage::<Runtime>::on_runtime_upgrade();
-            assert_eq!(
-                StorageVersion::get::<Pallet<Runtime>>(),
-                PREDICTION_MARKETS_NEXT_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE
-            );
-        });
-    }
-
-    #[test]
-    fn test_migrate_market_ids_on_runtime_upgrade() {
-        ExtBuilder::default().build().execute_with(|| {
-            setup_chain();
-
-            System::set_block_number(1);
-            create_test_market();
-            create_test_market();
-            let market_ids_reported =
-                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0])
-                    .expect("boundedvec creation failed");
-            let market_ids_disputed =
-                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![1])
-                    .expect("boundedvec creation failed");
-            System::set_block_number(4);
-            let dispute_block = System::current_block_number().saturating_sub(1_u32.into());
-            MarketIdsPerDisputeBlock::<Runtime>::insert(dispute_block, market_ids_disputed.clone());
-            MarketIdsPerReportBlock::<Runtime>::insert(dispute_block, market_ids_reported.clone());
-            let report = Report {
-                at: dispute_block,
-                by: BOB,
-                outcome: zeitgeist_primitives::types::OutcomeReport::Categorical(3),
-            };
-
-            assert_ok!(<MarketCommons as MarketCommonsPalletApi>::mutate_market(&0, |market| {
-                market.report = Some(report);
-                Ok(())
-            }));
-
-            let dispute = MarketDispute {
-                at: dispute_block,
-                by: EVE,
-                outcome: OutcomeReport::Categorical(1),
-            };
-            let disputes = BoundedVec::<
-                MarketDispute<
-                    <Runtime as frame_system::Config>::AccountId,
-                    <Runtime as frame_system::Config>::BlockNumber,
-                >,
-                <Runtime as Config>::MaxDisputes,
-            >::try_from(vec![dispute])
-            .expect("boundedvec creation failed");
-            Disputes::<Runtime>::insert(1, disputes);
-            MigrateMarketIdsPerBlockStorage::<Runtime>::on_runtime_upgrade();
-            let market_reported = MarketCommons::market(&0).expect("invalid market_id");
-            let market_disputed = MarketCommons::market(&1).expect("invalid market_id");
-            assert_eq!(
-                MarketIdsPerDisputeBlock::<Runtime>::get(
-                    dispute_block + market_disputed.deadlines.dispute_duration
-                ),
-                market_ids_disputed
-            );
-            assert_eq!(
-                MarketIdsPerReportBlock::<Runtime>::get(
-                    dispute_block + market_reported.deadlines.dispute_duration
-                ),
-                market_ids_reported
-            );
-        });
-    }
-
-    #[test]
-    fn test_dispute_blocks_with_gap_of_dispute_duration() {
-        ExtBuilder::default().build().execute_with(|| {
-            setup_chain();
-
-            System::set_block_number(1);
-            let market_ids_reported_0 =
-                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![0])
-                    .expect("boundedvec creation failed");
-            let market_ids_disputed_0 =
-                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![1])
-                    .expect("boundedvec creation failed");
-            System::set_block_number(4);
-            let dispute_block = System::current_block_number().saturating_sub(1_u32.into());
-            MarketIdsPerDisputeBlock::<Runtime>::insert(
-                dispute_block,
-                market_ids_disputed_0.clone(),
-            );
-            MarketIdsPerReportBlock::<Runtime>::insert(
-                dispute_block,
-                market_ids_reported_0.clone(),
-            );
-            let dispute_duration = <Runtime as Config>::DisputePeriod::get();
-            let next_dispute_block = dispute_block + dispute_duration;
-            let market_ids_reported_1 =
-                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![2])
-                    .expect("boundedvec creation failed");
-            let market_ids_disputed_1 =
-                BoundedVec::<MarketIdOf<Runtime>, CacheSize>::try_from(vec![3])
-                    .expect("boundedvec creation failed");
-            MarketIdsPerDisputeBlock::<Runtime>::insert(
-                next_dispute_block,
-                market_ids_disputed_1.clone(),
-            );
-            MarketIdsPerReportBlock::<Runtime>::insert(
-                next_dispute_block,
-                market_ids_reported_1.clone(),
-            );
-            MigrateMarketIdsPerBlockStorage::<Runtime>::on_runtime_upgrade();
-            // after migration dispute_block's data is stored against next_dispute_block
-            assert_eq!(
-                MarketIdsPerDisputeBlock::<Runtime>::get(next_dispute_block),
-                market_ids_disputed_0
-            );
-            assert_eq!(
-                MarketIdsPerReportBlock::<Runtime>::get(next_dispute_block),
-                market_ids_reported_0
-            );
-            // after migration next_dispute_block's data is stored against
-            // next_dispute_block + dispute_duration
-            assert_eq!(
-                MarketIdsPerDisputeBlock::<Runtime>::get(next_dispute_block + dispute_duration),
-                market_ids_disputed_1
-            );
-            assert_eq!(
-                MarketIdsPerReportBlock::<Runtime>::get(next_dispute_block + dispute_duration),
-                market_ids_reported_1
-            );
-        });
-    }
-
-    fn setup_chain() {
-        StorageVersion::new(
-            PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION_FOR_MIGRATE_MARKET_IDS_STORAGE,
-        )
-        .put::<Pallet<Runtime>>();
-        let key = utility::storage_prefix_of_market_common_pallet();
-        unhashed::put(&key, &StorageVersion::new(MARKET_COMMONS_NEXT_STORAGE_VERSION));
-    }
-
-    fn create_test_data_for_market_update() -> (Vec<LegacyMarketOf<Runtime>>, Vec<MarketOf<Runtime>>)
-    {
-        let old_markets: Vec<LegacyMarketOf<Runtime>> = vec![
-            LegacyMarket {
-                creator: 1_u128,
-                creation: MarketCreation::Permissionless,
-                creator_fee: 100_u8,
-                oracle: 2_u128,
-                metadata: vec![],
-                market_type: MarketType::Categorical(2),
-                period: MarketPeriod::Block(1..10),
-                scoring_rule: ScoringRule::CPMM,
-                status: MarketStatus::Proposed,
-                report: None,
-                resolved_outcome: None,
-                dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
-            },
-            LegacyMarket {
-                creator: 1_u128,
-                creation: MarketCreation::Advised,
-                creator_fee: 100_u8,
-                oracle: 2_u128,
-                metadata: vec![],
-                market_type: MarketType::Scalar(1_u128..=5_u128),
-                period: MarketPeriod::Timestamp(1..10),
-                scoring_rule: ScoringRule::CPMM,
-                status: MarketStatus::Active,
-                report: None,
-                resolved_outcome: None,
-                dispute_mechanism: MarketDisputeMechanism::Authorized(3_u128),
-            },
-        ];
-        let dispute_duration = <Runtime as Config>::DisputePeriod::get();
-        let oracle_duration = <Runtime as Config>::ReportingPeriod::get();
-        let deadlines = Deadlines { grace_period: 0_u32.into(), oracle_duration, dispute_duration };
-        let expected_markets: Vec<MarketOf<Runtime>> = vec![
-            Market {
-                creator: 1_u128,
-                creation: MarketCreation::Permissionless,
-                creator_fee: 100_u8,
-                oracle: 2_u128,
-                metadata: vec![],
-                market_type: MarketType::Categorical(2),
-                period: MarketPeriod::Block(1..10),
-                scoring_rule: ScoringRule::CPMM,
-                status: MarketStatus::Proposed,
-                report: None,
-                resolved_outcome: None,
-                dispute_mechanism: MarketDisputeMechanism::SimpleDisputes,
-                deadlines,
-            },
-            Market {
-                creator: 1_u128,
-                creation: MarketCreation::Advised,
-                creator_fee: 100_u8,
-                oracle: 2_u128,
-                metadata: vec![],
-                market_type: MarketType::Scalar(1_u128..=5_u128),
-                period: MarketPeriod::Timestamp(1..10),
-                scoring_rule: ScoringRule::CPMM,
-                status: MarketStatus::Active,
-                report: None,
-                resolved_outcome: None,
-                dispute_mechanism: MarketDisputeMechanism::Authorized(3_u128),
-                deadlines,
-            },
-        ];
-        (old_markets, expected_markets)
-    }
-
-    #[test]
-    fn test_on_runtime_upgrade() {
-        ExtBuilder::default().build().execute_with(|| {
-            utility::put_storage_version_of_market_commons_pallet(
-                MARKET_COMMONS_REQUIRED_STORAGE_VERSION,
-            );
-            let (legacy_markets, expected_markets) = create_test_data_for_market_update();
-            populate_test_data::<Blake2_128Concat, MarketId, LegacyMarketOf<Runtime>>(
-                MARKET_COMMONS,
-                MARKETS,
-                legacy_markets,
-            );
-            UpdateMarketsForDeadlines::<Runtime>::on_runtime_upgrade();
-            assert_eq!(
-                utility::get_on_chain_storage_version_of_market_commons_pallet(),
-                MARKET_COMMONS_NEXT_STORAGE_VERSION
-            );
-            for (market_id, market_expected) in expected_markets.iter().enumerate() {
-                let market_actual = MarketCommons::market(&(market_id as u128)).unwrap();
-                assert_eq!(market_actual, *market_expected);
-            }
-        });
-    }
-
-    fn populate_test_data<H, K, V>(pallet: &[u8], prefix: &[u8], data: Vec<V>)
-    where
-        H: StorageHasher,
-        K: TryFrom<usize> + Encode,
-        V: Encode + Clone,
-        <K as TryFrom<usize>>::Error: Debug,
-    {
-        for (key, value) in data.iter().enumerate() {
-            let storage_hash = utility::key_to_hash::<H, K>(
-                K::try_from(key).expect("usize to K conversion failed"),
-            );
-            put_storage_value::<V>(pallet, prefix, &storage_hash, (*value).clone());
-        }
-    }
-
-    fn create_test_market() {
-        let dispute_duration = <Runtime as crate::Config>::DisputePeriod::get();
-
-        let deadlines = Deadlines {
-            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
-            oracle_duration: <Runtime as crate::Config>::MaxOracleDuration::get(),
-            dispute_duration,
-        };
-        let mut metadata = [0; 50];
-        metadata[0] = 0x15;
-        metadata[1] = 0x30;
-        let market = Market {
-            creation: MarketCreation::Advised,
-            creator_fee: 0,
-            creator: ALICE,
-            market_type: MarketType::Categorical(5),
-            dispute_mechanism: MarketDisputeMechanism::Authorized(CHARLIE),
-            metadata: Vec::from(metadata),
-            oracle: BOB,
-            period: MarketPeriod::Block(2..10),
-            deadlines,
-            report: None,
-            resolved_outcome: None,
-            status: MarketStatus::Active,
-            scoring_rule: zeitgeist_primitives::types::ScoringRule::CPMM,
-        };
-        let _res = <MarketCommons as MarketCommonsPalletApi>::push_market(market);
     }
 }

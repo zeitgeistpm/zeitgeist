@@ -58,13 +58,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
-                pallet_author_mapping::migrations::AddAccountIdToNimbusLookup<Runtime>,
-                pallet_parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
-                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
-                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
-            )
+            zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -74,10 +68,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
-                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
-            )
+            zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
