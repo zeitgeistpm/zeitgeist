@@ -2184,6 +2184,8 @@ mod pallet {
                         resolved_outcome_option = Some(o);
                     }
 
+                     // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
+                     // the oracle's report.
                     if resolved_outcome_option.is_none() {
                         resolved_outcome_option = match market.dispute_mechanism {
                             MarketDisputeMechanism::Authorized(_) => {
