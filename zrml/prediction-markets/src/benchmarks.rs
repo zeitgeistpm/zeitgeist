@@ -729,7 +729,9 @@ benchmarks! {
 
         let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
         <frame_system::Pallet<T>>::set_block_number(current_block);
-        crate::MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
+        // the complexity depends on MarketIdsPerDisputeBlock at the current block
+        // this is because a variable number of market ids need to be decoded from the storage
+        MarketIdsPerDisputeBlock::<T>::insert(current_block, market_ids);
     }: _(RawOrigin::Signed(caller), market_id)
 
     dispute_authorized {
