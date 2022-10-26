@@ -106,6 +106,7 @@ construct_runtime!(
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
 
