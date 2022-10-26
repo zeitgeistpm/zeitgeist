@@ -260,7 +260,7 @@ mod pallet {
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::purge_outcomes(
             T::RemoveKeysLimit::get(),
-            T::MaxOwners::get()
+            T::MaxOwners::get(),
         ))]
         pub fn purge_outcomes(
             origin: OriginFor<T>,
