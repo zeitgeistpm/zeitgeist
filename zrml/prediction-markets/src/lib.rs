@@ -1170,7 +1170,7 @@ mod pallet {
         /// * `market_id`: The identifier of the market.
         ///
         /// NOTE:
-        /// The outcomes of the disputes and the report outcome is added to the global dispute voting outcomes.
+        /// The outcomes of the disputes and the report outcome are added to the global dispute voting outcomes.
         /// The bond of each dispute is the initial vote amount.
         #[pallet::weight(T::WeightInfo::start_global_dispute(CacheSize::get()))]
         #[transactional]
