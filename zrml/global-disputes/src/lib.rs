@@ -222,7 +222,7 @@ mod pallet {
             ensure!(!winner_info.is_finished, Error::<T>::GlobalDisputeAlreadyFinished);
 
             ensure!(
-                <Outcomes<T>>::get(market_id, &outcome).is_none(),
+                !<Outcomes<T>>::contains_key(market_id, &outcome),
                 Error::<T>::OutcomeAlreadyExists
             );
 
