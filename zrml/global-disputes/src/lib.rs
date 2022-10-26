@@ -206,8 +206,8 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(n)`, where `n` is the number of owner(s) of the outcome
-        /// in the case that this gets called for an already existing outcome.
+        /// Complexity: `O(n)`, where `n` is the number of owner(s) of the winner outcome
+        /// in the case that this gets called for an already finished global dispute.
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::add_vote_outcome(T::MaxOwners::get()))]
         pub fn add_vote_outcome(
@@ -240,8 +240,9 @@ mod pallet {
             )?;
 
             Self::deposit_event(Event::AddedVotingOutcome { market_id, owner, outcome });
-            // charge weight for successfully have no owners
-            // in Winners and no owners in empty Outcomes
+            // charge weight for successfully have no owners in Winners
+            // this is the case, because owners are not inserted
+            // as long as the global dispute is not finished
             Ok((Some(T::WeightInfo::add_vote_outcome(0u32))).into())
         }
 
