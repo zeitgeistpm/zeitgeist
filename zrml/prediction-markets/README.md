@@ -39,8 +39,8 @@ This pallet implements a two types of prediction markets:
 - `redeem_shares` - Redeems the winning shares for a market.
 - `report` - Reports an outcome for a market.
 - `sell_complete_set` - Sells a complete set of outcome assets for a market.
-- `start_global_dispute` - Starts a global dispute for a market, 
-  when the `MaxDisputes` amount of disputes is reached.
+- `start_global_dispute` - Starts a global dispute for a market, when the
+  `MaxDisputes` amount of disputes is reached.
 
 #### Admin Dispatches
 
