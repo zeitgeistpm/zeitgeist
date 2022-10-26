@@ -719,7 +719,7 @@ benchmarks! {
             // ensure that the MarketIdsPerDisputeBlock does not interfere with the start_global_dispute execution block
             <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
             let disputor: T::AccountId = account("Disputor", i, 0);
-            let _ = T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into());
+            T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
             let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Scalar(i.into()) }
                 .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
         }
