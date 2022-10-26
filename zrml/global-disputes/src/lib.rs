@@ -553,7 +553,7 @@ mod pallet {
 
     impl<T: Config> Pallet<T> {
         pub fn reward_account(market_id: &MarketIdOf<T>) -> T::AccountId {
-            T::GlobalDisputesPalletId::get().into_sub_account(market_id)
+            T::GlobalDisputesPalletId::get().into_sub_account_truncating(market_id)
         }
 
         fn update_winner(market_id: &MarketIdOf<T>, outcome: &OutcomeReport, amount: BalanceOf<T>) {
