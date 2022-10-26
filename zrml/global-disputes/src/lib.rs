@@ -319,7 +319,7 @@ mod pallet {
         #[pallet::weight(
             T::WeightInfo::reward_outcome_owner_no_funds(T::MaxOwners::get()).max(
                 T::WeightInfo::reward_outcome_owner_with_funds(T::MaxOwners::get()),
-            ),
+            )
         )]
         pub fn reward_outcome_owner(
             origin: OriginFor<T>,
