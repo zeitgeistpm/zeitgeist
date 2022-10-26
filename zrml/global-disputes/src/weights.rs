@@ -29,7 +29,8 @@ use frame_support::{traits::Get, weights::Weight};
 /// zrml_global_disputes (automatically generated)
 pub trait WeightInfoZeitgeist {
     fn vote_on_outcome(o: u32, v: u32) -> Weight;
-    fn unlock_vote_balance(l: u32, o: u32) -> Weight;
+    fn unlock_vote_balance_set(l: u32, o: u32) -> Weight;
+    fn unlock_vote_balance_remove(l: u32, o: u32) -> Weight;
     fn add_vote_outcome(w: u32) -> Weight;
     fn reward_outcome_owner_with_funds(o: u32) -> Weight;
     fn reward_outcome_owner_no_funds(o: u32) -> Weight;
@@ -53,20 +54,33 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
-    // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: GlobalDisputes Locks (r:1 w:1)
     // Storage: Balances Locks (r:1 w:1)
     // Storage: System Account (r:1 w:0)
-    // Storage: GlobalDisputes Winners (r:1 w:0)
-    fn unlock_vote_balance(l: u32, o: u32) -> Weight {
-        (20_268_000 as Weight)
-            // Standard Error: 1_000
-            .saturating_add((5_056_000 as Weight).saturating_mul(l as Weight))
-            // Standard Error: 14_000
-            .saturating_add((796_000 as Weight).saturating_mul(o as Weight))
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
+    // Storage: GlobalDisputes Winners (r:5 w:0)
+    fn unlock_vote_balance_set(l: u32, o: u32) -> Weight {
+        (17_468_000 as Weight)
+            // Standard Error: 2_000
+            .saturating_add((4_146_000 as Weight).saturating_mul(l as Weight))
+            // Standard Error: 12_000
+            .saturating_add((938_000 as Weight).saturating_mul(o as Weight))
+            .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(l as Weight)))
-            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    // Storage: GlobalDisputes Locks (r:1 w:1)
+    // Storage: Balances Locks (r:1 w:1)
+    // Storage: System Account (r:1 w:0)
+    // Storage: GlobalDisputes Winners (r:5 w:0)
+    fn unlock_vote_balance_remove(l: u32, o: u32) -> Weight {
+        (18_017_000 as Weight)
+            // Standard Error: 1_000
+            .saturating_add((4_043_000 as Weight).saturating_mul(l as Weight))
+            // Standard Error: 7_000
+            .saturating_add((674_000 as Weight).saturating_mul(o as Weight))
+            .saturating_add(T::DbWeight::get().reads(3 as Weight))
+            .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(l as Weight)))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     // Storage: unknown [0x3a7472616e73616374696f6e5f6c6576656c3a] (r:1 w:1)
     // Storage: GlobalDisputes Winners (r:1 w:1)

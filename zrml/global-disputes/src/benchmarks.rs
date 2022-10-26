@@ -103,7 +103,49 @@ benchmarks! {
         }.into());
     }
 
-    unlock_vote_balance {
+    unlock_vote_balance_set {
+        let l in 0..T::MaxGlobalDisputeVotes::get();
+        let o in 1..T::MaxOwners::get();
+
+        let vote_sum = 42u128.saturated_into();
+        let mut owners = Vec::new();
+        for i in 1..=o {
+            let owner = account("winners_owner", i, 0);
+            owners.push(owner);
+        }
+        let owners = BoundedVec::try_from(owners).unwrap();
+        let outcome = OutcomeReport::Scalar(0);
+        let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners };
+        // is_finished is false,
+        // because we need `lock_needed` to be greater zero to set a lock.
+        let winner_info = WinnerInfo {outcome, is_finished: false, outcome_info};
+
+        let caller: T::AccountId = whitelisted_caller();
+        let voter: T::AccountId = account("voter", 0, 0);
+        let voter_lookup = T::Lookup::unlookup(voter.clone());
+        let mut vote_locks: BoundedVec<(
+            MarketIdOf<T>,
+            BalanceOf<T>
+        ), T::MaxGlobalDisputeVotes> = Default::default();
+        for i in 0..l {
+            let market_id: MarketIdOf<T> = i.saturated_into();
+            let locked_balance: BalanceOf<T> = i.saturated_into();
+            vote_locks.try_push((market_id, locked_balance)).unwrap();
+            <Winners<T>>::insert(market_id, winner_info.clone());
+        }
+        <Locks<T>>::insert(voter.clone(), vote_locks.clone());
+    }: {
+        <Pallet<T>>::unlock_vote_balance(
+            RawOrigin::Signed(caller.clone()).into(),
+            voter_lookup
+        )
+        .unwrap();
+    } verify {
+        let lock_info = <Locks<T>>::get(&voter);
+        assert_eq!(lock_info, vote_locks);
+    }
+
+    unlock_vote_balance_remove {
         let l in 0..T::MaxGlobalDisputeVotes::get();
         let o in 1..T::MaxOwners::get();
 
@@ -117,7 +159,7 @@ benchmarks! {
         let outcome = OutcomeReport::Scalar(0);
         let outcome_info = OutcomeInfo { outcome_sum: vote_sum, owners };
         // is_finished is true,
-        // because we want the worst case to actually delete list items of the locks
+        // because we need `lock_needed` to be zero to remove all locks.
         let winner_info = WinnerInfo {outcome, is_finished: true, outcome_info};
 
         let caller: T::AccountId = whitelisted_caller();
@@ -133,10 +175,15 @@ benchmarks! {
             vote_locks.try_push((market_id, locked_balance)).unwrap();
             <Winners<T>>::insert(market_id, winner_info.clone());
         }
-        <Locks<T>>::insert(voter, vote_locks);
-    }: _(RawOrigin::Signed(caller.clone()), voter_lookup)
-    verify {
-        let lock_info = <Locks<T>>::get(&caller);
+        <Locks<T>>::insert(voter.clone(), vote_locks);
+    }: {
+        <Pallet<T>>::unlock_vote_balance(
+            RawOrigin::Signed(caller.clone()).into(),
+            voter_lookup
+        )
+        .unwrap();
+    } verify {
+        let lock_info = <Locks<T>>::get(&voter);
         assert!(lock_info.is_empty());
     }
 

@@ -497,10 +497,17 @@ mod pallet {
         /// Complexity: `O(n + m)`, where `n` is the number of all current votes on global disputes,
         /// and `m` is the number of owners for the winning outcome.
         #[frame_support::transactional]
-        #[pallet::weight(T::WeightInfo::unlock_vote_balance(
-            T::MaxGlobalDisputeVotes::get(),
-            T::MaxOwners::get(),
-        ))]
+        #[pallet::weight(
+            T::WeightInfo::unlock_vote_balance_set(
+                T::MaxGlobalDisputeVotes::get(),
+                T::MaxOwners::get(),
+            ).max(
+                T::WeightInfo::unlock_vote_balance_remove(
+                    T::MaxGlobalDisputeVotes::get(),
+                    T::MaxOwners::get(),
+                )
+            )
+        )]
         pub fn unlock_vote_balance(
             origin: OriginFor<T>,
             voter: AccountIdLookupOf<T>,
@@ -537,8 +544,18 @@ mod pallet {
                 }
             });
 
+            <Locks<T>>::insert(&voter, lock_info);
+
+            // use the worst case for owners length,
+            // because otherwise we would have to count each in Locks
             if lock_needed.is_zero() {
                 T::Currency::remove_lock(T::GlobalDisputeLockId::get(), &voter);
+
+                Ok(Some(T::WeightInfo::unlock_vote_balance_remove(
+                    vote_lock_counter,
+                    T::MaxOwners::get(),
+                ))
+                .into())
             } else {
                 T::Currency::set_lock(
                     T::GlobalDisputeLockId::get(),
@@ -546,14 +563,12 @@ mod pallet {
                     lock_needed,
                     WithdrawReasons::TRANSFER,
                 );
-            }
-
-            <Locks<T>>::insert(&voter, lock_info);
-
-            // use the worst case for owners length,
-            // because otherwise we would have to count each in Locks
-            Ok(Some(T::WeightInfo::unlock_vote_balance(vote_lock_counter, T::MaxOwners::get()))
+                Ok(Some(T::WeightInfo::unlock_vote_balance_set(
+                    vote_lock_counter,
+                    T::MaxOwners::get(),
+                ))
                 .into())
+            }
         }
     }
 
