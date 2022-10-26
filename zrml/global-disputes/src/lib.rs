@@ -597,7 +597,6 @@ mod pallet {
                     let outcome_sum = outcome_info.outcome_sum.saturating_add(initial_vote_balance);
                     Self::update_winner(market_id, &outcome, outcome_sum);
                     outcome_info.outcome_sum = outcome_sum;
-                    // there can not be more than MaxDisputes owners
                     if outcome_info.owners.try_push(owner.clone()).is_ok() {
                         <Outcomes<T>>::insert(market_id, outcome, outcome_info);
                     } else {
