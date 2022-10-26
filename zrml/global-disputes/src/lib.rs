@@ -497,7 +497,7 @@ mod pallet {
         #[frame_support::transactional]
         #[pallet::weight(T::WeightInfo::unlock_vote_balance(
             T::MaxGlobalDisputeVotes::get(),
-            T::MaxOwners::get()
+            T::MaxOwners::get(),
         ))]
         pub fn unlock_vote_balance(
             origin: OriginFor<T>,
