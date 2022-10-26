@@ -2197,8 +2197,6 @@ mod pallet {
                             }
                         };
                     }
-                    // Try to get the outcome of the MDM. If the MDM failed to resolve, default to
-                    // the oracle's report.
                     let resolved_outcome =
                         resolved_outcome_option.unwrap_or_else(|| report.outcome.clone());
 
