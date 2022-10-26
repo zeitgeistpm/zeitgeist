@@ -76,6 +76,8 @@ mod pallet {
 
         /// The maximum numbers of distinct markets
         /// on which one account can simultaneously vote on outcomes.
+        /// Otherwise users can just keep voting on different global disputes and never unlock. 
+        /// When the user unlocks, the user has again `MaxGlobalDisputeVotes` number of votes.
         #[pallet::constant]
         type MaxGlobalDisputeVotes: Get<u32>;
 
