@@ -1,6 +1,6 @@
 # v0.3.7
 
-- Added new pallet: GlobalDisputes. 
+- Added new pallet: GlobalDisputes.
   Dispatchable calls are:
   - `add_vote_outcome` - Add voting outcome to a global dispute in exchange for 
     a constant fee. Errors if the voting outcome already exists or
@@ -21,15 +21,24 @@
   - `OutcomesPartiallyCleaned` (outcomes storage item partially cleaned)
   - `OutcomesFullyCleaned` (outcomes storage item fully cleaned)
   - `VotedOnOutcome` (user voted on outcome)
+- `reject_market` extrinsic now requires `reject_reason` parameter which is
+  `Vec<u8>`. The config constant `MaxRejectReasonLen` defines maximum length of
+  above parameter. `MarketRejected` event also contains `reject_reason` so that
+  it can be cached for market creator.
 
 # v0.3.6
 
 - Added new field `deadlines` in Market structure, which has `grace_period`,
-  `oracle_duration` and `dispute_duration` fields, all represents duration in
-  number of blocks. `create_market` extrinsic has new parameter to specify these
-  deadlines.
+  `oracle_duration` and `dispute_duration` fields, all of which represent
+  durations in number of blocks. The `create_market` extrinsic has a new
+  parameter to specify these deadlines.
+- Added `pallet-bounties` to the Zeitgeist runtime to facilitate community
+  projects.
+- Changed `MaxCategories` to `64`, as originally intended
 - Changed the `reject_market` slash percentage of the `AdvisoryBond` from 100%
-  to 10% by introducing a new on-chain variable `AdvisoryBondSlashPercentage`.
+  to 0%; this value can be quickly adjusted in the future by using the new
+  on-chain variable `AdvisoryBondSlashPercentage`.
+- Temporarily disabled removal of losing assets when a market resolves.
 
 # v0.3.5
 

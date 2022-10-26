@@ -1,12 +1,12 @@
 [dependencies]
-frame-benchmarking = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, optional = true, git = "https://github.com/purestake/substrate" }
-frame-support = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-frame-system = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-orml-traits = { branch = "2022-06-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library" }
+frame-benchmarking = { branch = "polkadot-v0.9.23", default-features = false, optional = true, git = "https://github.com/paritytech/substrate" }
+frame-support = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+orml-traits = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 parity-scale-codec = { default-features = false, features = ["derive", "max-encoded-len"], version = "3.0.0" }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-arithmetic = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
-sp-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate" }
+sp-arithmetic = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate" }
 zeitgeist-primitives = { default-features = false, path = "../../primitives" }
 zrml-authorized = { default-features = false, path = "../authorized" }
 zrml-court = { default-features = false, path = "../court" }
@@ -17,13 +17,14 @@ zrml-simple-disputes = { default-features = false, path = "../simple-disputes" }
 
 # Mock
 
-orml-currencies = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-orml-tokens = { branch = "2022-06-v0.9.19", git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
-pallet-balances = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-pallet-randomness-collective-flip = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-pallet-timestamp = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/substrate", optional = true }
-sp-api = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
-sp-io = { branch = "moonbeam-polkadot-v0.9.19", git = "https://github.com/purestake/substrate", optional = true }
+orml-currencies = { branch = "polkadot-v0.9.23", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+orml-tokens = { branch = "polkadot-v0.9.23", git = "https://github.com/open-web3-stack/open-runtime-module-library", optional = true }
+pallet-balances = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate", optional = true }
+pallet-randomness-collective-flip = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate", optional = true }
+pallet-timestamp = { branch = "polkadot-v0.9.23", default-features = false, git = "https://github.com/paritytech/substrate", optional = true }
+pallet-treasury = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate", optional = true }
+sp-api = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate", optional = true }
+sp-io = { branch = "polkadot-v0.9.23", git = "https://github.com/paritytech/substrate", optional = true }
 substrate-fixed = { optional = true, git = "https://github.com/encointer/substrate-fixed" }
 zrml-prediction-markets-runtime-api = { features = ["std"], optional = true, path = "./runtime-api" }
 zrml-rikiddo = { optional = true, path = "../rikiddo" }
@@ -41,6 +42,8 @@ mock = [
     "orml-tokens",
     "pallet-balances",
     "pallet-randomness-collective-flip",
+    "pallet-timestamp/std",
+    "pallet-treasury",
     "sp-api",
     "sp-io",
     "substrate-fixed",
@@ -48,7 +51,6 @@ mock = [
     "zrml-prediction-markets-runtime-api",
     "zrml-rikiddo",
     "zrml-swaps",
-    "pallet-timestamp/std",
 ]
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",
@@ -84,4 +86,4 @@ with-global-disputes = [
 authors = ["Zeitgeist PM <contact@zeitgeist.pm>"]
 edition = "2021"
 name = "zrml-prediction-markets"
-version = "0.3.5"
+version = "0.3.6"

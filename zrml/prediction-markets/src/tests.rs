@@ -31,7 +31,7 @@ use frame_support::{
 use test_case::test_case;
 
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
@@ -49,7 +49,7 @@ const SENTINEL_AMOUNT: u128 = BASE;
 fn get_deadlines() -> Deadlines<<Runtime as frame_system::Config>::BlockNumber> {
     Deadlines {
         grace_period: 1_u32.into(),
-        oracle_duration: 1_u32.into(),
+        oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get(),
         dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
     }
 }
@@ -236,6 +236,31 @@ fn create_market_fails_on_min_dispute_period() {
                 ScoringRule::CPMM,
             ),
             crate::Error::<Runtime>::DisputeDurationSmallerThanMinDisputeDuration
+        );
+    });
+}
+
+#[test]
+fn create_market_fails_on_min_oracle_duration() {
+    ExtBuilder::default().build().execute_with(|| {
+        let deadlines = Deadlines {
+            grace_period: <Runtime as crate::Config>::MaxGracePeriod::get(),
+            oracle_duration: <Runtime as crate::Config>::MinOracleDuration::get() - 1,
+            dispute_duration: <Runtime as crate::Config>::MinDisputeDuration::get(),
+        };
+        assert_noop!(
+            PredictionMarkets::create_market(
+                Origin::signed(ALICE),
+                BOB,
+                MarketPeriod::Block(123..456),
+                deadlines,
+                gen_metadata(2),
+                MarketCreation::Permissionless,
+                MarketType::Categorical(2),
+                MarketDisputeMechanism::SimpleDisputes,
+                ScoringRule::CPMM,
+            ),
+            crate::Error::<Runtime>::OracleDurationSmallerThanMinOracleDuration
         );
     });
 }
@@ -596,7 +621,7 @@ fn admin_destroy_market_correctly_cleans_up_accounts() {
         assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(ALICE), 0, BASE));
         let market_id = 0;
         let pool_id = 0;
-        let pool_account = Swaps::pool_account_id(pool_id);
+        let pool_account = Swaps::pool_account_id(&pool_id);
         let market_account = PredictionMarkets::market_account(market_id);
         let alice_ztg_before = AssetManager::free_balance(Asset::Ztg, &ALICE);
         assert_ok!(PredictionMarkets::admin_destroy_market(Origin::signed(SUDO), 0));
@@ -870,6 +895,35 @@ fn it_allows_advisory_origin_to_approve_markets() {
 #[test]
 fn it_allows_the_advisory_origin_to_reject_markets() {
     ExtBuilder::default().build().execute_with(|| {
+        run_to_block(2);
+        // Creates an advised market.
+        simple_create_categorical_market(MarketCreation::Advised, 4..6, ScoringRule::CPMM);
+
+        // make sure it's in status proposed
+        let market = MarketCommons::market(&0);
+        assert_eq!(market.unwrap().status, MarketStatus::Proposed);
+
+        let reject_reason: Vec<u8> =
+            vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
+        // Now it should work from SUDO
+        assert_ok!(PredictionMarkets::reject_market(
+            Origin::signed(SUDO),
+            0,
+            reject_reason.clone()
+        ));
+        let reject_reason = reject_reason.try_into().expect("BoundedVec conversion failed");
+        System::assert_has_event(Event::MarketRejected(0, reject_reason).into());
+
+        assert_noop!(
+            MarketCommons::market(&0),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
+    });
+}
+
+#[test]
+fn reject_errors_if_reject_reason_is_too_long() {
+    ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
 
@@ -877,12 +931,11 @@ fn it_allows_the_advisory_origin_to_reject_markets() {
         let market = MarketCommons::market(&0);
         assert_eq!(market.unwrap().status, MarketStatus::Proposed);
 
-        // Now it should work from SUDO
-        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
-
+        let reject_reason: Vec<u8> =
+            vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize + 1];
         assert_noop!(
-            MarketCommons::market(&0),
-            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason),
+            Error::<Runtime>::RejectReasonLengthExceedsMaxRejectReasonLen
         );
     });
 }
@@ -898,14 +951,17 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
         assert_ok!(Balances::reserve_named(
             &PredictionMarkets::reserve_id(),
             &ALICE,
-            SENTINEL_AMOUNT
+            SENTINEL_AMOUNT,
         ));
-        let balance_free_before_alice = Balances::free_balance(&ALICE);
+        assert!(Balances::free_balance(Treasury::account_id()).is_zero());
 
+        let balance_free_before_alice = Balances::free_balance(&ALICE);
         let balance_reserved_before_alice =
             Balances::reserved_balance_named(&PredictionMarkets::reserve_id(), &ALICE);
 
-        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        let reject_reason: Vec<u8> =
+            vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason));
 
         // AdvisoryBond gets slashed after reject_market
         // OracleBond gets unreserved after reject_market
@@ -915,7 +971,7 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             balance_reserved_after_alice,
             balance_reserved_before_alice
                 - <Runtime as Config>::OracleBond::get()
-                - <Runtime as Config>::AdvisoryBond::get()
+                - <Runtime as Config>::AdvisoryBond::get(),
         );
         let balance_free_after_alice = Balances::free_balance(&ALICE);
         let slash_amount_advisory_bond = <Runtime as Config>::AdvisoryBondSlashPercentage::get()
@@ -926,8 +982,12 @@ fn reject_market_unreserves_oracle_bond_and_slashes_advisory_bond() {
             balance_free_after_alice,
             balance_free_before_alice
                 + <Runtime as Config>::OracleBond::get()
-                + advisory_bond_remains
+                + advisory_bond_remains,
         );
+
+        // AdvisoryBond is transferred to the treasury
+        let balance_treasury_after = Balances::free_balance(Treasury::account_id());
+        assert_eq!(balance_treasury_after, slash_amount_advisory_bond);
     });
 }
 
@@ -939,7 +999,9 @@ fn reject_market_clears_auto_close_blocks() {
         simple_create_categorical_market(MarketCreation::Advised, 33..66, ScoringRule::CPMM);
         simple_create_categorical_market(MarketCreation::Advised, 22..66, ScoringRule::CPMM);
         simple_create_categorical_market(MarketCreation::Advised, 22..33, ScoringRule::CPMM);
-        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0));
+        let reject_reason: Vec<u8> =
+            vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
+        assert_ok!(PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason));
 
         let auto_close = MarketIdsPerCloseBlock::<Runtime>::get(66);
         assert_eq!(auto_close.len(), 1);
@@ -1424,7 +1486,7 @@ fn it_allows_to_deploy_a_pool() {
 
         assert_ok!(Balances::transfer(
             Origin::signed(BOB),
-            <Runtime as crate::Config>::PalletId::get().into_account(),
+            <Runtime as crate::Config>::PalletId::get().into_account_truncating(),
             100 * BASE
         ));
 
@@ -2124,7 +2186,7 @@ fn create_market_and_deploy_assets_results_in_expected_balances_and_pool_params(
         ));
         let market_id = 0;
 
-        let pool_account = Swaps::pool_account_id(pool_id);
+        let pool_account = Swaps::pool_account_id(&pool_id);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 0), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 1), &ALICE), 0);
         assert_eq!(Tokens::free_balance(Asset::CategoricalOutcome(0, 2), &ALICE), 0);
@@ -2448,8 +2510,10 @@ fn reject_market_fails_on_permissionless_market() {
     ExtBuilder::default().build().execute_with(|| {
         // Creates an advised market.
         simple_create_categorical_market(MarketCreation::Permissionless, 0..1, ScoringRule::CPMM);
+        let reject_reason: Vec<u8> =
+            vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(
-            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason),
             Error::<Runtime>::InvalidMarketStatus
         );
     });
@@ -2461,8 +2525,10 @@ fn reject_market_fails_on_approved_market() {
         // Creates an advised market.
         simple_create_categorical_market(MarketCreation::Advised, 0..1, ScoringRule::CPMM);
         assert_ok!(PredictionMarkets::approve_market(Origin::signed(SUDO), 0));
+        let reject_reason: Vec<u8> =
+            vec![0; <Runtime as Config>::MaxRejectReasonLen::get() as usize];
         assert_noop!(
-            PredictionMarkets::reject_market(Origin::signed(SUDO), 0),
+            PredictionMarkets::reject_market(Origin::signed(SUDO), 0, reject_reason),
             Error::<Runtime>::InvalidMarketStatus
         );
     });
@@ -2639,6 +2705,7 @@ fn authorized_correctly_resolves_disputed_market() {
 #[test]
 fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
     ExtBuilder::default().build().execute_with(|| {
+        assert!(Balances::free_balance(Treasury::account_id()).is_zero());
         let end = 2;
         let market_id = 0;
         assert_ok!(PredictionMarkets::create_market(
@@ -2683,13 +2750,15 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         // Make sure rewards are right:
         //
         // - Bob reported "correctly" and in time, so Alice and Bob don't get slashed
-        // - Charlie started a dispute which was abandoned, hence he's slashed
-        let charlie_balance = Balances::free_balance(&CHARLIE);
-        assert_eq!(charlie_balance, 1_000 * BASE - charlie_reserved);
+        // - Charlie started a dispute which was abandoned, hence he's slashed and his rewards are
+        // moved to the treasury
         let alice_balance = Balances::free_balance(&ALICE);
         assert_eq!(alice_balance, 1_000 * BASE);
         let bob_balance = Balances::free_balance(&BOB);
         assert_eq!(bob_balance, 1_000 * BASE);
+        let charlie_balance = Balances::free_balance(&CHARLIE);
+        assert_eq!(charlie_balance, 1_000 * BASE - charlie_reserved);
+        assert_eq!(Balances::free_balance(Treasury::account_id()), charlie_reserved);
     });
 }
 
@@ -3184,7 +3253,7 @@ fn deploy_swap_pool(market: Market<u128, u64, u64>, market_id: u128) -> Dispatch
     assert_ok!(PredictionMarkets::buy_complete_set(Origin::signed(FRED), 0, 100 * BASE));
     assert_ok!(Balances::transfer(
         Origin::signed(FRED),
-        <Runtime as crate::Config>::PalletId::get().into_account(),
+        <Runtime as crate::Config>::PalletId::get().into_account_truncating(),
         100 * BASE
     ));
     let outcome_assets_len = PredictionMarkets::outcome_assets(market_id, &market).len();

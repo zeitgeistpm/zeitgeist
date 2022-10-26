@@ -1,4 +1,5 @@
 // Copyright 2021-2022 Zeitgeist PM LLC.
+// Copyright 2019-2020 Parity Technologies (UK) Ltd.
 //
 // This file is part of Zeitgeist.
 //
@@ -14,6 +15,25 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
+//
+// This file incorporates work covered by the following copyright and
+// permission notice:
+//
+//     Copyright (C) 2020-2022 Acala Foundation.
+//     SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+//
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU General Public License as published by
+//     the Free Software Foundation, either version 3 of the License, or
+//     (at your option) any later version.
+//
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+//     GNU General Public License for more details.
+//
+//     You should have received a copy of the GNU General Public License
+//     along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "256"]
@@ -25,11 +45,29 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
+        use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
         type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
+        #[cfg(feature = "parachain")]
+        pub type Executive = frame_executive::Executive<
+            Runtime,
+            Block,
+            frame_system::ChainContext<Runtime>,
+            Runtime,
+            AllPalletsWithSystem,
+            (
+                pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
+                pallet_author_mapping::migrations::AddAccountIdToNimbusLookup<Runtime>,
+                pallet_parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
+                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
+                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
+            )
+        >;
+
+        #[cfg(not(feature = "parachain"))]
         pub type Executive = frame_executive::Executive<
             Runtime,
             Block,
@@ -38,8 +76,8 @@ macro_rules! decl_common_types {
             AllPalletsWithSystem,
             (
                 zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
-                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>
-            ),
+                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
+            )
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -153,7 +191,7 @@ macro_rules! decl_common_types {
                 }
 
                 for pallet_id in pallets {
-                    let pallet_acc: AccountId = pallet_id.into_account();
+                    let pallet_acc: AccountId = pallet_id.into_account_truncating();
 
                     if pallet_acc == *ai {
                         return true;
@@ -161,6 +199,25 @@ macro_rules! decl_common_types {
                 }
 
                 false
+            }
+        }
+
+        pub struct DealWithFees;
+
+        type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+        impl OnUnbalanced<NegativeImbalance> for DealWithFees
+        {
+            fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
+                if let Some(mut fees) = fees_then_tips.next() {
+                    if let Some(tips) = fees_then_tips.next() {
+                        tips.merge_into(&mut fees);
+                    }
+                    let mut split = fees.ration(
+                        FEES_AND_TIPS_TREASURY_PERCENTAGE,
+                        FEES_AND_TIPS_BURN_PERCENTAGE,
+                    );
+                    Treasury::on_unbalanced(split.0);
+                }
             }
         }
 
@@ -180,6 +237,7 @@ macro_rules! decl_common_types {
             impl_opaque_keys! {
                 pub struct SessionKeys {
                     pub nimbus: crate::AuthorInherent,
+                    pub vrf: session_keys_primitives::VrfSessionKey,
                 }
             }
 
@@ -223,6 +281,7 @@ macro_rules! create_runtime {
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
+                Bounties: pallet_bounties::{Call, Event<T>, Pallet, Storage} =  15,
 
                 // Governance
                 Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 20,
@@ -269,7 +328,7 @@ macro_rules! create_runtime_with_additional_pallets {
             ParachainInfo: parachain_info::{Config, Pallet, Storage} = 101,
 
             // Consensus
-            ParachainStaking: parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
+            ParachainStaking: pallet_parachain_staking::{Call, Config<T>, Event<T>, Pallet, Storage} = 110,
             AuthorInherent: pallet_author_inherent::{Call, Inherent, Pallet, Storage} = 111,
             AuthorFilter: pallet_author_slot_filter::{Call, Config, Event, Pallet, Storage} = 112,
             AuthorMapping: pallet_author_mapping::{Call, Config<T>, Event<T>, Pallet, Storage} = 113,
@@ -385,6 +444,7 @@ macro_rules! impl_config_traits {
             type CanAuthor = AuthorFilter;
             type EventHandler = ParachainStaking;
             type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
+            type WeightInfo = weights::pallet_author_inherent::WeightInfo<Runtime>;
         }
 
         #[cfg(feature = "parachain")]
@@ -392,6 +452,7 @@ macro_rules! impl_config_traits {
             type DepositAmount = CollatorDeposit;
             type DepositCurrency = Balances;
             type Event = Event;
+            type Keys = session_keys_primitives::VrfId;
             type WeightInfo = weights::pallet_author_mapping::WeightInfo<Runtime>;
         }
 
@@ -448,7 +509,7 @@ macro_rules! impl_config_traits {
         }
 
         #[cfg(feature = "parachain")]
-        impl parachain_staking::Config for Runtime {
+        impl pallet_parachain_staking::Config for Runtime {
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
             type DefaultBlocksPerRound = DefaultBlocksPerRound;
@@ -468,9 +529,11 @@ macro_rules! impl_config_traits {
             type MinDelegatorStk = MinDelegatorStk;
             type MinSelectedCandidates = MinSelectedCandidates;
             type MonetaryGovernanceOrigin = EnsureRoot<AccountId>;
+            type OnCollatorPayout = ();
+            type OnNewRound = ();
             type RevokeDelegationDelay = RevokeDelegationDelay;
             type RewardPaymentDelay = RewardPaymentDelay;
-            type WeightInfo = weights::parachain_staking::WeightInfo<Runtime>;
+            type WeightInfo = weights::pallet_parachain_staking::WeightInfo<Runtime>;
         }
 
         impl orml_currencies::Config for Runtime {
@@ -492,8 +555,6 @@ macro_rules! impl_config_traits {
             type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
             type ReserveIdentifier = [u8; 8];
             type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
-            type OnNewTokenAccount = ();
-            type OnKilledTokenAccount = ();
         }
 
         #[cfg(feature = "parachain")]
@@ -753,7 +814,8 @@ macro_rules! impl_config_traits {
         impl pallet_transaction_payment::Config for Runtime {
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
-            type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+            type OnChargeTransaction =
+                pallet_transaction_payment::CurrencyAdapter<Balances, DealWithFees>;
             type OperationalFeeMultiplier = OperationalFeeMultiplier;
             type WeightToFee = IdentityFee<Balance>;
         }
@@ -771,9 +833,24 @@ macro_rules! impl_config_traits {
             type ProposalBondMinimum = ProposalBondMinimum;
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
-            type SpendFunds = ();
+            type SpendFunds = Bounties;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+        }
+
+        impl pallet_bounties::Config for Runtime {
+            type BountyDepositBase = BountyDepositBase;
+            type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
+            type BountyUpdatePeriod = BountyUpdatePeriod;
+            type BountyValueMinimum = BountyValueMinimum;
+            type ChildBountyManager = ();
+            type CuratorDepositMax = CuratorDepositMax;
+            type CuratorDepositMin = CuratorDepositMin;
+            type CuratorDepositMultiplier = CuratorDepositMultiplier;
+            type DataDepositPerByte = DataDepositPerByte;
+            type Event = Event;
+            type MaximumReasonLength = MaximumReasonLength;
+            type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
         }
 
         impl pallet_utility::Config for Runtime {
@@ -866,6 +943,10 @@ macro_rules! impl_config_traits {
             type DisputeFactor = DisputeFactor;
             type DisputePeriod = DisputePeriod;
             type Event = Event;
+            #[cfg(feature = "with-global-disputes")]
+            type GlobalDisputes = GlobalDisputes;
+            #[cfg(feature = "with-global-disputes")]
+            type GlobalDisputePeriod = GlobalDisputePeriod;
             // LiquidityMining is currently unstable.
             // NoopLiquidityMining will be applied only to mainnet once runtimes are separated.
             type LiquidityMining = NoopLiquidityMining;
@@ -877,10 +958,12 @@ macro_rules! impl_config_traits {
             type MaxDisputeDuration = MaxDisputeDuration;
             type MaxGracePeriod = MaxGracePeriod;
             type MaxOracleDuration = MaxOracleDuration;
+            type MinOracleDuration = MinOracleDuration;
             type MaxSubsidyPeriod = MaxSubsidyPeriod;
             type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;
             type MinSubsidyPeriod = MinSubsidyPeriod;
+            type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
@@ -888,10 +971,7 @@ macro_rules! impl_config_traits {
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             type SimpleDisputes = SimpleDisputes;
-            #[cfg(feature = "with-global-disputes")]
-            type GlobalDisputes = GlobalDisputes;
-            #[cfg(feature = "with-global-disputes")]
-            type GlobalDisputePeriod = GlobalDisputePeriod;
+            type Slash = Treasury;
             type Swaps = Swaps;
             type ValidityBond = ValidityBond;
             type WeightInfo = zrml_prediction_markets::weights::WeightInfo<Runtime>;
@@ -1019,7 +1099,7 @@ macro_rules! create_runtime_api {
                     // Because the staking solution calculates the next staking set at the beginning
                     // of the first block in the new round, the only way to accurately predict the
                     // authors is to compute the selection during prediction.
-                    if parachain_staking::Pallet::<Self>::round().should_update(block_number) {
+                    if pallet_parachain_staking::Pallet::<Self>::round().should_update(block_number) {
                         // get author account id
                         use nimbus_primitives::AccountLookup;
                         let author_account_id = if let Some(account) =
@@ -1032,7 +1112,7 @@ macro_rules! create_runtime_api {
                         // predict eligibility post-selection by computing selection results now
                         let (eligible, _) =
                             pallet_author_slot_filter::compute_pseudo_random_subset::<Self>(
-                                parachain_staking::Pallet::<Self>::compute_top_candidates(),
+                                pallet_parachain_staking::Pallet::<Self>::compute_top_candidates(),
                                 &slot
                             );
                         eligible.contains(&author_account_id)
@@ -1060,6 +1140,7 @@ macro_rules! create_runtime_api {
                     orml_list_benchmark!(list, extra, orml_currencies, crate::benchmarks::currencies);
                     orml_list_benchmark!(list, extra, orml_tokens, crate::benchmarks::tokens);
                     list_benchmark!(list, extra, pallet_balances, Balances);
+                    list_benchmark!(list, extra, pallet_bounties, Bounties);
                     list_benchmark!(list, extra, pallet_collective, AdvisoryCommittee);
                     list_benchmark!(list, extra, pallet_democracy, Democracy);
                     list_benchmark!(list, extra, pallet_identity, Identity);
@@ -1084,9 +1165,10 @@ macro_rules! create_runtime_api {
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
                             list_benchmark!(list, extra, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            list_benchmark!(list, extra, pallet_author_inherent, AuthorInherent);
                             list_benchmark!(list, extra, pallet_author_mapping, AuthorMapping);
                             list_benchmark!(list, extra, pallet_author_slot_filter, AuthorFilter);
-                            list_benchmark!(list, extra, parachain_staking, ParachainStaking);
+                            list_benchmark!(list, extra, pallet_parachain_staking, ParachainStaking);
                             list_benchmark!(list, extra, pallet_crowdloan_rewards, Crowdloan);
                         } else {
                             list_benchmark!(list, extra, pallet_grandpa, Grandpa);
@@ -1136,6 +1218,7 @@ macro_rules! create_runtime_api {
                     orml_add_benchmark!(params, batches, orml_currencies, crate::benchmarks::currencies);
                     orml_add_benchmark!(params, batches, orml_tokens, crate::benchmarks::tokens);
                     add_benchmark!(params, batches, pallet_balances, Balances);
+                    add_benchmark!(params, batches, pallet_bounties, Bounties);
                     add_benchmark!(params, batches, pallet_collective, AdvisoryCommittee);
                     add_benchmark!(params, batches, pallet_democracy, Democracy);
                     add_benchmark!(params, batches, pallet_identity, Identity);
@@ -1161,9 +1244,10 @@ macro_rules! create_runtime_api {
                     cfg_if::cfg_if! {
                         if #[cfg(feature = "parachain")] {
                             add_benchmark!(params, batches, cumulus_pallet_xcmp_queue, XcmpQueue);
+                            add_benchmark!(params, batches, pallet_author_inherent, AuthorInherent);
                             add_benchmark!(params, batches, pallet_author_mapping, AuthorMapping);
                             add_benchmark!(params, batches, pallet_author_slot_filter, AuthorFilter);
-                            add_benchmark!(params, batches, parachain_staking, ParachainStaking);
+                            add_benchmark!(params, batches, pallet_parachain_staking, ParachainStaking);
                             add_benchmark!(params, batches, pallet_crowdloan_rewards, Crowdloan);
                         } else {
                             add_benchmark!(params, batches, pallet_grandpa, Grandpa);
@@ -1196,6 +1280,19 @@ macro_rules! create_runtime_api {
                     len: u32,
                 ) -> pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo<Balance> {
                     TransactionPayment::query_info(uxt, len)
+                }
+            }
+
+            #[cfg(feature = "parachain")]
+            impl session_keys_primitives::VrfApi<Block> for Runtime {
+                fn get_last_vrf_output() -> Option<<Block as BlockT>::Hash> {
+                    None
+                }
+                fn vrf_key_lookup(
+                    nimbus_id: nimbus_primitives::NimbusId
+                ) -> Option<session_keys_primitives::VrfId> {
+                    use session_keys_primitives::KeysLookup;
+                    AuthorMapping::lookup_keys(&nimbus_id)
                 }
             }
 
@@ -1301,6 +1398,12 @@ macro_rules! create_runtime_api {
                     tx: <Block as BlockT>::Extrinsic,
                     block_hash: <Block as BlockT>::Hash,
                 ) -> TransactionValidity {
+                    // Filtered calls should not enter the tx pool as they'll fail if inserted.
+                    // If this call is not allowed, we return early.
+                    if !<Runtime as frame_system::Config>::BaseCallFilter::contains(&tx.function) {
+                        return frame_support::pallet_prelude::InvalidTransaction::Call.into();
+                    }
+
                     Executive::validate_transaction(source, tx, block_hash)
                 }
             }
@@ -1309,14 +1412,14 @@ macro_rules! create_runtime_api {
             for Runtime
             {
                 fn get_spot_price(
-                    pool_id: PoolId,
-                    asset_in: Asset<MarketId>,
-                    asset_out: Asset<MarketId>,
+                    pool_id: &PoolId,
+                    asset_in: &Asset<MarketId>,
+                    asset_out: &Asset<MarketId>,
                 ) -> SerdeWrapper<Balance> {
                     SerdeWrapper(Swaps::get_spot_price(pool_id, asset_in, asset_out).ok().unwrap_or(0))
                 }
 
-                fn pool_account_id(pool_id: PoolId) -> AccountId {
+                fn pool_account_id(pool_id: &PoolId) -> AccountId {
                     Swaps::pool_account_id(pool_id)
                 }
 
@@ -1709,6 +1812,29 @@ macro_rules! create_common_tests {
                     })
                 }
             }
+
+            mod deal_with_fees {
+                use crate::*;
+
+                #[test]
+                fn treasury_receives_correct_amount_of_fees_and_tips() {
+                    let mut t: sp_io::TestExternalities =
+                        frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap().into();
+                    t.execute_with(|| {
+                        let fee_balance = 3 * ExistentialDeposit::get();
+                        let fee_imbalance = Balances::issue(fee_balance);
+                        let tip_balance = 7 * ExistentialDeposit::get();
+                        let tip_imbalance = Balances::issue(tip_balance);
+                        assert_eq!(Balances::free_balance(Treasury::account_id()), 0);
+                        DealWithFees::on_unbalanceds(vec![fee_imbalance, tip_imbalance].into_iter());
+                        assert_eq!(
+                            Balances::free_balance(Treasury::account_id()),
+                            fee_balance + tip_balance,
+                        );
+                    });
+                }
+            }
         }
+
     }
 }

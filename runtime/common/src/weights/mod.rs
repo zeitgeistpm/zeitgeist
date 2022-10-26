@@ -18,10 +18,10 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "parachain")] {
         pub mod cumulus_pallet_xcmp_queue;
+        pub mod pallet_author_inherent;
         pub mod pallet_author_mapping;
         pub mod pallet_author_slot_filter;
-        // Currently the benchmark does fail at the verification of least one function
-        pub mod parachain_staking;
+        pub mod pallet_parachain_staking;
         // Currently the benchmark does fail at the verification of least one function
         // pub mod pallet_crowdloan_rewards;
     } else {
@@ -34,6 +34,7 @@ pub mod frame_system;
 pub mod orml_currencies;
 pub mod orml_tokens;
 pub mod pallet_balances;
+pub mod pallet_bounties;
 pub mod pallet_collective;
 pub mod pallet_democracy;
 pub mod pallet_identity;

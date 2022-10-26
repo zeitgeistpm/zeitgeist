@@ -25,7 +25,6 @@ use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{Everything, OnFinalize, OnInitialize},
-    PalletId,
 };
 use frame_system::EnsureSignedBy;
 use sp_arithmetic::per_things::Percent;
@@ -38,12 +37,13 @@ use zeitgeist_primitives::{
     constants::mock::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
-        GetNativeCurrencyId, LiquidityMiningPalletId, MaxAssets, MaxCategories, MaxDisputeDuration,
-        MaxDisputes, MaxGracePeriod, MaxInRatio, MaxMarketPeriod, MaxOracleDuration, MaxOutRatio,
-        MaxReserves, MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets,
-        MinCategories, MinDisputeDuration, MinLiquidity, MinSubsidy, MinSubsidyPeriod, MinWeight,
-        MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, BASE, CENT,
-        MILLISECS_PER_BLOCK,
+        GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
+        MaxDisputeDuration, MaxDisputes, MaxGracePeriod, MaxInRatio, MaxMarketPeriod,
+        MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod,
+        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
+        MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
+        PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, BASE,
+        CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -67,13 +67,14 @@ pub const EVE: AccountIdTest = 4;
 pub const FRED: AccountIdTest = 5;
 pub const SUDO: AccountIdTest = 69;
 
+pub const INITIAL_BALANCE: u128 = 1_000 * BASE;
+
 ord_parameter_types! {
     pub const Sudo: AccountIdTest = SUDO;
 }
 parameter_types! {
     pub const DisputePeriod: BlockNumber = 10;
     pub const ReportingPeriod: BlockNumber = 11;
-    pub const TreasuryPalletId: PalletId = PalletId(*b"3.141592");
     pub const MinSubsidyPerAccount: Balance = BASE;
     pub const AdvisoryBond: Balance = 11 * CENT;
     pub const AdvisoryBondSlashPercentage: Percent = Percent::from_percent(10);
@@ -130,6 +131,7 @@ construct_runtime!(
         System: frame_system::{Config, Event<T>, Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet},
         Tokens: orml_tokens::{Config<T>, Event<T>, Pallet, Storage},
+        Treasury: pallet_treasury::{Call, Event<T>, Pallet, Storage},
     }
 );
 
@@ -145,11 +147,16 @@ impl crate::Config for Runtime {
     type DisputeFactor = DisputeFactor;
     type DisputePeriod = DisputePeriod;
     type Event = Event;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputes = GlobalDisputes;
+    #[cfg(feature = "with-global-disputes")]
+    type GlobalDisputePeriod = GlobalDisputePeriod;
     type LiquidityMining = LiquidityMining;
     type MarketCommons = MarketCommons;
     type MaxCategories = MaxCategories;
     type MaxDisputes = MaxDisputes;
     type MinDisputeDuration = MinDisputeDuration;
+    type MinOracleDuration = MinOracleDuration;
     type MaxDisputeDuration = MaxDisputeDuration;
     type MaxGracePeriod = MaxGracePeriod;
     type MaxOracleDuration = MaxOracleDuration;
@@ -157,6 +164,7 @@ impl crate::Config for Runtime {
     type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
+    type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
@@ -164,10 +172,7 @@ impl crate::Config for Runtime {
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;
-    #[cfg(feature = "with-global-disputes")]
-    type GlobalDisputes = GlobalDisputes;
-    #[cfg(feature = "with-global-disputes")]
-    type GlobalDisputePeriod = GlobalDisputePeriod;
+    type Slash = Treasury;
     type Swaps = Swaps;
     type ValidityBond = ValidityBond;
     type WeightInfo = prediction_markets::weights::WeightInfo<Runtime>;
@@ -219,8 +224,6 @@ impl orml_tokens::Config for Runtime {
     type OnDust = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
-    type OnNewTokenAccount = ();
-    type OnKilledTokenAccount = ();
 }
 
 impl pallet_balances::Config for Runtime {
@@ -337,6 +340,24 @@ impl zrml_swaps::Config for Runtime {
     type WeightInfo = zrml_swaps::weights::WeightInfo<Runtime>;
 }
 
+impl pallet_treasury::Config for Runtime {
+    type ApproveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type Burn = ();
+    type BurnDestination = ();
+    type Currency = Balances;
+    type Event = Event;
+    type MaxApprovals = MaxApprovals;
+    type OnSlash = ();
+    type PalletId = TreasuryPalletId;
+    type ProposalBond = ();
+    type ProposalBondMinimum = ();
+    type ProposalBondMaximum = ();
+    type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
+    type SpendFunds = ();
+    type SpendPeriod = ();
+    type WeightInfo = ();
+}
+
 pub struct ExtBuilder {
     balances: Vec<(AccountIdTest, Balance)>,
 }
@@ -345,13 +366,13 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             balances: vec![
-                (ALICE, 1_000 * BASE),
-                (BOB, 1_000 * BASE),
-                (CHARLIE, 1_000 * BASE),
-                (DAVE, 1_000 * BASE),
-                (EVE, 1_000 * BASE),
-                (FRED, 1_000 * BASE),
-                (SUDO, 1_000 * BASE),
+                (ALICE, INITIAL_BALANCE),
+                (BOB, INITIAL_BALANCE),
+                (CHARLIE, INITIAL_BALANCE),
+                (DAVE, INITIAL_BALANCE),
+                (EVE, INITIAL_BALANCE),
+                (FRED, INITIAL_BALANCE),
+                (SUDO, INITIAL_BALANCE),
             ],
         }
     }
