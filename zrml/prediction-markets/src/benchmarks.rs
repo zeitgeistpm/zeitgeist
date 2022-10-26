@@ -720,8 +720,11 @@ benchmarks! {
             <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
             let disputor: T::AccountId = account("Disputor", i, 0);
             T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
-            let _ = Call::<T>::dispute { market_id, outcome: OutcomeReport::Scalar(i.into()) }
-                .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
+            let _ = Call::<T>::dispute {
+                market_id,
+                outcome: OutcomeReport::Scalar(i.into()),
+            }
+            .dispatch_bypass_filter(RawOrigin::Signed(disputor.clone()).into())?;
         }
 
         let current_block: T::BlockNumber = (max_dispute_len + 1).saturated_into();
