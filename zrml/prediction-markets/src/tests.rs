@@ -31,7 +31,7 @@ use frame_support::{
 use test_case::test_case;
 
 use orml_traits::MultiCurrency;
-use sp_runtime::traits::{AccountIdConversion, Zero};
+use sp_runtime::traits::{AccountIdConversion, SaturatedConversion, Zero};
 use zeitgeist_primitives::{
     constants::mock::{DisputeFactor, BASE, CENT, MILLISECS_PER_BLOCK},
     traits::Swaps as SwapsPalletApi,
@@ -2123,6 +2123,123 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         // The oracle report was accepted, so Alice is not slashed.
         assert_eq!(Balances::free_balance(&ALICE), 1_000 * BASE);
         assert_eq!(Balances::free_balance(&BOB), 1_000 * BASE);
+    });
+}
+
+#[test]
+fn start_global_dispute_works() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..2),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
+            MarketDisputeMechanism::Authorized(ALICE),
+            ScoringRule::CPMM,
+        ));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let grace_period = market.deadlines.grace_period;
+        run_to_block(end + grace_period + 1);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            market_id,
+            OutcomeReport::Categorical(0)
+        ));
+        let dispute_at_0 = end + grace_period + 2;
+        run_to_block(dispute_at_0);
+        for i in 1..=<Runtime as Config>::MaxDisputes::get() {
+            if i == 1 {
+                #[cfg(feature = "with-global-disputes")]
+                assert_noop!(
+                    PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
+                    Error::<Runtime>::InvalidMarketStatus
+                );
+            } else {
+                #[cfg(feature = "with-global-disputes")]
+                assert_noop!(
+                    PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
+                    Error::<Runtime>::MaxDisputesNeeded
+                );
+            }
+            assert_ok!(PredictionMarkets::dispute(
+                Origin::signed(CHARLIE),
+                market_id,
+                OutcomeReport::Categorical(i.saturated_into())
+            ));
+            run_blocks(1);
+            let market = MarketCommons::market(&market_id).unwrap();
+            assert_eq!(market.status, MarketStatus::Disputed);
+        }
+
+        let disputes = crate::Disputes::<Runtime>::get(market_id);
+        assert_eq!(disputes.len(), <Runtime as Config>::MaxDisputes::get() as usize);
+
+        let last_dispute = disputes.last().unwrap();
+        let dispute_block = last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+        let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
+        assert_eq!(removable_market_ids.len(), 1);
+
+        #[cfg(feature = "with-global-disputes")]
+        {
+            use zrml_global_disputes::GlobalDisputesPalletApi;
+
+            let now = <frame_system::Pallet<Runtime>>::block_number();
+            assert_ok!(PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id));
+
+            // report check
+            assert_eq!(
+                GlobalDisputes::get_voting_outcome_info(&market_id, &OutcomeReport::Categorical(0)),
+                Some((Zero::zero(), vec![BOB])),
+            );
+            for i in 1..=<Runtime as Config>::MaxDisputes::get() {
+                let dispute_bond = crate::default_dispute_bond::<Runtime>((i - 1).into());
+                assert_eq!(
+                    GlobalDisputes::get_voting_outcome_info(
+                        &market_id,
+                        &OutcomeReport::Categorical(i.saturated_into())
+                    ),
+                    Some((dispute_bond, vec![CHARLIE])),
+                );
+            }
+
+            // remove_last_dispute_from_market_ids_per_dispute_block works
+            let removable_market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_block);
+            assert_eq!(removable_market_ids.len(), 0);
+
+            let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(
+                now + <Runtime as Config>::GlobalDisputePeriod::get(),
+            );
+            assert_eq!(market_ids, vec![market_id]);
+            assert!(GlobalDisputes::is_started(&market_id));
+            System::assert_last_event(Event::GlobalDisputeStarted(market_id).into());
+
+            assert_noop!(
+                PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
+                Error::<Runtime>::GlobalDisputeAlreadyStarted
+            );
+        }
+    });
+}
+
+#[test]
+fn start_global_dispute_works_without_feature() {
+    ExtBuilder::default().build().execute_with(|| {
+        let non_market_id = 0;
+
+        #[cfg(not(feature = "with-global-disputes"))]
+        assert_ok!(PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), non_market_id));
+
+        #[cfg(feature = "with-global-disputes")]
+        assert_noop!(
+            PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), non_market_id),
+            zrml_market_commons::Error::<Runtime>::MarketDoesNotExist
+        );
     });
 }
 

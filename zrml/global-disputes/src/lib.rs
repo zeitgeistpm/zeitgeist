@@ -640,6 +640,14 @@ mod pallet {
             Ok(())
         }
 
+        fn get_voting_outcome_info(
+            market_id: &MarketIdOf<T>,
+            outcome: &OutcomeReport,
+        ) -> Option<(BalanceOf<T>, Vec<AccountIdOf<T>>)> {
+            <Outcomes<T>>::get(market_id, outcome)
+                .map(|outcome_info| (outcome_info.outcome_sum, outcome_info.owners.into_inner()))
+        }
+
         fn determine_voting_winner(market_id: &MarketIdOf<T>) -> Option<OutcomeReport> {
             match <Winners<T>>::get(market_id) {
                 Some(mut winner_info) => {

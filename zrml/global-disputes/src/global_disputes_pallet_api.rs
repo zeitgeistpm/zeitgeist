@@ -39,6 +39,22 @@ pub trait GlobalDisputesPalletApi<MarketId, AccountId, Balance> {
         initial_vote_balance: Balance,
     ) -> DispatchResult;
 
+    /// Get the information about a voting outcome for a global dispute.
+    ///
+    /// # Arguments
+    /// - `market_id` - The id of the market.
+    /// - `outcome` - The voting outcome to get.
+    ///
+    /// # Returns
+    ///
+    /// Returns the information stored for a particular outcome.
+    /// - outcome_sum - The current sum of all locks on this outcome.
+    /// - owners - The vector of owners of the outcome.
+    fn get_voting_outcome_info(
+        market_id: &MarketId,
+        outcome: &OutcomeReport,
+    ) -> Option<(Balance, Vec<AccountId>)>;
+
     /// Determine the winner of a global dispute.
     ///
     /// # Arguments

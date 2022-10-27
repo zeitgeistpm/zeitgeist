@@ -717,7 +717,7 @@ benchmarks! {
 
         let max_dispute_len = T::MaxDisputes::get();
         for i in 0..max_dispute_len {
-            // ensure that the MarketIdsPerDisputeBlock does not interfere 
+            // ensure that the MarketIdsPerDisputeBlock does not interfere
             // with the start_global_dispute execution block
             <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
             let disputor: T::AccountId = account("Disputor", i, 0);
