@@ -100,7 +100,7 @@ where
 
     // Defensively use `for` instead of `while` or `loop` to ensure that it breaks after
     // `max_iterations`.
-    let mut mid = T::zero();
+    let mut mid = min;
     let mut iteration_count = 0;
     for i in 1..=max_iterations {
         iteration_count = i;
@@ -283,6 +283,14 @@ mod tests {
             calc_preimage(f, _5 - 1, min, max, 10, _3_4),
             Err("calc_preimage: Function domain has no volume"),
         );
+    }
+
+    #[test]
+    fn calc_preimage_default_to_min_on_low_volume_domain() {
+        let f = |x: u128| Ok(x);
+        let (preimage, iteration_count) = calc_preimage(f, 2, 1, 3, usize::MAX, u128::MAX).unwrap();
+        assert_eq!(preimage, 1);
+        assert_eq!(iteration_count, 1);
     }
 
     #[test_case(2, 3, 1)]
