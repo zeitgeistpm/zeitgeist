@@ -287,6 +287,7 @@ mod tests {
 
     #[test]
     fn calc_preimage_default_to_min_on_low_volume_domain() {
+        #[allow(clippy::redundant_closure)]
         let f = |x: u128| Ok(x);
         let (preimage, iteration_count) = calc_preimage(f, 2, 1, 3, usize::MAX, u128::MAX).unwrap();
         assert_eq!(preimage, 1);
