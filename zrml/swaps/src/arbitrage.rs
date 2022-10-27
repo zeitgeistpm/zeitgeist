@@ -296,8 +296,8 @@ mod tests {
     #[test_case(vec![_9, _3, _6], vec![_100, _125, _150], 202_188_491_820)]
     #[test_case(vec![_9, _3, _6], vec![_100, _125, _100], 35_530_090_331)]
     #[test_case(vec![_9, _3, _6], vec![_125, _125, _150], 77_810_287_474)]
-    //                                                                                      10_000_000_000 = 1 * BASE
-    //                                                                                1_000_000_000_000 = 100 * BASE
+    //                                                     10_000_000_000 = 1 * BASE
+    //                                                  1_000_000_000_000 = 100 * BASE
     fn calc_arbitrage_amount_buy_burn_calculates_correct_results(
         weights: Vec<u128>,
         balances: Vec<u128>,
