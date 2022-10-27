@@ -15,6 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
+extern crate alloc;
+
+use alloc::vec::Vec;
 use sp_runtime::DispatchResult;
 use zeitgeist_primitives::types::OutcomeReport;
 
