@@ -48,15 +48,15 @@ use sp_runtime::traits::AtLeast32BitUnsigned;
 
 /// Calculate the preimage of `value` under `f` using bisection.
 ///
-/// This function always terminates (regardless of the properties of `f`), but `f` must be
-/// a monotonous function to guarantee that the result is correct. The algorithm _assumes_ that `f`
+/// This function always terminates (regardless of the properties of `f`), but `f` must be a
+/// monotonous function to guarantee that the result is correct. The algorithm _assumes_ that `f`
 /// is monotonous, but we cannot ensure this. Calling with a non-monotonous function is undefined
 /// behavior. We do some sanity checks, but in the end, the consumer is responsible for providing a
 /// function which satisfies the API.
 ///
-/// We return `(preimage, iteration_count)`. If `[min, max]` contains no preimage, then
-/// `min` or `max` is returned, depending on which is closer to the preimage. If `[min, max]`
-/// contains a preimage, an approximation of a preimage is returned.
+/// We return `(preimage, iteration_count)`. If `[min, max]` contains no preimage, then `min` or
+/// `max` is returned, depending on which is closer to the preimage. If `[min, max]` contains a
+/// preimage, an approximation of a preimage is returned.
 ///
 /// # Arguments
 ///
