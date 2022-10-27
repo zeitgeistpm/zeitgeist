@@ -698,10 +698,10 @@ benchmarks! {
     }
 
     start_global_dispute {
-        // CacheSize::get() does not work
-        let m in 1..62;
+        let m in 1..CacheSize::get();
 
-        // no benchmarking component for max disputes here, because MaxDisputes is enforced for the extrinsic
+        // no benchmarking component for max disputes here,
+        // because MaxDisputes is enforced for the extrinsic
         let (caller, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
             MarketType::Scalar(0u128..=u128::MAX),
@@ -709,14 +709,16 @@ benchmarks! {
         )?;
 
         // first element is the market id from above
-        let mut market_ids: BoundedVec<MarketIdOf<T>, crate::CacheSize> = BoundedVec::try_from(vec![market_id]).unwrap();
-        for i in 0..m {
+        let mut market_ids = BoundedVec::try_from(vec![market_id]).unwrap();
+        assert_eq!(market_id, 0u128.saturated_into());
+        for i in 1..m {
             market_ids.try_push(i.saturated_into()).unwrap();
         }
 
         let max_dispute_len = T::MaxDisputes::get();
         for i in 0..max_dispute_len {
-            // ensure that the MarketIdsPerDisputeBlock does not interfere with the start_global_dispute execution block
+            // ensure that the MarketIdsPerDisputeBlock does not interfere 
+            // with the start_global_dispute execution block
             <frame_system::Pallet<T>>::set_block_number(i.saturated_into());
             let disputor: T::AccountId = account("Disputor", i, 0);
             T::AssetManager::deposit(Asset::Ztg, &disputor, (u128::MAX).saturated_into())?;
