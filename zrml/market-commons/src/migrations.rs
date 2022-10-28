@@ -126,16 +126,25 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
+        assert_eq!(StorageVersion::get::<Pallet<T>>(), MARKET_COMMONS_REQUIRED_STORAGE_VERSION);
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        let legacy_markets_count_key = "legacy_markets_count_key".to_string();
+        Self::set_temp_storage(0_u32, &legacy_markets_count_key);
         for (key, legacy_market) in storage_iter::<LegacyMarketOf<T>>(MARKET_COMMONS, MARKETS) {
             Self::set_temp_storage(legacy_market, &format!("{:?}", key.as_slice()));
+            let legacy_markets_count: u32 = Self::get_temp_storage(&legacy_markets_count_key)
+                .expect("legacy_markets_count_key storage not found");
+            Self::set_temp_storage(legacy_markets_count + 1_u32, &legacy_markets_count_key);
         }
         Ok(())
     }
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
+        assert_eq!(StorageVersion::get::<Pallet<T>>(), MARKET_COMMONS_NEXT_STORAGE_VERSION);
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
+        let mut markets_count = 0_u32;
+        let legacy_markets_count_key = "legacy_markets_count_key".to_string();
         for (key, updated_market) in storage_iter::<MarketOf<T>>(MARKET_COMMONS, MARKETS) {
             let legacy_market: LegacyMarketOf<T> =
                 Self::get_temp_storage(&format!("{:?}", key.as_slice()))
@@ -152,7 +161,11 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
             assert_eq!(updated_market.status, legacy_market.status);
             assert_eq!(updated_market.report, legacy_market.report);
             assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
+            markets_count += 1_u32;
         }
+        let legacy_markets_count: u32 = Self::get_temp_storage(&legacy_markets_count_key)
+            .expect("temp_market_counts_key storage not found");
+        assert_eq!(markets_count, legacy_markets_count);
         Ok(())
     }
 }
@@ -245,7 +258,7 @@ mod tests {
                 status: MarketStatus::Active,
                 report: None,
                 resolved_outcome: None,
-                dispute_mechanism: LegacyMarketDisputeMechanism::Authorized(3_u128),
+                dispute_mechanism: LegacyMarketDisputeMechanism::Court,
                 deadlines,
             },
         ];
@@ -277,7 +290,7 @@ mod tests {
                 status: MarketStatus::Active,
                 report: None,
                 resolved_outcome: None,
-                dispute_mechanism: MarketDisputeMechanism::Authorized,
+                dispute_mechanism: MarketDisputeMechanism::Court,
                 deadlines,
             },
         ];
