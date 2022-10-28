@@ -45,7 +45,7 @@ pub mod weights;
 macro_rules! decl_common_types {
     {} => {
         use sp_runtime::generic;
-        use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
+        use frame_support::traits::{Currency, Imbalance, OnUnbalanced, NeverEnsureOrigin};
 
         pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 
@@ -274,7 +274,7 @@ macro_rules! create_runtime {
 
                 // Money
                 Balances: pallet_balances::{Call, Config<T>, Event<T>, Pallet, Storage} = 10,
-                TransactionPayment: pallet_transaction_payment::{Config, Pallet, Storage} = 11,
+                TransactionPayment: pallet_transaction_payment::{Config, Event<T>, Pallet, Storage} = 11,
                 Treasury: pallet_treasury::{Call, Config, Event<T>, Pallet, Storage} = 12,
                 Vesting: pallet_vesting::{Call, Config<T>, Event<T>, Pallet, Storage} = 13,
                 MultiSig: pallet_multisig::{Call, Event<T>, Pallet, Storage} = 14,
@@ -550,6 +550,8 @@ macro_rules! impl_config_traits {
             type MaxLocks = MaxLocks;
             type MaxReserves = MaxReserves;
             type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
+            type OnKilledTokenAccount = ();
+            type OnNewTokenAccount = ();
             type ReserveIdentifier = [u8; 8];
             type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
         }
@@ -809,6 +811,7 @@ macro_rules! impl_config_traits {
         }
 
         impl pallet_transaction_payment::Config for Runtime {
+            type Event = Event;
             type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Runtime>;
             type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
             type OnChargeTransaction =
@@ -831,6 +834,7 @@ macro_rules! impl_config_traits {
             type ProposalBondMaximum = ProposalBondMaximum;
             type RejectOrigin = EnsureRootOrTwoThirdsCouncil;
             type SpendFunds = Bounties;
+            type SpendOrigin = NeverEnsureOrigin<u128>;
             type SpendPeriod = SpendPeriod;
             type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
         }
