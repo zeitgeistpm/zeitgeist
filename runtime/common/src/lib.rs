@@ -964,7 +964,7 @@ macro_rules! impl_config_traits {
             type ReportingPeriod = ReportingPeriod;
             type RequestEditOrigin = EnsureOneOf<
                 EnsureRoot<AccountId>,
-                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
+                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
             >;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;

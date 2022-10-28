@@ -362,16 +362,22 @@ mod pallet {
                 .into())
         }
 
-        /// Edit requested to proposed market from advisory committee.
-        /// It requires market_id and edit_reason (a `Vec<u8>`).
-        /// NOTE: Can only be called by the `ApproveOrigin`.
+        /// Request an edit to a proposed market.
+        ///
+        /// Can only be called by the `RequestEditOrigin`.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The id of the market to edit.
+        /// * `edit_reason`: An short record of what needs to be changed.
+        ///
         /// # Weight
         ///
-        /// Complexity: `O(1)`
+        /// Complexity: `O(edit_reason.len())`
         #[pallet::weight((
-                T::WeightInfo::request_edit(edit_reason.len() as u32),
-                Pays::No
-            ))]
+            T::WeightInfo::request_edit(edit_reason.len() as u32),
+            Pays::No,
+        ))]
         #[transactional]
         pub fn request_edit(
             origin: OriginFor<T>,
@@ -641,6 +647,24 @@ mod pallet {
             Ok(Some(T::WeightInfo::create_market(ids_amount).saturating_add(extra_weight)).into())
         }
 
+        /// Edit a proposed market for which request is made.
+        ///
+        /// Edit can only be made by the creator of the market.
+        ///
+        /// # Arguments
+        ///
+        /// * `market_id`: The id of the market to edit.
+        /// * `oracle`: Oracle to edit market.
+        /// * `period`: MarketPeriod to edit market.
+        /// * `deadlines`: Deadlines to edit market.
+        /// * `metadata`: MultiHash metadata to edit market.
+        /// * `market_type`: MarketType to edit market.
+        /// * `dispute_mechanism`: MarketDisputeMechanism to edit market.
+        /// * `scoring_rule`: ScoringRule to edit market.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(1)`
         #[pallet::weight(T::WeightInfo::edit_market(CacheSize::get()))]
         #[transactional]
         pub fn edit_market(
@@ -680,14 +704,14 @@ mod pallet {
                 old_market.resolved_outcome,
             )?;
             T::MarketCommons::mutate_market(&market_id, |market| {
-                *market = edited_market;
+                *market = edited_market.clone();
                 Ok(())
             })?;
 
             let ids_amount: u32 = Self::insert_auto_close(&market_id)?;
 
             MarketIdsForEdit::<T>::remove(market_id);
-            Self::deposit_event(Event::MarketEdited(market_id));
+            Self::deposit_event(Event::MarketEdited(market_id, edited_market));
 
             Ok(Some(T::WeightInfo::edit_market(ids_amount)).into())
         }
@@ -1495,7 +1519,7 @@ mod pallet {
         /// A proposed market has been requested edit by advisor. \[market_id, edit_reason\]
         MarketRequestedEdit(MarketIdOf<T>, EditReason<T>),
         /// A proposed market has been edited by the market creator \[market_id\]
-        MarketEdited(MarketIdOf<T>),
+        MarketEdited(MarketIdOf<T>, MarketOf<T>),
         /// A complete set of assets has been sold \[market_id, amount_per_asset, seller\]
         SoldCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
         /// An amount of winning outcomes have been redeemed

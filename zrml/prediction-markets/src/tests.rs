@@ -2589,7 +2589,8 @@ fn edit_cycle_for_proposed_markets() {
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
         ));
-        System::assert_last_event(Event::MarketEdited(0).into());
+        let edited_market = MarketCommons::market(&0).expect("Market not found");
+        System::assert_last_event(Event::MarketEdited(0, edited_market).into());
         assert!(!MarketIdsForEdit::<Runtime>::contains_key(0));
         // verify oracle is CHARLIE
         let market = MarketCommons::market(&0);
