@@ -34,8 +34,8 @@ use zeitgeist_primitives::types::{
 };
 const MARKET_COMMONS: &[u8] = b"MarketCommons";
 const MARKETS: &[u8] = b"Markets";
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2_u16;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3_u16;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 3_u16;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 4_u16;
 
 #[derive(Clone, Decode, Encode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct LegacyMarket<AI, BN, M> {
