@@ -12936,6 +12936,7 @@ dependencies = [
  "cumulus-relay-chain-rpc-interface",
  "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.26)",
  "frame-benchmarking-cli",
+ "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.26)",
  "hex-literal",
  "jsonrpsee",
  "log",
