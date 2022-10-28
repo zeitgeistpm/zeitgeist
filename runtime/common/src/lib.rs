@@ -59,6 +59,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
                 zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
             )
         >;
@@ -71,6 +72,7 @@ macro_rules! decl_common_types {
             Runtime,
             AllPalletsWithSystem,
             (
+                zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
                 zrml_market_commons::migrations::UpdateMarketsForAuthorizedMDM<Runtime>,
             )
         >;
