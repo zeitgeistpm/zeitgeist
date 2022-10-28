@@ -17,6 +17,7 @@
 
 use crate::{Config, Pallet};
 use alloc::vec::Vec;
+use alloc::string::ToString;
 use frame_support::{
     log,
     migration::{put_storage_value, storage_iter},
