@@ -154,16 +154,6 @@ impl Contains<Call> for IsCallable {
                     _ => true,
                 }
             }
-            Call::Proxy(inner_call) => {
-                match inner_call {
-                    // Makes reserve inconsistent, see
-                    // https://github.com/paritytech/substrate/blob/37cca710eed3dadd4ed5364c7686608f5175cce1/frame/proxy/src/lib.rs#L270-L271
-                    anonymous { .. } => false,
-                    // See "anonymous"
-                    kill_anonymous { .. } => false,
-                    _ => true,
-                }
-            }
             Call::System(inner_call) => {
                 match inner_call {
                     // Some "waste" storage will never impact proper operation.
