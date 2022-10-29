@@ -126,7 +126,6 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
 
     #[cfg(feature = "try-runtime")]
     fn pre_upgrade() -> Result<(), &'static str> {
-        assert_eq!(StorageVersion::get::<Pallet<T>>(), MARKET_COMMONS_REQUIRED_STORAGE_VERSION);
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
         let legacy_markets_count_key = "legacy_markets_count_key".to_string();
         Self::set_temp_storage(0_u32, &legacy_markets_count_key);
@@ -141,7 +140,6 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
 
     #[cfg(feature = "try-runtime")]
     fn post_upgrade() -> Result<(), &'static str> {
-        assert_eq!(StorageVersion::get::<Pallet<T>>(), MARKET_COMMONS_NEXT_STORAGE_VERSION);
         use frame_support::traits::OnRuntimeUpgradeHelpersExt;
         let mut markets_count = 0_u32;
         let legacy_markets_count_key = "legacy_markets_count_key".to_string();

@@ -226,28 +226,6 @@ where
                 );
             }
         }
-
-        let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
-        let court_version = StorageVersion::get::<CourtPallet<T>>();
-        let market_commons_version = StorageVersion::get::<MarketCommonsPallet<T>>();
-        let prediction_markets_version = StorageVersion::get::<Pallet<T>>();
-        assert_eq!(
-            authorized_version, AUTHORIZED_NEXT_STORAGE_VERSION,
-            "TransformScalarMarketsToFixedPoint: authorized storage version mismatch",
-        );
-        assert_eq!(
-            court_version, COURT_NEXT_STORAGE_VERSION,
-            "TransformScalarMarketsToFixedPoint: court storage version mismatch",
-        );
-        assert_eq!(
-            market_commons_version, MARKET_COMMONS_NEXT_STORAGE_VERSION,
-            "TransformScalarMarketsToFixedPoint: market_commons storage version mismatch",
-        );
-        assert_eq!(
-            prediction_markets_version, PREDICTION_MARKETS_NEXT_STORAGE_VERSION,
-            "TransformScalarMarketsToFixedPoint: prediction_markets storage version mismatch",
-        );
-
         Ok(())
     }
 }
