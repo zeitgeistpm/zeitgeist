@@ -106,7 +106,6 @@ impl Contains<Call> for IsCallable {
         use orml_currencies::Call::update_balance;
         use pallet_balances::Call::{force_transfer, set_balance};
         use pallet_collective::Call::set_members;
-        use pallet_proxy::Call::{anonymous, kill_anonymous};
         use pallet_vesting::Call::force_vested_transfer;
 
         use zeitgeist_primitives::types::{
