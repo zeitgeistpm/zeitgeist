@@ -664,7 +664,8 @@ mod pallet {
         ///
         /// # Weight
         ///
-        /// Complexity: `O(1)`
+        /// Complexity: `O(n)`, where `n` is the number of markets
+        /// which end at the same time as the market before the edit.
         #[pallet::weight(T::WeightInfo::edit_market(CacheSize::get()))]
         #[transactional]
         pub fn edit_market(
