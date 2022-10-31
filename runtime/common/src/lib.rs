@@ -58,13 +58,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                pallet_author_mapping::migrations::AddKeysToRegistrationInfo<Runtime>,
-                pallet_author_mapping::migrations::AddAccountIdToNimbusLookup<Runtime>,
-                pallet_parachain_staking::migrations::SplitDelegatorStateIntoDelegationScheduledRequests<Runtime>,
-                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
-                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
-            )
+            zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
         >;
 
         #[cfg(not(feature = "parachain"))]
@@ -74,10 +68,7 @@ macro_rules! decl_common_types {
             frame_system::ChainContext<Runtime>,
             Runtime,
             AllPalletsWithSystem,
-            (
-                zrml_prediction_markets::migrations::UpdateMarketsForDeadlines<Runtime>,
-                zrml_prediction_markets::migrations::MigrateMarketIdsPerBlockStorage<Runtime>,
-            )
+            zrml_prediction_markets::migrations::TransformScalarMarketsToFixedPoint<Runtime>,
         >;
 
         pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
@@ -107,56 +98,56 @@ macro_rules! decl_common_types {
         // Council vote proportions
         // At least 50%
         type EnsureRootOrHalfCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 2>>;
 
         // At least 66%
         type EnsureRootOrTwoThirdsCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 2, 3>>;
 
         // At least 75%
         type EnsureRootOrThreeFourthsCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 3, 4>>;
 
         // At least 100%
         type EnsureRootOrAllCouncil =
-            EnsureOneOf<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
+            EitherOfDiverse<EnsureRoot<AccountId>, EnsureProportionAtLeast<AccountId, CouncilInstance, 1, 1>>;
 
         // Technical committee vote proportions
         // At least 50%
         #[cfg(feature = "parachain")]
-        type EnsureRootOrHalfTechnicalCommittee = EnsureOneOf<
+        type EnsureRootOrHalfTechnicalCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 2>,
         >;
 
         // At least 66%
-        type EnsureRootOrTwoThirdsTechnicalCommittee = EnsureOneOf<
+        type EnsureRootOrTwoThirdsTechnicalCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 2, 3>,
         >;
 
         // At least 100%
-        type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
+        type EnsureRootOrAllTechnicalCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, TechnicalCommitteeInstance, 1, 1>,
         >;
 
         // Advisory committee vote proportions
         // At least 50%
-        type EnsureRootOrHalfAdvisoryCommittee = EnsureOneOf<
+        type EnsureRootOrHalfAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 2>,
         >;
 
         // Technical committee vote proportions
         // At least 66%
-        type EnsureRootOrTwoThirdsAdvisoryCommittee = EnsureOneOf<
+        type EnsureRootOrTwoThirdsAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 2, 3>,
         >;
 
         // At least 100%
-        type EnsureRootOrAllAdvisoryCommittee = EnsureOneOf<
+        type EnsureRootOrAllAdvisoryCommittee = EitherOfDiverse<
             EnsureRoot<AccountId>,
             EnsureProportionAtLeast<AccountId, AdvisoryCommitteeInstance, 1, 1>,
         >;
@@ -932,7 +923,7 @@ macro_rules! impl_config_traits {
         impl zrml_prediction_markets::Config for Runtime {
             type AdvisoryBond = AdvisoryBond;
             type AdvisoryBondSlashPercentage = AdvisoryBondSlashPercentage;
-            type ApproveOrigin = EnsureOneOf<
+            type ApproveOrigin = EitherOfDiverse<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>
             >;
@@ -960,6 +951,7 @@ macro_rules! impl_config_traits {
             type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;
             type MinSubsidyPeriod = MinSubsidyPeriod;
+            type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
