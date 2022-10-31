@@ -59,6 +59,7 @@ moonbeam-vrf = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polk
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
 # Use dependencies from Paritytech
 session-keys-primitives = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
+pallet-parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "polkadot-v0.9.26" }
 
 [patch."https://github.com/purestake/nimbus"]
 # Use dependencies from Paritytech

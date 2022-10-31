@@ -238,14 +238,14 @@ pub fn run() -> sc_cli::Result<()> {
                 &params.chain.clone().unwrap_or_default(),
                 params.parachain_id.into(),
             )?;
-            let state_version = Cli::native_runtime_version(chain_spec).state_version();
+            let state_version = Cli::native_runtime_version(&chain_spec).state_version();
 
             let buf = match chain_spec {
                 #[cfg(feature = "with-zeitgeist-runtime")]
                 spec if spec.is_zeitgeist() => {
                     let block: zeitgeist_runtime::Block =
-                        cumulus_client_service::genesis::generate_genesis_block(
-                            chain_spec,
+                        cumulus_client_cli::generate_genesis_block(
+                            &**chain_spec,
                             state_version,
                         )?;
                     let raw_header = block.header().encode();
@@ -259,8 +259,8 @@ pub fn run() -> sc_cli::Result<()> {
                 #[cfg(feature = "with-battery-station-runtime")]
                 _ => {
                     let block: battery_station_runtime::Block =
-                        cumulus_client_service::genesis::generate_genesis_block(
-                            chain_spec,
+                        cumulus_client_cli::generate_genesis_block(
+                            &**chain_spec,
                             state_version,
                         )?;
                     let raw_header = block.header().encode();
@@ -276,7 +276,7 @@ pub fn run() -> sc_cli::Result<()> {
             };
 
             if let Some(output) = &params.output {
-                std::fs::write(output, buf)?;
+                std::fs::write(output, &buf)?;
             } else {
                 std::io::stdout().write_all(&buf)?;
             }
@@ -438,7 +438,7 @@ fn none_command(cli: &Cli) -> sc_cli::Result<()> {
 
         let state_version = Cli::native_runtime_version(chain_spec).state_version();
         let block: zeitgeist_runtime::Block =
-            cumulus_client_service::genesis::generate_genesis_block(chain_spec, state_version)
+            cumulus_client_cli::generate_genesis_block(&**chain_spec, state_version)
                 .map_err(|e| format!("{:?}", e))?;
         let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 

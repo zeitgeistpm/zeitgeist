@@ -361,6 +361,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl cumulus_pallet_parachain_system::Config for Runtime {
+            type CheckAssociatedRelayNumber = cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
             type DmpMessageHandler = DmpQueue;
             type Event = Event;
             type OnSystemEvent = ();
@@ -430,7 +431,6 @@ macro_rules! impl_config_traits {
         impl pallet_author_inherent::Config for Runtime {
             type AccountLookup = AuthorMapping;
             type CanAuthor = AuthorFilter;
-            type EventHandler = ParachainStaking;
             type SlotBeacon = cumulus_pallet_parachain_system::RelaychainBlockNumberProvider<Self>;
             type WeightInfo = weights::pallet_author_inherent::WeightInfo<Runtime>;
         }
@@ -498,6 +498,7 @@ macro_rules! impl_config_traits {
 
         #[cfg(feature = "parachain")]
         impl pallet_parachain_staking::Config for Runtime {
+            type BlockAuthor = AuthorInherent;
             type CandidateBondLessDelay = CandidateBondLessDelay;
             type Currency = Balances;
             type DefaultBlocksPerRound = DefaultBlocksPerRound;
