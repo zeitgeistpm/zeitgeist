@@ -45,13 +45,13 @@ use frame_support::{traits::Get, weights::Weight};
 ///  Trait containing the required functions for weight retrival within
 /// zrml_prediction_markets (automatically generated)
 pub trait WeightInfoZeitgeist {
-    fn admin_destroy_disputed_market(a: u32, d: u32, o: u32, c: u32, r: u32) -> Weight;
+    fn admin_destroy_disputed_market(a: u32, o: u32, c: u32, r: u32) -> Weight;
     fn admin_destroy_reported_market(a: u32, o: u32, c: u32, r: u32) -> Weight;
     fn admin_move_market_to_closed(o: u32, c: u32) -> Weight;
     fn admin_move_market_to_resolved_scalar_reported(r: u32) -> Weight;
     fn admin_move_market_to_resolved_categorical_reported(r: u32) -> Weight;
-    fn admin_move_market_to_resolved_scalar_disputed(r: u32, d: u32) -> Weight;
-    fn admin_move_market_to_resolved_categorical_disputed(r: u32, d: u32) -> Weight;
+    fn admin_move_market_to_resolved_scalar_disputed(r: u32) -> Weight;
+    fn admin_move_market_to_resolved_categorical_disputed(r: u32) -> Weight;
     fn approve_market() -> Weight;
     fn buy_complete_set(a: u32) -> Weight;
     fn create_market(m: u32) -> Weight;
@@ -88,7 +88,7 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Tokens TotalIssuance (r:2 w:2)
     // Storage: PredictionMarkets Disputes (r:1 w:1)
     // Storage: PredictionMarkets MarketIdsPerDisputeBlock (r:1 w:1)
-    fn admin_destroy_disputed_market(a: u32, _d: u32, o: u32, c: u32, r: u32) -> Weight {
+    fn admin_destroy_disputed_market(a: u32, o: u32, c: u32, r: u32) -> Weight {
         (0 as Weight)
             // Standard Error: 54_000
             .saturating_add((32_618_000 as Weight).saturating_mul(a as Weight))
@@ -172,14 +172,11 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: Authorized AuthorizedOutcomeReports (r:1 w:0)
     // Storage: System Account (r:7 w:7)
     // Storage: MarketCommons MarketPool (r:1 w:0)
-    fn admin_move_market_to_resolved_scalar_disputed(_r: u32, d: u32) -> Weight {
+    fn admin_move_market_to_resolved_scalar_disputed(_r: u32) -> Weight {
         (119_367_000 as Weight)
             // Standard Error: 162_000
-            .saturating_add((28_533_000 as Weight).saturating_mul(d as Weight))
             .saturating_add(T::DbWeight::get().reads(7 as Weight))
-            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
             .saturating_add(T::DbWeight::get().writes(6 as Weight))
-            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
     }
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: PredictionMarkets Disputes (r:1 w:1)
@@ -189,16 +186,12 @@ impl<T: frame_system::Config> WeightInfoZeitgeist for WeightInfo<T> {
     // Storage: System Account (r:6 w:6)
     // Storage: MarketCommons MarketPool (r:1 w:0)
     // Storage: Swaps Pools (r:1 w:1)
-    fn admin_move_market_to_resolved_categorical_disputed(r: u32, d: u32) -> Weight {
+    fn admin_move_market_to_resolved_categorical_disputed(r: u32) -> Weight {
         (166_932_000 as Weight)
             // Standard Error: 14_000
             .saturating_add((348_000 as Weight).saturating_mul(r as Weight))
-            // Standard Error: 198_000
-            .saturating_add((30_863_000 as Weight).saturating_mul(d as Weight))
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
-            .saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(d as Weight)))
             .saturating_add(T::DbWeight::get().writes(7 as Weight))
-            .saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(d as Weight)))
     }
     // Storage: MarketCommons Markets (r:1 w:1)
     // Storage: Balances Reserves (r:1 w:1)

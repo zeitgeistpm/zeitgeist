@@ -224,8 +224,6 @@ benchmarks! {
     admin_destroy_disputed_market{
         // The number of assets.
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
-        // The number of disputes.
-        let d in 1..T::MaxDisputes::get();
         // The number of market ids per open time frame.
         let o in 0..63;
         // The number of market ids per close time frame.
@@ -265,16 +263,6 @@ benchmarks! {
         for i in 0..c {
             MarketIdsPerCloseTimeFrame::<T>::try_mutate(
                 Pallet::<T>::calculate_time_frame_of_moment(range_end),
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
-
-        let disputes = Disputes::<T>::get(market_id);
-        let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
-        for i in 0..r {
-            MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
                 |ids| ids.try_push(i.into()),
             ).unwrap();
         }
@@ -443,7 +431,6 @@ benchmarks! {
 
     admin_move_market_to_resolved_scalar_disputed {
         let r in 0..63;
-        let d in 1..T::MaxDisputes::get();
 
         let (_, market_id) = create_close_and_report_market::<T>(
             MarketCreation::Permissionless,
@@ -464,28 +451,6 @@ benchmarks! {
             panic!("Must create scalar market");
         }
 
-        for i in 1..=d {
-            let outcome = OutcomeReport::Scalar(i.saturated_into());
-            let disputor = account("disputor", i, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            T::AssetManager::deposit(
-                Asset::Ztg,
-                &disputor,
-                dispute_bond,
-            )?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
-        let disputes = Disputes::<T>::get(market_id);
-
-        let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
-        for i in 0..r {
-            MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
-
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };
     }: {
@@ -500,7 +465,6 @@ benchmarks! {
 
     admin_move_market_to_resolved_categorical_disputed {
         let r in 0..63;
-        let d in 1..T::MaxDisputes::get();
 
         let categories = T::MaxCategories::get();
         let (caller, market_id) =
@@ -514,28 +478,6 @@ benchmarks! {
             market.dispute_mechanism = MarketDisputeMechanism::Authorized(admin);
             Ok(())
         })?;
-
-        for i in 1..=d {
-            let outcome = OutcomeReport::Categorical((i % 2).saturated_into::<u16>());
-            let disputor = account("disputor", i, 0);
-            let dispute_bond = crate::pallet::default_dispute_bond::<T>(i as usize);
-            T::AssetManager::deposit(
-                Asset::Ztg,
-                &disputor,
-                dispute_bond,
-            )?;
-            Pallet::<T>::dispute(RawOrigin::Signed(disputor).into(), market_id, outcome)?;
-        }
-        let disputes = Disputes::<T>::get(market_id);
-
-        let last_dispute = disputes.last().unwrap();
-        let dispute_at = last_dispute.at;
-        for i in 0..r {
-            MarketIdsPerDisputeBlock::<T>::try_mutate(
-                dispute_at,
-                |ids| ids.try_push(i.into()),
-            ).unwrap();
-        }
 
         let close_origin = T::CloseOrigin::successful_origin();
         let call = Call::<T>::admin_move_market_to_resolved { market_id };

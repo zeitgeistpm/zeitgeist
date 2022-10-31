@@ -98,7 +98,6 @@ mod pallet {
             )
             .max(T::WeightInfo::admin_destroy_disputed_market(
                 T::MaxCategories::get().into(),
-                T::MaxDisputes::get(),
                 CacheSize::get(),
                 CacheSize::get(),
                 CacheSize::get(),
@@ -158,7 +157,7 @@ mod pallet {
 
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let ids_len = Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
             Disputes::<T>::remove(market_id);
 
@@ -181,7 +180,6 @@ mod pallet {
                 Ok((
                     Some(T::WeightInfo::admin_destroy_disputed_market(
                         category_count,
-                        disputes_len,
                         open_ids_len,
                         close_ids_len,
                         ids_len,
@@ -245,13 +243,11 @@ mod pallet {
                 T::WeightInfo::admin_move_market_to_resolved_categorical_reported(CacheSize::get())
             ).max(
                 T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
-                    CacheSize::get(),
-                    T::MaxDisputes::get()
+                    CacheSize::get()
                 )
             ).max(
                 T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
-                    CacheSize::get(),
-                    T::MaxDisputes::get()
+                    CacheSize::get()
                 )
             ),
             Pays::No,
@@ -268,7 +264,7 @@ mod pallet {
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let ids_len = Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
             let _ = Self::on_resolution(&market_id, &market)?;
             let weight = match market.market_type {
@@ -277,10 +273,7 @@ mod pallet {
                         T::WeightInfo::admin_move_market_to_resolved_scalar_reported(ids_len)
                     }
                     MarketStatus::Disputed => {
-                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(
-                            ids_len,
-                            disputes_len,
-                        )
+                        T::WeightInfo::admin_move_market_to_resolved_scalar_disputed(ids_len)
                     }
                     _ => return Err(Error::<T>::InvalidMarketStatus.into()),
                 },
@@ -289,10 +282,7 @@ mod pallet {
                         T::WeightInfo::admin_move_market_to_resolved_categorical_reported(ids_len)
                     }
                     MarketStatus::Disputed => {
-                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(
-                            ids_len,
-                            disputes_len,
-                        )
+                        T::WeightInfo::admin_move_market_to_resolved_categorical_disputed(ids_len)
                     }
                     _ => return Err(Error::<T>::InvalidMarketStatus.into()),
                 },
@@ -1633,6 +1623,16 @@ mod pallet {
         ValueQuery,
     >;
 
+    // TODO(#851): remove storage element after migration to simple disputes was successful
+    #[pallet::storage]
+    pub type MarketIdsPerDisputeBlock<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        T::BlockNumber,
+        BoundedVec<MarketIdOf<T>, CacheSize>,
+        ValueQuery,
+    >;
+
     /// Contains a list of all markets that are currently collecting subsidy and the deadline.
     // All the values are "cached" here. Results in data duplication, but speeds up the iteration
     // over every market significantly (otherwise 25µs per relevant market per block).
@@ -1731,27 +1731,26 @@ mod pallet {
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
+        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<u32, DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
-            let (ids_len, disputes_len) = match market.status {
+            let ids_len = match market.status {
                 MarketStatus::Reported => {
                     let report = market.report.ok_or(Error::<T>::MarketIsNotReported)?;
                     let dispute_duration_ends_at_block =
                         report.at.saturating_add(market.deadlines.dispute_duration);
                     MarketIdsPerReportBlock::<T>::mutate(
                         dispute_duration_ends_at_block,
-                        |ids| -> (u32, u32) {
+                        |ids| -> u32 {
                             let ids_len = ids.len() as u32;
                             remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                            (ids_len, 0u32)
+                            ids_len
                         },
                     )
                 }
-                _ => (0u32, 0u32),
+                _ => 0u32,
             };
 
-            // TODO fix benchmark after removal
-            Ok((ids_len, disputes_len))
+            Ok(ids_len)
         }
 
         pub(crate) fn do_buy_complete_set(

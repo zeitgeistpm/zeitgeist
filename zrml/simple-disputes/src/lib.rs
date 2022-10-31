@@ -118,6 +118,7 @@ mod pallet {
 
                 match resolve {
                     Err(err) => {
+                        // DisputeResolution::resolve failed
                         Self::deposit_event(Event::BadOnInitialize);
                         log::error!(
                             "Simple Disputes: Block {:?} was not initialized. Error: {:?}",
