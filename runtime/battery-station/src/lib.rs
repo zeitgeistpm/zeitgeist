@@ -81,6 +81,9 @@ use sp_version::RuntimeVersion;
 pub mod parachain_params;
 pub mod parameters;
 #[cfg(feature = "parachain")]
+#[cfg(test)]
+pub mod integration_tests;
+#[cfg(feature = "parachain")]
 pub mod xcm_config;
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {

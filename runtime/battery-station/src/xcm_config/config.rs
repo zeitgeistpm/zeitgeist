@@ -17,7 +17,6 @@
 
 use super::{
     fees::{native_per_second, FixedConversionRateProvider},
-    parachains::zeitgeist::{ID as ZTG_PARAID, ZTG_KEY},
 };
 use crate::{
     AccountId, Ancestry, AssetManager, AssetRegistry, Balance, Call, CurrencyId, MaxInstructions,
@@ -51,6 +50,11 @@ use xcm_builder::{
 };
 use xcm_executor::Config;
 use zeitgeist_primitives::types::Asset;
+
+pub mod zeitgeist {
+    pub const ID: u32 = 2101;
+    pub const KEY: &[u8] = &[0, 1];
+}
 
 pub struct XcmConfig;
 
@@ -144,7 +148,7 @@ parameter_types! {
     pub ZtgPerSecond: (AssetId, u128) = (
         MultiLocation::new(
             0,
-            X1(general_key(ZTG_KEY)),
+            X1(general_key(zeitgeist::KEY)),
         ).into(),
         native_per_second(),
     );
@@ -186,8 +190,8 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
             Asset::Ztg => Some(MultiLocation::new(
 				1,
 				X2(
-					Junction::Parachain(ZTG_PARAID),
-					general_key(ZTG_KEY),
+					Junction::Parachain(zeitgeist::ID),
+					general_key(zeitgeist::KEY),
 				),
 			)),
             Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
@@ -203,15 +207,15 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
     fn convert(location: MultiLocation) -> Result<CurrencyId, MultiLocation> {
         match location.clone() {
             MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
-                ZTG_KEY => Ok(CurrencyId::Ztg),
+                zeitgeist::KEY => Ok(CurrencyId::Ztg),
                 _ => Err(location),
             },
             MultiLocation {
 				parents: 1,
 				interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
 			} => match para_id {
-				ZTG_PARAID => match &key[..] {
-					ZTG_KEY => Ok(CurrencyId::Ztg),
+				zeitgeist::ID => match &key[..] {
+					zeitgeist::KEY => Ok(CurrencyId::Ztg),
 					_ => Err(location),
 				},
                 _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),

@@ -83,6 +83,10 @@ hex-literal = { default-features = false, optional = true, version = "0.3.4" }
 log = { version = "0.4.8", default-features = false, optional = true }
 
 # XCM
+kusama-runtime = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-primitives = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+polkadot-runtime-parachains = { branch = "moonbeam-polkadot-v0.9.19", default-features = false, git = "https://github.com/purestake/polkadot", optional = true }
+#xcm-emulator = { rev = "897fff07c8ac51baf9afcb0a895980fce7a5c921", default-features = false, git = "https://github.com/shaunxw/xcm-simulator", optional = true }
 orml-asset-registry = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-xcm-support = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
 orml-unknown-tokens = { branch = "7e1123e-v0.9.19", default-features = false, git = "https://github.com/zeitgeistpm/open-runtime-module-library", optional = true }
@@ -136,6 +140,10 @@ parachain = [
 
     # XCM
 
+    "kusama-runtime",
+    "polkadot-primitives",
+    "polkadot-runtime-parachains",
+    #"xcm-emulator",
     "orml-asset-registry",
     "orml-unknown-tokens",
     "orml-xcm-support",
@@ -276,6 +284,13 @@ std = [
     "xcm-builder?/std",
     "xcm-executor?/std",
     "xcm?/std",
+    
+    # XCM test dependencies
+    # TODO Only include those when in test environment and feature=parachain
+    "kusama-runtime?/std",
+    "polkadot-primitives?/std",
+    "polkadot-runtime-parachains?/std",
+    #"xcm-emulator?/std",
 
     # Zeitgeist
 

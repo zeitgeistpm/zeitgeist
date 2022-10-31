@@ -24,7 +24,7 @@
 
 use super::{
     parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo, 
-    xcm_config::parachains::zeitgeist::{ID as ZTG_PARAID},
+    xcm_config::config::zeitgeist::{ID as ZTG_PARAID},
 };
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
