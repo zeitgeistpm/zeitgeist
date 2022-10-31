@@ -56,7 +56,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
-        traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
+        traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
             MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
@@ -472,17 +472,11 @@ mod pallet {
                     T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?
                 }
             }
-            Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
+
             Self::set_market_as_disputed(&market, &market_id)?;
             let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
-            // each dispute resets dispute_duration
-            let dispute_duration_ends_at_block =
-                curr_block_num.saturating_add(market.deadlines.dispute_duration);
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(dispute_duration_ends_at_block, |ids| {
-                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
@@ -2478,21 +2472,6 @@ mod pallet {
             weight_basis.saturating_add(total_weight)
         }
 
-        fn remove_last_dispute_from_market_ids_per_dispute_block(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market_id: &MarketIdOf<T>,
-        ) -> DispatchResult {
-            if let Some(last_dispute) = disputes.last() {
-                let market = T::MarketCommons::market(market_id)?;
-                let dispute_duration_ends_at_block =
-                    last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
-                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                });
-            }
-            Ok(())
-        }
-
         /// The reserve ID of the prediction-markets pallet.
         #[inline]
         pub fn reserve_id() -> [u8; 8] {
@@ -2722,6 +2701,39 @@ mod pallet {
     fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
         if let Some(pos) = items.iter().position(|i| i == item) {
             items.swap_remove(pos);
+        }
+    }
+
+    impl<T> DisputeResolutionApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type AccountId = T::AccountId;
+        type BlockNumber = T::BlockNumber;
+        type MarketId = MarketIdOf<T>;
+        type Moment = MomentOf<T>;
+
+        fn resolve(
+            market_id: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        ) -> Result<u64, DispatchError> {
+            Self::on_resolution(market_id, market)
+        }
+
+        fn add_auto_resolution(
+            market_id: &Self::MarketId,
+            future_block: Self::BlockNumber,
+        ) -> DispatchResult {
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(future_block, |ids| {
+                ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)
+            })?;
+            Ok(())
+        }
+
+        fn remove_auto_resolution(market_id: &Self::MarketId, future_block: Self::BlockNumber) {
+            MarketIdsPerDisputeBlock::<T>::mutate(future_block, |ids| {
+                remove_item::<MarketIdOf<T>, _>(ids, market_id);
+            });
         }
     }
 }

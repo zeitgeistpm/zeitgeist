@@ -36,9 +36,9 @@ mod pallet {
         traits::{Currency, Get, Hooks, IsType},
         PalletId,
     };
-    use sp_runtime::DispatchError;
+    use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
-        traits::DisputeApi,
+        traits::{DisputeApi, DisputeResolutionApi},
         types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -58,6 +58,13 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// The identifier of individual markets.
         type MarketCommons: MarketCommonsPalletApi<
@@ -99,13 +106,26 @@ mod pallet {
         type Origin = T::Origin;
 
         fn on_dispute(
-            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
+            disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> DispatchResult {
             if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
                 return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
             }
+            if let Some(last_dispute) = disputes.last() {
+                let dispute_duration_ends_at_block =
+                    last_dispute.at.saturating_add(market.deadlines.dispute_duration);
+                T::DisputeResolution::remove_auto_resolution(
+                    market_id,
+                    dispute_duration_ends_at_block,
+                );
+            }
+            let curr_block_num = <frame_system::Pallet<T>>::block_number();
+            // each dispute resets dispute_duration
+            let dispute_duration_ends_at_block =
+                curr_block_num.saturating_add(market.deadlines.dispute_duration);
+            T::DisputeResolution::add_auto_resolution(market_id, dispute_duration_ends_at_block)?;
             Ok(())
         }
 

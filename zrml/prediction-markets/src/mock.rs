@@ -213,6 +213,7 @@ impl pallet_timestamp::Config for Runtime {
 
 impl zrml_authorized::Config for Runtime {
     type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = AuthorizedPalletId;
     type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;
@@ -260,6 +261,7 @@ impl zrml_rikiddo::Config for Runtime {
 
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
 }

@@ -42,10 +42,12 @@ mod pallet {
         PalletId, Twox64Concat,
     };
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-    use sp_runtime::DispatchError;
+    use sp_runtime::{traits::Saturating, DispatchError};
     use zeitgeist_primitives::{
-        traits::DisputeApi,
-        types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
+        traits::{DisputeApi, DisputeResolutionApi},
+        types::{
+            Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport, Report,
+        },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
 
@@ -81,7 +83,16 @@ mod pallet {
             } else {
                 return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
-            AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
+            if let Some(report) = AuthorizedOutcomeReports::<T>::get(market_id) {
+                T::DisputeResolution::remove_auto_resolution(&market_id, report.at);
+            }
+            let now = frame_system::Pallet::<T>::block_number();
+            let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
+            T::DisputeResolution::add_auto_resolution(&market_id, correction_period_ends_at)?;
+
+            let report = Report { at: correction_period_ends_at, by: who.clone(), outcome };
+            AuthorizedOutcomeReports::<T>::insert(market_id, report);
+
             Ok(())
         }
     }
@@ -90,6 +101,17 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The period, in which the authority can correct the outcome of a market.
+        #[pallet::constant]
+        type CorrectionPeriod: Get<Self::BlockNumber>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<
@@ -159,17 +181,23 @@ mod pallet {
             if result.is_some() {
                 AuthorizedOutcomeReports::<T>::remove(market_id);
             }
-            Ok(result)
+            Ok(result.map(|report| report.outcome))
         }
     }
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}
 
+    // TODO storage migration from OutcomeReport to Report
     /// Maps the market id to the outcome reported by the authorized account.    
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
-    pub type AuthorizedOutcomeReports<T: Config> =
-        StorageMap<_, Twox64Concat, MarketIdOf<T>, OutcomeReport, OptionQuery>;
+    pub type AuthorizedOutcomeReports<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        MarketIdOf<T>,
+        Report<T::AccountId, T::BlockNumber>,
+        OptionQuery,
+    >;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
