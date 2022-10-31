@@ -24,7 +24,7 @@
 use crate as prediction_markets;
 use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
-    traits::{Everything, OnFinalize, OnInitialize, NeverEnsureOrigin},
+    traits::{Everything, NeverEnsureOrigin, OnFinalize, OnInitialize},
 };
 use frame_system::EnsureSignedBy;
 use sp_arithmetic::per_things::Percent;
