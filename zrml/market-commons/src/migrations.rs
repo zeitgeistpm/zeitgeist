@@ -159,6 +159,15 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
             assert_eq!(updated_market.status, legacy_market.status);
             assert_eq!(updated_market.report, legacy_market.report);
             assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
+            let dispute_mechanism = match legacy_market.dispute_mechanism {
+                LegacyMarketDisputeMechanism::Authorized(_) => MarketDisputeMechanism::Authorized,
+                LegacyMarketDisputeMechanism::Court => MarketDisputeMechanism::Court,
+                LegacyMarketDisputeMechanism::SimpleDisputes => {
+                    MarketDisputeMechanism::SimpleDisputes
+                }
+            };
+            assert_eq!(updated_market.dispute_mechanism, dispute_mechanism);
+
             markets_count += 1_u32;
         }
         let legacy_markets_count: u32 = Self::get_temp_storage(&legacy_markets_count_key)
