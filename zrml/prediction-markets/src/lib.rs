@@ -56,7 +56,7 @@ mod pallet {
     };
     use zeitgeist_primitives::{
         constants::MILLISECS_PER_BLOCK,
-        traits::{DisputeApi, Swaps, ZeitgeistAssetManager},
+        traits::{DisputeApi, DisputeResolutionApi, Swaps, ZeitgeistAssetManager},
         types::{
             Asset, Deadlines, Market, MarketCreation, MarketDispute, MarketDisputeMechanism,
             MarketPeriod, MarketStatus, MarketType, MultiHash, OutcomeReport, Report,
@@ -2543,6 +2543,23 @@ mod pallet {
     fn remove_item<I: cmp::PartialEq, G>(items: &mut BoundedVec<I, G>, item: &I) {
         if let Some(pos) = items.iter().position(|i| i == item) {
             items.swap_remove(pos);
+        }
+    }
+
+    impl<T> DisputeResolutionApi for Pallet<T>
+    where
+        T: Config,
+    {
+        type AccountId = T::AccountId;
+        type BlockNumber = T::BlockNumber;
+        type MarketId = MarketIdOf<T>;
+        type Moment = MomentOf<T>;
+
+        fn resolve(
+            market_id: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+        ) -> Result<u64, DispatchError> {
+            Self::on_resolution(market_id, market)
         }
     }
 }

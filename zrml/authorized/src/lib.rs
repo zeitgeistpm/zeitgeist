@@ -44,7 +44,7 @@ mod pallet {
     use frame_system::{ensure_signed, pallet_prelude::OriginFor};
     use sp_runtime::DispatchError;
     use zeitgeist_primitives::{
-        traits::DisputeApi,
+        traits::{DisputeApi, DisputeResolutionApi},
         types::{Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -82,6 +82,8 @@ mod pallet {
                 return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
             AuthorizedOutcomeReports::<T>::insert(market_id, outcome);
+            // TODO(#851): Allow a small correction period (if authority made a mistake)!
+            let _resolution_weight = T::DisputeResolution::resolve(&market_id, &market)?;
             Ok(())
         }
     }
@@ -90,6 +92,13 @@ mod pallet {
     pub trait Config: frame_system::Config {
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// Market commons
         type MarketCommons: MarketCommonsPalletApi<

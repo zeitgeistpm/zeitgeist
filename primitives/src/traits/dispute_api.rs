@@ -52,3 +52,23 @@ pub trait DisputeApi {
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
 }
+
+pub trait DisputeResolutionApi {
+    type AccountId;
+    type BlockNumber;
+    type MarketId;
+    type Moment;
+
+    /// Resolve a market. Fails if `on_resolution` from zrml-prediction-markets fails.
+    ///
+    /// **Should only be called if the market dispute**
+    /// **mechanism is ready for the resolution (`DisputeApi::on_resolution`).**
+    ///
+    /// # Returns
+    ///
+    /// Returns the consumed weight.
+    fn resolve(
+        market_id: &Self::MarketId,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+    ) -> Result<u64, DispatchError>;
+}
