@@ -2138,7 +2138,7 @@ fn start_global_dispute_works() {
             gen_metadata(2),
             MarketCreation::Permissionless,
             MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
-            MarketDisputeMechanism::Authorized(ALICE),
+            MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM,
         ));
         let market_id = MarketCommons::latest_market_id().unwrap();
@@ -2224,6 +2224,53 @@ fn start_global_dispute_works() {
                 Error::<Runtime>::GlobalDisputeAlreadyStarted
             );
         }
+    });
+}
+
+#[test]
+fn start_global_dispute_fails_on_wrong_mdm() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..2),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MaxDisputes::get() + 1),
+            MarketDisputeMechanism::Authorized(CHARLIE),
+            ScoringRule::CPMM,
+        ));
+        let market_id = MarketCommons::latest_market_id().unwrap();
+
+        let market = MarketCommons::market(&market_id).unwrap();
+        let grace_period = market.deadlines.grace_period;
+        run_to_block(end + grace_period + 1);
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            market_id,
+            OutcomeReport::Categorical(0)
+        ));
+        let dispute_at_0 = end + grace_period + 2;
+        run_to_block(dispute_at_0);
+
+        for i in 1..=<Runtime as Config>::MaxDisputes::get() {
+            assert_ok!(PredictionMarkets::dispute(
+                Origin::signed(CHARLIE),
+                market_id,
+                OutcomeReport::Categorical(i.saturated_into())
+            ));
+            run_blocks(1);
+            let market = MarketCommons::market(&market_id).unwrap();
+            assert_eq!(market.status, MarketStatus::Disputed);
+        }
+
+        #[cfg(feature = "with-global-disputes")]
+        assert_noop!(
+            PredictionMarkets::start_global_dispute(Origin::signed(CHARLIE), market_id),
+            Error::<Runtime>::InvalidDisputeMechanism
+        );
     });
 }
 

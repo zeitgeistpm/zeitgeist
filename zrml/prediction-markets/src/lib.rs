@@ -1192,6 +1192,11 @@ mod pallet {
                 let market = T::MarketCommons::market(&market_id)?;
                 ensure!(market.status == MarketStatus::Disputed, Error::<T>::InvalidMarketStatus);
 
+                ensure!(
+                    market.dispute_mechanism == MarketDisputeMechanism::SimpleDisputes,
+                    Error::<T>::InvalidDisputeMechanism
+                );
+
                 let disputes = <Disputes<T>>::get(market_id);
                 ensure!(
                     disputes.len() == T::MaxDisputes::get() as usize,
@@ -1491,6 +1496,8 @@ mod pallet {
         StorageOverflow,
         /// Too many categories for a categorical market.
         TooManyCategories,
+        /// The action requires another market dispute mechanism.
+        InvalidDisputeMechanism,
         /// Catch-all error for invalid market status.
         InvalidMarketStatus,
         /// The post dispatch should never be None.
