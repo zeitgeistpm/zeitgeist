@@ -676,7 +676,7 @@ mod pallet {
             deadlines: Deadlines<T::BlockNumber>,
             metadata: MultiHash,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
         ) -> DispatchResultWithPostInfo {
             // TODO(#787): Handle Rikiddo benchmarks!
@@ -2670,7 +2670,7 @@ mod pallet {
             metadata: MultiHash,
             creation: MarketCreation,
             market_type: MarketType,
-            dispute_mechanism: MarketDisputeMechanism<T::AccountId>,
+            dispute_mechanism: MarketDisputeMechanism,
             scoring_rule: ScoringRule,
             report: Option<Report<T::AccountId, T::BlockNumber>>,
             resolved_outcome: Option<OutcomeReport>,
