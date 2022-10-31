@@ -865,6 +865,7 @@ macro_rules! impl_config_traits {
 
         impl zrml_authorized::Config for Runtime {
             type Event = Event;
+            type DisputeResolution = zrml_prediction_markets::Pallet<Runtime>;
             type MarketCommons = MarketCommons;
             type PalletId = AuthorizedPalletId;
             type WeightInfo = zrml_authorized::weights::WeightInfo<Runtime>;

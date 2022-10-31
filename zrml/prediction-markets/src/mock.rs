@@ -259,6 +259,7 @@ impl zrml_rikiddo::Config for Runtime {
 
 impl zrml_simple_disputes::Config for Runtime {
     type Event = Event;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type MarketCommons = MarketCommons;
     type PalletId = SimpleDisputesPalletId;
 }

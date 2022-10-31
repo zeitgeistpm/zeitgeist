@@ -421,17 +421,11 @@ mod pallet {
                     T::SimpleDisputes::on_dispute(&disputes, &market_id, &market)?
                 }
             }
-            Self::remove_last_dispute_from_market_ids_per_dispute_block(&disputes, &market_id)?;
+
             Self::set_market_as_disputed(&market, &market_id)?;
             let market_dispute = MarketDispute { at: curr_block_num, by: who, outcome };
             <Disputes<T>>::try_mutate(market_id, |disputes| {
                 disputes.try_push(market_dispute.clone()).map_err(|_| <Error<T>>::StorageOverflow)
-            })?;
-            // each dispute resets dispute_duration
-            let dispute_duration_ends_at_block =
-                curr_block_num.saturating_add(market.deadlines.dispute_duration);
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(dispute_duration_ends_at_block, |ids| {
-                ids.try_push(market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
             Self::deposit_event(Event::MarketDisputed(
                 market_id,
@@ -1629,17 +1623,6 @@ mod pallet {
     #[pallet::storage]
     pub type LastTimeFrame<T: Config> = StorageValue<_, TimeFrame>;
 
-    /// A mapping of market identifiers to the block they were disputed at.
-    /// A market only ends up here if it was disputed.
-    #[pallet::storage]
-    pub type MarketIdsPerDisputeBlock<T: Config> = StorageMap<
-        _,
-        Twox64Concat,
-        T::BlockNumber,
-        BoundedVec<MarketIdOf<T>, CacheSize>,
-        ValueQuery,
-    >;
-
     /// A mapping of market identifiers to the block that they were reported on.
     #[pallet::storage]
     pub type MarketIdsPerReportBlock<T: Config> = StorageMap<
@@ -1764,23 +1747,10 @@ mod pallet {
                         },
                     )
                 }
-                MarketStatus::Disputed => {
-                    let disputes = Disputes::<T>::get(market_id);
-                    let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
-                    let dispute_duration_ends_at_block =
-                        last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                    MarketIdsPerDisputeBlock::<T>::mutate(
-                        dispute_duration_ends_at_block,
-                        |ids| -> (u32, u32) {
-                            let ids_len = ids.len() as u32;
-                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                            (ids_len, disputes.len() as u32)
-                        },
-                    )
-                }
                 _ => (0u32, 0u32),
             };
 
+            // TODO fix benchmark after removal
             Ok((ids_len, disputes_len))
         }
 
@@ -2340,21 +2310,6 @@ mod pallet {
             weight_basis.saturating_add(total_weight)
         }
 
-        fn remove_last_dispute_from_market_ids_per_dispute_block(
-            disputes: &[MarketDispute<T::AccountId, T::BlockNumber>],
-            market_id: &MarketIdOf<T>,
-        ) -> DispatchResult {
-            if let Some(last_dispute) = disputes.last() {
-                let market = T::MarketCommons::market(market_id)?;
-                let dispute_duration_ends_at_block =
-                    last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                MarketIdsPerDisputeBlock::<T>::mutate(dispute_duration_ends_at_block, |ids| {
-                    remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                });
-            }
-            Ok(())
-        }
-
         /// The reserve ID of the prediction-markets pallet.
         #[inline]
         pub fn reserve_id() -> [u8; 8] {
@@ -2428,17 +2383,10 @@ mod pallet {
             }
             MarketIdsPerReportBlock::<T>::remove(now);
 
-            // Resolve any disputed markets.
-            let market_ids_per_dispute_block = MarketIdsPerDisputeBlock::<T>::get(now);
-            for id in market_ids_per_dispute_block.iter() {
-                let market = T::MarketCommons::market(id)?;
-                cb(id, &market)?;
-            }
-            MarketIdsPerDisputeBlock::<T>::remove(now);
-
+            // TODO fix benchmark after removal
             Ok(T::WeightInfo::market_resolution_manager(
                 market_ids_per_report_block.len() as u32,
-                market_ids_per_dispute_block.len() as u32,
+                0u32,
             ))
         }
 
