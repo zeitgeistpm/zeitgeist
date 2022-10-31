@@ -38,12 +38,12 @@ use zeitgeist_primitives::{
         AuthorizedPalletId, BalanceFractionalDecimals, BlockHashCount, CourtCaseDuration,
         CourtPalletId, DisputeFactor, ExistentialDeposit, ExistentialDeposits, ExitFee,
         GetNativeCurrencyId, LiquidityMiningPalletId, MaxApprovals, MaxAssets, MaxCategories,
-        MaxDisputeDuration, MaxDisputes, MaxGracePeriod, MaxInRatio, MaxMarketPeriod,
-        MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves, MaxSubsidyPeriod,
-        MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories, MinDisputeDuration,
-        MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod, MinWeight, MinimumPeriod,
-        PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId, TreasuryPalletId, BASE,
-        CENT, MILLISECS_PER_BLOCK,
+        MaxDisputeDuration, MaxDisputes, MaxEditReasonLen, MaxGracePeriod, MaxInRatio,
+        MaxMarketPeriod, MaxOracleDuration, MaxOutRatio, MaxRejectReasonLen, MaxReserves,
+        MaxSubsidyPeriod, MaxSwapFee, MaxTotalWeight, MaxWeight, MinAssets, MinCategories,
+        MinDisputeDuration, MinLiquidity, MinOracleDuration, MinSubsidy, MinSubsidyPeriod,
+        MinWeight, MinimumPeriod, PmPalletId, SimpleDisputesPalletId, StakeWeight, SwapsPalletId,
+        TreasuryPalletId, BASE, CENT, MILLISECS_PER_BLOCK,
     },
     types::{
         AccountIdTest, Amount, Asset, Balance, BasicCurrencyAdapter, BlockNumber, BlockTest,
@@ -126,11 +126,13 @@ impl crate::Config for Runtime {
     type MaxMarketPeriod = MaxMarketPeriod;
     type MinCategories = MinCategories;
     type MinSubsidyPeriod = MinSubsidyPeriod;
+    type MaxEditReasonLen = MaxEditReasonLen;
     type MaxRejectReasonLen = MaxRejectReasonLen;
     type OracleBond = OracleBond;
     type PalletId = PmPalletId;
     type RejectOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ReportingPeriod = ReportingPeriod;
+    type RequestEditOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type ResolveOrigin = EnsureSignedBy<Sudo, AccountIdTest>;
     type AssetManager = AssetManager;
     type SimpleDisputes = SimpleDisputes;

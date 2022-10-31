@@ -558,6 +558,20 @@ benchmarks! {
         let call = Call::<T>::approve_market { market_id };
     }: { call.dispatch_bypass_filter(approve_origin)? }
 
+    request_edit {
+        let r in 0..<T as Config>::MaxEditReasonLen::get();
+        let (_, market_id) = create_market_common::<T>(
+            MarketCreation::Advised,
+            MarketType::Categorical(T::MaxCategories::get()),
+            ScoringRule::CPMM,
+            None,
+        )?;
+
+        let approve_origin = T::ApproveOrigin::successful_origin();
+        let edit_reason = vec![0_u8; r as usize];
+        let call = Call::<T>::request_edit{ market_id, edit_reason };
+    }: { call.dispatch_bypass_filter(approve_origin)? }
+
     buy_complete_set {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
         let (caller, market_id) = create_market_common::<T>(
@@ -596,7 +610,59 @@ benchmarks! {
             MarketType::Categorical(T::MaxCategories::get()),
             MarketDisputeMechanism::SimpleDisputes,
             ScoringRule::CPMM
-        )
+    )
+
+    edit_market {
+        let m in 0..63;
+
+        let market_type = MarketType::Categorical(T::MaxCategories::get());
+        let dispute_mechanism = MarketDisputeMechanism::SimpleDisputes;
+        let scoring_rule = ScoringRule::CPMM;
+        let range_start: MomentOf<T> = 100_000u64.saturated_into();
+        let range_end: MomentOf<T> = 1_000_000u64.saturated_into();
+        let period = MarketPeriod::Timestamp(range_start..range_end);
+        let (caller, oracle, deadlines, metadata, creation) =
+            create_market_common_parameters::<T>(MarketCreation::Advised)?;
+        Call::<T>::create_market {
+            oracle: oracle.clone(),
+            period: period.clone(),
+            deadlines,
+            metadata: metadata.clone(),
+            creation,
+            market_type: market_type.clone(),
+            dispute_mechanism: dispute_mechanism.clone(),
+            scoring_rule,
+        }
+        .dispatch_bypass_filter(RawOrigin::Signed(caller.clone()).into())?;
+        let market_id = T::MarketCommons::latest_market_id()?;
+
+        let approve_origin = T::ApproveOrigin::successful_origin();
+        let edit_reason = vec![0_u8; 1024];
+        Call::<T>::request_edit{ market_id, edit_reason }
+        .dispatch_bypass_filter(approve_origin)?;
+
+        for i in 0..m {
+            MarketIdsPerCloseTimeFrame::<T>::try_mutate(
+                Pallet::<T>::calculate_time_frame_of_moment(range_end),
+                |ids| ids.try_push(i.into()),
+            ).unwrap();
+        }
+        let new_deadlines = Deadlines::<T::BlockNumber> {
+            grace_period: 2_u32.into(),
+            oracle_duration: T::MinOracleDuration::get(),
+            dispute_duration: T::MinDisputeDuration::get(),
+        };
+    }: _(
+            RawOrigin::Signed(caller),
+            market_id,
+            oracle,
+            period,
+            new_deadlines,
+            metadata,
+            market_type,
+            dispute_mechanism,
+            scoring_rule
+    )
 
     deploy_swap_pool_for_market_future_pool {
         let a in (T::MinCategories::get().into())..T::MaxCategories::get().into();
