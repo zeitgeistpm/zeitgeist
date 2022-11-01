@@ -952,11 +952,16 @@ macro_rules! impl_config_traits {
             type MaxMarketPeriod = MaxMarketPeriod;
             type MinCategories = MinCategories;
             type MinSubsidyPeriod = MinSubsidyPeriod;
+            type MaxEditReasonLen = MaxEditReasonLen;
             type MaxRejectReasonLen = MaxRejectReasonLen;
             type OracleBond = OracleBond;
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type ReportingPeriod = ReportingPeriod;
+            type RequestEditOrigin = EnsureOneOf<
+                EnsureRoot<AccountId>,
+                pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
+            >;
             type ResolveOrigin = EnsureRoot<AccountId>;
             type AssetManager = AssetManager;
             type SimpleDisputes = SimpleDisputes;
