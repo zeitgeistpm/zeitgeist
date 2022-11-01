@@ -51,6 +51,13 @@ pub trait DisputeApi {
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<OutcomeReport>, DispatchError>;
+
+    // TODO doc comment
+    fn get_auto_resolve(
+        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+        market_id: &Self::MarketId,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+    ) -> Result<Option<Self::BlockNumber>, DispatchError>;
 }
 
 pub trait DisputeResolutionApi {
@@ -72,10 +79,12 @@ pub trait DisputeResolutionApi {
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<u64, DispatchError>;
 
-    fn add_auto_resolution(
+    // TODO doc comment
+    fn add_auto_resolve(
         market_id: &Self::MarketId,
-        future_block: Self::BlockNumber,
+        resolution: Self::BlockNumber,
     ) -> DispatchResult;
 
-    fn remove_auto_resolution(market_id: &Self::MarketId, future_block: Self::BlockNumber);
+    // TODO doc comment
+    fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber);
 }

@@ -63,14 +63,14 @@ impl DisputeResolutionApi for NoopResolution {
         Ok(0)
     }
 
-    fn add_auto_resolution(
-            market_id: &Self::MarketId,
-            future_block: Self::BlockNumber,
-        ) -> frame_support::pallet_prelude::DispatchResult {
-            Ok(())
-        }
-    
-        fn remove_auto_resolution(market_id: &Self::MarketId, future_block: Self::BlockNumber) {}
+    fn add_auto_resolve(
+        _market_id: &Self::MarketId,
+        _resolution: Self::BlockNumber,
+    ) -> frame_support::pallet_prelude::DispatchResult {
+        Ok(())
+    }
+
+    fn remove_auto_resolve(_market_id: &Self::MarketId, _resolution: Self::BlockNumber) {}
 }
 
 impl crate::Config for Runtime {

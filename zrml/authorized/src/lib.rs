@@ -46,7 +46,8 @@ mod pallet {
     use zeitgeist_primitives::{
         traits::{DisputeApi, DisputeResolutionApi},
         types::{
-            Market, MarketDispute, MarketDisputeMechanism, MarketStatus, OutcomeReport, Report,
+            AuthorityReport, Market, MarketDispute, MarketDisputeMechanism, MarketStatus,
+            OutcomeReport,
         },
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -83,14 +84,13 @@ mod pallet {
             } else {
                 return Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into());
             }
-            if let Some(report) = AuthorizedOutcomeReports::<T>::get(market_id) {
-                T::DisputeResolution::remove_auto_resolution(&market_id, report.at);
-            }
+
+            Self::remove_auto_resolve(&market_id);
             let now = frame_system::Pallet::<T>::block_number();
             let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
-            T::DisputeResolution::add_auto_resolution(&market_id, correction_period_ends_at)?;
+            T::DisputeResolution::add_auto_resolve(&market_id, correction_period_ends_at)?;
 
-            let report = Report { at: correction_period_ends_at, by: who.clone(), outcome };
+            let report = AuthorityReport { at: correction_period_ends_at, outcome };
             AuthorizedOutcomeReports::<T>::insert(market_id, report);
 
             Ok(())
@@ -151,7 +151,20 @@ mod pallet {
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(PhantomData<T>);
 
-    impl<T> Pallet<T> where T: Config {}
+    impl<T> Pallet<T>
+    where
+        T: Config,
+    {
+        fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<T::BlockNumber> {
+            AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.at)
+        }
+
+        fn remove_auto_resolve(market_id: &MarketIdOf<T>) {
+            Self::get_auto_resolve(market_id).map(|at| {
+                T::DisputeResolution::remove_auto_resolve(&market_id, at);
+            });
+        }
+    }
 
     impl<T> DisputeApi for Pallet<T>
     where
@@ -167,21 +180,41 @@ mod pallet {
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             _: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+            market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
-            Ok(())
+            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+                Ok(())
+            } else {
+                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
+            }
         }
 
         fn on_resolution(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
             market_id: &Self::MarketId,
-            _: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
         ) -> Result<Option<OutcomeReport>, DispatchError> {
-            let result = AuthorizedOutcomeReports::<T>::get(market_id);
-            if result.is_some() {
-                AuthorizedOutcomeReports::<T>::remove(market_id);
+            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+                let result = AuthorizedOutcomeReports::<T>::get(market_id);
+                if result.is_some() {
+                    AuthorizedOutcomeReports::<T>::remove(market_id);
+                }
+                Ok(result.map(|report| report.outcome))
+            } else {
+                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
             }
-            Ok(result.map(|report| report.outcome))
+        }
+
+        fn get_auto_resolve(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            market_id: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+            if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+                Ok(Self::get_auto_resolve(market_id))
+            } else {
+                Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())
+            }
         }
     }
 
@@ -191,13 +224,8 @@ mod pallet {
     /// Maps the market id to the outcome reported by the authorized account.    
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]
-    pub type AuthorizedOutcomeReports<T: Config> = StorageMap<
-        _,
-        Twox64Concat,
-        MarketIdOf<T>,
-        Report<T::AccountId, T::BlockNumber>,
-        OptionQuery,
-    >;
+    pub type AuthorizedOutcomeReports<T: Config> =
+        StorageMap<_, Twox64Concat, MarketIdOf<T>, AuthorityReport<T::BlockNumber>, OptionQuery>;
 }
 
 #[cfg(any(feature = "runtime-benchmarks", test))]

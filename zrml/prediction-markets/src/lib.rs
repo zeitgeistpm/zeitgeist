@@ -165,7 +165,7 @@ mod pallet {
 
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id, &market)?;
             T::MarketCommons::remove_market(&market_id)?;
             Disputes::<T>::remove(market_id);
 
@@ -275,7 +275,7 @@ mod pallet {
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id, &market)?;
             let market = T::MarketCommons::market(&market_id)?;
             let _ = Self::on_resolution(&market_id, &market)?;
             let weight = match market.market_type {
@@ -1840,7 +1840,10 @@ mod pallet {
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
+        fn clear_auto_resolve(
+            market_id: &MarketIdOf<T>,
+            market: &MarketOf<T>,
+        ) -> Result<(u32, u32), DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
             let (ids_len, disputes_len) = match market.status {
                 MarketStatus::Reported => {
@@ -1858,17 +1861,29 @@ mod pallet {
                 }
                 MarketStatus::Disputed => {
                     let disputes = Disputes::<T>::get(market_id);
-                    let last_dispute = disputes.last().ok_or(Error::<T>::MarketIsNotDisputed)?;
-                    let dispute_duration_ends_at_block =
-                        last_dispute.at.saturating_add(market.deadlines.dispute_duration);
-                    MarketIdsPerDisputeBlock::<T>::mutate(
-                        dispute_duration_ends_at_block,
-                        |ids| -> (u32, u32) {
-                            let ids_len = ids.len() as u32;
-                            remove_item::<MarketIdOf<T>, _>(ids, market_id);
-                            (ids_len, disputes.len() as u32)
-                        },
-                    )
+                    let auto_resolve_block_opt = match market.dispute_mechanism {
+                        MarketDisputeMechanism::Authorized(_) => {
+                            T::Authorized::get_auto_resolve(&disputes, &market_id, &market)?
+                        }
+                        MarketDisputeMechanism::Court => {
+                            T::Court::get_auto_resolve(&disputes, &market_id, &market)?
+                        }
+                        MarketDisputeMechanism::SimpleDisputes => {
+                            T::SimpleDisputes::get_auto_resolve(&disputes, &market_id, &market)?
+                        }
+                    };
+                    if let Some(auto_resolve_block) = auto_resolve_block_opt {
+                        MarketIdsPerDisputeBlock::<T>::mutate(
+                            auto_resolve_block,
+                            |ids| -> (u32, u32) {
+                                let ids_len = ids.len() as u32;
+                                remove_item::<MarketIdOf<T>, _>(ids, market_id);
+                                (ids_len, disputes.len() as u32)
+                            },
+                        )
+                    } else {
+                        (0u32, disputes.len() as u32)
+                    }
                 }
                 _ => (0u32, 0u32),
             };
@@ -2720,18 +2735,18 @@ mod pallet {
             Self::on_resolution(market_id, market)
         }
 
-        fn add_auto_resolution(
+        fn add_auto_resolve(
             market_id: &Self::MarketId,
-            future_block: Self::BlockNumber,
+            resolution: Self::BlockNumber,
         ) -> DispatchResult {
-            <MarketIdsPerDisputeBlock<T>>::try_mutate(future_block, |ids| {
+            <MarketIdsPerDisputeBlock<T>>::try_mutate(resolution, |ids| {
                 ids.try_push(*market_id).map_err(|_| <Error<T>>::StorageOverflow)
             })?;
             Ok(())
         }
 
-        fn remove_auto_resolution(market_id: &Self::MarketId, future_block: Self::BlockNumber) {
-            MarketIdsPerDisputeBlock::<T>::mutate(future_block, |ids| {
+        fn remove_auto_resolve(market_id: &Self::MarketId, resolution: Self::BlockNumber) {
+            MarketIdsPerDisputeBlock::<T>::mutate(resolution, |ids| {
                 remove_item::<MarketIdOf<T>, _>(ids, market_id);
             });
         }

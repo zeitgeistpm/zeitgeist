@@ -546,6 +546,18 @@ mod pallet {
             RequestedJurors::<T>::remove_prefix(market_id, None);
             Ok(Some(first))
         }
+
+        fn get_auto_resolve(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+        ) -> Result<Option<Self::BlockNumber>, DispatchError> {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
+                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
+            }
+
+            Ok(None)
+        }
     }
 
     impl<T> CourtPalletApi for Pallet<T> where T: Config {}
