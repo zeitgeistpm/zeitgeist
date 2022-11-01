@@ -2019,7 +2019,17 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
 fn dispute_fails_authority_reported_already() {
     ExtBuilder::default().build().execute_with(|| {
         let end = 2;
-        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+        assert_ok!(PredictionMarkets::create_market(
+            Origin::signed(ALICE),
+            BOB,
+            MarketPeriod::Block(0..end),
+            get_deadlines(),
+            gen_metadata(2),
+            MarketCreation::Permissionless,
+            MarketType::Categorical(<Runtime as Config>::MinCategories::get()),
+            MarketDisputeMechanism::Authorized(FRED),
+            ScoringRule::CPMM,
+        ));
 
         // Run to the end of the trading phase.
         let market = MarketCommons::market(&0).unwrap();
@@ -2035,6 +2045,12 @@ fn dispute_fails_authority_reported_already() {
         let dispute_at = grace_period + 2;
         run_to_block(dispute_at);
 
+        assert_ok!(PredictionMarkets::dispute(
+            Origin::signed(CHARLIE),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+
         assert_ok!(Authorized::authorize_market_outcome(
             Origin::signed(FRED),
             0,
@@ -2042,7 +2058,7 @@ fn dispute_fails_authority_reported_already() {
         ));
 
         assert_noop!(
-            PredictionMarkets::dispute(Origin::signed(CHARLIE), 1, OutcomeReport::Categorical(0)),
+            PredictionMarkets::dispute(Origin::signed(CHARLIE), 0, OutcomeReport::Categorical(1)),
             AuthorizedError::<Runtime>::AuthorityAlreadyReported
         );
     });
@@ -2324,7 +2340,7 @@ fn it_resolves_a_disputed_market_to_default_if_dispute_mechanism_failed() {
         let disputes = crate::Disputes::<Runtime>::get(0);
         assert_eq!(disputes.len(), 3);
 
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(0);
@@ -2901,18 +2917,6 @@ fn authorized_correctly_resolves_disputed_market() {
             OutcomeReport::Categorical(1)
         ));
 
-        // Fred authorizses an outcome, but fat-fingers it on the first try.
-        assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(FRED),
-            0,
-            OutcomeReport::Categorical(0)
-        ));
-        assert_ok!(Authorized::authorize_market_outcome(
-            Origin::signed(FRED),
-            0,
-            OutcomeReport::Categorical(1)
-        ));
-
         let dispute_at_1 = dispute_at_0 + 1;
         run_to_block(dispute_at_1);
         assert_ok!(PredictionMarkets::dispute(
@@ -2924,6 +2928,18 @@ fn authorized_correctly_resolves_disputed_market() {
         run_to_block(dispute_at_2);
         assert_ok!(PredictionMarkets::dispute(
             Origin::signed(EVE),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        // Fred authorizses an outcome, but fat-fingers it on the first try.
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(FRED),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(FRED),
             0,
             OutcomeReport::Categorical(1)
         ));
@@ -2947,21 +2963,21 @@ fn authorized_correctly_resolves_disputed_market() {
 
         // make sure the old mappings of market id per dispute block are erased
         let market_ids_1 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_0 + market.deadlines.dispute_duration,
+            dispute_at_0 + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
         );
         assert_eq!(market_ids_1.len(), 0);
 
         let market_ids_2 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_1 + market.deadlines.dispute_duration,
+            dispute_at_1 + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
         );
         assert_eq!(market_ids_2.len(), 0);
 
         let market_ids_3 = MarketIdsPerDisputeBlock::<Runtime>::get(
-            dispute_at_2 + market.deadlines.dispute_duration,
+            dispute_at_2 + <Runtime as zrml_authorized::Config>::CorrectionPeriod::get(),
         );
         assert_eq!(market_ids_3.len(), 1);
 
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
 
         let market_after = MarketCommons::market(&0).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
@@ -3039,7 +3055,7 @@ fn on_resolution_defaults_to_oracle_report_in_case_of_unresolved_dispute() {
         let charlie_reserved = Balances::reserved_balance(&CHARLIE);
         assert_eq!(charlie_reserved, DisputeBond::get());
 
-        run_blocks(market.deadlines.dispute_duration);
+        run_blocks(<Runtime as zrml_authorized::Config>::CorrectionPeriod::get());
         let market_after = MarketCommons::market(&market_id).unwrap();
         assert_eq!(market_after.status, MarketStatus::Resolved);
         let disputes = crate::Disputes::<Runtime>::get(0);

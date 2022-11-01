@@ -39,7 +39,7 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
             OutcomeReport::Scalar(1)
         ));
         let now = frame_system::Pallet::<Runtime>::block_number();
-        let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+        let resolve_at = Some(now + <Runtime as crate::Config>::CorrectionPeriod::get());
         assert_eq!(
             AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
             AuthorityReport { outcome: OutcomeReport::Scalar(1), resolve_at }
@@ -188,7 +188,7 @@ fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
             OutcomeReport::Scalar(456)
         ));
         let now = frame_system::Pallet::<Runtime>::block_number();
-        let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+        let resolve_at = Some(now + <Runtime as crate::Config>::CorrectionPeriod::get());
         assert_eq!(
             AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
             AuthorityReport { outcome: OutcomeReport::Scalar(123), resolve_at }

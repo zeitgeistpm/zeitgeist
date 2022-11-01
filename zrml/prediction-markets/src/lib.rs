@@ -165,7 +165,7 @@ mod pallet {
 
             let open_ids_len = Self::clear_auto_open(&market_id)?;
             let close_ids_len = Self::clear_auto_close(&market_id)?;
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id, &market)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             T::MarketCommons::remove_market(&market_id)?;
             Disputes::<T>::remove(market_id);
 
@@ -275,7 +275,7 @@ mod pallet {
                 market.status == MarketStatus::Reported || market.status == MarketStatus::Disputed,
                 Error::<T>::InvalidMarketStatus,
             );
-            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id, &market)?;
+            let (ids_len, disputes_len) = Self::clear_auto_resolve(&market_id)?;
             let market = T::MarketCommons::market(&market_id)?;
             let _ = Self::on_resolution(&market_id, &market)?;
             let weight = match market.market_type {
@@ -1842,10 +1842,7 @@ mod pallet {
         }
 
         /// Clears this market from being stored for automatic resolution.
-        fn clear_auto_resolve(
-            market_id: &MarketIdOf<T>,
-            market: &MarketOf<T>,
-        ) -> Result<(u32, u32), DispatchError> {
+        fn clear_auto_resolve(market_id: &MarketIdOf<T>) -> Result<(u32, u32), DispatchError> {
             let market = T::MarketCommons::market(market_id)?;
             let (ids_len, disputes_len) = match market.status {
                 MarketStatus::Reported => {

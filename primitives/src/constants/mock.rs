@@ -11,7 +11,7 @@ use orml_traits::parameter_type_with_key;
 // Authorized
 parameter_types! {
     pub const AuthorizedPalletId: PalletId = PalletId(*b"zge/atzd");
-    pub const CorrectionPeriod: BlockNumber = 2;
+    pub const CorrectionPeriod: BlockNumber = 4;
 }
 
 // Court

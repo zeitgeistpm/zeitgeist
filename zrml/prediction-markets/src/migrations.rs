@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{CacheSize, Config, Disputes, MarketIdOf, Pallet};
+use crate::{CacheSize, Config, Disputes, Pallet};
 use alloc::{vec, vec::Vec};
 use frame_support::{
     dispatch::Weight,
@@ -487,7 +487,8 @@ mod tests {
                 BoundedVec::try_from(vec![dispute.clone()]).unwrap(),
             );
 
-            AuthorizedOutcomeReports::<Runtime>::insert(market_id, OutcomeReport::Scalar(19));
+            let report = AuthorityReport { resolve_at: None, outcome: OutcomeReport::Scalar(19) };
+            AuthorizedOutcomeReports::<Runtime>::insert(market_id, report);
 
             let juror = 20;
             let block_number = 21;
@@ -508,7 +509,7 @@ mod tests {
 
             let authorized_report_after =
                 AuthorizedOutcomeReports::<Runtime>::get(market_id).unwrap();
-            assert_eq!(authorized_report_after, OutcomeReport::Scalar(190_000_000_000));
+            assert_eq!(authorized_report_after.outcome, OutcomeReport::Scalar(190_000_000_000));
 
             let vote_after = Votes::<Runtime>::get(market_id, juror).unwrap();
             assert_eq!(vote_after, (block_number, OutcomeReport::Scalar(220_000_000_000)));
@@ -545,7 +546,8 @@ mod tests {
                 BoundedVec::try_from(vec![dispute.clone()]).unwrap(),
             );
 
-            AuthorizedOutcomeReports::<Runtime>::insert(market_id, OutcomeReport::Scalar(19));
+            let report = AuthorityReport { resolve_at: None, outcome: OutcomeReport::Scalar(19) };
+            AuthorizedOutcomeReports::<Runtime>::insert(market_id, report);
 
             let juror = 20;
             let vote = (21, OutcomeReport::Scalar(22));
@@ -562,7 +564,7 @@ mod tests {
 
             let authorized_report_after =
                 AuthorizedOutcomeReports::<Runtime>::get(market_id).unwrap();
-            assert_eq!(authorized_report_after, OutcomeReport::Scalar(19));
+            assert_eq!(authorized_report_after.outcome, OutcomeReport::Scalar(19));
 
             let vote_after = Votes::<Runtime>::get(market_id, juror).unwrap();
             assert_eq!(vote_after, vote);
