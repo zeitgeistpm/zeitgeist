@@ -86,7 +86,7 @@ pub struct CustomMetadata {
 )]
 pub struct XcmMetadata {
     /// The factor used to determine the fee.
-    /// It is multiplied by the fee that would have been paind in native currency, so it represents
+    /// It is multiplied by the fee that would have been paid in native currency, so it represents
     /// the ratio `native_price / other_asset_price`. It is a fixed point decimal number containing
     /// as many fractional decimals as the asset it is used for contains.
     /// Should be updated regularly.

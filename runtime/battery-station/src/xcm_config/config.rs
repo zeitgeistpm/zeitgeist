@@ -307,6 +307,6 @@ match_types! {
 }
 
 #[inline]
-fn general_key(key: &[u8]) -> Junction {
+pub(crate) fn general_key(key: &[u8]) -> Junction {
     GeneralKey(Vec::from(key))
 }
