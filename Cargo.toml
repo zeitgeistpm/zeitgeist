@@ -48,3 +48,6 @@ resolver = "2"
 [patch."https://github.com/purestake/moonbeam"]
 pallet-author-mapping = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
 parachain-staking = { git = "https://github.com/zeitgeistpm/moonbeam", branch = "downgrade-staking-and-mapping" }
+
+[patch."https://github.com/shaunxw/xcm-simulator"]
+xcm-emulator = { git = "https://github.com/sea212/xcm-simulator", branch = "polkadot-v0.9.19-moonbeam" }

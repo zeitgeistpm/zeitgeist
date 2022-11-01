@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{AccountId, CurrencyId, Runtime, Origin, XcmpQueue, DmpQueue, TreasuryAccount, xcm_config::config::zeitgeist};
+use crate::{AccountId, CurrencyId, Runtime, Origin, XcmpQueue, DmpQueue, parameters::ZeitgeistTreasuryAccount, xcm_config::config::zeitgeist};
 use cumulus_primitives_core::ParaId;
 use frame_support::{traits::GenesisBuild, weights::Weight};
 use polkadot_primitives::v2::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
@@ -23,7 +23,7 @@ use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
-use super::setup::{ztg, ksm, sibling, ExtBuilder, ALICE, BOB, PARA_ID_SIBLING};
+use super::setup::{ztg, ksm, sibling, ExtBuilder, ALICE, BOB, PARA_ID_SIBLING, FOREIGN_KSM};
 
 decl_test_relay_chain! {
 	pub struct KusamaNet {
@@ -79,11 +79,11 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 		balances: vec![
 			(AccountId::from(ALICE), ksm(2002)),
 			(
-				ParaId::from(zeitgeist::ID).into_account_truncating(),
+				ParaId::from(zeitgeist::ID).into_account(),
 				ztg(7),
 			),
 			(
-				ParaId::from(PARA_ID_SIBLING).into_account_truncating(),
+				ParaId::from(PARA_ID_SIBLING).into_account(),
 				sibling(7),
 			),
 		],
@@ -115,10 +115,10 @@ pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 		.balances(vec![
 			(AccountId::from(ALICE), CurrencyId::Ztg, ztg(10)),
 			(AccountId::from(BOB), CurrencyId::Ztg, ztg(10)),
-			(AccountId::from(ALICE), CurrencyId::ForeignAsset(FOREIGN_KSM), ksm(10)),
+			(AccountId::from(ALICE), FOREIGN_KSM, ksm(10)),
 			(
-				TreasuryAccount::get(),
-				CurrencyId::ForeignAsset(FOREIGN_KSM),
+				ZeitgeistTreasuryAccount::get(),
+				FOREIGN_KSM,
 				ksm(1),
 			),
 		])
@@ -141,7 +141,7 @@ fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 		max_upward_queue_count: 8,
 		max_upward_queue_size: 1024 * 1024,
 		max_downward_message_size: 1024,
-		ump_service_total_weight: Weight::from_ref_time(4 * 1_000_000_000),
+		ump_service_total_weight: Weight::from(4 * 1_000_000_000u32),
 		max_upward_message_size: 50 * 1024,
 		max_upward_message_num_per_candidate: 5,
 		hrmp_sender_deposit: 0,

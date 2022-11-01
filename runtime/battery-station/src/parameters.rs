@@ -286,7 +286,7 @@ parameter_types! {
     /// Period between successive spends.
     pub const SpendPeriod: BlockNumber = 24 * BLOCKS_PER_DAY;
     /// Pallet identifier, mainly used for named balance reserves.
-    pub const TreasuryPalletId: PalletId = PalletId(*b"zge/tsry");
+    pub const TreasuryPalletId: PalletId = TREASURY_PALLET_ID;
     /// Treasury account.
     pub ZeitgeistTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 

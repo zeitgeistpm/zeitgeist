@@ -31,7 +31,7 @@ pub const PARA_ID_SIBLING: u32 = 3000;
 
 /// IDs that are used to represent tokens from other chains
 pub const FOREIGN_ZTG: Asset<u128> = CurrencyId::ForeignAsset(0);
-pub const FOREIGN_KSM: Asset<u128> = CurrencyId::ForeigAsset(1);
+pub const FOREIGN_KSM: Asset<u128> = CurrencyId::ForeignAsset(1);
 pub const FOREIGN_SIBLING: Asset<u128> = CurrencyId::ForeignAsset(2);
 
 
@@ -140,5 +140,5 @@ pub fn zeitgeist_account() -> AccountId {
 fn parachain_account(id: u32) -> AccountId {
 	use sp_runtime::traits::AccountIdConversion;
 
-	polkadot_parachain::primitives::Sibling::from(id).into_account_truncating()
+	polkadot_parachain::primitives::Sibling::from(id).into_account()
 }

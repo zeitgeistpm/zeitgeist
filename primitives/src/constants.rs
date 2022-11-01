@@ -85,3 +85,8 @@ pub const SD_PALLET_ID: PalletId = PalletId(*b"zge/sedp");
 pub const MAX_ASSETS: u16 = MAX_CATEGORIES + 1;
 /// Pallet identifier, mainly used for named balance reserves.
 pub const SWAPS_PALLET_ID: PalletId = PalletId(*b"zge/swap");
+
+
+// Treasury
+/// Pallet identifier, used to derive treasury account
+pub const TREASURY_PALLET_ID: PalletId = PalletId(*b"zge/swap");
