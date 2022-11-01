@@ -15,23 +15,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Config, Disputes, Pallet};
+use crate::{CacheSize, Config, Disputes, MarketIdOf, Pallet};
 use alloc::{vec, vec::Vec};
 use frame_support::{
     dispatch::Weight,
     log,
+    migration::{put_storage_value, storage_iter},
     pallet_prelude::PhantomData,
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec,
 };
-use frame_support::migration::storage_iter;
-use frame_support::migration::put_storage_value;
 use parity_scale_codec::EncodeLike;
 use zeitgeist_primitives::{
     constants::BASE,
-    types::{MarketType, OutcomeReport},
+    types::{AuthorityReport, MarketDisputeMechanism, MarketType, OutcomeReport},
 };
-use zeitgeist_primitives::types::AuthorityReport;
 use zrml_authorized::{AuthorizedOutcomeReports, Pallet as AuthorizedPallet};
 use zrml_court::{Pallet as CourtPallet, Votes};
 use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
@@ -39,15 +37,27 @@ use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet}
 const AUTHORIZED: &[u8] = b"Authorized";
 const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
 
+const PREDICTION_MARKETS: &[u8] = b"PredictionMarkets";
+const MARKET_IDS_PER_DISPUTE_BLOCK: &[u8] = b"MarketIdsPerDisputeBlock";
+
+const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
+const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
+const COURT_REQUIRED_STORAGE_VERSION: u16 = 1;
+const COURT_NEXT_STORAGE_VERSION: u16 = 2;
+const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2;
+const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3;
+const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
+const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
+
 pub struct AddFieldToAuthorityReport<T>(PhantomData<T>);
 
-// Add resolve_at block number value field to `AuthorizedOutcomeReports` map. 
-impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config>
-    OnRuntimeUpgrade for AddFieldToAuthorityReport<T>
+// Add resolve_at block number value field to `AuthorizedOutcomeReports` map.
+impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade
+    for AddFieldToAuthorityReport<T>
 where
     <T as zrml_market_commons::Config>::MarketId: EncodeLike<
         <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
-    >
+    >,
 {
     fn on_runtime_upgrade() -> Weight
     where
@@ -55,10 +65,9 @@ where
     {
         let mut total_weight = T::DbWeight::get().reads(1);
         let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
-        if authorized_version != AUTHORIZED_REQUIRED_STORAGE_VERSION
-        {
+        if authorized_version != AUTHORIZED_REQUIRED_STORAGE_VERSION {
             log::info!(
-                "AddFieldToAuthorityReport: authorized version is {:?}, require {:?};
+                "AddFieldToAuthorityReport: authorized version is {:?}, require {:?};",
                 authorized_version,
                 AUTHORIZED_REQUIRED_STORAGE_VERSION,
             );
@@ -66,7 +75,9 @@ where
         }
         log::info!("AddFieldToAuthorityReport: Starting...");
 
-        for (key, value) in storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS) {
+        for (key, value) in
+            storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
+        {
             if let Some(old_value) = value {
                 let resolve_at: Option<T::BlockNumber> = None;
                 let new_value = AuthorityReport { resolve_at, outcome: old_value };
@@ -99,16 +110,72 @@ where
     }
 }
 
-// TODO: Storage Migration: Delete the auto resolution of authorized and court from `MarketIdsPerDisputeBlock`
+pub struct UpdateMarketIdsPerDisputeBlock<T>(PhantomData<T>);
 
-const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
-const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
-const COURT_REQUIRED_STORAGE_VERSION: u16 = 1;
-const COURT_NEXT_STORAGE_VERSION: u16 = 2;
-const MARKET_COMMONS_REQUIRED_STORAGE_VERSION: u16 = 2;
-const MARKET_COMMONS_NEXT_STORAGE_VERSION: u16 = 3;
-const PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION: u16 = 5;
-const PREDICTION_MARKETS_NEXT_STORAGE_VERSION: u16 = 6;
+// Delete the auto resolution of authorized and court from `MarketIdsPerDisputeBlock`
+impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for UpdateMarketIdsPerDisputeBlock<T>
+where
+    <T as zrml_market_commons::Config>::MarketId:
+        EncodeLike<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+{
+    fn on_runtime_upgrade() -> Weight
+    where
+        T: Config,
+    {
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let prediction_markets_version = StorageVersion::get::<Pallet<T>>();
+        if prediction_markets_version != PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION {
+            log::info!(
+                "prediction-markets version is {:?}, require {:?}",
+                prediction_markets_version,
+                PREDICTION_MARKETS_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("UpdateMarketIdsPerDisputeBlock: Starting...");
+
+        for (key, mut bounded_vec) in storage_iter::<
+            BoundedVec<<T as zrml_market_commons::Config>::MarketId, CacheSize>,
+        >(PREDICTION_MARKETS, MARKET_IDS_PER_DISPUTE_BLOCK)
+        {
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+            bounded_vec.retain(|id| {
+                if let Ok(market) = MarketCommonsPallet::<T>::market(id) {
+                    match market.dispute_mechanism {
+                        MarketDisputeMechanism::Authorized(_) => false,
+                        MarketDisputeMechanism::Court => false,
+                        MarketDisputeMechanism::SimpleDisputes => true,
+                    }
+                } else {
+                    false
+                }
+            });
+            put_storage_value::<BoundedVec<<T as zrml_market_commons::Config>::MarketId, CacheSize>>(
+                PREDICTION_MARKETS,
+                MARKET_IDS_PER_DISPUTE_BLOCK,
+                &key,
+                bounded_vec,
+            );
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        }
+
+        StorageVersion::new(PREDICTION_MARKETS_NEXT_STORAGE_VERSION).put::<Pallet<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("UpdateMarketIdsPerDisputeBlock: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        Ok(())
+    }
+}
 
 pub struct TransformScalarMarketsToFixedPoint<T>(PhantomData<T>);
 
