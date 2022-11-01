@@ -222,6 +222,7 @@ impl zrml_authorized::Config for Runtime {
 
 impl zrml_court::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
+    type DisputeResolution = prediction_markets::Pallet<Runtime>;
     type Event = Event;
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;

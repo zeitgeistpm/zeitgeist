@@ -64,7 +64,7 @@ mod pallet {
         ArithmeticError, DispatchError, SaturatedConversion,
     };
     use zeitgeist_primitives::{
-        traits::DisputeApi,
+        traits::{DisputeApi, DisputeResolutionApi},
         types::{Market, MarketDispute, MarketDisputeMechanism, OutcomeReport},
     };
     use zrml_market_commons::MarketCommonsPalletApi;
@@ -143,6 +143,13 @@ mod pallet {
         /// Block duration to cast a vote on an outcome.
         #[pallet::constant]
         type CourtCaseDuration: Get<Self::BlockNumber>;
+
+        type DisputeResolution: DisputeResolutionApi<
+            AccountId = Self::AccountId,
+            BlockNumber = Self::BlockNumber,
+            MarketId = MarketIdOf<Self>,
+            Moment = MomentOf<Self>,
+        >;
 
         /// Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;

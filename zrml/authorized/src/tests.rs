@@ -25,7 +25,7 @@ use crate::{
 use frame_support::{assert_noop, assert_ok};
 use zeitgeist_primitives::{
     traits::DisputeApi,
-    types::{MarketDisputeMechanism, MarketStatus, OutcomeReport},
+    types::{AuthorityReport, MarketDisputeMechanism, MarketStatus, OutcomeReport},
 };
 use zrml_market_commons::Markets;
 
@@ -38,7 +38,12 @@ fn authorize_market_outcome_inserts_a_new_outcome() {
             0,
             OutcomeReport::Scalar(1)
         ));
-        assert_eq!(AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(), OutcomeReport::Scalar(1));
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
+        assert_eq!(
+            AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
+            AuthorityReport { outcome: OutcomeReport::Scalar(1), at: resolve_at }
+        );
     });
 }
 
@@ -182,13 +187,15 @@ fn authorize_market_outcome_allows_using_same_account_on_multiple_markets() {
             1,
             OutcomeReport::Scalar(456)
         ));
+        let now = frame_system::Pallet::<Runtime>::block_number();
+        let resolve_at = now + <Runtime as crate::Config>::CorrectionPeriod::get();
         assert_eq!(
             AuthorizedOutcomeReports::<Runtime>::get(0).unwrap(),
-            OutcomeReport::Scalar(123)
+            AuthorityReport { outcome: OutcomeReport::Scalar(123), at: resolve_at }
         );
         assert_eq!(
             AuthorizedOutcomeReports::<Runtime>::get(1).unwrap(),
-            OutcomeReport::Scalar(456)
+            AuthorityReport { outcome: OutcomeReport::Scalar(456), at: resolve_at }
         );
     });
 }

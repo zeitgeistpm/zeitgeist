@@ -220,7 +220,7 @@ mod pallet {
 
     impl<T> AuthorizedPalletApi for Pallet<T> where T: Config {}
 
-    // TODO storage migration from OutcomeReport to Report
+    // TODO storage migration from OutcomeReport to AuthorityReport
     /// Maps the market id to the outcome reported by the authorized account.    
     #[pallet::storage]
     #[pallet::getter(fn outcomes)]

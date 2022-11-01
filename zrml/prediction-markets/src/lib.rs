@@ -1694,6 +1694,8 @@ mod pallet {
     #[pallet::storage]
     pub type LastTimeFrame<T: Config> = StorageValue<_, TimeFrame>;
 
+    // TODO storage migration: delete Court and Authorized markets from here,
+    // TODO simple disputes is okay as it is
     /// A mapping of market identifiers to the block they were disputed at.
     /// A market only ends up here if it was disputed.
     #[pallet::storage]

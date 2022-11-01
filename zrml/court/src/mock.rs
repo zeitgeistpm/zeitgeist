@@ -18,7 +18,9 @@
 #![cfg(test)]
 
 use crate::{self as zrml_court};
-use frame_support::{construct_runtime, parameter_types, traits::Everything, PalletId};
+use frame_support::{
+    construct_runtime, pallet_prelude::DispatchError, parameter_types, traits::Everything, PalletId,
+};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -28,8 +30,9 @@ use zeitgeist_primitives::{
         BlockHashCount, CourtCaseDuration, CourtPalletId, MaxReserves, MinimumPeriod, StakeWeight,
         BASE,
     },
+    traits::DisputeResolutionApi,
     types::{
-        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, MarketId, Moment,
+        AccountIdTest, Balance, BlockNumber, BlockTest, Hash, Index, Market, MarketId, Moment,
         UncheckedExtrinsicTest,
     },
 };
@@ -59,8 +62,35 @@ construct_runtime!(
     }
 );
 
+// NoopResolution implements DisputeResolutionApi with no-ops.
+pub struct NoopResolution;
+
+impl DisputeResolutionApi for NoopResolution {
+    type AccountId = AccountIdTest;
+    type BlockNumber = BlockNumber;
+    type MarketId = MarketId;
+    type Moment = Moment;
+
+    fn resolve(
+        _market_id: &Self::MarketId,
+        _market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+    ) -> Result<u64, DispatchError> {
+        Ok(0)
+    }
+
+    fn add_auto_resolve(
+        _market_id: &Self::MarketId,
+        _resolution: Self::BlockNumber,
+    ) -> frame_support::pallet_prelude::DispatchResult {
+        Ok(())
+    }
+
+    fn remove_auto_resolve(_market_id: &Self::MarketId, _resolution: Self::BlockNumber) {}
+}
+
 impl crate::Config for Runtime {
     type CourtCaseDuration = CourtCaseDuration;
+    type DisputeResolution = NoopResolution;
     type Event = ();
     type MarketCommons = MarketCommons;
     type PalletId = CourtPalletId;
