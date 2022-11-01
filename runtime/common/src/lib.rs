@@ -958,7 +958,7 @@ macro_rules! impl_config_traits {
             type PalletId = PmPalletId;
             type RejectOrigin = EnsureRootOrHalfAdvisoryCommittee;
             type ReportingPeriod = ReportingPeriod;
-            type RequestEditOrigin = EnsureOneOf<
+            type RequestEditOrigin = EitherOfDiverse<
                 EnsureRoot<AccountId>,
                 pallet_collective::EnsureMember<AccountId, AdvisoryCommitteeInstance>,
             >;
