@@ -217,7 +217,7 @@ pub struct Report<AccountId, BlockNumber> {
 
 #[derive(Clone, Decode, Encode, Eq, MaxEncodedLen, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct AuthorityReport<BlockNumber> {
-    pub at: BlockNumber,
+    pub resolve_at: Option<BlockNumber>,
     pub outcome: OutcomeReport,
 }
 

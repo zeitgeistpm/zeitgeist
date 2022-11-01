@@ -90,7 +90,7 @@ mod pallet {
             let correction_period_ends_at = now.saturating_add(T::CorrectionPeriod::get());
             T::DisputeResolution::add_auto_resolve(&market_id, correction_period_ends_at)?;
 
-            let report = AuthorityReport { at: correction_period_ends_at, outcome };
+            let report = AuthorityReport { resolve_at: Some(correction_period_ends_at), outcome };
             AuthorizedOutcomeReports::<T>::insert(market_id, report);
 
             Ok(())
@@ -137,6 +137,8 @@ mod pallet {
         MarketIsNotDisputed,
         /// The report does not match the market's type.
         OutcomeMismatch,
+        /// The authority already made its report.
+        AuthorityAlreadyReported,
     }
 
     #[pallet::event]
@@ -156,12 +158,12 @@ mod pallet {
         T: Config,
     {
         fn get_auto_resolve(market_id: &MarketIdOf<T>) -> Option<T::BlockNumber> {
-            AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.at)
+            AuthorizedOutcomeReports::<T>::get(market_id).map(|report| report.resolve_at).flatten()
         }
 
         fn remove_auto_resolve(market_id: &MarketIdOf<T>) {
-            Self::get_auto_resolve(market_id).map(|at| {
-                T::DisputeResolution::remove_auto_resolve(&market_id, at);
+            Self::get_auto_resolve(market_id).map(|resolve_at| {
+                T::DisputeResolution::remove_auto_resolve(&market_id, resolve_at);
             });
         }
     }
@@ -179,10 +181,13 @@ mod pallet {
 
         fn on_dispute(
             _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
-            _: &Self::MarketId,
+            market_id: &Self::MarketId,
             market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
         ) -> DispatchResult {
             if let MarketDisputeMechanism::Authorized(_) = market.dispute_mechanism {
+                if AuthorizedOutcomeReports::<T>::get(market_id).is_some() {
+                    return Err(Error::<T>::AuthorityAlreadyReported.into());
+                }
                 Ok(())
             } else {
                 Err(Error::<T>::MarketDoesNotHaveDisputeMechanismAuthorized.into())

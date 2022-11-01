@@ -41,6 +41,7 @@ use zeitgeist_primitives::{
         ScalarPosition, ScoringRule,
     },
 };
+use zrml_authorized::Error as AuthorizedError;
 use zrml_market_commons::MarketCommonsPalletApi;
 use zrml_swaps::Pools;
 
@@ -2011,6 +2012,39 @@ fn it_allows_to_dispute_the_outcome_of_a_market() {
         let market_ids = MarketIdsPerDisputeBlock::<Runtime>::get(dispute_ends_at);
         assert_eq!(market_ids.len(), 1);
         assert_eq!(market_ids[0], 0);
+    });
+}
+
+#[test]
+fn dispute_fails_authority_reported_already() {
+    ExtBuilder::default().build().execute_with(|| {
+        let end = 2;
+        simple_create_categorical_market(MarketCreation::Permissionless, 0..end, ScoringRule::CPMM);
+
+        // Run to the end of the trading phase.
+        let market = MarketCommons::market(&0).unwrap();
+        let grace_period = end + market.deadlines.grace_period;
+        run_to_block(grace_period + 1);
+
+        assert_ok!(PredictionMarkets::report(
+            Origin::signed(BOB),
+            0,
+            OutcomeReport::Categorical(1)
+        ));
+
+        let dispute_at = grace_period + 2;
+        run_to_block(dispute_at);
+
+        assert_ok!(Authorized::authorize_market_outcome(
+            Origin::signed(FRED),
+            0,
+            OutcomeReport::Categorical(0)
+        ));
+
+        assert_noop!(
+            PredictionMarkets::dispute(Origin::signed(CHARLIE), 1, OutcomeReport::Categorical(0)),
+            AuthorizedError::<Runtime>::AuthorityAlreadyReported
+        );
     });
 }
 

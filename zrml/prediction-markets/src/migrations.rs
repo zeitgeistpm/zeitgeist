@@ -24,14 +24,82 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec,
 };
+use frame_support::migration::storage_iter;
+use frame_support::migration::put_storage_value;
 use parity_scale_codec::EncodeLike;
 use zeitgeist_primitives::{
     constants::BASE,
     types::{MarketType, OutcomeReport},
 };
+use zeitgeist_primitives::types::AuthorityReport;
 use zrml_authorized::{AuthorizedOutcomeReports, Pallet as AuthorizedPallet};
 use zrml_court::{Pallet as CourtPallet, Votes};
 use zrml_market_commons::{MarketCommonsPalletApi, Pallet as MarketCommonsPallet};
+
+const AUTHORIZED: &[u8] = b"Authorized";
+const AUTHORIZED_OUTCOME_REPORTS: &[u8] = b"AuthorizedOutcomeReports";
+
+pub struct AddFieldToAuthorityReport<T>(PhantomData<T>);
+
+// Add resolve_at block number value field to `AuthorizedOutcomeReports` map. 
+impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config>
+    OnRuntimeUpgrade for AddFieldToAuthorityReport<T>
+where
+    <T as zrml_market_commons::Config>::MarketId: EncodeLike<
+        <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+    >
+{
+    fn on_runtime_upgrade() -> Weight
+    where
+        T: Config,
+    {
+        let mut total_weight = T::DbWeight::get().reads(1);
+        let authorized_version = StorageVersion::get::<AuthorizedPallet<T>>();
+        if authorized_version != AUTHORIZED_REQUIRED_STORAGE_VERSION
+        {
+            log::info!(
+                "AddFieldToAuthorityReport: authorized version is {:?}, require {:?};
+                authorized_version,
+                AUTHORIZED_REQUIRED_STORAGE_VERSION,
+            );
+            return total_weight;
+        }
+        log::info!("AddFieldToAuthorityReport: Starting...");
+
+        for (key, value) in storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS) {
+            if let Some(old_value) = value {
+                let resolve_at: Option<T::BlockNumber> = None;
+                let new_value = AuthorityReport { resolve_at, outcome: old_value };
+                put_storage_value::<Option<AuthorityReport<T::BlockNumber>>>(
+                    AUTHORIZED,
+                    AUTHORIZED_OUTCOME_REPORTS,
+                    &key,
+                    Some(new_value),
+                );
+                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+            }
+
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+        }
+
+        StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<T>>();
+        total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        log::info!("AddFieldToAuthorityReport: Done!");
+        total_weight
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        Ok(())
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        Ok(())
+    }
+}
+
+// TODO: Storage Migration: Delete the auto resolution of authorized and court from `MarketIdsPerDisputeBlock`
 
 const AUTHORIZED_REQUIRED_STORAGE_VERSION: u16 = 1;
 const AUTHORIZED_NEXT_STORAGE_VERSION: u16 = 2;
@@ -133,9 +201,9 @@ where
 
                 let authorized_report = match AuthorizedOutcomeReports::<T>::get(market_id) {
                     Some(mut outcome_report) => {
-                        if let OutcomeReport::Scalar(value) = outcome_report {
-                            outcome_report = OutcomeReport::Scalar(to_fixed_point(value));
-                        };
+                        if let OutcomeReport::Scalar(value) = outcome_report.outcome {
+                            outcome_report.outcome = OutcomeReport::Scalar(to_fixed_point(value));
+                        }
                         Some(outcome_report)
                     }
                     None => None,
