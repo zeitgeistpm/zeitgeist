@@ -152,13 +152,10 @@ impl<T: Config> OnRuntimeUpgrade for UpdateMarketsForAuthorizedMDM<T> {
             assert_eq!(updated_market.creator_fee, legacy_market.creator_fee);
             assert_eq!(updated_market.oracle, legacy_market.oracle);
             assert_eq!(updated_market.metadata, legacy_market.metadata);
-            match legacy_market.market_type {
-                MarketType::Categorical(_) => {
-                    assert_eq!(updated_market.market_type, legacy_market.market_type);
-                    assert_eq!(updated_market.report, legacy_market.report);
-                    assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
-                }
-                _ => (),
+            if let MarketType::Categorical(_) = legacy_market.market_type {
+                assert_eq!(updated_market.market_type, legacy_market.market_type);
+                assert_eq!(updated_market.report, legacy_market.report);
+                assert_eq!(updated_market.resolved_outcome, legacy_market.resolved_outcome);
             };
             assert_eq!(updated_market.period, legacy_market.period);
             assert_eq!(updated_market.deadlines, legacy_market.deadlines);
