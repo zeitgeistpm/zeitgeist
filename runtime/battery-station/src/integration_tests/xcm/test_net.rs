@@ -28,7 +28,7 @@ use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
 use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
-use super::setup::{ksm, sibling, ztg, ExtBuilder, ALICE, BOB, FOREIGN_KSM_ID, PARA_ID_SIBLING};
+use super::setup::{ksm, sibling, ztg, ExtBuilder, ALICE, BOB, FOREIGN_PARENT_ID, PARA_ID_SIBLING};
 
 decl_test_relay_chain! {
     pub struct KusamaNet {
@@ -73,7 +73,7 @@ decl_test_network! {
     }
 }
 
-pub fn relay_ext() -> sp_io::TestExternalities {
+pub(super) fn relay_ext() -> sp_io::TestExternalities {
     use kusama_runtime::{Runtime, System};
 
     let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
@@ -105,15 +105,13 @@ pub fn relay_ext() -> sp_io::TestExternalities {
     ext
 }
 
-pub fn para_ext(
-    parachain_id: u32,
-) -> sp_io::TestExternalities {
+pub(super) fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
     ExtBuilder::default()
         .balances(vec![
             (AccountId::from(ALICE), CurrencyId::Ztg, ztg(10)),
             (AccountId::from(BOB), CurrencyId::Ztg, ztg(10)),
-            (AccountId::from(ALICE), FOREIGN_KSM_ID, ksm(10)),
-            (ZeitgeistTreasuryAccount::get(), FOREIGN_KSM_ID, ksm(1)),
+            (AccountId::from(ALICE), FOREIGN_PARENT_ID, ksm(10)),
+            (ZeitgeistTreasuryAccount::get(), FOREIGN_PARENT_ID, ksm(1)),
         ])
         .parachain_id(parachain_id)
         .build()

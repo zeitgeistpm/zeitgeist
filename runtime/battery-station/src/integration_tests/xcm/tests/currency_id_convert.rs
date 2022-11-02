@@ -19,8 +19,10 @@
 use crate::{
     integration_tests::xcm::{
         setup::{
-            foreign, ksm, sibling, sibling_account, zeitgeist_account, ztg, ALICE, BOB,
-            PARA_ID_SIBLING, FOREIGN_KSM_ID,
+            foreign, foreign_parent_multilocation, foreign_sibling_multilocation, ksm,
+            register_foreign_parent, register_foreign_sibling, sibling, sibling_account,
+            zeitgeist_account, ztg, ALICE, BOB, FOREIGN_PARENT_ID, FOREIGN_SIBLING_ID,
+            PARA_ID_SIBLING,
         },
         test_net::{KusamaNet, Sibling, TestNet, Zeitgeist},
     },
@@ -32,17 +34,16 @@ use crate::{
     AssetRegistry, Balance, Balances, CurrencyId, Origin, Tokens, XTokens,
 };
 
-use frame_support::assert_ok;
+use frame_support::{assert_err, assert_ok};
 use orml_traits::{asset_registry::AssetMetadata, FixedConversionRateProvider, MultiCurrency};
 use parity_scale_codec::Encode;
 use sp_runtime::traits::Convert as C2;
 use xcm::{
-	latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId},
-	VersionedMultiLocation,
+    latest::{Junction, Junction::*, Junctions::*, MultiLocation, NetworkId},
+    VersionedMultiLocation,
 };
 use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert as C1;
-
 
 #[test]
 fn convert_native() {
@@ -54,47 +55,65 @@ fn convert_native() {
     assert_eq!(<AssetConvert as C1<_, _>>::convert(ztg_location_inner), Ok(CurrencyId::Ztg),);
 
     // The canonical way Ztg is represented out in the wild
-    let air_location_canonical: MultiLocation =
+    let ztg_location_canonical: MultiLocation =
         MultiLocation::new(1, X2(Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)));
 
+    // TODO USE variable
     Zeitgeist::execute_with(|| {
         assert_eq!(
             <AssetConvert as C2<_, _>>::convert(CurrencyId::Ztg),
-            Some(air_location_canonical)
+            Some(ztg_location_canonical)
         )
     });
 }
 
 #[test]
-fn convert_any_registered_multilocation() {
-    let ksm_location: MultiLocation = MultiLocation::parent().into();
-
+fn convert_any_registered_parent_multilocation() {
     Zeitgeist::execute_with(|| {
-        // Register KSM as foreign asset in the sibling parachain
-        let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
-            decimals: 12,
-            name: "Kusama".into(),
-            symbol: "KSM".into(),
-            existential_deposit: 10_000_000_000,
-            location: Some(VersionedMultiLocation::V1(ksm_location.clone())),
-            additional: CustomMetadata::default(),
-        };
+        assert_err!(
+            <AssetConvert as C1<_, _>>::convert(foreign_parent_multilocation()),
+            foreign_parent_multilocation()
+        );
 
-        assert_ok!(AssetRegistry::register_asset(
-            Origin::root(),
-            meta,
-            Some(FOREIGN_KSM_ID)
-        ));
+        assert_eq!(<AssetConvert as C2<_, _>>::convert(FOREIGN_PARENT_ID), None,);
+
+        // Register parent as foreign asset in the Zeitgeist parachain
+        register_foreign_parent(None);
 
         assert_eq!(
-            <AssetConvert as C1<_, _>>::convert(ksm_location.clone()),
-            Ok(FOREIGN_KSM_ID),
+            <AssetConvert as C1<_, _>>::convert(foreign_parent_multilocation()),
+            Ok(FOREIGN_PARENT_ID),
         );
 
         assert_eq!(
-            <AssetConvert as C2<_, _>>::convert(FOREIGN_KSM_ID),
-            Some(ksm_location)
-        )
+            <AssetConvert as C2<_, _>>::convert(FOREIGN_PARENT_ID),
+            Some(foreign_parent_multilocation())
+        );
+    });
+}
+
+#[test]
+fn convert_any_registered_sibling_multilocation() {
+    Zeitgeist::execute_with(|| {
+        assert_err!(
+            <AssetConvert as C1<_, _>>::convert(foreign_sibling_multilocation()),
+            foreign_sibling_multilocation()
+        );
+
+        assert_eq!(<AssetConvert as C2<_, _>>::convert(FOREIGN_SIBLING_ID), None,);
+
+        // Register parent as foreign asset in the Zeitgeist parachain
+        register_foreign_sibling(None);
+
+        assert_eq!(
+            <AssetConvert as C1<_, _>>::convert(foreign_sibling_multilocation()),
+            Ok(FOREIGN_SIBLING_ID),
+        );
+
+        assert_eq!(
+            <AssetConvert as C2<_, _>>::convert(FOREIGN_SIBLING_ID),
+            Some(foreign_sibling_multilocation())
+        );
     });
 }
 

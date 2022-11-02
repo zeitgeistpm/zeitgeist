@@ -17,27 +17,21 @@
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
 use crate::{
-    xcm_config::{asset_registry::CustomMetadata, config::zeitgeist},
-    AccountId, Balance, CurrencyId, Origin, Runtime, System,
+    xcm_config::{
+        asset_registry::CustomMetadata,
+        config::{general_key, zeitgeist},
+    },
+    AccountId, AssetRegistry, Balance, CurrencyId, Origin, Runtime, System,
 };
-use frame_support::traits::GenesisBuild;
+use frame_support::{assert_ok, traits::GenesisBuild};
 use orml_traits::asset_registry::AssetMetadata;
+use xcm::{
+    latest::{Junction::Parachain, Junctions::X2, MultiLocation},
+    VersionedMultiLocation,
+};
 use zeitgeist_primitives::types::Asset;
 
-/// Accounts
-pub const ALICE: [u8; 32] = [4u8; 32];
-pub const BOB: [u8; 32] = [5u8; 32];
-
-/// A PARA ID used for a sibling parachain.
-/// It must be one that doesn't collide with any other in use.
-pub const PARA_ID_SIBLING: u32 = 3000;
-
-/// IDs that are used to represent tokens from other chains
-pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
-pub const FOREIGN_KSM_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
-pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
-
-pub struct ExtBuilder {
+pub(super) struct ExtBuilder {
     balances: Vec<(AccountId, CurrencyId, Balance)>,
     parachain_id: u32,
 }
@@ -102,34 +96,113 @@ impl ExtBuilder {
     }
 }
 
-pub fn ztg(amount: Balance) -> Balance {
+/// Accounts
+pub const ALICE: [u8; 32] = [4u8; 32];
+pub const BOB: [u8; 32] = [5u8; 32];
+
+/// A PARA ID used for a sibling parachain.
+/// It must be one that doesn't collide with any other in use.
+pub const PARA_ID_SIBLING: u32 = 3000;
+
+/// IDs that are used to represent tokens from other chains
+pub const FOREIGN_ZTG_ID: Asset<u128> = CurrencyId::ForeignAsset(0);
+pub const FOREIGN_PARENT_ID: Asset<u128> = CurrencyId::ForeignAsset(1);
+pub const FOREIGN_SIBLING_ID: Asset<u128> = CurrencyId::ForeignAsset(2);
+
+// Multilocations that are used to represent tokens from other chains
+#[inline]
+pub(super) fn foreign_ztg_multilocation() -> MultiLocation {
+    MultiLocation::new(1, X2(Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)))
+}
+
+#[inline]
+pub(super) fn foreign_sibling_multilocation() -> MultiLocation {
+    MultiLocation::new(1, X2(Parachain(PARA_ID_SIBLING), general_key(zeitgeist::KEY)))
+}
+
+#[inline]
+pub(super) fn foreign_parent_multilocation() -> MultiLocation {
+    MultiLocation::parent()
+}
+
+pub(super) fn register_foreign_ztg(additional_meta: Option<CustomMetadata>) {
+    // Register ZTG as foreign asset.
+    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+        decimals: 10,
+        name: "Zeitgeist".into(),
+        symbol: "ZTG".into(),
+        existential_deposit: 500_000_000, // 0.05
+        location: Some(VersionedMultiLocation::V1(foreign_ztg_multilocation())),
+        additional: additional_meta.unwrap_or_default(),
+    };
+
+    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_ZTG_ID)));
+}
+
+pub(super) fn register_foreign_sibling(additional_meta: Option<CustomMetadata>) {
+    // Register native Sibling token as foreign asset.
+    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+        decimals: 10,
+        name: "Sibling".into(),
+        symbol: "SBL".into(),
+        existential_deposit: 500_000_000, // 0.05
+        location: Some(VersionedMultiLocation::V1(foreign_sibling_multilocation())),
+        additional: additional_meta.unwrap_or_default(),
+    };
+
+    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_SIBLING_ID)));
+}
+
+pub(super) fn register_foreign_parent(additional_meta: Option<CustomMetadata>) {
+    // Register KSM as foreign asset in the sibling parachain
+    let meta: AssetMetadata<Balance, CustomMetadata> = AssetMetadata {
+        decimals: 12,
+        name: "Kusama".into(),
+        symbol: "KSM".into(),
+        existential_deposit: 10_000_000_000, // 0.01
+        location: Some(VersionedMultiLocation::V1(foreign_parent_multilocation())),
+        additional: additional_meta.unwrap_or_default(),
+    };
+
+    assert_ok!(AssetRegistry::register_asset(Origin::root(), meta, Some(FOREIGN_PARENT_ID)));
+}
+
+#[inline]
+pub(super) fn ztg(amount: Balance) -> Balance {
     amount * dollar(10)
 }
 
-pub fn sibling(amount: Balance) -> Balance {
+#[inline]
+pub(super) fn sibling(amount: Balance) -> Balance {
     foreign(amount, 10)
 }
 
-pub fn ksm(amount: Balance) -> Balance {
+#[inline]
+pub(super) fn ksm(amount: Balance) -> Balance {
     foreign(amount, 12)
 }
 
-pub fn foreign(amount: Balance, decimals: u32) -> Balance {
+#[inline]
+pub(super) fn foreign(amount: Balance, decimals: u32) -> Balance {
     amount * dollar(decimals)
 }
 
-pub fn dollar(decimals: u32) -> Balance {
+#[inline]
+pub(super) fn dollar(decimals: u32) -> Balance {
     10u128.saturating_pow(decimals.into())
 }
 
-pub fn sibling_account() -> AccountId {
+#[inline]
+pub(super) fn sibling_account() -> AccountId {
     parachain_account(PARA_ID_SIBLING.into())
 }
 
-pub fn zeitgeist_account() -> AccountId {
+#[inline]
+pub(super) fn zeitgeist_account() -> AccountId {
     parachain_account(zeitgeist::ID)
 }
 
+#[inline]
 fn parachain_account(id: u32) -> AccountId {
     use sp_runtime::traits::AccountIdConversion;
 
