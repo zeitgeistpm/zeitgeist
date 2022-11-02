@@ -2217,7 +2217,7 @@ mod pallet {
             // If the oracle reported right, return the OracleBond, otherwise slash it to
             // pay the correct reporters.
             let mut overall_imbalance = NegativeImbalanceOf::<T>::zero();
-            if report.outcome == resolved_outcome {
+            if report.by == market.oracle && report.outcome == resolved_outcome {
                 T::AssetManager::unreserve_named(
                     &Self::reserve_id(),
                     Asset::Ztg,
