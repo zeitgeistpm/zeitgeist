@@ -58,6 +58,13 @@ pub trait DisputeApi {
         market_id: &Self::MarketId,
         market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
     ) -> Result<Option<Self::BlockNumber>, DispatchError>;
+
+    // TODO doc comment
+    fn is_fail(
+        disputes: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+        market_id: &Self::MarketId,
+        market: &Market<Self::AccountId, Self::BlockNumber, Self::Moment>,
+    ) -> Result<bool, DispatchError>;
 }
 
 pub trait DisputeResolutionApi {

@@ -565,6 +565,18 @@ mod pallet {
 
             Ok(None)
         }
+
+        fn is_fail(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+        ) -> Result<bool, DispatchError> {
+            if market.dispute_mechanism != MarketDisputeMechanism::Court {
+                return Err(Error::<T>::MarketDoesNotHaveCourtMechanism.into());
+            }
+            // TODO when does court fail?
+            Ok(false)
+        }
     }
 
     impl<T> CourtPalletApi for Pallet<T> where T: Config {}

@@ -487,6 +487,45 @@ mod pallet {
             Ok((Some(T::WeightInfo::dispute_authorized(num_disputes, CacheSize::get()))).into())
         }
 
+        /// Resolve the market, when the dispute mechanism failed.
+        ///
+        /// # Weight
+        ///
+        /// Complexity: `O(n)`, where `n` is the number of outstanding disputes.
+        // TODO update benchmarks
+        #[pallet::weight(5000)]
+        #[transactional]
+        pub fn resolve_failed_mdm(
+            origin: OriginFor<T>,
+            #[pallet::compact] market_id: MarketIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let market = T::MarketCommons::market(&market_id)?;
+            ensure!(
+                market.status == MarketStatus::Disputed,
+                Error::<T>::InvalidMarketStatus
+            );
+            let disputes = Disputes::<T>::get(market_id);
+            let is_fail = match market.dispute_mechanism {
+                MarketDisputeMechanism::Authorized(_) => {
+                    T::Authorized::is_fail(&disputes, &market_id, &market)?
+                }
+                MarketDisputeMechanism::Court => {
+                    T::Court::is_fail(&disputes, &market_id, &market)?
+                }
+                MarketDisputeMechanism::SimpleDisputes => {
+                    T::SimpleDisputes::is_fail(&disputes, &market_id, &market)?
+                }
+            };
+            ensure!(is_fail, Error::<T>::DisputeMechanismNotFailed);
+
+            Self::on_resolution(&market_id, &market);
+
+            Self::deposit_event(Event::DisputeMechanismFailed(market_id));
+
+            Ok(().into())
+        }
+
         /// Create a permissionless market, buy complete sets and deploy a pool with specified
         /// liquidity.
         ///
@@ -1396,6 +1435,8 @@ mod pallet {
         /// Someone is trying to call `dispute` with the same outcome that is currently
         /// registered on-chain.
         CannotDisputeSameOutcome,
+        /// The market dispute mechanism has not failed.
+        DisputeMechanismNotFailed,
         /// Only creator is able to edit the market.
         EditorNotCreator,
         /// EditReason's length greater than MaxEditReasonLen.
@@ -1488,6 +1529,8 @@ mod pallet {
         BadOnInitialize,
         /// A complete set of assets has been bought \[market_id, amount_per_asset, buyer\]
         BoughtCompleteSet(MarketIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::AccountId),
+        /// A market dispute mechansim failed \[market_id\]
+        DisputeMechanismFailed(MarketIdOf<T>),
         /// A market has been approved \[market_id, new_market_status\]
         MarketApproved(MarketIdOf<T>, MarketStatus),
         /// A market has been created \[market_id, market_account, market\]

@@ -17,6 +17,7 @@
 
 use crate::{CacheSize, Config, Disputes, Pallet};
 use alloc::{vec, vec::Vec};
+use sp_runtime::traits::One;
 use frame_support::{
     dispatch::Weight,
     log,
@@ -25,6 +26,7 @@ use frame_support::{
     traits::{Get, OnRuntimeUpgrade, StorageVersion},
     BoundedVec,
 };
+use sp_runtime::traits::Saturating;
 use parity_scale_codec::EncodeLike;
 use zeitgeist_primitives::{
     constants::BASE,
@@ -76,13 +78,15 @@ where
         log::info!("AddFieldToAuthorityReport: Starting...");
 
         let mut new_storage_map = Vec::new();
+        let now = <frame_system::Pallet<T>>::block_number();
         for (key, old_value) in
             storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
         {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
 
             if let Some(outcome) = old_value {
-                let resolve_at: Option<T::BlockNumber> = None;
+                let resolve_at: T::BlockNumber =
+                    now.saturating_add(T::AuthorityReportPeriod::get());
                 let new_value = AuthorityReport { resolve_at, outcome };
                 new_storage_map.push((key, new_value));
             }
@@ -118,10 +122,13 @@ where
 pub struct UpdateMarketIdsPerDisputeBlock<T>(PhantomData<T>);
 
 // Delete the auto resolution of authorized and court from `MarketIdsPerDisputeBlock`
-impl<T: Config + zrml_market_commons::Config> OnRuntimeUpgrade for UpdateMarketIdsPerDisputeBlock<T>
+impl<T: Config + zrml_market_commons::Config + zrml_authorized::Config> OnRuntimeUpgrade for UpdateMarketIdsPerDisputeBlock<T>
 where
     <T as zrml_market_commons::Config>::MarketId:
         EncodeLike<<<T as Config>::MarketCommons as MarketCommonsPalletApi>::MarketId>,
+    <T as zrml_market_commons::Config>::MarketId: EncodeLike<
+        <<T as zrml_authorized::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId,
+    >
 {
     fn on_runtime_upgrade() -> Weight
     where
@@ -140,8 +147,9 @@ where
         log::info!("UpdateMarketIdsPerDisputeBlock: Starting...");
 
         let mut new_storage_map = Vec::new();
+        let mut authorized_ids = Vec::new();
         for (key, mut bounded_vec) in storage_iter::<
-            BoundedVec<<T as zrml_market_commons::Config>::MarketId, CacheSize>,
+            BoundedVec<<<T as crate::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId, CacheSize>,
         >(PREDICTION_MARKETS, MARKET_IDS_PER_DISPUTE_BLOCK)
         {
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
@@ -149,7 +157,10 @@ where
             bounded_vec.retain(|id| {
                 if let Ok(market) = MarketCommonsPallet::<T>::market(id) {
                     match market.dispute_mechanism {
-                        MarketDisputeMechanism::Authorized(_) => false,
+                        MarketDisputeMechanism::Authorized(_) => {
+                            authorized_ids.push(id);
+                            false
+                        }
                         MarketDisputeMechanism::Court => false,
                         MarketDisputeMechanism::SimpleDisputes => true,
                     }
@@ -163,12 +174,31 @@ where
         }
 
         for (key, new_bounded_vec) in new_storage_map {
-            put_storage_value::<BoundedVec<<T as zrml_market_commons::Config>::MarketId, CacheSize>>(
+            put_storage_value::<BoundedVec<<<T as crate::Config>::MarketCommons as MarketCommonsPalletApi>::MarketId, CacheSize>>(
                 PREDICTION_MARKETS,
                 MARKET_IDS_PER_DISPUTE_BLOCK,
                 &key,
                 new_bounded_vec,
             );
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
+        }
+
+        let now = <frame_system::Pallet<T>>::block_number();
+        for id in authorized_ids {
+            let mut resolve_at: T::BlockNumber =
+                now.saturating_add(<T as zrml_authorized::Config>::AuthorityReportPeriod::get());
+            let mut ids = crate::MarketIdsPerDisputeBlock::<T>::get(resolve_at);
+            total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+
+            while ids.is_full() {
+                resolve_at = resolve_at.saturating_add(One::one());
+                ids = crate::MarketIdsPerDisputeBlock::<T>::get(resolve_at);
+                total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+            }
+            // is_full check above to ensure, that we can force_push
+            ids.force_push(*id);
+            crate::MarketIdsPerDisputeBlock::<T>::insert(resolve_at, ids);
+
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
 

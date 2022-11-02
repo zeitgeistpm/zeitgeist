@@ -174,6 +174,18 @@ mod pallet {
             }
             Ok(Self::get_auto_resolve(disputes, market))
         }
+
+        fn is_fail(
+            _: &[MarketDispute<Self::AccountId, Self::BlockNumber>],
+            _: &Self::MarketId,
+            market: &Market<Self::AccountId, Self::BlockNumber, MomentOf<T>>,
+        ) -> Result<bool, DispatchError> {
+            if market.dispute_mechanism != MarketDisputeMechanism::SimpleDisputes {
+                return Err(Error::<T>::MarketDoesNotHaveSimpleDisputesMechanism.into());
+            }
+            // TODO when does simple disputes fail?
+            Ok(false)
+        }
     }
 
     impl<T> SimpleDisputesPalletApi for Pallet<T> where T: Config {}
