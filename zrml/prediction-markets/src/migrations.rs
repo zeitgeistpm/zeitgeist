@@ -75,22 +75,27 @@ where
         }
         log::info!("AddFieldToAuthorityReport: Starting...");
 
-        for (key, value) in
+        let mut new_storage_map = Vec::new();
+        for (key, old_value) in
             storage_iter::<Option<OutcomeReport>>(AUTHORIZED, AUTHORIZED_OUTCOME_REPORTS)
         {
-            if let Some(old_value) = value {
-                let resolve_at: Option<T::BlockNumber> = None;
-                let new_value = AuthorityReport { resolve_at, outcome: old_value };
-                put_storage_value::<Option<AuthorityReport<T::BlockNumber>>>(
-                    AUTHORIZED,
-                    AUTHORIZED_OUTCOME_REPORTS,
-                    &key,
-                    Some(new_value),
-                );
-                total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
-            }
-
             total_weight = total_weight.saturating_add(T::DbWeight::get().reads(1));
+            
+            if let Some(outcome) = old_value {
+                let resolve_at: Option<T::BlockNumber> = None;
+                let new_value = AuthorityReport { resolve_at, outcome };
+                new_storage_map.push((key, new_value));
+            }
+        }
+
+        for (key, new_value) in new_storage_map {
+            put_storage_value::<Option<AuthorityReport<T::BlockNumber>>>(
+                AUTHORIZED,
+                AUTHORIZED_OUTCOME_REPORTS,
+                &key,
+                Some(new_value),
+            );
+            total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
 
         StorageVersion::new(AUTHORIZED_NEXT_STORAGE_VERSION).put::<AuthorizedPallet<T>>();
@@ -134,6 +139,7 @@ where
         }
         log::info!("UpdateMarketIdsPerDisputeBlock: Starting...");
 
+        let mut new_storage_map = Vec::new();
         for (key, mut bounded_vec) in storage_iter::<
             BoundedVec<<T as zrml_market_commons::Config>::MarketId, CacheSize>,
         >(PREDICTION_MARKETS, MARKET_IDS_PER_DISPUTE_BLOCK)
@@ -148,14 +154,20 @@ where
                         MarketDisputeMechanism::SimpleDisputes => true,
                     }
                 } else {
+                    // no market for id in MarketIdsPerDisputeBlock
                     false
                 }
             });
+
+            new_storage_map.push((key, bounded_vec));
+        }
+
+        for (key, new_bounded_vec) in new_storage_map {
             put_storage_value::<BoundedVec<<T as zrml_market_commons::Config>::MarketId, CacheSize>>(
                 PREDICTION_MARKETS,
                 MARKET_IDS_PER_DISPUTE_BLOCK,
                 &key,
-                bounded_vec,
+                new_bounded_vec,
             );
             total_weight = total_weight.saturating_add(T::DbWeight::get().writes(1));
         }
