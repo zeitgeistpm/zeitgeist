@@ -78,11 +78,11 @@ use nimbus_primitives::{CanAuthor, NimbusId};
 use sp_version::RuntimeVersion;
 
 #[cfg(feature = "parachain")]
-pub mod parachain_params;
-pub mod parameters;
-#[cfg(feature = "parachain")]
 #[cfg(test)]
 pub mod integration_tests;
+#[cfg(feature = "parachain")]
+pub mod parachain_params;
+pub mod parameters;
 #[cfg(feature = "parachain")]
 pub mod xcm_config;
 
@@ -173,25 +173,23 @@ impl orml_unknown_tokens::Config for Runtime {
 #[cfg(feature = "parachain")]
 use xcm_config::config::*;
 
-
 #[cfg(feature = "parachain")]
 impl orml_xtokens::Config for Runtime {
-	type AccountIdToMultiLocation = AccountIdToMultiLocation;
-	type Balance = Balance;
-	type BaseXcmWeight = BaseXcmWeight;
-	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = AssetConvert;
-	type Event = Event;
-	type LocationInverter = LocationInverter<Ancestry>;
-	type MaxAssetsForTransfer = MaxAssetsForTransfer;
-	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
-	type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
-	type SelfLocation = SelfLocation;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
+    type AccountIdToMultiLocation = AccountIdToMultiLocation;
+    type Balance = Balance;
+    type BaseXcmWeight = BaseXcmWeight;
+    type CurrencyId = CurrencyId;
+    type CurrencyIdConvert = AssetConvert;
+    type Event = Event;
+    type LocationInverter = LocationInverter<Ancestry>;
+    type MaxAssetsForTransfer = MaxAssetsForTransfer;
+    type MinXcmFee = ParachainMinFee;
+    type MultiLocationsFilter = Everything;
+    type ReserveProvider = orml_traits::location::AbsoluteReserveProvider;
+    type SelfLocation = SelfLocation;
+    type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+    type XcmExecutor = xcm_executor::XcmExecutor<XcmConfig>;
 }
-
 
 impl_config_traits!();
 create_runtime_api!();

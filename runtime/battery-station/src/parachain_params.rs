@@ -23,13 +23,13 @@
 #![cfg(feature = "parachain")]
 
 use super::{
-    parameters::MAXIMUM_BLOCK_WEIGHT, Origin, ParachainInfo, 
-    xcm_config::config::zeitgeist::{ID as ZTG_PARAID},
+    parameters::MAXIMUM_BLOCK_WEIGHT, xcm_config::config::zeitgeist::ID as ZTG_PARAID, Origin,
+    ParachainInfo,
 };
 use frame_support::{parameter_types, weights::Weight};
 use orml_traits::parameter_type_with_key;
 use sp_runtime::{Perbill, Percent, SaturatedConversion};
-use xcm::latest::{Junction, MultiLocation, NetworkId, prelude::X1};
+use xcm::latest::{prelude::X1, Junction, MultiLocation, NetworkId};
 use zeitgeist_primitives::{
     constants::{BASE, BLOCKS_PER_MINUTE, MICRO},
     types::Balance,
@@ -106,7 +106,7 @@ parameter_types! {
 
 parameter_type_with_key! {
     // XCM
-	pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
-		None
-	};
+    pub ParachainMinFee: |_location: MultiLocation| -> Option<u128> {
+        None
+    };
 }

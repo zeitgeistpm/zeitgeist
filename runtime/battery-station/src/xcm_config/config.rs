@@ -15,9 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Zeitgeist. If not, see <https://www.gnu.org/licenses/>.
 
-use super::{
-    fees::{native_per_second, FixedConversionRateProvider},
-};
+use super::fees::{native_per_second, FixedConversionRateProvider};
 use crate::{
     AccountId, Ancestry, AssetManager, AssetRegistry, Balance, Call, CurrencyId, MaxInstructions,
     Origin, ParachainSystem, PolkadotXcm, RelayChainOrigin, RelayNetwork, UnitWeightCost,
@@ -188,12 +186,9 @@ impl Convert<CurrencyId, Option<MultiLocation>> for AssetConvert {
     fn convert(id: CurrencyId) -> Option<MultiLocation> {
         match id {
             Asset::Ztg => Some(MultiLocation::new(
-				1,
-				X2(
-					Junction::Parachain(zeitgeist::ID),
-					general_key(zeitgeist::KEY),
-				),
-			)),
+                1,
+                X2(Junction::Parachain(zeitgeist::ID), general_key(zeitgeist::KEY)),
+            )),
             Asset::ForeignAsset(_) => AssetRegistry::multilocation(&id).ok()?,
             _ => None,
         }
@@ -211,15 +206,15 @@ impl xcm_executor::traits::Convert<MultiLocation, CurrencyId> for AssetConvert {
                 _ => Err(location),
             },
             MultiLocation {
-				parents: 1,
-				interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
-			} => match para_id {
-				zeitgeist::ID => match &key[..] {
-					zeitgeist::KEY => Ok(CurrencyId::Ztg),
-					_ => Err(location),
-				},
+                parents: 1,
+                interior: X2(Junction::Parachain(para_id), GeneralKey(key)),
+            } => match para_id {
+                zeitgeist::ID => match &key[..] {
+                    zeitgeist::KEY => Ok(CurrencyId::Ztg),
+                    _ => Err(location),
+                },
                 _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
-			},
+            },
             _ => AssetRegistry::location_to_asset_id(location.clone()).ok_or(location),
         }
     }
@@ -244,13 +239,9 @@ impl Convert<MultiLocation, Option<CurrencyId>> for AssetConvert {
 pub struct AccountIdToMultiLocation;
 
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
-	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 {
-			network: NetworkId::Any,
-			id: account.into(),
-		})
-		.into()
-	}
+    fn convert(account: AccountId) -> MultiLocation {
+        X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
+    }
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
